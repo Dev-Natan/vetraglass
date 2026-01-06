@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Users, 
@@ -9,20 +9,17 @@ import {
   ClipboardList,
   DollarSign,
   UserCog,
-  ChevronDown,
   LogOut,
   Menu,
-  X
+  X,
+  ShoppingCart,
+  Scissors,
+  Settings
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Company } from '@/types';
 import { Button } from '@/components/ui/button';
-
-const mockCompanies: Company[] = [
-  { id: '1', name: 'Vidraçaria Central', cnpj: '12.345.678/0001-90' },
-  { id: '2', name: 'Vidros Premium', cnpj: '98.765.432/0001-10' },
-  { id: '3', name: 'Glass & Design', cnpj: '55.444.333/0001-22' },
-];
+import { useAuth } from '@/contexts/AuthContext';
+import { CompanySelector } from './CompanySelector';
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
@@ -33,17 +30,21 @@ const menuItems = [
   { icon: ClipboardList, label: 'Ordens de Serviço', path: '/ordens-servico' },
   { icon: DollarSign, label: 'Financeiro', path: '/financeiro' },
   { icon: UserCog, label: 'Funcionários', path: '/funcionarios' },
+  { icon: ShoppingCart, label: 'Caixa & Vendas', path: '/caixa-vendas' },
+  { icon: Scissors, label: 'Plano de Corte', path: '/plano-corte' },
+  { icon: Settings, label: 'Configurações', path: '/configuracoes' },
 ];
 
-interface SidebarProps {
-  currentCompany: Company;
-  onCompanyChange: (company: Company) => void;
-}
-
-export function Sidebar({ currentCompany, onCompanyChange }: SidebarProps) {
+export function Sidebar() {
   const location = useLocation();
-  const [isCompanyOpen, setIsCompanyOpen] = useState(false);
+  const navigate = useNavigate();
+  const { signOut, currentCompany } = useAuth();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
+  };
 
   return (
     <>
@@ -84,6 +85,13 @@ export function Sidebar({ currentCompany, onCompanyChange }: SidebarProps) {
           </div>
         </div>
 
+        {/* Company Selector */}
+        {currentCompany && (
+          <div className="p-3 border-b border-sidebar-border">
+            <CompanySelector />
+          </div>
+        )}
+
         {/* Navigation */}
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
           {menuItems.map((item) => {
@@ -109,7 +117,10 @@ export function Sidebar({ currentCompany, onCompanyChange }: SidebarProps) {
 
         {/* Footer */}
         <div className="p-3 border-t border-sidebar-border">
-          <button className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors">
+          <button 
+            onClick={handleSignOut}
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
+          >
             <LogOut className="w-5 h-5" />
             <span className="text-sm font-medium">Sair</span>
           </button>
