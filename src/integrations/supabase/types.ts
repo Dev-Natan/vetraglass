@@ -117,6 +117,32 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_company_and_assign_admin: {
+        Args: {
+          _address?: string
+          _cnpj: string
+          _email?: string
+          _name: string
+          _phone?: string
+        }
+        Returns: {
+          address: string | null
+          cnpj: string
+          created_at: string
+          email: string | null
+          id: string
+          logo_url: string | null
+          name: string
+          phone: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "companies"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       user_belongs_to_company: {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
