@@ -69,32 +69,17 @@ export default function CompanySetup() {
     setIsLoading(true);
     
     try {
-      // Create company
+      // Use RPC to create company and assign admin role
       const { data: companyData, error: companyError } = await supabase
-        .from('companies')
-        .insert({
-          name,
-          cnpj: cnpj.replace(/\D/g, ''),
-          phone: phone || null,
-          email: email || null,
-          address: address || null,
-        })
-        .select()
-        .single();
-      
-      if (companyError) throw companyError;
-      
-      // Create user-company relationship as admin
-      const { error: relationError } = await supabase
-        .from('user_companies')
-        .insert({
-          user_id: user.id,
-          company_id: companyData.id,
-          role: 'admin',
-          is_active: true,
+        .rpc('create_company_and_assign_admin', {
+          _name: name,
+          _cnpj: cnpj.replace(/\D/g, ''),
+          _phone: phone || '',
+          _email: email || '',
+          _address: address || '',
         });
       
-      if (relationError) throw relationError;
+      if (companyError) throw companyError;
       
       setCurrentCompany(companyData);
       
