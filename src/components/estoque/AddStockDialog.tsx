@@ -39,6 +39,7 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
+  const [selectedType, setSelectedType] = useState('');
   const [selectedItemId, setSelectedItemId] = useState('');
   const [quantity, setQuantity] = useState('');
   const [minQuantity, setMinQuantity] = useState('');
@@ -113,10 +114,16 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
   });
 
   const resetForm = () => {
+    setSelectedType('');
     setSelectedItemId('');
     setQuantity('');
     setMinQuantity('');
     setLocation('');
+  };
+
+  const handleTypeChange = (type: string) => {
+    setSelectedType(type);
+    setSelectedItemId(''); // Reset item selection when type changes
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -137,13 +144,13 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
     item => !existingStock?.includes(item.id)
   );
 
-  // Group items by type
-  const groupedItems = availableItems?.reduce((acc, item) => {
-    const type = item.type;
-    if (!acc[type]) acc[type] = [];
-    acc[type].push(item);
-    return acc;
-  }, {} as Record<string, typeof availableItems>);
+  // Get unique types from available items
+  const availableTypes = [...new Set(availableItems?.map(item => item.type) || [])];
+
+  // Filter items by selected type
+  const filteredItems = selectedType
+    ? availableItems?.filter(item => item.type === selectedType)
+    : [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -151,38 +158,51 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
         <DialogHeader>
           <DialogTitle>Adicionar Item ao Estoque</DialogTitle>
           <DialogDescription>
-            Selecione um item e defina a quantidade inicial.
+            Selecione o tipo e o item para adicionar ao estoque.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="item">Item *</Label>
-            <Select value={selectedItemId} onValueChange={setSelectedItemId}>
+            <Label htmlFor="type">Tipo *</Label>
+            <Select value={selectedType} onValueChange={handleTypeChange}>
               <SelectTrigger>
-                <SelectValue placeholder="Selecione um item..." />
+                <SelectValue placeholder="Selecione o tipo..." />
+              </SelectTrigger>
+              <SelectContent>
+                {availableTypes.map(type => (
+                  <SelectItem key={type} value={type}>
+                    {itemTypeLabels[type] || type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="item">Item *</Label>
+            <Select 
+              value={selectedItemId} 
+              onValueChange={setSelectedItemId}
+              disabled={!selectedType}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={selectedType ? "Selecione um item..." : "Selecione o tipo primeiro"} />
               </SelectTrigger>
               <SelectContent className="max-h-64">
                 {loadingItems ? (
                   <div className="flex items-center justify-center p-4">
                     <Loader2 className="w-4 h-4 animate-spin" />
                   </div>
-                ) : groupedItems && Object.keys(groupedItems).length > 0 ? (
-                  Object.entries(groupedItems).map(([type, items]) => (
-                    <div key={type}>
-                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted">
-                        {itemTypeLabels[type] || type}
-                      </div>
-                      {items?.map(item => (
-                        <SelectItem key={item.id} value={item.id}>
-                          {item.name}
-                        </SelectItem>
-                      ))}
-                    </div>
+                ) : filteredItems && filteredItems.length > 0 ? (
+                  filteredItems.map(item => (
+                    <SelectItem key={item.id} value={item.id}>
+                      {item.name}
+                    </SelectItem>
                   ))
                 ) : (
                   <div className="p-4 text-sm text-muted-foreground text-center">
-                    Todos os itens já estão no estoque.
+                    {selectedType ? 'Todos os itens deste tipo já estão no estoque.' : 'Selecione um tipo primeiro.'}
                   </div>
                 )}
               </SelectContent>
