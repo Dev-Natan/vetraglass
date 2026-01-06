@@ -1,125 +1,188 @@
 import { MainLayout } from '@/components/layout/MainLayout';
-import { MetricCard } from '@/components/dashboard/MetricCard';
-import { OrdersTable } from '@/components/dashboard/OrdersTable';
-import { QuickActions } from '@/components/dashboard/QuickActions';
-import { FileText, Clock, DollarSign, CheckCircle, TrendingUp } from 'lucide-react';
-import { Order } from '@/types';
+import { 
+  Plus, 
+  ShoppingCart, 
+  ClipboardList, 
+  Users,
+  FileText,
+  TrendingUp,
+  Package,
+  Boxes,
+  DollarSign,
+  Zap
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
 
-const mockOrders: Order[] = [
-  {
-    id: '1',
-    number: '001',
-    client: 'João Silva',
-    description: 'Box de vidro temperado para banheiro 8mm',
-    status: 'completed',
-    total: 2450.00,
-    createdAt: new Date('2024-01-10'),
+const quickActions = [
+  { 
+    icon: Plus, 
+    label: 'Novo Orçamento', 
+    path: '/orcamentos/novo',
+    colorClass: 'action-card-green'
   },
-  {
-    id: '2',
-    number: '002',
-    client: 'Maria Santos',
-    description: 'Espelho bisotado para sala 150x100cm',
-    status: 'in_progress',
-    total: 890.00,
-    createdAt: new Date('2024-01-12'),
+  { 
+    icon: ShoppingCart, 
+    label: 'Nova Venda', 
+    path: '/vendas/nova',
+    colorClass: 'action-card-blue'
   },
-  {
-    id: '3',
-    number: '003',
-    client: 'Pedro Oliveira',
-    description: 'Porta de correr em vidro laminado',
-    status: 'pending',
-    total: 3200.00,
-    createdAt: new Date('2024-01-14'),
+  { 
+    icon: ClipboardList, 
+    label: 'Nova OS', 
+    path: '/ordens-servico/nova',
+    colorClass: 'action-card-purple'
   },
-  {
-    id: '4',
-    number: '004',
-    client: 'Ana Costa',
-    description: 'Guarda-corpo em vidro temperado 10mm',
-    status: 'in_progress',
-    total: 4800.00,
-    createdAt: new Date('2024-01-15'),
+  { 
+    icon: Users, 
+    label: 'Novo Cliente', 
+    path: '/clientes/novo',
+    colorClass: 'action-card-orange'
   },
-  {
-    id: '5',
-    number: '005',
-    client: 'Carlos Mendes',
-    description: 'Prateleiras de vidro para cozinha',
-    status: 'pending',
-    total: 650.00,
-    createdAt: new Date('2024-01-16'),
+];
+
+const salesMenuItems = [
+  { 
+    icon: FileText, 
+    label: 'Orçamentos', 
+    description: 'Crie e gerencie orçamentos',
+    path: '/orcamentos'
   },
-  {
-    id: '6',
-    number: '006',
-    client: 'Lucia Ferreira',
-    description: 'Janela blindex 4 folhas',
-    status: 'cancelled',
-    total: 2100.00,
-    createdAt: new Date('2024-01-08'),
+  { 
+    icon: ShoppingCart, 
+    label: 'Vendas', 
+    description: 'Finalize vendas e emita notas',
+    path: '/vendas'
+  },
+  { 
+    icon: Users, 
+    label: 'Clientes', 
+    description: 'Gerencie sua carteira de clientes',
+    path: '/clientes'
+  },
+];
+
+const operationsMenuItems = [
+  { 
+    icon: ClipboardList, 
+    label: 'Ordens de Serviço', 
+    description: 'Acompanhe as OS em andamento',
+    path: '/ordens-servico'
+  },
+  { 
+    icon: Package, 
+    label: 'Produtos', 
+    description: 'Cadastre e edite produtos',
+    path: '/produtos'
+  },
+  { 
+    icon: Boxes, 
+    label: 'Estoque', 
+    description: 'Controle entradas e saídas',
+    path: '/estoque'
+  },
+];
+
+const financeMenuItems = [
+  { 
+    icon: DollarSign, 
+    label: 'Financeiro', 
+    description: 'Contas a pagar e receber',
+    path: '/financeiro'
+  },
+  { 
+    icon: TrendingUp, 
+    label: 'Relatórios', 
+    description: 'Análises e estatísticas',
+    path: '/relatorios'
   },
 ];
 
 export default function Index() {
   return (
     <MainLayout>
-      <div className="space-y-8 pt-12 lg:pt-0">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="animate-fade-in">
-            <h1 className="text-3xl font-display font-bold text-foreground">Dashboard</h1>
-            <p className="text-muted-foreground mt-1">Bem-vindo de volta! Aqui está o resumo da sua vidraçaria.</p>
+      <div className="space-y-8">
+        {/* Quick Actions */}
+        <section className="section-card bg-amber-50/50 border-amber-200/50 animate-fade-in">
+          <div className="flex items-center gap-2 mb-5">
+            <Zap className="w-5 h-5 text-primary" />
+            <h2 className="font-display font-semibold text-lg text-foreground">Ações Rápidas</h2>
           </div>
-          <QuickActions />
-        </div>
-
-        {/* Metrics Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-          <MetricCard
-            title="Total de Pedidos"
-            value={156}
-            icon={FileText}
-            trend={{ value: 12, isPositive: true }}
-            variant="default"
-            className="animate-slide-up"
-          />
-          <MetricCard
-            title="Pedidos Pendentes"
-            value={23}
-            icon={Clock}
-            variant="warning"
-            className="animate-slide-up [animation-delay:100ms]"
-          />
-          <MetricCard
-            title="Faturamento Mensal"
-            value="R$ 45.890"
-            icon={DollarSign}
-            trend={{ value: 8, isPositive: true }}
-            variant="success"
-            className="animate-slide-up [animation-delay:200ms]"
-          />
-          <MetricCard
-            title="Concluídos no Mês"
-            value={42}
-            icon={CheckCircle}
-            trend={{ value: 5, isPositive: true }}
-            variant="accent"
-            className="animate-slide-up [animation-delay:300ms]"
-          />
-        </div>
-
-        {/* Recent Orders */}
-        <div className="animate-slide-up [animation-delay:400ms]">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-display font-semibold text-foreground">Pedidos Recentes</h2>
-            <button className="text-sm text-accent hover:text-accent/80 font-medium flex items-center gap-1 transition-colors">
-              Ver todos <TrendingUp className="w-4 h-4" />
-            </button>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {quickActions.map((action) => (
+              <Link
+                key={action.label}
+                to={action.path}
+                className={action.colorClass}
+              >
+                <action.icon className="w-6 h-6" />
+                <span className="font-medium text-sm">{action.label}</span>
+              </Link>
+            ))}
           </div>
-          <OrdersTable orders={mockOrders} />
-        </div>
+        </section>
+
+        {/* Sales & Service Section */}
+        <section className="animate-slide-up">
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp className="w-5 h-5 text-muted-foreground" />
+            <h2 className="font-display font-semibold text-lg text-foreground">Vendas & Atendimento</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {salesMenuItems.map((item) => (
+              <Link key={item.label} to={item.path} className="menu-card">
+                <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
+                  <item.icon className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <h3 className="font-medium text-foreground">{item.label}</h3>
+                  <p className="text-sm text-muted-foreground">{item.description}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        {/* Operations Section */}
+        <section className="animate-slide-up [animation-delay:100ms]">
+          <div className="flex items-center gap-2 mb-4">
+            <Boxes className="w-5 h-5 text-muted-foreground" />
+            <h2 className="font-display font-semibold text-lg text-foreground">Operações</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {operationsMenuItems.map((item) => (
+              <Link key={item.label} to={item.path} className="menu-card">
+                <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
+                  <item.icon className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <h3 className="font-medium text-foreground">{item.label}</h3>
+                  <p className="text-sm text-muted-foreground">{item.description}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        {/* Finance Section */}
+        <section className="animate-slide-up [animation-delay:200ms]">
+          <div className="flex items-center gap-2 mb-4">
+            <DollarSign className="w-5 h-5 text-muted-foreground" />
+            <h2 className="font-display font-semibold text-lg text-foreground">Financeiro</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {financeMenuItems.map((item) => (
+              <Link key={item.label} to={item.path} className="menu-card">
+                <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
+                  <item.icon className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <h3 className="font-medium text-foreground">{item.label}</h3>
+                  <p className="text-sm text-muted-foreground">{item.description}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
       </div>
     </MainLayout>
   );
