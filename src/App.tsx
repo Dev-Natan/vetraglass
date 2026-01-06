@@ -23,7 +23,7 @@ import { Loader2 } from "lucide-react";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading, companies } = useAuth();
+  const { user, loading, companies, isSaasAdmin } = useAuth();
 
   if (loading) {
     return (
@@ -37,8 +37,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/auth" replace />;
   }
 
-  // If user has no companies, redirect to company setup
-  if (companies.length === 0) {
+  // SaaS admins can access the system without a company
+  if (!isSaasAdmin && companies.length === 0) {
     return <Navigate to="/empresa/nova" replace />;
   }
 
