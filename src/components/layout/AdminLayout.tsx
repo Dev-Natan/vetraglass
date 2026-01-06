@@ -87,22 +87,22 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t space-y-2">
+        <div className="p-4 border-t space-y-3">
           <Link
             to="/"
-            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
           >
             <ChevronLeft className="w-4 h-4" />
             Voltar ao Sistema
           </Link>
           <Button
-            variant="ghost"
+            variant="destructive"
             size="sm"
-            className="w-full justify-start text-muted-foreground hover:text-destructive"
+            className="w-full justify-start"
             onClick={() => signOut()}
           >
             <LogOut className="w-4 h-4 mr-2" />
-            Sair
+            Sair do Sistema
           </Button>
         </div>
       </aside>
