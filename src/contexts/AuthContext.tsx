@@ -36,6 +36,7 @@ interface AuthContextType {
   currentCompany: Company | null;
   setCurrentCompany: (company: Company) => void;
   loading: boolean;
+  isSaasAdmin: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -49,6 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [companies, setCompanies] = useState<UserCompany[]>([]);
   const [currentCompany, setCurrentCompany] = useState<Company | null>(null);
+  const [isSaasAdmin, setIsSaasAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -68,6 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setProfile(null);
           setCompanies([]);
           setCurrentCompany(null);
+          setIsSaasAdmin(false);
         }
       }
     );
@@ -88,12 +91,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserData = async (userId: string) => {
     try {
+      // Check if user is SaaS admin
+      const { data: saasAdminData } = await supabase
+        .from('saas_admins')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      setIsSaasAdmin(!!saasAdminData);
+
       // Fetch profile
       const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
       
       if (profileData) {
         setProfile(profileData);
@@ -208,6 +220,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       currentCompany,
       setCurrentCompany: handleSetCurrentCompany,
       loading,
+      isSaasAdmin,
       signIn,
       signUp,
       signOut,
