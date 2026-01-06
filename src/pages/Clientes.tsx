@@ -1,22 +1,6 @@
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
-import { Plus, Search, Filter, Phone, Mail, MapPin, MoreHorizontal } from 'lucide-react';
-import { Client } from '@/types';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-
-const mockClients: Client[] = [
-  { id: '1', name: 'João Silva', email: 'joao@email.com', phone: '(11) 99999-1111', address: 'Rua das Flores, 123 - São Paulo' },
-  { id: '2', name: 'Maria Santos', email: 'maria@email.com', phone: '(11) 99999-2222', address: 'Av. Paulista, 456 - São Paulo' },
-  { id: '3', name: 'Pedro Oliveira', email: 'pedro@email.com', phone: '(11) 99999-3333', address: 'Rua Augusta, 789 - São Paulo' },
-  { id: '4', name: 'Ana Costa', email: 'ana@email.com', phone: '(11) 99999-4444', address: 'Av. Brasil, 321 - São Paulo' },
-  { id: '5', name: 'Carlos Mendes', email: 'carlos@email.com', phone: '(11) 99999-5555', address: 'Rua Oscar Freire, 654 - São Paulo' },
-  { id: '6', name: 'Lucia Ferreira', email: 'lucia@email.com', phone: '(11) 99999-6666', address: 'Av. Rebouças, 987 - São Paulo' },
-];
+import { Plus, Search, Filter, Users } from 'lucide-react';
 
 export default function Clientes() {
   return (
@@ -50,56 +34,17 @@ export default function Clientes() {
           </Button>
         </div>
 
-        {/* Clients Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 animate-slide-up [animation-delay:100ms]">
-          {mockClients.map((client, index) => (
-            <div 
-              key={client.id} 
-              className="glass-card rounded-2xl p-6 hover-lift"
-              style={{ animationDelay: `${(index + 1) * 50}ms` }}
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-                    <span className="text-lg font-display font-bold text-primary">
-                      {client.name.charAt(0)}
-                    </span>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground">{client.name}</h3>
-                    <p className="text-sm text-muted-foreground">Cliente</p>
-                  </div>
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreHorizontal className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem>Editar</DropdownMenuItem>
-                    <DropdownMenuItem>Ver Pedidos</DropdownMenuItem>
-                    <DropdownMenuItem className="text-destructive">Excluir</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm">
-                  <Mail className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-muted-foreground truncate">{client.email}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Phone className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">{client.phone}</span>
-                </div>
-                <div className="flex items-start gap-2 text-sm">
-                  <MapPin className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
-                  <span className="text-muted-foreground line-clamp-2">{client.address}</span>
-                </div>
-              </div>
-            </div>
-          ))}
+        {/* Empty State */}
+        <div className="section-card flex flex-col items-center justify-center py-12 text-center animate-slide-up">
+          <Users className="w-12 h-12 text-muted-foreground/50 mb-4" />
+          <h3 className="font-medium text-foreground mb-1">Nenhum cliente cadastrado</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Comece cadastrando seus clientes para gerenciar sua base.
+          </p>
+          <Button className="gap-2">
+            <Plus className="w-4 h-4" />
+            Cadastrar Primeiro Cliente
+          </Button>
         </div>
       </div>
     </MainLayout>

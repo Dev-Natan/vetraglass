@@ -3,14 +3,6 @@ import { Package, Plus, Search, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-const mockProducts = [
-  { id: '1', name: 'Vidro Temperado 8mm', category: 'Temperado', price: 180.00, stock: 45, unit: 'm²' },
-  { id: '2', name: 'Vidro Laminado 6mm', category: 'Laminado', price: 220.00, stock: 32, unit: 'm²' },
-  { id: '3', name: 'Espelho Cristal 4mm', category: 'Espelho', price: 150.00, stock: 28, unit: 'm²' },
-  { id: '4', name: 'Box Frontal', category: 'Box', price: 850.00, stock: 12, unit: 'un' },
-  { id: '5', name: 'Porta de Vidro 10mm', category: 'Porta', price: 1200.00, stock: 8, unit: 'un' },
-];
-
 export default function Produtos() {
   return (
     <MainLayout>
@@ -41,43 +33,16 @@ export default function Produtos() {
             </Button>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Produto</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Categoria</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Preço</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Estoque</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {mockProducts.map((product) => (
-                  <tr key={product.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
-                    <td className="py-3 px-4">
-                      <span className="font-medium text-foreground">{product.name}</span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-secondary text-secondary-foreground">
-                        {product.category}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-foreground">
-                      R$ {product.price.toFixed(2)}/{product.unit}
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className={`font-medium ${product.stock < 15 ? 'text-destructive' : 'text-foreground'}`}>
-                        {product.stock} {product.unit}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <Button variant="ghost" size="sm">Editar</Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <Package className="w-12 h-12 text-muted-foreground/50 mb-4" />
+            <h3 className="font-medium text-foreground mb-1">Nenhum produto cadastrado</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Comece cadastrando seus produtos para gerenciar o catálogo.
+            </p>
+            <Button className="gap-2">
+              <Plus className="w-4 h-4" />
+              Cadastrar Primeiro Produto
+            </Button>
           </div>
         </div>
       </div>
