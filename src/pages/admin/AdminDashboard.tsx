@@ -1,11 +1,11 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Package, Layers, Settings, Users, LogOut } from "lucide-react";
+import { Package, Layers, Users, Settings } from "lucide-react";
 
 export default function AdminDashboard() {
-  const { isSaasAdmin, signOut, profile } = useAuth();
+  const { isSaasAdmin } = useAuth();
 
   if (!isSaasAdmin) {
     return (
@@ -54,25 +54,14 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Painel SaaS Admin</h1>
-            <p className="text-sm text-muted-foreground">
-              Bem-vindo, {profile?.full_name || "Administrador"}
-            </p>
-          </div>
-          <Button variant="outline" onClick={() => signOut()}>
-            <LogOut className="w-4 h-4 mr-2" />
-            Sair
-          </Button>
+    <AdminLayout>
+      <div className="p-6">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-muted-foreground">Visão geral do sistema</p>
         </div>
-      </header>
 
-      {/* Content */}
-      <main className="max-w-7xl mx-auto px-6 py-8">
+        {/* Modules */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {adminModules.map((module) => (
             <Link key={module.path} to={module.path}>
@@ -113,7 +102,7 @@ export default function AdminDashboard() {
             </Card>
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </AdminLayout>
   );
 }

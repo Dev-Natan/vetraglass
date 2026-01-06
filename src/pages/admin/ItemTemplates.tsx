@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { AdminLayout } from '@/components/layout/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Plus, Pencil, Trash2, Search, ArrowLeft, Package, Upload, X } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, Search, Package, Upload, X } from 'lucide-react';
 
 interface ItemTemplate {
   id: string;
@@ -42,7 +42,6 @@ const typeColors: Record<string, string> = {
 };
 
 export default function ItemTemplates() {
-  const navigate = useNavigate();
   const { isSaasAdmin } = useAuth();
   const { toast } = useToast();
   
@@ -70,12 +69,10 @@ export default function ItemTemplates() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isSaasAdmin) {
-      navigate('/');
-      return;
+    if (isSaasAdmin) {
+      fetchItems();
     }
-    fetchItems();
-  }, [isSaasAdmin, navigate]);
+  }, [isSaasAdmin]);
 
   const fetchItems = async () => {
     try {
@@ -261,14 +258,11 @@ export default function ItemTemplates() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sidebar via-background to-background p-6">
-      <div className="max-w-7xl mx-auto">
+    <AdminLayout>
+      <div className="p-6">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex-1">
+        <div className="flex items-center justify-between mb-6">
+          <div>
             <h1 className="font-display font-bold text-3xl text-foreground">Item Templates</h1>
             <p className="text-muted-foreground">Gerencie vidros, perfis, acessórios e serviços globais</p>
           </div>
@@ -551,6 +545,6 @@ export default function ItemTemplates() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </AdminLayout>
   );
 }
