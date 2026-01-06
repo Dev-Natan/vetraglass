@@ -63,6 +63,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         // Defer data fetching with setTimeout
         if (session?.user) {
+          // Set loading to true when fetching new user data
+          setLoading(true);
           setTimeout(() => {
             fetchUserData(session.user.id);
           }, 0);
@@ -71,6 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setCompanies([]);
           setCurrentCompany(null);
           setIsSaasAdmin(false);
+          setLoading(false);
         }
       }
     );
