@@ -19,6 +19,7 @@ import PlanoCorte from "./pages/PlanoCorte";
 import Configuracoes from "./pages/Configuracoes";
 import ItemTemplates from "./pages/admin/ItemTemplates";
 import ProductTemplates from "./pages/admin/ProductTemplates";
+import AdminDashboard from "./pages/admin/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
@@ -45,6 +46,16 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   return <>{children}</>;
+}
+
+function IndexRedirect() {
+  const { isSaasAdmin } = useAuth();
+  
+  if (isSaasAdmin) {
+    return <Navigate to="/admin" replace />;
+  }
+  
+  return <Index />;
 }
 
 function CompanySetupRoute({ children }: { children: React.ReactNode }) {
@@ -76,7 +87,7 @@ function AppRoutes() {
       } />
       <Route path="/" element={
         <ProtectedRoute>
-          <Index />
+          <IndexRedirect />
         </ProtectedRoute>
       } />
       <Route path="/clientes" element={
@@ -127,6 +138,11 @@ function AppRoutes() {
       <Route path="/configuracoes" element={
         <ProtectedRoute>
           <Configuracoes />
+        </ProtectedRoute>
+      } />
+      <Route path="/admin" element={
+        <ProtectedRoute>
+          <AdminDashboard />
         </ProtectedRoute>
       } />
       <Route path="/admin/item-templates" element={
