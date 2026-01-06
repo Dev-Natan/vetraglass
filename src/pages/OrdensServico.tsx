@@ -3,19 +3,6 @@ import { ClipboardList, Plus, Search, Filter, Clock, CheckCircle, AlertCircle } 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-const mockOrders = [
-  { id: 'OS-001', client: 'João Silva', description: 'Box para banheiro 1,20x1,90m', status: 'em_andamento', date: '2024-01-15', deadline: '2024-01-20' },
-  { id: 'OS-002', client: 'Maria Santos', description: 'Espelho decorativo sala', status: 'pendente', date: '2024-01-14', deadline: '2024-01-18' },
-  { id: 'OS-003', client: 'Pedro Costa', description: 'Porta de vidro temperado', status: 'concluida', date: '2024-01-10', deadline: '2024-01-15' },
-  { id: 'OS-004', client: 'Ana Oliveira', description: 'Fechamento de varanda', status: 'em_andamento', date: '2024-01-12', deadline: '2024-01-22' },
-];
-
-const statusConfig = {
-  pendente: { label: 'Pendente', icon: AlertCircle, className: 'bg-action-orange/20 text-action-orange' },
-  em_andamento: { label: 'Em Andamento', icon: Clock, className: 'bg-action-blue/20 text-action-blue' },
-  concluida: { label: 'Concluída', icon: CheckCircle, className: 'bg-action-green/20 text-action-green' },
-};
-
 export default function OrdensServico() {
   return (
     <MainLayout>
@@ -41,7 +28,7 @@ export default function OrdensServico() {
               <AlertCircle className="w-6 h-6 text-action-orange" />
             </div>
             <div>
-              <p className="text-2xl font-display font-bold text-foreground">8</p>
+              <p className="text-2xl font-display font-bold text-foreground">0</p>
               <p className="text-sm text-muted-foreground">Pendentes</p>
             </div>
           </div>
@@ -50,7 +37,7 @@ export default function OrdensServico() {
               <Clock className="w-6 h-6 text-action-blue" />
             </div>
             <div>
-              <p className="text-2xl font-display font-bold text-foreground">12</p>
+              <p className="text-2xl font-display font-bold text-foreground">0</p>
               <p className="text-sm text-muted-foreground">Em Andamento</p>
             </div>
           </div>
@@ -59,7 +46,7 @@ export default function OrdensServico() {
               <CheckCircle className="w-6 h-6 text-action-green" />
             </div>
             <div>
-              <p className="text-2xl font-display font-bold text-foreground">45</p>
+              <p className="text-2xl font-display font-bold text-foreground">0</p>
               <p className="text-sm text-muted-foreground">Concluídas (mês)</p>
             </div>
           </div>
@@ -77,42 +64,16 @@ export default function OrdensServico() {
             </Button>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">OS</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Cliente</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Descrição</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Status</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Prazo</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {mockOrders.map((order) => {
-                  const status = statusConfig[order.status as keyof typeof statusConfig];
-                  const StatusIcon = status.icon;
-                  return (
-                    <tr key={order.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
-                      <td className="py-3 px-4 font-medium text-primary">{order.id}</td>
-                      <td className="py-3 px-4 font-medium text-foreground">{order.client}</td>
-                      <td className="py-3 px-4 text-muted-foreground">{order.description}</td>
-                      <td className="py-3 px-4">
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${status.className}`}>
-                          <StatusIcon className="w-3 h-3" />
-                          {status.label}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-muted-foreground">{order.deadline}</td>
-                      <td className="py-3 px-4">
-                        <Button variant="ghost" size="sm">Ver</Button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <ClipboardList className="w-12 h-12 text-muted-foreground/50 mb-4" />
+            <h3 className="font-medium text-foreground mb-1">Nenhuma ordem de serviço</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Crie sua primeira ordem de serviço para começar.
+            </p>
+            <Button className="gap-2">
+              <Plus className="w-4 h-4" />
+              Criar Primeira OS
+            </Button>
           </div>
         </div>
       </div>
