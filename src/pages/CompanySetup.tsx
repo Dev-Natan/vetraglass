@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Building2 } from 'lucide-react';
+import { Loader2, Building2, ArrowLeft } from 'lucide-react';
 import { z } from 'zod';
 
 const companySchema = z.object({
@@ -20,8 +20,13 @@ const companySchema = z.object({
 
 export default function CompanySetup() {
   const navigate = useNavigate();
-  const { user, setCurrentCompany } = useAuth();
+  const { user, setCurrentCompany, signOut } = useAuth();
   const { toast } = useToast();
+
+  const handleBackToLogin = async () => {
+    await signOut();
+    navigate('/auth');
+  };
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   
@@ -104,6 +109,16 @@ export default function CompanySetup() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sidebar via-background to-background p-4">
       <div className="w-full max-w-lg">
+        {/* Back Button */}
+        <Button 
+          variant="ghost" 
+          onClick={handleBackToLogin}
+          className="mb-4"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Voltar para Login
+        </Button>
+
         {/* Header */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 rounded-2xl bg-primary mx-auto flex items-center justify-center mb-4">
