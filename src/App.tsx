@@ -18,6 +18,7 @@ import CaixaVendas from "./pages/CaixaVendas";
 import PlanoCorte from "./pages/PlanoCorte";
 import Configuracoes from "./pages/Configuracoes";
 import ItemTemplates from "./pages/admin/ItemTemplates";
+import ProductTemplates from "./pages/admin/ProductTemplates";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
@@ -131,6 +132,11 @@ function AppRoutes() {
       <Route path="/admin/item-templates" element={
         <ProtectedRoute>
           <ItemTemplates />
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/product-templates" element={
+        <ProtectedRoute>
+          <ProductTemplates />
         </ProtectedRoute>
       } />
       <Route path="*" element={<NotFound />} />
