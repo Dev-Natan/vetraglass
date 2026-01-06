@@ -205,6 +205,7 @@ export type Database = {
           id: string
           image_url: string | null
           is_active: boolean
+          linha: string | null
           name: string
           specifications: Json | null
           type: Database["public"]["Enums"]["item_type"]
@@ -218,6 +219,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean
+          linha?: string | null
           name: string
           specifications?: Json | null
           type: Database["public"]["Enums"]["item_type"]
@@ -231,6 +233,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean
+          linha?: string | null
           name?: string
           specifications?: Json | null
           type?: Database["public"]["Enums"]["item_type"]

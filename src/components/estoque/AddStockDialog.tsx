@@ -39,6 +39,7 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
+  const [selectedLinha, setSelectedLinha] = useState('');
   const [selectedType, setSelectedType] = useState('');
   const [selectedItemId, setSelectedItemId] = useState('');
   const [quantity, setQuantity] = useState('');
@@ -53,6 +54,7 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
         .from('item_templates')
         .select('*')
         .eq('is_active', true)
+        .order('linha')
         .order('type')
         .order('name');
       
@@ -114,6 +116,7 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
   });
 
   const resetForm = () => {
+    setSelectedLinha('');
     setSelectedType('');
     setSelectedItemId('');
     setQuantity('');
@@ -121,9 +124,15 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
     setLocation('');
   };
 
+  const handleLinhaChange = (linha: string) => {
+    setSelectedLinha(linha);
+    setSelectedType('');
+    setSelectedItemId('');
+  };
+
   const handleTypeChange = (type: string) => {
     setSelectedType(type);
-    setSelectedItemId(''); // Reset item selection when type changes
+    setSelectedItemId('');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -144,12 +153,20 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
     item => !existingStock?.includes(item.id)
   );
 
-  // Get unique types from available items
-  const availableTypes = [...new Set(availableItems?.map(item => item.type) || [])];
+  // Get unique linhas from available items
+  const availableLinhas = [...new Set(availableItems?.map(item => item.linha || 'Sem Linha') || [])].sort();
+
+  // Filter items by selected linha
+  const itemsByLinha = selectedLinha
+    ? availableItems?.filter(item => (item.linha || 'Sem Linha') === selectedLinha)
+    : [];
+
+  // Get unique types from items in selected linha
+  const availableTypes = [...new Set(itemsByLinha?.map(item => item.type) || [])];
 
   // Filter items by selected type
   const filteredItems = selectedType
-    ? availableItems?.filter(item => item.type === selectedType)
+    ? itemsByLinha?.filter(item => item.type === selectedType)
     : [];
 
   return (
@@ -158,16 +175,36 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
         <DialogHeader>
           <DialogTitle>Adicionar Item ao Estoque</DialogTitle>
           <DialogDescription>
-            Selecione o tipo e o item para adicionar ao estoque.
+            Selecione a linha, tipo e item para adicionar ao estoque.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="type">Tipo *</Label>
-            <Select value={selectedType} onValueChange={handleTypeChange}>
+            <Label htmlFor="linha">Linha *</Label>
+            <Select value={selectedLinha} onValueChange={handleLinhaChange}>
               <SelectTrigger>
-                <SelectValue placeholder="Selecione o tipo..." />
+                <SelectValue placeholder="Selecione a linha..." />
+              </SelectTrigger>
+              <SelectContent>
+                {availableLinhas.map(linha => (
+                  <SelectItem key={linha} value={linha}>
+                    {linha}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="type">Tipo *</Label>
+            <Select 
+              value={selectedType} 
+              onValueChange={handleTypeChange}
+              disabled={!selectedLinha}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={selectedLinha ? "Selecione o tipo..." : "Selecione a linha primeiro"} />
               </SelectTrigger>
               <SelectContent>
                 {availableTypes.map(type => (
@@ -202,7 +239,7 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
                   ))
                 ) : (
                   <div className="p-4 text-sm text-muted-foreground text-center">
-                    {selectedType ? 'Todos os itens deste tipo já estão no estoque.' : 'Selecione um tipo primeiro.'}
+                    {selectedType ? 'Todos os itens deste tipo já estão no estoque.' : 'Selecione o tipo primeiro.'}
                   </div>
                 )}
               </SelectContent>
