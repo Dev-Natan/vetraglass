@@ -11,6 +11,19 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
+// Tradução de categorias
+const categoryLabels: Record<string, string> = {
+  window: 'Janela',
+  door: 'Porta',
+  facade: 'Fachada',
+  shower: 'Box de Banheiro',
+  mirror: 'Espelho',
+  partition: 'Divisória',
+  other: 'Outros',
+};
+
+const translateCategory = (category: string) => categoryLabels[category] || category;
+
 interface CutPiece {
   profileName: string;
   formula: string;
@@ -306,7 +319,7 @@ export default function PlanoCorte() {
                     <SelectContent>
                       {availableCategories.map(category => (
                         <SelectItem key={category} value={category}>
-                          {category}
+                          {translateCategory(category)}
                         </SelectItem>
                       ))}
                     </SelectContent>
