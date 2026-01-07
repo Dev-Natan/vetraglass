@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Package } from 'lucide-react';
 
 interface AddStockDialogProps {
   open: boolean;
@@ -169,6 +169,7 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
     ? itemsByLinha?.filter(item => item.type === selectedType)
     : [];
 
+  const selectedItem = itemTemplates?.find((item) => item.id === selectedItemId);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -224,7 +225,27 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
               disabled={!selectedType}
             >
               <SelectTrigger>
-                <SelectValue placeholder={selectedType ? "Selecione um item..." : "Selecione o tipo primeiro"} />
+                {selectedItem ? (
+                  <div className="flex items-center gap-2 min-w-0">
+                    {selectedItem.image_url ? (
+                      <div className="h-6 w-6 rounded border bg-background p-0.5 flex items-center justify-center shrink-0">
+                        <img
+                          src={selectedItem.image_url}
+                          alt={selectedItem.name}
+                          loading="lazy"
+                          className="max-h-full max-w-full object-contain"
+                        />
+                      </div>
+                    ) : (
+                      <div className="h-6 w-6 rounded border bg-background flex items-center justify-center shrink-0">
+                        <Package className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    )}
+                    <span className="truncate">{selectedItem.name}</span>
+                  </div>
+                ) : (
+                  <SelectValue placeholder={selectedType ? "Selecione um item..." : "Selecione o tipo primeiro"} />
+                )}
               </SelectTrigger>
               <SelectContent className="max-h-64">
                 {loadingItems ? (
@@ -234,7 +255,23 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
                 ) : filteredItems && filteredItems.length > 0 ? (
                   filteredItems.map(item => (
                     <SelectItem key={item.id} value={item.id}>
-                      {item.name}
+                      <div className="flex items-center gap-2 min-w-0">
+                        {item.image_url ? (
+                          <div className="h-7 w-7 rounded border bg-background p-0.5 flex items-center justify-center shrink-0">
+                            <img
+                              src={item.image_url}
+                              alt={item.name}
+                              loading="lazy"
+                              className="max-h-full max-w-full object-contain"
+                            />
+                          </div>
+                        ) : (
+                          <div className="h-7 w-7 rounded border bg-background flex items-center justify-center shrink-0">
+                            <Package className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                        )}
+                        <span className="truncate">{item.name}</span>
+                      </div>
                     </SelectItem>
                   ))
                 ) : (
