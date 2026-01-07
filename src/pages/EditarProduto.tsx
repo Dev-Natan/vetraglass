@@ -241,7 +241,11 @@ export default function EditarProduto() {
 
   const getStorageUrl = (path: string | null) => {
     if (!path) return null;
+    // Se começa com http, já é URL completa
     if (path.startsWith('http')) return path;
+    // Se começa com /, é arquivo local na pasta public
+    if (path.startsWith('/')) return path;
+    // Caso contrário, é do storage do Supabase
     return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/item-templates/${path}`;
   };
 
