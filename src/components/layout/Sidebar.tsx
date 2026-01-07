@@ -14,7 +14,8 @@ import {
   X,
   ShoppingCart,
   Scissors,
-  Settings
+  Settings,
+  Tag
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -26,6 +27,7 @@ const menuItems = [
   { icon: Users, label: 'Clientes', path: '/clientes' },
   { icon: Package, label: 'Produtos', path: '/produtos' },
   { icon: Boxes, label: 'Estoque', path: '/estoque' },
+  { icon: Tag, label: 'Preços', path: '/precos' },
   { icon: FileText, label: 'Orçamentos', path: '/orcamentos' },
   { icon: ClipboardList, label: 'Ordens de Serviço', path: '/ordens-servico' },
   { icon: DollarSign, label: 'Financeiro', path: '/financeiro' },

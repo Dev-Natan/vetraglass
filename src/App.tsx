@@ -12,6 +12,7 @@ import Produtos from "./pages/Produtos";
 import ProdutosLinha from "./pages/ProdutosLinha";
 import EditarProduto from "./pages/EditarProduto";
 import Estoque from "./pages/Estoque";
+import PrecosEmpresa from "./pages/PrecosEmpresa";
 import Orcamentos from "./pages/Orcamentos";
 import OrdensServico from "./pages/OrdensServico";
 import Financeiro from "./pages/Financeiro";
@@ -117,6 +118,11 @@ function AppRoutes() {
       <Route path="/estoque" element={
         <ProtectedRoute>
           <Estoque />
+        </ProtectedRoute>
+      } />
+      <Route path="/precos" element={
+        <ProtectedRoute>
+          <PrecosEmpresa />
         </ProtectedRoute>
       } />
       <Route path="/orcamentos" element={
