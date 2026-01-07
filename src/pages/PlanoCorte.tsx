@@ -90,6 +90,8 @@ function optimizeCutting(pieces: CutPiece[], barLength: number = 6000): BarOptim
 
 export default function PlanoCorte() {
   const { currentCompany } = useAuth();
+  const [selectedLinha, setSelectedLinha] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedProduct, setSelectedProduct] = useState<string>('');
   const [width, setWidth] = useState<number>(1200);
   const [height, setHeight] = useState<number>(1400);
@@ -112,6 +114,7 @@ export default function PlanoCorte() {
             id,
             name,
             category,
+            linha,
             min_width,
             max_width,
             min_height,
@@ -126,6 +129,53 @@ export default function PlanoCorte() {
     },
     enabled: !!currentCompany?.id
   });
+
+  // Get unique linhas from products
+  const availableLinhas = useMemo(() => {
+    if (!companyProducts) return [];
+    const linhas = new Set<string>();
+    companyProducts.forEach(p => {
+      const linha = (p.product_templates as any)?.linha;
+      if (linha) linhas.add(linha);
+    });
+    return Array.from(linhas).sort();
+  }, [companyProducts]);
+
+  // Get unique categories filtered by selected linha
+  const availableCategories = useMemo(() => {
+    if (!companyProducts) return [];
+    const categories = new Set<string>();
+    companyProducts
+      .filter(p => !selectedLinha || (p.product_templates as any)?.linha === selectedLinha)
+      .forEach(p => {
+        const category = (p.product_templates as any)?.category;
+        if (category) categories.add(category);
+      });
+    return Array.from(categories).sort();
+  }, [companyProducts, selectedLinha]);
+
+  // Get products filtered by linha and category
+  const filteredProducts = useMemo(() => {
+    if (!companyProducts) return [];
+    return companyProducts.filter(p => {
+      const template = p.product_templates as any;
+      if (selectedLinha && template?.linha !== selectedLinha) return false;
+      if (selectedCategory && template?.category !== selectedCategory) return false;
+      return true;
+    });
+  }, [companyProducts, selectedLinha, selectedCategory]);
+
+  // Reset dependent filters when parent changes
+  const handleLinhaChange = (value: string) => {
+    setSelectedLinha(value);
+    setSelectedCategory('');
+    setSelectedProduct('');
+  };
+
+  const handleCategoryChange = (value: string) => {
+    setSelectedCategory(value);
+    setSelectedProduct('');
+  };
 
   // Fetch product template items for selected product
   const { data: productItems } = useQuery({
@@ -240,21 +290,63 @@ export default function PlanoCorte() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Product Selection */}
-              <div className="space-y-2">
-                <Label>Produto</Label>
-                <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um produto" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {companyProducts?.map(product => (
-                      <SelectItem key={product.id} value={product.id}>
-                        {product.commercial_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              {/* Filters: Linha → Categoria → Produto */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>Linha</Label>
+                  <Select value={selectedLinha} onValueChange={handleLinhaChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a linha" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableLinhas.map(linha => (
+                        <SelectItem key={linha} value={linha}>
+                          {linha}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Categoria</Label>
+                  <Select 
+                    value={selectedCategory} 
+                    onValueChange={handleCategoryChange}
+                    disabled={!selectedLinha}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableCategories.map(category => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Produto</Label>
+                  <Select 
+                    value={selectedProduct} 
+                    onValueChange={setSelectedProduct}
+                    disabled={!selectedCategory}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o produto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredProducts.map(product => (
+                        <SelectItem key={product.id} value={product.id}>
+                          {product.commercial_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               {selectedProduct && (
