@@ -251,6 +251,7 @@ export type Database = {
       product_template_items: {
         Row: {
           created_at: string
+          cut_angle: number
           id: string
           is_optional: boolean
           item_template_id: string
@@ -260,6 +261,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          cut_angle?: number
           id?: string
           is_optional?: boolean
           item_template_id: string
@@ -269,6 +271,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          cut_angle?: number
           id?: string
           is_optional?: boolean
           item_template_id?: string
