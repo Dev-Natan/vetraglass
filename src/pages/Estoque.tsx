@@ -11,23 +11,14 @@ export default function Estoque() {
   const { currentCompany } = useAuth();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
 
-  // Fetch company stock with item details
-  const { data: stockItems, isLoading } = useQuery({
+  // Fetch company stock
+  const { data: stockData, isLoading: loadingStock } = useQuery({
     queryKey: ['company-stock', currentCompany?.id],
     queryFn: async () => {
       if (!currentCompany?.id) return [];
       const { data, error } = await supabase
         .from('company_stock')
-        .select(`
-          *,
-          item_template:item_templates (
-            id,
-            name,
-            type,
-            unit,
-            specifications
-          )
-        `)
+        .select('*')
         .eq('company_id', currentCompany.id)
         .order('created_at', { ascending: false });
       
@@ -36,6 +27,28 @@ export default function Estoque() {
     },
     enabled: !!currentCompany?.id,
   });
+
+  // Fetch item templates
+  const { data: itemTemplates, isLoading: loadingItems } = useQuery({
+    queryKey: ['item-templates'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('item_templates')
+        .select('*')
+        .eq('is_active', true);
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Combine stock with item details
+  const stockItems = stockData?.map(stock => {
+    const item_template = itemTemplates?.find(t => t.id === stock.item_template_id);
+    return { ...stock, item_template };
+  });
+
+  const isLoading = loadingStock || loadingItems;
 
   // Filter low stock items
   const lowStockItems = stockItems?.filter(
