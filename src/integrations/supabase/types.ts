@@ -256,6 +256,7 @@ export type Database = {
           is_optional: boolean
           item_template_id: string
           notes: string | null
+          pieces_quantity: number
           product_template_id: string
           quantity_formula: string
         }
@@ -266,6 +267,7 @@ export type Database = {
           is_optional?: boolean
           item_template_id: string
           notes?: string | null
+          pieces_quantity?: number
           product_template_id: string
           quantity_formula?: string
         }
@@ -276,6 +278,7 @@ export type Database = {
           is_optional?: boolean
           item_template_id?: string
           notes?: string | null
+          pieces_quantity?: number
           product_template_id?: string
           quantity_formula?: string
         }
