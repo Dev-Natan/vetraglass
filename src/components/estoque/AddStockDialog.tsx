@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Loader2, Package } from 'lucide-react';
 
 interface AddStockDialogProps {
@@ -47,6 +48,7 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
   const [location, setLocation] = useState('');
   const [cost, setCost] = useState('');
   const [price, setPrice] = useState('');
+  const [allowFractional, setAllowFractional] = useState(false);
 
   // Fetch item templates
   const { data: itemTemplates, isLoading: loadingItems } = useQuery({
@@ -96,7 +98,8 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
           quantity: parseFloat(quantity) || 0,
           min_quantity: parseFloat(minQuantity) || 0,
           location: location || null,
-        });
+          allow_fractional: allowFractional,
+        } as any);
 
       if (stockError) throw stockError;
 
@@ -148,6 +151,7 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
     setLocation('');
     setCost('');
     setPrice('');
+    setAllowFractional(false);
   };
 
   const handleLinhaChange = (linha: string) => {
@@ -347,6 +351,20 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
               onChange={(e) => setLocation(e.target.value)}
               placeholder="Ex: Prateleira A1, Galpão 2..."
               maxLength={100}
+            />
+          </div>
+
+          <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
+            <div className="space-y-0.5">
+              <Label htmlFor="allowFractionalAdd" className="cursor-pointer">Venda Fracionada</Label>
+              <p className="text-xs text-muted-foreground">
+                Permitir vender quantidades fracionadas
+              </p>
+            </div>
+            <Switch
+              id="allowFractionalAdd"
+              checked={allowFractional}
+              onCheckedChange={setAllowFractional}
             />
           </div>
 
