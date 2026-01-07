@@ -99,71 +99,60 @@ export default function PlanoCorte() {
   const [barLength, setBarLength] = useState<number>(6000);
   const [showResults, setShowResults] = useState(false);
 
-  // Fetch company products
-  const { data: companyProducts } = useQuery({
-    queryKey: ['company-products-for-cutting', currentCompany?.id],
+  // Fetch product templates (global templates)
+  const { data: productTemplates } = useQuery({
+    queryKey: ['product-templates-for-cutting'],
     queryFn: async () => {
-      if (!currentCompany?.id) return [];
       const { data, error } = await supabase
-        .from('company_products')
+        .from('product_templates')
         .select(`
           id,
-          commercial_name,
-          product_template_id,
-          product_templates (
-            id,
-            name,
-            category,
-            linha,
-            min_width,
-            max_width,
-            min_height,
-            max_height
-          )
+          name,
+          category,
+          linha,
+          min_width,
+          max_width,
+          min_height,
+          max_height
         `)
-        .eq('company_id', currentCompany.id)
         .eq('is_active', true);
       
       if (error) throw error;
       return data || [];
-    },
-    enabled: !!currentCompany?.id
+    }
   });
 
   // Get unique linhas from products
   const availableLinhas = useMemo(() => {
-    if (!companyProducts) return [];
+    if (!productTemplates) return [];
     const linhas = new Set<string>();
-    companyProducts.forEach(p => {
-      const linha = (p.product_templates as any)?.linha;
-      if (linha) linhas.add(linha);
+    productTemplates.forEach(p => {
+      if (p.linha) linhas.add(p.linha);
     });
     return Array.from(linhas).sort();
-  }, [companyProducts]);
+  }, [productTemplates]);
 
   // Get unique categories filtered by selected linha
   const availableCategories = useMemo(() => {
-    if (!companyProducts) return [];
+    if (!productTemplates) return [];
     const categories = new Set<string>();
-    companyProducts
-      .filter(p => !selectedLinha || (p.product_templates as any)?.linha === selectedLinha)
+    productTemplates
+      .filter(p => !selectedLinha || p.linha === selectedLinha)
       .forEach(p => {
-        const category = (p.product_templates as any)?.category;
-        if (category) categories.add(category);
+        if (p.category) categories.add(p.category);
       });
     return Array.from(categories).sort();
-  }, [companyProducts, selectedLinha]);
+  }, [productTemplates, selectedLinha]);
 
   // Get products filtered by linha and category
   const filteredProducts = useMemo(() => {
-    if (!companyProducts) return [];
-    return companyProducts.filter(p => {
-      const template = p.product_templates as any;
-      if (selectedLinha && template?.linha !== selectedLinha) return false;
-      if (selectedCategory && template?.category !== selectedCategory) return false;
+    if (!productTemplates) return [];
+    return productTemplates.filter(p => {
+      if (selectedLinha && p.linha !== selectedLinha) return false;
+      if (selectedCategory && p.category !== selectedCategory) return false;
       return true;
     });
-  }, [companyProducts, selectedLinha, selectedCategory]);
+  }, [productTemplates, selectedLinha, selectedCategory]);
 
   // Reset dependent filters when parent changes
   const handleLinhaChange = (value: string) => {
@@ -183,10 +172,6 @@ export default function PlanoCorte() {
     queryFn: async () => {
       if (!selectedProduct) return [];
       
-      // Get the product_template_id from company_products
-      const companyProduct = companyProducts?.find(p => p.id === selectedProduct);
-      if (!companyProduct) return [];
-      
       const { data, error } = await supabase
         .from('product_template_items')
         .select(`
@@ -202,12 +187,12 @@ export default function PlanoCorte() {
             image_url
           )
         `)
-        .eq('product_template_id', companyProduct.product_template_id);
+        .eq('product_template_id', selectedProduct);
       
       if (error) throw error;
       return data || [];
     },
-    enabled: !!selectedProduct && !!companyProducts
+    enabled: !!selectedProduct
   });
 
   // Calculate cuts based on dimensions
@@ -259,7 +244,7 @@ export default function PlanoCorte() {
     setQuantity(1);
   };
 
-  const selectedProductData = companyProducts?.find(p => p.id === selectedProduct);
+  const selectedProductData = productTemplates?.find(p => p.id === selectedProduct);
 
   return (
     <MainLayout>
@@ -341,7 +326,7 @@ export default function PlanoCorte() {
                     <SelectContent>
                       {filteredProducts.map(product => (
                         <SelectItem key={product.id} value={product.id}>
-                          {product.commercial_name}
+                          {product.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -359,13 +344,13 @@ export default function PlanoCorte() {
                         type="number" 
                         value={width} 
                         onChange={e => setWidth(Number(e.target.value))}
-                        min={selectedProductData?.product_templates?.min_width || 300}
-                        max={selectedProductData?.product_templates?.max_width || 3000}
+                        min={selectedProductData?.min_width || 300}
+                        max={selectedProductData?.max_width || 3000}
                       />
-                      {selectedProductData?.product_templates?.min_width && (
+                      {selectedProductData?.min_width && (
                         <p className="text-xs text-muted-foreground">
-                          Min: {selectedProductData.product_templates.min_width}mm | 
-                          Max: {selectedProductData.product_templates.max_width}mm
+                          Min: {selectedProductData.min_width}mm | 
+                          Max: {selectedProductData.max_width}mm
                         </p>
                       )}
                     </div>
@@ -375,13 +360,13 @@ export default function PlanoCorte() {
                         type="number" 
                         value={height} 
                         onChange={e => setHeight(Number(e.target.value))}
-                        min={selectedProductData?.product_templates?.min_height || 300}
-                        max={selectedProductData?.product_templates?.max_height || 3000}
+                        min={selectedProductData?.min_height || 300}
+                        max={selectedProductData?.max_height || 3000}
                       />
-                      {selectedProductData?.product_templates?.min_height && (
+                      {selectedProductData?.min_height && (
                         <p className="text-xs text-muted-foreground">
-                          Min: {selectedProductData.product_templates.min_height}mm | 
-                          Max: {selectedProductData.product_templates.max_height}mm
+                          Min: {selectedProductData.min_height}mm | 
+                          Max: {selectedProductData.max_height}mm
                         </p>
                       )}
                     </div>
@@ -518,7 +503,7 @@ export default function PlanoCorte() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Scissors className="w-5 h-5" />
-                  Lista de Cortes - {selectedProductData?.commercial_name}
+                  Lista de Cortes - {selectedProductData?.name}
                 </CardTitle>
               </CardHeader>
               <CardContent>
