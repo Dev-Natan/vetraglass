@@ -51,6 +51,7 @@ type ProductTemplateItem = {
   quantity_formula: string;
   is_optional: boolean;
   notes: string | null;
+  cut_angle: number;
   item_template: {
     id: string;
     name: string;
@@ -59,6 +60,14 @@ type ProductTemplateItem = {
     image_url: string | null;
     linha: string | null;
   };
+};
+
+// Helper para detectar se a fórmula usa Altura ou Largura
+const getFormulaType = (formula: string): 'Altura' | 'Largura' | null => {
+  const lower = formula.toLowerCase();
+  if (lower.includes('altura')) return 'Altura';
+  if (lower.includes('largura')) return 'Largura';
+  return null;
 };
 
 type ItemTemplate = {
@@ -497,15 +506,30 @@ export default function EditarProduto() {
                     <h4 className="font-medium text-xs text-primary truncate text-center">
                       {item.item_template?.name}
                     </h4>
+                    
+                    {/* Formula type indicator */}
+                    {getFormulaType(item.quantity_formula) && (
+                      <div className="flex justify-center mt-1">
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                          getFormulaType(item.quantity_formula) === 'Altura' 
+                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' 
+                            : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                        }`}>
+                          {getFormulaType(item.quantity_formula)}
+                        </span>
+                      </div>
+                    )}
+                    
                     <p className="text-xs text-muted-foreground text-center mt-1">
                       {item.quantity_formula}
                     </p>
 
                     {/* Angle indicators (for profiles) */}
                     {tab.value === 'profile' && (
-                      <div className="flex justify-between mt-3 text-sm font-bold text-foreground">
-                        <span>90°</span>
-                        <span>90°</span>
+                      <div className="flex justify-center mt-3">
+                        <span className="text-sm font-bold text-foreground bg-muted px-2 py-1 rounded">
+                          {item.cut_angle || 90}°
+                        </span>
                       </div>
                     )}
                   </div>
