@@ -430,10 +430,6 @@ export default function EditarProduto() {
             <TabsContent key={tab.value} value={tab.value} className="mt-4">
               {/* Actions bar */}
               <div className="flex justify-end gap-2 mb-4">
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Video className="w-4 h-4" />
-                  Assistir tutorial
-                </Button>
                 <Button 
                   size="sm" 
                   className="gap-2"
