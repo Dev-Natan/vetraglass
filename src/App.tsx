@@ -20,6 +20,7 @@ import Configuracoes from "./pages/Configuracoes";
 import ItemTemplates from "./pages/admin/ItemTemplates";
 import ProductTemplates from "./pages/admin/ProductTemplates";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminCompanies from "./pages/admin/AdminCompanies";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
@@ -153,6 +154,11 @@ function AppRoutes() {
       <Route path="/admin/product-templates" element={
         <ProtectedRoute>
           <ProductTemplates />
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/companies" element={
+        <ProtectedRoute>
+          <AdminCompanies />
         </ProtectedRoute>
       } />
       <Route path="*" element={<NotFound />} />
