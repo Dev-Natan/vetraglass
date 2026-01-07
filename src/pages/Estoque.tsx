@@ -3,13 +3,21 @@ import { useQuery } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Boxes, TrendingDown, TrendingUp, Package, Plus, MapPin } from 'lucide-react';
+import { Boxes, TrendingDown, TrendingUp, Package, Plus, MapPin, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AddStockDialog } from '@/components/estoque/AddStockDialog';
+import { EditItemPriceDialog } from '@/components/estoque/EditItemPriceDialog';
 
 export default function Estoque() {
   const { currentCompany } = useAuth();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [priceDialogOpen, setPriceDialogOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<{
+    id: string;
+    name: string;
+    imageUrl?: string | null;
+    unit?: string;
+  } | null>(null);
 
   // Fetch company stock
   const {
@@ -61,14 +69,42 @@ export default function Estoque() {
     },
   });
 
-  // Combine stock with item details (only when both are loaded)
+  // Fetch company item prices
+  const { data: itemPrices } = useQuery({
+    queryKey: ['company-item-prices', currentCompany?.id],
+    queryFn: async () => {
+      if (!currentCompany?.id) return [];
+
+      const { data, error } = await supabase
+        .from('company_item_prices')
+        .select('*')
+        .eq('company_id', currentCompany.id);
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!currentCompany?.id,
+  });
+
+  // Combine stock with item details and prices (only when both are loaded)
   const stockItems = useMemo(() => {
     if (!stockData || !itemTemplates) return [];
     return stockData.map((stock) => {
       const item_template = itemTemplates.find((t) => t.id === stock.item_template_id);
-      return { ...stock, item_template };
+      const priceInfo = itemPrices?.find((p) => p.item_template_id === stock.item_template_id);
+      return { ...stock, item_template, priceInfo };
     });
-  }, [stockData, itemTemplates]);
+  }, [stockData, itemTemplates, itemPrices]);
+
+  const handleOpenPriceDialog = (item: typeof stockItems[0]) => {
+    setSelectedItem({
+      id: item.item_template_id,
+      name: item.item_template?.name ?? 'Item',
+      imageUrl: item.item_template?.image_url,
+      unit: item.item_template?.unit,
+    });
+    setPriceDialogOpen(true);
+  };
 
   const isLoading = loadingStock || loadingItems;
   const loadError = stockError || itemsError;
@@ -194,7 +230,8 @@ export default function Estoque() {
                 {stockItems.map(item => (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between gap-3 p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                    className="flex items-center justify-between gap-3 p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer"
+                    onClick={() => handleOpenPriceDialog(item)}
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       {item.item_template?.image_url ? (
@@ -223,6 +260,26 @@ export default function Estoque() {
                           <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                             <MapPin className="w-3 h-3" />
                             {item.location}
+                          </p>
+                        )}
+                        {/* Price info */}
+                        {item.priceInfo && (item.priceInfo.cost > 0 || item.priceInfo.price > 0) ? (
+                          <div className="flex items-center gap-3 mt-1 text-xs">
+                            {item.priceInfo.cost > 0 && (
+                              <span className="text-muted-foreground">
+                                Custo: R$ {Number(item.priceInfo.cost).toFixed(2)}
+                              </span>
+                            )}
+                            {item.priceInfo.price > 0 && (
+                              <span className="text-green-600 font-medium">
+                                Venda: R$ {Number(item.priceInfo.price).toFixed(2)}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground/70 flex items-center gap-1 mt-1">
+                            <DollarSign className="w-3 h-3" />
+                            Clique para definir preços
                           </p>
                         )}
                       </div>
@@ -260,6 +317,14 @@ export default function Estoque() {
       </div>
 
       <AddStockDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} />
+      <EditItemPriceDialog
+        open={priceDialogOpen}
+        onOpenChange={setPriceDialogOpen}
+        itemTemplateId={selectedItem?.id ?? null}
+        itemName={selectedItem?.name ?? ''}
+        itemImageUrl={selectedItem?.imageUrl}
+        itemUnit={selectedItem?.unit}
+      />
     </MainLayout>
   );
 }
