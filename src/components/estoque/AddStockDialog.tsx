@@ -45,6 +45,8 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
   const [quantity, setQuantity] = useState('');
   const [minQuantity, setMinQuantity] = useState('');
   const [location, setLocation] = useState('');
+  const [cost, setCost] = useState('');
+  const [price, setPrice] = useState('');
 
   // Fetch item templates
   const { data: itemTemplates, isLoading: loadingItems } = useQuery({
@@ -85,7 +87,8 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
         throw new Error('Dados incompletos');
       }
 
-      const { error } = await supabase
+      // Insert stock record
+      const { error: stockError } = await supabase
         .from('company_stock')
         .insert({
           company_id: currentCompany.id,
@@ -95,7 +98,26 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
           location: location || null,
         });
 
-      if (error) throw error;
+      if (stockError) throw stockError;
+
+      // Insert price record if cost or price is provided
+      const costValue = parseFloat(cost) || 0;
+      const priceValue = parseFloat(price) || 0;
+      
+      if (costValue > 0 || priceValue > 0) {
+        const { error: priceError } = await supabase
+          .from('company_item_prices')
+          .upsert({
+            company_id: currentCompany.id,
+            item_template_id: selectedItemId,
+            cost: costValue,
+            price: priceValue,
+          }, {
+            onConflict: 'company_id,item_template_id'
+          });
+
+        if (priceError) throw priceError;
+      }
     },
     onSuccess: () => {
       toast({
@@ -104,6 +126,7 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
       });
       queryClient.invalidateQueries({ queryKey: ['company-stock'] });
       queryClient.invalidateQueries({ queryKey: ['company-stock-item-ids'] });
+      queryClient.invalidateQueries({ queryKey: ['company-item-prices'] });
       resetForm();
       onOpenChange(false);
     },
@@ -123,6 +146,8 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
     setQuantity('');
     setMinQuantity('');
     setLocation('');
+    setCost('');
+    setPrice('');
   };
 
   const handleLinhaChange = (linha: string) => {
@@ -173,11 +198,11 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
   const selectedItem = itemTemplates?.find((item) => item.id === selectedItemId);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Adicionar Item ao Estoque</DialogTitle>
           <DialogDescription>
-            Selecione a linha, tipo e item para adicionar ao estoque.
+            Configure o item, quantidade e preços em um só lugar.
           </DialogDescription>
         </DialogHeader>
 
@@ -321,7 +346,53 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="Ex: Prateleira A1, Galpão 2..."
+              maxLength={100}
             />
+          </div>
+
+          {/* Separator for pricing */}
+          <div className="border-t pt-4 mt-4">
+            <p className="text-sm font-medium text-muted-foreground mb-3">Preços (opcional)</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="cost">Preço de Custo (R$)</Label>
+                <Input
+                  id="cost"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={cost}
+                  onChange={(e) => setCost(e.target.value)}
+                  placeholder="0,00"
+                />
+                <p className="text-xs text-muted-foreground">Por barra (6m)</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="price">Preço de Venda (R$)</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  placeholder="0,00"
+                />
+                <p className="text-xs text-muted-foreground">Por barra (6m)</p>
+              </div>
+            </div>
+
+            {/* Margin indicator */}
+            {parseFloat(cost) > 0 && parseFloat(price) > 0 && (
+              <div className="mt-3 p-2 rounded bg-muted/50 text-xs flex items-center justify-between">
+                <span className="text-muted-foreground">Margem:</span>
+                <span className={`font-medium ${parseFloat(price) >= parseFloat(cost) ? 'text-green-600' : 'text-destructive'}`}>
+                  {(((parseFloat(price) - parseFloat(cost)) / parseFloat(cost)) * 100).toFixed(1)}%
+                  {' • '}R$ {(parseFloat(price) - parseFloat(cost)).toFixed(2)} lucro
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-4">

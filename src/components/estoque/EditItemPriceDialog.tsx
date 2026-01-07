@@ -13,7 +13,18 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Package } from 'lucide-react';
+import { Loader2, Package, Trash2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface EditItemPriceDialogProps {
   open: boolean;
@@ -22,6 +33,7 @@ interface EditItemPriceDialogProps {
   itemName: string;
   itemImageUrl?: string | null;
   itemUnit?: string;
+  stockId?: string;
 }
 
 export function EditItemPriceDialog({
@@ -31,6 +43,7 @@ export function EditItemPriceDialog({
   itemName,
   itemImageUrl,
   itemUnit = 'un',
+  stockId,
 }: EditItemPriceDialogProps) {
   const { currentCompany } = useAuth();
   const { toast } = useToast();
@@ -38,6 +51,9 @@ export function EditItemPriceDialog({
 
   const [cost, setCost] = useState('');
   const [price, setPrice] = useState('');
+  const [quantity, setQuantity] = useState('');
+  const [minQuantity, setMinQuantity] = useState('');
+  const [location, setLocation] = useState('');
 
   // Fetch existing price
   const { data: existingPrice, isLoading: loadingPrice } = useQuery({
@@ -47,6 +63,25 @@ export function EditItemPriceDialog({
 
       const { data, error } = await supabase
         .from('company_item_prices')
+        .select('*')
+        .eq('company_id', currentCompany.id)
+        .eq('item_template_id', itemTemplateId)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!currentCompany?.id && !!itemTemplateId && open,
+  });
+
+  // Fetch existing stock
+  const { data: existingStock, isLoading: loadingStock } = useQuery({
+    queryKey: ['company-stock-item', currentCompany?.id, itemTemplateId],
+    queryFn: async () => {
+      if (!currentCompany?.id || !itemTemplateId) return null;
+
+      const { data, error } = await supabase
+        .from('company_stock')
         .select('*')
         .eq('company_id', currentCompany.id)
         .eq('item_template_id', itemTemplateId)
@@ -69,12 +104,25 @@ export function EditItemPriceDialog({
     }
   }, [existingPrice]);
 
-  const savePriceMutation = useMutation({
+  useEffect(() => {
+    if (existingStock) {
+      setQuantity(existingStock.quantity?.toString() ?? '');
+      setMinQuantity(existingStock.min_quantity?.toString() ?? '');
+      setLocation(existingStock.location ?? '');
+    } else {
+      setQuantity('');
+      setMinQuantity('');
+      setLocation('');
+    }
+  }, [existingStock]);
+
+  const saveMutation = useMutation({
     mutationFn: async () => {
       if (!currentCompany?.id || !itemTemplateId) {
         throw new Error('Dados incompletos');
       }
 
+      // Save prices
       const priceData = {
         company_id: currentCompany.id,
         item_template_id: itemTemplateId,
@@ -83,7 +131,6 @@ export function EditItemPriceDialog({
       };
 
       if (existingPrice) {
-        // Update existing
         const { error } = await supabase
           .from('company_item_prices')
           .update({
@@ -94,21 +141,36 @@ export function EditItemPriceDialog({
 
         if (error) throw error;
       } else {
-        // Insert new
         const { error } = await supabase
           .from('company_item_prices')
           .insert(priceData);
 
         if (error) throw error;
       }
+
+      // Save stock
+      if (existingStock) {
+        const { error } = await supabase
+          .from('company_stock')
+          .update({
+            quantity: parseFloat(quantity) || 0,
+            min_quantity: parseFloat(minQuantity) || 0,
+            location: location || null,
+          })
+          .eq('id', existingStock.id);
+
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       toast({
-        title: 'Preços salvos',
-        description: 'Os preços foram atualizados com sucesso.',
+        title: 'Dados salvos',
+        description: 'As informações foram atualizadas com sucesso.',
       });
       queryClient.invalidateQueries({ queryKey: ['company-item-prices'] });
       queryClient.invalidateQueries({ queryKey: ['company-item-price'] });
+      queryClient.invalidateQueries({ queryKey: ['company-stock'] });
+      queryClient.invalidateQueries({ queryKey: ['company-stock-item'] });
       onOpenChange(false);
     },
     onError: (error: Error) => {
@@ -120,9 +182,52 @@ export function EditItemPriceDialog({
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      if (!existingStock?.id) {
+        throw new Error('Item não encontrado');
+      }
+
+      // Delete stock
+      const { error: stockError } = await supabase
+        .from('company_stock')
+        .delete()
+        .eq('id', existingStock.id);
+
+      if (stockError) throw stockError;
+
+      // Also delete price if exists
+      if (existingPrice?.id) {
+        const { error: priceError } = await supabase
+          .from('company_item_prices')
+          .delete()
+          .eq('id', existingPrice.id);
+
+        if (priceError) throw priceError;
+      }
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Item removido',
+        description: 'O item foi removido do estoque.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['company-stock'] });
+      queryClient.invalidateQueries({ queryKey: ['company-stock-item-ids'] });
+      queryClient.invalidateQueries({ queryKey: ['company-item-prices'] });
+      onOpenChange(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erro ao remover',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    savePriceMutation.mutate();
+    saveMutation.mutate();
   };
 
   // Calculate margin
@@ -130,20 +235,22 @@ export function EditItemPriceDialog({
   const priceValue = parseFloat(price) || 0;
   const margin = costValue > 0 ? ((priceValue - costValue) / costValue) * 100 : 0;
 
+  const isLoading = loadingPrice || loadingStock;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Configurar Preços</DialogTitle>
+          <DialogTitle>Configurar Item</DialogTitle>
           <DialogDescription>
-            Defina os preços de custo e venda para este item.
+            Gerencie quantidade, localização e preços deste item.
           </DialogDescription>
         </DialogHeader>
 
         {/* Item Info */}
         <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border">
           {itemImageUrl ? (
-            <div className="h-12 w-12 rounded-md border bg-background p-1 flex items-center justify-center shrink-0">
+            <div className="h-14 w-14 rounded-md border bg-background p-1 flex items-center justify-center shrink-0">
               <img
                 src={itemImageUrl}
                 alt={itemName}
@@ -152,90 +259,170 @@ export function EditItemPriceDialog({
               />
             </div>
           ) : (
-            <div className="h-12 w-12 rounded-md border bg-background flex items-center justify-center shrink-0">
-              <Package className="h-6 w-6 text-muted-foreground" />
+            <div className="h-14 w-14 rounded-md border bg-background flex items-center justify-center shrink-0">
+              <Package className="h-7 w-7 text-muted-foreground" />
             </div>
           )}
           <div>
-            <p className="font-medium">{itemName}</p>
+            <p className="font-semibold text-lg">{itemName}</p>
             <p className="text-xs text-muted-foreground">
               Barra padrão: 6000mm | Unidade: {itemUnit}
             </p>
           </div>
         </div>
 
-        {loadingPrice ? (
+        {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="cost">Preço de Custo (R$)</Label>
-                <Input
-                  id="cost"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={cost}
-                  onChange={(e) => setCost(e.target.value)}
-                  placeholder="0,00"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Custo por barra (6m)
-                </p>
+            {/* Stock Section */}
+            <div className="space-y-3">
+              <p className="text-sm font-medium text-foreground">Estoque</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="quantity">Quantidade Atual</Label>
+                  <Input
+                    id="quantity"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={quantity}
+                    onChange={(e) => setQuantity(e.target.value)}
+                    placeholder="0"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="minQuantity">Quantidade Mínima</Label>
+                  <Input
+                    id="minQuantity"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={minQuantity}
+                    onChange={(e) => setMinQuantity(e.target.value)}
+                    placeholder="0"
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="price">Preço de Venda (R$)</Label>
+                <Label htmlFor="location">Localização</Label>
                 <Input
-                  id="price"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  placeholder="0,00"
+                  id="location"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="Ex: Prateleira A1, Galpão 2..."
+                  maxLength={100}
                 />
-                <p className="text-xs text-muted-foreground">
-                  Venda por barra (6m)
-                </p>
               </div>
             </div>
 
-            {/* Margin indicator */}
-            {costValue > 0 && priceValue > 0 && (
-              <div className="p-3 rounded-lg bg-muted/50 border">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Margem de lucro:</span>
-                  <span className={`font-semibold ${margin >= 0 ? 'text-green-600' : 'text-destructive'}`}>
-                    {margin.toFixed(1)}%
-                  </span>
+            {/* Separator */}
+            <div className="border-t" />
+
+            {/* Pricing Section */}
+            <div className="space-y-3">
+              <p className="text-sm font-medium text-foreground">Preços (por barra de 6m)</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="cost">Preço de Custo (R$)</Label>
+                  <Input
+                    id="cost"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={cost}
+                    onChange={(e) => setCost(e.target.value)}
+                    placeholder="0,00"
+                  />
                 </div>
-                <div className="flex items-center justify-between mt-1">
-                  <span className="text-sm text-muted-foreground">Lucro por barra:</span>
-                  <span className={`font-semibold ${priceValue - costValue >= 0 ? 'text-green-600' : 'text-destructive'}`}>
-                    R$ {(priceValue - costValue).toFixed(2)}
-                  </span>
+
+                <div className="space-y-2">
+                  <Label htmlFor="price">Preço de Venda (R$)</Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    placeholder="0,00"
+                  />
                 </div>
               </div>
-            )}
 
-            <div className="flex justify-end gap-2 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={savePriceMutation.isPending}>
-                {savePriceMutation.isPending && (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                )}
-                Salvar Preços
-              </Button>
+              {/* Margin indicator */}
+              {costValue > 0 && priceValue > 0 && (
+                <div className="p-3 rounded-lg bg-muted/50 border">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Margem de lucro:</span>
+                    <span className={`font-semibold ${margin >= 0 ? 'text-green-600' : 'text-destructive'}`}>
+                      {margin.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-sm text-muted-foreground">Lucro por barra:</span>
+                    <span className={`font-semibold ${priceValue - costValue >= 0 ? 'text-green-600' : 'text-destructive'}`}>
+                      R$ {(priceValue - costValue).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-between gap-2 pt-4 border-t">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    className="gap-1"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Remover
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Remover item do estoque?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta ação irá remover "{itemName}" do seu estoque. Os preços configurados também serão removidos.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => deleteMutation.mutate()}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      {deleteMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : null}
+                      Remover
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={saveMutation.isPending}>
+                  {saveMutation.isPending && (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  )}
+                  Salvar
+                </Button>
+              </div>
             </div>
           </form>
         )}
