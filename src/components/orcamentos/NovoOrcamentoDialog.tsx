@@ -40,6 +40,7 @@ type QuoteFormData = z.infer<typeof quoteSchema>;
 interface QuoteItem {
   id?: string;
   company_product_id?: string;
+  product_template_id?: string;
   description: string;
   width?: number;
   height?: number;
@@ -89,26 +90,32 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
     },
   });
 
-  // Fetch company products with linha and category
+  // Fetch all product templates (system products)
+  const { data: productTemplates } = useQuery({
+    queryKey: ['product-templates'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('product_templates')
+        .select('*')
+        .eq('is_active', true)
+        .order('linha')
+        .order('category')
+        .order('name');
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: open
+  });
+
+  // Fetch existing company products to get prices
   const { data: companyProducts } = useQuery({
     queryKey: ['company-products', currentCompany?.id],
     queryFn: async () => {
       if (!currentCompany?.id) return [];
       const { data, error } = await supabase
         .from('company_products')
-        .select(`
-          id,
-          commercial_name,
-          base_price,
-          product_templates (
-            linha,
-            category,
-            min_width,
-            max_width,
-            min_height,
-            max_height
-          )
-        `)
+        .select('*')
         .eq('company_id', currentCompany.id)
         .eq('is_active', true);
       
@@ -118,22 +125,22 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
     enabled: !!currentCompany?.id && open
   });
 
-  // Get unique linhas from products
-  const linhas = [...new Set(companyProducts?.map(p => p.product_templates?.linha).filter(Boolean) || [])];
+  // Get unique linhas from product templates
+  const linhas = [...new Set(productTemplates?.map(p => p.linha).filter(Boolean) || [])];
   
   // Get categories for a specific linha
   const getCategoriesForLinha = (linha: string) => {
-    const categories = companyProducts
-      ?.filter(p => p.product_templates?.linha === linha)
-      .map(p => p.product_templates?.category)
+    const categories = productTemplates
+      ?.filter(p => p.linha === linha)
+      .map(p => p.category)
       .filter(Boolean) || [];
     return [...new Set(categories)];
   };
 
   // Get products for a specific linha and category
   const getProductsForLinhaAndCategory = (linha: string, category: string) => {
-    return companyProducts?.filter(
-      p => p.product_templates?.linha === linha && p.product_templates?.category === category
+    return productTemplates?.filter(
+      p => p.linha === linha && p.category === category
     ) || [];
   };
 
@@ -249,16 +256,21 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
     setItems(newItems);
   };
 
-  const selectProduct = (index: number, productId: string) => {
-    const product = companyProducts?.find(p => p.id === productId);
-    if (product) {
+  const selectProduct = (index: number, templateId: string) => {
+    const template = productTemplates?.find(p => p.id === templateId);
+    if (template) {
+      // Check if company already has this product activated
+      const existingProduct = companyProducts?.find(p => p.product_template_id === templateId);
+      
       const newItems = [...items];
       newItems[index] = {
         ...newItems[index],
-        company_product_id: productId,
-        description: product.commercial_name,
-        unit_price: Number(product.base_price) || 0,
-        total_price: (newItems[index].quantity || 1) * (Number(product.base_price) || 0),
+        company_product_id: existingProduct?.id || undefined,
+        description: existingProduct?.commercial_name || template.name,
+        unit_price: Number(existingProduct?.base_price) || 0,
+        total_price: (newItems[index].quantity || 1) * (Number(existingProduct?.base_price) || 0),
+        // Store template id for reference
+        product_template_id: templateId,
       };
       setItems(newItems);
     }
@@ -542,9 +554,9 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
                                 </SelectTrigger>
                                 <SelectContent className="bg-background border">
                                   {item.selectedLinha && item.selectedCategory && 
-                                    getProductsForLinhaAndCategory(item.selectedLinha, item.selectedCategory).map(product => (
-                                      <SelectItem key={product.id} value={product.id}>
-                                        {product.commercial_name}
+                                    getProductsForLinhaAndCategory(item.selectedLinha, item.selectedCategory).map(template => (
+                                      <SelectItem key={template.id} value={template.id}>
+                                        {template.name}
                                       </SelectItem>
                                     ))}
                                 </SelectContent>
