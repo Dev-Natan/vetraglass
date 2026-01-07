@@ -139,12 +139,30 @@ export default function Estoque() {
                     key={item.id}
                     className="flex items-center justify-between p-3 rounded-lg bg-destructive/10 border border-destructive/20"
                   >
-                    <div>
-                      <p className="font-medium text-sm">{item.item_template?.name ?? `Item (${item.item_template_id})`}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Mínimo: {item.min_quantity} {item.item_template?.unit}
-                      </p>
+                    <div className="flex items-center gap-3">
+                      {item.item_template?.image_url ? (
+                        <div className="h-10 w-10 rounded-md border bg-background p-1 flex items-center justify-center">
+                          <img
+                            src={item.item_template.image_url}
+                            alt={item.item_template?.name ?? 'Item'}
+                            loading="lazy"
+                            className="max-h-full max-w-full object-contain"
+                          />
+                        </div>
+                      ) : (
+                        <div className="h-10 w-10 rounded-md border bg-background flex items-center justify-center">
+                          <Package className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                      )}
+
+                      <div>
+                        <p className="font-medium text-sm">{item.item_template?.name ?? `Item (${item.item_template_id})`}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Mínimo: {item.min_quantity} {item.item_template?.unit}
+                        </p>
+                      </div>
                     </div>
+
                     <span className="text-destructive font-semibold">
                       {item.quantity} {item.item_template?.unit}
                     </span>
@@ -173,25 +191,44 @@ export default function Estoque() {
                 {stockItems.map(item => (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                    className="flex items-center justify-between gap-3 p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
                   >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium">{item.item_template?.name ?? `Item (${item.item_template_id})`}</p>
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-                          {itemTypeLabels[item.item_template?.type || ''] || item.item_template?.type}
-                        </span>
-                      </div>
-                      {item.location && (
-                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                          <MapPin className="w-3 h-3" />
-                          {item.location}
-                        </p>
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      {item.item_template?.image_url ? (
+                        <div className="h-12 w-12 rounded-md border bg-background p-1 flex items-center justify-center shrink-0">
+                          <img
+                            src={item.item_template.image_url}
+                            alt={item.item_template?.name ?? 'Item'}
+                            loading="lazy"
+                            className="max-h-full max-w-full object-contain"
+                          />
+                        </div>
+                      ) : (
+                        <div className="h-12 w-12 rounded-md border bg-background flex items-center justify-center shrink-0">
+                          <Package className="h-6 w-6 text-muted-foreground" />
+                        </div>
                       )}
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <p className="font-medium truncate">{item.item_template?.name ?? `Item (${item.item_template_id})`}</p>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0">
+                            {itemTypeLabels[item.item_template?.type || ''] || item.item_template?.type}
+                          </span>
+                        </div>
+                        {item.location && (
+                          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                            <MapPin className="w-3 h-3" />
+                            {item.location}
+                          </p>
+                        )}
+                      </div>
                     </div>
+
                     <div className="text-right">
                       <p className="font-semibold text-lg">
-                        {item.quantity} <span className="text-sm text-muted-foreground">{item.item_template?.unit}</span>
+                        {item.quantity}{' '}
+                        <span className="text-sm text-muted-foreground">{item.item_template?.unit}</span>
                       </p>
                       {item.min_quantity > 0 && (
                         <p className="text-xs text-muted-foreground">
