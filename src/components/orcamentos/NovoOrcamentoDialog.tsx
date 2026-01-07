@@ -46,6 +46,9 @@ interface QuoteItem {
   quantity: number;
   unit_price: number;
   total_price: number;
+  // Selection state
+  selectedLinha?: string;
+  selectedCategory?: string;
 }
 
 interface Quote {
@@ -86,7 +89,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
     },
   });
 
-  // Fetch company products
+  // Fetch company products with linha and category
   const { data: companyProducts } = useQuery({
     queryKey: ['company-products', currentCompany?.id],
     queryFn: async () => {
@@ -98,6 +101,8 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
           commercial_name,
           base_price,
           product_templates (
+            linha,
+            category,
             min_width,
             max_width,
             min_height,
@@ -112,6 +117,36 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
     },
     enabled: !!currentCompany?.id && open
   });
+
+  // Get unique linhas from products
+  const linhas = [...new Set(companyProducts?.map(p => p.product_templates?.linha).filter(Boolean) || [])];
+  
+  // Get categories for a specific linha
+  const getCategoriesForLinha = (linha: string) => {
+    const categories = companyProducts
+      ?.filter(p => p.product_templates?.linha === linha)
+      .map(p => p.product_templates?.category)
+      .filter(Boolean) || [];
+    return [...new Set(categories)];
+  };
+
+  // Get products for a specific linha and category
+  const getProductsForLinhaAndCategory = (linha: string, category: string) => {
+    return companyProducts?.filter(
+      p => p.product_templates?.linha === linha && p.product_templates?.category === category
+    ) || [];
+  };
+
+  // Category translation map
+  const categoryLabels: Record<string, string> = {
+    window: 'Janela',
+    door: 'Porta',
+    partition: 'Divisória',
+    mirror: 'Espelho',
+    shower: 'Box',
+    facade: 'Fachada',
+    other: 'Outros',
+  };
 
   // Fetch quote items when editing
   const { data: existingItems } = useQuery({
@@ -166,6 +201,8 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
       quantity: 1,
       unit_price: 0,
       total_price: 0,
+      selectedLinha: '',
+      selectedCategory: '',
     }]);
   };
 
@@ -183,6 +220,33 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
 
   const removeItem = (index: number) => {
     setItems(items.filter((_, i) => i !== index));
+  };
+
+  const selectLinha = (index: number, linha: string) => {
+    const newItems = [...items];
+    newItems[index] = {
+      ...newItems[index],
+      selectedLinha: linha,
+      selectedCategory: '',
+      company_product_id: undefined,
+      description: '',
+      unit_price: 0,
+      total_price: 0,
+    };
+    setItems(newItems);
+  };
+
+  const selectCategory = (index: number, category: string) => {
+    const newItems = [...items];
+    newItems[index] = {
+      ...newItems[index],
+      selectedCategory: category,
+      company_product_id: undefined,
+      description: '',
+      unit_price: 0,
+      total_price: 0,
+    };
+    setItems(newItems);
   };
 
   const selectProduct = (index: number, productId: string) => {
@@ -426,50 +490,96 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
                   {items.map((item, index) => (
                     <div key={index} className="border rounded-lg p-4 space-y-3">
                       <div className="flex items-start gap-3">
-                        <div className="flex-1 grid grid-cols-1 sm:grid-cols-6 gap-3">
-                          <div className="sm:col-span-2">
-                            <label className="text-xs text-muted-foreground">Produto</label>
-                            <Select
-                              value={item.company_product_id || ''}
-                              onValueChange={(value) => selectProduct(index, value)}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecionar produto" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {companyProducts?.map(product => (
-                                  <SelectItem key={product.id} value={product.id}>
-                                    {product.commercial_name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                        <div className="flex-1 space-y-3">
+                          {/* Linha → Categoria → Produto Selection */}
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                              <label className="text-xs text-muted-foreground">Linha</label>
+                              <Select
+                                value={item.selectedLinha || ''}
+                                onValueChange={(value) => selectLinha(index, value)}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecionar linha" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-background border">
+                                  {linhas.map(linha => (
+                                    <SelectItem key={linha} value={linha!}>
+                                      {linha}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <label className="text-xs text-muted-foreground">Categoria</label>
+                              <Select
+                                value={item.selectedCategory || ''}
+                                onValueChange={(value) => selectCategory(index, value)}
+                                disabled={!item.selectedLinha}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecionar categoria" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-background border">
+                                  {item.selectedLinha && getCategoriesForLinha(item.selectedLinha).map(category => (
+                                    <SelectItem key={category} value={category!}>
+                                      {categoryLabels[category!] || category}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <label className="text-xs text-muted-foreground">Produto</label>
+                              <Select
+                                value={item.company_product_id || ''}
+                                onValueChange={(value) => selectProduct(index, value)}
+                                disabled={!item.selectedLinha || !item.selectedCategory}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecionar produto" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-background border">
+                                  {item.selectedLinha && item.selectedCategory && 
+                                    getProductsForLinhaAndCategory(item.selectedLinha, item.selectedCategory).map(product => (
+                                      <SelectItem key={product.id} value={product.id}>
+                                        {product.commercial_name}
+                                      </SelectItem>
+                                    ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
                           </div>
-                          <div className="sm:col-span-2">
-                            <label className="text-xs text-muted-foreground">Descrição</label>
-                            <Input
-                              value={item.description}
-                              onChange={(e) => updateItem(index, 'description', e.target.value)}
-                              placeholder="Descrição do item"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-xs text-muted-foreground">Largura (mm)</label>
-                            <Input
-                              type="number"
-                              value={item.width || ''}
-                              onChange={(e) => updateItem(index, 'width', Number(e.target.value))}
-                              placeholder="0"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-xs text-muted-foreground">Altura (mm)</label>
-                            <Input
-                              type="number"
-                              value={item.height || ''}
-                              onChange={(e) => updateItem(index, 'height', Number(e.target.value))}
-                              placeholder="0"
-                            />
+                          
+                          {/* Dimensions and Description */}
+                          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                            <div className="sm:col-span-2">
+                              <label className="text-xs text-muted-foreground">Descrição</label>
+                              <Input
+                                value={item.description}
+                                onChange={(e) => updateItem(index, 'description', e.target.value)}
+                                placeholder="Descrição do item"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs text-muted-foreground">Largura (mm)</label>
+                              <Input
+                                type="number"
+                                value={item.width || ''}
+                                onChange={(e) => updateItem(index, 'width', Number(e.target.value))}
+                                placeholder="0"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs text-muted-foreground">Altura (mm)</label>
+                              <Input
+                                type="number"
+                                value={item.height || ''}
+                                onChange={(e) => updateItem(index, 'height', Number(e.target.value))}
+                                placeholder="0"
+                              />
+                            </div>
                           </div>
                         </div>
                         <Button
