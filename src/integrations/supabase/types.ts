@@ -301,6 +301,7 @@ export type Database = {
           id: string
           image_url: string | null
           is_active: boolean
+          linha: string | null
           max_height: number | null
           max_width: number | null
           min_height: number | null
@@ -315,6 +316,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean
+          linha?: string | null
           max_height?: number | null
           max_width?: number | null
           min_height?: number | null
@@ -329,6 +331,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_active?: boolean
+          linha?: string | null
           max_height?: number | null
           max_width?: number | null
           min_height?: number | null

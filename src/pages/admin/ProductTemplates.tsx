@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -39,13 +40,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Package, Settings2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Package, Settings2, ArrowLeft } from "lucide-react";
 
 type ProductTemplate = {
   id: string;
   name: string;
   description: string | null;
   category: string;
+  linha: string | null;
   image_url: string | null;
   is_active: boolean;
   min_width: number | null;
@@ -82,17 +84,22 @@ type ProductCategory = "window" | "door" | "shower" | "mirror" | "partition" | "
 const categoriesList: ProductCategory[] = ["window", "door", "shower", "mirror", "partition", "facade", "other"];
 
 export default function ProductTemplates() {
+  const { linha: linhaParam } = useParams<{ linha?: string }>();
+  const navigate = useNavigate();
   const { isSaasAdmin } = useAuth();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCompositionDialogOpen, setIsCompositionDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<ProductTemplate | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<ProductTemplate | null>(null);
+  
+  const currentLinha = linhaParam ? decodeURIComponent(linhaParam) : null;
 
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     category: "shower" as ProductCategory,
+    linha: currentLinha || "",
     min_width: "",
     max_width: "",
     min_height: "",
@@ -100,14 +107,17 @@ export default function ProductTemplates() {
     is_active: true,
   });
 
-  // Fetch product templates
+  // Fetch product templates (filtered by linha if param exists)
   const { data: templates, isLoading } = useQuery({
-    queryKey: ["product-templates"],
+    queryKey: ["product-templates", currentLinha],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("product_templates")
-        .select("*")
-        .order("name");
+      let query = supabase.from("product_templates").select("*");
+      
+      if (currentLinha) {
+        query = query.eq("linha", currentLinha);
+      }
+      
+      const { data, error } = await query.order("name");
       if (error) throw error;
       return data as ProductTemplate[];
     },
@@ -152,6 +162,7 @@ export default function ProductTemplates() {
         name: data.name,
         description: data.description || null,
         category: data.category,
+        linha: data.linha || null,
         min_width: data.min_width ? parseFloat(data.min_width) : null,
         max_width: data.max_width ? parseFloat(data.max_width) : null,
         min_height: data.min_height ? parseFloat(data.min_height) : null,
@@ -171,7 +182,8 @@ export default function ProductTemplates() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["product-templates"] });
+      queryClient.invalidateQueries({ queryKey: ["product-templates", currentLinha] });
+      queryClient.invalidateQueries({ queryKey: ["admin-product-linhas"] });
       toast.success(editingTemplate ? "Template atualizado!" : "Template criado!");
       handleCloseDialog();
     },
@@ -238,6 +250,7 @@ export default function ProductTemplates() {
       name: "",
       description: "",
       category: "shower" as ProductCategory,
+      linha: currentLinha || "",
       min_width: "",
       max_width: "",
       min_height: "",
@@ -252,6 +265,7 @@ export default function ProductTemplates() {
       name: template.name,
       description: template.description || "",
       category: template.category as ProductCategory,
+      linha: template.linha || "",
       min_width: template.min_width?.toString() || "",
       max_width: template.max_width?.toString() || "",
       min_height: template.min_height?.toString() || "",
@@ -297,23 +311,34 @@ export default function ProductTemplates() {
     <AdminLayout>
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Product Templates</h1>
-            <p className="text-muted-foreground">
-              Gerencie os modelos de produtos globais do sistema
-            </p>
+          <div className="flex items-center gap-4">
+            {currentLinha && (
+              <Button variant="ghost" size="icon" onClick={() => navigate('/admin/linhas')}>
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+            )}
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">
+                {currentLinha ? `Produtos - ${currentLinha}` : 'Product Templates'}
+              </h1>
+              <p className="text-muted-foreground">
+                {currentLinha 
+                  ? `Gerencie os produtos da linha ${currentLinha}`
+                  : 'Gerencie os modelos de produtos globais do sistema'}
+              </p>
+            </div>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button onClick={() => handleCloseDialog()}>
                 <Plus className="w-4 h-4 mr-2" />
-                Novo Template
+                Novo Produto
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>
-                  {editingTemplate ? "Editar Template" : "Novo Template de Produto"}
+                  {editingTemplate ? "Editar Produto" : "Novo Produto"}
                 </DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -324,10 +349,23 @@ export default function ProductTemplates() {
                       id="name"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="Ex: Box Canto 90°"
+                      placeholder="Ex: Janela 2 Folhas"
                       required
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="linha">Linha</Label>
+                    <Input
+                      id="linha"
+                      value={formData.linha}
+                      onChange={(e) => setFormData({ ...formData, linha: e.target.value })}
+                      placeholder="Ex: Linha Suprema"
+                      disabled={!!currentLinha}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="category">Categoria</Label>
                     <Select
@@ -346,17 +384,15 @@ export default function ProductTemplates() {
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="description">Descrição</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Descrição do produto modelo"
-                    rows={3}
-                  />
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Descrição</Label>
+                    <Input
+                      id="description"
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      placeholder="Descrição do produto"
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-4 gap-4">

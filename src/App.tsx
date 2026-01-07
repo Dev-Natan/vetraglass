@@ -19,6 +19,7 @@ import PlanoCorte from "./pages/PlanoCorte";
 import Configuracoes from "./pages/Configuracoes";
 import ItemTemplates from "./pages/admin/ItemTemplates";
 import ProductTemplates from "./pages/admin/ProductTemplates";
+import AdminLinhas from "./pages/admin/AdminLinhas";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminCompanies from "./pages/admin/AdminCompanies";
 import NotFound from "./pages/NotFound";
@@ -152,6 +153,16 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
       <Route path="/admin/product-templates" element={
+        <ProtectedRoute>
+          <ProductTemplates />
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/linhas" element={
+        <ProtectedRoute>
+          <AdminLinhas />
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/linhas/:linha" element={
         <ProtectedRoute>
           <ProductTemplates />
         </ProtectedRoute>
