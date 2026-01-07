@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import CompanySetup from "./pages/CompanySetup";
 import Clientes from "./pages/Clientes";
 import Produtos from "./pages/Produtos";
+import ProdutosLinha from "./pages/ProdutosLinha";
 import Estoque from "./pages/Estoque";
 import Orcamentos from "./pages/Orcamentos";
 import OrdensServico from "./pages/OrdensServico";
@@ -100,6 +101,11 @@ function AppRoutes() {
       <Route path="/produtos" element={
         <ProtectedRoute>
           <Produtos />
+        </ProtectedRoute>
+      } />
+      <Route path="/produtos/linha/:linha" element={
+        <ProtectedRoute>
+          <ProdutosLinha />
         </ProtectedRoute>
       } />
       <Route path="/estoque" element={
