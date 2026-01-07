@@ -228,9 +228,9 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
               </SelectTrigger>
               <SelectContent className="max-h-64">
                 {loadingItems ? (
-                  <div className="flex items-center justify-center p-4">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  </div>
+                  <SelectItem value="__loading" disabled>
+                    Carregando...
+                  </SelectItem>
                 ) : filteredItems && filteredItems.length > 0 ? (
                   filteredItems.map(item => (
                     <SelectItem key={item.id} value={item.id}>
@@ -238,9 +238,11 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
                     </SelectItem>
                   ))
                 ) : (
-                  <div className="p-4 text-sm text-muted-foreground text-center">
-                    {selectedType ? 'Todos os itens deste tipo já estão no estoque.' : 'Selecione o tipo primeiro.'}
-                  </div>
+                  <SelectItem value="__empty" disabled>
+                    {selectedType
+                      ? 'Todos os itens deste tipo já estão no estoque.'
+                      : 'Selecione o tipo primeiro.'}
+                  </SelectItem>
                 )}
               </SelectContent>
             </Select>

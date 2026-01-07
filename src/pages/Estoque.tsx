@@ -12,43 +12,63 @@ export default function Estoque() {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
 
   // Fetch company stock
-  const { data: stockData, isLoading: loadingStock } = useQuery({
+  const {
+    data: stockData,
+    isLoading: loadingStock,
+    error: stockError,
+  } = useQuery({
     queryKey: ['company-stock', currentCompany?.id],
     queryFn: async () => {
       if (!currentCompany?.id) return [];
+
+      console.log('[Estoque] carregando estoque', { companyId: currentCompany.id });
+
       const { data, error } = await supabase
         .from('company_stock')
         .select('*')
         .eq('company_id', currentCompany.id)
         .order('created_at', { ascending: false });
-      
+
       if (error) throw error;
+
+      console.log('[Estoque] estoque carregado', { count: data?.length ?? 0 });
+
       return data;
     },
     enabled: !!currentCompany?.id,
   });
 
   // Fetch item templates
-  const { data: itemTemplates, isLoading: loadingItems } = useQuery({
+  const {
+    data: itemTemplates,
+    isLoading: loadingItems,
+    error: itemsError,
+  } = useQuery({
     queryKey: ['item-templates'],
     queryFn: async () => {
+      console.log('[Estoque] carregando item_templates');
+
       const { data, error } = await supabase
         .from('item_templates')
         .select('*')
         .eq('is_active', true);
-      
+
       if (error) throw error;
+
+      console.log('[Estoque] item_templates carregados', { count: data?.length ?? 0 });
+
       return data;
     },
   });
 
   // Combine stock with item details
-  const stockItems = stockData?.map(stock => {
-    const item_template = itemTemplates?.find(t => t.id === stock.item_template_id);
+  const stockItems = stockData?.map((stock) => {
+    const item_template = itemTemplates?.find((t) => t.id === stock.item_template_id);
     return { ...stock, item_template };
   });
 
   const isLoading = loadingStock || loadingItems;
+  const loadError = stockError || itemsError;
 
   // Filter low stock items
   const lowStockItems = stockItems?.filter(
@@ -89,6 +109,22 @@ export default function Estoque() {
           </div>
         </div>
 
+        {!currentCompany && (
+          <div className="rounded-lg border border-border bg-muted p-4 text-sm text-muted-foreground">
+            Selecione uma empresa para ver o estoque.
+          </div>
+        )}
+
+        {loadError && (
+          <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
+            Erro ao carregar estoque: {(loadError as any)?.message ?? String(loadError)}
+          </div>
+        )}
+
+        <div className="text-xs text-muted-foreground">
+          Empresa: {currentCompany?.name ?? '—'} | Estoque: {stockData?.length ?? 0} | Itens ativos: {itemTemplates?.length ?? 0}
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Stock Alerts */}
           <div className="section-card lg:col-span-1">
@@ -104,7 +140,7 @@ export default function Estoque() {
                     className="flex items-center justify-between p-3 rounded-lg bg-destructive/10 border border-destructive/20"
                   >
                     <div>
-                      <p className="font-medium text-sm">{item.item_template?.name}</p>
+                      <p className="font-medium text-sm">{item.item_template?.name ?? `Item (${item.item_template_id})`}</p>
                       <p className="text-xs text-muted-foreground">
                         Mínimo: {item.min_quantity} {item.item_template?.unit}
                       </p>
@@ -141,7 +177,7 @@ export default function Estoque() {
                   >
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <p className="font-medium">{item.item_template?.name}</p>
+                        <p className="font-medium">{item.item_template?.name ?? `Item (${item.item_template_id})`}</p>
                         <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
                           {itemTypeLabels[item.item_template?.type || ''] || item.item_template?.type}
                         </span>
