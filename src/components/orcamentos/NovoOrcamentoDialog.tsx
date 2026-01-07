@@ -213,14 +213,37 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
     }]);
   };
 
+  const calculatePriceFromDimensions = (item: QuoteItem, basePrice: number) => {
+    // Convert mm to m and calculate area in m²
+    const widthM = (item.width || 0) / 1000;
+    const heightM = (item.height || 0) / 1000;
+    const area = widthM * heightM;
+    
+    if (area > 0) {
+      return basePrice * area;
+    }
+    return basePrice; // Return base price if no dimensions
+  };
+
   const updateItem = (index: number, field: keyof QuoteItem, value: any) => {
     const newItems = [...items];
     newItems[index] = { ...newItems[index], [field]: value };
     
-    // Recalculate total
-    if (field === 'quantity' || field === 'unit_price') {
-      newItems[index].total_price = newItems[index].quantity * newItems[index].unit_price;
+    // Recalculate price based on dimensions
+    if (field === 'width' || field === 'height') {
+      const item = newItems[index];
+      // Get the base price from company product or template
+      const existingProduct = companyProducts?.find(p => p.product_template_id === item.product_template_id);
+      const basePrice = Number(existingProduct?.base_price) || item.unit_price || 0;
+      
+      if (basePrice > 0) {
+        const calculatedPrice = calculatePriceFromDimensions(item, basePrice);
+        newItems[index].unit_price = Math.round(calculatedPrice * 100) / 100;
+      }
     }
+    
+    // Recalculate total
+    newItems[index].total_price = newItems[index].quantity * newItems[index].unit_price;
     
     setItems(newItems);
   };
@@ -261,14 +284,24 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
     if (template) {
       // Check if company already has this product activated
       const existingProduct = companyProducts?.find(p => p.product_template_id === templateId);
+      const basePrice = Number(existingProduct?.base_price) || 0;
       
       const newItems = [...items];
+      const currentItem = newItems[index];
+      
+      // Calculate price based on existing dimensions if available
+      let unitPrice = basePrice;
+      if (currentItem.width && currentItem.height) {
+        unitPrice = calculatePriceFromDimensions(currentItem, basePrice);
+        unitPrice = Math.round(unitPrice * 100) / 100;
+      }
+      
       newItems[index] = {
-        ...newItems[index],
+        ...currentItem,
         company_product_id: existingProduct?.id || undefined,
         description: existingProduct?.commercial_name || template.name,
-        unit_price: Number(existingProduct?.base_price) || 0,
-        total_price: (newItems[index].quantity || 1) * (Number(existingProduct?.base_price) || 0),
+        unit_price: unitPrice,
+        total_price: (currentItem.quantity || 1) * unitPrice,
         // Store template id for reference
         product_template_id: templateId,
       };
@@ -565,7 +598,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
                           </div>
                           
                           {/* Dimensions and Description */}
-                          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                          <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
                             <div className="sm:col-span-2">
                               <label className="text-xs text-muted-foreground">Descrição</label>
                               <Input
@@ -580,7 +613,8 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
                                 type="number"
                                 value={item.width || ''}
                                 onChange={(e) => updateItem(index, 'width', Number(e.target.value))}
-                                placeholder="0"
+                                placeholder="Ex: 1200"
+                                min={0}
                               />
                             </div>
                             <div>
@@ -589,9 +623,15 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
                                 type="number"
                                 value={item.height || ''}
                                 onChange={(e) => updateItem(index, 'height', Number(e.target.value))}
-                                placeholder="0"
+                                placeholder="Ex: 1500"
+                                min={0}
                               />
                             </div>
+                            {item.width && item.height && (
+                              <div className="sm:col-span-2 text-xs text-muted-foreground flex items-end pb-2">
+                                Área: {((item.width / 1000) * (item.height / 1000)).toFixed(2)} m²
+                              </div>
+                            )}
                           </div>
                         </div>
                         <Button
