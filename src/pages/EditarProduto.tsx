@@ -400,24 +400,6 @@ export default function EditarProduto() {
                 </Select>
               </div>
             </div>
-
-            <div className="space-y-2">
-              <Label>Tipo do vão:</Label>
-              <div className="flex gap-2">
-                {['normal', 'corner', 'length'].map((type) => (
-                  <Button
-                    key={type}
-                    type="button"
-                    variant={formData.gap_type === type ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setFormData({ ...formData, gap_type: type })}
-                  >
-                    {type === 'normal' ? 'Normal' : type === 'corner' ? 'Por canto' : 'Comprimento'}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
             <div className="space-y-2">
               <Label>Descritivo do produto: (opcional)</Label>
               <Textarea
