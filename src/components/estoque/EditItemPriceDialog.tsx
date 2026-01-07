@@ -25,6 +25,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Switch } from '@/components/ui/switch';
 
 interface EditItemPriceDialogProps {
   open: boolean;
@@ -54,6 +55,7 @@ export function EditItemPriceDialog({
   const [quantity, setQuantity] = useState('');
   const [minQuantity, setMinQuantity] = useState('');
   const [location, setLocation] = useState('');
+  const [allowFractional, setAllowFractional] = useState(false);
 
   // Fetch existing price
   const { data: existingPrice, isLoading: loadingPrice } = useQuery({
@@ -109,10 +111,12 @@ export function EditItemPriceDialog({
       setQuantity(existingStock.quantity?.toString() ?? '');
       setMinQuantity(existingStock.min_quantity?.toString() ?? '');
       setLocation(existingStock.location ?? '');
+      setAllowFractional((existingStock as any).allow_fractional ?? false);
     } else {
       setQuantity('');
       setMinQuantity('');
       setLocation('');
+      setAllowFractional(false);
     }
   }, [existingStock]);
 
@@ -156,7 +160,8 @@ export function EditItemPriceDialog({
             quantity: parseFloat(quantity) || 0,
             min_quantity: parseFloat(minQuantity) || 0,
             location: location || null,
-          })
+            allow_fractional: allowFractional,
+          } as any)
           .eq('id', existingStock.id);
 
         if (error) throw error;
@@ -316,6 +321,20 @@ export function EditItemPriceDialog({
                   onChange={(e) => setLocation(e.target.value)}
                   placeholder="Ex: Prateleira A1, Galpão 2..."
                   maxLength={100}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
+                <div className="space-y-0.5">
+                  <Label htmlFor="allowFractional" className="cursor-pointer">Venda Fracionada</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Permitir vender quantidades fracionadas (ex: 0.5 barras, 2.3 metros)
+                  </p>
+                </div>
+                <Switch
+                  id="allowFractional"
+                  checked={allowFractional}
+                  onCheckedChange={setAllowFractional}
                 />
               </div>
             </div>

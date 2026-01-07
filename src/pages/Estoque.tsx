@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Boxes, TrendingDown, TrendingUp, Package, Plus, MapPin, DollarSign, Power } from 'lucide-react';
+import { Boxes, TrendingDown, TrendingUp, Package, Plus, MapPin, DollarSign, Power, Scissors } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AddStockDialog } from '@/components/estoque/AddStockDialog';
 import { EditItemPriceDialog } from '@/components/estoque/EditItemPriceDialog';
@@ -180,6 +180,12 @@ export default function Estoque() {
             <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0">
               {itemTypeLabels[item.item_template?.type || ''] || item.item_template?.type}
             </span>
+            {(item as any).allow_fractional && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary shrink-0 flex items-center gap-1" title="Venda fracionada habilitada">
+                <Scissors className="w-3 h-3" />
+                Fracionado
+              </span>
+            )}
           </div>
           {item.location && (
             <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
