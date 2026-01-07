@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { Scissors, Plus, Calculator, Ruler, Package, ChevronRight, RotateCcw } from 'lucide-react';
+import { Scissors, Plus, Calculator, Ruler, Package, ChevronRight, RotateCcw, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -257,6 +257,111 @@ export default function PlanoCorte() {
     setQuantity(1);
   };
 
+  const handlePrint = () => {
+    const printContent = document.getElementById('plano-corte-print');
+    if (!printContent) return;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Plano de Corte - ${selectedProductData?.name || 'Produto'}</title>
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { font-family: Arial, sans-serif; padding: 20px; color: #1a1a1a; }
+            h1 { font-size: 24px; margin-bottom: 8px; }
+            h2 { font-size: 18px; margin: 20px 0 10px; border-bottom: 2px solid #333; padding-bottom: 5px; }
+            .header { margin-bottom: 20px; }
+            .info { font-size: 14px; color: #666; margin-bottom: 4px; }
+            .stats { display: flex; gap: 20px; margin: 20px 0; flex-wrap: wrap; }
+            .stat { background: #f5f5f5; padding: 15px; border-radius: 8px; min-width: 120px; }
+            .stat-value { font-size: 24px; font-weight: bold; }
+            .stat-label { font-size: 12px; color: #666; }
+            .cut-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #eee; }
+            .cut-name { font-weight: 500; }
+            .cut-details { color: #666; font-size: 12px; }
+            .cut-length { font-weight: bold; font-size: 18px; }
+            .cut-qty { font-size: 12px; color: #666; }
+            .bar { margin-bottom: 15px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+            .bar-header { display: flex; justify-content: space-between; margin-bottom: 10px; }
+            .bar-visual { height: 30px; background: #e5e5e5; border-radius: 4px; display: flex; overflow: hidden; margin-bottom: 8px; }
+            .bar-piece { background: #3b82f6; display: flex; align-items: center; justify-content: center; color: white; font-size: 10px; border-right: 1px solid white; }
+            .bar-waste { background: #f87171; }
+            .bar-pieces-list { font-size: 12px; color: #666; }
+            @media print { body { padding: 0; } }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Plano de Corte</h1>
+            <p class="info"><strong>Produto:</strong> ${selectedProductData?.name || '-'}</p>
+            <p class="info"><strong>Dimensões:</strong> ${width}mm x ${height}mm</p>
+            <p class="info"><strong>Quantidade:</strong> ${quantity} unidade(s)</p>
+            <p class="info"><strong>Comprimento da barra:</strong> ${barLength}mm</p>
+            <p class="info"><strong>Data:</strong> ${new Date().toLocaleDateString('pt-BR')}</p>
+          </div>
+
+          <div class="stats">
+            <div class="stat">
+              <div class="stat-value">${totalPieces}</div>
+              <div class="stat-label">Peças totais</div>
+            </div>
+            <div class="stat">
+              <div class="stat-value">${totalBars}</div>
+              <div class="stat-label">Barras necessárias</div>
+            </div>
+            <div class="stat">
+              <div class="stat-value">${avgUtilization.toFixed(1)}%</div>
+              <div class="stat-label">Aproveitamento</div>
+            </div>
+            <div class="stat">
+              <div class="stat-value">${(totalWaste / 1000).toFixed(2)}m</div>
+              <div class="stat-label">Sobra total</div>
+            </div>
+          </div>
+
+          <h2>Lista de Cortes</h2>
+          ${calculatedCuts.map((cut, i) => `
+            <div class="cut-item">
+              <div>
+                <div class="cut-name">${i + 1}. ${cut.profileName}</div>
+                <div class="cut-details">Fórmula: ${cut.formula} | Ângulo: ${cut.cutAngle}°</div>
+              </div>
+              <div style="text-align: right;">
+                <div class="cut-length">${cut.calculatedLength} mm</div>
+                <div class="cut-qty">${cut.quantity}x peças</div>
+              </div>
+            </div>
+          `).join('')}
+
+          <h2>Otimização por Barra</h2>
+          ${optimizedBars.map((bar, i) => `
+            <div class="bar">
+              <div class="bar-header">
+                <strong>Barra ${i + 1}</strong>
+                <span>Aproveitamento: ${(100 - bar.wastePercent).toFixed(1)}% | Sobra: ${bar.wasteLength}mm</span>
+              </div>
+              <div class="bar-visual">
+                ${bar.pieces.map(p => `
+                  <div class="bar-piece" style="width: ${(p.length / bar.barLength) * 100}%">${p.length}</div>
+                `).join('')}
+                ${bar.wasteLength > 0 ? `<div class="bar-piece bar-waste" style="width: ${(bar.wasteLength / bar.barLength) * 100}%">${bar.wasteLength}</div>` : ''}
+              </div>
+              <div class="bar-pieces-list">
+                ${bar.pieces.map(p => `${p.profileName}: ${p.length}mm`).join(' | ')}
+              </div>
+            </div>
+          `).join('')}
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+  };
+
   const selectedProductData = productTemplates?.find(p => p.id === selectedProduct);
 
   return (
@@ -271,10 +376,16 @@ export default function PlanoCorte() {
             <p className="text-muted-foreground">Otimização de corte de perfis de alumínio</p>
           </div>
           {showResults && (
-            <Button variant="outline" className="gap-2" onClick={handleReset}>
-              <RotateCcw className="w-4 h-4" />
-              Novo Cálculo
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" className="gap-2" onClick={handlePrint}>
+                <Printer className="w-4 h-4" />
+                Imprimir
+              </Button>
+              <Button variant="outline" className="gap-2" onClick={handleReset}>
+                <RotateCcw className="w-4 h-4" />
+                Novo Cálculo
+              </Button>
+            </div>
           )}
         </div>
 
