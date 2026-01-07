@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { supabase } from '@/integrations/supabase/client';
@@ -61,11 +61,14 @@ export default function Estoque() {
     },
   });
 
-  // Combine stock with item details
-  const stockItems = stockData?.map((stock) => {
-    const item_template = itemTemplates?.find((t) => t.id === stock.item_template_id);
-    return { ...stock, item_template };
-  });
+  // Combine stock with item details (only when both are loaded)
+  const stockItems = useMemo(() => {
+    if (!stockData || !itemTemplates) return [];
+    return stockData.map((stock) => {
+      const item_template = itemTemplates.find((t) => t.id === stock.item_template_id);
+      return { ...stock, item_template };
+    });
+  }, [stockData, itemTemplates]);
 
   const isLoading = loadingStock || loadingItems;
   const loadError = stockError || itemsError;
