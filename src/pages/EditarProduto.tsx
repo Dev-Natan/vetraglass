@@ -387,18 +387,6 @@ export default function EditarProduto() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Margem de lucro:</Label>
-                <div className="flex gap-2">
-                  <Input
-                    type="number"
-                    value={formData.margin_percent}
-                    onChange={(e) => setFormData({ ...formData, margin_percent: e.target.value })}
-                    className="flex-1"
-                  />
-                  <span className="flex items-center text-muted-foreground">%</span>
-                </div>
-              </div>
-              <div className="space-y-2">
                 <Label>Possui vidro?</Label>
                 <Select
                   value={formData.has_glass ? 'yes' : 'no'}
