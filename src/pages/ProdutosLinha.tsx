@@ -178,12 +178,12 @@ export default function ProdutosLinha() {
                 >
                   {/* Product info */}
                   <div className="col-span-6 sm:col-span-5 flex items-center gap-3">
-                    <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center text-2xl shrink-0">
+                    <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center text-2xl shrink-0 p-1">
                       {product.image_url ? (
                         <img 
                           src={product.image_url} 
                           alt={product.name}
-                          className="w-full h-full object-cover rounded-lg"
+                          className="w-full h-full object-contain"
                         />
                       ) : (
                         getCategoryIcon(product.category)
