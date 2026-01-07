@@ -142,6 +142,7 @@ export default function PlanoCorte() {
         .select(`
           id,
           quantity_formula,
+          pieces_quantity,
           cut_angle,
           is_optional,
           item_templates (
@@ -165,13 +166,21 @@ export default function PlanoCorte() {
 
     return productItems
       .filter(item => item.item_templates?.type === 'profile')
-      .map(item => ({
-        profileName: item.item_templates?.name || 'Perfil',
-        formula: item.quantity_formula,
-        calculatedLength: evaluateFormula(item.quantity_formula, width, height),
-        quantity: quantity,
-        cutAngle: item.cut_angle
-      }));
+      .map(item => {
+        // pieces_quantity = número de peças do perfil por unidade de produto
+        // quantity = número de produtos (janelas/portas)
+        // Total de peças = pieces_quantity × quantity
+        const piecesPerProduct = (item as any).pieces_quantity || 1;
+        const totalPieces = piecesPerProduct * quantity;
+        
+        return {
+          profileName: item.item_templates?.name || 'Perfil',
+          formula: item.quantity_formula,
+          calculatedLength: evaluateFormula(item.quantity_formula, width, height),
+          quantity: totalPieces,
+          cutAngle: item.cut_angle
+        };
+      });
   }, [productItems, width, height, quantity]);
 
   // Optimize cutting

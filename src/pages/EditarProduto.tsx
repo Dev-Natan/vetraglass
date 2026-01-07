@@ -50,6 +50,7 @@ type ProductTemplateItem = {
   product_template_id: string;
   item_template_id: string;
   quantity_formula: string;
+  pieces_quantity: number;
   is_optional: boolean;
   notes: string | null;
   cut_angle: number;
@@ -103,6 +104,7 @@ export default function EditarProduto() {
   const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
   const [selectedItemToAdd, setSelectedItemToAdd] = useState('');
   const [quantityFormula, setQuantityFormula] = useState('1');
+  const [piecesQuantity, setPiecesQuantity] = useState(1);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -210,6 +212,7 @@ export default function EditarProduto() {
           product_template_id: id,
           item_template_id: selectedItemToAdd,
           quantity_formula: quantityFormula,
+          pieces_quantity: piecesQuantity,
           is_optional: false,
         });
       if (error) throw error;
@@ -220,6 +223,7 @@ export default function EditarProduto() {
       setIsAddItemDialogOpen(false);
       setSelectedItemToAdd('');
       setQuantityFormula('1');
+      setPiecesQuantity(1);
     },
     onError: (error) => {
       toast.error('Erro ao adicionar: ' + error.message);
@@ -503,10 +507,13 @@ export default function EditarProduto() {
                       {item.quantity_formula}
                     </p>
 
-                    {/* Angle indicators (for profiles) */}
+                    {/* Pieces quantity and Angle indicators (for profiles) */}
                     {tab.value === 'profile' && (
-                      <div className="flex justify-center mt-3">
-                        <span className="text-sm font-bold text-foreground bg-muted px-2 py-1 rounded">
+                      <div className="flex justify-center gap-2 mt-3">
+                        <span className="text-xs font-medium text-foreground bg-primary/10 px-2 py-1 rounded">
+                          {item.pieces_quantity || 1}x peças
+                        </span>
+                        <span className="text-xs font-medium text-foreground bg-muted px-2 py-1 rounded">
                           {item.cut_angle || 90}°
                         </span>
                       </div>
@@ -565,16 +572,31 @@ export default function EditarProduto() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Fórmula de quantidade:</Label>
+                <Label>Fórmula de comprimento:</Label>
                 <Input
                   value={quantityFormula}
                   onChange={(e) => setQuantityFormula(e.target.value)}
-                  placeholder="Ex: (Altura do vão - 20 mm) x 2"
+                  placeholder="Ex: Altura - 20"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Use variáveis como: altura, largura, perímetro
+                  Use variáveis: Altura, Largura
                 </p>
               </div>
+              {activeTab === 'profile' && (
+                <div className="space-y-2">
+                  <Label>Quantidade de peças por produto:</Label>
+                  <Input
+                    type="number"
+                    value={piecesQuantity}
+                    onChange={(e) => setPiecesQuantity(Number(e.target.value))}
+                    min={1}
+                    max={20}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Ex: Montantes = 2 peças, Travessas = 2 peças
+                  </p>
+                </div>
+              )}
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setIsAddItemDialogOpen(false)}>
                   Cancelar
