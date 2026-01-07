@@ -481,14 +481,16 @@ export default function ItemTemplates() {
                     <TableRow key={item.id}>
                       <TableCell>
                         {item.image_url ? (
-                          <img 
-                            src={item.image_url} 
-                            alt={item.name}
-                            className="w-12 h-12 object-cover rounded-lg border"
-                          />
+                          <div className="w-16 h-16 bg-white rounded-lg border p-1 flex items-center justify-center">
+                            <img 
+                              src={item.image_url} 
+                              alt={item.name}
+                              className="max-w-full max-h-full object-contain"
+                            />
+                          </div>
                         ) : (
-                          <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
-                            <Package className="h-5 w-5 text-muted-foreground" />
+                          <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center">
+                            <Package className="h-6 w-6 text-muted-foreground" />
                           </div>
                         )}
                       </TableCell>
