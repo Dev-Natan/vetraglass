@@ -107,9 +107,8 @@ export default function EditarProduto() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    difficulty: 'medium',
+    unit: 'm2',
     is_ready_product: false,
-    margin_percent: '100',
     has_glass: true,
     gap_type: 'normal',
     base_price: '',
@@ -171,9 +170,8 @@ export default function EditarProduto() {
       setFormData({
         name: product.name || '',
         description: product.description || '',
-        difficulty: 'medium',
+        unit: 'm2',
         is_ready_product: false,
-        margin_percent: '100',
         has_glass: true,
         gap_type: 'normal',
         base_price: product.base_price?.toString() || '',
@@ -334,18 +332,18 @@ export default function EditarProduto() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Dificuldade:</Label>
+                <Label>Unidade de venda:</Label>
                 <Select
-                  value={formData.difficulty}
-                  onValueChange={(value) => setFormData({ ...formData, difficulty: value })}
+                  value={formData.unit}
+                  onValueChange={(value) => setFormData({ ...formData, unit: value })}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-background border shadow-lg z-50">
-                    <SelectItem value="low">Baixa</SelectItem>
-                    <SelectItem value="medium">Média</SelectItem>
-                    <SelectItem value="high">Alta</SelectItem>
+                    <SelectItem value="m2">m²</SelectItem>
+                    <SelectItem value="ml">Metro linear</SelectItem>
+                    <SelectItem value="un">Unidade</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
