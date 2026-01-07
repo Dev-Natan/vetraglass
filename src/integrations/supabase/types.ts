@@ -371,6 +371,128 @@ export type Database = {
         }
         Relationships: []
       }
+      quote_items: {
+        Row: {
+          company_product_id: string | null
+          created_at: string
+          description: string
+          height: number | null
+          id: string
+          notes: string | null
+          quantity: number
+          quote_id: string
+          total_price: number
+          unit_price: number
+          width: number | null
+        }
+        Insert: {
+          company_product_id?: string | null
+          created_at?: string
+          description: string
+          height?: number | null
+          id?: string
+          notes?: string | null
+          quantity?: number
+          quote_id: string
+          total_price?: number
+          unit_price?: number
+          width?: number | null
+        }
+        Update: {
+          company_product_id?: string | null
+          created_at?: string
+          description?: string
+          height?: number | null
+          id?: string
+          notes?: string | null
+          quantity?: number
+          quote_id?: string
+          total_price?: number
+          unit_price?: number
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_items_company_product_id_fkey"
+            columns: ["company_product_id"]
+            isOneToOne: false
+            referencedRelation: "company_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quotes: {
+        Row: {
+          company_id: string
+          created_at: string
+          customer_address: string | null
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string | null
+          discount_amount: number | null
+          discount_percent: number | null
+          final_amount: number
+          id: string
+          notes: string | null
+          quote_number: number
+          status: string
+          total_amount: number
+          updated_at: string
+          valid_until: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          customer_address?: string | null
+          customer_email?: string | null
+          customer_name: string
+          customer_phone?: string | null
+          discount_amount?: number | null
+          discount_percent?: number | null
+          final_amount?: number
+          id?: string
+          notes?: string | null
+          quote_number?: number
+          status?: string
+          total_amount?: number
+          updated_at?: string
+          valid_until?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          customer_address?: string | null
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          discount_amount?: number | null
+          discount_percent?: number | null
+          final_amount?: number
+          id?: string
+          notes?: string | null
+          quote_number?: number
+          status?: string
+          total_amount?: number
+          updated_at?: string
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       saas_admins: {
         Row: {
           created_at: string
