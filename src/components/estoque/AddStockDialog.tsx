@@ -163,6 +163,8 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
   const handleTypeChange = (type: string) => {
     setSelectedType(type);
     setSelectedItemId('');
+    // Perfis têm venda fracionada habilitada por padrão
+    setAllowFractional(type === 'profile');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
