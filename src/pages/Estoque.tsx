@@ -1,15 +1,19 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Boxes, TrendingDown, TrendingUp, Package, Plus, MapPin, DollarSign } from 'lucide-react';
+import { Boxes, TrendingDown, TrendingUp, Package, Plus, MapPin, DollarSign, Power } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AddStockDialog } from '@/components/estoque/AddStockDialog';
 import { EditItemPriceDialog } from '@/components/estoque/EditItemPriceDialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toast } from 'sonner';
 
 export default function Estoque() {
   const { currentCompany } = useAuth();
+  const queryClient = useQueryClient();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [priceDialogOpen, setPriceDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<{
@@ -18,6 +22,7 @@ export default function Estoque() {
     imageUrl?: string | null;
     unit?: string;
   } | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
 
   // Fetch company stock
   const {
@@ -29,8 +34,6 @@ export default function Estoque() {
     queryFn: async () => {
       if (!currentCompany?.id) return [];
 
-      console.log('[Estoque] carregando estoque', { companyId: currentCompany.id });
-
       const { data, error } = await supabase
         .from('company_stock')
         .select('*')
@@ -38,9 +41,6 @@ export default function Estoque() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-
-      console.log('[Estoque] estoque carregado', { count: data?.length ?? 0 });
-
       return data;
     },
     enabled: !!currentCompany?.id,
@@ -54,17 +54,12 @@ export default function Estoque() {
   } = useQuery({
     queryKey: ['item-templates'],
     queryFn: async () => {
-      console.log('[Estoque] carregando item_templates');
-
       const { data, error } = await supabase
         .from('item_templates')
         .select('*')
         .eq('is_active', true);
 
       if (error) throw error;
-
-      console.log('[Estoque] item_templates carregados', { count: data?.length ?? 0 });
-
       return data;
     },
   });
@@ -86,7 +81,26 @@ export default function Estoque() {
     enabled: !!currentCompany?.id,
   });
 
-  // Combine stock with item details and prices (only when both are loaded)
+  // Toggle active mutation
+  const toggleActiveMutation = useMutation({
+    mutationFn: async ({ stockId, isActive }: { stockId: string; isActive: boolean }) => {
+      const { error } = await supabase
+        .from('company_stock')
+        .update({ is_active: isActive })
+        .eq('id', stockId);
+
+      if (error) throw error;
+    },
+    onSuccess: (_, { isActive }) => {
+      queryClient.invalidateQueries({ queryKey: ['company-stock'] });
+      toast.success(isActive ? 'Item ativado' : 'Item desativado');
+    },
+    onError: (error: any) => {
+      toast.error('Erro ao atualizar item: ' + error.message);
+    },
+  });
+
+  // Combine stock with item details and prices
   const stockItems = useMemo(() => {
     if (!stockData || !itemTemplates) return [];
     return stockData.map((stock) => {
@@ -95,6 +109,16 @@ export default function Estoque() {
       return { ...stock, item_template, priceInfo };
     });
   }, [stockData, itemTemplates, itemPrices]);
+
+  // Filter by category
+  const filteredStockItems = useMemo(() => {
+    if (categoryFilter === 'all') return stockItems;
+    return stockItems.filter((item) => item.item_template?.type === categoryFilter);
+  }, [stockItems, categoryFilter]);
+
+  // Split active/inactive
+  const activeItems = useMemo(() => filteredStockItems.filter((i) => i.is_active !== false), [filteredStockItems]);
+  const inactiveItems = useMemo(() => filteredStockItems.filter((i) => i.is_active === false), [filteredStockItems]);
 
   const handleOpenPriceDialog = (item: typeof stockItems[0]) => {
     setSelectedItem({
@@ -106,12 +130,17 @@ export default function Estoque() {
     setPriceDialogOpen(true);
   };
 
+  const handleToggleActive = (e: React.MouseEvent, stockId: string, currentActive: boolean) => {
+    e.stopPropagation();
+    toggleActiveMutation.mutate({ stockId, isActive: !currentActive });
+  };
+
   const isLoading = loadingStock || loadingItems;
   const loadError = stockError || itemsError;
 
-  // Filter low stock items
-  const lowStockItems = stockItems?.filter(
-    item => item.quantity <= (item.min_quantity || 0) && item.min_quantity > 0
+  // Filter low stock items (only active)
+  const lowStockItems = activeItems?.filter(
+    (item) => item.quantity <= (item.min_quantity || 0) && item.min_quantity > 0
   );
 
   const itemTypeLabels: Record<string, string> = {
@@ -120,6 +149,91 @@ export default function Estoque() {
     accessory: 'Acessório',
     service: 'Serviço',
   };
+
+  const renderStockItem = (item: typeof stockItems[0], showActivateBtn = true) => (
+    <div
+      key={item.id}
+      className={`flex items-center justify-between gap-3 p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer ${
+        item.is_active === false ? 'opacity-60' : ''
+      }`}
+      onClick={() => handleOpenPriceDialog(item)}
+    >
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        {item.item_template?.image_url ? (
+          <div className="h-12 w-12 rounded-md border bg-background p-1 flex items-center justify-center shrink-0">
+            <img
+              src={item.item_template.image_url}
+              alt={item.item_template?.name ?? 'Item'}
+              loading="lazy"
+              className="max-h-full max-w-full object-contain"
+            />
+          </div>
+        ) : (
+          <div className="h-12 w-12 rounded-md border bg-background flex items-center justify-center shrink-0">
+            <Package className="h-6 w-6 text-muted-foreground" />
+          </div>
+        )}
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 min-w-0">
+            <p className="font-medium truncate">{item.item_template?.name ?? `Item (${item.item_template_id})`}</p>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0">
+              {itemTypeLabels[item.item_template?.type || ''] || item.item_template?.type}
+            </span>
+          </div>
+          {item.location && (
+            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+              <MapPin className="w-3 h-3" />
+              {item.location}
+            </p>
+          )}
+          {item.priceInfo && (item.priceInfo.cost > 0 || item.priceInfo.price > 0) ? (
+            <div className="flex items-center gap-3 mt-1 text-xs">
+              {item.priceInfo.cost > 0 && (
+                <span className="text-muted-foreground">
+                  Custo: R$ {Number(item.priceInfo.cost).toFixed(2)}
+                </span>
+              )}
+              {item.priceInfo.price > 0 && (
+                <span className="text-green-600 font-medium">
+                  Venda: R$ {Number(item.priceInfo.price).toFixed(2)}
+                </span>
+              )}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground/70 flex items-center gap-1 mt-1">
+              <DollarSign className="w-3 h-3" />
+              Clique para definir preços
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <div className="text-right">
+          <p className="font-semibold text-lg">
+            {item.quantity}{' '}
+            <span className="text-sm text-muted-foreground">{item.item_template?.unit}</span>
+          </p>
+          {item.min_quantity > 0 && (
+            <p className="text-xs text-muted-foreground">Mín: {item.min_quantity}</p>
+          )}
+        </div>
+
+        {showActivateBtn && (
+          <Button
+            variant={item.is_active !== false ? 'outline' : 'default'}
+            size="icon"
+            className="shrink-0"
+            onClick={(e) => handleToggleActive(e, item.id, item.is_active !== false)}
+            title={item.is_active !== false ? 'Desativar item' : 'Ativar item'}
+          >
+            <Power className="w-4 h-4" />
+          </Button>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <MainLayout>
@@ -160,10 +274,6 @@ export default function Estoque() {
           </div>
         )}
 
-        <div className="text-xs text-muted-foreground">
-          Empresa: {currentCompany?.name ?? '—'} | Estoque: {stockData?.length ?? 0} | Itens ativos: {itemTemplates?.length ?? 0}
-        </div>
-
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Stock Alerts */}
           <div className="section-card lg:col-span-1">
@@ -173,7 +283,7 @@ export default function Estoque() {
             </h2>
             {lowStockItems && lowStockItems.length > 0 ? (
               <div className="space-y-2">
-                {lowStockItems.map(item => (
+                {lowStockItems.map((item) => (
                   <div
                     key={item.id}
                     className="flex items-center justify-between p-3 rounded-lg bg-destructive/10 border border-destructive/20"
@@ -195,7 +305,9 @@ export default function Estoque() {
                       )}
 
                       <div>
-                        <p className="font-medium text-sm">{item.item_template?.name ?? `Item (${item.item_template_id})`}</p>
+                        <p className="font-medium text-sm">
+                          {item.item_template?.name ?? `Item (${item.item_template_id})`}
+                        </p>
                         <p className="text-xs text-muted-foreground">
                           Mínimo: {item.min_quantity} {item.item_template?.unit}
                         </p>
@@ -216,102 +328,70 @@ export default function Estoque() {
             )}
           </div>
 
-          {/* Stock List */}
+          {/* Stock List with Tabs */}
           <div className="section-card lg:col-span-2">
-            <h2 className="font-display font-semibold text-lg text-foreground mb-4">
-              Itens em Estoque
-            </h2>
-            {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              </div>
-            ) : stockItems && stockItems.length > 0 ? (
-              <div className="space-y-2">
-                {stockItems.map(item => (
-                  <div
-                    key={item.id}
-                    className="flex items-center justify-between gap-3 p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer"
-                    onClick={() => handleOpenPriceDialog(item)}
-                  >
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      {item.item_template?.image_url ? (
-                        <div className="h-12 w-12 rounded-md border bg-background p-1 flex items-center justify-center shrink-0">
-                          <img
-                            src={item.item_template.image_url}
-                            alt={item.item_template?.name ?? 'Item'}
-                            loading="lazy"
-                            className="max-h-full max-w-full object-contain"
-                          />
-                        </div>
-                      ) : (
-                        <div className="h-12 w-12 rounded-md border bg-background flex items-center justify-center shrink-0">
-                          <Package className="h-6 w-6 text-muted-foreground" />
-                        </div>
-                      )}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+              <h2 className="font-display font-semibold text-lg text-foreground">Itens em Estoque</h2>
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filtrar categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas categorias</SelectItem>
+                  <SelectItem value="profile">Perfis</SelectItem>
+                  <SelectItem value="glass">Vidros</SelectItem>
+                  <SelectItem value="accessory">Acessórios</SelectItem>
+                  <SelectItem value="service">Serviços</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <p className="font-medium truncate">{item.item_template?.name ?? `Item (${item.item_template_id})`}</p>
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0">
-                            {itemTypeLabels[item.item_template?.type || ''] || item.item_template?.type}
-                          </span>
-                        </div>
-                        {item.location && (
-                          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                            <MapPin className="w-3 h-3" />
-                            {item.location}
-                          </p>
-                        )}
-                        {/* Price info */}
-                        {item.priceInfo && (item.priceInfo.cost > 0 || item.priceInfo.price > 0) ? (
-                          <div className="flex items-center gap-3 mt-1 text-xs">
-                            {item.priceInfo.cost > 0 && (
-                              <span className="text-muted-foreground">
-                                Custo: R$ {Number(item.priceInfo.cost).toFixed(2)}
-                              </span>
-                            )}
-                            {item.priceInfo.price > 0 && (
-                              <span className="text-green-600 font-medium">
-                                Venda: R$ {Number(item.priceInfo.price).toFixed(2)}
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <p className="text-xs text-muted-foreground/70 flex items-center gap-1 mt-1">
-                            <DollarSign className="w-3 h-3" />
-                            Clique para definir preços
-                          </p>
-                        )}
-                      </div>
-                    </div>
+            <Tabs defaultValue="active" className="w-full">
+              <TabsList className="mb-4">
+                <TabsTrigger value="active">
+                  Ativos ({activeItems.length})
+                </TabsTrigger>
+                <TabsTrigger value="inactive">
+                  Desativados ({inactiveItems.length})
+                </TabsTrigger>
+              </TabsList>
 
-                    <div className="text-right">
-                      <p className="font-semibold text-lg">
-                        {item.quantity}{' '}
-                        <span className="text-sm text-muted-foreground">{item.item_template?.unit}</span>
-                      </p>
-                      {item.min_quantity > 0 && (
-                        <p className="text-xs text-muted-foreground">
-                          Mín: {item.min_quantity}
-                        </p>
-                      )}
-                    </div>
+              <TabsContent value="active">
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Boxes className="w-12 h-12 text-muted-foreground/50 mb-4" />
-                <h3 className="font-medium text-foreground mb-1">Nenhum item no estoque</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Adicione itens para controlar seu estoque.
-                </p>
-                <Button onClick={() => setAddDialogOpen(true)} className="gap-2">
-                  <Plus className="w-4 h-4" />
-                  Adicionar Primeiro Item
-                </Button>
-              </div>
-            )}
+                ) : activeItems.length > 0 ? (
+                  <div className="space-y-2">{activeItems.map((item) => renderStockItem(item))}</div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <Boxes className="w-12 h-12 text-muted-foreground/50 mb-4" />
+                    <h3 className="font-medium text-foreground mb-1">Nenhum item ativo</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Adicione itens para controlar seu estoque.
+                    </p>
+                    <Button onClick={() => setAddDialogOpen(true)} className="gap-2">
+                      <Plus className="w-4 h-4" />
+                      Adicionar Primeiro Item
+                    </Button>
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="inactive">
+                {inactiveItems.length > 0 ? (
+                  <div className="space-y-2">{inactiveItems.map((item) => renderStockItem(item))}</div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <Package className="w-12 h-12 text-muted-foreground/50 mb-4" />
+                    <h3 className="font-medium text-foreground mb-1">Nenhum item desativado</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Itens desativados aparecerão aqui.
+                    </p>
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>

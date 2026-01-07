@@ -154,6 +154,7 @@ export type Database = {
           company_id: string
           created_at: string
           id: string
+          is_active: boolean
           item_template_id: string
           location: string | null
           min_quantity: number | null
@@ -164,6 +165,7 @@ export type Database = {
           company_id: string
           created_at?: string
           id?: string
+          is_active?: boolean
           item_template_id: string
           location?: string | null
           min_quantity?: number | null
@@ -174,6 +176,7 @@ export type Database = {
           company_id?: string
           created_at?: string
           id?: string
+          is_active?: boolean
           item_template_id?: string
           location?: string | null
           min_quantity?: number | null
