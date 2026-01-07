@@ -1,15 +1,15 @@
 import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { Scissors, Plus, Calculator, Ruler, Package, ChevronRight, RotateCcw, Printer } from 'lucide-react';
+import { ArrowLeft, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 // Tradução de categorias
 const categoryLabels: Record<string, string> = {
@@ -24,20 +24,15 @@ const categoryLabels: Record<string, string> = {
 
 const translateCategory = (category: string) => categoryLabels[category] || category;
 
-interface CutPiece {
+interface CutItem {
+  id: string;
   profileName: string;
+  imageUrl: string | null;
   formula: string;
   calculatedLength: number;
   quantity: number;
   cutAngle: number;
-}
-
-interface BarOptimization {
-  barLength: number;
-  pieces: { profileName: string; length: number }[];
-  usedLength: number;
-  wasteLength: number;
-  wastePercent: number;
+  position: 'Altura' | 'Largura';
 }
 
 // Evaluate a formula like "Altura - 20" or "(Largura - 136) / 2"
@@ -49,70 +44,39 @@ function evaluateFormula(formula: string, width: number, height: number): number
       .replace(/L/g, width.toString())
       .replace(/A/g, height.toString());
     
-    // Safe evaluation using Function constructor
     const result = new Function(`return ${normalized}`)();
-    return Math.round(result * 100) / 100;
+    return Math.round(result);
   } catch {
     return 0;
   }
 }
 
-// Simple First Fit Decreasing algorithm for 1D bin packing
-function optimizeCutting(pieces: CutPiece[], barLength: number = 6000): BarOptimization[] {
-  // Expand pieces by quantity
-  const allPieces: { profileName: string; length: number }[] = [];
-  pieces.forEach(piece => {
-    for (let i = 0; i < piece.quantity; i++) {
-      allPieces.push({ profileName: piece.profileName, length: piece.calculatedLength });
-    }
-  });
-
-  // Sort descending by length
-  allPieces.sort((a, b) => b.length - a.length);
-
-  const bars: BarOptimization[] = [];
-
-  allPieces.forEach(piece => {
-    // Find first bar that can fit this piece
-    let placed = false;
-    for (const bar of bars) {
-      if (bar.usedLength + piece.length <= barLength) {
-        bar.pieces.push(piece);
-        bar.usedLength += piece.length;
-        bar.wasteLength = barLength - bar.usedLength;
-        bar.wastePercent = (bar.wasteLength / barLength) * 100;
-        placed = true;
-        break;
-      }
-    }
-
-    // If no bar can fit, create new bar
-    if (!placed) {
-      bars.push({
-        barLength,
-        pieces: [piece],
-        usedLength: piece.length,
-        wasteLength: barLength - piece.length,
-        wastePercent: ((barLength - piece.length) / barLength) * 100
-      });
-    }
-  });
-
-  return bars;
+// Detect if formula uses Altura or Largura
+function getFormulaPosition(formula: string): 'Altura' | 'Largura' {
+  const lower = formula.toLowerCase();
+  if (lower.includes('altura')) return 'Altura';
+  return 'Largura';
 }
 
+// Get storage URL helper
+const getStorageUrl = (path: string | null) => {
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  if (path.startsWith('/')) return path;
+  return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/item-templates/${path}`;
+};
+
 export default function PlanoCorte() {
-  const { currentCompany } = useAuth();
+  const navigate = useNavigate();
   const [selectedLinha, setSelectedLinha] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedProduct, setSelectedProduct] = useState<string>('');
-  const [width, setWidth] = useState<number>(1200);
-  const [height, setHeight] = useState<number>(1400);
+  const [width, setWidth] = useState<number>(1000);
+  const [height, setHeight] = useState<number>(1000);
   const [quantity, setQuantity] = useState<number>(1);
-  const [barLength, setBarLength] = useState<number>(6000);
-  const [showResults, setShowResults] = useState(false);
+  const [activeTab, setActiveTab] = useState<'pendente' | 'fabricado'>('pendente');
 
-  // Fetch product templates (global templates)
+  // Fetch product templates
   const { data: productTemplates } = useQuery({
     queryKey: ['product-templates-for-cutting'],
     queryFn: async () => {
@@ -123,6 +87,7 @@ export default function PlanoCorte() {
           name,
           category,
           linha,
+          image_url,
           min_width,
           max_width,
           min_height,
@@ -135,7 +100,7 @@ export default function PlanoCorte() {
     }
   });
 
-  // Get unique linhas from products
+  // Get unique linhas
   const availableLinhas = useMemo(() => {
     if (!productTemplates) return [];
     const linhas = new Set<string>();
@@ -145,7 +110,7 @@ export default function PlanoCorte() {
     return Array.from(linhas).sort();
   }, [productTemplates]);
 
-  // Get unique categories filtered by selected linha
+  // Get unique categories filtered by linha
   const availableCategories = useMemo(() => {
     if (!productTemplates) return [];
     const categories = new Set<string>();
@@ -167,7 +132,7 @@ export default function PlanoCorte() {
     });
   }, [productTemplates, selectedLinha, selectedCategory]);
 
-  // Reset dependent filters when parent changes
+  // Reset dependent filters
   const handleLinhaChange = (value: string) => {
     setSelectedLinha(value);
     setSelectedCategory('');
@@ -179,9 +144,9 @@ export default function PlanoCorte() {
     setSelectedProduct('');
   };
 
-  // Fetch product template items for selected product
+  // Fetch product template items
   const { data: productItems } = useQuery({
-    queryKey: ['product-template-items', selectedProduct],
+    queryKey: ['product-template-items-cutting', selectedProduct],
     queryFn: async () => {
       if (!selectedProduct) return [];
       
@@ -193,6 +158,7 @@ export default function PlanoCorte() {
           pieces_quantity,
           cut_angle,
           is_optional,
+          notes,
           item_templates (
             id,
             name,
@@ -208,59 +174,33 @@ export default function PlanoCorte() {
     enabled: !!selectedProduct
   });
 
-  // Calculate cuts based on dimensions
-  const calculatedCuts = useMemo((): CutPiece[] => {
+  // Calculate cuts
+  const calculatedCuts = useMemo((): CutItem[] => {
     if (!productItems || productItems.length === 0) return [];
 
     return productItems
       .filter(item => item.item_templates?.type === 'profile')
       .map(item => {
-        // pieces_quantity = número de peças do perfil por unidade de produto
-        // quantity = número de produtos (janelas/portas)
-        // Total de peças = pieces_quantity × quantity
         const piecesPerProduct = (item as any).pieces_quantity || 1;
         const totalPieces = piecesPerProduct * quantity;
+        const position = getFormulaPosition(item.quantity_formula);
         
         return {
+          id: item.id,
           profileName: item.item_templates?.name || 'Perfil',
+          imageUrl: item.item_templates?.image_url || null,
           formula: item.quantity_formula,
           calculatedLength: evaluateFormula(item.quantity_formula, width, height),
           quantity: totalPieces,
-          cutAngle: item.cut_angle
+          cutAngle: item.cut_angle,
+          position
         };
       });
   }, [productItems, width, height, quantity]);
 
-  // Optimize cutting
-  const optimizedBars = useMemo(() => {
-    if (!showResults || calculatedCuts.length === 0) return [];
-    return optimizeCutting(calculatedCuts, barLength);
-  }, [calculatedCuts, barLength, showResults]);
-
-  // Stats
-  const totalPieces = calculatedCuts.reduce((sum, c) => sum + c.quantity, 0);
-  const totalBars = optimizedBars.length;
-  const avgUtilization = optimizedBars.length > 0
-    ? 100 - (optimizedBars.reduce((sum, b) => sum + b.wastePercent, 0) / optimizedBars.length)
-    : 0;
-  const totalWaste = optimizedBars.reduce((sum, b) => sum + b.wasteLength, 0);
-
-  const handleCalculate = () => {
-    setShowResults(true);
-  };
-
-  const handleReset = () => {
-    setShowResults(false);
-    setSelectedProduct('');
-    setWidth(1200);
-    setHeight(1400);
-    setQuantity(1);
-  };
+  const selectedProductData = productTemplates?.find(p => p.id === selectedProduct);
 
   const handlePrint = () => {
-    const printContent = document.getElementById('plano-corte-print');
-    if (!printContent) return;
-
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
@@ -272,89 +212,96 @@ export default function PlanoCorte() {
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body { font-family: Arial, sans-serif; padding: 20px; color: #1a1a1a; }
-            h1 { font-size: 24px; margin-bottom: 8px; }
-            h2 { font-size: 18px; margin: 20px 0 10px; border-bottom: 2px solid #333; padding-bottom: 5px; }
-            .header { margin-bottom: 20px; }
-            .info { font-size: 14px; color: #666; margin-bottom: 4px; }
-            .stats { display: flex; gap: 20px; margin: 20px 0; flex-wrap: wrap; }
-            .stat { background: #f5f5f5; padding: 15px; border-radius: 8px; min-width: 120px; }
-            .stat-value { font-size: 24px; font-weight: bold; }
-            .stat-label { font-size: 12px; color: #666; }
-            .cut-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #eee; }
-            .cut-name { font-weight: 500; }
-            .cut-details { color: #666; font-size: 12px; }
-            .cut-length { font-weight: bold; font-size: 18px; }
-            .cut-qty { font-size: 12px; color: #666; }
-            .bar { margin-bottom: 15px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
-            .bar-header { display: flex; justify-content: space-between; margin-bottom: 10px; }
-            .bar-visual { height: 30px; background: #e5e5e5; border-radius: 4px; display: flex; overflow: hidden; margin-bottom: 8px; }
-            .bar-piece { background: #3b82f6; display: flex; align-items: center; justify-content: center; color: white; font-size: 10px; border-right: 1px solid white; }
-            .bar-waste { background: #f87171; }
-            .bar-pieces-list { font-size: 12px; color: #666; }
-            @media print { body { padding: 0; } }
+            .header { display: flex; gap: 30px; margin-bottom: 30px; align-items: flex-start; }
+            .product-image { width: 150px; height: 150px; background: #f0f0f0; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; }
+            .product-image img { max-width: 100%; max-height: 100%; }
+            .product-info h1 { font-size: 20px; margin-bottom: 15px; text-transform: uppercase; }
+            .dimensions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+            .dim-box { background: #f5f5f5; padding: 8px 15px; border-radius: 4px; }
+            .dim-label { font-size: 11px; color: #666; }
+            .dim-value { font-size: 16px; font-weight: bold; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th { background: #1e3a5f; color: white; padding: 12px; text-align: left; font-size: 12px; text-transform: uppercase; }
+            td { padding: 12px; border-bottom: 1px solid #eee; vertical-align: middle; }
+            .profile-cell { display: flex; align-items: center; gap: 10px; }
+            .profile-img { width: 60px; height: 40px; background: #f0f0f0; border: 1px solid #ddd; }
+            .profile-img img { width: 100%; height: 100%; object-fit: contain; }
+            .angle-box { display: inline-flex; gap: 5px; }
+            .angle { background: #1e3a5f; color: white; padding: 5px 12px; font-size: 12px; }
+            .position { display: flex; align-items: center; gap: 8px; }
+            .position-dot { width: 10px; height: 10px; border-radius: 50%; }
+            .position-altura { background: #3b82f6; }
+            .position-largura { background: #f59e0b; }
+            @media print { body { padding: 10px; } }
           </style>
         </head>
         <body>
           <div class="header">
-            <h1>Plano de Corte</h1>
-            <p class="info"><strong>Produto:</strong> ${selectedProductData?.name || '-'}</p>
-            <p class="info"><strong>Dimensões:</strong> ${width}mm x ${height}mm</p>
-            <p class="info"><strong>Quantidade:</strong> ${quantity} unidade(s)</p>
-            <p class="info"><strong>Comprimento da barra:</strong> ${barLength}mm</p>
-            <p class="info"><strong>Data:</strong> ${new Date().toLocaleDateString('pt-BR')}</p>
-          </div>
-
-          <div class="stats">
-            <div class="stat">
-              <div class="stat-value">${totalPieces}</div>
-              <div class="stat-label">Peças totais</div>
+            <div class="product-image">
+              ${selectedProductData?.image_url ? `<img src="${getStorageUrl(selectedProductData.image_url)}" alt="${selectedProductData.name}" />` : '<span style="color:#999">🪟</span>'}
             </div>
-            <div class="stat">
-              <div class="stat-value">${totalBars}</div>
-              <div class="stat-label">Barras necessárias</div>
-            </div>
-            <div class="stat">
-              <div class="stat-value">${avgUtilization.toFixed(1)}%</div>
-              <div class="stat-label">Aproveitamento</div>
-            </div>
-            <div class="stat">
-              <div class="stat-value">${(totalWaste / 1000).toFixed(2)}m</div>
-              <div class="stat-label">Sobra total</div>
-            </div>
-          </div>
-
-          <h2>Lista de Cortes</h2>
-          ${calculatedCuts.map((cut, i) => `
-            <div class="cut-item">
+            <div class="product-info">
+              <h1>${selectedProductData?.name || '-'}</h1>
+              <div class="dimensions">
+                <div>
+                  <div class="dim-label">Largura</div>
+                  <div class="dim-box"><span class="dim-value">${width}</span></div>
+                </div>
+                <div>
+                  <div class="dim-label">Altura</div>
+                  <div class="dim-box"><span class="dim-value">${height}</span></div>
+                </div>
+              </div>
               <div>
-                <div class="cut-name">${i + 1}. ${cut.profileName}</div>
-                <div class="cut-details">Fórmula: ${cut.formula} | Ângulo: ${cut.cutAngle}°</div>
-              </div>
-              <div style="text-align: right;">
-                <div class="cut-length">${cut.calculatedLength} mm</div>
-                <div class="cut-qty">${cut.quantity}x peças</div>
+                <div class="dim-label">Quantidade</div>
+                <div class="dim-box"><span class="dim-value">${quantity}</span></div>
               </div>
             </div>
-          `).join('')}
+          </div>
 
-          <h2>Otimização por Barra</h2>
-          ${optimizedBars.map((bar, i) => `
-            <div class="bar">
-              <div class="bar-header">
-                <strong>Barra ${i + 1}</strong>
-                <span>Aproveitamento: ${(100 - bar.wastePercent).toFixed(1)}% | Sobra: ${bar.wasteLength}mm</span>
-              </div>
-              <div class="bar-visual">
-                ${bar.pieces.map(p => `
-                  <div class="bar-piece" style="width: ${(p.length / bar.barLength) * 100}%">${p.length}</div>
-                `).join('')}
-                ${bar.wasteLength > 0 ? `<div class="bar-piece bar-waste" style="width: ${(bar.wasteLength / bar.barLength) * 100}%">${bar.wasteLength}</div>` : ''}
-              </div>
-              <div class="bar-pieces-list">
-                ${bar.pieces.map(p => `${p.profileName}: ${p.length}mm`).join(' | ')}
-              </div>
-            </div>
-          `).join('')}
+          <table>
+            <thead>
+              <tr>
+                <th>PERFIL</th>
+                <th>MEDIDA (mm)</th>
+                <th>QUANTIDADE</th>
+                <th>ÂNGULO DE CORTE</th>
+                <th>POSIÇÃO</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${calculatedCuts.map(cut => `
+                <tr>
+                  <td>
+                    <div class="profile-cell">
+                      <div class="profile-img">
+                        ${cut.imageUrl ? `<img src="${getStorageUrl(cut.imageUrl)}" alt="${cut.profileName}" />` : ''}
+                      </div>
+                      <strong>${cut.profileName}</strong>
+                    </div>
+                  </td>
+                  <td><strong>${cut.calculatedLength}</strong></td>
+                  <td>${cut.quantity}</td>
+                  <td>
+                    <div class="angle-box">
+                      <span class="angle">${cut.cutAngle}°</span>
+                      <span class="angle">${cut.cutAngle}°</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="position">
+                      <span class="position-dot position-${cut.position.toLowerCase()}"></span>
+                      ${cut.position}
+                    </div>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          
+          <p style="margin-top: 30px; text-align: center; font-size: 11px; color: #999;">
+            Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}
+          </p>
         </body>
       </html>
     `);
@@ -362,373 +309,228 @@ export default function PlanoCorte() {
     printWindow.print();
   };
 
-  const selectedProductData = productTemplates?.find(p => p.id === selectedProduct);
-
   return (
     <MainLayout>
       <div className="space-y-6 animate-fade-in">
-        <div className="flex flex-col sm:flex-row justify-between gap-4">
-          <div>
-            <h1 className="font-display font-bold text-2xl text-foreground flex items-center gap-2">
-              <Scissors className="w-7 h-7 text-primary" />
-              Plano de Corte
-            </h1>
-            <p className="text-muted-foreground">Otimização de corte de perfis de alumínio</p>
-          </div>
-          {showResults && (
-            <div className="flex gap-2">
-              <Button variant="outline" className="gap-2" onClick={handlePrint}>
-                <Printer className="w-4 h-4" />
-                Imprimir
-              </Button>
-              <Button variant="outline" className="gap-2" onClick={handleReset}>
-                <RotateCcw className="w-4 h-4" />
-                Novo Cálculo
-              </Button>
-            </div>
-          )}
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <Button variant="outline" className="gap-2" onClick={handlePrint} disabled={!selectedProduct || calculatedCuts.length === 0}>
+            <Printer className="w-4 h-4" />
+            Imprimir
+          </Button>
         </div>
 
-        {/* Input Form */}
-        {!showResults && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calculator className="w-5 h-5" />
-                Calcular Cortes
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Filters: Linha → Categoria → Produto */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Linha</Label>
-                  <Select value={selectedLinha} onValueChange={handleLinhaChange}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione a linha" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableLinhas.map(linha => (
-                        <SelectItem key={linha} value={linha}>
-                          {linha}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+        {/* Product Selection & Info */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Product Image */}
+          <div className="flex justify-center">
+            <div className="w-full max-w-[250px] aspect-square bg-muted rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
+              {selectedProductData?.image_url ? (
+                <img 
+                  src={getStorageUrl(selectedProductData.image_url)} 
+                  alt={selectedProductData.name}
+                  className="w-full h-full object-contain rounded-lg"
+                />
+              ) : (
+                <div className="text-6xl text-muted-foreground/30">🪟</div>
+              )}
+            </div>
+          </div>
 
-                <div className="space-y-2">
-                  <Label>Categoria</Label>
-                  <Select 
-                    value={selectedCategory} 
-                    onValueChange={handleCategoryChange}
-                    disabled={!selectedLinha}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione a categoria" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableCategories.map(category => (
-                        <SelectItem key={category} value={category}>
-                          {translateCategory(category)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Produto</Label>
-                  <Select 
-                    value={selectedProduct} 
-                    onValueChange={setSelectedProduct}
-                    disabled={!selectedCategory}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o produto" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filteredProducts.map(product => (
-                        <SelectItem key={product.id} value={product.id}>
-                          {product.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+          {/* Product Selection & Dimensions */}
+          <div className="lg:col-span-2 space-y-4">
+            {/* Filters */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Linha</Label>
+                <Select value={selectedLinha} onValueChange={handleLinhaChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a linha" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableLinhas.map(linha => (
+                      <SelectItem key={linha} value={linha}>
+                        {linha}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
-              {selectedProduct && (
-                <>
-                  {/* Dimensions */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Largura (mm)</Label>
-                      <Input 
-                        type="number" 
-                        value={width} 
-                        onChange={e => setWidth(Number(e.target.value))}
-                        min={selectedProductData?.min_width || 300}
-                        max={selectedProductData?.max_width || 3000}
-                      />
-                      {selectedProductData?.min_width && (
-                        <p className="text-xs text-muted-foreground">
-                          Min: {selectedProductData.min_width}mm | 
-                          Max: {selectedProductData.max_width}mm
-                        </p>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Altura (mm)</Label>
-                      <Input 
-                        type="number" 
-                        value={height} 
-                        onChange={e => setHeight(Number(e.target.value))}
-                        min={selectedProductData?.min_height || 300}
-                        max={selectedProductData?.max_height || 3000}
-                      />
-                      {selectedProductData?.min_height && (
-                        <p className="text-xs text-muted-foreground">
-                          Min: {selectedProductData.min_height}mm | 
-                          Max: {selectedProductData.max_height}mm
-                        </p>
-                      )}
-                    </div>
-                  </div>
+              <div className="space-y-2">
+                <Label>Categoria</Label>
+                <Select 
+                  value={selectedCategory} 
+                  onValueChange={handleCategoryChange}
+                  disabled={!selectedLinha}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableCategories.map(category => (
+                      <SelectItem key={category} value={category}>
+                        {translateCategory(category)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-                  {/* Quantity and Bar Length */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Quantidade de Peças</Label>
-                      <Input 
-                        type="number" 
-                        value={quantity} 
-                        onChange={e => setQuantity(Number(e.target.value))}
-                        min={1}
-                        max={100}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Comprimento da Barra (mm)</Label>
-                      <Select value={barLength.toString()} onValueChange={v => setBarLength(Number(v))}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="5000">5.000 mm (5m)</SelectItem>
-                          <SelectItem value="6000">6.000 mm (6m)</SelectItem>
-                          <SelectItem value="6500">6.500 mm (6.5m)</SelectItem>
-                          <SelectItem value="7000">7.000 mm (7m)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  {/* Preview of formulas */}
-                  {calculatedCuts.length > 0 && (
-                    <div className="border rounded-lg p-4 bg-muted/50">
-                      <h4 className="font-medium text-sm mb-3 flex items-center gap-2">
-                        <Ruler className="w-4 h-4" />
-                        Prévia dos Cortes
-                      </h4>
-                      <div className="space-y-2">
-                        {calculatedCuts.map((cut, index) => (
-                          <div key={index} className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">{cut.profileName}</span>
-                            <div className="flex items-center gap-2">
-                              <code className="text-xs bg-background px-2 py-1 rounded">
-                                {cut.formula}
-                              </code>
-                              <ChevronRight className="w-3 h-3 text-muted-foreground" />
-                              <Badge variant="secondary">{cut.calculatedLength} mm</Badge>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <Button 
-                    className="w-full gap-2" 
-                    size="lg"
-                    onClick={handleCalculate}
-                    disabled={calculatedCuts.length === 0}
-                  >
-                    <Scissors className="w-4 h-4" />
-                    Calcular Plano de Corte
-                  </Button>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Results */}
-        {showResults && (
-          <>
-            {/* Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
-                      <Package className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-display font-bold">{totalPieces}</p>
-                      <p className="text-xs text-muted-foreground">Peças totais</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-action-blue/20 flex items-center justify-center">
-                      <Ruler className="w-5 h-5 text-action-blue" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-display font-bold">{totalBars}</p>
-                      <p className="text-xs text-muted-foreground">Barras necessárias</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-action-green/20 flex items-center justify-center">
-                      <Scissors className="w-5 h-5 text-action-green" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-display font-bold">{avgUtilization.toFixed(1)}%</p>
-                      <p className="text-xs text-muted-foreground">Aproveitamento</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-action-orange/20 flex items-center justify-center">
-                      <Ruler className="w-5 h-5 text-action-orange" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-display font-bold">{(totalWaste / 1000).toFixed(2)}m</p>
-                      <p className="text-xs text-muted-foreground">Sobra total</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="space-y-2">
+                <Label>Produto</Label>
+                <Select 
+                  value={selectedProduct} 
+                  onValueChange={setSelectedProduct}
+                  disabled={!selectedCategory}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredProducts.map(product => (
+                      <SelectItem key={product.id} value={product.id}>
+                        {product.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            {/* Cut List */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Scissors className="w-5 h-5" />
-                  Lista de Cortes - {selectedProductData?.name}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {calculatedCuts.map((cut, index) => (
-                    <div 
-                      key={index} 
-                      className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded bg-primary/20 flex items-center justify-center text-primary font-bold text-sm">
-                          {index + 1}
-                        </div>
-                        <div>
-                          <p className="font-medium">{cut.profileName}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Fórmula: {cut.formula} | Ângulo: {cut.cutAngle}°
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-lg">{cut.calculatedLength} mm</p>
-                        <p className="text-xs text-muted-foreground">
-                          {cut.quantity}x peças
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            {/* Product Name */}
+            {selectedProductData && (
+              <h2 className="text-xl font-bold uppercase text-foreground">
+                {selectedProductData.name}
+              </h2>
+            )}
 
-            {/* Bar Optimization */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Ruler className="w-5 h-5" />
-                  Otimização de Barras ({barLength / 1000}m)
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  {optimizedBars.map((bar, barIndex) => (
-                    <div key={barIndex} className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium">Barra {barIndex + 1}</span>
-                        <span className="text-muted-foreground">
-                          Aproveitamento: {(100 - bar.wastePercent).toFixed(1)}% | 
-                          Sobra: {bar.wasteLength}mm
-                        </span>
-                      </div>
-                      
-                      {/* Visual bar representation */}
-                      <div className="h-10 bg-muted rounded-lg overflow-hidden flex">
-                        {bar.pieces.map((piece, pieceIndex) => {
-                          const widthPercent = (piece.length / bar.barLength) * 100;
-                          // Alternate colors
-                          const colors = [
-                            'bg-primary',
-                            'bg-action-blue',
-                            'bg-action-green',
-                            'bg-action-purple',
-                            'bg-action-orange'
-                          ];
-                          const colorClass = colors[pieceIndex % colors.length];
-                          
-                          return (
-                            <div
-                              key={pieceIndex}
-                              className={`${colorClass} h-full flex items-center justify-center text-xs text-white font-medium border-r border-background`}
-                              style={{ width: `${widthPercent}%` }}
-                              title={`${piece.profileName}: ${piece.length}mm`}
-                            >
-                              {widthPercent > 8 && `${piece.length}`}
+            {/* Dimensions */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Largura</Label>
+                <Input 
+                  type="number" 
+                  value={width} 
+                  onChange={e => setWidth(Number(e.target.value))}
+                  className="bg-muted"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Altura</Label>
+                <Input 
+                  type="number" 
+                  value={height} 
+                  onChange={e => setHeight(Number(e.target.value))}
+                  className="bg-muted"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Quantidade</Label>
+                <Input 
+                  type="number" 
+                  value={quantity} 
+                  onChange={e => setQuantity(Number(e.target.value))}
+                  min={1}
+                  className="bg-muted"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'pendente' | 'fabricado')}>
+          <TabsList className="w-auto">
+            <TabsTrigger value="pendente" className="px-8">
+              Pendente
+            </TabsTrigger>
+            <TabsTrigger value="fabricado" className="px-8">
+              Fabricado
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="pendente" className="mt-4">
+            {/* Cut Table */}
+            {calculatedCuts.length > 0 ? (
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-primary hover:bg-primary">
+                      <TableHead className="text-primary-foreground font-bold">PERFIL</TableHead>
+                      <TableHead className="text-primary-foreground font-bold text-center">MEDIDA (mm)</TableHead>
+                      <TableHead className="text-primary-foreground font-bold text-center">QUANTIDADE</TableHead>
+                      <TableHead className="text-primary-foreground font-bold text-center">ÂNGULO DE CORTE</TableHead>
+                      <TableHead className="text-primary-foreground font-bold text-center">POSIÇÃO</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {calculatedCuts.map((cut) => (
+                      <TableRow key={cut.id} className="hover:bg-muted/50">
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="w-16 h-12 bg-muted rounded border flex items-center justify-center overflow-hidden">
+                              {cut.imageUrl ? (
+                                <img 
+                                  src={getStorageUrl(cut.imageUrl)} 
+                                  alt={cut.profileName}
+                                  className="w-full h-full object-contain"
+                                />
+                              ) : (
+                                <span className="text-muted-foreground text-xs">📦</span>
+                              )}
                             </div>
-                          );
-                        })}
-                        {/* Waste */}
-                        <div 
-                          className="bg-destructive/30 h-full flex items-center justify-center text-xs text-destructive font-medium"
-                          style={{ width: `${bar.wastePercent}%` }}
-                        >
-                          {bar.wastePercent > 5 && 'Sobra'}
-                        </div>
-                      </div>
+                            <span className="font-medium">{cut.profileName}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center font-bold text-lg">
+                          {cut.calculatedLength}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {cut.quantity}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="inline-flex gap-1">
+                            <span className="bg-foreground text-background px-3 py-1 text-sm font-medium">
+                              {cut.cutAngle}°
+                            </span>
+                            <span className="bg-foreground text-background px-3 py-1 text-sm font-medium">
+                              {cut.cutAngle}°
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="inline-flex items-center gap-2">
+                            <span className={`w-3 h-3 rounded-full ${
+                              cut.position === 'Altura' ? 'bg-blue-500' : 'bg-amber-500'
+                            }`} />
+                            <span>{cut.position}</span>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground border rounded-lg">
+                {selectedProduct 
+                  ? 'Nenhum perfil cadastrado para este produto.'
+                  : 'Selecione uma linha, categoria e produto para ver o plano de corte.'
+                }
+              </div>
+            )}
+          </TabsContent>
 
-                      {/* Pieces legend */}
-                      <div className="flex flex-wrap gap-2">
-                        {bar.pieces.map((piece, pieceIndex) => (
-                          <Badge key={pieceIndex} variant="outline" className="text-xs">
-                            {piece.profileName}: {piece.length}mm
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </>
-        )}
+          <TabsContent value="fabricado" className="mt-4">
+            <div className="text-center py-12 text-muted-foreground border rounded-lg">
+              Nenhum item fabricado ainda.
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </MainLayout>
   );
