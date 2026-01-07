@@ -10,6 +10,7 @@ import CompanySetup from "./pages/CompanySetup";
 import Clientes from "./pages/Clientes";
 import Produtos from "./pages/Produtos";
 import ProdutosLinha from "./pages/ProdutosLinha";
+import EditarProduto from "./pages/EditarProduto";
 import Estoque from "./pages/Estoque";
 import Orcamentos from "./pages/Orcamentos";
 import OrdensServico from "./pages/OrdensServico";
@@ -106,6 +107,11 @@ function AppRoutes() {
       <Route path="/produtos/linha/:linha" element={
         <ProtectedRoute>
           <ProdutosLinha />
+        </ProtectedRoute>
+      } />
+      <Route path="/produtos/editar/:id" element={
+        <ProtectedRoute>
+          <EditarProduto />
         </ProtectedRoute>
       } />
       <Route path="/estoque" element={
