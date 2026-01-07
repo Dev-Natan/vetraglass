@@ -45,6 +45,7 @@ interface QuoteItem {
   width?: number;
   height?: number;
   quantity: number;
+  base_price_m2: number; // Price per m²
   unit_price: number;
   total_price: number;
   // Selection state
@@ -166,7 +167,13 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
         .eq('quote_id', quote.id);
       
       if (error) throw error;
-      return data as QuoteItem[];
+      // Map database items to include base_price_m2
+      return (data || []).map(item => ({
+        ...item,
+        base_price_m2: item.width && item.height 
+          ? item.unit_price / ((item.width / 1000) * (item.height / 1000)) 
+          : item.unit_price,
+      })) as QuoteItem[];
     },
     enabled: !!quote?.id && open
   });
@@ -206,6 +213,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
     setItems([...items, {
       description: '',
       quantity: 1,
+      base_price_m2: 0,
       unit_price: 0,
       total_price: 0,
       selectedLinha: '',
@@ -229,12 +237,10 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
     const newItems = [...items];
     newItems[index] = { ...newItems[index], [field]: value };
     
-    // Recalculate price based on dimensions
-    if (field === 'width' || field === 'height') {
+    // Recalculate price based on dimensions or base_price_m2
+    if (field === 'width' || field === 'height' || field === 'base_price_m2') {
       const item = newItems[index];
-      // Get the base price from company product or template
-      const existingProduct = companyProducts?.find(p => p.product_template_id === item.product_template_id);
-      const basePrice = Number(existingProduct?.base_price) || item.unit_price || 0;
+      const basePrice = item.base_price_m2 || 0;
       
       if (basePrice > 0) {
         const calculatedPrice = calculatePriceFromDimensions(item, basePrice);
@@ -300,6 +306,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
         ...currentItem,
         company_product_id: existingProduct?.id || undefined,
         description: existingProduct?.commercial_name || template.name,
+        base_price_m2: basePrice,
         unit_price: unitPrice,
         total_price: (currentItem.quantity || 1) * unitPrice,
         // Store template id for reference
@@ -644,7 +651,18 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
-                      <div className="grid grid-cols-3 gap-3">
+                      <div className="grid grid-cols-4 gap-3">
+                        <div>
+                          <label className="text-xs text-muted-foreground">Preço Base (m²)</label>
+                          <Input
+                            type="number"
+                            value={item.base_price_m2 || ''}
+                            onChange={(e) => updateItem(index, 'base_price_m2', Number(e.target.value))}
+                            min={0}
+                            step={0.01}
+                            placeholder="R$/m²"
+                          />
+                        </div>
                         <div>
                           <label className="text-xs text-muted-foreground">Quantidade</label>
                           <Input
@@ -662,6 +680,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
                             onChange={(e) => updateItem(index, 'unit_price', Number(e.target.value))}
                             min={0}
                             step={0.01}
+                            className="bg-muted/50"
                           />
                         </div>
                         <div>
