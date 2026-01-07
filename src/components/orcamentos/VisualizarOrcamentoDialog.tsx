@@ -1,8 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { generateQuotePdf } from '@/utils/generateQuotePdf';
 import {
   Dialog,
   DialogContent,
@@ -21,7 +23,8 @@ import {
   XCircle,
   Clock,
   FileText,
-  Printer
+  Printer,
+  Download
 } from 'lucide-react';
 import {
   Select,
@@ -75,6 +78,7 @@ interface VisualizarOrcamentoDialogProps {
 
 export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: VisualizarOrcamentoDialogProps) {
   const { toast } = useToast();
+  const { currentCompany } = useAuth();
   const queryClient = useQueryClient();
 
   // Fetch quote items
@@ -118,6 +122,21 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleDownloadPdf = () => {
+    if (!quote || !items) return;
+    
+    const company = currentCompany ? {
+      name: currentCompany.name,
+      cnpj: currentCompany.cnpj,
+      phone: currentCompany.phone,
+      email: currentCompany.email,
+      address: currentCompany.address,
+    } : null;
+    
+    generateQuotePdf(quote, items, company);
+    toast({ title: 'PDF gerado com sucesso!' });
   };
 
   if (!quote) return null;
@@ -259,6 +278,10 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
               </Select>
             </div>
             <div className="flex gap-2">
+              <Button variant="outline" onClick={handleDownloadPdf} className="gap-2">
+                <Download className="w-4 h-4" />
+                Baixar PDF
+              </Button>
               <Button variant="outline" onClick={handlePrint} className="gap-2">
                 <Printer className="w-4 h-4" />
                 Imprimir
