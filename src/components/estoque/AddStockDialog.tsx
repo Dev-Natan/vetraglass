@@ -65,7 +65,7 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
 
   // Fetch existing stock to avoid duplicates
   const { data: existingStock } = useQuery({
-    queryKey: ['company-stock', currentCompany?.id],
+    queryKey: ['company-stock-item-ids', currentCompany?.id],
     queryFn: async () => {
       if (!currentCompany?.id) return [];
       const { data, error } = await supabase
@@ -103,6 +103,7 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
         description: 'O item foi adicionado com sucesso.',
       });
       queryClient.invalidateQueries({ queryKey: ['company-stock'] });
+      queryClient.invalidateQueries({ queryKey: ['company-stock-item-ids'] });
       resetForm();
       onOpenChange(false);
     },
