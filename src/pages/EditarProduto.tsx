@@ -42,6 +42,7 @@ type ProductTemplate = {
   max_width: number | null;
   min_height: number | null;
   max_height: number | null;
+  base_price: number | null;
 };
 
 type ProductTemplateItem = {
@@ -111,6 +112,7 @@ export default function EditarProduto() {
     margin_percent: '100',
     has_glass: true,
     gap_type: 'normal',
+    base_price: '',
   });
 
   // Fetch product template
@@ -174,6 +176,7 @@ export default function EditarProduto() {
         margin_percent: '100',
         has_glass: true,
         gap_type: 'normal',
+        base_price: product.base_price?.toString() || '',
       });
     }
   }, [product]);
@@ -186,6 +189,7 @@ export default function EditarProduto() {
         .update({
           name: formData.name,
           description: formData.description,
+          base_price: formData.base_price ? parseFloat(formData.base_price) : 0,
         })
         .eq('id', id);
       if (error) throw error;
@@ -347,7 +351,7 @@ export default function EditarProduto() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <div className="space-y-2">
                 <Label>Produto pronto:</Label>
                 <div className="flex gap-2">
@@ -370,6 +374,17 @@ export default function EditarProduto() {
                     Sim
                   </Button>
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Preço Base (R$/m²):</Label>
+                <Input
+                  type="number"
+                  value={formData.base_price}
+                  onChange={(e) => setFormData({ ...formData, base_price: e.target.value })}
+                  placeholder="0,00"
+                  min={0}
+                  step={0.01}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Margem de lucro:</Label>
