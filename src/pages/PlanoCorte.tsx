@@ -306,7 +306,20 @@ export default function PlanoCorte() {
       </html>
     `);
     printWindow.document.close();
-    printWindow.print();
+    
+    // Use setTimeout to avoid blocking the main thread
+    printWindow.onload = () => {
+      setTimeout(() => {
+        printWindow.focus();
+        printWindow.print();
+      }, 100);
+    };
+    
+    // Fallback if onload doesn't fire (some browsers)
+    setTimeout(() => {
+      printWindow.focus();
+      printWindow.print();
+    }, 500);
   };
 
   return (
