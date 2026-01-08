@@ -105,6 +105,7 @@ export default function EditarProduto() {
   const [selectedItemToAdd, setSelectedItemToAdd] = useState('');
   const [quantityFormula, setQuantityFormula] = useState('1');
   const [piecesQuantity, setPiecesQuantity] = useState(1);
+  const [isUploading, setIsUploading] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -115,6 +116,45 @@ export default function EditarProduto() {
     gap_type: 'normal',
     base_price: '',
   });
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !id) return;
+
+    // Validar tipo de arquivo
+    if (!['image/png', 'image/jpeg', 'image/jpg'].includes(file.type)) {
+      toast.error('Apenas arquivos PNG, JPEG ou JPG são permitidos');
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${id}.${fileExt}`;
+
+      // Upload para o bucket product-templates
+      const { error: uploadError } = await supabase.storage
+        .from('product-templates')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Atualizar o registro com a nova URL
+      const { error: updateError } = await supabase
+        .from('product_templates')
+        .update({ image_url: fileName })
+        .eq('id', id);
+
+      if (updateError) throw updateError;
+
+      queryClient.invalidateQueries({ queryKey: ['product-template', id] });
+      toast.success('Imagem atualizada!');
+    } catch (error: any) {
+      toast.error('Erro ao enviar imagem: ' + error.message);
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   // Fetch product template
   const { data: product, isLoading: productLoading } = useQuery({
@@ -254,14 +294,14 @@ export default function EditarProduto() {
     return productItems?.filter((item) => item.item_template?.type === dbType) || [];
   };
 
-  const getStorageUrl = (path: string | null) => {
+  const getStorageUrl = (path: string | null, bucket: 'item-templates' | 'product-templates' = 'item-templates') => {
     if (!path) return null;
     // Se começa com http, já é URL completa
     if (path.startsWith('http')) return path;
     // Se começa com /, é arquivo local na pasta public
     if (path.startsWith('/')) return path;
     // Caso contrário, é do storage do Supabase
-    return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/item-templates/${path}`;
+    return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
   };
 
   if (productLoading) {
@@ -301,10 +341,17 @@ export default function EditarProduto() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Product Image */}
           <div className="flex flex-col items-center gap-3">
-            <div className="w-full aspect-square max-w-[250px] bg-muted rounded-lg flex items-center justify-center border-2 border-dashed border-muted-foreground/30 relative group cursor-pointer hover:border-primary/50 transition-colors">
+            <label className="w-full aspect-square max-w-[250px] bg-muted rounded-lg flex items-center justify-center border-2 border-dashed border-muted-foreground/30 relative group cursor-pointer hover:border-primary/50 transition-colors">
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/jpg"
+                className="hidden"
+                onChange={handleImageUpload}
+                disabled={isUploading}
+              />
               {product.image_url ? (
                 <img 
-                  src={getStorageUrl(product.image_url)} 
+                  src={getStorageUrl(product.image_url, 'product-templates')} 
                   alt={product.name}
                   className="w-full h-full object-contain rounded-lg"
                 />
@@ -312,12 +359,12 @@ export default function EditarProduto() {
                 <div className="text-6xl text-muted-foreground/30">🪟</div>
               )}
               <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                <Button variant="secondary" size="sm" className="gap-2">
+                <Button variant="secondary" size="sm" className="gap-2 pointer-events-none" disabled={isUploading}>
                   <Upload className="w-4 h-4" />
-                  Alterar foto
+                  {isUploading ? 'Enviando...' : 'Alterar foto'}
                 </Button>
               </div>
-            </div>
+            </label>
             <p className="text-xs text-muted-foreground text-center">
               Arquivos permitidos: PNG, JPEG ou JPG<br />
               Obs: Essa imagem será usada na folha de orçamento
