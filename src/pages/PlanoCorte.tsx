@@ -39,13 +39,19 @@ interface CutItem {
 // Evaluate a formula like "Altura - 20" or "(Largura - 136) / 2"
 function evaluateFormula(formula: string, width: number, height: number): number {
   try {
-    const normalized = formula
-      .replace(/Largura/gi, width.toString())
-      .replace(/Altura/gi, height.toString())
-      .replace(/L/g, width.toString())
-      .replace(/A/g, height.toString());
+    // Use safe math expression parser to prevent code injection
+    const { Parser } = require('expr-eval');
+    const parser = new Parser();
     
-    const result = new Function(`return ${normalized}`)();
+    // Normalize variable names to safe single-letter variables
+    const normalized = formula
+      .replace(/Largura/gi, 'W')
+      .replace(/Altura/gi, 'H')
+      .replace(/\bL\b/g, 'W')
+      .replace(/\bA\b/g, 'H');
+    
+    const expr = parser.parse(normalized);
+    const result = expr.evaluate({ W: width, H: height });
     return Math.round(result);
   } catch {
     return 0;
