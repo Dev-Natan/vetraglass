@@ -28,8 +28,13 @@ import {
   EyeOff,
   Copy,
   DollarSign,
-  Ruler
+  Ruler,
+  ImageUp,
+  CheckCircle2,
+  XCircle,
+  AlertCircle
 } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -101,6 +106,22 @@ export default function ItemTemplates() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploadingImageId, setUploadingImageId] = useState<string | null>(null);
+  
+  // Bulk upload state
+  const [bulkUploadDialogOpen, setBulkUploadDialogOpen] = useState(false);
+  const [bulkUploadProgress, setBulkUploadProgress] = useState<{
+    total: number;
+    processed: number;
+    matched: number;
+    notMatched: string[];
+    isUploading: boolean;
+  }>({
+    total: 0,
+    processed: 0,
+    matched: 0,
+    notMatched: [],
+    isUploading: false,
+  });
 
   // Fetch items
   const { data: items, isLoading } = useQuery({
@@ -319,6 +340,93 @@ export default function ItemTemplates() {
     input.click();
   };
 
+  // Bulk image upload handler
+  const handleBulkImageUpload = async (files: FileList) => {
+    if (!items) return;
+    
+    setBulkUploadProgress({
+      total: files.length,
+      processed: 0,
+      matched: 0,
+      notMatched: [],
+      isUploading: true,
+    });
+    setBulkUploadDialogOpen(true);
+
+    const notMatchedFiles: string[] = [];
+    let matchedCount = 0;
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const fileName = file.name.replace(/\.[^/.]+$/, ''); // Remove extension
+      
+      // Try to find matching item by name (case-insensitive, ignoring spaces)
+      const normalizedFileName = fileName.toLowerCase().replace(/\s+/g, '-');
+      const matchingItem = items.find(item => {
+        const normalizedItemName = item.name.toLowerCase().replace(/\s+/g, '-');
+        return normalizedItemName === normalizedFileName;
+      });
+
+      if (matchingItem) {
+        try {
+          const fileExt = file.name.split('.').pop();
+          const storageName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+          const filePath = `items/${storageName}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from('item-templates')
+            .upload(filePath, file);
+
+          if (!uploadError) {
+            const { data: urlData } = supabase.storage
+              .from('item-templates')
+              .getPublicUrl(filePath);
+
+            await supabase
+              .from('item_templates')
+              .update({ image_url: urlData.publicUrl })
+              .eq('id', matchingItem.id);
+            
+            matchedCount++;
+          }
+        } catch (err) {
+          console.error('Error uploading:', err);
+          notMatchedFiles.push(fileName + ' (erro)');
+        }
+      } else {
+        notMatchedFiles.push(fileName);
+      }
+
+      setBulkUploadProgress(prev => ({
+        ...prev,
+        processed: i + 1,
+        matched: matchedCount,
+        notMatched: notMatchedFiles,
+      }));
+    }
+
+    setBulkUploadProgress(prev => ({ ...prev, isUploading: false }));
+    queryClient.invalidateQueries({ queryKey: ['item-templates-admin'] });
+    
+    if (matchedCount > 0) {
+      toast.success(`${matchedCount} imagens atualizadas!`);
+    }
+  };
+
+  const openBulkUploadDialog = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.multiple = true;
+    input.onchange = (e) => {
+      const files = (e.target as HTMLInputElement).files;
+      if (files && files.length > 0) {
+        handleBulkImageUpload(files);
+      }
+    };
+    input.click();
+  };
+
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setEditingItem(null);
@@ -400,12 +508,18 @@ export default function ItemTemplates() {
             </p>
           </div>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={handleCloseDialog}>
-                <Plus className="w-4 h-4 mr-2" />
-                Novo Item
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={openBulkUploadDialog}>
+                <ImageUp className="w-4 h-4 mr-2" />
+                Upload em Massa
               </Button>
-            </DialogTrigger>
+              <DialogTrigger asChild>
+                <Button onClick={handleCloseDialog}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Novo Item
+                </Button>
+              </DialogTrigger>
+            </div>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
@@ -571,6 +685,81 @@ export default function ItemTemplates() {
                   </Button>
                 </div>
               </form>
+            </DialogContent>
+          </Dialog>
+
+          {/* Bulk Upload Progress Dialog */}
+          <Dialog open={bulkUploadDialogOpen} onOpenChange={(open) => {
+            if (!bulkUploadProgress.isUploading) setBulkUploadDialogOpen(open);
+          }}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <ImageUp className="w-5 h-5" />
+                  Upload em Massa
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Progresso</span>
+                    <span>{bulkUploadProgress.processed} / {bulkUploadProgress.total}</span>
+                  </div>
+                  <Progress 
+                    value={(bulkUploadProgress.processed / Math.max(bulkUploadProgress.total, 1)) * 100} 
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                    <CheckCircle2 className="w-5 h-5 text-green-600" />
+                    <div>
+                      <p className="text-xl font-bold text-green-600">{bulkUploadProgress.matched}</p>
+                      <p className="text-xs text-muted-foreground">Atualizadas</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                    <AlertCircle className="w-5 h-5 text-amber-600" />
+                    <div>
+                      <p className="text-xl font-bold text-amber-600">{bulkUploadProgress.notMatched.length}</p>
+                      <p className="text-xs text-muted-foreground">Não encontrados</p>
+                    </div>
+                  </div>
+                </div>
+
+                {bulkUploadProgress.notMatched.length > 0 && !bulkUploadProgress.isUploading && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium flex items-center gap-1">
+                      <XCircle className="w-4 h-4 text-amber-500" />
+                      Arquivos sem correspondência:
+                    </p>
+                    <div className="max-h-32 overflow-y-auto text-xs text-muted-foreground bg-muted/50 p-2 rounded space-y-1">
+                      {bulkUploadProgress.notMatched.map((name, i) => (
+                        <div key={i}>{name}</div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Dica: O nome do arquivo deve ser igual ao nome do item (ex: AC-001.png → AC-001)
+                    </p>
+                  </div>
+                )}
+
+                {!bulkUploadProgress.isUploading && (
+                  <Button 
+                    className="w-full" 
+                    onClick={() => setBulkUploadDialogOpen(false)}
+                  >
+                    Fechar
+                  </Button>
+                )}
+
+                {bulkUploadProgress.isUploading && (
+                  <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Enviando imagens...
+                  </div>
+                )}
+              </div>
             </DialogContent>
           </Dialog>
         </div>
