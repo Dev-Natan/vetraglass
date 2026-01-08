@@ -983,46 +983,17 @@ export default function ProductTemplates() {
                 <CardContent className="pt-0 space-y-3">
                   {/* Image thumbnail */}
                   {template.image_url ? (
-                    <div className="group relative aspect-[4/3] rounded-lg overflow-hidden bg-gradient-to-br from-muted to-muted/50 border border-border/50 shadow-sm">
+                    <div className="relative aspect-video rounded-md overflow-hidden bg-muted">
                       <img 
                         src={template.image_url} 
                         alt={template.name}
-                        className="w-full h-full object-contain p-2 transition-transform duration-300 group-hover:scale-110"
+                        className="w-full h-full object-cover"
                       />
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300" />
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleQuickImageUpload(template.id);
-                        }}
-                        className="absolute bottom-2 right-2 p-1.5 rounded-md bg-background/80 backdrop-blur-sm border border-border/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-background"
-                        disabled={uploadingImageId === template.id}
-                      >
-                        <Upload className="w-3.5 h-3.5 text-muted-foreground" />
-                      </button>
                     </div>
                   ) : (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleQuickImageUpload(template.id);
-                      }}
-                      disabled={uploadingImageId === template.id}
-                      className="relative aspect-[4/3] w-full rounded-lg overflow-hidden bg-gradient-to-br from-muted/50 to-muted border-2 border-dashed border-border/50 flex flex-col items-center justify-center gap-2 hover:border-primary/50 hover:bg-muted transition-colors duration-200 cursor-pointer group"
-                    >
-                      {uploadingImageId === template.id ? (
-                        <div className="animate-pulse text-muted-foreground text-xs">Enviando...</div>
-                      ) : (
-                        <>
-                          <div className="p-3 rounded-full bg-muted-foreground/10 group-hover:bg-primary/10 transition-colors">
-                            <ImageUp className="w-6 h-6 text-muted-foreground/60 group-hover:text-primary/60 transition-colors" />
-                          </div>
-                          <span className="text-xs text-muted-foreground/60 group-hover:text-muted-foreground transition-colors">
-                            Adicionar imagem
-                          </span>
-                        </>
-                      )}
-                    </button>
+                    <div className="relative aspect-video rounded-md overflow-hidden bg-muted flex items-center justify-center">
+                      <Package className="w-8 h-8 text-muted-foreground/50" />
+                    </div>
                   )}
 
                   {/* Dimensions */}
