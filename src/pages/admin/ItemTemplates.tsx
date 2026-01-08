@@ -100,6 +100,7 @@ export default function ItemTemplates() {
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadingImageId, setUploadingImageId] = useState<string | null>(null);
 
   // Fetch items
   const { data: items, isLoading } = useQuery({
@@ -267,6 +268,56 @@ export default function ItemTemplates() {
       toast.success('Item duplicado!');
     },
   });
+
+  // Quick image upload mutation
+  const quickImageUploadMutation = useMutation({
+    mutationFn: async ({ itemId, file }: { itemId: string; file: File }) => {
+      setUploadingImageId(itemId);
+      
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `items/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('item-templates')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('item-templates')
+        .getPublicUrl(filePath);
+
+      const { error } = await supabase
+        .from('item_templates')
+        .update({ image_url: urlData.publicUrl })
+        .eq('id', itemId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['item-templates-admin'] });
+      toast.success('Imagem atualizada!');
+      setUploadingImageId(null);
+    },
+    onError: (error) => {
+      toast.error('Erro ao atualizar imagem: ' + error.message);
+      setUploadingImageId(null);
+    },
+  });
+
+  const handleQuickImageUpload = (itemId: string) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        quickImageUploadMutation.mutate({ itemId, file });
+      }
+    };
+    input.click();
+  };
 
   const handleCloseDialog = () => {
     setDialogOpen(false);
@@ -645,19 +696,33 @@ export default function ItemTemplates() {
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-3 min-w-0">
-                      {item.image_url ? (
-                        <div className="w-12 h-12 bg-white rounded-lg border p-1 flex-shrink-0 flex items-center justify-center">
-                          <img 
-                            src={item.image_url} 
-                            alt={item.name}
-                            className="max-w-full max-h-full object-contain"
-                          />
-                        </div>
-                      ) : (
-                        <div className="w-12 h-12 bg-muted rounded-lg flex-shrink-0 flex items-center justify-center">
-                          <Package className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleQuickImageUpload(item.id)}
+                        disabled={uploadingImageId === item.id}
+                        className="relative w-12 h-12 bg-white rounded-lg border p-1 flex-shrink-0 flex items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors group/img disabled:opacity-50"
+                        title="Clique para trocar imagem"
+                      >
+                        {uploadingImageId === item.id ? (
+                          <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                        ) : item.image_url ? (
+                          <>
+                            <img 
+                              src={item.image_url} 
+                              alt={item.name}
+                              className="max-w-full max-h-full object-contain"
+                            />
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/img:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                              <Upload className="h-4 w-4 text-white" />
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <Package className="h-5 w-5 text-muted-foreground group-hover/img:hidden" />
+                            <Upload className="h-5 w-5 text-primary hidden group-hover/img:block" />
+                          </>
+                        )}
+                      </button>
                       <div className="min-w-0">
                         <CardTitle className="text-sm font-semibold truncate">
                           {item.name}
@@ -679,6 +744,10 @@ export default function ItemTemplates() {
                         <DropdownMenuItem onClick={() => handleEdit(item)}>
                           <Pencil className="w-4 h-4 mr-2" />
                           Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleQuickImageUpload(item.id)}>
+                          <Upload className="w-4 h-4 mr-2" />
+                          Trocar Imagem
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => copyMutation.mutate(item)}>
                           <Copy className="w-4 h-4 mr-2" />
