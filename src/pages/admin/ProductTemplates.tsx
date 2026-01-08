@@ -7,7 +7,6 @@ import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -40,7 +39,28 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Package, Settings2, ArrowLeft } from "lucide-react";
+import { 
+  Plus, 
+  Pencil, 
+  Trash2, 
+  Package, 
+  Settings2, 
+  ArrowLeft, 
+  Search,
+  Layers,
+  Ruler,
+  Copy,
+  MoreVertical,
+  Eye,
+  EyeOff
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type ProductTemplate = {
   id: string;
@@ -62,6 +82,8 @@ type ProductTemplateItem = {
   product_template_id: string;
   item_template_id: string;
   quantity_formula: string;
+  pieces_quantity: number;
+  cut_angle: number;
   is_optional: boolean;
   notes: string | null;
   item_template?: {
@@ -77,11 +99,32 @@ type ItemTemplate = {
   name: string;
   type: string;
   unit: string;
+  linha: string | null;
 };
 
 type ProductCategory = "window" | "door" | "shower" | "mirror" | "partition" | "facade" | "other";
 
 const categoriesList: ProductCategory[] = ["window", "door", "shower", "mirror", "partition", "facade", "other"];
+
+const categoryLabels: Record<string, string> = {
+  window: "Janela",
+  door: "Porta",
+  shower: "Box",
+  mirror: "Espelho",
+  partition: "Divisória",
+  facade: "Fachada",
+  other: "Outro",
+};
+
+const categoryColors: Record<string, string> = {
+  window: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+  door: "bg-orange-500/10 text-orange-600 border-orange-500/20",
+  shower: "bg-cyan-500/10 text-cyan-600 border-cyan-500/20",
+  mirror: "bg-purple-500/10 text-purple-600 border-purple-500/20",
+  partition: "bg-green-500/10 text-green-600 border-green-500/20",
+  facade: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+  other: "bg-gray-500/10 text-gray-600 border-gray-500/20",
+};
 
 export default function ProductTemplates() {
   const { linha: linhaParam } = useParams<{ linha?: string }>();
@@ -92,13 +135,16 @@ export default function ProductTemplates() {
   const [isCompositionDialogOpen, setIsCompositionDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<ProductTemplate | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<ProductTemplate | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterCategory, setFilterCategory] = useState<string>("all");
+  const [showInactive, setShowInactive] = useState(false);
   
   const currentLinha = linhaParam ? decodeURIComponent(linhaParam) : null;
 
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    category: "shower" as ProductCategory,
+    category: "window" as ProductCategory,
     linha: currentLinha || "",
     min_width: "",
     max_width: "",
@@ -107,7 +153,7 @@ export default function ProductTemplates() {
     is_active: true,
   });
 
-  // Fetch product templates (filtered by linha if param exists)
+  // Fetch product templates with composition count
   const { data: templates, isLoading } = useQuery({
     queryKey: ["product-templates", currentLinha],
     queryFn: async () => {
@@ -123,13 +169,44 @@ export default function ProductTemplates() {
     },
   });
 
+  // Fetch composition counts for all templates
+  const { data: compositionCounts } = useQuery({
+    queryKey: ["product-template-items-counts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("product_template_items")
+        .select("product_template_id");
+      if (error) throw error;
+      
+      const counts: Record<string, number> = {};
+      data.forEach((item) => {
+        counts[item.product_template_id] = (counts[item.product_template_id] || 0) + 1;
+      });
+      return counts;
+    },
+  });
+
+  // Fetch available lines
+  const { data: availableLines } = useQuery({
+    queryKey: ["available-lines"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("product_templates")
+        .select("linha")
+        .not("linha", "is", null);
+      if (error) throw error;
+      const lines = [...new Set(data.map((d) => d.linha).filter(Boolean))];
+      return lines as string[];
+    },
+  });
+
   // Fetch item templates for composition
   const { data: itemTemplates } = useQuery({
-    queryKey: ["item-templates-active"],
+    queryKey: ["item-templates-active", currentLinha],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("item_templates")
-        .select("id, name, type, unit")
+        .select("id, name, type, unit, linha")
         .eq("is_active", true)
         .order("name");
       if (error) throw error;
@@ -148,11 +225,21 @@ export default function ProductTemplates() {
           *,
           item_template:item_templates(id, name, type, unit)
         `)
-        .eq("product_template_id", selectedTemplate.id);
+        .eq("product_template_id", selectedTemplate.id)
+        .order("created_at");
       if (error) throw error;
       return data as ProductTemplateItem[];
     },
     enabled: !!selectedTemplate,
+  });
+
+  // Filter templates
+  const filteredTemplates = templates?.filter((template) => {
+    const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          template.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = filterCategory === "all" || template.category === filterCategory;
+    const matchesActive = showInactive || template.is_active;
+    return matchesSearch && matchesCategory && matchesActive;
   });
 
   // Create/Update mutation
@@ -182,9 +269,10 @@ export default function ProductTemplates() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["product-templates", currentLinha] });
+      queryClient.invalidateQueries({ queryKey: ["product-templates"] });
       queryClient.invalidateQueries({ queryKey: ["admin-product-linhas"] });
-      toast.success(editingTemplate ? "Template atualizado!" : "Template criado!");
+      queryClient.invalidateQueries({ queryKey: ["available-lines"] });
+      toast.success(editingTemplate ? "Produto atualizado!" : "Produto criado!");
       handleCloseDialog();
     },
     onError: (error) => {
@@ -195,33 +283,114 @@ export default function ProductTemplates() {
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
+      // First delete composition items
+      await supabase.from("product_template_items").delete().eq("product_template_id", id);
       const { error } = await supabase.from("product_templates").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["product-templates"] });
-      toast.success("Template excluído!");
+      queryClient.invalidateQueries({ queryKey: ["product-template-items-counts"] });
+      toast.success("Produto excluído!");
     },
     onError: (error) => {
       toast.error("Erro ao excluir: " + error.message);
     },
   });
 
+  // Toggle active mutation
+  const toggleActiveMutation = useMutation({
+    mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
+      const { error } = await supabase
+        .from("product_templates")
+        .update({ is_active })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["product-templates"] });
+      toast.success("Status atualizado!");
+    },
+  });
+
+  // Copy product mutation
+  const copyMutation = useMutation({
+    mutationFn: async (template: ProductTemplate) => {
+      // Create copy of product
+      const { data: newProduct, error: productError } = await supabase
+        .from("product_templates")
+        .insert([{
+          name: `${template.name} (Cópia)`,
+          description: template.description,
+          category: template.category as "window" | "door" | "shower" | "mirror" | "partition" | "facade" | "other",
+          linha: template.linha,
+          min_width: template.min_width,
+          max_width: template.max_width,
+          min_height: template.min_height,
+          max_height: template.max_height,
+          is_active: false,
+        }])
+        .select()
+        .single();
+      if (productError) throw productError;
+
+      // Copy composition items
+      const { data: items } = await supabase
+        .from("product_template_items")
+        .select("*")
+        .eq("product_template_id", template.id);
+
+      if (items && items.length > 0) {
+        const newItems = items.map((item) => ({
+          product_template_id: newProduct.id,
+          item_template_id: item.item_template_id,
+          quantity_formula: item.quantity_formula,
+          pieces_quantity: item.pieces_quantity,
+          cut_angle: item.cut_angle,
+          is_optional: item.is_optional,
+          notes: item.notes,
+        }));
+        await supabase.from("product_template_items").insert(newItems);
+      }
+
+      return newProduct;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["product-templates"] });
+      queryClient.invalidateQueries({ queryKey: ["product-template-items-counts"] });
+      toast.success("Produto duplicado!");
+    },
+    onError: (error) => {
+      toast.error("Erro ao duplicar: " + error.message);
+    },
+  });
+
   // Add composition item mutation
   const addCompositionMutation = useMutation({
-    mutationFn: async (data: { item_template_id: string; quantity_formula: string; is_optional: boolean }) => {
+    mutationFn: async (data: { 
+      item_template_id: string; 
+      quantity_formula: string; 
+      pieces_quantity: number;
+      cut_angle: number;
+      is_optional: boolean;
+      notes: string;
+    }) => {
       if (!selectedTemplate) throw new Error("Nenhum template selecionado");
       const { error } = await supabase.from("product_template_items").insert({
         product_template_id: selectedTemplate.id,
         item_template_id: data.item_template_id,
         quantity_formula: data.quantity_formula,
+        pieces_quantity: data.pieces_quantity,
+        cut_angle: data.cut_angle,
         is_optional: data.is_optional,
+        notes: data.notes || null,
       });
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["product-template-items", selectedTemplate?.id] });
-      toast.success("Item adicionado à composição!");
+      queryClient.invalidateQueries({ queryKey: ["product-template-items-counts"] });
+      toast.success("Item adicionado!");
     },
     onError: (error) => {
       toast.error("Erro ao adicionar: " + error.message);
@@ -236,6 +405,7 @@ export default function ProductTemplates() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["product-template-items", selectedTemplate?.id] });
+      queryClient.invalidateQueries({ queryKey: ["product-template-items-counts"] });
       toast.success("Item removido!");
     },
     onError: (error) => {
@@ -249,7 +419,7 @@ export default function ProductTemplates() {
     setFormData({
       name: "",
       description: "",
-      category: "shower" as ProductCategory,
+      category: "window" as ProductCategory,
       linha: currentLinha || "",
       min_width: "",
       max_width: "",
@@ -280,17 +450,14 @@ export default function ProductTemplates() {
     saveMutation.mutate({ ...formData, id: editingTemplate?.id });
   };
 
-  const getCategoryLabel = (category: string) => {
-    const labels: Record<string, string> = {
-      box: "Box",
-      porta: "Porta",
-      janela: "Janela",
-      espelho: "Espelho",
-      fechamento: "Fechamento",
-      outro: "Outro",
-    };
-    return labels[category] || category;
-  };
+  // Filter item templates for composition - prioritize same line
+  const sortedItemTemplates = itemTemplates?.sort((a, b) => {
+    const aIsCurrentLine = a.linha === currentLinha || a.linha === selectedTemplate?.linha;
+    const bIsCurrentLine = b.linha === currentLinha || b.linha === selectedTemplate?.linha;
+    if (aIsCurrentLine && !bIsCurrentLine) return -1;
+    if (!aIsCurrentLine && bIsCurrentLine) return 1;
+    return a.name.localeCompare(b.name);
+  });
 
   if (!isSaasAdmin) {
     return (
@@ -310,7 +477,8 @@ export default function ProductTemplates() {
   return (
     <AdminLayout>
       <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
+        {/* Header */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-4">
             {currentLinha && (
               <Button variant="ghost" size="icon" onClick={() => navigate('/admin/linhas')}>
@@ -318,13 +486,12 @@ export default function ProductTemplates() {
               </Button>
             )}
             <div>
-              <h1 className="text-3xl font-bold text-foreground">
-                {currentLinha ? `Produtos - ${currentLinha}` : 'Product Templates'}
+              <h1 className="text-2xl font-bold text-foreground">
+                {currentLinha ? `Produtos - ${currentLinha}` : 'Produtos Templates'}
               </h1>
-              <p className="text-muted-foreground">
-                {currentLinha 
-                  ? `Gerencie os produtos da linha ${currentLinha}`
-                  : 'Gerencie os modelos de produtos globais do sistema'}
+              <p className="text-sm text-muted-foreground">
+                {filteredTemplates?.length || 0} produtos 
+                {currentLinha ? ` na linha ${currentLinha}` : ' cadastrados'}
               </p>
             </div>
           </div>
@@ -344,7 +511,7 @@ export default function ProductTemplates() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Nome</Label>
+                    <Label htmlFor="name">Nome *</Label>
                     <Input
                       id="name"
                       value={formData.name}
@@ -355,19 +522,37 @@ export default function ProductTemplates() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="linha">Linha</Label>
-                    <Input
-                      id="linha"
+                    <Select
                       value={formData.linha}
-                      onChange={(e) => setFormData({ ...formData, linha: e.target.value })}
-                      placeholder="Ex: Linha Suprema"
+                      onValueChange={(value) => setFormData({ ...formData, linha: value })}
                       disabled={!!currentLinha}
-                    />
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione uma linha" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableLines?.map((line) => (
+                          <SelectItem key={line} value={line}>
+                            {line}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="new">+ Nova Linha</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {formData.linha === "new" && (
+                      <Input
+                        value=""
+                        onChange={(e) => setFormData({ ...formData, linha: e.target.value })}
+                        placeholder="Nome da nova linha"
+                        className="mt-2"
+                      />
+                    )}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="category">Categoria</Label>
+                    <Label htmlFor="category">Categoria *</Label>
                     <Select
                       value={formData.category}
                       onValueChange={(value) => setFormData({ ...formData, category: value as ProductCategory })}
@@ -378,7 +563,7 @@ export default function ProductTemplates() {
                       <SelectContent>
                         {categoriesList.map((cat) => (
                           <SelectItem key={cat} value={cat}>
-                            {getCategoryLabel(cat)}
+                            {categoryLabels[cat]}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -395,46 +580,48 @@ export default function ProductTemplates() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-4 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="min_width">Largura Mín (mm)</Label>
-                    <Input
-                      id="min_width"
-                      type="number"
-                      value={formData.min_width}
-                      onChange={(e) => setFormData({ ...formData, min_width: e.target.value })}
-                      placeholder="500"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="max_width">Largura Máx (mm)</Label>
-                    <Input
-                      id="max_width"
-                      type="number"
-                      value={formData.max_width}
-                      onChange={(e) => setFormData({ ...formData, max_width: e.target.value })}
-                      placeholder="2000"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="min_height">Altura Mín (mm)</Label>
-                    <Input
-                      id="min_height"
-                      type="number"
-                      value={formData.min_height}
-                      onChange={(e) => setFormData({ ...formData, min_height: e.target.value })}
-                      placeholder="1000"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="max_height">Altura Máx (mm)</Label>
-                    <Input
-                      id="max_height"
-                      type="number"
-                      value={formData.max_height}
-                      onChange={(e) => setFormData({ ...formData, max_height: e.target.value })}
-                      placeholder="2200"
-                    />
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Ruler className="w-4 h-4" />
+                    Dimensões (mm)
+                  </Label>
+                  <div className="grid grid-cols-4 gap-4">
+                    <div className="space-y-1">
+                      <span className="text-xs text-muted-foreground">Larg. Mín</span>
+                      <Input
+                        type="number"
+                        value={formData.min_width}
+                        onChange={(e) => setFormData({ ...formData, min_width: e.target.value })}
+                        placeholder="500"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-xs text-muted-foreground">Larg. Máx</span>
+                      <Input
+                        type="number"
+                        value={formData.max_width}
+                        onChange={(e) => setFormData({ ...formData, max_width: e.target.value })}
+                        placeholder="2000"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-xs text-muted-foreground">Alt. Mín</span>
+                      <Input
+                        type="number"
+                        value={formData.min_height}
+                        onChange={(e) => setFormData({ ...formData, min_height: e.target.value })}
+                        placeholder="500"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-xs text-muted-foreground">Alt. Máx</span>
+                      <Input
+                        type="number"
+                        value={formData.max_height}
+                        onChange={(e) => setFormData({ ...formData, max_height: e.target.value })}
+                        placeholder="2200"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -444,10 +631,10 @@ export default function ProductTemplates() {
                     checked={formData.is_active}
                     onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
                   />
-                  <Label htmlFor="is_active">Ativo</Label>
+                  <Label htmlFor="is_active">Produto ativo</Label>
                 </div>
 
-                <div className="flex justify-end gap-2">
+                <div className="flex justify-end gap-2 pt-4 border-t">
                   <Button type="button" variant="outline" onClick={handleCloseDialog}>
                     Cancelar
                   </Button>
@@ -460,19 +647,204 @@ export default function ProductTemplates() {
           </Dialog>
         </div>
 
+        {/* Filters */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-center">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar produtos..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Select value={filterCategory} onValueChange={setFilterCategory}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Categoria" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas</SelectItem>
+              {categoriesList.map((cat) => (
+                <SelectItem key={cat} value={cat}>
+                  {categoryLabels[cat]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            variant={showInactive ? "secondary" : "outline"}
+            size="sm"
+            onClick={() => setShowInactive(!showInactive)}
+          >
+            {showInactive ? <Eye className="w-4 h-4 mr-2" /> : <EyeOff className="w-4 h-4 mr-2" />}
+            {showInactive ? "Todos" : "Só ativos"}
+          </Button>
+        </div>
+
+        {/* Products Grid */}
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <Card key={i} className="animate-pulse">
+                <CardContent className="h-40" />
+              </Card>
+            ))}
+          </div>
+        ) : filteredTemplates?.length === 0 ? (
+          <Card className="border-dashed">
+            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+              <Package className="w-12 h-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium">Nenhum produto encontrado</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                {searchTerm ? "Tente outro termo de busca" : "Clique em 'Novo Produto' para começar"}
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredTemplates?.map((template) => (
+              <Card 
+                key={template.id} 
+                className={`group relative transition-all hover:shadow-md ${
+                  !template.is_active ? "opacity-60" : ""
+                }`}
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-base font-semibold truncate">
+                        {template.name}
+                      </CardTitle>
+                      {template.description && (
+                        <CardDescription className="text-xs mt-1 line-clamp-1">
+                          {template.description}
+                        </CardDescription>
+                      )}
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleEdit(template)}>
+                          <Pencil className="w-4 h-4 mr-2" />
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => {
+                          setSelectedTemplate(template);
+                          setIsCompositionDialogOpen(true);
+                        }}>
+                          <Settings2 className="w-4 h-4 mr-2" />
+                          Composição
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => copyMutation.mutate(template)}>
+                          <Copy className="w-4 h-4 mr-2" />
+                          Duplicar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => toggleActiveMutation.mutate({ 
+                            id: template.id, 
+                            is_active: !template.is_active 
+                          })}
+                        >
+                          {template.is_active ? (
+                            <>
+                              <EyeOff className="w-4 h-4 mr-2" />
+                              Desativar
+                            </>
+                          ) : (
+                            <>
+                              <Eye className="w-4 h-4 mr-2" />
+                              Ativar
+                            </>
+                          )}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          className="text-destructive"
+                          onClick={() => {
+                            if (confirm("Excluir este produto e sua composição?")) {
+                              deleteMutation.mutate(template.id);
+                            }
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <div className="flex items-center gap-2 mt-2">
+                    <Badge 
+                      variant="outline" 
+                      className={categoryColors[template.category] || categoryColors.other}
+                    >
+                      {categoryLabels[template.category] || template.category}
+                    </Badge>
+                    {!template.is_active && (
+                      <Badge variant="secondary">Inativo</Badge>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0 space-y-3">
+                  {/* Dimensions */}
+                  {(template.min_width || template.max_width || template.min_height || template.max_height) && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Ruler className="w-3 h-3" />
+                      <span>
+                        L: {template.min_width || "?"} - {template.max_width || "?"} mm
+                      </span>
+                      <span>•</span>
+                      <span>
+                        A: {template.min_height || "?"} - {template.max_height || "?"} mm
+                      </span>
+                    </div>
+                  )}
+                  
+                  {/* Composition count */}
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    <div className="flex items-center gap-2 text-sm">
+                      <Layers className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-muted-foreground">
+                        {compositionCounts?.[template.id] || 0} itens na composição
+                      </span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedTemplate(template);
+                        setIsCompositionDialogOpen(true);
+                      }}
+                    >
+                      <Settings2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
         {/* Composition Dialog */}
         <Dialog open={isCompositionDialogOpen} onOpenChange={setIsCompositionDialogOpen}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                <Settings2 className="w-5 h-5" />
                 Composição: {selectedTemplate?.name}
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               {/* Add item form */}
-              <Card>
+              <Card className="bg-muted/50">
                 <CardHeader className="py-3">
-                  <CardTitle className="text-sm">Adicionar Item</CardTitle>
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Plus className="w-4 h-4" />
+                    Adicionar Item
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <form
@@ -483,204 +855,142 @@ export default function ProductTemplates() {
                       addCompositionMutation.mutate({
                         item_template_id: formData.get("item_template_id") as string,
                         quantity_formula: formData.get("quantity_formula") as string || "1",
+                        pieces_quantity: parseInt(formData.get("pieces_quantity") as string) || 1,
+                        cut_angle: parseInt(formData.get("cut_angle") as string) || 90,
                         is_optional: formData.get("is_optional") === "on",
+                        notes: formData.get("notes") as string || "",
                       });
                       form.reset();
                     }}
-                    className="flex gap-4 items-end"
+                    className="grid grid-cols-6 gap-3 items-end"
                   >
-                    <div className="flex-1 space-y-2">
-                      <Label>Item</Label>
+                    <div className="col-span-2 space-y-1">
+                      <Label className="text-xs">Item *</Label>
                       <Select name="item_template_id" required>
                         <SelectTrigger>
-                          <SelectValue placeholder="Selecione um item" />
+                          <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
                         <SelectContent>
-                          {itemTemplates?.map((item) => (
+                          {sortedItemTemplates?.map((item) => (
                             <SelectItem key={item.id} value={item.id}>
-                              {item.name} ({item.type})
+                              <span className="flex items-center gap-2">
+                                {item.name}
+                                <Badge variant="outline" className="text-xs">
+                                  {item.type}
+                                </Badge>
+                                {item.linha === selectedTemplate?.linha && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    {item.linha}
+                                  </Badge>
+                                )}
+                              </span>
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="w-48 space-y-2">
-                      <Label>Fórmula Qtd</Label>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Fórmula *</Label>
                       <Input
                         name="quantity_formula"
-                        placeholder="Ex: largura * altura"
+                        placeholder="Altura - 50"
                         defaultValue="1"
+                        className="font-mono text-sm"
                       />
                     </div>
-                    <div className="flex items-center gap-2">
-                      <input type="checkbox" name="is_optional" id="is_optional" />
-                      <Label htmlFor="is_optional">Opcional</Label>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Qtd Peças</Label>
+                      <Input
+                        name="pieces_quantity"
+                        type="number"
+                        defaultValue="1"
+                        min="1"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Ângulo °</Label>
+                      <Input
+                        name="cut_angle"
+                        type="number"
+                        defaultValue="90"
+                        min="0"
+                        max="90"
+                      />
                     </div>
                     <Button type="submit" disabled={addCompositionMutation.isPending}>
-                      <Plus className="w-4 h-4" />
+                      <Plus className="w-4 h-4 mr-1" />
+                      Adicionar
                     </Button>
                   </form>
                 </CardContent>
               </Card>
 
               {/* Items list */}
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Item</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Fórmula Quantidade</TableHead>
-                    <TableHead>Opcional</TableHead>
-                    <TableHead className="w-20">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {compositionItems?.length === 0 ? (
+              <Card>
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground">
-                        Nenhum item na composição
-                      </TableCell>
+                      <TableHead>Item</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Fórmula</TableHead>
+                      <TableHead className="text-center">Peças</TableHead>
+                      <TableHead className="text-center">Ângulo</TableHead>
+                      <TableHead>Notas</TableHead>
+                      <TableHead className="w-16"></TableHead>
                     </TableRow>
-                  ) : (
-                    compositionItems?.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-medium">
-                          {item.item_template?.name}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{item.item_template?.type}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <code className="text-sm bg-muted px-2 py-1 rounded">
-                            {item.quantity_formula}
-                          </code>
-                        </TableCell>
-                        <TableCell>
-                          {item.is_optional ? (
-                            <Badge variant="secondary">Opcional</Badge>
-                          ) : (
-                            <Badge>Obrigatório</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeCompositionMutation.mutate(item.id)}
-                          >
-                            <Trash2 className="w-4 h-4 text-destructive" />
-                          </Button>
+                  </TableHeader>
+                  <TableBody>
+                    {compositionItems?.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                          <Layers className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                          Nenhum item na composição
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ) : (
+                      compositionItems?.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="font-medium">
+                            {item.item_template?.name}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="text-xs">
+                              {item.item_template?.type}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <code className="text-sm bg-muted px-2 py-1 rounded font-mono">
+                              {item.quantity_formula}
+                            </code>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {item.pieces_quantity}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {item.cut_angle}°
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground max-w-32 truncate">
+                            {item.notes || "-"}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeCompositionMutation.mutate(item.id)}
+                              className="h-8 w-8"
+                            >
+                              <Trash2 className="w-4 h-4 text-destructive" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </Card>
             </div>
           </DialogContent>
         </Dialog>
-
-        {/* Templates Table */}
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Categoria</TableHead>
-                  <TableHead>Dimensões (mm)</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-32">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center">
-                      Carregando...
-                    </TableCell>
-                  </TableRow>
-                ) : templates?.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground">
-                      Nenhum template cadastrado
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  templates?.map((template) => (
-                    <TableRow key={template.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Package className="w-4 h-4 text-muted-foreground" />
-                          <div>
-                            <p className="font-medium">{template.name}</p>
-                            {template.description && (
-                              <p className="text-sm text-muted-foreground truncate max-w-xs">
-                                {template.description}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{getCategoryLabel(template.category)}</Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {template.min_width || template.max_width ? (
-                          <>
-                            L: {template.min_width || "?"} - {template.max_width || "?"}
-                            <br />
-                            A: {template.min_height || "?"} - {template.max_height || "?"}
-                          </>
-                        ) : (
-                          "-"
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={template.is_active ? "default" : "secondary"}>
-                          {template.is_active ? "Ativo" : "Inativo"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              setSelectedTemplate(template);
-                              setIsCompositionDialogOpen(true);
-                            }}
-                            title="Composição"
-                          >
-                            <Settings2 className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(template)}
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              if (confirm("Excluir este template?")) {
-                                deleteMutation.mutate(template.id);
-                              }
-                            }}
-                          >
-                            <Trash2 className="w-4 h-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
       </div>
     </AdminLayout>
   );
