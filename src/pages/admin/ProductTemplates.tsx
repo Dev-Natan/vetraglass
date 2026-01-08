@@ -983,15 +983,15 @@ export default function ProductTemplates() {
                 <CardContent className="pt-0 space-y-3">
                   {/* Image thumbnail */}
                   {template.image_url ? (
-                    <div className="relative aspect-video rounded-md overflow-hidden bg-muted">
+                    <div className="relative aspect-square rounded-md overflow-hidden bg-muted">
                       <img 
                         src={template.image_url} 
                         alt={template.name}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain"
                       />
                     </div>
                   ) : (
-                    <div className="relative aspect-video rounded-md overflow-hidden bg-muted flex items-center justify-center">
+                    <div className="relative aspect-square rounded-md overflow-hidden bg-muted flex items-center justify-center">
                       <Package className="w-8 h-8 text-muted-foreground/50" />
                     </div>
                   )}
