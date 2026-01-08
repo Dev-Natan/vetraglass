@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { 
   Plus, 
@@ -52,7 +53,12 @@ import {
   Copy,
   MoreVertical,
   Eye,
-  EyeOff
+  EyeOff,
+  Upload,
+  ImageUp,
+  CheckCircle2,
+  XCircle,
+  AlertCircle
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -139,6 +145,23 @@ export default function ProductTemplates() {
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [filterLinha, setFilterLinha] = useState<string>("all");
   const [showInactive, setShowInactive] = useState(false);
+  const [uploadingImageId, setUploadingImageId] = useState<string | null>(null);
+  
+  // Bulk upload state
+  const [bulkUploadDialogOpen, setBulkUploadDialogOpen] = useState(false);
+  const [bulkUploadProgress, setBulkUploadProgress] = useState<{
+    total: number;
+    processed: number;
+    matched: number;
+    notMatched: string[];
+    isUploading: boolean;
+  }>({
+    total: 0,
+    processed: 0,
+    matched: 0,
+    notMatched: [],
+    isUploading: false,
+  });
   
   const currentLinha = linhaParam ? decodeURIComponent(linhaParam) : null;
 
@@ -415,6 +438,143 @@ export default function ProductTemplates() {
     },
   });
 
+  // Quick image upload mutation
+  const quickImageUploadMutation = useMutation({
+    mutationFn: async ({ templateId, file }: { templateId: string; file: File }) => {
+      setUploadingImageId(templateId);
+      
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `products/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('product-templates')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('product-templates')
+        .getPublicUrl(filePath);
+
+      const { error } = await supabase
+        .from('product_templates')
+        .update({ image_url: urlData.publicUrl })
+        .eq('id', templateId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['product-templates'] });
+      toast.success('Imagem atualizada!');
+      setUploadingImageId(null);
+    },
+    onError: (error) => {
+      toast.error('Erro ao atualizar imagem: ' + error.message);
+      setUploadingImageId(null);
+    },
+  });
+
+  const handleQuickImageUpload = (templateId: string) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        quickImageUploadMutation.mutate({ templateId, file });
+      }
+    };
+    input.click();
+  };
+
+  // Bulk image upload handler
+  const handleBulkImageUpload = async (files: FileList) => {
+    if (!templates) return;
+    
+    setBulkUploadProgress({
+      total: files.length,
+      processed: 0,
+      matched: 0,
+      notMatched: [],
+      isUploading: true,
+    });
+    setBulkUploadDialogOpen(true);
+
+    const notMatchedFiles: string[] = [];
+    let matchedCount = 0;
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const fileName = file.name.replace(/\.[^/.]+$/, ''); // Remove extension
+      
+      // Try to find matching template by name (case-insensitive, ignoring spaces/dashes)
+      const normalizedFileName = fileName.toLowerCase().replace(/[-_\s]+/g, '-');
+      const matchingTemplate = templates.find(template => {
+        const normalizedTemplateName = template.name.toLowerCase().replace(/[-_\s]+/g, '-');
+        return normalizedTemplateName === normalizedFileName;
+      });
+
+      if (matchingTemplate) {
+        try {
+          const fileExt = file.name.split('.').pop();
+          const storageName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+          const filePath = `products/${storageName}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from('product-templates')
+            .upload(filePath, file);
+
+          if (!uploadError) {
+            const { data: urlData } = supabase.storage
+              .from('product-templates')
+              .getPublicUrl(filePath);
+
+            await supabase
+              .from('product_templates')
+              .update({ image_url: urlData.publicUrl })
+              .eq('id', matchingTemplate.id);
+            
+            matchedCount++;
+          }
+        } catch (err) {
+          console.error('Error uploading:', err);
+          notMatchedFiles.push(fileName + ' (erro)');
+        }
+      } else {
+        notMatchedFiles.push(fileName);
+      }
+
+      setBulkUploadProgress(prev => ({
+        ...prev,
+        processed: i + 1,
+        matched: matchedCount,
+        notMatched: notMatchedFiles,
+      }));
+    }
+
+    setBulkUploadProgress(prev => ({ ...prev, isUploading: false }));
+    queryClient.invalidateQueries({ queryKey: ['product-templates'] });
+    
+    if (matchedCount > 0) {
+      toast.success(`${matchedCount} imagens atualizadas!`);
+    }
+  };
+
+  const openBulkUploadDialog = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.multiple = true;
+    input.onchange = (e) => {
+      const files = (e.target as HTMLInputElement).files;
+      if (files && files.length > 0) {
+        handleBulkImageUpload(files);
+      }
+    };
+    input.click();
+  };
+
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
     setEditingTemplate(null);
@@ -497,13 +657,18 @@ export default function ProductTemplates() {
               </p>
             </div>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={() => handleCloseDialog()}>
-                <Plus className="w-4 h-4 mr-2" />
-                Novo Produto
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={openBulkUploadDialog}>
+              <ImageUp className="w-4 h-4 mr-2" />
+              Upload em Lote
+            </Button>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={() => handleCloseDialog()}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Novo Produto
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>
@@ -646,7 +811,8 @@ export default function ProductTemplates() {
                 </div>
               </form>
             </DialogContent>
-          </Dialog>
+            </Dialog>
+          </div>
         </div>
 
         {/* Filters */}
@@ -754,6 +920,17 @@ export default function ProductTemplates() {
                           <Settings2 className="w-4 h-4 mr-2" />
                           Composição
                         </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => handleQuickImageUpload(template.id)}
+                          disabled={uploadingImageId === template.id}
+                        >
+                          <Upload className="w-4 h-4 mr-2" />
+                          {uploadingImageId === template.id 
+                            ? "Enviando..." 
+                            : template.image_url 
+                              ? "Trocar Imagem" 
+                              : "Adicionar Imagem"}
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => copyMutation.mutate(template)}>
                           <Copy className="w-4 h-4 mr-2" />
                           Duplicar
@@ -804,6 +981,21 @@ export default function ProductTemplates() {
                   </div>
                 </CardHeader>
                 <CardContent className="pt-0 space-y-3">
+                  {/* Image thumbnail */}
+                  {template.image_url ? (
+                    <div className="relative aspect-video rounded-md overflow-hidden bg-muted">
+                      <img 
+                        src={template.image_url} 
+                        alt={template.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="relative aspect-video rounded-md overflow-hidden bg-muted flex items-center justify-center">
+                      <Package className="w-8 h-8 text-muted-foreground/50" />
+                    </div>
+                  )}
+
                   {/* Dimensions */}
                   {(template.min_width || template.max_width || template.min_height || template.max_height) && (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -1003,6 +1195,64 @@ export default function ProductTemplates() {
                   </TableBody>
                 </Table>
               </Card>
+            </div>
+          </DialogContent>
+        </Dialog>
+        {/* Bulk Upload Progress Dialog */}
+        <Dialog open={bulkUploadDialogOpen} onOpenChange={setBulkUploadDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <ImageUp className="w-5 h-5" />
+                Upload de Imagens em Lote
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Progresso</span>
+                  <span>{bulkUploadProgress.processed} / {bulkUploadProgress.total}</span>
+                </div>
+                <Progress 
+                  value={(bulkUploadProgress.processed / bulkUploadProgress.total) * 100} 
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-green-500" />
+                  <span>{bulkUploadProgress.matched} associadas</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <XCircle className="w-4 h-4 text-red-500" />
+                  <span>{bulkUploadProgress.notMatched.length} não encontradas</span>
+                </div>
+              </div>
+
+              {bulkUploadProgress.notMatched.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <AlertCircle className="w-4 h-4 text-amber-500" />
+                    Arquivos sem correspondência:
+                  </div>
+                  <div className="max-h-32 overflow-y-auto bg-muted rounded-md p-2">
+                    {bulkUploadProgress.notMatched.map((file, i) => (
+                      <div key={i} className="text-xs text-muted-foreground truncate">
+                        {file}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {!bulkUploadProgress.isUploading && (
+                <Button 
+                  className="w-full" 
+                  onClick={() => setBulkUploadDialogOpen(false)}
+                >
+                  Fechar
+                </Button>
+              )}
             </div>
           </DialogContent>
         </Dialog>
