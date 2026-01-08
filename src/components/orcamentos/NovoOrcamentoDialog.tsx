@@ -153,6 +153,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
     mirror: 'Espelho',
     shower: 'Box',
     facade: 'Fachada',
+    guarda_corpo: 'Guarda Corpo',
     other: 'Outros',
   };
 

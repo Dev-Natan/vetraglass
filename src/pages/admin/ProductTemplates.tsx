@@ -108,9 +108,9 @@ type ItemTemplate = {
   linha: string | null;
 };
 
-type ProductCategory = "window" | "door" | "shower" | "mirror" | "partition" | "facade" | "other";
+type ProductCategory = "window" | "door" | "shower" | "mirror" | "partition" | "facade" | "guarda_corpo" | "other";
 
-const categoriesList: ProductCategory[] = ["window", "door", "shower", "mirror", "partition", "facade", "other"];
+const categoriesList: ProductCategory[] = ["window", "door", "shower", "mirror", "partition", "facade", "guarda_corpo", "other"];
 
 const categoryLabels: Record<string, string> = {
   window: "Janela",
@@ -119,6 +119,7 @@ const categoryLabels: Record<string, string> = {
   mirror: "Espelho",
   partition: "Divisória",
   facade: "Fachada",
+  guarda_corpo: "Guarda Corpo",
   other: "Outro",
 };
 
@@ -129,6 +130,7 @@ const categoryColors: Record<string, string> = {
   mirror: "bg-purple-500/10 text-purple-600 border-purple-500/20",
   partition: "bg-green-500/10 text-green-600 border-green-500/20",
   facade: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+  guarda_corpo: "bg-teal-500/10 text-teal-600 border-teal-500/20",
   other: "bg-gray-500/10 text-gray-600 border-gray-500/20",
 };
 

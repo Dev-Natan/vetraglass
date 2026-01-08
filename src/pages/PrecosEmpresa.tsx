@@ -37,7 +37,7 @@ const categoryLabels: Record<string, string> = {
   partition: 'Divisórias',
   shower: 'Box/Banheiros',
   mirror: 'Espelhos',
-  railing: 'Guarda-corpos',
+  guarda_corpo: 'Guarda Corpo',
   other: 'Outros',
 };
 

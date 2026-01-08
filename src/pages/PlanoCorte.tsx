@@ -19,6 +19,7 @@ const categoryLabels: Record<string, string> = {
   shower: 'Box de Banheiro',
   mirror: 'Espelho',
   partition: 'Divisória',
+  guarda_corpo: 'Guarda Corpo',
   other: 'Outros',
 };
 
