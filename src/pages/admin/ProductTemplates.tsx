@@ -137,6 +137,7 @@ export default function ProductTemplates() {
   const [selectedTemplate, setSelectedTemplate] = useState<ProductTemplate | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState<string>("all");
+  const [filterLinha, setFilterLinha] = useState<string>("all");
   const [showInactive, setShowInactive] = useState(false);
   
   const currentLinha = linhaParam ? decodeURIComponent(linhaParam) : null;
@@ -238,8 +239,9 @@ export default function ProductTemplates() {
     const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           template.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = filterCategory === "all" || template.category === filterCategory;
+    const matchesLinha = filterLinha === "all" || template.linha === filterLinha;
     const matchesActive = showInactive || template.is_active;
-    return matchesSearch && matchesCategory && matchesActive;
+    return matchesSearch && matchesCategory && matchesLinha && matchesActive;
   });
 
   // Create/Update mutation
@@ -658,12 +660,25 @@ export default function ProductTemplates() {
               className="pl-9"
             />
           </div>
+          <Select value={filterLinha} onValueChange={setFilterLinha}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Linha" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas Linhas</SelectItem>
+              {availableLines?.map((line) => (
+                <SelectItem key={line} value={line}>
+                  {line}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Select value={filterCategory} onValueChange={setFilterCategory}>
             <SelectTrigger className="w-40">
               <SelectValue placeholder="Categoria" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todas</SelectItem>
+              <SelectItem value="all">Todas Categorias</SelectItem>
               {categoriesList.map((cat) => (
                 <SelectItem key={cat} value={cat}>
                   {categoryLabels[cat]}
