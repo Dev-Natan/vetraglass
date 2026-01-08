@@ -10,6 +10,7 @@ import {
   Settings,
   LogOut,
   ChevronLeft,
+  Upload,
 } from "lucide-react";
 
 const adminMenuItems = [
@@ -27,6 +28,11 @@ const adminMenuItems = [
     title: "Product Templates",
     path: "/admin/product-templates",
     icon: Package,
+  },
+  {
+    title: "Importar Produtos",
+    path: "/admin/import-products",
+    icon: Upload,
   },
   {
     title: "Empresas",
