@@ -400,30 +400,7 @@ export default function EditarProduto() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <Label>Produto pronto:</Label>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant={!formData.is_ready_product ? 'default' : 'outline'}
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => setFormData({ ...formData, is_ready_product: false })}
-                  >
-                    Não
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={formData.is_ready_product ? 'default' : 'outline'}
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => setFormData({ ...formData, is_ready_product: true })}
-                  >
-                    Sim
-                  </Button>
-                </div>
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Preço Base (R$/m²):</Label>
                 <Input
