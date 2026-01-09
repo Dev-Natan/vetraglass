@@ -17,7 +17,16 @@ interface QuoteItem {
   image_url?: string | null;
   linha?: string | null;
   category?: string;
+  has_glass?: boolean;
+  glass_color?: string;
+  glass_thickness?: string;
 }
+
+const glassColorLabels: Record<string, string> = {
+  incolor: 'Incolor',
+  verde: 'Verde',
+  fume: 'Fumê',
+};
 
 interface QuoteItemCardProps {
   item: QuoteItem;
@@ -72,13 +81,31 @@ export function QuoteItemCard({ item, index, onUpdate, onRemove, formatCurrency 
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
               <h4 className="font-medium text-sm truncate">{item.description || 'Produto não selecionado'}</h4>
-              <div className="flex items-center gap-2 mt-1">
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
                 {item.linha && (
                   <Badge variant="secondary" className="text-xs">{item.linha}</Badge>
                 )}
                 {item.category && (
                   <Badge variant="outline" className="text-xs">
                     {categoryLabels[item.category] || item.category}
+                  </Badge>
+                )}
+                {item.has_glass !== undefined && (
+                  <Badge 
+                    variant={item.has_glass ? 'default' : 'outline'} 
+                    className="text-xs"
+                  >
+                    {item.has_glass ? 'Com Vidro' : 'Sem Vidro'}
+                  </Badge>
+                )}
+                {item.has_glass && item.glass_color && (
+                  <Badge variant="outline" className="text-xs bg-blue-50 border-blue-200 text-blue-700">
+                    {glassColorLabels[item.glass_color] || item.glass_color}
+                  </Badge>
+                )}
+                {item.has_glass && item.glass_thickness && (
+                  <Badge variant="outline" className="text-xs bg-green-50 border-green-200 text-green-700">
+                    {item.glass_thickness}
                   </Badge>
                 )}
               </div>
