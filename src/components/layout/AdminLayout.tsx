@@ -106,7 +106,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       {/* Sidebar */}
       <aside
         className={cn(
-          "border-r bg-card flex flex-col transition-all duration-300 ease-in-out",
+          "fixed top-0 left-0 h-screen border-r bg-card flex flex-col transition-all duration-300 ease-in-out z-40",
           collapsed ? "w-16" : "w-64"
         )}
       >
@@ -201,7 +201,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
+      <main className={cn(
+        "flex-1 overflow-auto transition-all duration-300",
+        collapsed ? "ml-16" : "ml-64"
+      )}>
         {children}
       </main>
     </div>
