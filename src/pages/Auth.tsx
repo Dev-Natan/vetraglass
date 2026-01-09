@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -176,6 +176,14 @@ export default function Auth() {
                       'Entrar'
                     )}
                   </Button>
+                  <div className="text-center">
+                    <Link 
+                      to="/recuperar-senha" 
+                      className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      Esqueceu sua senha?
+                    </Link>
+                  </div>
                 </form>
               </TabsContent>
               
