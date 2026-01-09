@@ -67,6 +67,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { FormulaEditor } from "@/components/produtos/FormulaEditor";
+import { GlassFormulaEditor } from "@/components/produtos/GlassFormulaEditor";
+import { cn } from "@/lib/utils";
 
 type ProductTemplate = {
   id: string;
@@ -92,11 +95,15 @@ type ProductTemplateItem = {
   cut_angle: number;
   is_optional: boolean;
   notes: string | null;
+  width_formula: string | null;
+  height_formula: string | null;
   item_template?: {
     id: string;
     name: string;
     type: string;
     unit: string;
+    image_url: string | null;
+    linha: string | null;
   };
 };
 
@@ -106,7 +113,15 @@ type ItemTemplate = {
   type: string;
   unit: string;
   linha: string | null;
+  image_url: string | null;
 };
+
+// Item type tabs for the dialog
+const itemTypeTabs = [
+  { value: 'glass', label: 'VIDROS', dbType: 'glass' },
+  { value: 'profile', label: 'PERFIS', dbType: 'profile' },
+  { value: 'accessory', label: 'ACESSÓRIOS', dbType: 'accessory' },
+];
 
 type ProductCategory = "window" | "door" | "shower" | "mirror" | "partition" | "facade" | "guarda_corpo" | "other";
 
@@ -148,6 +163,16 @@ export default function ProductTemplates() {
   const [filterLinha, setFilterLinha] = useState<string>("all");
   const [showInactive, setShowInactive] = useState(false);
   const [uploadingImageId, setUploadingImageId] = useState<string | null>(null);
+  
+  // Composition dialog states
+  const [compositionActiveTab, setCompositionActiveTab] = useState("glass");
+  const [selectedItemToAdd, setSelectedItemToAdd] = useState("");
+  const [quantityFormula, setQuantityFormula] = useState("1");
+  const [piecesQuantity, setPiecesQuantity] = useState(1);
+  const [widthFormula, setWidthFormula] = useState("");
+  const [heightFormula, setHeightFormula] = useState("");
+  const [glassName, setGlassName] = useState("");
+  const [cutAngle, setCutAngle] = useState(90);
   
   // Bulk upload state
   const [bulkUploadDialogOpen, setBulkUploadDialogOpen] = useState(false);
@@ -232,7 +257,7 @@ export default function ProductTemplates() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("item_templates")
-        .select("id, name, type, unit, linha")
+        .select("id, name, type, unit, linha, image_url")
         .eq("is_active", true)
         .order("name");
       if (error) throw error;
@@ -249,7 +274,7 @@ export default function ProductTemplates() {
         .from("product_template_items")
         .select(`
           *,
-          item_template:item_templates(id, name, type, unit)
+          item_template:item_templates(id, name, type, unit, image_url, linha)
         `)
         .eq("product_template_id", selectedTemplate.id)
         .order("created_at");
@@ -268,6 +293,77 @@ export default function ProductTemplates() {
     const matchesActive = showInactive || template.is_active;
     return matchesSearch && matchesCategory && matchesLinha && matchesActive;
   });
+
+  // Sort item templates - prioritize items from the selected template's linha
+  const sortedItemTemplates = itemTemplates?.slice().sort((a, b) => {
+    const templateLinha = selectedTemplate?.linha;
+    if (!templateLinha) return a.name.localeCompare(b.name);
+    
+    const aMatchesLinha = a.linha === templateLinha;
+    const bMatchesLinha = b.linha === templateLinha;
+    
+    if (aMatchesLinha && !bMatchesLinha) return -1;
+    if (!aMatchesLinha && bMatchesLinha) return 1;
+    
+    // Secondary sort by linha name, then by item name
+    if (a.linha !== b.linha) {
+      return (a.linha || 'ZZZ').localeCompare(b.linha || 'ZZZ');
+    }
+    return a.name.localeCompare(b.name);
+  });
+
+  // Get items filtered by type for composition dialog
+  const getItemsByTypeForAdd = (tabValue: string) => {
+    const currentTab = itemTypeTabs.find(t => t.value === tabValue);
+    const dbType = currentTab?.dbType;
+    return sortedItemTemplates?.filter((item) => item.type === dbType) || [];
+  };
+
+  // Get items already in composition by type
+  const getCompositionItemsByType = (tabValue: string) => {
+    const currentTab = itemTypeTabs.find(t => t.value === tabValue);
+    const dbType = currentTab?.dbType;
+    return compositionItems?.filter((item) => item.item_template?.type === dbType) || [];
+  };
+
+  // Helper to get storage URL
+  const getStorageUrl = (path: string | null, bucket: 'item-templates' | 'product-templates' = 'item-templates') => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    if (path.startsWith('/')) return path;
+    return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
+  };
+
+  // Reset composition form
+  const resetCompositionForm = () => {
+    setSelectedItemToAdd("");
+    setQuantityFormula("1");
+    setPiecesQuantity(1);
+    setWidthFormula("");
+    setHeightFormula("");
+    setGlassName("");
+    setCutAngle(90);
+  };
+
+  // Handle add composition item
+  const handleAddCompositionItem = () => {
+    if (!selectedItemToAdd) return;
+    
+    addCompositionMutation.mutate({
+      item_template_id: selectedItemToAdd,
+      quantity_formula: quantityFormula,
+      pieces_quantity: piecesQuantity,
+      cut_angle: cutAngle,
+      is_optional: false,
+      notes: compositionActiveTab === 'glass' ? glassName : "",
+      width_formula: compositionActiveTab === 'glass' ? widthFormula : undefined,
+      height_formula: compositionActiveTab === 'glass' ? heightFormula : undefined,
+    }, {
+      onSuccess: () => {
+        resetCompositionForm();
+      }
+    });
+  };
 
   // Create/Update mutation
   const saveMutation = useMutation({
@@ -401,6 +497,8 @@ export default function ProductTemplates() {
       cut_angle: number;
       is_optional: boolean;
       notes: string;
+      width_formula?: string;
+      height_formula?: string;
     }) => {
       if (!selectedTemplate) throw new Error("Nenhum template selecionado");
       const { error } = await supabase.from("product_template_items").insert({
@@ -411,6 +509,8 @@ export default function ProductTemplates() {
         cut_angle: data.cut_angle,
         is_optional: data.is_optional,
         notes: data.notes || null,
+        width_formula: data.width_formula || null,
+        height_formula: data.height_formula || null,
       });
       if (error) throw error;
     },
@@ -614,14 +714,6 @@ export default function ProductTemplates() {
     saveMutation.mutate({ ...formData, id: editingTemplate?.id });
   };
 
-  // Filter item templates for composition - prioritize same line
-  const sortedItemTemplates = itemTemplates?.sort((a, b) => {
-    const aIsCurrentLine = a.linha === currentLinha || a.linha === selectedTemplate?.linha;
-    const bIsCurrentLine = b.linha === currentLinha || b.linha === selectedTemplate?.linha;
-    if (aIsCurrentLine && !bIsCurrentLine) return -1;
-    if (!aIsCurrentLine && bIsCurrentLine) return 1;
-    return a.name.localeCompare(b.name);
-  });
 
   if (!isSaasAdmin) {
     return (
@@ -1038,165 +1130,318 @@ export default function ProductTemplates() {
         )}
 
         {/* Composition Dialog */}
-        <Dialog open={isCompositionDialogOpen} onOpenChange={setIsCompositionDialogOpen}>
-          <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
+        <Dialog open={isCompositionDialogOpen} onOpenChange={(open) => {
+          setIsCompositionDialogOpen(open);
+          if (!open) resetCompositionForm();
+        }}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Settings2 className="w-5 h-5" />
                 Composição: {selectedTemplate?.name}
+                {selectedTemplate?.linha && (
+                  <Badge variant="secondary">{selectedTemplate.linha}</Badge>
+                )}
               </DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
-              {/* Add item form */}
-              <Card className="bg-muted/50">
-                <CardHeader className="py-3">
+            
+            <div className="space-y-6">
+              {/* Tab Navigation */}
+              <div className="flex gap-1 p-1 bg-muted rounded-lg">
+                {itemTypeTabs.map((tab) => (
+                  <button
+                    key={tab.value}
+                    onClick={() => {
+                      setCompositionActiveTab(tab.value);
+                      setSelectedItemToAdd("");
+                    }}
+                    className={cn(
+                      "flex-1 px-4 py-2.5 text-sm font-medium rounded-md transition-all",
+                      compositionActiveTab === tab.value
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Add Item Section */}
+              <Card className="border-primary/20">
+                <CardHeader className="py-3 bg-primary/5">
                   <CardTitle className="text-sm flex items-center gap-2">
                     <Plus className="w-4 h-4" />
                     Adicionar Item
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      const form = e.target as HTMLFormElement;
-                      const formData = new FormData(form);
-                      addCompositionMutation.mutate({
-                        item_template_id: formData.get("item_template_id") as string,
-                        quantity_formula: formData.get("quantity_formula") as string || "1",
-                        pieces_quantity: parseInt(formData.get("pieces_quantity") as string) || 1,
-                        cut_angle: parseInt(formData.get("cut_angle") as string) || 90,
-                        is_optional: formData.get("is_optional") === "on",
-                        notes: formData.get("notes") as string || "",
-                      });
-                      form.reset();
-                    }}
-                    className="grid grid-cols-6 gap-3 items-end"
-                  >
-                    <div className="col-span-2 space-y-1">
-                      <Label className="text-xs">Item *</Label>
-                      <Select name="item_template_id" required>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {sortedItemTemplates?.map((item) => (
-                            <SelectItem key={item.id} value={item.id}>
-                              <span className="flex items-center gap-2">
-                                {item.name}
-                                <Badge variant="outline" className="text-xs">
-                                  {item.type}
-                                </Badge>
-                                {item.linha === selectedTemplate?.linha && (
-                                  <Badge variant="secondary" className="text-xs">
-                                    {item.linha}
-                                  </Badge>
+                <CardContent className="pt-4 space-y-4">
+                  {/* Item Selection with images */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">
+                      Selecione o item:
+                      {selectedTemplate?.linha && (
+                        <span className="ml-2 text-xs text-primary font-normal">
+                          (Itens da linha "{selectedTemplate.linha}" aparecem primeiro)
+                        </span>
+                      )}
+                    </Label>
+                    <Select value={selectedItemToAdd} onValueChange={setSelectedItemToAdd}>
+                      <SelectTrigger className="h-14">
+                        <SelectValue placeholder="Clique para escolher um item" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[400px]">
+                        {getItemsByTypeForAdd(compositionActiveTab).map((item, index) => {
+                          const isProductLinha = item.linha === selectedTemplate?.linha;
+                          const prevItem = index > 0 ? getItemsByTypeForAdd(compositionActiveTab)[index - 1] : null;
+                          const showSeparator = prevItem && prevItem.linha !== item.linha;
+                          const isFirstOfProductLinha = isProductLinha && (!prevItem || prevItem.linha !== item.linha);
+                          
+                          return (
+                            <div key={item.id}>
+                              {isFirstOfProductLinha && (
+                                <div className="px-2 py-1.5 text-xs font-semibold text-primary bg-primary/10 border-b">
+                                  ⭐ Itens da linha {selectedTemplate?.linha}
+                                </div>
+                              )}
+                              {showSeparator && !isFirstOfProductLinha && (
+                                <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground bg-muted/50 border-y">
+                                  {item.linha || 'Sem Linha'}
+                                </div>
+                              )}
+                              <SelectItem 
+                                value={item.id} 
+                                className={cn(
+                                  "py-2",
+                                  isProductLinha && "bg-primary/5"
                                 )}
-                              </span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Fórmula *</Label>
-                      <Input
-                        name="quantity_formula"
-                        placeholder="Altura - 50"
-                        defaultValue="1"
-                        className="font-mono text-sm"
+                              >
+                                <div className="flex items-center gap-3">
+                                  {/* Item image */}
+                                  <div className="w-10 h-10 rounded bg-muted flex-shrink-0 overflow-hidden">
+                                    {item.image_url ? (
+                                      <img 
+                                        src={getStorageUrl(item.image_url)}
+                                        alt={item.name}
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                          (e.target as HTMLImageElement).style.display = 'none';
+                                        }}
+                                      />
+                                    ) : (
+                                      <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
+                                        —
+                                      </div>
+                                    )}
+                                  </div>
+                                  {/* Item info */}
+                                  <div className="flex flex-col min-w-0">
+                                    <span className="font-medium truncate">{item.name}</span>
+                                    {item.linha && (
+                                      <span className={cn(
+                                        "text-xs",
+                                        isProductLinha 
+                                          ? "text-primary font-medium"
+                                          : "text-muted-foreground"
+                                      )}>
+                                        {item.linha}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </SelectItem>
+                            </div>
+                          );
+                        })}
+                        {getItemsByTypeForAdd(compositionActiveTab).length === 0 && (
+                          <div className="p-4 text-sm text-muted-foreground text-center">
+                            Nenhum item disponível para esta categoria
+                          </div>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {/* Show GlassFormulaEditor for glass items, FormulaEditor for others */}
+                  {compositionActiveTab === 'glass' ? (
+                    <>
+                      {/* Glass Name Input */}
+                      <div className="space-y-2">
+                        <Label>Nome do Vidro (opcional)</Label>
+                        <Input
+                          placeholder="Ex: Vidro Fixo, Vidro Móvel, Bandeira..."
+                          value={glassName}
+                          onChange={(e) => setGlassName(e.target.value)}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Identifique o vidro para facilitar no plano de corte
+                        </p>
+                      </div>
+                      
+                      <GlassFormulaEditor
+                        widthFormula={widthFormula}
+                        heightFormula={heightFormula}
+                        onWidthFormulaChange={setWidthFormula}
+                        onHeightFormulaChange={setHeightFormula}
                       />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Qtd Peças</Label>
-                      <Input
-                        name="pieces_quantity"
-                        type="number"
-                        defaultValue="1"
-                        min="1"
+                    </>
+                  ) : (
+                    <>
+                      <FormulaEditor
+                        value={quantityFormula}
+                        onChange={setQuantityFormula}
+                        showPiecesQuantity={compositionActiveTab === 'profile'}
+                        piecesQuantity={piecesQuantity}
+                        onPiecesChange={setPiecesQuantity}
                       />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Ângulo °</Label>
-                      <Input
-                        name="cut_angle"
-                        type="number"
-                        defaultValue="90"
-                        min="0"
-                        max="90"
-                      />
-                    </div>
-                    <Button type="submit" disabled={addCompositionMutation.isPending}>
-                      <Plus className="w-4 h-4 mr-1" />
+                      
+                      {compositionActiveTab === 'profile' && (
+                        <div className="space-y-2">
+                          <Label>Ângulo de corte (graus)</Label>
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              variant={cutAngle === 90 ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setCutAngle(90)}
+                            >
+                              90°
+                            </Button>
+                            <Button
+                              type="button"
+                              variant={cutAngle === 45 ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setCutAngle(45)}
+                            >
+                              45°
+                            </Button>
+                            <Input
+                              type="number"
+                              value={cutAngle}
+                              onChange={(e) => setCutAngle(Number(e.target.value))}
+                              className="w-24"
+                              min={0}
+                              max={90}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  
+                  <div className="flex justify-end">
+                    <Button 
+                      onClick={handleAddCompositionItem}
+                      disabled={!selectedItemToAdd || addCompositionMutation.isPending}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
                       Adicionar
                     </Button>
-                  </form>
+                  </div>
                 </CardContent>
               </Card>
 
-              {/* Items list */}
-              <Card>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Item</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Fórmula</TableHead>
-                      <TableHead className="text-center">Peças</TableHead>
-                      <TableHead className="text-center">Ângulo</TableHead>
-                      <TableHead>Notas</TableHead>
-                      <TableHead className="w-16"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {compositionItems?.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                          <Layers className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                          Nenhum item na composição
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      compositionItems?.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium">
-                            {item.item_template?.name}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="text-xs">
-                              {item.item_template?.type}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <code className="text-sm bg-muted px-2 py-1 rounded font-mono">
-                              {item.quantity_formula}
-                            </code>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {item.pieces_quantity}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {item.cut_angle}°
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground max-w-32 truncate">
-                            {item.notes || "-"}
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => removeCompositionMutation.mutate(item.id)}
-                              className="h-8 w-8"
-                            >
-                              <Trash2 className="w-4 h-4 text-destructive" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </Card>
+              {/* Items Grid by Type */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium text-muted-foreground">
+                  Itens adicionados ({getCompositionItemsByType(compositionActiveTab).length})
+                </h4>
+                
+                {getCompositionItemsByType(compositionActiveTab).length === 0 ? (
+                  <Card className="border-dashed">
+                    <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+                      <Layers className="w-10 h-10 text-muted-foreground/50 mb-2" />
+                      <p className="text-sm text-muted-foreground">
+                        Nenhum item desta categoria na composição
+                      </p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {getCompositionItemsByType(compositionActiveTab).map((item) => (
+                      <div
+                        key={item.id}
+                        className="bg-card border rounded-lg p-3 relative group hover:shadow-md transition-shadow"
+                      >
+                        {/* Delete button */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute top-1 right-1 w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => removeCompositionMutation.mutate(item.id)}
+                        >
+                          <Trash2 className="w-3 h-3 text-destructive" />
+                        </Button>
+
+                        {/* Item image */}
+                        <div className="aspect-square bg-muted rounded-lg mb-2 flex items-center justify-center overflow-hidden">
+                          {item.item_template?.image_url ? (
+                            <img
+                              src={getStorageUrl(item.item_template.image_url)}
+                              alt={item.item_template.name}
+                              className="w-full h-full object-contain"
+                            />
+                          ) : (
+                            <div className="text-2xl text-muted-foreground/30">📦</div>
+                          )}
+                        </div>
+
+                        {/* Item info */}
+                        {compositionActiveTab === 'glass' && item.notes && (
+                          <h4 className="font-bold text-xs text-foreground truncate text-center mb-0.5">
+                            {item.notes}
+                          </h4>
+                        )}
+                        <h4 className={cn(
+                          "font-medium text-[11px] truncate text-center",
+                          compositionActiveTab === 'glass' && item.notes ? 'text-muted-foreground' : 'text-primary'
+                        )}>
+                          {item.item_template?.name}
+                        </h4>
+                        
+                        {/* Glass formulas display */}
+                        {compositionActiveTab === 'glass' && (item.width_formula || item.height_formula) && (
+                          <div className="mt-1.5 space-y-0.5">
+                            {item.width_formula && (
+                              <div className="flex items-center justify-center">
+                                <span className="text-[9px] px-1.5 py-0.5 rounded-full font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                                  L: {item.width_formula}
+                                </span>
+                              </div>
+                            )}
+                            {item.height_formula && (
+                              <div className="flex items-center justify-center">
+                                <span className="text-[9px] px-1.5 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                                  A: {item.height_formula}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        
+                        {/* Formula for non-glass items */}
+                        {compositionActiveTab !== 'glass' && (
+                          <p className="text-[10px] text-muted-foreground text-center mt-1 font-mono">
+                            {item.quantity_formula}
+                          </p>
+                        )}
+
+                        {/* Pieces and angle for profiles */}
+                        {compositionActiveTab === 'profile' && (
+                          <div className="flex justify-center gap-1 mt-1.5">
+                            <span className="text-[9px] font-medium text-foreground bg-primary/10 px-1.5 py-0.5 rounded">
+                              {item.pieces_quantity || 1}x
+                            </span>
+                            <span className="text-[9px] font-medium text-foreground bg-muted px-1.5 py-0.5 rounded">
+                              {item.cut_angle || 90}°
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </DialogContent>
         </Dialog>
