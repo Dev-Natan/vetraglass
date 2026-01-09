@@ -205,7 +205,7 @@ export default function EditarProduto() {
 
   // Fetch available item templates for adding
   const { data: availableItems } = useQuery({
-    queryKey: ['item-templates-by-type', activeTab],
+    queryKey: ['item-templates-by-type', activeTab, product?.linha],
     queryFn: async () => {
       const currentTab = itemTypeTabs.find(t => t.value === activeTab);
       const dbType = currentTab?.dbType || 'accessory';
@@ -215,9 +215,31 @@ export default function EditarProduto() {
         .select('*')
         .eq('type', dbType as "accessory" | "glass" | "profile" | "service")
         .eq('is_active', true)
+        .order('linha')
         .order('name');
       if (error) throw error;
-      return data as ItemTemplate[];
+      
+      // Sort items: product linha first, then others
+      const items = data as ItemTemplate[];
+      const productLinha = product?.linha;
+      
+      if (productLinha) {
+        return items.sort((a, b) => {
+          const aMatchesLinha = a.linha === productLinha;
+          const bMatchesLinha = b.linha === productLinha;
+          
+          if (aMatchesLinha && !bMatchesLinha) return -1;
+          if (!aMatchesLinha && bMatchesLinha) return 1;
+          
+          // Secondary sort by linha name, then by item name
+          if (a.linha !== b.linha) {
+            return (a.linha || 'ZZZ').localeCompare(b.linha || 'ZZZ');
+          }
+          return a.name.localeCompare(b.name);
+        });
+      }
+      
+      return items;
     },
   });
 
@@ -666,24 +688,61 @@ export default function EditarProduto() {
               
               {/* Item selection with search */}
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Selecione o item:</Label>
+                <Label className="text-sm font-medium">
+                  Selecione o item:
+                  {product?.linha && (
+                    <span className="ml-2 text-xs text-primary font-normal">
+                      (Itens da linha "{product.linha}" aparecem primeiro)
+                    </span>
+                  )}
+                </Label>
                 <Select value={selectedItemToAdd} onValueChange={setSelectedItemToAdd}>
                   <SelectTrigger className="h-12">
                     <SelectValue placeholder="Clique para escolher um item" />
                   </SelectTrigger>
-                  <SelectContent className="bg-background border shadow-lg z-50 max-h-[300px]">
-                    {availableItems?.map((item) => (
-                      <SelectItem key={item.id} value={item.id} className="py-3">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{item.name}</span>
-                          {item.linha && (
-                            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                              {item.linha}
-                            </span>
+                  <SelectContent className="bg-background border shadow-lg z-50 max-h-[400px]">
+                    {availableItems?.map((item, index) => {
+                      const isProductLinha = item.linha === product?.linha;
+                      const prevItem = index > 0 ? availableItems[index - 1] : null;
+                      const showSeparator = prevItem && prevItem.linha !== item.linha;
+                      const isFirstOfProductLinha = isProductLinha && (!prevItem || prevItem.linha !== item.linha);
+                      
+                      return (
+                        <div key={item.id}>
+                          {isFirstOfProductLinha && (
+                            <div className="px-2 py-1.5 text-xs font-semibold text-primary bg-primary/10 border-b">
+                              ⭐ Itens da linha {product?.linha}
+                            </div>
                           )}
+                          {showSeparator && !isFirstOfProductLinha && (
+                            <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground bg-muted/50 border-y">
+                              {item.linha || 'Sem Linha'}
+                            </div>
+                          )}
+                          <SelectItem 
+                            value={item.id} 
+                            className={cn(
+                              "py-3",
+                              isProductLinha && "bg-primary/5"
+                            )}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{item.name}</span>
+                              {item.linha && (
+                                <span className={cn(
+                                  "text-xs px-2 py-0.5 rounded",
+                                  isProductLinha 
+                                    ? "bg-primary/20 text-primary font-medium"
+                                    : "bg-muted text-muted-foreground"
+                                )}>
+                                  {item.linha}
+                                </span>
+                              )}
+                            </div>
+                          </SelectItem>
                         </div>
-                      </SelectItem>
-                    ))}
+                      );
+                    })}
                     {!availableItems?.length && (
                       <div className="p-4 text-sm text-muted-foreground text-center">
                         Nenhum item disponível para esta categoria
