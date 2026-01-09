@@ -549,7 +549,12 @@ export default function EditarProduto() {
                     </div>
 
                     {/* Item info */}
-                    <h4 className="font-medium text-xs text-primary truncate text-center">
+                    {tab.value === 'glass' && item.notes && (
+                      <h4 className="font-bold text-sm text-foreground truncate text-center mb-1">
+                        {item.notes}
+                      </h4>
+                    )}
+                    <h4 className={`font-medium text-xs truncate text-center ${tab.value === 'glass' && item.notes ? 'text-muted-foreground' : 'text-primary'}`}>
                       {item.item_template?.name}
                     </h4>
                     
