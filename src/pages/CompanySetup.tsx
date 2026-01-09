@@ -9,10 +9,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Building2, ArrowLeft } from 'lucide-react';
 import { z } from 'zod';
+import { validateCPFOrCNPJ, formatCPFOrCNPJ } from '@/utils/documentValidation';
 
 const companySchema = z.object({
   name: z.string().min(2, 'Nome deve ter no mínimo 2 caracteres'),
-  cnpj: z.string().min(14, 'CNPJ inválido'),
+  document: z.string().refine((val) => {
+    const result = validateCPFOrCNPJ(val);
+    return result.valid;
+  }, 'CPF ou CNPJ inválido'),
   phone: z.string().optional(),
   email: z.string().email('Email inválido').optional().or(z.literal('')),
   address: z.string().optional(),
@@ -31,19 +35,14 @@ export default function CompanySetup() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   
   const [name, setName] = useState('');
-  const [cnpj, setCnpj] = useState('');
+  const [document, setDocument] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
 
-  const formatCNPJ = (value: string) => {
-    const numbers = value.replace(/\D/g, '');
-    return numbers
-      .replace(/^(\d{2})(\d)/, '$1.$2')
-      .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
-      .replace(/\.(\d{3})(\d)/, '.$1/$2')
-      .replace(/(\d{4})(\d)/, '$1-$2')
-      .slice(0, 18);
+  const handleDocumentChange = (value: string) => {
+    const formatted = formatCPFOrCNPJ(value);
+    setDocument(formatted);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -52,7 +51,7 @@ export default function CompanySetup() {
     
     const validation = companySchema.safeParse({
       name,
-      cnpj: cnpj.replace(/\D/g, ''),
+      document: document.replace(/\D/g, ''),
       phone,
       email,
       address,
@@ -78,7 +77,7 @@ export default function CompanySetup() {
       const { data: companyData, error: companyError } = await supabase
         .rpc('create_company_and_assign_admin', {
           _name: name,
-          _cnpj: cnpj.replace(/\D/g, ''),
+          _cnpj: document.replace(/\D/g, ''),
           _phone: phone || '',
           _email: email || '',
           _address: address || '',
@@ -153,17 +152,21 @@ export default function CompanySetup() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="cnpj">CNPJ *</Label>
+                <Label htmlFor="document">CPF ou CNPJ *</Label>
                 <Input
-                  id="cnpj"
-                  placeholder="00.000.000/0001-00"
-                  value={cnpj}
-                  onChange={(e) => setCnpj(formatCNPJ(e.target.value))}
+                  id="document"
+                  placeholder="000.000.000-00 ou 00.000.000/0001-00"
+                  value={document}
+                  onChange={(e) => handleDocumentChange(e.target.value)}
                   disabled={isLoading}
+                  maxLength={18}
                 />
-                {errors.cnpj && (
-                  <p className="text-sm text-destructive">{errors.cnpj}</p>
+                {errors.document && (
+                  <p className="text-sm text-destructive">{errors.document}</p>
                 )}
+                <p className="text-xs text-muted-foreground">
+                  Digite um CPF (11 dígitos) ou CNPJ (14 dígitos) válido
+                </p>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
