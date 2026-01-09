@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Package, Check, ArrowLeft, Ruler } from 'lucide-react';
+import { Search, Package, Check, ArrowLeft, Ruler, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AddProductPanelProps {
@@ -48,6 +48,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   const [width, setWidth] = useState<number>(0);
   const [height, setHeight] = useState<number>(0);
   const [quantity, setQuantity] = useState<number>(1);
+  const [customPrice, setCustomPrice] = useState<number | null>(null);
 
   // Fetch all product templates
   const { data: productTemplates, isLoading } = useQuery({
@@ -121,12 +122,19 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
 
   const selectedProduct = productTemplates?.find(p => p.id === selectedProductId);
   const companyProduct = companyProducts?.find(cp => cp.product_template_id === selectedProductId);
-  const basePrice = Number(companyProduct?.base_price) || 0;
+  const defaultBasePrice = Number(companyProduct?.base_price) || 0;
+  const basePrice = customPrice !== null ? customPrice : defaultBasePrice;
 
   // Calculate prices
   const area = width && height ? (width / 1000) * (height / 1000) : 0;
   const unitPrice = area > 0 ? basePrice * area : 0;
   const totalPrice = unitPrice * quantity;
+
+  // Reset custom price when product changes
+  const handleProductSelect = (productId: string) => {
+    setSelectedProductId(productId);
+    setCustomPrice(null);
+  };
 
   const getProductImage = (imageUrl: string | null) => {
     if (!imageUrl) return null;
@@ -260,7 +268,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                   <button
                     key={product.id}
                     type="button"
-                    onClick={() => setSelectedProductId(product.id)}
+                    onClick={() => handleProductSelect(product.id)}
                     className={cn(
                       "relative aspect-square rounded-xl border-2 bg-card overflow-hidden transition-all",
                       "hover:shadow-lg hover:border-primary/50 hover:scale-[1.02]",
@@ -334,8 +342,8 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
           </div>
         )}
 
-        {/* Dimensions & Quantity */}
-        <div className="grid grid-cols-4 gap-3">
+        {/* Dimensions, Price & Quantity */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
               <Ruler className="w-3 h-3" />
@@ -365,6 +373,21 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
             />
           </div>
           <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+              <DollarSign className="w-3 h-3" />
+              Preço/m²
+            </label>
+            <Input
+              type="number"
+              value={customPrice !== null ? customPrice : defaultBasePrice || ''}
+              onChange={(e) => setCustomPrice(e.target.value ? Number(e.target.value) : null)}
+              placeholder="0.00"
+              min={0}
+              step="0.01"
+              className="bg-background h-10"
+            />
+          </div>
+          <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground">Qtd</label>
             <Input
               type="number"
@@ -383,29 +406,34 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
         </div>
 
         {/* Price Summary & Actions */}
-        <div className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-primary/10 to-primary/5 border">
-          <div className="flex-1 space-y-1">
-            <div className="flex items-center gap-4 text-sm">
-              <span className="text-muted-foreground">Unitário: <span className="text-foreground font-medium">{formatCurrency(unitPrice)}</span></span>
-              <span className="text-muted-foreground">× {quantity}</span>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-4 rounded-xl bg-gradient-to-r from-primary/10 to-primary/5 border">
+          <div className="flex-1 flex items-center gap-4">
+            <div className="space-y-0.5">
+              <span className="text-xs text-muted-foreground">Unitário</span>
+              <p className="font-semibold">{formatCurrency(unitPrice)}</p>
             </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-xs text-muted-foreground uppercase tracking-wide">Total:</span>
-              <span className="text-2xl font-bold text-primary">{formatCurrency(totalPrice)}</span>
+            <span className="text-muted-foreground">×</span>
+            <div className="space-y-0.5">
+              <span className="text-xs text-muted-foreground">Qtd</span>
+              <p className="font-semibold">{quantity}</p>
+            </div>
+            <span className="text-muted-foreground">=</span>
+            <div className="space-y-0.5">
+              <span className="text-xs text-muted-foreground uppercase tracking-wide">Total</span>
+              <p className="text-xl font-bold text-primary">{formatCurrency(totalPrice)}</p>
             </div>
           </div>
           
-          <div className="flex gap-2 shrink-0">
-            <Button type="button" variant="outline" size="lg" onClick={onCancel}>
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" onClick={onCancel} className="flex-1 sm:flex-none">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Voltar
             </Button>
             <Button 
               type="button" 
-              size="lg"
               onClick={handleAdd} 
               disabled={!canAdd}
-              className="bg-green-600 hover:bg-green-700 text-white px-6"
+              className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white px-6"
             >
               Adicionar
             </Button>

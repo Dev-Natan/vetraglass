@@ -341,8 +341,8 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0">
-        <DialogHeader className="p-6 pb-0">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
+        <DialogHeader className="p-6 pb-4 shrink-0">
           <DialogTitle className="flex items-center gap-2">
             {viewMode === 'form' ? (
               <>
@@ -358,7 +358,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
           </DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 px-6">
+        <div className="flex-1 overflow-y-auto px-6 pb-6">
           {viewMode === 'form' ? (
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-4">
@@ -546,7 +546,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
               />
             </div>
           )}
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );
