@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -10,8 +11,15 @@ import {
   Settings,
   LogOut,
   ChevronLeft,
+  ChevronRight,
   Upload,
+  Shield,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const adminMenuItems = [
   {
@@ -53,6 +61,7 @@ interface AdminLayoutProps {
 export function AdminLayout({ children }: AdminLayoutProps) {
   const { signOut, profile } = useAuth();
   const location = useLocation();
+  const [collapsed, setCollapsed] = useState(false);
 
   const isActive = (path: string) => {
     if (path === "/admin") {
@@ -61,56 +70,134 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     return location.pathname.startsWith(path);
   };
 
+  const NavItem = ({ item }: { item: typeof adminMenuItems[0] }) => {
+    const content = (
+      <Link
+        to={item.path}
+        className={cn(
+          "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+          isActive(item.path)
+            ? "bg-primary text-primary-foreground shadow-sm"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground",
+          collapsed && "justify-center px-2"
+        )}
+      >
+        <item.icon className={cn("shrink-0", collapsed ? "w-5 h-5" : "w-4 h-4")} />
+        {!collapsed && <span>{item.title}</span>}
+      </Link>
+    );
+
+    if (collapsed) {
+      return (
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>{content}</TooltipTrigger>
+          <TooltipContent side="right" className="font-medium">
+            {item.title}
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+
+    return content;
+  };
+
   return (
     <div className="min-h-screen bg-background flex">
       {/* Sidebar */}
-      <aside className="w-64 border-r bg-card flex flex-col">
+      <aside
+        className={cn(
+          "border-r bg-card flex flex-col transition-all duration-300 ease-in-out",
+          collapsed ? "w-16" : "w-64"
+        )}
+      >
         {/* Logo/Header */}
-        <div className="p-4 border-b">
-          <h1 className="text-xl font-bold text-foreground">SaaS Admin</h1>
-          <p className="text-xs text-muted-foreground mt-1">
-            {profile?.full_name || "Administrador"}
-          </p>
+        <div className={cn(
+          "p-4 border-b flex items-center gap-3",
+          collapsed && "justify-center"
+        )}>
+          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
+            <Shield className="w-4 h-4 text-primary-foreground" />
+          </div>
+          {!collapsed && (
+            <div className="overflow-hidden">
+              <h1 className="text-lg font-bold text-foreground truncate">SaaS Admin</h1>
+              <p className="text-xs text-muted-foreground truncate">
+                {profile?.full_name || "Administrador"}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-1">
+        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
           {adminMenuItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                isActive(item.path)
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}
-            >
-              <item.icon className="w-4 h-4" />
-              {item.title}
-            </Link>
+            <NavItem key={item.path} item={item} />
           ))}
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t space-y-3">
-          <Link
-            to="/"
-            className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            Voltar ao Sistema
-          </Link>
-          <Button
-            variant="destructive"
-            size="sm"
-            className="w-full justify-start"
-            onClick={() => signOut()}
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            Sair do Sistema
-          </Button>
+        <div className="p-3 border-t space-y-2">
+          {collapsed ? (
+            <>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Link
+                    to="/"
+                    className="flex items-center justify-center p-2.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right">Voltar ao Sistema</TooltipContent>
+              </Tooltip>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="w-full h-10 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => signOut()}
+                  >
+                    <LogOut className="w-5 h-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">Sair do Sistema</TooltipContent>
+              </Tooltip>
+            </>
+          ) : (
+            <>
+              <Link
+                to="/"
+                className="flex items-center gap-2 px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Voltar ao Sistema
+              </Link>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={() => signOut()}
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Sair do Sistema
+              </Button>
+            </>
+          )}
         </div>
+
+        {/* Collapse Toggle */}
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="absolute top-20 -right-3 w-6 h-6 bg-background border rounded-full flex items-center justify-center shadow-sm hover:bg-muted transition-colors"
+          style={{ left: collapsed ? "52px" : "248px" }}
+        >
+          {collapsed ? (
+            <ChevronRight className="w-3 h-3" />
+          ) : (
+            <ChevronLeft className="w-3 h-3" />
+          )}
+        </button>
       </aside>
 
       {/* Main Content */}
