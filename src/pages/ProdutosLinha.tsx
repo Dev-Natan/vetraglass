@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { ArrowLeft, Search, Trash2, Download, Percent, Plus } from 'lucide-react';
+import { ArrowLeft, Search, Trash2, Download, Percent, Plus, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -25,6 +26,19 @@ export default function ProdutosLinha() {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [showActive, setShowActive] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+
+  // Category labels
+  const categoryLabels: Record<string, string> = {
+    window: 'Janela',
+    door: 'Porta',
+    facade: 'Fachada',
+    shower: 'Box de Banheiro',
+    mirror: 'Espelho',
+    partition: 'Divisória',
+    guarda_corpo: 'Guarda Corpo',
+    other: 'Outros',
+  };
 
   const currentLinha = linhaParam ? decodeURIComponent(linhaParam) : '';
 
@@ -64,9 +78,21 @@ export default function ProdutosLinha() {
     },
   });
 
-  const filteredProducts = products?.filter(
-    (p) => p.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Get unique categories from products
+  const availableCategories = useMemo(() => {
+    if (!products) return [];
+    const categories = new Set<string>();
+    products.forEach(p => {
+      if (p.category) categories.add(p.category);
+    });
+    return Array.from(categories).sort();
+  }, [products]);
+
+  const filteredProducts = products?.filter((p) => {
+    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   const getCategoryIcon = (category: string) => {
     // Simple placeholder icons based on category
@@ -109,6 +135,23 @@ export default function ProdutosLinha() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
+          
+          {/* Category filter */}
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <Filter className="w-4 h-4 mr-2" />
+              <SelectValue placeholder="Categoria" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas Categorias</SelectItem>
+              {availableCategories.map(cat => (
+                <SelectItem key={cat} value={cat}>
+                  {categoryLabels[cat] || cat}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
           <Button variant="default" size="sm" className="gap-2">
             <Search className="w-4 h-4" />
             Buscar
