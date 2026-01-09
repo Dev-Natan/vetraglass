@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Package, Check, ArrowLeft } from 'lucide-react';
+import { Search, Package, Check, ArrowLeft, Ruler } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AddProductPanelProps {
@@ -171,78 +171,86 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   const canAdd = selectedProductId && width > 0 && height > 0 && quantity > 0;
 
   return (
-    <div className="space-y-6">
-      {/* Linha Selector */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-muted-foreground">Selecione ou digite o nome da linha:</label>
-        <Select value={selectedLinha} onValueChange={handleLinhaChange}>
-          <SelectTrigger className="bg-background">
-            <SelectValue placeholder="Selecione a linha..." />
-          </SelectTrigger>
-          <SelectContent className="bg-popover border shadow-lg z-50">
-            {linhas.map((linha) => (
-              <SelectItem key={linha} value={linha!}>
-                {linha}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+    <div className="flex flex-col h-full min-h-0">
+      {/* Fixed Header - Filters */}
+      <div className="shrink-0 space-y-4 pb-4 border-b mb-4">
+        {/* Linha & Search Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Linha</label>
+            <Select value={selectedLinha} onValueChange={handleLinhaChange}>
+              <SelectTrigger className="bg-background h-10">
+                <SelectValue placeholder="Selecione a linha..." />
+              </SelectTrigger>
+              <SelectContent className="bg-popover border shadow-lg z-50">
+                {linhas.map((linha) => (
+                  <SelectItem key={linha} value={linha!}>
+                    {linha}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Buscar</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Filtrar produtos..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 bg-background h-10"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Category Filter Chips */}
+        {selectedLinha && categories.length > 0 && (
+          <ScrollArea className="w-full">
+            <div className="flex gap-2 pb-1">
+              <Badge
+                variant={selectedCategory === '' ? 'default' : 'outline'}
+                className="cursor-pointer shrink-0 h-8 px-4"
+                onClick={() => setSelectedCategory('')}
+              >
+                Todos
+              </Badge>
+              {categories.map((cat) => (
+                <Badge
+                  key={cat}
+                  variant={selectedCategory === cat ? 'default' : 'outline'}
+                  className="cursor-pointer shrink-0 h-8 px-4"
+                  onClick={() => handleCategoryChange(cat!)}
+                >
+                  {categoryLabels[cat!] || cat}
+                </Badge>
+              ))}
+            </div>
+          </ScrollArea>
+        )}
       </div>
 
-      {/* Category Filter - Only show when linha is selected */}
-      {selectedLinha && categories.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          <Badge
-            variant={selectedCategory === '' ? 'default' : 'outline'}
-            className="cursor-pointer"
-            onClick={() => setSelectedCategory('')}
-          >
-            Todos
-          </Badge>
-          {categories.map((cat) => (
-            <Badge
-              key={cat}
-              variant={selectedCategory === cat ? 'default' : 'outline'}
-              className="cursor-pointer"
-              onClick={() => handleCategoryChange(cat!)}
-            >
-              {categoryLabels[cat!] || cat}
-            </Badge>
-          ))}
-        </div>
-      )}
-
-      {/* Search */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-muted-foreground">Filtrar nome do produto:</label>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 bg-background"
-          />
-        </div>
-      </div>
-
-      {/* Product Selection */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-muted-foreground">Selecione um produto:</label>
-        <ScrollArea className="h-[200px] rounded-lg border bg-muted/30 p-3">
+      {/* Scrollable Middle - Products Grid */}
+      <div className="flex-1 min-h-0 mb-4">
+        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 block">
+          Selecione um produto ({filteredProducts.length})
+        </label>
+        <ScrollArea className="h-[240px] rounded-xl border bg-muted/20 p-3">
           {isLoading ? (
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="aspect-square rounded-lg bg-muted animate-pulse" />
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="aspect-square rounded-xl bg-muted animate-pulse" />
               ))}
             </div>
           ) : filteredProducts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-              <Package className="w-10 h-10 mb-2 opacity-50" />
-              <p className="text-sm">Nenhum produto encontrado</p>
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-8">
+              <Package className="w-12 h-12 mb-3 opacity-50" />
+              <p className="text-sm font-medium">Nenhum produto encontrado</p>
+              <p className="text-xs mt-1">Tente ajustar os filtros</p>
             </div>
           ) : (
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">
               {filteredProducts.map((product) => {
                 const isSelected = selectedProductId === product.id;
                 const imageUrl = getProductImage(product.image_url);
@@ -254,20 +262,20 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                     type="button"
                     onClick={() => setSelectedProductId(product.id)}
                     className={cn(
-                      "relative aspect-square rounded-lg border-2 bg-card overflow-hidden transition-all",
-                      "hover:shadow-md hover:border-primary/50",
-                      isSelected ? "border-primary ring-2 ring-primary/20" : "border-border"
+                      "relative aspect-square rounded-xl border-2 bg-card overflow-hidden transition-all",
+                      "hover:shadow-lg hover:border-primary/50 hover:scale-[1.02]",
+                      isSelected ? "border-primary ring-2 ring-primary/20 shadow-lg" : "border-border"
                     )}
                   >
                     {/* Selection indicator */}
                     {isSelected && (
-                      <div className="absolute top-1 left-1 z-10 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                        <Check className="w-3 h-3 text-primary-foreground" />
+                      <div className="absolute top-1.5 left-1.5 z-10 w-6 h-6 rounded-full bg-primary flex items-center justify-center shadow-md">
+                        <Check className="w-3.5 h-3.5 text-primary-foreground" />
                       </div>
                     )}
 
                     {/* Image */}
-                    <div className="w-full h-3/4 bg-muted flex items-center justify-center p-2">
+                    <div className="w-full h-[70%] bg-gradient-to-b from-muted/50 to-muted flex items-center justify-center p-2">
                       {imageUrl ? (
                         <img
                           src={imageUrl}
@@ -275,20 +283,20 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                           className="w-full h-full object-contain"
                         />
                       ) : (
-                        <Package className="w-8 h-8 text-muted-foreground/30" />
+                        <Package className="w-10 h-10 text-muted-foreground/30" />
                       )}
                     </div>
 
                     {/* Name */}
-                    <div className="h-1/4 p-1 flex items-center justify-center bg-background">
-                      <span className="text-[10px] font-medium text-center line-clamp-2 leading-tight">
+                    <div className="h-[30%] p-1.5 flex items-center justify-center bg-background">
+                      <span className="text-[9px] sm:text-[10px] font-medium text-center line-clamp-2 leading-tight">
                         {product.name}
                       </span>
                     </div>
 
                     {/* Active indicator */}
                     {hasCompanyProduct && !isSelected && (
-                      <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-green-500" />
+                      <div className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-green-500 ring-2 ring-white" />
                     )}
                   </button>
                 );
@@ -298,86 +306,111 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
         </ScrollArea>
       </div>
 
-      {/* Dimensions */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-muted-foreground">Largura do vão (mm)</label>
-          <Input
-            type="number"
-            value={width || ''}
-            onChange={(e) => setWidth(Number(e.target.value))}
-            placeholder="0 mm"
-            min={0}
-            className="bg-background"
-          />
-        </div>
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-muted-foreground">Altura do vão (mm)</label>
-          <Input
-            type="number"
-            value={height || ''}
-            onChange={(e) => setHeight(Number(e.target.value))}
-            placeholder="0 mm"
-            min={0}
-            className="bg-background"
-          />
-        </div>
-      </div>
+      {/* Fixed Bottom - Dimensions & Pricing */}
+      <div className="shrink-0 space-y-4 pt-4 border-t">
+        {/* Selected Product Preview */}
+        {selectedProduct && (
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/20">
+            <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+              {getProductImage(selectedProduct.image_url) ? (
+                <img
+                  src={getProductImage(selectedProduct.image_url)!}
+                  alt={selectedProduct.name}
+                  className="w-full h-full object-contain p-1"
+                />
+              ) : (
+                <Package className="w-6 h-6 text-muted-foreground/50" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm truncate">{selectedProduct.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {selectedProduct.linha} • {categoryLabels[selectedProduct.category] || selectedProduct.category}
+              </p>
+            </div>
+            <Badge variant="secondary" className="shrink-0">
+              {formatCurrency(basePrice)}/m²
+            </Badge>
+          </div>
+        )}
 
-      {/* Quantity */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-muted-foreground">Quantidade</label>
-        <Input
-          type="number"
-          value={quantity}
-          onChange={(e) => setQuantity(Number(e.target.value))}
-          min={1}
-          className="bg-background w-24"
-        />
-      </div>
-
-      {/* Price Summary */}
-      {selectedProduct && (
-        <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Preço Base (m²)</span>
-            <span>{formatCurrency(basePrice)}</span>
+        {/* Dimensions & Quantity */}
+        <div className="grid grid-cols-4 gap-3">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+              <Ruler className="w-3 h-3" />
+              Largura (mm)
+            </label>
+            <Input
+              type="number"
+              value={width || ''}
+              onChange={(e) => setWidth(Number(e.target.value))}
+              placeholder="0"
+              min={0}
+              className="bg-background h-10"
+            />
           </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Área</span>
-            <span>{area.toFixed(2)} m²</span>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+              <Ruler className="w-3 h-3 rotate-90" />
+              Altura (mm)
+            </label>
+            <Input
+              type="number"
+              value={height || ''}
+              onChange={(e) => setHeight(Number(e.target.value))}
+              placeholder="0"
+              min={0}
+              className="bg-background h-10"
+            />
           </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Preço Unitário</span>
-            <span>{formatCurrency(unitPrice)}</span>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Qtd</label>
+            <Input
+              type="number"
+              value={quantity}
+              onChange={(e) => setQuantity(Number(e.target.value))}
+              min={1}
+              className="bg-background h-10"
+            />
           </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Quantidade</span>
-            <span>× {quantity}</span>
-          </div>
-          <div className="border-t pt-2 mt-2">
-            <div className="flex justify-between font-bold">
-              <span>VALOR PRODUTO</span>
-              <span className="text-primary text-lg">{formatCurrency(totalPrice)}</span>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Área</label>
+            <div className="h-10 px-3 rounded-md border bg-muted/50 flex items-center justify-center font-medium text-sm">
+              {area.toFixed(2)} m²
             </div>
           </div>
         </div>
-      )}
 
-      {/* Actions */}
-      <div className="flex justify-between gap-3 pt-2">
-        <Button type="button" variant="outline" onClick={onCancel} className="gap-2">
-          <ArrowLeft className="w-4 h-4" />
-          Voltar
-        </Button>
-        <Button 
-          type="button" 
-          onClick={handleAdd} 
-          disabled={!canAdd}
-          className="bg-green-600 hover:bg-green-700 text-white"
-        >
-          Adicionar
-        </Button>
+        {/* Price Summary & Actions */}
+        <div className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-primary/10 to-primary/5 border">
+          <div className="flex-1 space-y-1">
+            <div className="flex items-center gap-4 text-sm">
+              <span className="text-muted-foreground">Unitário: <span className="text-foreground font-medium">{formatCurrency(unitPrice)}</span></span>
+              <span className="text-muted-foreground">× {quantity}</span>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-xs text-muted-foreground uppercase tracking-wide">Total:</span>
+              <span className="text-2xl font-bold text-primary">{formatCurrency(totalPrice)}</span>
+            </div>
+          </div>
+          
+          <div className="flex gap-2 shrink-0">
+            <Button type="button" variant="outline" size="lg" onClick={onCancel}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Voltar
+            </Button>
+            <Button 
+              type="button" 
+              size="lg"
+              onClick={handleAdd} 
+              disabled={!canAdd}
+              className="bg-green-600 hover:bg-green-700 text-white px-6"
+            >
+              Adicionar
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );
