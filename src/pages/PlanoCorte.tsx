@@ -304,11 +304,11 @@ export default function PlanoCorte() {
               <h1>${selectedProductData?.name || '-'}</h1>
               <div class="dimensions">
                 <div>
-                  <div class="dim-label">Largura</div>
+                  <div class="dim-label">Largura do Vão</div>
                   <div class="dim-box"><span class="dim-value">${width}</span></div>
                 </div>
                 <div>
-                  <div class="dim-label">Altura</div>
+                  <div class="dim-label">Altura do Vão</div>
                   <div class="dim-box"><span class="dim-value">${height}</span></div>
                 </div>
               </div>
@@ -532,7 +532,7 @@ export default function PlanoCorte() {
             {/* Dimensions */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label>Largura</Label>
+                <Label>Largura do Vão</Label>
                 <Input 
                   type="number" 
                   value={width} 
@@ -541,7 +541,7 @@ export default function PlanoCorte() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Altura</Label>
+                <Label>Altura do Vão</Label>
                 <Input 
                   type="number" 
                   value={height} 

@@ -24,22 +24,24 @@ interface GlassFormulaEditorProps {
   onHeightFormulaChange: (value: string) => void;
 }
 
-// Common formulas for width
+// Common formulas for width (based on VÃO - opening dimensions)
 const widthFormulas = [
-  { label: 'Largura', formula: 'Largura' },
-  { label: 'Largura - 20', formula: 'Largura - 20' },
-  { label: 'Largura - 40', formula: 'Largura - 40' },
-  { label: '(Largura / 2) - 20', formula: '(Largura / 2) - 20' },
-  { label: '(Largura - 136) / 2', formula: '(Largura - 136) / 2' },
+  { label: 'Vão', formula: 'Largura' },
+  { label: 'Vão - 10', formula: 'Largura - 10' },
+  { label: 'Vão - 20', formula: 'Largura - 20' },
+  { label: 'Vão / 2', formula: 'Largura / 2' },
+  { label: '(Vão / 2) - 10', formula: '(Largura / 2) - 10' },
+  { label: 'Vão / 3', formula: 'Largura / 3' },
+  { label: 'Vão / 4', formula: 'Largura / 4' },
 ];
 
-// Common formulas for height
+// Common formulas for height (based on VÃO - opening dimensions)
 const heightFormulas = [
-  { label: 'Altura', formula: 'Altura' },
-  { label: 'Altura - 20', formula: 'Altura - 20' },
-  { label: 'Altura - 40', formula: 'Altura - 40' },
-  { label: 'Altura - 60', formula: 'Altura - 60' },
-  { label: '(Altura / 2) - 20', formula: '(Altura / 2) - 20' },
+  { label: 'Vão', formula: 'Altura' },
+  { label: 'Vão - 10', formula: 'Altura - 10' },
+  { label: 'Vão - 20', formula: 'Altura - 20' },
+  { label: 'Vão / 2', formula: 'Altura / 2' },
+  { label: '(Vão / 2) - 10', formula: '(Altura / 2) - 10' },
 ];
 
 // Operators
@@ -82,9 +84,10 @@ interface FormulaInputProps {
   icon: React.ReactNode;
   color: string;
   variableName: string;
+  variableDescription?: string;
 }
 
-function FormulaInput({ label, value, onChange, quickFormulas, icon, color, variableName }: FormulaInputProps) {
+function FormulaInput({ label, value, onChange, quickFormulas, icon, color, variableName, variableDescription }: FormulaInputProps) {
   const [focusedInput, setFocusedInput] = useState(false);
   const validation = validateFormula(value);
 
@@ -171,9 +174,10 @@ function FormulaInput({ label, value, onChange, quickFormulas, icon, color, vari
           size="sm"
           className={cn("h-8 text-xs gap-1", color.replace('bg-', 'text-').replace('/10', ''))}
           onClick={() => insertText(variableName)}
+          title={variableDescription || variableName}
         >
           {icon}
-          {variableName}
+          {variableDescription || variableName}
         </Button>
         {operators.map((op, index) => (
           <Button
@@ -225,7 +229,7 @@ export function GlassFormulaEditor({
         <div>
           <h3 className="font-medium text-sm">Fórmulas de Dimensão do Vidro</h3>
           <p className="text-xs text-muted-foreground">
-            Configure as fórmulas para calcular largura e altura do vidro
+            As fórmulas são calculadas com base nas dimensões do <strong>VÃO</strong> (abertura)
           </p>
         </div>
       </div>
@@ -239,6 +243,7 @@ export function GlassFormulaEditor({
         icon={<ArrowLeftRight className="w-4 h-4 text-green-600" />}
         color="bg-green-500/10"
         variableName="Largura"
+        variableDescription="Largura do Vão"
       />
 
       {/* Height formula */}
@@ -250,6 +255,7 @@ export function GlassFormulaEditor({
         icon={<ArrowUpDown className="w-4 h-4 text-blue-600" />}
         color="bg-blue-500/10"
         variableName="Altura"
+        variableDescription="Altura do Vão"
       />
 
       {/* Combined preview */}
@@ -278,8 +284,11 @@ export function GlassFormulaEditor({
 
       {/* Help text */}
       <div className="text-xs text-muted-foreground bg-muted/30 p-3 rounded-lg">
-        <p className="font-medium mb-1">💡 Estas fórmulas aparecerão no Plano de Corte</p>
-        <p>As dimensões calculadas serão exibidas para o corte do vidro, facilitando a fabricação.</p>
+        <p className="font-medium mb-1">💡 Fórmulas baseadas no VÃO</p>
+        <p className="mb-2">
+          <strong>"Largura"</strong> = Largura do Vão | <strong>"Altura"</strong> = Altura do Vão
+        </p>
+        <p>Exemplo: Uma basculante de vão 500×500mm com fórmula "Largura - 10" resultará em vidro de 490mm.</p>
       </div>
     </div>
   );
