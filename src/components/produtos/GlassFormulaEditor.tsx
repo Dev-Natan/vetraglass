@@ -255,10 +255,10 @@ export function GlassFormulaEditor({
       {/* Combined preview */}
       {(widthFormula || heightFormula) && widthValid.isValid && heightValid.isValid && (
         <div className="p-4 rounded-lg bg-muted/50 border space-y-3">
-          <div className="flex items-center gap-2">
-            <Calculator className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm font-medium">Preview do Vidro (Produto: 800×1000mm)</span>
-          </div>
+        <div className="flex items-center gap-2">
+          <Calculator className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm font-medium">Preview do Vidro (Vão: 800×1000mm)</span>
+        </div>
           <div className="grid grid-cols-3 gap-4 text-center">
             <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
               <div className="text-xs text-green-600 mb-1">Largura</div>
