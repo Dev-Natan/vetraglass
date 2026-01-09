@@ -20,8 +20,6 @@ import {
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { CompanySelector } from './CompanySelector';
-
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
   { icon: Users, label: 'Clientes', path: '/clientes' },
@@ -86,13 +84,6 @@ export function Sidebar() {
             </div>
           </div>
         </div>
-
-        {/* Company Selector */}
-        {currentCompany && (
-          <div className="p-3 border-b border-sidebar-border">
-            <CompanySelector />
-          </div>
-        )}
 
         {/* Navigation */}
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
