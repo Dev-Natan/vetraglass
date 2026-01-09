@@ -97,10 +97,13 @@ const itemTypeTabs = [
   { value: 'accessory', label: 'ACESSÓRIOS E FERRAGENS', dbType: 'accessory' },
 ];
 
+import { useAuth } from '@/contexts/AuthContext';
+
 export default function EditarProduto() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { currentCompany, isSaasAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState('glass');
   const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
   const [selectedItemToAdd, setSelectedItemToAdd] = useState('');
@@ -172,19 +175,23 @@ export default function EditarProduto() {
     enabled: !!id,
   });
 
-  // Fetch product items
+  // Fetch product items (global + company-specific)
   const { data: productItems, isLoading: itemsLoading } = useQuery({
-    queryKey: ['product-template-items', id],
+    queryKey: ['product-template-items', id, currentCompany?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Fetch items that are either global (company_id IS NULL) or belong to the current company
+      let query = supabase
         .from('product_template_items')
         .select(`
           *,
           item_template:item_templates(id, name, type, unit, image_url, linha)
         `)
         .eq('product_template_id', id);
+      
+      // RLS will handle filtering, but we can optimize by requesting only what we need
+      const { data, error } = await query;
       if (error) throw error;
-      return data as ProductTemplateItem[];
+      return data as (ProductTemplateItem & { company_id?: string | null })[];
     },
     enabled: !!id,
   });
@@ -247,15 +254,31 @@ export default function EditarProduto() {
   // Add item mutation
   const addItemMutation = useMutation({
     mutationFn: async () => {
+      // SaaS admins add global items (company_id = null)
+      // Company users add company-specific items
+      const insertData: {
+        product_template_id: string | undefined;
+        item_template_id: string;
+        quantity_formula: string;
+        pieces_quantity: number;
+        is_optional: boolean;
+        company_id?: string;
+      } = {
+        product_template_id: id,
+        item_template_id: selectedItemToAdd,
+        quantity_formula: quantityFormula,
+        pieces_quantity: piecesQuantity,
+        is_optional: false,
+      };
+
+      // If not SaaS admin, must include company_id
+      if (!isSaasAdmin && currentCompany) {
+        insertData.company_id = currentCompany.id;
+      }
+
       const { error } = await supabase
         .from('product_template_items')
-        .insert({
-          product_template_id: id,
-          item_template_id: selectedItemToAdd,
-          quantity_formula: quantityFormula,
-          pieces_quantity: piecesQuantity,
-          is_optional: false,
-        });
+        .insert(insertData);
       if (error) throw error;
     },
     onSuccess: () => {

@@ -250,6 +250,7 @@ export type Database = {
       }
       product_template_items: {
         Row: {
+          company_id: string | null
           created_at: string
           cut_angle: number
           id: string
@@ -261,6 +262,7 @@ export type Database = {
           quantity_formula: string
         }
         Insert: {
+          company_id?: string | null
           created_at?: string
           cut_angle?: number
           id?: string
@@ -272,6 +274,7 @@ export type Database = {
           quantity_formula?: string
         }
         Update: {
+          company_id?: string | null
           created_at?: string
           cut_angle?: number
           id?: string
@@ -283,6 +286,13 @@ export type Database = {
           quantity_formula?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "product_template_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "product_template_items_item_template_id_fkey"
             columns: ["item_template_id"]
