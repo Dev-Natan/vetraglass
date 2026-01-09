@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { ArrowLeft, Search, Trash2, Download, Percent, Plus, Copy } from 'lucide-react';
+import { ArrowLeft, Search, Trash2, Download, Percent, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -61,29 +61,6 @@ export default function ProdutosLinha() {
     },
     onError: (error) => {
       toast.error('Erro ao atualizar: ' + error.message);
-    },
-  });
-
-  // Copy product mutation
-  const copyProductMutation = useMutation({
-    mutationFn: async (product: ProductTemplate) => {
-      const { error } = await supabase
-        .from('product_templates')
-        .insert({
-          name: `${product.name} (Cópia)`,
-          description: product.description,
-          category: product.category as "door" | "facade" | "mirror" | "other" | "partition" | "shower" | "window",
-          linha: product.linha,
-          is_active: false,
-        });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['linha-products'] });
-      toast.success('Produto copiado!');
-    },
-    onError: (error) => {
-      toast.error('Erro ao copiar: ' + error.message);
     },
   });
 
@@ -211,15 +188,6 @@ export default function ProdutosLinha() {
                       })}
                     >
                       {product.is_active ? 'Desabilitar' : 'Habilitar'}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1 hidden sm:flex"
-                      onClick={() => copyProductMutation.mutate(product)}
-                    >
-                      <Copy className="w-3 h-3" />
-                      Fazer cópia
                     </Button>
                     <Button
                       variant="destructive"
