@@ -174,6 +174,16 @@ export default function ProductTemplates() {
   const [glassName, setGlassName] = useState("");
   const [cutAngle, setCutAngle] = useState(90);
   
+  // Edit item dialog states
+  const [editingItem, setEditingItem] = useState<ProductTemplateItem | null>(null);
+  const [isEditItemDialogOpen, setIsEditItemDialogOpen] = useState(false);
+  const [editQuantityFormula, setEditQuantityFormula] = useState("1");
+  const [editPiecesQuantity, setEditPiecesQuantity] = useState(1);
+  const [editWidthFormula, setEditWidthFormula] = useState("");
+  const [editHeightFormula, setEditHeightFormula] = useState("");
+  const [editGlassName, setEditGlassName] = useState("");
+  const [editCutAngle, setEditCutAngle] = useState(90);
+  
   // Bulk upload state
   const [bulkUploadDialogOpen, setBulkUploadDialogOpen] = useState(false);
   const [bulkUploadProgress, setBulkUploadProgress] = useState<{
@@ -365,6 +375,35 @@ export default function ProductTemplates() {
     });
   };
 
+  // Handle edit item - open dialog with item data
+  const handleEditItem = (item: ProductTemplateItem) => {
+    setEditingItem(item);
+    setEditQuantityFormula(item.quantity_formula || "1");
+    setEditPiecesQuantity(item.pieces_quantity || 1);
+    setEditWidthFormula(item.width_formula || "");
+    setEditHeightFormula(item.height_formula || "");
+    setEditGlassName(item.notes || "");
+    setEditCutAngle(item.cut_angle || 90);
+    setIsEditItemDialogOpen(true);
+  };
+
+  // Handle update item
+  const handleUpdateItem = () => {
+    if (!editingItem) return;
+    
+    const itemType = editingItem.item_template?.type;
+    
+    updateCompositionMutation.mutate({
+      id: editingItem.id,
+      quantity_formula: editQuantityFormula,
+      pieces_quantity: editPiecesQuantity,
+      cut_angle: editCutAngle,
+      notes: itemType === 'glass' ? editGlassName : undefined,
+      width_formula: itemType === 'glass' ? editWidthFormula : undefined,
+      height_formula: itemType === 'glass' ? editHeightFormula : undefined,
+    });
+  };
+
   // Create/Update mutation
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData & { id?: string }) => {
@@ -537,6 +576,41 @@ export default function ProductTemplates() {
     },
     onError: (error) => {
       toast.error("Erro ao remover: " + error.message);
+    },
+  });
+
+  // Update composition item mutation
+  const updateCompositionMutation = useMutation({
+    mutationFn: async (data: { 
+      id: string;
+      quantity_formula: string; 
+      pieces_quantity: number;
+      cut_angle: number;
+      notes?: string;
+      width_formula?: string;
+      height_formula?: string;
+    }) => {
+      const { error } = await supabase
+        .from("product_template_items")
+        .update({
+          quantity_formula: data.quantity_formula,
+          pieces_quantity: data.pieces_quantity,
+          cut_angle: data.cut_angle,
+          notes: data.notes || null,
+          width_formula: data.width_formula || null,
+          height_formula: data.height_formula || null,
+        })
+        .eq("id", data.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["product-template-items", selectedTemplate?.id] });
+      toast.success("Item atualizado!");
+      setIsEditItemDialogOpen(false);
+      setEditingItem(null);
+    },
+    onError: (error) => {
+      toast.error("Erro ao atualizar: " + error.message);
     },
   });
 
@@ -1361,17 +1435,26 @@ export default function ProductTemplates() {
                     {getCompositionItemsByType(compositionActiveTab).map((item) => (
                       <div
                         key={item.id}
-                        className="bg-card border rounded-lg p-3 relative group hover:shadow-md transition-shadow"
+                        className="bg-card border rounded-lg p-3 relative group hover:shadow-md transition-shadow cursor-pointer hover:border-primary/50"
+                        onClick={() => handleEditItem(item)}
                       >
                         {/* Delete button */}
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="absolute top-1 right-1 w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => removeCompositionMutation.mutate(item.id)}
+                          className="absolute top-1 right-1 w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeCompositionMutation.mutate(item.id);
+                          }}
                         >
                           <Trash2 className="w-3 h-3 text-destructive" />
                         </Button>
+
+                        {/* Edit indicator */}
+                        <div className="absolute top-1 left-1 w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Pencil className="w-2.5 h-2.5 text-primary" />
+                        </div>
 
                         {/* Item image */}
                         <div className="aspect-square bg-muted rounded-lg mb-2 flex items-center justify-center overflow-hidden">
@@ -1445,6 +1528,121 @@ export default function ProductTemplates() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Edit Item Dialog */}
+        <Dialog open={isEditItemDialogOpen} onOpenChange={(open) => {
+          setIsEditItemDialogOpen(open);
+          if (!open) setEditingItem(null);
+        }}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Pencil className="w-5 h-5" />
+                Editar Item: {editingItem?.item_template?.name}
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              {/* Item preview */}
+              <div className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
+                <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
+                  {editingItem?.item_template?.image_url ? (
+                    <img
+                      src={getStorageUrl(editingItem.item_template.image_url)}
+                      alt={editingItem.item_template.name}
+                      className="w-full h-full object-contain"
+                    />
+                  ) : (
+                    <div className="text-2xl text-muted-foreground/30">📦</div>
+                  )}
+                </div>
+                <div>
+                  <h4 className="font-medium">{editingItem?.item_template?.name}</h4>
+                  <p className="text-sm text-muted-foreground capitalize">
+                    {editingItem?.item_template?.type} • {editingItem?.item_template?.linha || 'Sem linha'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Show GlassFormulaEditor for glass items, FormulaEditor for others */}
+              {editingItem?.item_template?.type === 'glass' ? (
+                <>
+                  {/* Glass Name Input */}
+                  <div className="space-y-2">
+                    <Label>Nome do Vidro (opcional)</Label>
+                    <Input
+                      placeholder="Ex: Vidro Fixo, Vidro Móvel, Bandeira..."
+                      value={editGlassName}
+                      onChange={(e) => setEditGlassName(e.target.value)}
+                    />
+                  </div>
+                  
+                  <GlassFormulaEditor
+                    widthFormula={editWidthFormula}
+                    heightFormula={editHeightFormula}
+                    onWidthFormulaChange={setEditWidthFormula}
+                    onHeightFormulaChange={setEditHeightFormula}
+                  />
+                </>
+              ) : (
+                <>
+                  <FormulaEditor
+                    value={editQuantityFormula}
+                    onChange={setEditQuantityFormula}
+                    showPiecesQuantity={editingItem?.item_template?.type === 'profile'}
+                    piecesQuantity={editPiecesQuantity}
+                    onPiecesChange={setEditPiecesQuantity}
+                  />
+                  
+                  {editingItem?.item_template?.type === 'profile' && (
+                    <div className="space-y-2">
+                      <Label>Ângulo de corte (graus)</Label>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant={editCutAngle === 90 ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setEditCutAngle(90)}
+                        >
+                          90°
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={editCutAngle === 45 ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setEditCutAngle(45)}
+                        >
+                          45°
+                        </Button>
+                        <Input
+                          type="number"
+                          value={editCutAngle}
+                          onChange={(e) => setEditCutAngle(Number(e.target.value))}
+                          className="w-24"
+                          min={0}
+                          max={90}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+              
+              <div className="flex justify-end gap-2 pt-4 border-t">
+                <Button variant="outline" onClick={() => setIsEditItemDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={handleUpdateItem}
+                  disabled={updateCompositionMutation.isPending}
+                >
+                  {updateCompositionMutation.isPending ? 'Salvando...' : 'Salvar Alterações'}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {/* Bulk Upload Progress Dialog */}
         <Dialog open={bulkUploadDialogOpen} onOpenChange={setBulkUploadDialogOpen}>
           <DialogContent className="max-w-md">
