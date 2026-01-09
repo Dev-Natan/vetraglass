@@ -53,6 +53,9 @@ interface QuoteItem {
   image_url?: string | null;
   linha?: string | null;
   category?: string;
+  has_glass?: boolean;
+  glass_color?: string;
+  glass_thickness?: string;
 }
 
 interface Quote {
@@ -174,6 +177,9 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
     quantity: number;
     unit_price: number;
     total_price: number;
+    has_glass?: boolean;
+    glass_color?: string;
+    glass_thickness?: string;
   }) => {
     const newItem: QuoteItem = {
       product_template_id: product.product_template_id,
@@ -188,6 +194,9 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
       image_url: product.image_url,
       linha: product.linha,
       category: product.category,
+      has_glass: product.has_glass,
+      glass_color: product.glass_color,
+      glass_thickness: product.glass_thickness,
     };
     setItems([...items, newItem]);
     setViewMode('form');
