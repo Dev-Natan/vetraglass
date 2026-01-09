@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FormulaEditor } from '@/components/produtos/FormulaEditor';
+import { GlassFormulaEditor } from '@/components/produtos/GlassFormulaEditor';
 import {
   Select,
   SelectContent,
@@ -55,6 +56,8 @@ type ProductTemplateItem = {
   is_optional: boolean;
   notes: string | null;
   cut_angle: number;
+  width_formula: string | null;
+  height_formula: string | null;
   item_template: {
     id: string;
     name: string;
@@ -109,6 +112,8 @@ export default function EditarProduto() {
   const [selectedItemToAdd, setSelectedItemToAdd] = useState('');
   const [quantityFormula, setQuantityFormula] = useState('1');
   const [piecesQuantity, setPiecesQuantity] = useState(1);
+  const [widthFormula, setWidthFormula] = useState('');
+  const [heightFormula, setHeightFormula] = useState('');
   const [isUploading, setIsUploading] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -263,12 +268,16 @@ export default function EditarProduto() {
         pieces_quantity: number;
         is_optional: boolean;
         company_id?: string;
+        width_formula?: string | null;
+        height_formula?: string | null;
       } = {
         product_template_id: id,
         item_template_id: selectedItemToAdd,
         quantity_formula: quantityFormula,
         pieces_quantity: piecesQuantity,
         is_optional: false,
+        width_formula: activeTab === 'glass' ? (widthFormula || null) : null,
+        height_formula: activeTab === 'glass' ? (heightFormula || null) : null,
       };
 
       // If not SaaS admin, must include company_id
@@ -288,6 +297,8 @@ export default function EditarProduto() {
       setSelectedItemToAdd('');
       setQuantityFormula('1');
       setPiecesQuantity(1);
+      setWidthFormula('');
+      setHeightFormula('');
     },
     onError: (error) => {
       toast.error('Erro ao adicionar: ' + error.message);
@@ -538,8 +549,28 @@ export default function EditarProduto() {
                       {item.item_template?.name}
                     </h4>
                     
-                    {/* Formula type indicator */}
-                    {getFormulaType(item.quantity_formula) && (
+                    {/* Glass formulas display */}
+                    {tab.value === 'glass' && (item.width_formula || item.height_formula) && (
+                      <div className="mt-2 space-y-1">
+                        {item.width_formula && (
+                          <div className="flex items-center justify-center gap-1">
+                            <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                              L: {item.width_formula}
+                            </span>
+                          </div>
+                        )}
+                        {item.height_formula && (
+                          <div className="flex items-center justify-center gap-1">
+                            <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                              A: {item.height_formula}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Formula type indicator for non-glass items */}
+                    {tab.value !== 'glass' && getFormulaType(item.quantity_formula) && (
                       <div className="flex justify-center mt-1">
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
                           getFormulaType(item.quantity_formula) === 'Altura' 
@@ -551,9 +582,11 @@ export default function EditarProduto() {
                       </div>
                     )}
                     
-                    <p className="text-xs text-muted-foreground text-center mt-1">
-                      {item.quantity_formula}
-                    </p>
+                    {tab.value !== 'glass' && (
+                      <p className="text-xs text-muted-foreground text-center mt-1">
+                        {item.quantity_formula}
+                      </p>
+                    )}
 
                     {/* Pieces quantity and Angle indicators (for profiles) */}
                     {tab.value === 'profile' && (
@@ -594,7 +627,7 @@ export default function EditarProduto() {
 
         {/* Add Item Dialog */}
         <Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen}>
-          <DialogContent>
+          <DialogContent className={activeTab === 'glass' ? 'max-w-2xl max-h-[90vh] overflow-y-auto' : ''}>
             <DialogHeader>
               <DialogTitle>Adicionar Item - {itemTypeTabs.find(t => t.value === activeTab)?.label}</DialogTitle>
             </DialogHeader>
@@ -619,13 +652,25 @@ export default function EditarProduto() {
                   </SelectContent>
                 </Select>
               </div>
-              <FormulaEditor
-                value={quantityFormula}
-                onChange={setQuantityFormula}
-                showPiecesQuantity={activeTab === 'profile'}
-                piecesQuantity={piecesQuantity}
-                onPiecesChange={setPiecesQuantity}
-              />
+              
+              {/* Show GlassFormulaEditor for glass items, FormulaEditor for others */}
+              {activeTab === 'glass' ? (
+                <GlassFormulaEditor
+                  widthFormula={widthFormula}
+                  heightFormula={heightFormula}
+                  onWidthFormulaChange={setWidthFormula}
+                  onHeightFormulaChange={setHeightFormula}
+                />
+              ) : (
+                <FormulaEditor
+                  value={quantityFormula}
+                  onChange={setQuantityFormula}
+                  showPiecesQuantity={activeTab === 'profile'}
+                  piecesQuantity={piecesQuantity}
+                  onPiecesChange={setPiecesQuantity}
+                />
+              )}
+              
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setIsAddItemDialogOpen(false)}>
                   Cancelar

@@ -253,6 +253,7 @@ export type Database = {
           company_id: string | null
           created_at: string
           cut_angle: number
+          height_formula: string | null
           id: string
           is_optional: boolean
           item_template_id: string
@@ -260,11 +261,13 @@ export type Database = {
           pieces_quantity: number
           product_template_id: string
           quantity_formula: string
+          width_formula: string | null
         }
         Insert: {
           company_id?: string | null
           created_at?: string
           cut_angle?: number
+          height_formula?: string | null
           id?: string
           is_optional?: boolean
           item_template_id: string
@@ -272,11 +275,13 @@ export type Database = {
           pieces_quantity?: number
           product_template_id: string
           quantity_formula?: string
+          width_formula?: string | null
         }
         Update: {
           company_id?: string | null
           created_at?: string
           cut_angle?: number
+          height_formula?: string | null
           id?: string
           is_optional?: boolean
           item_template_id?: string
@@ -284,6 +289,7 @@ export type Database = {
           pieces_quantity?: number
           product_template_id?: string
           quantity_formula?: string
+          width_formula?: string | null
         }
         Relationships: [
           {
