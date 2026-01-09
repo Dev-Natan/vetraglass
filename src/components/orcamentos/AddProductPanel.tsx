@@ -24,6 +24,7 @@ interface AddProductPanelProps {
     quantity: number;
     unit_price: number;
     total_price: number;
+    has_glass?: boolean;
     glass_color?: string;
     glass_thickness?: string;
   }) => void;
@@ -64,6 +65,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   const [height, setHeight] = useState<number>(0);
   const [quantity, setQuantity] = useState<number>(1);
   const [customPrice, setCustomPrice] = useState<number | null>(null);
+  const [hasGlass, setHasGlass] = useState<boolean>(true);
   const [glassColor, setGlassColor] = useState<string>('incolor');
   const [glassThickness, setGlassThickness] = useState<string>('4mm');
 
@@ -175,8 +177,9 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
       quantity,
       unit_price: unitPrice,
       total_price: totalPrice,
-      glass_color: glassColor,
-      glass_thickness: glassThickness,
+      has_glass: hasGlass,
+      glass_color: hasGlass ? glassColor : undefined,
+      glass_thickness: hasGlass ? glassThickness : undefined,
     });
   };
 
@@ -362,37 +365,61 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
         )}
 
         {/* Glass Options */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Cor do Vidro</label>
-            <Select value={glassColor} onValueChange={setGlassColor}>
-              <SelectTrigger className="bg-background h-10">
-                <SelectValue placeholder="Selecione..." />
-              </SelectTrigger>
-              <SelectContent className="bg-popover border shadow-lg z-50">
-                {glassColors.map((color) => (
-                  <SelectItem key={color.value} value={color.value}>
-                    {color.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <label className="text-xs font-medium text-muted-foreground">Vidro:</label>
+            <div className="flex gap-2">
+              <Badge
+                variant={hasGlass ? 'default' : 'outline'}
+                className="cursor-pointer h-8 px-4"
+                onClick={() => setHasGlass(true)}
+              >
+                Com Vidro
+              </Badge>
+              <Badge
+                variant={!hasGlass ? 'default' : 'outline'}
+                className="cursor-pointer h-8 px-4"
+                onClick={() => setHasGlass(false)}
+              >
+                Sem Vidro
+              </Badge>
+            </div>
           </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Espessura</label>
-            <Select value={glassThickness} onValueChange={setGlassThickness}>
-              <SelectTrigger className="bg-background h-10">
-                <SelectValue placeholder="Selecione..." />
-              </SelectTrigger>
-              <SelectContent className="bg-popover border shadow-lg z-50">
-                {glassThicknesses.map((thickness) => (
-                  <SelectItem key={thickness.value} value={thickness.value}>
-                    {thickness.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          
+          {hasGlass && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Cor do Vidro</label>
+                <Select value={glassColor} onValueChange={setGlassColor}>
+                  <SelectTrigger className="bg-background h-10">
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border shadow-lg z-50">
+                    {glassColors.map((color) => (
+                      <SelectItem key={color.value} value={color.value}>
+                        {color.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Espessura</label>
+                <Select value={glassThickness} onValueChange={setGlassThickness}>
+                  <SelectTrigger className="bg-background h-10">
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border shadow-lg z-50">
+                    {glassThicknesses.map((thickness) => (
+                      <SelectItem key={thickness.value} value={thickness.value}>
+                        {thickness.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Dimensions, Price & Quantity */}
