@@ -171,47 +171,47 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   const canAdd = selectedProductId && width > 0 && height > 0 && quantity > 0;
 
   return (
-    <ScrollArea className="h-full">
-      <div className="space-y-4 p-1">
-        {/* Filters Section */}
-        <div className="space-y-4 pb-4 border-b">
-          {/* Linha & Search Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Linha</label>
-              <Select value={selectedLinha} onValueChange={handleLinhaChange}>
-                <SelectTrigger className="bg-background h-10">
-                  <SelectValue placeholder="Selecione a linha..." />
-                </SelectTrigger>
-                <SelectContent className="bg-popover border shadow-lg z-50">
-                  {linhas.map((linha) => (
-                    <SelectItem key={linha} value={linha!}>
-                      {linha}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Buscar</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Filtrar produtos..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 bg-background h-10"
-                />
-              </div>
+    <div className="flex flex-col h-full min-h-0">
+      {/* Fixed Header - Filters */}
+      <div className="shrink-0 space-y-4 pb-4 border-b mb-4">
+        {/* Linha & Search Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Linha</label>
+            <Select value={selectedLinha} onValueChange={handleLinhaChange}>
+              <SelectTrigger className="bg-background h-10">
+                <SelectValue placeholder="Selecione a linha..." />
+              </SelectTrigger>
+              <SelectContent className="bg-popover border shadow-lg z-50">
+                {linhas.map((linha) => (
+                  <SelectItem key={linha} value={linha!}>
+                    {linha}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Buscar</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Filtrar produtos..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 bg-background h-10"
+              />
             </div>
           </div>
+        </div>
 
-          {/* Category Filter Chips */}
-          {selectedLinha && categories.length > 0 && (
-            <div className="flex gap-2 flex-wrap">
+        {/* Category Filter Chips */}
+        {selectedLinha && categories.length > 0 && (
+          <ScrollArea className="w-full">
+            <div className="flex gap-2 pb-1">
               <Badge
                 variant={selectedCategory === '' ? 'default' : 'outline'}
-                className="cursor-pointer h-8 px-4"
+                className="cursor-pointer shrink-0 h-8 px-4"
                 onClick={() => setSelectedCategory('')}
               >
                 Todos
@@ -220,198 +220,198 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                 <Badge
                   key={cat}
                   variant={selectedCategory === cat ? 'default' : 'outline'}
-                  className="cursor-pointer h-8 px-4"
+                  className="cursor-pointer shrink-0 h-8 px-4"
                   onClick={() => handleCategoryChange(cat!)}
                 >
                   {categoryLabels[cat!] || cat}
                 </Badge>
               ))}
             </div>
+          </ScrollArea>
+        )}
+      </div>
+
+      {/* Scrollable Middle - Products Grid */}
+      <div className="flex-1 min-h-0 mb-4">
+        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 block">
+          Selecione um produto ({filteredProducts.length})
+        </label>
+        <ScrollArea className="h-[240px] rounded-xl border bg-muted/20 p-3">
+          {isLoading ? (
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="aspect-square rounded-xl bg-muted animate-pulse" />
+              ))}
+            </div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-8">
+              <Package className="w-12 h-12 mb-3 opacity-50" />
+              <p className="text-sm font-medium">Nenhum produto encontrado</p>
+              <p className="text-xs mt-1">Tente ajustar os filtros</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">
+              {filteredProducts.map((product) => {
+                const isSelected = selectedProductId === product.id;
+                const imageUrl = getProductImage(product.image_url);
+                const hasCompanyProduct = companyProducts?.some(cp => cp.product_template_id === product.id);
+
+                return (
+                  <button
+                    key={product.id}
+                    type="button"
+                    onClick={() => setSelectedProductId(product.id)}
+                    className={cn(
+                      "relative aspect-square rounded-xl border-2 bg-card overflow-hidden transition-all",
+                      "hover:shadow-lg hover:border-primary/50 hover:scale-[1.02]",
+                      isSelected ? "border-primary ring-2 ring-primary/20 shadow-lg" : "border-border"
+                    )}
+                  >
+                    {/* Selection indicator */}
+                    {isSelected && (
+                      <div className="absolute top-1.5 left-1.5 z-10 w-6 h-6 rounded-full bg-primary flex items-center justify-center shadow-md">
+                        <Check className="w-3.5 h-3.5 text-primary-foreground" />
+                      </div>
+                    )}
+
+                    {/* Image */}
+                    <div className="w-full h-[70%] bg-gradient-to-b from-muted/50 to-muted flex items-center justify-center p-2">
+                      {imageUrl ? (
+                        <img
+                          src={imageUrl}
+                          alt={product.name}
+                          className="w-full h-full object-contain"
+                        />
+                      ) : (
+                        <Package className="w-10 h-10 text-muted-foreground/30" />
+                      )}
+                    </div>
+
+                    {/* Name */}
+                    <div className="h-[30%] p-1.5 flex items-center justify-center bg-background">
+                      <span className="text-[9px] sm:text-[10px] font-medium text-center line-clamp-2 leading-tight">
+                        {product.name}
+                      </span>
+                    </div>
+
+                    {/* Active indicator */}
+                    {hasCompanyProduct && !isSelected && (
+                      <div className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-green-500 ring-2 ring-white" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           )}
-        </div>
+        </ScrollArea>
+      </div>
 
-        {/* Products Grid Section */}
-        <div className="space-y-2">
-          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            Selecione um produto ({filteredProducts.length})
-          </label>
-          <div className="rounded-xl border bg-muted/20 p-3">
-            {isLoading ? (
-              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">
-                {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <div key={i} className="aspect-square rounded-xl bg-muted animate-pulse" />
-                ))}
-              </div>
-            ) : filteredProducts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center text-muted-foreground py-8">
-                <Package className="w-12 h-12 mb-3 opacity-50" />
-                <p className="text-sm font-medium">Nenhum produto encontrado</p>
-                <p className="text-xs mt-1">Tente ajustar os filtros</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">
-                {filteredProducts.map((product) => {
-                  const isSelected = selectedProductId === product.id;
-                  const imageUrl = getProductImage(product.image_url);
-                  const hasCompanyProduct = companyProducts?.some(cp => cp.product_template_id === product.id);
+      {/* Fixed Bottom - Dimensions & Pricing */}
+      <div className="shrink-0 space-y-4 pt-4 border-t">
+        {/* Selected Product Preview */}
+        {selectedProduct && (
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/20">
+            <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+              {getProductImage(selectedProduct.image_url) ? (
+                <img
+                  src={getProductImage(selectedProduct.image_url)!}
+                  alt={selectedProduct.name}
+                  className="w-full h-full object-contain p-1"
+                />
+              ) : (
+                <Package className="w-6 h-6 text-muted-foreground/50" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm truncate">{selectedProduct.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {selectedProduct.linha} • {categoryLabels[selectedProduct.category] || selectedProduct.category}
+              </p>
+            </div>
+            <Badge variant="secondary" className="shrink-0">
+              {formatCurrency(basePrice)}/m²
+            </Badge>
+          </div>
+        )}
 
-                  return (
-                    <button
-                      key={product.id}
-                      type="button"
-                      onClick={() => setSelectedProductId(product.id)}
-                      className={cn(
-                        "relative aspect-square rounded-xl border-2 bg-card overflow-hidden transition-all",
-                        "hover:shadow-lg hover:border-primary/50 hover:scale-[1.02]",
-                        isSelected ? "border-primary ring-2 ring-primary/20 shadow-lg" : "border-border"
-                      )}
-                    >
-                      {/* Selection indicator */}
-                      {isSelected && (
-                        <div className="absolute top-1.5 left-1.5 z-10 w-6 h-6 rounded-full bg-primary flex items-center justify-center shadow-md">
-                          <Check className="w-3.5 h-3.5 text-primary-foreground" />
-                        </div>
-                      )}
-
-                      {/* Image */}
-                      <div className="w-full h-[70%] bg-gradient-to-b from-muted/50 to-muted flex items-center justify-center p-2">
-                        {imageUrl ? (
-                          <img
-                            src={imageUrl}
-                            alt={product.name}
-                            className="w-full h-full object-contain"
-                          />
-                        ) : (
-                          <Package className="w-10 h-10 text-muted-foreground/30" />
-                        )}
-                      </div>
-
-                      {/* Name */}
-                      <div className="h-[30%] p-1.5 flex items-center justify-center bg-background">
-                        <span className="text-[9px] sm:text-[10px] font-medium text-center line-clamp-2 leading-tight">
-                          {product.name}
-                        </span>
-                      </div>
-
-                      {/* Active indicator */}
-                      {hasCompanyProduct && !isSelected && (
-                        <div className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-green-500 ring-2 ring-white" />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+        {/* Dimensions & Quantity */}
+        <div className="grid grid-cols-4 gap-3">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+              <Ruler className="w-3 h-3" />
+              Largura (mm)
+            </label>
+            <Input
+              type="number"
+              value={width || ''}
+              onChange={(e) => setWidth(Number(e.target.value))}
+              placeholder="0"
+              min={0}
+              className="bg-background h-10"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+              <Ruler className="w-3 h-3 rotate-90" />
+              Altura (mm)
+            </label>
+            <Input
+              type="number"
+              value={height || ''}
+              onChange={(e) => setHeight(Number(e.target.value))}
+              placeholder="0"
+              min={0}
+              className="bg-background h-10"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Qtd</label>
+            <Input
+              type="number"
+              value={quantity}
+              onChange={(e) => setQuantity(Number(e.target.value))}
+              min={1}
+              className="bg-background h-10"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Área</label>
+            <div className="h-10 px-3 rounded-md border bg-muted/50 flex items-center justify-center font-medium text-sm">
+              {area.toFixed(2)} m²
+            </div>
           </div>
         </div>
 
-        {/* Dimensions & Pricing Section */}
-        <div className="space-y-4 pt-4 border-t">
-          {/* Selected Product Preview */}
-          {selectedProduct && (
-            <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/20">
-              <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center shrink-0 overflow-hidden">
-                {getProductImage(selectedProduct.image_url) ? (
-                  <img
-                    src={getProductImage(selectedProduct.image_url)!}
-                    alt={selectedProduct.name}
-                    className="w-full h-full object-contain p-1"
-                  />
-                ) : (
-                  <Package className="w-6 h-6 text-muted-foreground/50" />
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm truncate">{selectedProduct.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {selectedProduct.linha} • {categoryLabels[selectedProduct.category] || selectedProduct.category}
-                </p>
-              </div>
-              <Badge variant="secondary" className="shrink-0">
-                {formatCurrency(basePrice)}/m²
-              </Badge>
+        {/* Price Summary & Actions */}
+        <div className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-primary/10 to-primary/5 border">
+          <div className="flex-1 space-y-1">
+            <div className="flex items-center gap-4 text-sm">
+              <span className="text-muted-foreground">Unitário: <span className="text-foreground font-medium">{formatCurrency(unitPrice)}</span></span>
+              <span className="text-muted-foreground">× {quantity}</span>
             </div>
-          )}
-
-          {/* Dimensions & Quantity */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                <Ruler className="w-3 h-3" />
-                Largura (mm)
-              </label>
-              <Input
-                type="number"
-                value={width || ''}
-                onChange={(e) => setWidth(Number(e.target.value))}
-                placeholder="0"
-                min={0}
-                className="bg-background h-10"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                <Ruler className="w-3 h-3 rotate-90" />
-                Altura (mm)
-              </label>
-              <Input
-                type="number"
-                value={height || ''}
-                onChange={(e) => setHeight(Number(e.target.value))}
-                placeholder="0"
-                min={0}
-                className="bg-background h-10"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Qtd</label>
-              <Input
-                type="number"
-                value={quantity}
-                onChange={(e) => setQuantity(Number(e.target.value))}
-                min={1}
-                className="bg-background h-10"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Área</label>
-              <div className="h-10 px-3 rounded-md border bg-muted/50 flex items-center justify-center font-medium text-sm">
-                {area.toFixed(2)} m²
-              </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-xs text-muted-foreground uppercase tracking-wide">Total:</span>
+              <span className="text-2xl font-bold text-primary">{formatCurrency(totalPrice)}</span>
             </div>
           </div>
-
-          {/* Price Summary & Actions */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-primary/10 to-primary/5 border">
-            <div className="flex-1 space-y-1">
-              <div className="flex items-center gap-4 text-sm">
-                <span className="text-muted-foreground">Unitário: <span className="text-foreground font-medium">{formatCurrency(unitPrice)}</span></span>
-                <span className="text-muted-foreground">× {quantity}</span>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-xs text-muted-foreground uppercase tracking-wide">Total:</span>
-                <span className="text-2xl font-bold text-primary">{formatCurrency(totalPrice)}</span>
-              </div>
-            </div>
-            
-            <div className="flex gap-2">
-              <Button type="button" variant="outline" size="lg" onClick={onCancel} className="flex-1 sm:flex-none">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Voltar
-              </Button>
-              <Button 
-                type="button" 
-                size="lg"
-                onClick={handleAdd} 
-                disabled={!canAdd}
-                className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white px-6"
-              >
-                Adicionar
-              </Button>
-            </div>
+          
+          <div className="flex gap-2 shrink-0">
+            <Button type="button" variant="outline" size="lg" onClick={onCancel}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Voltar
+            </Button>
+            <Button 
+              type="button" 
+              size="lg"
+              onClick={handleAdd} 
+              disabled={!canAdd}
+              className="bg-green-600 hover:bg-green-700 text-white px-6"
+            >
+              Adicionar
+            </Button>
           </div>
         </div>
       </div>
-    </ScrollArea>
+    </div>
   );
 }
