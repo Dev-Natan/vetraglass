@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { ArrowLeft, Upload, MoreHorizontal, Plus, Video } from 'lucide-react';
+import { ArrowLeft, Upload, MoreHorizontal, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { FormulaEditor } from '@/components/produtos/FormulaEditor';
 import {
   Select,
   SelectContent,
@@ -595,32 +596,13 @@ export default function EditarProduto() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>Fórmula de comprimento:</Label>
-                <Input
-                  value={quantityFormula}
-                  onChange={(e) => setQuantityFormula(e.target.value)}
-                  placeholder="Ex: Altura - 20"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Use variáveis: Altura, Largura
-                </p>
-              </div>
-              {activeTab === 'profile' && (
-                <div className="space-y-2">
-                  <Label>Quantidade de peças por produto:</Label>
-                  <Input
-                    type="number"
-                    value={piecesQuantity}
-                    onChange={(e) => setPiecesQuantity(Number(e.target.value))}
-                    min={1}
-                    max={20}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Ex: Montantes = 2 peças, Travessas = 2 peças
-                  </p>
-                </div>
-              )}
+              <FormulaEditor
+                value={quantityFormula}
+                onChange={setQuantityFormula}
+                showPiecesQuantity={activeTab === 'profile'}
+                piecesQuantity={piecesQuantity}
+                onPiecesChange={setPiecesQuantity}
+              />
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setIsAddItemDialogOpen(false)}>
                   Cancelar
