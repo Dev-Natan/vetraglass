@@ -36,6 +36,18 @@ interface CutItem {
   position: 'Altura' | 'Largura';
 }
 
+interface GlassCutItem {
+  id: string;
+  glassName: string;
+  imageUrl: string | null;
+  widthFormula: string | null;
+  heightFormula: string | null;
+  calculatedWidth: number;
+  calculatedHeight: number;
+  areaM2: number;
+  quantity: number;
+}
+
 // Evaluate a formula like "Altura - 20" or "(Largura - 136) / 2"
 function evaluateFormula(formula: string, width: number, height: number): number {
   try {
@@ -166,6 +178,8 @@ export default function PlanoCorte() {
           cut_angle,
           is_optional,
           notes,
+          width_formula,
+          height_formula,
           item_templates (
             id,
             name,
@@ -181,7 +195,7 @@ export default function PlanoCorte() {
     enabled: !!selectedProduct
   });
 
-  // Calculate cuts
+  // Calculate profile cuts
   const calculatedCuts = useMemo((): CutItem[] => {
     if (!productItems || productItems.length === 0) return [];
 
@@ -201,6 +215,33 @@ export default function PlanoCorte() {
           quantity: totalPieces,
           cutAngle: item.cut_angle,
           position
+        };
+      });
+  }, [productItems, width, height, quantity]);
+
+  // Calculate glass cuts
+  const calculatedGlassCuts = useMemo((): GlassCutItem[] => {
+    if (!productItems || productItems.length === 0) return [];
+
+    return productItems
+      .filter(item => item.item_templates?.type === 'glass')
+      .map(item => {
+        const widthF = (item as any).width_formula || 'Largura';
+        const heightF = (item as any).height_formula || 'Altura';
+        const calcWidth = evaluateFormula(widthF, width, height);
+        const calcHeight = evaluateFormula(heightF, width, height);
+        const areaM2 = (calcWidth * calcHeight) / 1000000;
+        
+        return {
+          id: item.id,
+          glassName: item.item_templates?.name || 'Vidro',
+          imageUrl: item.item_templates?.image_url || null,
+          widthFormula: (item as any).width_formula,
+          heightFormula: (item as any).height_formula,
+          calculatedWidth: calcWidth,
+          calculatedHeight: calcHeight,
+          areaM2: areaM2,
+          quantity: quantity
         };
       });
   }, [productItems, width, height, quantity]);
@@ -227,18 +268,30 @@ export default function PlanoCorte() {
             .dim-box { background: #f5f5f5; padding: 8px 15px; border-radius: 4px; }
             .dim-label { font-size: 11px; color: #666; }
             .dim-value { font-size: 16px; font-weight: bold; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th { background: #1e3a5f; color: white; padding: 12px; text-align: left; font-size: 12px; text-transform: uppercase; }
+            .section-title { font-size: 14px; font-weight: bold; margin: 25px 0 10px 0; display: flex; align-items: center; gap: 8px; }
+            .section-dot { width: 12px; height: 12px; border-radius: 3px; }
+            .section-dot-glass { background: #9333ea; }
+            .section-dot-profile { background: #1e3a5f; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+            th { padding: 12px; text-align: left; font-size: 12px; text-transform: uppercase; color: white; }
+            th.glass { background: #9333ea; }
+            th.profile { background: #1e3a5f; }
             td { padding: 12px; border-bottom: 1px solid #eee; vertical-align: middle; }
-            .profile-cell { display: flex; align-items: center; gap: 10px; }
-            .profile-img { width: 60px; height: 40px; background: #f0f0f0; border: 1px solid #ddd; }
-            .profile-img img { width: 100%; height: 100%; object-fit: contain; }
+            .item-cell { display: flex; align-items: center; gap: 10px; }
+            .item-img { width: 60px; height: 40px; background: #f0f0f0; border: 1px solid #ddd; }
+            .item-img img { width: 100%; height: 100%; object-fit: contain; }
+            .formula-tag { font-size: 9px; padding: 2px 6px; border-radius: 3px; margin-right: 4px; }
+            .formula-width { background: #dcfce7; color: #166534; }
+            .formula-height { background: #dbeafe; color: #1e40af; }
             .angle-box { display: inline-flex; gap: 5px; }
             .angle { background: #1e3a5f; color: white; padding: 5px 12px; font-size: 12px; }
             .position { display: flex; align-items: center; gap: 8px; }
             .position-dot { width: 10px; height: 10px; border-radius: 50%; }
             .position-altura { background: #3b82f6; }
             .position-largura { background: #f59e0b; }
+            .value-green { color: #16a34a; font-weight: bold; }
+            .value-blue { color: #2563eb; font-weight: bold; }
+            .value-purple { color: #9333ea; font-weight: bold; }
             @media print { body { padding: 10px; } }
           </style>
         </head>
@@ -266,45 +319,93 @@ export default function PlanoCorte() {
             </div>
           </div>
 
-          <table>
-            <thead>
-              <tr>
-                <th>PERFIL</th>
-                <th>MEDIDA (mm)</th>
-                <th>QUANTIDADE</th>
-                <th>ÂNGULO DE CORTE</th>
-                <th>POSIÇÃO</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${calculatedCuts.map(cut => `
+          ${calculatedGlassCuts.length > 0 ? `
+            <div class="section-title">
+              <span class="section-dot section-dot-glass"></span>
+              Vidros
+            </div>
+            <table>
+              <thead>
                 <tr>
-                  <td>
-                    <div class="profile-cell">
-                      <div class="profile-img">
-                        ${cut.imageUrl ? `<img src="${getStorageUrl(cut.imageUrl)}" alt="${cut.profileName}" />` : ''}
-                      </div>
-                      <strong>${cut.profileName}</strong>
-                    </div>
-                  </td>
-                  <td><strong>${cut.calculatedLength}</strong></td>
-                  <td>${cut.quantity}</td>
-                  <td>
-                    <div class="angle-box">
-                      <span class="angle">${cut.cutAngle}°</span>
-                      <span class="angle">${cut.cutAngle}°</span>
-                    </div>
-                  </td>
-                  <td>
-                    <div class="position">
-                      <span class="position-dot position-${cut.position.toLowerCase()}"></span>
-                      ${cut.position}
-                    </div>
-                  </td>
+                  <th class="glass">VIDRO</th>
+                  <th class="glass">LARGURA (mm)</th>
+                  <th class="glass">ALTURA (mm)</th>
+                  <th class="glass">ÁREA (m²)</th>
+                  <th class="glass">QUANTIDADE</th>
                 </tr>
-              `).join('')}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                ${calculatedGlassCuts.map(glass => `
+                  <tr>
+                    <td>
+                      <div class="item-cell">
+                        <div class="item-img">
+                          ${glass.imageUrl ? `<img src="${getStorageUrl(glass.imageUrl)}" alt="${glass.glassName}" />` : '🪟'}
+                        </div>
+                        <div>
+                          <strong>${glass.glassName}</strong>
+                          <div style="margin-top: 4px;">
+                            ${glass.widthFormula ? `<span class="formula-tag formula-width">L: ${glass.widthFormula}</span>` : ''}
+                            ${glass.heightFormula ? `<span class="formula-tag formula-height">A: ${glass.heightFormula}</span>` : ''}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="value-green">${glass.calculatedWidth}</td>
+                    <td class="value-blue">${glass.calculatedHeight}</td>
+                    <td class="value-purple">${glass.areaM2.toFixed(3)}</td>
+                    <td>${glass.quantity}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          ` : ''}
+
+          ${calculatedCuts.length > 0 ? `
+            <div class="section-title">
+              <span class="section-dot section-dot-profile"></span>
+              Perfis de Alumínio
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th class="profile">PERFIL</th>
+                  <th class="profile">MEDIDA (mm)</th>
+                  <th class="profile">QUANTIDADE</th>
+                  <th class="profile">ÂNGULO DE CORTE</th>
+                  <th class="profile">POSIÇÃO</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${calculatedCuts.map(cut => `
+                  <tr>
+                    <td>
+                      <div class="item-cell">
+                        <div class="item-img">
+                          ${cut.imageUrl ? `<img src="${getStorageUrl(cut.imageUrl)}" alt="${cut.profileName}" />` : ''}
+                        </div>
+                        <strong>${cut.profileName}</strong>
+                      </div>
+                    </td>
+                    <td><strong>${cut.calculatedLength}</strong></td>
+                    <td>${cut.quantity}</td>
+                    <td>
+                      <div class="angle-box">
+                        <span class="angle">${cut.cutAngle}°</span>
+                        <span class="angle">${cut.cutAngle}°</span>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="position">
+                        <span class="position-dot position-${cut.position.toLowerCase()}"></span>
+                        ${cut.position}
+                      </div>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          ` : ''}
           
           <p style="margin-top: 30px; text-align: center; font-size: 11px; color: #999;">
             Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}
@@ -474,71 +575,152 @@ export default function PlanoCorte() {
           </TabsList>
 
           <TabsContent value="pendente" className="mt-4">
-            {/* Cut Table */}
-            {calculatedCuts.length > 0 ? (
-              <div className="border rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-primary hover:bg-primary">
-                      <TableHead className="text-primary-foreground font-bold">PERFIL</TableHead>
-                      <TableHead className="text-primary-foreground font-bold text-center">MEDIDA (mm)</TableHead>
-                      <TableHead className="text-primary-foreground font-bold text-center">QUANTIDADE</TableHead>
-                      <TableHead className="text-primary-foreground font-bold text-center">ÂNGULO DE CORTE</TableHead>
-                      <TableHead className="text-primary-foreground font-bold text-center">POSIÇÃO</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {calculatedCuts.map((cut) => (
-                      <TableRow key={cut.id} className="hover:bg-muted/50">
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className="w-16 h-12 bg-muted rounded border flex items-center justify-center overflow-hidden">
-                              {cut.imageUrl ? (
-                                <img 
-                                  src={getStorageUrl(cut.imageUrl)} 
-                                  alt={cut.profileName}
-                                  className="w-full h-full object-contain"
-                                />
-                              ) : (
-                                <span className="text-muted-foreground text-xs">📦</span>
-                              )}
-                            </div>
-                            <span className="font-medium">{cut.profileName}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center font-bold text-lg">
-                          {cut.calculatedLength}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {cut.quantity}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="inline-flex gap-1">
-                            <span className="bg-foreground text-background px-3 py-1 text-sm font-medium">
-                              {cut.cutAngle}°
-                            </span>
-                            <span className="bg-foreground text-background px-3 py-1 text-sm font-medium">
-                              {cut.cutAngle}°
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="inline-flex items-center gap-2">
-                            <span className={`w-3 h-3 rounded-full ${
-                              cut.position === 'Altura' ? 'bg-blue-500' : 'bg-amber-500'
-                            }`} />
-                            <span>{cut.position}</span>
-                          </div>
-                        </TableCell>
+            {/* Glass Cut Table */}
+            {calculatedGlassCuts.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                  <span className="w-3 h-3 rounded bg-purple-500"></span>
+                  Vidros
+                </h3>
+                <div className="border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-purple-600 hover:bg-purple-600">
+                        <TableHead className="text-white font-bold">VIDRO</TableHead>
+                        <TableHead className="text-white font-bold text-center">LARGURA (mm)</TableHead>
+                        <TableHead className="text-white font-bold text-center">ALTURA (mm)</TableHead>
+                        <TableHead className="text-white font-bold text-center">ÁREA (m²)</TableHead>
+                        <TableHead className="text-white font-bold text-center">QUANTIDADE</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {calculatedGlassCuts.map((glass) => (
+                        <TableRow key={glass.id} className="hover:bg-muted/50">
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <div className="w-16 h-12 bg-purple-50 dark:bg-purple-900/20 rounded border border-purple-200 dark:border-purple-800 flex items-center justify-center overflow-hidden">
+                                {glass.imageUrl ? (
+                                  <img 
+                                    src={getStorageUrl(glass.imageUrl)} 
+                                    alt={glass.glassName}
+                                    className="w-full h-full object-contain"
+                                  />
+                                ) : (
+                                  <span className="text-purple-400 text-lg">🪟</span>
+                                )}
+                              </div>
+                              <div>
+                                <span className="font-medium">{glass.glassName}</span>
+                                {(glass.widthFormula || glass.heightFormula) && (
+                                  <div className="flex gap-2 mt-1">
+                                    {glass.widthFormula && (
+                                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                                        L: {glass.widthFormula}
+                                      </span>
+                                    )}
+                                    {glass.heightFormula && (
+                                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                                        A: {glass.heightFormula}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <span className="font-bold text-lg text-green-600">{glass.calculatedWidth}</span>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <span className="font-bold text-lg text-blue-600">{glass.calculatedHeight}</span>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <span className="font-bold text-lg text-purple-600">{glass.areaM2.toFixed(3)}</span>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {glass.quantity}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
-            ) : (
+            )}
+
+            {/* Profile Cut Table */}
+            {calculatedCuts.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                  <span className="w-3 h-3 rounded bg-primary"></span>
+                  Perfis de Alumínio
+                </h3>
+                <div className="border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-primary hover:bg-primary">
+                        <TableHead className="text-primary-foreground font-bold">PERFIL</TableHead>
+                        <TableHead className="text-primary-foreground font-bold text-center">MEDIDA (mm)</TableHead>
+                        <TableHead className="text-primary-foreground font-bold text-center">QUANTIDADE</TableHead>
+                        <TableHead className="text-primary-foreground font-bold text-center">ÂNGULO DE CORTE</TableHead>
+                        <TableHead className="text-primary-foreground font-bold text-center">POSIÇÃO</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {calculatedCuts.map((cut) => (
+                        <TableRow key={cut.id} className="hover:bg-muted/50">
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <div className="w-16 h-12 bg-muted rounded border flex items-center justify-center overflow-hidden">
+                                {cut.imageUrl ? (
+                                  <img 
+                                    src={getStorageUrl(cut.imageUrl)} 
+                                    alt={cut.profileName}
+                                    className="w-full h-full object-contain"
+                                  />
+                                ) : (
+                                  <span className="text-muted-foreground text-xs">📦</span>
+                                )}
+                              </div>
+                              <span className="font-medium">{cut.profileName}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center font-bold text-lg">
+                            {cut.calculatedLength}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {cut.quantity}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="inline-flex gap-1">
+                              <span className="bg-foreground text-background px-3 py-1 text-sm font-medium">
+                                {cut.cutAngle}°
+                              </span>
+                              <span className="bg-foreground text-background px-3 py-1 text-sm font-medium">
+                                {cut.cutAngle}°
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="inline-flex items-center gap-2">
+                              <span className={`w-3 h-3 rounded-full ${
+                                cut.position === 'Altura' ? 'bg-blue-500' : 'bg-amber-500'
+                              }`} />
+                              <span>{cut.position}</span>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+
+            {calculatedCuts.length === 0 && calculatedGlassCuts.length === 0 && (
               <div className="text-center py-12 text-muted-foreground border rounded-lg">
                 {selectedProduct 
-                  ? 'Nenhum perfil cadastrado para este produto.'
+                  ? 'Nenhum item cadastrado para este produto.'
                   : 'Selecione uma linha, categoria e produto para ver o plano de corte.'
                 }
               </div>
