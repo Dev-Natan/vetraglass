@@ -722,22 +722,42 @@ export default function EditarProduto() {
                           <SelectItem 
                             value={item.id} 
                             className={cn(
-                              "py-3",
+                              "py-2",
                               isProductLinha && "bg-primary/5"
                             )}
                           >
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{item.name}</span>
-                              {item.linha && (
-                                <span className={cn(
-                                  "text-xs px-2 py-0.5 rounded",
-                                  isProductLinha 
-                                    ? "bg-primary/20 text-primary font-medium"
-                                    : "bg-muted text-muted-foreground"
-                                )}>
-                                  {item.linha}
-                                </span>
-                              )}
+                            <div className="flex items-center gap-3">
+                              {/* Item image */}
+                              <div className="w-10 h-10 rounded bg-muted flex-shrink-0 overflow-hidden">
+                                {item.image_url ? (
+                                  <img 
+                                    src={item.image_url.startsWith('http') ? item.image_url : `/profiles/${item.image_url}`}
+                                    alt={item.name}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      (e.target as HTMLImageElement).style.display = 'none';
+                                    }}
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
+                                    —
+                                  </div>
+                                )}
+                              </div>
+                              {/* Item info */}
+                              <div className="flex flex-col min-w-0">
+                                <span className="font-medium truncate">{item.name}</span>
+                                {item.linha && (
+                                  <span className={cn(
+                                    "text-xs",
+                                    isProductLinha 
+                                      ? "text-primary font-medium"
+                                      : "text-muted-foreground"
+                                  )}>
+                                    {item.linha}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </SelectItem>
                         </div>
