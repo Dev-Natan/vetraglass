@@ -124,7 +124,7 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
     window.print();
   };
 
-  const handleDownloadPdf = () => {
+  const handleDownloadPdf = async () => {
     if (!quote || !items) return;
     
     const company = currentCompany ? {
@@ -135,7 +135,8 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
       address: currentCompany.address,
     } : null;
     
-    generateQuotePdf(quote, items, company);
+    toast({ title: 'Gerando PDF...' });
+    await generateQuotePdf(quote, items, company);
     toast({ title: 'PDF gerado com sucesso!' });
   };
 
