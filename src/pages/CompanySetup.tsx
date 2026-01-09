@@ -7,9 +7,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Building2, ArrowLeft } from 'lucide-react';
+import { Loader2, Building2, ArrowLeft, CheckCircle, XCircle, Search } from 'lucide-react';
 import { z } from 'zod';
 import { validateCPFOrCNPJ, formatCPFOrCNPJ } from '@/utils/documentValidation';
+
+interface CNPJData {
+  razaoSocial: string;
+  nomeFantasia: string;
+  situacao: string;
+  endereco: string;
+  telefone: string;
+  email: string;
+}
 
 const companySchema = z.object({
   name: z.string().min(2, 'Nome deve ter no mínimo 2 caracteres'),
@@ -32,6 +41,9 @@ export default function CompanySetup() {
     navigate('/auth');
   };
   const [isLoading, setIsLoading] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+  const [cnpjValidated, setCnpjValidated] = useState<boolean | null>(null);
+  const [cnpjData, setCnpjData] = useState<CNPJData | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   
   const [name, setName] = useState('');
@@ -43,6 +55,75 @@ export default function CompanySetup() {
   const handleDocumentChange = (value: string) => {
     const formatted = formatCPFOrCNPJ(value);
     setDocument(formatted);
+    setCnpjValidated(null);
+    setCnpjData(null);
+    setErrors(prev => ({ ...prev, document: '' }));
+  };
+
+  const validateCNPJWithReceita = async () => {
+    const cleanDoc = document.replace(/\D/g, '');
+    
+    // Only validate CNPJ (14 digits), not CPF
+    if (cleanDoc.length !== 14) {
+      toast({
+        title: "Consulta disponível apenas para CNPJ",
+        description: "A consulta à Receita Federal é apenas para CNPJ (14 dígitos).",
+        variant: "default",
+      });
+      return;
+    }
+
+    setIsValidating(true);
+    setCnpjValidated(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('validate-cnpj', {
+        body: { cnpj: cleanDoc },
+      });
+
+      if (error) throw error;
+
+      if (data.valid && data.active) {
+        setCnpjValidated(true);
+        setCnpjData(data.data);
+        
+        // Auto-fill fields with data from Receita Federal
+        if (data.data.nomeFantasia || data.data.razaoSocial) {
+          setName(data.data.nomeFantasia || data.data.razaoSocial);
+        }
+        if (data.data.endereco) {
+          setAddress(data.data.endereco);
+        }
+        if (data.data.telefone) {
+          setPhone(data.data.telefone);
+        }
+        if (data.data.email) {
+          setEmail(data.data.email);
+        }
+
+        toast({
+          title: "CNPJ Validado!",
+          description: `Empresa: ${data.data.razaoSocial}`,
+        });
+      } else {
+        setCnpjValidated(false);
+        setErrors(prev => ({ ...prev, document: data.error || 'CNPJ inválido ou inativo' }));
+        toast({
+          title: "CNPJ não validado",
+          description: data.error || 'CNPJ não encontrado ou empresa inativa',
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error('Error validating CNPJ:', error);
+      toast({
+        title: "Erro na consulta",
+        description: "Não foi possível consultar o CNPJ. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsValidating(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -153,19 +234,54 @@ export default function CompanySetup() {
               
               <div className="space-y-2">
                 <Label htmlFor="document">CPF ou CNPJ *</Label>
-                <Input
-                  id="document"
-                  placeholder="000.000.000-00 ou 00.000.000/0001-00"
-                  value={document}
-                  onChange={(e) => handleDocumentChange(e.target.value)}
-                  disabled={isLoading}
-                  maxLength={18}
-                />
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Input
+                      id="document"
+                      placeholder="000.000.000-00 ou 00.000.000/0001-00"
+                      value={document}
+                      onChange={(e) => handleDocumentChange(e.target.value)}
+                      disabled={isLoading || isValidating}
+                      maxLength={18}
+                      className={cnpjValidated === true ? 'border-green-500 pr-10' : cnpjValidated === false ? 'border-destructive pr-10' : ''}
+                    />
+                    {cnpjValidated === true && (
+                      <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-green-500" />
+                    )}
+                    {cnpjValidated === false && (
+                      <XCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-destructive" />
+                    )}
+                  </div>
+                  {document.replace(/\D/g, '').length === 14 && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={validateCNPJWithReceita}
+                      disabled={isValidating || isLoading}
+                      className="shrink-0"
+                    >
+                      {isValidating ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <Search className="h-4 w-4 mr-1" />
+                          Consultar
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
                 {errors.document && (
                   <p className="text-sm text-destructive">{errors.document}</p>
                 )}
+                {cnpjData && cnpjValidated && (
+                  <div className="p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800 text-sm">
+                    <p className="font-medium text-green-800 dark:text-green-200">{cnpjData.razaoSocial}</p>
+                    <p className="text-green-600 dark:text-green-400 text-xs">Situação: {cnpjData.situacao}</p>
+                  </div>
+                )}
                 <p className="text-xs text-muted-foreground">
-                  Digite um CPF (11 dígitos) ou CNPJ (14 dígitos) válido
+                  Digite um CPF (11 dígitos) ou CNPJ (14 dígitos) válido. Para CNPJ, clique em "Consultar" para validar na Receita Federal.
                 </p>
               </div>
               
