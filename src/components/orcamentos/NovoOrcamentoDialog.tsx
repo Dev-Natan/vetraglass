@@ -24,8 +24,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Package } from 'lucide-react';
-import { ProductSelectionSheet } from './ProductSelectionSheet';
+import { Plus, Package, ShoppingCart, User } from 'lucide-react';
+import { AddProductPanel } from './AddProductPanel';
 import { QuoteItemCard } from './QuoteItemCard';
 
 const quoteSchema = z.object({
@@ -72,13 +72,15 @@ interface NovoOrcamentoDialogProps {
   quote?: Quote | null;
 }
 
+type ViewMode = 'form' | 'add-product';
+
 export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamentoDialogProps) {
   const { currentCompany } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [items, setItems] = useState<QuoteItem[]>([]);
   const [discountPercent, setDiscountPercent] = useState(0);
-  const [isProductSheetOpen, setIsProductSheetOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('form');
 
   const isEditing = !!quote;
 
@@ -126,6 +128,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
         valid_until: quote.valid_until || '',
         notes: quote.notes || '',
       });
+      setViewMode('form');
     } else if (open && !quote) {
       form.reset({
         customer_name: '',
@@ -137,6 +140,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
       });
       setItems([]);
       setDiscountPercent(0);
+      setViewMode('form');
     }
   }, [open, quote, form]);
 
@@ -165,20 +169,29 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
     image_url?: string | null;
     linha?: string | null;
     category?: string;
+    width: number;
+    height: number;
+    quantity: number;
+    unit_price: number;
+    total_price: number;
   }) => {
     const newItem: QuoteItem = {
       product_template_id: product.product_template_id,
       company_product_id: product.company_product_id,
       description: product.name,
-      quantity: 1,
+      width: product.width,
+      height: product.height,
+      quantity: product.quantity,
       base_price_m2: product.base_price,
-      unit_price: 0,
-      total_price: 0,
+      unit_price: product.unit_price,
+      total_price: product.total_price,
       image_url: product.image_url,
       linha: product.linha,
       category: product.category,
     };
     setItems([...items, newItem]);
+    setViewMode('form');
+    toast({ title: 'Produto adicionado!' });
   };
 
   const updateItem = (index: number, field: keyof QuoteItem, value: any) => {
@@ -327,65 +340,98 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
   };
 
   return (
-    <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0">
-          <DialogHeader className="p-6 pb-0">
-            <DialogTitle>{isEditing ? 'Editar Orçamento' : 'Novo Orçamento'}</DialogTitle>
-          </DialogHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="p-6 pb-0">
+          <DialogTitle className="flex items-center gap-2">
+            {viewMode === 'form' ? (
+              <>
+                <ShoppingCart className="w-5 h-5" />
+                {isEditing ? 'Editar Orçamento' : 'Novo Orçamento'}
+              </>
+            ) : (
+              <>
+                <Package className="w-5 h-5" />
+                Adicionar Produto
+              </>
+            )}
+          </DialogTitle>
+        </DialogHeader>
 
-          <ScrollArea className="flex-1 px-6">
+        <ScrollArea className="flex-1 px-6">
+          {viewMode === 'form' ? (
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-4">
-                {/* Customer Info */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Customer Info Section */}
+                <div className="rounded-xl border bg-card p-4 space-y-4">
+                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                    <User className="w-4 h-4" />
+                    Dados do Cliente
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="customer_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nome do Cliente *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Nome completo" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="customer_phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Telefone</FormLabel>
+                          <FormControl>
+                            <Input placeholder="(00) 00000-0000" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="customer_email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input placeholder="email@exemplo.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="valid_until"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Válido até</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
                   <FormField
                     control={form.control}
-                    name="customer_name"
+                    name="customer_address"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Nome do Cliente *</FormLabel>
+                        <FormLabel>Endereço</FormLabel>
                         <FormControl>
-                          <Input placeholder="Nome completo" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="customer_phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Telefone</FormLabel>
-                        <FormControl>
-                          <Input placeholder="(00) 00000-0000" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="customer_email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input placeholder="email@exemplo.com" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="valid_until"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Válido até</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
+                          <Input placeholder="Endereço completo" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -393,40 +439,28 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
                   />
                 </div>
 
-                <FormField
-                  control={form.control}
-                  name="customer_address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Endereço</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Endereço completo" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
                 {/* Items Section */}
-                <div className="space-y-4">
+                <div className="rounded-xl border bg-card p-4 space-y-4">
                   <div className="flex items-center justify-between">
-                    <h3 className="font-medium">Itens do Orçamento</h3>
+                    <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                      <Package className="w-4 h-4" />
+                      Produtos ({items.length})
+                    </div>
                     <Button
                       type="button"
-                      variant="default"
                       size="sm"
-                      onClick={() => setIsProductSheetOpen(true)}
+                      onClick={() => setViewMode('add-product')}
                       className="gap-2"
                     >
                       <Plus className="w-4 h-4" />
-                      Adicionar Produto
+                      Adicionar
                     </Button>
                   </div>
 
                   {items.length === 0 ? (
                     <button
                       type="button"
-                      onClick={() => setIsProductSheetOpen(true)}
+                      onClick={() => setViewMode('add-product')}
                       className="w-full border-2 border-dashed rounded-xl p-8 text-center text-muted-foreground hover:border-primary hover:text-primary transition-colors"
                     >
                       <Package className="w-10 h-10 mx-auto mb-3 opacity-50" />
@@ -450,20 +484,20 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
                 </div>
 
                 {/* Totals */}
-                <div className="bg-muted/50 rounded-xl p-4 space-y-3">
+                <div className="rounded-xl border bg-gradient-to-br from-primary/5 to-primary/10 p-4 space-y-3">
                   <div className="flex justify-between text-sm">
-                    <span>Subtotal</span>
+                    <span className="text-muted-foreground">Subtotal</span>
                     <span className="font-medium">{formatCurrency(totalAmount)}</span>
                   </div>
                   <div className="flex justify-between items-center text-sm">
-                    <span>Desconto (%)</span>
+                    <span className="text-muted-foreground">Desconto (%)</span>
                     <Input
                       type="number"
                       value={discountPercent}
                       onChange={(e) => setDiscountPercent(Number(e.target.value))}
                       min={0}
                       max={100}
-                      className="w-20 h-8 text-right"
+                      className="w-20 h-8 text-right bg-background"
                     />
                   </div>
                   {discountAmount > 0 && (
@@ -472,7 +506,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
                       <span>-{formatCurrency(discountAmount)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-lg font-bold border-t pt-3">
+                  <div className="flex justify-between text-xl font-bold border-t pt-3">
                     <span>Total</span>
                     <span className="text-primary">{formatCurrency(finalAmount)}</span>
                   </div>
@@ -504,15 +538,16 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
                 </div>
               </form>
             </Form>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
-
-      <ProductSelectionSheet
-        open={isProductSheetOpen}
-        onOpenChange={setIsProductSheetOpen}
-        onSelectProduct={handleAddProduct}
-      />
-    </>
+          ) : (
+            <div className="py-4">
+              <AddProductPanel
+                onAdd={handleAddProduct}
+                onCancel={() => setViewMode('form')}
+              />
+            </div>
+          )}
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
   );
 }
