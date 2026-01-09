@@ -24,9 +24,24 @@ interface AddProductPanelProps {
     quantity: number;
     unit_price: number;
     total_price: number;
+    glass_color?: string;
+    glass_thickness?: string;
   }) => void;
   onCancel: () => void;
 }
+
+const glassColors = [
+  { value: 'incolor', label: 'Incolor' },
+  { value: 'verde', label: 'Verde' },
+  { value: 'fume', label: 'Fumê' },
+];
+
+const glassThicknesses = [
+  { value: '4mm', label: '4mm' },
+  { value: '6mm', label: '6mm' },
+  { value: '8mm', label: '8mm' },
+  { value: '10mm', label: '10mm' },
+];
 
 const categoryLabels: Record<string, string> = {
   window: 'Janela',
@@ -49,6 +64,8 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   const [height, setHeight] = useState<number>(0);
   const [quantity, setQuantity] = useState<number>(1);
   const [customPrice, setCustomPrice] = useState<number | null>(null);
+  const [glassColor, setGlassColor] = useState<string>('incolor');
+  const [glassThickness, setGlassThickness] = useState<string>('4mm');
 
   // Fetch all product templates
   const { data: productTemplates, isLoading } = useQuery({
@@ -158,6 +175,8 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
       quantity,
       unit_price: unitPrice,
       total_price: totalPrice,
+      glass_color: glassColor,
+      glass_thickness: glassThickness,
     });
   };
 
@@ -341,6 +360,40 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
             </Badge>
           </div>
         )}
+
+        {/* Glass Options */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Cor do Vidro</label>
+            <Select value={glassColor} onValueChange={setGlassColor}>
+              <SelectTrigger className="bg-background h-10">
+                <SelectValue placeholder="Selecione..." />
+              </SelectTrigger>
+              <SelectContent className="bg-popover border shadow-lg z-50">
+                {glassColors.map((color) => (
+                  <SelectItem key={color.value} value={color.value}>
+                    {color.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Espessura</label>
+            <Select value={glassThickness} onValueChange={setGlassThickness}>
+              <SelectTrigger className="bg-background h-10">
+                <SelectValue placeholder="Selecione..." />
+              </SelectTrigger>
+              <SelectContent className="bg-popover border shadow-lg z-50">
+                {glassThicknesses.map((thickness) => (
+                  <SelectItem key={thickness.value} value={thickness.value}>
+                    {thickness.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
 
         {/* Dimensions, Price & Quantity */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
