@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ArrowLeft, Upload, MoreHorizontal, Plus } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -636,26 +637,56 @@ export default function EditarProduto() {
 
         {/* Add Item Dialog */}
         <Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen}>
-          <DialogContent className={activeTab === 'glass' ? 'max-w-2xl max-h-[90vh] overflow-y-auto' : ''}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Adicionar Item - {itemTypeTabs.find(t => t.value === activeTab)?.label}</DialogTitle>
+              <DialogTitle>Adicionar Item ao Produto</DialogTitle>
             </DialogHeader>
+            
             <div className="space-y-4">
+              {/* Tab navigation inside dialog */}
+              <div className="flex gap-1 p-1 bg-muted rounded-lg">
+                {itemTypeTabs.map((tab) => (
+                  <button
+                    key={tab.value}
+                    onClick={() => {
+                      setActiveTab(tab.value);
+                      setSelectedItemToAdd('');
+                    }}
+                    className={cn(
+                      "flex-1 px-3 py-2 text-xs font-medium rounded-md transition-all",
+                      activeTab === tab.value
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+              
+              {/* Item selection with search */}
               <div className="space-y-2">
-                <Label>Selecione o item:</Label>
+                <Label className="text-sm font-medium">Selecione o item:</Label>
                 <Select value={selectedItemToAdd} onValueChange={setSelectedItemToAdd}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Escolha um item" />
+                  <SelectTrigger className="h-12">
+                    <SelectValue placeholder="Clique para escolher um item" />
                   </SelectTrigger>
                   <SelectContent className="bg-background border shadow-lg z-50 max-h-[300px]">
                     {availableItems?.map((item) => (
-                      <SelectItem key={item.id} value={item.id}>
-                        {item.name} {item.linha && `(${item.linha})`}
+                      <SelectItem key={item.id} value={item.id} className="py-3">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{item.name}</span>
+                          {item.linha && (
+                            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                              {item.linha}
+                            </span>
+                          )}
+                        </div>
                       </SelectItem>
                     ))}
                     {!availableItems?.length && (
-                      <div className="p-2 text-sm text-muted-foreground">
-                        Nenhum item disponível
+                      <div className="p-4 text-sm text-muted-foreground text-center">
+                        Nenhum item disponível para esta categoria
                       </div>
                     )}
                   </SelectContent>
