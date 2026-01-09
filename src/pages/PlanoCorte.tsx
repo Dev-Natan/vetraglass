@@ -39,6 +39,7 @@ interface CutItem {
 interface GlassCutItem {
   id: string;
   glassName: string;
+  customName: string | null;
   imageUrl: string | null;
   widthFormula: string | null;
   heightFormula: string | null;
@@ -231,10 +232,12 @@ export default function PlanoCorte() {
         const calcWidth = evaluateFormula(widthF, width, height);
         const calcHeight = evaluateFormula(heightF, width, height);
         const areaM2 = (calcWidth * calcHeight) / 1000000;
+        const customName = (item as any).notes || null;
         
         return {
           id: item.id,
           glassName: item.item_templates?.name || 'Vidro',
+          customName: customName,
           imageUrl: item.item_templates?.image_url || null,
           widthFormula: (item as any).width_formula,
           heightFormula: (item as any).height_formula,
@@ -343,7 +346,8 @@ export default function PlanoCorte() {
                           ${glass.imageUrl ? `<img src="${getStorageUrl(glass.imageUrl)}" alt="${glass.glassName}" />` : '🪟'}
                         </div>
                         <div>
-                          <strong>${glass.glassName}</strong>
+                          <strong>${glass.customName || glass.glassName}</strong>
+                          ${glass.customName ? `<div style="font-size: 11px; color: #666;">${glass.glassName}</div>` : ''}
                           <div style="margin-top: 4px;">
                             ${glass.widthFormula ? `<span class="formula-tag formula-width">L: ${glass.widthFormula}</span>` : ''}
                             ${glass.heightFormula ? `<span class="formula-tag formula-height">A: ${glass.heightFormula}</span>` : ''}
@@ -610,7 +614,10 @@ export default function PlanoCorte() {
                                 )}
                               </div>
                               <div>
-                                <span className="font-medium">{glass.glassName}</span>
+                                <span className="font-medium">{glass.customName || glass.glassName}</span>
+                                {glass.customName && (
+                                  <div className="text-xs text-muted-foreground">{glass.glassName}</div>
+                                )}
                                 {(glass.widthFormula || glass.heightFormula) && (
                                   <div className="flex gap-2 mt-1">
                                     {glass.widthFormula && (

@@ -114,6 +114,7 @@ export default function EditarProduto() {
   const [piecesQuantity, setPiecesQuantity] = useState(1);
   const [widthFormula, setWidthFormula] = useState('');
   const [heightFormula, setHeightFormula] = useState('');
+  const [glassName, setGlassName] = useState('');
   const [isUploading, setIsUploading] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -270,6 +271,7 @@ export default function EditarProduto() {
         company_id?: string;
         width_formula?: string | null;
         height_formula?: string | null;
+        notes?: string | null;
       } = {
         product_template_id: id,
         item_template_id: selectedItemToAdd,
@@ -278,6 +280,7 @@ export default function EditarProduto() {
         is_optional: false,
         width_formula: activeTab === 'glass' ? (widthFormula || null) : null,
         height_formula: activeTab === 'glass' ? (heightFormula || null) : null,
+        notes: activeTab === 'glass' ? (glassName || null) : null,
       };
 
       // If not SaaS admin, must include company_id
@@ -299,6 +302,7 @@ export default function EditarProduto() {
       setPiecesQuantity(1);
       setWidthFormula('');
       setHeightFormula('');
+      setGlassName('');
     },
     onError: (error) => {
       toast.error('Erro ao adicionar: ' + error.message);
@@ -655,12 +659,27 @@ export default function EditarProduto() {
               
               {/* Show GlassFormulaEditor for glass items, FormulaEditor for others */}
               {activeTab === 'glass' ? (
-                <GlassFormulaEditor
-                  widthFormula={widthFormula}
-                  heightFormula={heightFormula}
-                  onWidthFormulaChange={setWidthFormula}
-                  onHeightFormulaChange={setHeightFormula}
-                />
+                <>
+                  {/* Glass Name Input */}
+                  <div className="space-y-2">
+                    <Label>Nome do Vidro (opcional)</Label>
+                    <Input
+                      placeholder="Ex: Vidro Fixo, Vidro Móvel, Bandeira..."
+                      value={glassName}
+                      onChange={(e) => setGlassName(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Identifique o vidro para facilitar no plano de corte
+                    </p>
+                  </div>
+                  
+                  <GlassFormulaEditor
+                    widthFormula={widthFormula}
+                    heightFormula={heightFormula}
+                    onWidthFormulaChange={setWidthFormula}
+                    onHeightFormulaChange={setHeightFormula}
+                  />
+                </>
               ) : (
                 <FormulaEditor
                   value={quantityFormula}
