@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
+import { Parser } from 'expr-eval';
 
 // Tradução de categorias
 const categoryLabels: Record<string, string> = {
@@ -53,12 +54,11 @@ interface GlassCutItem {
 }
 
 // Evaluate a formula like "Altura - 20", "A + 27", "(Largura - 136) / 2", or "L - 20"
+// Evaluate a formula like "Altura - 20", "A + 27", "(Largura - 136) / 2", or "L - 20"
 function evaluateFormula(formula: string, width: number, height: number): number {
   try {
     if (!formula || formula.trim() === '') return 0;
     
-    // Use safe math expression parser to prevent code injection
-    const { Parser } = require('expr-eval');
     const parser = new Parser();
     
     // Normalize variable names to safe single-letter variables
