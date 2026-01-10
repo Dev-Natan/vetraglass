@@ -700,6 +700,7 @@ export type Database = {
         Returns: undefined
       }
       is_saas_admin: { Args: { _user_id: string }; Returns: boolean }
+      normalize_text: { Args: { input_text: string }; Returns: string }
       user_belongs_to_company: {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
