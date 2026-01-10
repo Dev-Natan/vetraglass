@@ -236,6 +236,22 @@ export default function ItemTemplates() {
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
+      // Check if item is used in any product template
+      const { data: usageData, error: usageError } = await supabase
+        .from('product_template_items')
+        .select('id, product_template_id, product_templates(name)')
+        .eq('item_template_id', id)
+        .limit(5);
+
+      if (usageError) throw usageError;
+
+      if (usageData && usageData.length > 0) {
+        const productNames = usageData
+          .map((u: any) => u.product_templates?.name || 'Produto desconhecido')
+          .join(', ');
+        throw new Error(`Este item está sendo usado em ${usageData.length} produto(s): ${productNames}. Remova-o dos produtos antes de excluir.`);
+      }
+
       const { error } = await supabase
         .from('item_templates')
         .delete()
