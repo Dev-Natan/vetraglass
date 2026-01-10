@@ -29,9 +29,12 @@ interface CutItem {
   id: string;
   profileName: string;
   imageUrl: string | null;
-  formula: string;
+  widthFormula: string | null;
+  heightFormula: string | null;
+  quantityFormula: string;
   calculatedLength: number;
   quantity: number;
+  piecesPerProduct: number;
   cutAngle: number;
   position: 'Altura' | 'Largura';
 }
@@ -204,16 +207,49 @@ export default function PlanoCorte() {
       .filter(item => item.item_templates?.type === 'profile')
       .map(item => {
         const piecesPerProduct = (item as any).pieces_quantity || 1;
+        const widthF = (item as any).width_formula || null;
+        const heightF = (item as any).height_formula || null;
+        const quantityF = item.quantity_formula || '1';
+        
+        // Calculate the cut length from width or height formula
+        let calculatedLength = 0;
+        let position: 'Altura' | 'Largura' = 'Largura';
+        let displayWidthFormula: string | null = widthF;
+        let displayHeightFormula: string | null = heightF;
+        
+        if (heightF) {
+          // If height_formula exists, use it for the cut length
+          calculatedLength = evaluateFormula(heightF, width, height);
+          position = 'Altura';
+        } else if (widthF) {
+          // If width_formula exists, use it for the cut length
+          calculatedLength = evaluateFormula(widthF, width, height);
+          position = 'Largura';
+        } else {
+          // Fallback: use quantity_formula as the cut formula (legacy behavior)
+          calculatedLength = evaluateFormula(quantityF, width, height);
+          position = getFormulaPosition(quantityF);
+          // Show the quantity_formula as the display formula
+          if (position === 'Altura') {
+            displayHeightFormula = quantityF;
+          } else {
+            displayWidthFormula = quantityF;
+          }
+        }
+        
+        // Calculate quantity from pieces_quantity * product quantity
         const totalPieces = piecesPerProduct * quantity;
-        const position = getFormulaPosition(item.quantity_formula);
         
         return {
           id: item.id,
           profileName: item.item_templates?.name || 'Perfil',
           imageUrl: item.item_templates?.image_url || null,
-          formula: item.quantity_formula,
-          calculatedLength: evaluateFormula(item.quantity_formula, width, height),
+          widthFormula: displayWidthFormula,
+          heightFormula: displayHeightFormula,
+          quantityFormula: quantityF,
+          calculatedLength,
           quantity: totalPieces,
+          piecesPerProduct,
           cutAngle: item.cut_angle,
           position
         };
@@ -388,11 +424,17 @@ export default function PlanoCorte() {
                         <div class="item-img">
                           ${cut.imageUrl ? `<img src="${getStorageUrl(cut.imageUrl)}" alt="${cut.profileName}" />` : ''}
                         </div>
-                        <strong>${cut.profileName}</strong>
+                        <div>
+                          <strong>${cut.profileName}</strong>
+                          <div style="margin-top: 4px;">
+                            ${cut.widthFormula ? `<span class="formula-tag formula-width">L: ${cut.widthFormula}</span>` : ''}
+                            ${cut.heightFormula ? `<span class="formula-tag formula-height">A: ${cut.heightFormula}</span>` : ''}
+                          </div>
+                        </div>
                       </div>
                     </td>
-                    <td><strong>${cut.calculatedLength}</strong></td>
-                    <td>${cut.quantity}</td>
+                    <td><strong style="font-size: 18px;">${cut.calculatedLength}</strong></td>
+                    <td>${cut.piecesPerProduct} × ${quantity} = <strong>${cut.quantity}</strong></td>
                     <td>
                       <div class="angle-box">
                         <span class="angle">${cut.cutAngle}°</span>
@@ -689,7 +731,23 @@ export default function PlanoCorte() {
                                   <span className="text-muted-foreground text-xs">📦</span>
                                 )}
                               </div>
-                              <span className="font-medium">{cut.profileName}</span>
+                              <div>
+                                <span className="font-medium">{cut.profileName}</span>
+                                {(cut.widthFormula || cut.heightFormula) && (
+                                  <div className="flex gap-2 mt-1">
+                                    {cut.widthFormula && (
+                                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                                        L: {cut.widthFormula}
+                                      </span>
+                                    )}
+                                    {cut.heightFormula && (
+                                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                                        A: {cut.heightFormula}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </TableCell>
                           <TableCell className="text-center font-bold text-lg">
