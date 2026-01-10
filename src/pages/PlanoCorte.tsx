@@ -52,24 +52,36 @@ interface GlassCutItem {
   quantity: number;
 }
 
-// Evaluate a formula like "Altura - 20" or "(Largura - 136) / 2"
+// Evaluate a formula like "Altura - 20", "A + 27", "(Largura - 136) / 2", or "L - 20"
 function evaluateFormula(formula: string, width: number, height: number): number {
   try {
+    if (!formula || formula.trim() === '') return 0;
+    
     // Use safe math expression parser to prevent code injection
     const { Parser } = require('expr-eval');
     const parser = new Parser();
     
     // Normalize variable names to safe single-letter variables
-    const normalized = formula
+    // Order matters: replace full names first, then abbreviations
+    let normalized = formula
       .replace(/Largura/gi, 'W')
-      .replace(/Altura/gi, 'H')
-      .replace(/\bL\b/g, 'W')
-      .replace(/\bA\b/g, 'H');
+      .replace(/Altura/gi, 'H');
+    
+    // Replace standalone L and A (word boundaries) - common abbreviations
+    // Use regex to match L/A that are not part of other words
+    normalized = normalized
+      .replace(/\bL\b/gi, 'W')
+      .replace(/\bA\b/gi, 'H');
     
     const expr = parser.parse(normalized);
     const result = expr.evaluate({ W: width, H: height });
+    
+    // Ensure we return a valid number
+    if (isNaN(result) || !isFinite(result)) return 0;
+    
     return Math.round(result);
-  } catch {
+  } catch (error) {
+    console.warn('Error evaluating formula:', formula, error);
     return 0;
   }
 }
