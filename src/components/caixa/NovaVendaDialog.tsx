@@ -898,9 +898,17 @@ export function NovaVendaDialog({
                   </div>
                 )}
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Quantidade</span>
+                  <span className="text-muted-foreground">
+                    {selectedMaterial.type === 'profile' ? 'Quantidade de barras' : 'Quantidade'}
+                  </span>
                   <span>{parseInt(materialQuantity) || 1}</span>
                 </div>
+                {selectedMaterial.type === 'profile' && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Total metros lineares</span>
+                    <span>{((parseInt(materialQuantity) || 1) * 6).toFixed(1)}m</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-lg font-bold border-t pt-3">
                   <span>Total estimado</span>
                   <span className="text-primary">
