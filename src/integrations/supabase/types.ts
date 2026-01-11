@@ -665,42 +665,58 @@ export type Database = {
       }
       sale_items: {
         Row: {
+          company_product_id: string | null
           created_at: string
+          height: number | null
           id: string
           item_name: string
-          item_template_id: string
+          item_template_id: string | null
           item_unit: string
           notes: string | null
           quantity: number
           sale_id: string
           total_price: number
           unit_price: number
+          width: number | null
         }
         Insert: {
+          company_product_id?: string | null
           created_at?: string
+          height?: number | null
           id?: string
           item_name: string
-          item_template_id: string
+          item_template_id?: string | null
           item_unit: string
           notes?: string | null
           quantity?: number
           sale_id: string
           total_price?: number
           unit_price?: number
+          width?: number | null
         }
         Update: {
+          company_product_id?: string | null
           created_at?: string
+          height?: number | null
           id?: string
           item_name?: string
-          item_template_id?: string
+          item_template_id?: string | null
           item_unit?: string
           notes?: string | null
           quantity?: number
           sale_id?: string
           total_price?: number
           unit_price?: number
+          width?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "sale_items_company_product_id_fkey"
+            columns: ["company_product_id"]
+            isOneToOne: false
+            referencedRelation: "company_products"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "sale_items_item_template_id_fkey"
             columns: ["item_template_id"]
