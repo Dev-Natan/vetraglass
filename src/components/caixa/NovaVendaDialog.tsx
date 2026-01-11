@@ -28,6 +28,7 @@ export interface VendaItem {
   productTemplateId?: string;
   name: string;
   unit: string;
+  type?: string;
   quantity: number;
   unitPrice: number;
   totalPrice: number;
@@ -173,11 +174,12 @@ export function NovaVendaDialog({
       itemTemplateId: selectedMaterial.id,
       name: selectedMaterial.name,
       unit: selectedMaterial.unit,
+      type: selectedMaterial.type,
       quantity,
       unitPrice: selectedMaterial.price,
       totalPrice,
       width: width > 0 ? width : undefined,
-      height: height > 0 ? height : undefined,
+      height: selectedMaterial.type !== 'profile' && height > 0 ? height : undefined,
       isProduct: false,
       isDefaultPrice: selectedMaterial.isDefaultPrice,
     };
@@ -438,14 +440,15 @@ export function NovaVendaDialog({
                                     <Badge variant="outline" className="text-[10px] h-4">Preço padrão</Badge>
                                   )}
                                 </div>
-                                {item.width || item.height ? (
+                                {item.type === 'profile' && item.width ? (
+                                  <p className="text-xs text-muted-foreground">
+                                    {item.width}mm = {(item.width/1000).toFixed(2)} m
+                                  </p>
+                                ) : item.width || item.height ? (
                                   <p className="text-xs text-muted-foreground">
                                     {item.width}mm × {item.height}mm
                                     {item.unit === 'm²' && item.width && item.height && (
                                       <span> = {((item.width/1000)*(item.height/1000)).toFixed(2)} m²</span>
-                                    )}
-                                    {item.unit === 'm' && (
-                                      <span> = {(Math.max(item.width || 0, item.height || 0)/1000).toFixed(2)} m</span>
                                     )}
                                   </p>
                                 ) : (
@@ -789,32 +792,48 @@ export function NovaVendaDialog({
               {/* Dimensions Input */}
               <div className="rounded-xl border bg-card p-4 space-y-4">
                 <Label className="text-sm font-medium text-muted-foreground">
-                  Medidas (opcional)
+                  {selectedMaterial.type === 'profile' ? 'Tamanho (opcional)' : 'Medidas (opcional)'}
                 </Label>
-                <div className="grid grid-cols-2 gap-4">
+                {selectedMaterial.type === 'profile' ? (
+                  /* Profile - only length field */
                   <div className="space-y-2">
-                    <Label htmlFor="material-width">Largura (mm)</Label>
+                    <Label htmlFor="material-length">Comprimento (mm)</Label>
                     <Input
-                      id="material-width"
+                      id="material-length"
                       type="text"
                       inputMode="numeric"
-                      placeholder="Ex: 1000"
+                      placeholder="Ex: 6000"
                       value={materialWidth}
                       onChange={(e) => setMaterialWidth(e.target.value)}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="material-height">Altura (mm)</Label>
-                    <Input
-                      id="material-height"
-                      type="text"
-                      inputMode="numeric"
-                      placeholder="Ex: 2000"
-                      value={materialHeight}
-                      onChange={(e) => setMaterialHeight(e.target.value)}
-                    />
+                ) : (
+                  /* Other types - width and height */
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="material-width">Largura (mm)</Label>
+                      <Input
+                        id="material-width"
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="Ex: 1000"
+                        value={materialWidth}
+                        onChange={(e) => setMaterialWidth(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="material-height">Altura (mm)</Label>
+                      <Input
+                        id="material-height"
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="Ex: 2000"
+                        value={materialHeight}
+                        onChange={(e) => setMaterialHeight(e.target.value)}
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Quantity Input */}
@@ -851,7 +870,13 @@ export function NovaVendaDialog({
                   <span className="text-muted-foreground">Preço unitário</span>
                   <span>{formatCurrency(selectedMaterial.price)} / {selectedMaterial.unit}</span>
                 </div>
-                {(parseFloat(materialWidth) > 0 || parseFloat(materialHeight) > 0) && (
+                {selectedMaterial.type === 'profile' && parseFloat(materialWidth) > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Comprimento</span>
+                    <span>{parseFloat(materialWidth) || 0}mm</span>
+                  </div>
+                )}
+                {selectedMaterial.type !== 'profile' && (parseFloat(materialWidth) > 0 || parseFloat(materialHeight) > 0) && (
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Medidas</span>
                     <span>
