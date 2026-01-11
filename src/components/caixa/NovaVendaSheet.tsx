@@ -118,27 +118,46 @@ export function NovaVendaSheet({
   };
 
   const handleQuantityChange = (id: string, quantity: number) => {
-    setItems(items.map((item) => 
-      item.id === id 
-        ? { ...item, quantity, totalPrice: quantity * item.unitPrice }
-        : item
-    ));
+    setItems(items.map((item) => {
+      if (item.id !== id) return item;
+      
+      if (item.isProduct && item.width && item.height) {
+        // For products: area (m²) × quantity × unit price
+        const areaM2 = (item.width / 1000) * (item.height / 1000);
+        return { ...item, quantity, totalPrice: areaM2 * quantity * item.unitPrice };
+      }
+      
+      // For materials: quantity × unit price
+      return { ...item, quantity, totalPrice: quantity * item.unitPrice };
+    }));
   };
 
   const handlePriceChange = (id: string, price: number) => {
-    setItems(items.map((item) => 
-      item.id === id 
-        ? { ...item, unitPrice: price, totalPrice: item.quantity * price }
-        : item
-    ));
+    setItems(items.map((item) => {
+      if (item.id !== id) return item;
+      
+      if (item.isProduct && item.width && item.height) {
+        // For products: area (m²) × quantity × unit price
+        const areaM2 = (item.width / 1000) * (item.height / 1000);
+        return { ...item, unitPrice: price, totalPrice: areaM2 * item.quantity * price };
+      }
+      
+      // For materials: quantity × unit price
+      return { ...item, unitPrice: price, totalPrice: item.quantity * price };
+    }));
   };
 
   const handleDimensionsChange = (id: string, width: number, height: number) => {
-    setItems(items.map((item) => 
-      item.id === id 
-        ? { ...item, width, height }
-        : item
-    ));
+    setItems(items.map((item) => {
+      if (item.id !== id) return item;
+      
+      // Calculate area in m² (dimensions are in mm)
+      const areaM2 = (width / 1000) * (height / 1000);
+      // Total = area × quantity × unit price (price per m²)
+      const totalPrice = areaM2 * item.quantity * item.unitPrice;
+      
+      return { ...item, width, height, totalPrice };
+    }));
   };
 
   const handleRemove = (id: string) => {
