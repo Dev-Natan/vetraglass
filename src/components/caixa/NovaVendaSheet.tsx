@@ -110,8 +110,8 @@ export function NovaVendaSheet({
       quantity: 1,
       unitPrice: product.base_price || 0,
       totalPrice: product.base_price || 0,
-      width: 1000,
-      height: 1000,
+      width: 0,
+      height: 0,
       isProduct: true,
     };
     setItems([...items, newItem]);
