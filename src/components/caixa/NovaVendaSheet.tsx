@@ -198,11 +198,7 @@ export function NovaVendaSheet({
               availableProducts={availableProducts}
               onSelectMaterial={addItem}
               onSelectProduct={addProduct}
-              placeholder="Buscar linha, categoria, material ou produto..."
             />
-            <p className="text-xs text-muted-foreground">
-              {availableItems.length} materiais • {availableProducts.length} produtos disponíveis
-            </p>
           </div>
 
           {/* Lista de Itens */}

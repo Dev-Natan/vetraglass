@@ -1,13 +1,13 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { 
-  Search, Package, ChevronRight, Layers, 
-  Sparkles, SquareStack, Wrench, X 
+  Package, ChevronRight, ChevronLeft,
+  Sparkles, SquareStack, Wrench, Layers,
+  DoorOpen, LayoutGrid, Square, Shield
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -34,81 +34,64 @@ interface CompanyProduct {
   };
 }
 
-interface SearchResult {
-  type: 'linha' | 'category' | 'material' | 'product';
-  id: string;
-  name: string;
-  image?: string | null;
-  linha?: string | null;
-  category?: string;
-  count?: number;
-  price?: number;
-  unit?: string;
-  itemType?: string;
-  companyProduct?: CompanyProduct;
-  itemTemplate?: ItemTemplate;
-}
-
 interface UniversalProductSearchProps {
   availableItems: ItemTemplate[];
   availableProducts: CompanyProduct[];
   onSelectMaterial: (item: ItemTemplate) => void;
   onSelectProduct: (product: CompanyProduct) => void;
-  placeholder?: string;
 }
 
-const categoryLabels: Record<string, string> = {
-  window: 'Janela',
-  door: 'Porta',
-  partition: 'Divisória',
-  mirror: 'Espelho',
+// Category mappings for products
+const productCategoryLabels: Record<string, string> = {
+  window: 'Janelas',
+  door: 'Portas',
+  partition: 'Divisórias',
+  mirror: 'Espelhos',
   shower: 'Box',
-  facade: 'Fachada',
+  facade: 'Fachadas',
   guarda_corpo: 'Guarda Corpo',
   other: 'Outros',
 };
 
-const categoryIcons: Record<string, string> = {
-  window: '🪟',
-  door: '🚪',
-  partition: '🧱',
-  mirror: '🪞',
-  shower: '🚿',
-  facade: '🏢',
-  guarda_corpo: '🛡️',
-  other: '📦',
+const productCategoryIcons: Record<string, React.ReactNode> = {
+  window: <LayoutGrid className="w-4 h-4" />,
+  door: <DoorOpen className="w-4 h-4" />,
+  partition: <Square className="w-4 h-4" />,
+  mirror: <Square className="w-4 h-4" />,
+  shower: <Square className="w-4 h-4" />,
+  facade: <Square className="w-4 h-4" />,
+  guarda_corpo: <Shield className="w-4 h-4" />,
+  other: <Package className="w-4 h-4" />,
 };
 
-const typeIcons: Record<string, React.ReactNode> = {
+// Material type mappings
+const materialTypeLabels: Record<string, string> = {
+  profile: 'Perfis',
+  glass: 'Vidros',
+  accessory: 'Acessórios',
+  service: 'Serviços',
+};
+
+const materialTypeIcons: Record<string, React.ReactNode> = {
   profile: <SquareStack className="w-4 h-4" />,
   glass: <Sparkles className="w-4 h-4" />,
   accessory: <Wrench className="w-4 h-4" />,
   service: <Layers className="w-4 h-4" />,
 };
 
-const typeLabels: Record<string, string> = {
-  profile: 'Perfil',
-  glass: 'Vidro',
-  accessory: 'Acessório',
-  service: 'Serviço',
-};
+type ViewStep = 'linhas' | 'categories' | 'items';
 
 export function UniversalProductSearch({
   availableItems,
   availableProducts,
   onSelectMaterial,
   onSelectProduct,
-  placeholder = "Buscar linha, categoria ou produto...",
 }: UniversalProductSearchProps) {
-  const { currentCompany } = useAuth();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isOpen, setIsOpen] = useState(false);
+  const [step, setStep] = useState<ViewStep>('linhas');
   const [selectedLinha, setSelectedLinha] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
 
-  // Fetch product templates for images
+  // Fetch product templates for images and categories
   const { data: productTemplates } = useQuery({
     queryKey: ['product-templates-search'],
     queryFn: async () => {
@@ -121,27 +104,17 @@ export function UniversalProductSearch({
     },
   });
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // Get unique linhas with images
+  // Get unique linhas with counts
   const linhas = useMemo(() => {
-    const linhaMap = new Map<string, { count: number; image: string | null }>();
+    const linhaMap = new Map<string, { productCount: number; materialCount: number; image: string | null }>();
     
     // From product templates
     productTemplates?.forEach(p => {
       if (p.linha) {
         const existing = linhaMap.get(p.linha);
         linhaMap.set(p.linha, {
-          count: (existing?.count || 0) + 1,
+          productCount: (existing?.productCount || 0) + 1,
+          materialCount: existing?.materialCount || 0,
           image: existing?.image || p.image_url,
         });
       }
@@ -152,203 +125,132 @@ export function UniversalProductSearch({
       if (item.linha) {
         const existing = linhaMap.get(item.linha);
         linhaMap.set(item.linha, {
+          productCount: existing?.productCount || 0,
+          materialCount: (existing?.materialCount || 0) + 1,
+          image: existing?.image || item.image_url || null,
+        });
+      }
+    });
+
+    return Array.from(linhaMap.entries())
+      .map(([name, data]) => ({
+        name,
+        productCount: data.productCount,
+        materialCount: data.materialCount,
+        totalCount: data.productCount + data.materialCount,
+        image: data.image,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  }, [productTemplates, availableItems]);
+
+  // Get categories for selected linha (products + materials)
+  const categories = useMemo(() => {
+    if (!selectedLinha) return [];
+    
+    const categoryList: Array<{
+      id: string;
+      label: string;
+      icon: React.ReactNode;
+      count: number;
+      type: 'product' | 'material';
+      image: string | null;
+    }> = [];
+
+    // Product categories for this linha
+    const productCats = new Map<string, { count: number; image: string | null }>();
+    productTemplates?.filter(p => p.linha === selectedLinha).forEach(p => {
+      if (p.category) {
+        const existing = productCats.get(p.category);
+        productCats.set(p.category, {
+          count: (existing?.count || 0) + 1,
+          image: existing?.image || p.image_url,
+        });
+      }
+    });
+    
+    productCats.forEach((data, cat) => {
+      categoryList.push({
+        id: `product:${cat}`,
+        label: productCategoryLabels[cat] || cat,
+        icon: productCategoryIcons[cat] || <Package className="w-4 h-4" />,
+        count: data.count,
+        type: 'product',
+        image: data.image,
+      });
+    });
+
+    // Material types for this linha
+    const materialTypes = new Map<string, { count: number; image: string | null }>();
+    availableItems.filter(item => item.linha === selectedLinha).forEach(item => {
+      if (item.type) {
+        const existing = materialTypes.get(item.type);
+        materialTypes.set(item.type, {
           count: (existing?.count || 0) + 1,
           image: existing?.image || item.image_url || null,
         });
       }
     });
 
-    return Array.from(linhaMap.entries()).map(([name, data]) => ({
-      name,
-      count: data.count,
-      image: data.image,
-    }));
-  }, [productTemplates, availableItems]);
-
-  // Get categories for selected linha
-  const categories = useMemo(() => {
-    if (!selectedLinha) return [];
-    
-    const catMap = new Map<string, { count: number; image: string | null }>();
-    
-    productTemplates?.filter(p => p.linha === selectedLinha).forEach(p => {
-      if (p.category) {
-        const existing = catMap.get(p.category);
-        catMap.set(p.category, {
-          count: (existing?.count || 0) + 1,
-          image: existing?.image || p.image_url,
-        });
-      }
+    materialTypes.forEach((data, type) => {
+      categoryList.push({
+        id: `material:${type}`,
+        label: materialTypeLabels[type] || type,
+        icon: materialTypeIcons[type] || <Package className="w-4 h-4" />,
+        count: data.count,
+        type: 'material',
+        image: data.image,
+      });
     });
 
-    return Array.from(catMap.entries()).map(([name, data]) => ({
-      name,
-      label: categoryLabels[name] || name,
-      icon: categoryIcons[name] || '📦',
-      count: data.count,
-      image: data.image,
-    }));
-  }, [productTemplates, selectedLinha]);
+    return categoryList;
+  }, [productTemplates, availableItems, selectedLinha]);
 
-  // Build search results
-  const searchResults = useMemo((): SearchResult[] => {
-    const results: SearchResult[] = [];
-    const query = searchTerm.toLowerCase().trim();
-
-    // If navigating into a linha
-    if (selectedLinha && !selectedCategory) {
-      // Show categories for this linha
-      categories.forEach(cat => {
-        if (!query || cat.label.toLowerCase().includes(query) || cat.name.toLowerCase().includes(query)) {
-          results.push({
-            type: 'category',
-            id: cat.name,
-            name: cat.label,
-            image: cat.image,
-            linha: selectedLinha,
-            count: cat.count,
-          });
-        }
-      });
-      return results;
-    }
-
-    // If navigating into a category
-    if (selectedLinha && selectedCategory) {
-      // Show products in this category
-      availableProducts.forEach(product => {
+  // Get items for selected linha and category
+  const items = useMemo(() => {
+    if (!selectedLinha || !selectedCategory) return { products: [], materials: [] };
+    
+    const [type, categoryId] = selectedCategory.split(':');
+    
+    if (type === 'product') {
+      const products = availableProducts.filter(product => {
         const template = productTemplates?.find(t => t.id === product.product_template_id);
-        if (template?.linha === selectedLinha && template?.category === selectedCategory) {
-          if (!query || product.commercial_name.toLowerCase().includes(query)) {
-            results.push({
-              type: 'product',
-              id: product.id,
-              name: product.commercial_name,
-              image: template?.image_url,
-              linha: selectedLinha,
-              category: selectedCategory,
-              price: product.base_price || undefined,
-              companyProduct: product,
-            });
-          }
-        }
+        return template?.linha === selectedLinha && template?.category === categoryId;
       });
-      return results;
-    }
-
-    // Default: show everything based on search
-    if (!query) {
-      // Show linhas by default
-      linhas.slice(0, 6).forEach(linha => {
-        results.push({
-          type: 'linha',
-          id: linha.name,
-          name: linha.name,
-          image: linha.image,
-          count: linha.count,
-        });
-      });
+      return { products, materials: [] };
     } else {
-      // Search across everything
-      
-      // Search linhas
-      linhas.filter(l => l.name.toLowerCase().includes(query)).slice(0, 3).forEach(linha => {
-        results.push({
-          type: 'linha',
-          id: linha.name,
-          name: linha.name,
-          image: linha.image,
-          count: linha.count,
-        });
-      });
-
-      // Search categories
-      Object.entries(categoryLabels).filter(([key, label]) => 
-        label.toLowerCase().includes(query) || key.toLowerCase().includes(query)
-      ).slice(0, 3).forEach(([key, label]) => {
-        const template = productTemplates?.find(t => t.category === key);
-        if (template) {
-          results.push({
-            type: 'category',
-            id: key,
-            name: label,
-            image: template.image_url,
-            linha: template.linha || undefined,
-          });
-        }
-      });
-
-      // Search products
-      availableProducts.filter(p => 
-        p.commercial_name.toLowerCase().includes(query)
-      ).slice(0, 5).forEach(product => {
-        const template = productTemplates?.find(t => t.id === product.product_template_id);
-        results.push({
-          type: 'product',
-          id: product.id,
-          name: product.commercial_name,
-          image: template?.image_url,
-          linha: template?.linha || undefined,
-          category: template?.category,
-          price: product.base_price || undefined,
-          companyProduct: product,
-        });
-      });
-
-      // Search materials
-      availableItems.filter(item => 
-        item.name.toLowerCase().includes(query)
-      ).slice(0, 5).forEach(item => {
-        results.push({
-          type: 'material',
-          id: item.id,
-          name: item.name,
-          image: item.image_url,
-          linha: item.linha || undefined,
-          price: item.price,
-          unit: item.unit,
-          itemType: item.type,
-          itemTemplate: item,
-        });
-      });
+      const materials = availableItems.filter(
+        item => item.linha === selectedLinha && item.type === categoryId
+      );
+      return { products: [], materials };
     }
+  }, [selectedLinha, selectedCategory, availableProducts, availableItems, productTemplates]);
 
-    return results;
-  }, [searchTerm, selectedLinha, selectedCategory, linhas, categories, availableProducts, availableItems, productTemplates]);
-
-  const handleSelect = (result: SearchResult) => {
-    if (result.type === 'linha') {
-      setSelectedLinha(result.id);
-      setSearchTerm('');
-    } else if (result.type === 'category') {
-      if (result.linha) {
-        setSelectedLinha(result.linha);
-      }
-      setSelectedCategory(result.id);
-      setSearchTerm('');
-    } else if (result.type === 'product' && result.companyProduct) {
-      onSelectProduct(result.companyProduct);
-      resetSearch();
-    } else if (result.type === 'material' && result.itemTemplate) {
-      onSelectMaterial(result.itemTemplate);
-      resetSearch();
-    }
+  const handleSelectLinha = (linha: string) => {
+    setSelectedLinha(linha);
+    setStep('categories');
   };
 
-  const resetSearch = () => {
-    setSearchTerm('');
-    setSelectedLinha(null);
-    setSelectedCategory(null);
-    setIsOpen(false);
+  const handleSelectCategory = (categoryId: string) => {
+    setSelectedCategory(categoryId);
+    setStep('items');
   };
 
-  const goBack = () => {
-    if (selectedCategory) {
+  const handleBack = () => {
+    if (step === 'items') {
       setSelectedCategory(null);
-    } else if (selectedLinha) {
+      setStep('categories');
+    } else if (step === 'categories') {
       setSelectedLinha(null);
+      setStep('linhas');
     }
-    setSearchTerm('');
+  };
+
+  const handleSelectProduct = (product: CompanyProduct) => {
+    onSelectProduct(product);
+  };
+
+  const handleSelectMaterial = (item: ItemTemplate) => {
+    onSelectMaterial(item);
   };
 
   const getImageUrl = (url: string | null | undefined) => {
@@ -361,225 +263,221 @@ export function UniversalProductSearch({
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
-  const breadcrumb = useMemo(() => {
-    const parts: string[] = [];
-    if (selectedLinha) parts.push(selectedLinha);
-    if (selectedCategory) parts.push(categoryLabels[selectedCategory] || selectedCategory);
-    return parts;
-  }, [selectedLinha, selectedCategory]);
-
   return (
-    <div ref={containerRef} className="relative">
-      {/* Search Input */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          ref={inputRef}
-          placeholder={placeholder}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          onFocus={() => setIsOpen(true)}
-          className="pl-9 pr-9"
-        />
-        {(searchTerm || selectedLinha) && (
-          <button
-            type="button"
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-muted"
-            onClick={resetSearch}
+    <div className="border rounded-lg bg-card overflow-hidden">
+      {/* Header with navigation */}
+      <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 border-b">
+        {step !== 'linhas' && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2"
+            onClick={handleBack}
           >
-            <X className="h-4 w-4 text-muted-foreground" />
-          </button>
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
         )}
+        <div className="flex items-center gap-1 text-sm flex-1 min-w-0">
+          <button
+            onClick={() => { setStep('linhas'); setSelectedLinha(null); setSelectedCategory(null); }}
+            className={cn(
+              "transition-colors truncate",
+              step === 'linhas' ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            Linhas
+          </button>
+          {selectedLinha && (
+            <>
+              <ChevronRight className="w-3 h-3 text-muted-foreground shrink-0" />
+              <button
+                onClick={() => { setStep('categories'); setSelectedCategory(null); }}
+                className={cn(
+                  "transition-colors truncate",
+                  step === 'categories' ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {selectedLinha}
+              </button>
+            </>
+          )}
+          {selectedCategory && (
+            <>
+              <ChevronRight className="w-3 h-3 text-muted-foreground shrink-0" />
+              <span className="text-primary font-medium truncate">
+                {categories.find(c => c.id === selectedCategory)?.label || selectedCategory}
+              </span>
+            </>
+          )}
+        </div>
       </div>
 
-      {/* Dropdown Results */}
-      {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-popover border rounded-lg shadow-lg z-50 overflow-hidden">
-          {/* Breadcrumb Navigation */}
-          {breadcrumb.length > 0 && (
-            <div className="flex items-center gap-1 px-3 py-2 bg-muted/50 border-b text-sm">
-              <button
-                onClick={resetSearch}
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Início
-              </button>
-              {breadcrumb.map((part, index) => (
-                <div key={index} className="flex items-center gap-1">
-                  <ChevronRight className="w-3 h-3 text-muted-foreground" />
-                  <button
-                    onClick={() => {
-                      if (index === 0) {
-                        setSelectedCategory(null);
-                      }
-                    }}
-                    className={cn(
-                      "transition-colors",
-                      index === breadcrumb.length - 1 
-                        ? "text-primary font-medium" 
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    {part}
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <ScrollArea className="max-h-80">
-            {searchResults.length === 0 ? (
-              <div className="p-6 text-center text-muted-foreground">
+      <ScrollArea className="h-64">
+        {/* Step 1: Linhas */}
+        {step === 'linhas' && (
+          <div className="p-2 grid grid-cols-2 gap-2">
+            {linhas.length === 0 ? (
+              <div className="col-span-2 py-8 text-center text-muted-foreground">
                 <Package className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Nenhum resultado encontrado</p>
+                <p className="text-sm">Nenhuma linha disponível</p>
               </div>
             ) : (
-              <div className="py-1">
-                {/* Group results by type when searching */}
-                {!selectedLinha && searchTerm && (
-                  <>
-                    {/* Linhas Section */}
-                    {searchResults.filter(r => r.type === 'linha').length > 0 && (
-                      <div className="px-2 py-1">
-                        <p className="text-[10px] uppercase font-semibold text-muted-foreground px-2 mb-1">Linhas</p>
-                        {searchResults.filter(r => r.type === 'linha').map(result => (
-                          <ResultItem key={result.id} result={result} onSelect={handleSelect} getImageUrl={getImageUrl} formatCurrency={formatCurrency} />
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Categories Section */}
-                    {searchResults.filter(r => r.type === 'category').length > 0 && (
-                      <div className="px-2 py-1">
-                        <p className="text-[10px] uppercase font-semibold text-muted-foreground px-2 mb-1">Categorias</p>
-                        {searchResults.filter(r => r.type === 'category').map(result => (
-                          <ResultItem key={result.id} result={result} onSelect={handleSelect} getImageUrl={getImageUrl} formatCurrency={formatCurrency} />
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Products Section */}
-                    {searchResults.filter(r => r.type === 'product').length > 0 && (
-                      <div className="px-2 py-1">
-                        <p className="text-[10px] uppercase font-semibold text-muted-foreground px-2 mb-1">Produtos</p>
-                        {searchResults.filter(r => r.type === 'product').map(result => (
-                          <ResultItem key={result.id} result={result} onSelect={handleSelect} getImageUrl={getImageUrl} formatCurrency={formatCurrency} />
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Materials Section */}
-                    {searchResults.filter(r => r.type === 'material').length > 0 && (
-                      <div className="px-2 py-1">
-                        <p className="text-[10px] uppercase font-semibold text-muted-foreground px-2 mb-1">Materiais</p>
-                        {searchResults.filter(r => r.type === 'material').map(result => (
-                          <ResultItem key={result.id} result={result} onSelect={handleSelect} getImageUrl={getImageUrl} formatCurrency={formatCurrency} />
-                        ))}
-                      </div>
-                    )}
-                  </>
-                )}
-
-                {/* Default grid layout for browsing */}
-                {(!searchTerm || selectedLinha) && (
-                  <div className="p-2">
-                    {searchResults.map(result => (
-                      <ResultItem key={result.id} result={result} onSelect={handleSelect} getImageUrl={getImageUrl} formatCurrency={formatCurrency} />
-                    ))}
-                  </div>
-                )}
-              </div>
+              linhas.map((linha) => {
+                const imageUrl = getImageUrl(linha.image);
+                return (
+                  <button
+                    key={linha.name}
+                    onClick={() => handleSelectLinha(linha.name)}
+                    className="group relative flex flex-col items-center p-3 rounded-lg border bg-background hover:border-primary hover:shadow-md transition-all text-center"
+                  >
+                    <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center mb-2 overflow-hidden">
+                      {imageUrl ? (
+                        <img src={imageUrl} alt={linha.name} className="w-full h-full object-contain p-1" />
+                      ) : (
+                        <Package className="w-5 h-5 text-muted-foreground" />
+                      )}
+                    </div>
+                    <h3 className="font-medium text-sm group-hover:text-primary transition-colors">
+                      {linha.name}
+                    </h3>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      {linha.totalCount} itens
+                    </p>
+                    <ChevronRight className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </button>
+                );
+              })
             )}
-          </ScrollArea>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Separate component for result items
-function ResultItem({ 
-  result, 
-  onSelect, 
-  getImageUrl,
-  formatCurrency,
-}: { 
-  result: SearchResult; 
-  onSelect: (result: SearchResult) => void;
-  getImageUrl: (url: string | null | undefined) => string | null;
-  formatCurrency: (value: number) => string;
-}) {
-  const imageUrl = getImageUrl(result.image);
-  const isNavigable = result.type === 'linha' || result.type === 'category';
-
-  return (
-    <button
-      type="button"
-      onClick={() => onSelect(result)}
-      className={cn(
-        "w-full flex items-center gap-3 px-2 py-2.5 rounded-lg transition-colors text-left",
-        "hover:bg-muted/80 group"
-      )}
-    >
-      {/* Image/Icon */}
-      <div className={cn(
-        "shrink-0 rounded-lg overflow-hidden bg-muted flex items-center justify-center",
-        result.type === 'material' ? "w-10 h-10" : "w-12 h-12"
-      )}>
-        {imageUrl ? (
-          <img
-            src={imageUrl}
-            alt={result.name}
-            className="w-full h-full object-contain p-1"
-          />
-        ) : result.type === 'category' ? (
-          <span className="text-lg">{categoryIcons[result.id] || '📦'}</span>
-        ) : result.type === 'material' && result.itemType ? (
-          <span className="text-muted-foreground">{typeIcons[result.itemType] || <Package className="w-4 h-4" />}</span>
-        ) : (
-          <Package className="w-5 h-5 text-muted-foreground/50" />
+          </div>
         )}
-      </div>
 
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <p className="font-medium text-sm truncate group-hover:text-primary transition-colors">
-            {result.name}
-          </p>
-          {result.type === 'linha' && (
-            <Badge variant="secondary" className="text-[10px] px-1.5 shrink-0">Linha</Badge>
-          )}
-          {result.type === 'category' && (
-            <Badge variant="outline" className="text-[10px] px-1.5 shrink-0">Categoria</Badge>
-          )}
-          {result.type === 'material' && result.itemType && (
-            <Badge variant="outline" className="text-[10px] px-1.5 shrink-0">
-              {typeLabels[result.itemType] || result.itemType}
-            </Badge>
-          )}
-        </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-          {result.linha && result.type !== 'linha' && (
-            <span>{result.linha}</span>
-          )}
-          {result.count !== undefined && (
-            <span>{result.count} {result.count === 1 ? 'item' : 'itens'}</span>
-          )}
-          {result.unit && (
-            <span>{result.unit}</span>
-          )}
-        </div>
-      </div>
+        {/* Step 2: Categories */}
+        {step === 'categories' && (
+          <div className="p-2 space-y-1">
+            {categories.length === 0 ? (
+              <div className="py-8 text-center text-muted-foreground">
+                <Package className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">Nenhuma categoria nesta linha</p>
+              </div>
+            ) : (
+              categories.map((category) => {
+                const imageUrl = getImageUrl(category.image);
+                return (
+                  <button
+                    key={category.id}
+                    onClick={() => handleSelectCategory(category.id)}
+                    className="w-full flex items-center gap-3 p-3 rounded-lg border bg-background hover:border-primary hover:shadow-sm transition-all group"
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+                      {imageUrl ? (
+                        <img src={imageUrl} alt={category.label} className="w-full h-full object-contain p-1" />
+                      ) : (
+                        <span className="text-muted-foreground">{category.icon}</span>
+                      )}
+                    </div>
+                    <div className="flex-1 text-left min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-medium text-sm group-hover:text-primary transition-colors">
+                          {category.label}
+                        </h3>
+                        <Badge 
+                          variant={category.type === 'product' ? 'default' : 'secondary'} 
+                          className="text-[9px] px-1.5 py-0"
+                        >
+                          {category.type === 'product' ? 'Produto' : 'Material'}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {category.count} {category.count === 1 ? 'item' : 'itens'}
+                      </p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+                  </button>
+                );
+              })
+            )}
+          </div>
+        )}
 
-      {/* Price or Arrow */}
-      {result.price !== undefined ? (
-        <span className="text-sm font-semibold text-primary shrink-0">
-          {formatCurrency(result.price)}
-        </span>
-      ) : isNavigable ? (
-        <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
-      ) : null}
-    </button>
+        {/* Step 3: Items (Products or Materials) */}
+        {step === 'items' && (
+          <div className="p-2 space-y-1">
+            {items.products.length === 0 && items.materials.length === 0 ? (
+              <div className="py-8 text-center text-muted-foreground">
+                <Package className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">Nenhum item disponível</p>
+              </div>
+            ) : (
+              <>
+                {/* Products */}
+                {items.products.map((product) => {
+                  const template = productTemplates?.find(t => t.id === product.product_template_id);
+                  const imageUrl = getImageUrl(template?.image_url);
+                  return (
+                    <button
+                      key={product.id}
+                      onClick={() => handleSelectProduct(product)}
+                      className="w-full flex items-center gap-3 p-3 rounded-lg border bg-background hover:border-primary hover:shadow-sm transition-all group"
+                    >
+                      <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+                        {imageUrl ? (
+                          <img src={imageUrl} alt={product.commercial_name} className="w-full h-full object-contain p-1" />
+                        ) : (
+                          <Package className="w-5 h-5 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="flex-1 text-left min-w-0">
+                        <h3 className="font-medium text-sm group-hover:text-primary transition-colors truncate">
+                          {product.commercial_name}
+                        </h3>
+                        <p className="text-xs text-muted-foreground">Produto</p>
+                      </div>
+                      <span className="text-sm font-semibold text-primary shrink-0">
+                        {product.base_price ? formatCurrency(product.base_price) : 'Sob consulta'}
+                      </span>
+                    </button>
+                  );
+                })}
+
+                {/* Materials */}
+                {items.materials.map((item) => {
+                  const imageUrl = getImageUrl(item.image_url);
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => handleSelectMaterial(item)}
+                      className="w-full flex items-center gap-3 p-3 rounded-lg border bg-background hover:border-primary hover:shadow-sm transition-all group"
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+                        {imageUrl ? (
+                          <img src={imageUrl} alt={item.name} className="w-full h-full object-contain p-1" />
+                        ) : (
+                          <span className="text-muted-foreground">
+                            {materialTypeIcons[item.type] || <Package className="w-4 h-4" />}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex-1 text-left min-w-0">
+                        <h3 className="font-medium text-sm group-hover:text-primary transition-colors truncate">
+                          {item.name}
+                        </h3>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>{materialTypeLabels[item.type] || item.type}</span>
+                          <span>•</span>
+                          <span>{item.unit}</span>
+                        </div>
+                      </div>
+                      <span className="text-sm font-semibold text-primary shrink-0">
+                        {formatCurrency(item.price)}
+                      </span>
+                    </button>
+                  );
+                })}
+              </>
+            )}
+          </div>
+        )}
+      </ScrollArea>
+    </div>
   );
 }
