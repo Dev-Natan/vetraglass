@@ -14,10 +14,9 @@ import { Parser } from 'expr-eval';
 
 import { AbrirCaixaDialog } from '@/components/caixa/AbrirCaixaDialog';
 import { FecharCaixaDialog } from '@/components/caixa/FecharCaixaDialog';
-import { NovaVendaSheet } from '@/components/caixa/NovaVendaSheet';
+import { NovaVendaDialog, VendaItem } from '@/components/caixa/NovaVendaDialog';
 import { CaixaResumo } from '@/components/caixa/CaixaResumo';
 import { VendasTable } from '@/components/caixa/VendasTable';
-import { VendaItem } from '@/components/caixa/VendaItemCard';
 
 // Função para calcular quantidade baseada na fórmula do componente
 function calculateFormulaQuantity(formula: string, width: number, height: number, piecesQty: number): number {
@@ -554,12 +553,11 @@ export default function CaixaVendas() {
         isLoading={closeCashMutation.isPending}
       />
 
-      <NovaVendaSheet
+      <NovaVendaDialog
         open={novaVendaOpen}
         onOpenChange={setNovaVendaOpen}
         onConfirm={(data) => newSaleMutation.mutateAsync(data)}
         availableItems={availableItems}
-        availableProducts={availableProducts}
         approvedQuotes={approvedQuotes}
         isLoading={newSaleMutation.isPending}
       />
