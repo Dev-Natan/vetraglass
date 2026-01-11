@@ -195,7 +195,10 @@ export function VendaItemCard({
         {/* Total */}
         <div className="flex justify-between items-center pt-3 border-t border-primary/20">
           <span className="text-sm text-muted-foreground">
-            {item.quantity} × {formatCurrency(item.unitPrice)}
+            {areaM2 > 0 
+              ? `${areaM2.toFixed(2)} m² × ${item.quantity} × ${formatCurrency(item.unitPrice)}/m²`
+              : `${item.quantity} × ${formatCurrency(item.unitPrice)}`
+            }
           </span>
           <p className="font-bold text-lg text-primary">
             {formatCurrency(item.totalPrice)}
