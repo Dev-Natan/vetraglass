@@ -149,6 +149,9 @@ export function NovaVendaDialog({
   };
 
   // Add material item with dimensions
+  // Profile price is always per bar (6000mm = 6m), calculate proportionally when selling fractional
+  const PROFILE_BAR_LENGTH_MM = 6000;
+  
   const addMaterialWithDimensions = () => {
     if (!selectedMaterial) return;
     
@@ -158,13 +161,21 @@ export function NovaVendaDialog({
     
     // Calculate based on unit type
     let totalPrice = selectedMaterial.price * quantity;
-    const hasDimensions = width > 0 || height > 0;
+    let unitPriceDisplay = selectedMaterial.price;
     
-    // For m² or m (linear), calculate based on dimensions
-    if (selectedMaterial.unit === 'm²' && width > 0 && height > 0) {
+    if (selectedMaterial.type === 'profile') {
+      // Profile: price is per bar (6000mm), calculate proportionally
+      if (width > 0) {
+        const pricePerMm = selectedMaterial.price / PROFILE_BAR_LENGTH_MM;
+        totalPrice = pricePerMm * width * quantity;
+        unitPriceDisplay = selectedMaterial.price; // Keep bar price for display
+      }
+    } else if (selectedMaterial.unit === 'm²' && width > 0 && height > 0) {
+      // Glass/other m² items: calculate area
       const areaM2 = (width / 1000) * (height / 1000);
       totalPrice = areaM2 * selectedMaterial.price * quantity;
     } else if (selectedMaterial.unit === 'm' && (width > 0 || height > 0)) {
+      // Linear items
       const lengthM = Math.max(width, height) / 1000;
       totalPrice = lengthM * selectedMaterial.price * quantity;
     }
@@ -176,7 +187,7 @@ export function NovaVendaDialog({
       unit: selectedMaterial.unit,
       type: selectedMaterial.type,
       quantity,
-      unitPrice: selectedMaterial.price,
+      unitPrice: unitPriceDisplay,
       totalPrice,
       width: width > 0 ? width : undefined,
       height: selectedMaterial.type !== 'profile' && height > 0 ? height : undefined,
