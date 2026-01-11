@@ -2,12 +2,13 @@ import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { ArrowLeft, Search, Trash2, Download, Percent, Plus, Filter } from 'lucide-react';
+import { ArrowLeft, Search, Trash2, Download, Percent, Plus, Filter, Check, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 type ProductTemplate = {
@@ -24,6 +25,7 @@ export default function ProdutosLinha() {
   const { linha: linhaParam } = useParams<{ linha: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { currentCompany } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [showActive, setShowActive] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -59,7 +61,74 @@ export default function ProdutosLinha() {
     enabled: !!currentLinha,
   });
 
-  // Toggle active mutation
+  // Fetch company products to know which ones are activated
+  const { data: companyProducts = [] } = useQuery({
+    queryKey: ['company-products', currentCompany?.id],
+    queryFn: async () => {
+      if (!currentCompany?.id) return [];
+      const { data, error } = await supabase
+        .from('company_products')
+        .select('id, product_template_id, is_active')
+        .eq('company_id', currentCompany.id);
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!currentCompany?.id,
+  });
+
+  // Check if product is activated for this company
+  const isProductActivated = (productTemplateId: string) => {
+    return companyProducts.some(
+      cp => cp.product_template_id === productTemplateId && cp.is_active
+    );
+  };
+
+  // Activate product for company
+  const activateProductMutation = useMutation({
+    mutationFn: async (productTemplateId: string) => {
+      if (!currentCompany?.id) throw new Error('Empresa não selecionada');
+      
+      const { data, error } = await supabase.rpc('activate_product_template_for_company', {
+        _company_id: currentCompany.id,
+        _product_template_id: productTemplateId,
+      });
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-products'] });
+      toast.success('Produto ativado para venda!');
+    },
+    onError: (error) => {
+      toast.error('Erro ao ativar: ' + error.message);
+    },
+  });
+
+  // Deactivate product for company
+  const deactivateProductMutation = useMutation({
+    mutationFn: async (productTemplateId: string) => {
+      if (!currentCompany?.id) throw new Error('Empresa não selecionada');
+      
+      const { error } = await supabase
+        .from('company_products')
+        .update({ is_active: false })
+        .eq('company_id', currentCompany.id)
+        .eq('product_template_id', productTemplateId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-products'] });
+      toast.success('Produto desativado para venda');
+    },
+    onError: (error) => {
+      toast.error('Erro ao desativar: ' + error.message);
+    },
+  });
+
+  // Toggle active mutation (for templates - admin only)
   const toggleActiveMutation = useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
       const { error } = await supabase
@@ -198,7 +267,7 @@ export default function ProdutosLinha() {
                 >
                   {/* Product info */}
                   <div className="col-span-6 sm:col-span-5 flex items-center gap-3">
-                    <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center text-2xl shrink-0 p-1">
+                    <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center text-2xl shrink-0 p-1 relative">
                       {product.image_url ? (
                         <img 
                           src={product.image_url} 
@@ -208,10 +277,23 @@ export default function ProdutosLinha() {
                       ) : (
                         getCategoryIcon(product.category)
                       )}
+                      {isProductActivated(product.id) && (
+                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                          <Check className="w-3 h-3 text-white" />
+                        </div>
+                      )}
                     </div>
-                    <span className="font-medium text-foreground uppercase text-sm truncate">
-                      {product.name}
-                    </span>
+                    <div className="min-w-0">
+                      <span className="font-medium text-foreground uppercase text-sm truncate block">
+                        {product.name}
+                      </span>
+                      {isProductActivated(product.id) && (
+                        <Badge variant="secondary" className="text-xs mt-1 bg-green-100 text-green-700">
+                          <ShoppingCart className="w-3 h-3 mr-1" />
+                          Ativado para venda
+                        </Badge>
+                      )}
+                    </div>
                   </div>
 
                   {/* Hours */}
@@ -221,23 +303,36 @@ export default function ProdutosLinha() {
 
                   {/* Actions */}
                   <div className="col-span-6 sm:col-span-5 flex items-center justify-end gap-2 flex-wrap">
+                    {/* Activate/Deactivate for sale */}
+                    {isProductActivated(product.id) ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-red-600 border-red-300 hover:bg-red-50"
+                        onClick={() => deactivateProductMutation.mutate(product.id)}
+                        disabled={deactivateProductMutation.isPending}
+                      >
+                        <ShoppingCart className="w-4 h-4 mr-1" />
+                        Desativar Venda
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700"
+                        onClick={() => activateProductMutation.mutate(product.id)}
+                        disabled={activateProductMutation.isPending}
+                      >
+                        <ShoppingCart className="w-4 h-4 mr-1" />
+                        Ativar para Venda
+                      </Button>
+                    )}
                     <Button
-                      variant={product.is_active ? 'outline' : 'default'}
-                      size="sm"
-                      className={product.is_active ? 'text-yellow-600 border-yellow-600 hover:bg-yellow-50' : 'bg-green-600 hover:bg-green-700'}
-                      onClick={() => toggleActiveMutation.mutate({ 
-                        id: product.id, 
-                        is_active: !product.is_active 
-                      })}
-                    >
-                      {product.is_active ? 'Desabilitar' : 'Habilitar'}
-                    </Button>
-                    <Button
-                      variant="destructive"
+                      variant="outline"
                       size="sm"
                       onClick={() => navigate(`/produtos/editar/${product.id}`)}
                     >
-                      Editar produto
+                      Editar
                     </Button>
                   </div>
                 </div>
