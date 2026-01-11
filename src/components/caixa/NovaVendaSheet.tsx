@@ -12,13 +12,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
 import { 
-  Loader2, Search, DollarSign, CreditCard, Smartphone, ShoppingCart, 
-  Package, Layers, SquareStack, Sparkles, Wrench, X
+  Loader2, DollarSign, CreditCard, Smartphone, ShoppingCart
 } from 'lucide-react';
 import { VendaItemCard, VendaItem } from './VendaItemCard';
+import { UniversalProductSearch } from './UniversalProductSearch';
 
 interface ItemTemplate {
   id: string;
@@ -68,9 +66,6 @@ export function NovaVendaSheet({
   const [customerName, setCustomerName] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'dinheiro' | 'cartao' | 'pix'>('dinheiro');
   const [discountPercent, setDiscountPercent] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'materiais' | 'produtos'>('materiais');
-  const [typeFilter, setTypeFilter] = useState<string | null>(null);
 
   const subtotal = useMemo(() => {
     return items.reduce((sum, item) => sum + item.totalPrice, 0);
@@ -82,37 +77,6 @@ export function NovaVendaSheet({
   }, [subtotal, discountPercent]);
 
   const total = subtotal - discountValue;
-
-  // Get unique types for filter
-  const itemTypes = useMemo(() => {
-    const types = [...new Set(availableItems.map(item => item.type))];
-    return types;
-  }, [availableItems]);
-
-  const filteredItems = useMemo(() => {
-    let filtered = availableItems;
-    
-    // Filter by type if selected
-    if (typeFilter) {
-      filtered = filtered.filter(item => item.type === typeFilter);
-    }
-    
-    // Filter by search term
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(item => item.name.toLowerCase().includes(term));
-    }
-    
-    return filtered.slice(0, 30);
-  }, [availableItems, searchTerm, typeFilter]);
-
-  const filteredProducts = useMemo(() => {
-    if (!searchTerm) return availableProducts.slice(0, 20);
-    const term = searchTerm.toLowerCase();
-    return availableProducts
-      .filter((p) => p.commercial_name.toLowerCase().includes(term))
-      .slice(0, 20);
-  }, [availableProducts, searchTerm]);
 
   const addItem = (template: ItemTemplate) => {
     const existingIndex = items.findIndex((i) => i.itemTemplateId === template.id && !i.isProduct);
@@ -151,7 +115,6 @@ export function NovaVendaSheet({
       isProduct: true,
     };
     setItems([...items, newItem]);
-    setSearchTerm('');
   };
 
   const handleQuantityChange = (id: string, quantity: number) => {
@@ -200,9 +163,6 @@ export function NovaVendaSheet({
     setCustomerName('');
     setPaymentMethod('dinheiro');
     setDiscountPercent('');
-    setSearchTerm('');
-    setActiveTab('materiais');
-    setTypeFilter(null);
   };
 
   const handleClose = () => {
@@ -230,181 +190,20 @@ export function NovaVendaSheet({
         </SheetHeader>
 
         <div className="flex-1 overflow-hidden flex flex-col gap-4 py-4">
-          {/* Tabs for Materials vs Products */}
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'materiais' | 'produtos')}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="materiais" className="gap-2">
-                <Layers className="h-4 w-4" />
-                Materiais
-              </TabsTrigger>
-              <TabsTrigger value="produtos" className="gap-2">
-                <Package className="h-4 w-4" />
-                Produtos
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="materiais" className="mt-4 space-y-3">
-              {/* Type Filter Chips */}
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant={typeFilter === null ? "default" : "outline"}
-                  size="sm"
-                  className="h-7 text-xs"
-                  onClick={() => setTypeFilter(null)}
-                >
-                  Todos
-                </Button>
-                {itemTypes.map((type) => {
-                  const getTypeIcon = (t: string) => {
-                    switch (t) {
-                      case 'profile': return <SquareStack className="h-3 w-3" />;
-                      case 'glass': return <Sparkles className="h-3 w-3" />;
-                      case 'accessory': return <Wrench className="h-3 w-3" />;
-                      default: return null;
-                    }
-                  };
-                  const getTypeLabel = (t: string) => {
-                    switch (t) {
-                      case 'profile': return 'Perfis';
-                      case 'glass': return 'Vidros';
-                      case 'accessory': return 'Acessórios';
-                      case 'service': return 'Serviços';
-                      default: return t;
-                    }
-                  };
-                  return (
-                    <Button
-                      key={type}
-                      type="button"
-                      variant={typeFilter === type ? "default" : "outline"}
-                      size="sm"
-                      className="h-7 text-xs gap-1"
-                      onClick={() => setTypeFilter(typeFilter === type ? null : type)}
-                    >
-                      {getTypeIcon(type)}
-                      {getTypeLabel(type)}
-                    </Button>
-                  );
-                })}
-              </div>
-
-              {/* Search Input */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar por nome..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9 pr-9"
-                />
-                {searchTerm && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
-                    onClick={() => setSearchTerm('')}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                )}
-              </div>
-
-              {/* Results List - always show when filter is active or searching */}
-              <div className="border rounded-lg max-h-48 overflow-auto">
-                {filteredItems.length === 0 ? (
-                  <p className="p-4 text-sm text-muted-foreground text-center">
-                    Nenhum material encontrado
-                  </p>
-                ) : (
-                  filteredItems.map((item) => {
-                    const getTypeBadge = (t: string) => {
-                      switch (t) {
-                        case 'profile': return <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Perfil</Badge>;
-                        case 'glass': return <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-blue-300 text-blue-600">Vidro</Badge>;
-                        case 'accessory': return <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-300 text-amber-600">Acessório</Badge>;
-                        case 'service': return <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-green-300 text-green-600">Serviço</Badge>;
-                        default: return null;
-                      }
-                    };
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        className="w-full px-3 py-2.5 text-left hover:bg-muted flex items-center gap-3 text-sm border-b last:border-b-0 transition-colors"
-                        onClick={() => {
-                          addItem(item);
-                          setSearchTerm('');
-                        }}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{item.name}</p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            {getTypeBadge(item.type)}
-                            <span className="text-xs text-muted-foreground">{item.unit}</span>
-                          </div>
-                        </div>
-                        <span className="font-semibold text-primary whitespace-nowrap">
-                          {formatCurrency(item.price)}
-                        </span>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground text-center">
-                {filteredItems.length} de {availableItems.length} materiais
-              </p>
-            </TabsContent>
-
-            <TabsContent value="produtos" className="mt-4 space-y-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar janela, porta, box..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              {searchTerm && (
-                <div className="border rounded-lg max-h-40 overflow-auto">
-                  {filteredProducts.length === 0 ? (
-                    <p className="p-3 text-sm text-muted-foreground text-center">
-                      Nenhum produto encontrado
-                    </p>
-                  ) : (
-                    filteredProducts.map((product) => (
-                      <button
-                        key={product.id}
-                        type="button"
-                        className="w-full px-3 py-2 text-left hover:bg-muted flex items-center justify-between text-sm"
-                        onClick={() => addProduct(product)}
-                      >
-                        <div>
-                          <span className="font-medium">{product.commercial_name}</span>
-                          {product.product_template?.category && (
-                            <span className="ml-2 text-xs text-muted-foreground">
-                              ({product.product_template.category})
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-muted-foreground">
-                          {product.base_price ? formatCurrency(product.base_price) : 'Sob consulta'}
-                        </span>
-                      </button>
-                    ))
-                  )}
-                </div>
-              )}
-              {availableProducts.length === 0 && !searchTerm && (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  Nenhum produto ativo. Ative produtos na aba Produtos.
-                </p>
-              )}
-            </TabsContent>
-          </Tabs>
+          {/* Universal Search */}
+          <div className="space-y-2">
+            <Label>Adicionar Item</Label>
+            <UniversalProductSearch
+              availableItems={availableItems}
+              availableProducts={availableProducts}
+              onSelectMaterial={addItem}
+              onSelectProduct={addProduct}
+              placeholder="Buscar linha, categoria, material ou produto..."
+            />
+            <p className="text-xs text-muted-foreground">
+              {availableItems.length} materiais • {availableProducts.length} produtos disponíveis
+            </p>
+          </div>
 
           {/* Lista de Itens */}
           <div className="flex-1 overflow-hidden">
