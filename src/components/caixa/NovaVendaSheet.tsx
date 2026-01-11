@@ -7,6 +7,14 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,7 +25,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
   Loader2, DollarSign, CreditCard, Smartphone, ShoppingCart, 
-  FileText, Package, Trash2, Plus, Minus
+  FileText, Package, Trash2, Plus, Minus, Layers, Box, Info
 } from 'lucide-react';
 import { VendaItem } from './VendaItemCard';
 
@@ -28,6 +36,7 @@ interface ItemTemplate {
   type: string;
   price: number;
   linha?: string | null;
+  isDefaultPrice?: boolean;
 }
 
 interface CompanyProduct {
@@ -66,6 +75,7 @@ interface QuoteItem {
 }
 
 type VendaMode = 'orcamento' | 'avulsa';
+type AvulsaSubMode = 'materiais' | 'produtos';
 
 interface NovaVendaSheetProps {
   open: boolean;
@@ -95,6 +105,16 @@ function getLinhas(items: ItemTemplate[]): string[] {
   return Array.from(linhas).sort();
 }
 
+// Get unique linhas from products
+function getProductLinhas(products: CompanyProduct[]): string[] {
+  const linhas = new Set<string>();
+  products.forEach(product => {
+    const linha = product.product_template?.linha;
+    if (linha) linhas.add(linha);
+  });
+  return Array.from(linhas).sort();
+}
+
 export function NovaVendaSheet({
   open,
   onOpenChange,
@@ -105,16 +125,26 @@ export function NovaVendaSheet({
   isLoading = false,
 }: NovaVendaSheetProps) {
   const [mode, setMode] = useState<VendaMode>('avulsa');
+  const [avulsaSubMode, setAvulsaSubMode] = useState<AvulsaSubMode>('materiais');
   const [items, setItems] = useState<VendaItem[]>([]);
   const [customerName, setCustomerName] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'dinheiro' | 'cartao' | 'pix'>('dinheiro');
   const [discountPercent, setDiscountPercent] = useState('');
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   
-  // Avulsa mode navigation
+  // Material mode navigation
   const [selectedLinha, setSelectedLinha] = useState<string | null>(null);
   
+  // Product mode navigation and dialog
+  const [selectedProductLinha, setSelectedProductLinha] = useState<string | null>(null);
+  const [productDialogOpen, setProductDialogOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<CompanyProduct | null>(null);
+  const [productWidth, setProductWidth] = useState('');
+  const [productHeight, setProductHeight] = useState('');
+  const [productQuantity, setProductQuantity] = useState('1');
+  
   const linhas = useMemo(() => getLinhas(availableItems), [availableItems]);
+  const productLinhas = useMemo(() => getProductLinhas(availableProducts), [availableProducts]);
 
   const subtotal = useMemo(() => {
     return items.reduce((sum, item) => sum + item.totalPrice, 0);
@@ -148,9 +178,53 @@ export function NovaVendaSheet({
         unitPrice: template.price,
         totalPrice: template.price,
         isProduct: false,
+        isDefaultPrice: template.isDefaultPrice,
       };
       setItems(prev => [...prev, newItem]);
     }
+  };
+
+  // Open product dimension dialog
+  const openProductDialog = (product: CompanyProduct) => {
+    setSelectedProduct(product);
+    setProductWidth('');
+    setProductHeight('');
+    setProductQuantity('1');
+    setProductDialogOpen(true);
+  };
+
+  // Add product with dimensions
+  const addProductWithDimensions = () => {
+    if (!selectedProduct) return;
+    
+    const width = parseFloat(productWidth.replace(',', '.')) || 0;
+    const height = parseFloat(productHeight.replace(',', '.')) || 0;
+    const quantity = parseInt(productQuantity) || 1;
+    
+    if (width <= 0 || height <= 0) return;
+    
+    // Calculate price based on area (m²)
+    const areaM2 = (width / 1000) * (height / 1000);
+    const unitPrice = selectedProduct.base_price || 0;
+    const totalPrice = unitPrice * areaM2 * quantity;
+    
+    const newItem: VendaItem = {
+      id: crypto.randomUUID(),
+      companyProductId: selectedProduct.id,
+      productTemplateId: selectedProduct.product_template_id,
+      name: selectedProduct.commercial_name,
+      unit: 'm²',
+      quantity,
+      unitPrice,
+      totalPrice,
+      width,
+      height,
+      isProduct: true,
+    };
+    
+    setItems(prev => [...prev, newItem]);
+    setProductDialogOpen(false);
+    setSelectedProduct(null);
   };
 
   // Select quote and load items (orcamento mode)
@@ -180,6 +254,13 @@ export function NovaVendaSheet({
     setItems(items.map((item) => {
       if (item.id !== id) return item;
       const newQty = Math.max(1, item.quantity + delta);
+      
+      if (item.isProduct && item.width && item.height) {
+        // For products, recalculate based on area
+        const areaM2 = (item.width / 1000) * (item.height / 1000);
+        return { ...item, quantity: newQty, totalPrice: areaM2 * newQty * item.unitPrice };
+      }
+      
       return { ...item, quantity: newQty, totalPrice: newQty * item.unitPrice };
     }));
   };
@@ -209,6 +290,8 @@ export function NovaVendaSheet({
     setDiscountPercent('');
     setSelectedQuote(null);
     setSelectedLinha(null);
+    setSelectedProductLinha(null);
+    setAvulsaSubMode('materiais');
     setMode('avulsa');
   };
 
@@ -229,73 +312,125 @@ export function NovaVendaSheet({
     return availableItems.filter(item => item.linha === selectedLinha);
   }, [availableItems, selectedLinha]);
 
+  // Get products filtered by linha
+  const filteredProducts = useMemo(() => {
+    if (!selectedProductLinha) return [];
+    return availableProducts.filter(p => p.product_template?.linha === selectedProductLinha);
+  }, [availableProducts, selectedProductLinha]);
+
   return (
-    <Sheet open={open} onOpenChange={handleClose}>
-      <SheetContent className="w-full sm:max-w-2xl flex flex-col p-0">
-        <SheetHeader className="p-6 pb-4">
-          <SheetTitle className="flex items-center gap-2">
-            <ShoppingCart className="h-5 w-5" />
-            Nova Venda
-          </SheetTitle>
-          <SheetDescription>
-            Escolha o tipo de venda
-          </SheetDescription>
-        </SheetHeader>
+    <>
+      <Sheet open={open} onOpenChange={handleClose}>
+        <SheetContent className="w-full sm:max-w-2xl flex flex-col p-0">
+          <SheetHeader className="p-6 pb-4">
+            <SheetTitle className="flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5" />
+              Nova Venda
+            </SheetTitle>
+            <SheetDescription>
+              Escolha o tipo de venda
+            </SheetDescription>
+          </SheetHeader>
 
-        <div className="flex-1 overflow-hidden flex flex-col px-6">
-          {/* Mode Tabs */}
-          <Tabs value={mode} onValueChange={(v) => {
-            setMode(v as VendaMode);
-            setItems([]);
-            setSelectedQuote(null);
-            setSelectedLinha(null);
-          }} className="flex-1 flex flex-col">
-            <TabsList className="grid w-full grid-cols-2 mb-4">
-              <TabsTrigger value="orcamento" className="flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Via Orçamento
-              </TabsTrigger>
-              <TabsTrigger value="avulsa" className="flex items-center gap-2">
-                <Package className="h-4 w-4" />
-                Venda Avulsa
-              </TabsTrigger>
-            </TabsList>
+          <div className="flex-1 overflow-hidden flex flex-col px-6">
+            {/* Mode Tabs */}
+            <Tabs value={mode} onValueChange={(v) => {
+              setMode(v as VendaMode);
+              setItems([]);
+              setSelectedQuote(null);
+              setSelectedLinha(null);
+              setSelectedProductLinha(null);
+            }} className="flex-1 flex flex-col">
+              <TabsList className="grid w-full grid-cols-2 mb-4">
+                <TabsTrigger value="orcamento" className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Via Orçamento
+                </TabsTrigger>
+                <TabsTrigger value="avulsa" className="flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  Venda Avulsa
+                </TabsTrigger>
+              </TabsList>
 
-            {/* MODO ORÇAMENTO */}
-            <TabsContent value="orcamento" className="flex-1 overflow-hidden flex flex-col m-0">
-              {!selectedQuote ? (
-                <div className="flex-1 overflow-hidden">
-                  <Label className="mb-2 block">Selecione um Orçamento Aprovado</Label>
-                  {approvedQuotes.length === 0 ? (
-                    <div className="h-32 flex items-center justify-center border border-dashed rounded-lg">
-                      <p className="text-sm text-muted-foreground">
-                        Nenhum orçamento aprovado disponível
-                      </p>
+              {/* MODO ORÇAMENTO */}
+              <TabsContent value="orcamento" className="flex-1 overflow-hidden flex flex-col m-0">
+                {!selectedQuote ? (
+                  <div className="flex-1 overflow-hidden">
+                    <Label className="mb-2 block">Selecione um Orçamento Aprovado</Label>
+                    {approvedQuotes.length === 0 ? (
+                      <div className="h-32 flex items-center justify-center border border-dashed rounded-lg">
+                        <p className="text-sm text-muted-foreground">
+                          Nenhum orçamento aprovado disponível
+                        </p>
+                      </div>
+                    ) : (
+                      <ScrollArea className="h-64">
+                        <div className="space-y-2 pr-4">
+                          {approvedQuotes.map((quote) => (
+                            <Card 
+                              key={quote.id} 
+                              className="cursor-pointer hover:border-primary transition-colors"
+                              onClick={() => selectQuote(quote)}
+                            >
+                              <CardContent className="p-4">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <p className="font-medium">
+                                      Orçamento #{String(quote.quote_number).padStart(4, '0')}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">
+                                      {quote.customer_name}
+                                    </p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="font-semibold text-primary">
+                                      {formatCurrency(quote.final_amount)}
+                                    </p>
+                                    <Badge variant="secondary">{quote.quote_items?.length || 0} itens</Badge>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex-1 overflow-hidden flex flex-col">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <p className="font-medium">
+                          Orçamento #{String(selectedQuote.quote_number).padStart(4, '0')}
+                        </p>
+                        <p className="text-sm text-muted-foreground">{selectedQuote.customer_name}</p>
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => {
+                        setSelectedQuote(null);
+                        setItems([]);
+                      }}>
+                        Trocar
+                      </Button>
                     </div>
-                  ) : (
-                    <ScrollArea className="h-64">
+                    
+                    <Label className="mb-2 block">Itens do Orçamento (somente leitura)</Label>
+                    <ScrollArea className="flex-1">
                       <div className="space-y-2 pr-4">
-                        {approvedQuotes.map((quote) => (
-                          <Card 
-                            key={quote.id} 
-                            className="cursor-pointer hover:border-primary transition-colors"
-                            onClick={() => selectQuote(quote)}
-                          >
-                            <CardContent className="p-4">
+                        {items.map((item) => (
+                          <Card key={item.id} className="bg-muted/50">
+                            <CardContent className="p-3">
                               <div className="flex items-center justify-between">
                                 <div>
-                                  <p className="font-medium">
-                                    Orçamento #{String(quote.quote_number).padStart(4, '0')}
-                                  </p>
-                                  <p className="text-sm text-muted-foreground">
-                                    {quote.customer_name}
-                                  </p>
+                                  <p className="font-medium text-sm">{item.name}</p>
+                                  {item.width && item.height && (
+                                    <p className="text-xs text-muted-foreground">
+                                      {item.width}mm × {item.height}mm
+                                    </p>
+                                  )}
                                 </div>
                                 <div className="text-right">
-                                  <p className="font-semibold text-primary">
-                                    {formatCurrency(quote.final_amount)}
-                                  </p>
-                                  <Badge variant="secondary">{quote.quote_items?.length || 0} itens</Badge>
+                                  <p className="text-sm">Qtd: {item.quantity}</p>
+                                  <p className="font-semibold text-sm">{formatCurrency(item.totalPrice)}</p>
                                 </div>
                               </div>
                             </CardContent>
@@ -303,122 +438,200 @@ export function NovaVendaSheet({
                         ))}
                       </div>
                     </ScrollArea>
-                  )}
-                </div>
-              ) : (
-                <div className="flex-1 overflow-hidden flex flex-col">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <p className="font-medium">
-                        Orçamento #{String(selectedQuote.quote_number).padStart(4, '0')}
-                      </p>
-                      <p className="text-sm text-muted-foreground">{selectedQuote.customer_name}</p>
-                    </div>
-                    <Button variant="ghost" size="sm" onClick={() => {
-                      setSelectedQuote(null);
-                      setItems([]);
-                    }}>
-                      Trocar
-                    </Button>
                   </div>
-                  
-                  <Label className="mb-2 block">Itens do Orçamento (somente leitura)</Label>
-                  <ScrollArea className="flex-1">
-                    <div className="space-y-2 pr-4">
-                      {items.map((item) => (
-                        <Card key={item.id} className="bg-muted/50">
-                          <CardContent className="p-3">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="font-medium text-sm">{item.name}</p>
-                                {item.width && item.height && (
-                                  <p className="text-xs text-muted-foreground">
-                                    {item.width}mm × {item.height}mm
-                                  </p>
-                                )}
-                              </div>
-                              <div className="text-right">
-                                <p className="text-sm">Qtd: {item.quantity}</p>
-                                <p className="font-semibold text-sm">{formatCurrency(item.totalPrice)}</p>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </div>
-              )}
-            </TabsContent>
+                )}
+              </TabsContent>
 
-            {/* MODO AVULSA */}
-            <TabsContent value="avulsa" className="flex-1 overflow-hidden flex flex-col m-0">
-              {/* Step 1: Select Linha */}
-              {!selectedLinha && (
-                <div className="flex-1 overflow-hidden">
-                  <Label className="mb-2 block">Selecione a Linha</Label>
-                  <ScrollArea className="h-48">
-                    <div className="grid grid-cols-2 gap-2 pr-4">
-                      {linhas.map((linha) => (
-                        <Card 
-                          key={linha}
-                          className="cursor-pointer hover:border-primary transition-colors"
-                          onClick={() => setSelectedLinha(linha)}
-                        >
-                          <CardContent className="p-4 text-center">
-                            <p className="font-medium">{linha}</p>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </div>
-              )}
+              {/* MODO AVULSA */}
+              <TabsContent value="avulsa" className="flex-1 overflow-hidden flex flex-col m-0">
+                {/* Sub-tabs for Materiais / Produtos */}
+                <Tabs value={avulsaSubMode} onValueChange={(v) => {
+                  setAvulsaSubMode(v as AvulsaSubMode);
+                  setSelectedLinha(null);
+                  setSelectedProductLinha(null);
+                }} className="flex-1 flex flex-col">
+                  <TabsList className="grid w-full grid-cols-2 mb-4 h-9">
+                    <TabsTrigger value="materiais" className="flex items-center gap-1.5 text-xs">
+                      <Layers className="h-3.5 w-3.5" />
+                      Materiais
+                    </TabsTrigger>
+                    <TabsTrigger value="produtos" className="flex items-center gap-1.5 text-xs">
+                      <Box className="h-3.5 w-3.5" />
+                      Produtos Prontos
+                    </TabsTrigger>
+                  </TabsList>
 
-              {/* Step 2: Select Items from Linha */}
-              {selectedLinha && (
-                <div className="flex-1 overflow-hidden flex flex-col">
-                  <div className="flex items-center justify-between mb-2">
-                    <Label>Linha: {selectedLinha}</Label>
-                    <Button variant="ghost" size="sm" onClick={() => setSelectedLinha(null)}>
-                      Trocar Linha
-                    </Button>
-                  </div>
-                  
-                  <ScrollArea className="h-40 mb-4">
-                    <div className="grid grid-cols-2 gap-2 pr-4">
-                      {filteredItems.map((item) => (
-                        <Card 
-                          key={item.id}
-                          className="cursor-pointer hover:border-primary transition-colors"
-                          onClick={() => addItem(item)}
-                        >
-                          <CardContent className="p-3">
-                            <p className="font-medium text-sm truncate">{item.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {formatCurrency(item.price)} / {item.unit}
+                  {/* MATERIAIS SUB-TAB */}
+                  <TabsContent value="materiais" className="flex-1 overflow-hidden flex flex-col m-0">
+                    {/* Step 1: Select Linha */}
+                    {!selectedLinha && (
+                      <div className="flex-1 overflow-hidden">
+                        <Label className="mb-2 block">Selecione a Linha</Label>
+                        {linhas.length === 0 ? (
+                          <div className="h-32 flex items-center justify-center border border-dashed rounded-lg">
+                            <p className="text-sm text-muted-foreground">
+                              Nenhum material disponível
                             </p>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </ScrollArea>
+                          </div>
+                        ) : (
+                          <ScrollArea className="h-40">
+                            <div className="grid grid-cols-2 gap-2 pr-4">
+                              {linhas.map((linha) => (
+                                <Card 
+                                  key={linha}
+                                  className="cursor-pointer hover:border-primary transition-colors"
+                                  onClick={() => setSelectedLinha(linha)}
+                                >
+                                  <CardContent className="p-3 text-center">
+                                    <p className="font-medium text-sm">{linha}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {availableItems.filter(i => i.linha === linha).length} itens
+                                    </p>
+                                  </CardContent>
+                                </Card>
+                              ))}
+                            </div>
+                          </ScrollArea>
+                        )}
+                      </div>
+                    )}
 
-                  {/* Items added */}
+                    {/* Step 2: Select Items from Linha */}
+                    {selectedLinha && (
+                      <div className="flex-1 overflow-hidden flex flex-col">
+                        <div className="flex items-center justify-between mb-2">
+                          <Label>Linha: {selectedLinha}</Label>
+                          <Button variant="ghost" size="sm" onClick={() => setSelectedLinha(null)}>
+                            Trocar Linha
+                          </Button>
+                        </div>
+                        
+                        <ScrollArea className="h-32 mb-4">
+                          <div className="grid grid-cols-2 gap-2 pr-4">
+                            {filteredItems.map((item) => (
+                              <Card 
+                                key={item.id}
+                                className="cursor-pointer hover:border-primary transition-colors"
+                                onClick={() => addItem(item)}
+                              >
+                                <CardContent className="p-3">
+                                  <div className="flex items-center gap-1">
+                                    <p className="font-medium text-sm truncate flex-1">{item.name}</p>
+                                    {item.isDefaultPrice && (
+                                      <Info className="h-3 w-3 text-muted-foreground shrink-0" />
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-muted-foreground">
+                                    {formatCurrency(item.price)} / {item.unit}
+                                  </p>
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
+                        </ScrollArea>
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  {/* PRODUTOS PRONTOS SUB-TAB */}
+                  <TabsContent value="produtos" className="flex-1 overflow-hidden flex flex-col m-0">
+                    {/* Step 1: Select Product Linha */}
+                    {!selectedProductLinha && (
+                      <div className="flex-1 overflow-hidden">
+                        <Label className="mb-2 block">Selecione a Linha do Produto</Label>
+                        {productLinhas.length === 0 ? (
+                          <div className="h-32 flex items-center justify-center border border-dashed rounded-lg">
+                            <p className="text-sm text-muted-foreground">
+                              Nenhum produto pronto disponível
+                            </p>
+                          </div>
+                        ) : (
+                          <ScrollArea className="h-40">
+                            <div className="grid grid-cols-2 gap-2 pr-4">
+                              {productLinhas.map((linha) => (
+                                <Card 
+                                  key={linha}
+                                  className="cursor-pointer hover:border-primary transition-colors"
+                                  onClick={() => setSelectedProductLinha(linha)}
+                                >
+                                  <CardContent className="p-3 text-center">
+                                    <p className="font-medium text-sm">{linha}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {availableProducts.filter(p => p.product_template?.linha === linha).length} produtos
+                                    </p>
+                                  </CardContent>
+                                </Card>
+                              ))}
+                            </div>
+                          </ScrollArea>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Step 2: Select Product from Linha */}
+                    {selectedProductLinha && (
+                      <div className="flex-1 overflow-hidden flex flex-col">
+                        <div className="flex items-center justify-between mb-2">
+                          <Label>Linha: {selectedProductLinha}</Label>
+                          <Button variant="ghost" size="sm" onClick={() => setSelectedProductLinha(null)}>
+                            Trocar Linha
+                          </Button>
+                        </div>
+                        
+                        <ScrollArea className="h-32 mb-4">
+                          <div className="grid grid-cols-2 gap-2 pr-4">
+                            {filteredProducts.map((product) => (
+                              <Card 
+                                key={product.id}
+                                className="cursor-pointer hover:border-primary transition-colors"
+                                onClick={() => openProductDialog(product)}
+                              >
+                                <CardContent className="p-3">
+                                  <p className="font-medium text-sm truncate">{product.commercial_name}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {formatCurrency(product.base_price || 0)} / m²
+                                  </p>
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
+                        </ScrollArea>
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  {/* Items added - shown for both sub-modes */}
                   {items.length > 0 && (
-                    <>
+                    <div className="flex-1 overflow-hidden flex flex-col">
                       <Label className="mb-2 block">Itens Adicionados ({items.length})</Label>
                       <ScrollArea className="flex-1">
                         <div className="space-y-2 pr-4">
                           {items.map((item) => (
-                            <Card key={item.id}>
+                            <Card key={item.id} className={item.isProduct ? 'border-primary/30 bg-primary/5' : ''}>
                               <CardContent className="p-3">
                                 <div className="flex items-center justify-between">
                                   <div className="flex-1 min-w-0">
-                                    <p className="font-medium text-sm truncate">{item.name}</p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {formatCurrency(item.unitPrice)} × {item.quantity} = {formatCurrency(item.totalPrice)}
-                                    </p>
+                                    <div className="flex items-center gap-2">
+                                      <p className="font-medium text-sm truncate">{item.name}</p>
+                                      {item.isProduct && (
+                                        <Badge variant="secondary" className="text-[10px] h-4">Produto</Badge>
+                                      )}
+                                      {item.isDefaultPrice && (
+                                        <Badge variant="outline" className="text-[10px] h-4">
+                                          <Info className="h-2.5 w-2.5 mr-0.5" />
+                                          Padrão
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    {item.isProduct && item.width && item.height ? (
+                                      <p className="text-xs text-muted-foreground">
+                                        {item.width}mm × {item.height}mm = {((item.width/1000)*(item.height/1000)).toFixed(2)} m²
+                                      </p>
+                                    ) : (
+                                      <p className="text-xs text-muted-foreground">
+                                        {formatCurrency(item.unitPrice)} × {item.quantity} = {formatCurrency(item.totalPrice)}
+                                      </p>
+                                    )}
                                   </div>
                                   <div className="flex items-center gap-1 ml-2">
                                     <Button
@@ -453,110 +666,205 @@ export function NovaVendaSheet({
                           ))}
                         </div>
                       </ScrollArea>
-                    </>
+                    </div>
                   )}
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
+                </Tabs>
+              </TabsContent>
+            </Tabs>
 
-          {/* Payment Section - Show when items exist */}
-          {items.length > 0 && (
-            <div className="space-y-4 border-t pt-4 mt-4">
-              {mode === 'avulsa' && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="customer-name">Cliente (opcional)</Label>
-                    <Input
-                      id="customer-name"
-                      placeholder="Nome do cliente"
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="discount">Desconto (%)</Label>
-                    <Input
-                      id="discount"
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="0"
-                      value={discountPercent}
-                      onChange={(e) => setDiscountPercent(e.target.value)}
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label>Forma de Pagamento</Label>
-                <RadioGroup
-                  value={paymentMethod}
-                  onValueChange={(v) => setPaymentMethod(v as 'dinheiro' | 'cartao' | 'pix')}
-                  className="flex gap-4"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="dinheiro" id="dinheiro" />
-                    <Label htmlFor="dinheiro" className="flex items-center gap-1 cursor-pointer">
-                      <DollarSign className="h-4 w-4" /> Dinheiro
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="cartao" id="cartao" />
-                    <Label htmlFor="cartao" className="flex items-center gap-1 cursor-pointer">
-                      <CreditCard className="h-4 w-4" /> Cartão
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="pix" id="pix" />
-                    <Label htmlFor="pix" className="flex items-center gap-1 cursor-pointer">
-                      <Smartphone className="h-4 w-4" /> PIX
-                    </Label>
-                  </div>
-                </RadioGroup>
-              </div>
-
-              {/* Totais */}
-              <div className="border-t pt-4 space-y-1">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Subtotal:</span>
-                  <span>{formatCurrency(subtotal)}</span>
-                </div>
-                {discountValue > 0 && (
-                  <div className="flex justify-between text-sm text-green-600">
-                    <span>Desconto ({discountPercent}%):</span>
-                    <span>-{formatCurrency(discountValue)}</span>
+            {/* Payment Section - Show when items exist */}
+            {items.length > 0 && (
+              <div className="space-y-4 border-t pt-4 mt-4">
+                {mode === 'avulsa' && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="customer-name">Cliente (opcional)</Label>
+                      <Input
+                        id="customer-name"
+                        placeholder="Nome do cliente"
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="discount">Desconto (%)</Label>
+                      <Input
+                        id="discount"
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="0"
+                        value={discountPercent}
+                        onChange={(e) => setDiscountPercent(e.target.value)}
+                      />
+                    </div>
                   </div>
                 )}
-                <div className="flex justify-between text-lg font-bold">
-                  <span>Total:</span>
-                  <span className="text-primary">{formatCurrency(total)}</span>
+
+                <div className="space-y-2">
+                  <Label>Forma de Pagamento</Label>
+                  <RadioGroup
+                    value={paymentMethod}
+                    onValueChange={(v) => setPaymentMethod(v as 'dinheiro' | 'cartao' | 'pix')}
+                    className="flex gap-4"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="dinheiro" id="dinheiro" />
+                      <Label htmlFor="dinheiro" className="flex items-center gap-1 cursor-pointer">
+                        <DollarSign className="h-4 w-4" /> Dinheiro
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="cartao" id="cartao" />
+                      <Label htmlFor="cartao" className="flex items-center gap-1 cursor-pointer">
+                        <CreditCard className="h-4 w-4" /> Cartão
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="pix" id="pix" />
+                      <Label htmlFor="pix" className="flex items-center gap-1 cursor-pointer">
+                        <Smartphone className="h-4 w-4" /> PIX
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+
+                {/* Totais */}
+                <div className="border-t pt-4 space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Subtotal:</span>
+                    <span>{formatCurrency(subtotal)}</span>
+                  </div>
+                  {discountValue > 0 && (
+                    <div className="flex justify-between text-sm text-green-600">
+                      <span>Desconto ({discountPercent}%):</span>
+                      <span>-{formatCurrency(discountValue)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-lg font-bold">
+                    <span>Total:</span>
+                    <span className="text-primary">{formatCurrency(total)}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
-
-        <SheetFooter className="border-t p-6">
-          <Button variant="outline" onClick={handleClose} disabled={isLoading}>
-            Cancelar
-          </Button>
-          <Button 
-            onClick={handleConfirm} 
-            disabled={isLoading || items.length === 0}
-            className="flex-1 sm:flex-initial"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Finalizando...
-              </>
-            ) : (
-              `Faturar Venda ${formatCurrency(total)}`
             )}
-          </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+          </div>
+
+          <SheetFooter className="border-t p-6">
+            <Button variant="outline" onClick={handleClose} disabled={isLoading}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleConfirm} 
+              disabled={isLoading || items.length === 0}
+              className="flex-1 sm:flex-initial"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Finalizando...
+                </>
+              ) : (
+                `Faturar Venda ${formatCurrency(total)}`
+              )}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+
+      {/* Product Dimensions Dialog */}
+      <Dialog open={productDialogOpen} onOpenChange={setProductDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Box className="h-5 w-5" />
+              Dimensões do Produto
+            </DialogTitle>
+            <DialogDescription>
+              {selectedProduct?.commercial_name}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="product-width">Largura (mm)</Label>
+                <Input
+                  id="product-width"
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="1200"
+                  value={productWidth}
+                  onChange={(e) => setProductWidth(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="product-height">Altura (mm)</Label>
+                <Input
+                  id="product-height"
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="1800"
+                  value={productHeight}
+                  onChange={(e) => setProductHeight(e.target.value)}
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="product-qty">Quantidade</Label>
+              <Input
+                id="product-qty"
+                type="text"
+                inputMode="numeric"
+                placeholder="1"
+                value={productQuantity}
+                onChange={(e) => setProductQuantity(e.target.value)}
+              />
+            </div>
+            
+            {/* Preview calculation */}
+            {parseFloat(productWidth) > 0 && parseFloat(productHeight) > 0 && (
+              <div className="p-4 bg-muted rounded-lg space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Área:</span>
+                  <span>
+                    {((parseFloat(productWidth.replace(',', '.')) / 1000) * 
+                      (parseFloat(productHeight.replace(',', '.')) / 1000)).toFixed(2)} m²
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Preço/m²:</span>
+                  <span>{formatCurrency(selectedProduct?.base_price || 0)}</span>
+                </div>
+                <div className="flex justify-between font-medium pt-2 border-t">
+                  <span>Total estimado:</span>
+                  <span className="text-primary">
+                    {formatCurrency(
+                      (selectedProduct?.base_price || 0) * 
+                      ((parseFloat(productWidth.replace(',', '.')) || 0) / 1000) * 
+                      ((parseFloat(productHeight.replace(',', '.')) || 0) / 1000) *
+                      (parseInt(productQuantity) || 1)
+                    )}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setProductDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={addProductWithDimensions}
+              disabled={!productWidth || !productHeight || parseFloat(productWidth) <= 0 || parseFloat(productHeight) <= 0}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Adicionar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

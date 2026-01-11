@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Trash2, Plus, Minus, Package, Ruler } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Trash2, Plus, Minus, Package, Ruler, Info } from 'lucide-react';
 
 export interface VendaItem {
   id: string;
@@ -15,6 +16,7 @@ export interface VendaItem {
   width?: number;
   height?: number;
   isProduct?: boolean;
+  isDefaultPrice?: boolean;
 }
 
 interface VendaItemCardProps {
@@ -213,7 +215,15 @@ export function VendaItemCard({
   return (
     <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-sm truncate">{item.name}</p>
+        <div className="flex items-center gap-2">
+          <p className="font-medium text-sm truncate">{item.name}</p>
+          {item.isDefaultPrice && (
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-normal text-muted-foreground">
+              <Info className="h-2.5 w-2.5 mr-0.5" />
+              Preço padrão
+            </Badge>
+          )}
+        </div>
         <p className="text-xs text-muted-foreground">
           {isLinearMeter ? `${item.unit} (preço/metro)` : item.unit}
         </p>

@@ -88,44 +88,54 @@ export default function CaixaVendas() {
     enabled: !!openCashRegister?.id,
   });
 
-  // Buscar itens disponíveis com preço da empresa
+  // Buscar todos os itens disponíveis com fallback de preço
   const { data: availableItems = [] } = useQuery({
     queryKey: ['available-items', currentCompany?.id],
     queryFn: async () => {
       if (!currentCompany?.id) return [];
       
-      // Buscar itens com preço da empresa
-      const { data: itemPrices, error: pricesError } = await supabase
+      // Buscar todos os item_templates ativos
+      const { data: allItems, error: itemsError } = await supabase
+        .from('item_templates')
+        .select('id, name, unit, type, linha, default_price')
+        .eq('is_active', true);
+      
+      if (itemsError) throw itemsError;
+      
+      // Buscar preços da empresa
+      const { data: companyPrices, error: pricesError } = await supabase
         .from('company_item_prices')
-        .select(`
-          price,
-          item_template:item_templates (
-            id,
-            name,
-            unit,
-            type,
-            linha
-          )
-        `)
+        .select('item_template_id, price')
         .eq('company_id', currentCompany.id);
       
       if (pricesError) throw pricesError;
       
-      return (itemPrices || [])
-        .filter((ip) => ip.item_template)
-        .map((ip) => ({
-          id: (ip.item_template as any).id,
-          name: (ip.item_template as any).name,
-          unit: (ip.item_template as any).unit,
-          type: (ip.item_template as any).type,
-          linha: (ip.item_template as any).linha,
-          price: ip.price || 0,
-        }));
+      // Mapear preços: company_price ?? default_price
+      const priceMap = new Map<string, number>();
+      (companyPrices || []).forEach(cp => {
+        if (cp.item_template_id && cp.price !== null) {
+          priceMap.set(cp.item_template_id, cp.price);
+        }
+      });
+      
+      return (allItems || []).map(item => {
+        const companyPrice = priceMap.get(item.id);
+        const hasCompanyPrice = companyPrice !== undefined;
+        return {
+          id: item.id,
+          name: item.name,
+          unit: item.unit,
+          type: item.type,
+          linha: item.linha,
+          price: hasCompanyPrice ? companyPrice : (item.default_price || 0),
+          isDefaultPrice: !hasCompanyPrice,
+        };
+      });
     },
     enabled: !!currentCompany?.id,
   });
 
-  // Buscar produtos da empresa com product_template_id
+  // Buscar produtos da empresa com product_template_id e linha
   const { data: availableProducts = [] } = useQuery({
     queryKey: ['available-products', currentCompany?.id],
     queryFn: async () => {
@@ -140,7 +150,8 @@ export default function CaixaVendas() {
           product_template_id,
           product_template:product_templates (
             name,
-            category
+            category,
+            linha
           )
         `)
         .eq('company_id', currentCompany.id)
