@@ -13,7 +13,11 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Search, DollarSign, CreditCard, Smartphone, ShoppingCart, Package, Layers } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { 
+  Loader2, Search, DollarSign, CreditCard, Smartphone, ShoppingCart, 
+  Package, Layers, SquareStack, Sparkles, Wrench, X
+} from 'lucide-react';
 import { VendaItemCard, VendaItem } from './VendaItemCard';
 
 interface ItemTemplate {
@@ -65,6 +69,7 @@ export function NovaVendaSheet({
   const [discountPercent, setDiscountPercent] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'materiais' | 'produtos'>('materiais');
+  const [typeFilter, setTypeFilter] = useState<string | null>(null);
 
   const subtotal = useMemo(() => {
     return items.reduce((sum, item) => sum + item.totalPrice, 0);
@@ -77,13 +82,28 @@ export function NovaVendaSheet({
 
   const total = subtotal - discountValue;
 
+  // Get unique types for filter
+  const itemTypes = useMemo(() => {
+    const types = [...new Set(availableItems.map(item => item.type))];
+    return types;
+  }, [availableItems]);
+
   const filteredItems = useMemo(() => {
-    if (!searchTerm) return availableItems.slice(0, 20);
-    const term = searchTerm.toLowerCase();
-    return availableItems
-      .filter((item) => item.name.toLowerCase().includes(term))
-      .slice(0, 20);
-  }, [availableItems, searchTerm]);
+    let filtered = availableItems;
+    
+    // Filter by type if selected
+    if (typeFilter) {
+      filtered = filtered.filter(item => item.type === typeFilter);
+    }
+    
+    // Filter by search term
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(item => item.name.toLowerCase().includes(term));
+    }
+    
+    return filtered.slice(0, 30);
+  }, [availableItems, searchTerm, typeFilter]);
 
   const filteredProducts = useMemo(() => {
     if (!searchTerm) return availableProducts.slice(0, 20);
@@ -181,6 +201,7 @@ export function NovaVendaSheet({
     setDiscountPercent('');
     setSearchTerm('');
     setActiveTab('materiais');
+    setTypeFilter(null);
   };
 
   const handleClose = () => {
@@ -221,42 +242,119 @@ export function NovaVendaSheet({
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="materiais" className="mt-4 space-y-2">
+            <TabsContent value="materiais" className="mt-4 space-y-3">
+              {/* Type Filter Chips */}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant={typeFilter === null ? "default" : "outline"}
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => setTypeFilter(null)}
+                >
+                  Todos
+                </Button>
+                {itemTypes.map((type) => {
+                  const getTypeIcon = (t: string) => {
+                    switch (t) {
+                      case 'profile': return <SquareStack className="h-3 w-3" />;
+                      case 'glass': return <Sparkles className="h-3 w-3" />;
+                      case 'accessory': return <Wrench className="h-3 w-3" />;
+                      default: return null;
+                    }
+                  };
+                  const getTypeLabel = (t: string) => {
+                    switch (t) {
+                      case 'profile': return 'Perfis';
+                      case 'glass': return 'Vidros';
+                      case 'accessory': return 'Acessórios';
+                      case 'service': return 'Serviços';
+                      default: return t;
+                    }
+                  };
+                  return (
+                    <Button
+                      key={type}
+                      type="button"
+                      variant={typeFilter === type ? "default" : "outline"}
+                      size="sm"
+                      className="h-7 text-xs gap-1"
+                      onClick={() => setTypeFilter(typeFilter === type ? null : type)}
+                    >
+                      {getTypeIcon(type)}
+                      {getTypeLabel(type)}
+                    </Button>
+                  );
+                })}
+              </div>
+
+              {/* Search Input */}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar perfil, vidro, acessório..."
+                  placeholder="Buscar por nome..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
+                  className="pl-9 pr-9"
                 />
+                {searchTerm && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                    onClick={() => setSearchTerm('')}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                )}
               </div>
-              {searchTerm && (
-                <div className="border rounded-lg max-h-40 overflow-auto">
-                  {filteredItems.length === 0 ? (
-                    <p className="p-3 text-sm text-muted-foreground text-center">
-                      Nenhum material encontrado
-                    </p>
-                  ) : (
-                    filteredItems.map((item) => (
+
+              {/* Results List - always show when filter is active or searching */}
+              <div className="border rounded-lg max-h-48 overflow-auto">
+                {filteredItems.length === 0 ? (
+                  <p className="p-4 text-sm text-muted-foreground text-center">
+                    Nenhum material encontrado
+                  </p>
+                ) : (
+                  filteredItems.map((item) => {
+                    const getTypeBadge = (t: string) => {
+                      switch (t) {
+                        case 'profile': return <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Perfil</Badge>;
+                        case 'glass': return <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-blue-300 text-blue-600">Vidro</Badge>;
+                        case 'accessory': return <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-300 text-amber-600">Acessório</Badge>;
+                        case 'service': return <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-green-300 text-green-600">Serviço</Badge>;
+                        default: return null;
+                      }
+                    };
+                    return (
                       <button
                         key={item.id}
                         type="button"
-                        className="w-full px-3 py-2 text-left hover:bg-muted flex items-center justify-between text-sm"
+                        className="w-full px-3 py-2.5 text-left hover:bg-muted flex items-center gap-3 text-sm border-b last:border-b-0 transition-colors"
                         onClick={() => {
                           addItem(item);
                           setSearchTerm('');
                         }}
                       >
-                        <span>{item.name}</span>
-                        <span className="text-muted-foreground">
-                          {formatCurrency(item.price)}/{item.unit}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{item.name}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            {getTypeBadge(item.type)}
+                            <span className="text-xs text-muted-foreground">{item.unit}</span>
+                          </div>
+                        </div>
+                        <span className="font-semibold text-primary whitespace-nowrap">
+                          {formatCurrency(item.price)}
                         </span>
                       </button>
-                    ))
-                  )}
-                </div>
-              )}
+                    );
+                  })
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground text-center">
+                {filteredItems.length} de {availableItems.length} materiais
+              </p>
             </TabsContent>
 
             <TabsContent value="produtos" className="mt-4 space-y-2">
