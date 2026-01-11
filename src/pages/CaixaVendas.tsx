@@ -17,6 +17,7 @@ import { FecharCaixaDialog } from '@/components/caixa/FecharCaixaDialog';
 import { NovaVendaDialog, VendaItem } from '@/components/caixa/NovaVendaDialog';
 import { CaixaResumo } from '@/components/caixa/CaixaResumo';
 import { VendasTable } from '@/components/caixa/VendasTable';
+import { CancelarVendaDialog } from '@/components/caixa/CancelarVendaDialog';
 
 // Função para calcular quantidade baseada na fórmula do componente
 function calculateFormulaQuantity(formula: string, width: number, height: number, piecesQty: number): number {
@@ -42,6 +43,16 @@ function calculateFormulaQuantity(formula: string, width: number, height: number
   }
 }
 
+interface Sale {
+  id: string;
+  sale_number: number;
+  customer_name: string | null;
+  total_amount: number;
+  payment_method: string;
+  payment_status: string;
+  created_at: string;
+}
+
 export default function CaixaVendas() {
   const { currentCompany, user } = useAuth();
   const queryClient = useQueryClient();
@@ -49,6 +60,8 @@ export default function CaixaVendas() {
   const [abrirCaixaOpen, setAbrirCaixaOpen] = useState(false);
   const [fecharCaixaOpen, setFecharCaixaOpen] = useState(false);
   const [novaVendaOpen, setNovaVendaOpen] = useState(false);
+  const [cancelarVendaOpen, setCancelarVendaOpen] = useState(false);
+  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
 
   // Buscar caixa aberto
   const { data: openCashRegister, isLoading: loadingCashRegister } = useQuery({
@@ -200,16 +213,17 @@ export default function CaixaVendas() {
     enabled: !!currentCompany?.id,
   });
 
-  // Calcular resumo do caixa
+  // Calcular resumo do caixa (excluindo vendas canceladas)
   const cashSummary = useMemo(() => {
     const openingAmount = openCashRegister?.opening_amount || 0;
-    const totalDinheiro = todaySales
+    const activeSales = todaySales.filter((s) => s.payment_status !== 'cancelled');
+    const totalDinheiro = activeSales
       .filter((s) => s.payment_method === 'dinheiro')
       .reduce((sum, s) => sum + (s.total_amount || 0), 0);
-    const totalCartao = todaySales
+    const totalCartao = activeSales
       .filter((s) => s.payment_method === 'cartao')
       .reduce((sum, s) => sum + (s.total_amount || 0), 0);
-    const totalPix = todaySales
+    const totalPix = activeSales
       .filter((s) => s.payment_method === 'pix')
       .reduce((sum, s) => sum + (s.total_amount || 0), 0);
     const totalVendas = totalDinheiro + totalCartao + totalPix;
@@ -450,6 +464,123 @@ export default function CaixaVendas() {
     },
   });
 
+  // Mutation: Cancelar venda
+  const cancelSaleMutation = useMutation({
+    mutationFn: async ({ saleId, reason }: { saleId: string; reason: string }) => {
+      if (!currentCompany?.id) throw new Error('Empresa não encontrada');
+
+      // 1. Buscar itens da venda para restaurar estoque
+      const { data: saleItems, error: itemsError } = await supabase
+        .from('sale_items')
+        .select(`
+          id,
+          item_template_id,
+          company_product_id,
+          quantity,
+          width,
+          height
+        `)
+        .eq('sale_id', saleId);
+
+      if (itemsError) throw itemsError;
+
+      // 2. Restaurar estoque dos itens
+      const stockRestorations: Map<string, number> = new Map();
+
+      // Restaurar materiais diretos
+      for (const item of saleItems || []) {
+        if (item.item_template_id && !item.company_product_id) {
+          const currentQty = stockRestorations.get(item.item_template_id) || 0;
+          stockRestorations.set(item.item_template_id, currentQty + item.quantity);
+        }
+      }
+
+      // Restaurar componentes de produtos
+      for (const item of saleItems || []) {
+        if (item.company_product_id && item.width && item.height) {
+          // Buscar product_template_id do company_product
+          const { data: companyProduct } = await supabase
+            .from('company_products')
+            .select('product_template_id')
+            .eq('id', item.company_product_id)
+            .single();
+
+          if (!companyProduct?.product_template_id) continue;
+
+          // Buscar componentes do produto
+          const { data: templateItems } = await supabase
+            .from('product_template_items')
+            .select('item_template_id, quantity_formula, pieces_quantity')
+            .eq('product_template_id', companyProduct.product_template_id)
+            .or(`company_id.is.null,company_id.eq.${currentCompany.id}`);
+
+          for (const templateItem of templateItems || []) {
+            if (!templateItem.item_template_id || !templateItem.quantity_formula) continue;
+
+            const componentQty = calculateFormulaQuantity(
+              templateItem.quantity_formula,
+              item.width,
+              item.height,
+              templateItem.pieces_quantity || 1
+            ) * item.quantity;
+
+            if (componentQty > 0) {
+              const currentQty = stockRestorations.get(templateItem.item_template_id) || 0;
+              stockRestorations.set(templateItem.item_template_id, currentQty + componentQty);
+            }
+          }
+        }
+      }
+
+      // Aplicar restaurações de estoque
+      for (const [itemTemplateId, restoreQty] of stockRestorations) {
+        const { data: stockItem } = await supabase
+          .from('company_stock')
+          .select('id, quantity')
+          .eq('company_id', currentCompany.id)
+          .eq('item_template_id', itemTemplateId)
+          .maybeSingle();
+
+        if (stockItem) {
+          await supabase
+            .from('company_stock')
+            .update({ quantity: stockItem.quantity + restoreQty })
+            .eq('id', stockItem.id);
+        }
+      }
+
+      // 3. Atualizar status da venda para cancelada
+      const { data: sale, error: saleError } = await supabase
+        .from('sales')
+        .update({
+          payment_status: 'cancelled',
+          notes: reason ? `Cancelado: ${reason}` : 'Venda cancelada',
+        })
+        .eq('id', saleId)
+        .select()
+        .single();
+
+      if (saleError) throw saleError;
+
+      return sale;
+    },
+    onSuccess: (sale) => {
+      toast.success(`Venda #${String(sale.sale_number).padStart(4, '0')} cancelada!`);
+      queryClient.invalidateQueries({ queryKey: ['sales-today'] });
+      queryClient.invalidateQueries({ queryKey: ['company-stock'] });
+      setCancelarVendaOpen(false);
+      setSelectedSale(null);
+    },
+    onError: (error: Error) => {
+      toast.error(`Erro ao cancelar venda: ${error.message}`);
+    },
+  });
+
+  const handleCancelSale = (sale: Sale) => {
+    setSelectedSale(sale);
+    setCancelarVendaOpen(true);
+  };
+
   const isCashOpen = !!openCashRegister;
 
   return (
@@ -511,10 +642,15 @@ export default function CaixaVendas() {
                 <CardTitle className="text-lg font-semibold">
                   Vendas de Hoje
                 </CardTitle>
-                <Badge variant="secondary">{todaySales.length} vendas</Badge>
+                <Badge variant="secondary">
+                  {todaySales.filter(s => s.payment_status !== 'cancelled').length} vendas
+                </Badge>
               </CardHeader>
               <CardContent>
-                <VendasTable sales={todaySales} />
+                <VendasTable 
+                  sales={todaySales} 
+                  onCancelSale={handleCancelSale}
+                />
               </CardContent>
             </Card>
           </>
@@ -560,6 +696,14 @@ export default function CaixaVendas() {
         availableItems={availableItems}
         approvedQuotes={approvedQuotes}
         isLoading={newSaleMutation.isPending}
+      />
+
+      <CancelarVendaDialog
+        open={cancelarVendaOpen}
+        onOpenChange={setCancelarVendaOpen}
+        sale={selectedSale}
+        onConfirm={(saleId, reason) => cancelSaleMutation.mutateAsync({ saleId, reason })}
+        isLoading={cancelSaleMutation.isPending}
       />
     </MainLayout>
   );

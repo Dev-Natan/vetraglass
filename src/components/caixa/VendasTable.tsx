@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye, DollarSign, CreditCard, Smartphone } from 'lucide-react';
+import { Eye, DollarSign, CreditCard, Smartphone, XCircle } from 'lucide-react';
 
 interface Sale {
   id: string;
@@ -25,6 +25,7 @@ interface Sale {
 interface VendasTableProps {
   sales: Sale[];
   onViewDetails?: (sale: Sale) => void;
+  onCancelSale?: (sale: Sale) => void;
 }
 
 const paymentMethodConfig = {
@@ -33,7 +34,7 @@ const paymentMethodConfig = {
   pix: { label: 'PIX', icon: Smartphone, color: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' },
 };
 
-export function VendasTable({ sales, onViewDetails }: VendasTableProps) {
+export function VendasTable({ sales, onViewDetails, onCancelSale }: VendasTableProps) {
   const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
@@ -55,17 +56,19 @@ export function VendasTable({ sales, onViewDetails }: VendasTableProps) {
             <TableHead className="w-24">Hora</TableHead>
             <TableHead>Cliente</TableHead>
             <TableHead className="w-32">Pagamento</TableHead>
+            <TableHead className="w-24">Status</TableHead>
             <TableHead className="w-32 text-right">Total</TableHead>
-            <TableHead className="w-16"></TableHead>
+            <TableHead className="w-24"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {sales.map((sale) => {
             const config = paymentMethodConfig[sale.payment_method as keyof typeof paymentMethodConfig] || paymentMethodConfig.dinheiro;
             const Icon = config.icon;
+            const isCancelled = sale.payment_status === 'cancelled';
             
             return (
-              <TableRow key={sale.id}>
+              <TableRow key={sale.id} className={isCancelled ? 'opacity-60' : ''}>
                 <TableCell className="font-mono text-sm">
                   {String(sale.sale_number).padStart(4, '0')}
                 </TableCell>
@@ -83,18 +86,40 @@ export function VendasTable({ sales, onViewDetails }: VendasTableProps) {
                     {config.label}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right font-medium">
+                <TableCell>
+                  {isCancelled ? (
+                    <Badge variant="destructive">Cancelada</Badge>
+                  ) : (
+                    <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                      Paga
+                    </Badge>
+                  )}
+                </TableCell>
+                <TableCell className={`text-right font-medium ${isCancelled ? 'line-through' : ''}`}>
                   {formatCurrency(sale.total_amount)}
                 </TableCell>
                 <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => onViewDetails?.(sale)}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => onViewDetails?.(sale)}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    {!isCancelled && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        onClick={() => onCancelSale?.(sale)}
+                        title="Cancelar venda"
+                      >
+                        <XCircle className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             );
