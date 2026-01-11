@@ -25,6 +25,9 @@ export function VendaItemCard({
   onPriceChange,
   onRemove,
 }: VendaItemCardProps) {
+  // Units that allow fractional quantities (meters, m², kg)
+  const isFractionalUnit = ['m', 'm²', 'kg', 'metro', 'metros'].includes(item.unit.toLowerCase());
+
   const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
@@ -46,29 +49,43 @@ export function VendaItemCard({
         <p className="text-xs text-muted-foreground">{item.unit}</p>
       </div>
 
+      {/* Quantity controls with smart increment based on unit */}
       <div className="flex items-center gap-1">
         <Button
           type="button"
           variant="outline"
           size="icon"
           className="h-8 w-8"
-          onClick={() => onQuantityChange(item.id, Math.max(0.01, item.quantity - 1))}
+          onClick={() => {
+            const step = isFractionalUnit ? 0.1 : 1;
+            const newQty = Math.max(step, parseFloat((item.quantity - step).toFixed(2)));
+            onQuantityChange(item.id, newQty);
+          }}
         >
           <Minus className="h-3 w-3" />
         </Button>
-        <Input
-          type="text"
-          inputMode="decimal"
-          value={item.quantity.toString().replace('.', ',')}
-          onChange={(e) => handleQuantityInput(e.target.value)}
-          className="w-16 h-8 text-center text-sm"
-        />
+        <div className="relative">
+          <Input
+            type="text"
+            inputMode="decimal"
+            value={item.quantity.toString().replace('.', ',')}
+            onChange={(e) => handleQuantityInput(e.target.value)}
+            className="w-20 h-8 text-center text-sm pr-6"
+          />
+          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+            {item.unit}
+          </span>
+        </div>
         <Button
           type="button"
           variant="outline"
           size="icon"
           className="h-8 w-8"
-          onClick={() => onQuantityChange(item.id, item.quantity + 1)}
+          onClick={() => {
+            const step = isFractionalUnit ? 0.1 : 1;
+            const newQty = parseFloat((item.quantity + step).toFixed(2));
+            onQuantityChange(item.id, newQty);
+          }}
         >
           <Plus className="h-3 w-3" />
         </Button>
