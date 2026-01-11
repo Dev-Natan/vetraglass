@@ -79,13 +79,17 @@ export function NovaVendaSheet({
   const total = subtotal - discountValue;
 
   const addItem = (template: ItemTemplate) => {
+    console.log('addItem called with:', template);
     const existingIndex = items.findIndex((i) => i.itemTemplateId === template.id && !i.isProduct);
     
     if (existingIndex >= 0) {
-      const updated = [...items];
-      updated[existingIndex].quantity += 1;
-      updated[existingIndex].totalPrice = updated[existingIndex].quantity * updated[existingIndex].unitPrice;
-      setItems(updated);
+      setItems(prev => {
+        const updated = [...prev];
+        updated[existingIndex].quantity += 1;
+        updated[existingIndex].totalPrice = updated[existingIndex].quantity * updated[existingIndex].unitPrice;
+        console.log('Item quantity updated:', updated);
+        return updated;
+      });
     } else {
       const newItem: VendaItem = {
         id: crypto.randomUUID(),
@@ -97,24 +101,35 @@ export function NovaVendaSheet({
         totalPrice: template.price,
         isProduct: false,
       };
-      setItems([...items, newItem]);
+      console.log('New material item created:', newItem);
+      setItems(prev => {
+        const updated = [...prev, newItem];
+        console.log('Items after add:', updated);
+        return updated;
+      });
     }
   };
 
   const addProduct = (product: CompanyProduct) => {
+    console.log('addProduct called with:', product);
     const newItem: VendaItem = {
       id: crypto.randomUUID(),
       companyProductId: product.id,
       name: product.commercial_name,
-      unit: 'un',
+      unit: 'm²',
       quantity: 1,
       unitPrice: product.base_price || 0,
-      totalPrice: product.base_price || 0,
+      totalPrice: 0, // Will be calculated when dimensions are set
       width: 0,
       height: 0,
       isProduct: true,
     };
-    setItems([...items, newItem]);
+    console.log('New item created:', newItem);
+    setItems(prev => {
+      const updated = [...prev, newItem];
+      console.log('Items after add:', updated);
+      return updated;
+    });
   };
 
   const handleQuantityChange = (id: string, quantity: number) => {
