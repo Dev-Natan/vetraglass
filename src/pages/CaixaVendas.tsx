@@ -103,7 +103,8 @@ export default function CaixaVendas() {
             id,
             name,
             unit,
-            type
+            type,
+            linha
           )
         `)
         .eq('company_id', currentCompany.id);
@@ -117,6 +118,7 @@ export default function CaixaVendas() {
           name: (ip.item_template as any).name,
           unit: (ip.item_template as any).unit,
           type: (ip.item_template as any).type,
+          linha: (ip.item_template as any).linha,
           price: ip.price || 0,
         }));
     },
