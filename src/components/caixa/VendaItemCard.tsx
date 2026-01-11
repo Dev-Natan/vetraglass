@@ -25,16 +25,35 @@ export function VendaItemCard({
   onPriceChange,
   onRemove,
 }: VendaItemCardProps) {
-  // Units that allow fractional quantities (meters, m², kg)
-  const isFractionalUnit = ['m', 'm²', 'kg', 'metro', 'metros'].includes(item.unit.toLowerCase());
+  // Units that use millimeters for display (stored internally as meters)
+  const isLinearMeter = ['m', 'metro', 'metros'].includes(item.unit.toLowerCase());
+  const isFractionalUnit = isLinearMeter || ['m²', 'kg'].includes(item.unit.toLowerCase());
+
+  // For linear meters: display in mm, store in meters
+  const displayQuantity = isLinearMeter ? Math.round(item.quantity * 1000) : item.quantity;
+  const displayUnit = isLinearMeter ? 'mm' : item.unit;
+  const step = isLinearMeter ? 100 : (isFractionalUnit ? 0.1 : 1); // 100mm step for profiles
 
   const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
   const handleQuantityInput = (value: string) => {
-    const qty = parseFloat(value.replace(',', '.')) || 0;
-    onQuantityChange(item.id, qty);
+    const inputQty = parseFloat(value.replace(',', '.')) || 0;
+    // Convert mm to meters for storage if linear meter
+    const storedQty = isLinearMeter ? inputQty / 1000 : inputQty;
+    onQuantityChange(item.id, storedQty);
+  };
+
+  const handleIncrement = (delta: number) => {
+    if (isLinearMeter) {
+      // delta is in mm, convert to meters
+      const newQty = Math.max(0.001, item.quantity + (delta / 1000));
+      onQuantityChange(item.id, parseFloat(newQty.toFixed(3)));
+    } else {
+      const newQty = Math.max(0.01, parseFloat((item.quantity + delta).toFixed(2)));
+      onQuantityChange(item.id, newQty);
+    }
   };
 
   const handlePriceInput = (value: string) => {
@@ -46,34 +65,32 @@ export function VendaItemCard({
     <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
       <div className="flex-1 min-w-0">
         <p className="font-medium text-sm truncate">{item.name}</p>
-        <p className="text-xs text-muted-foreground">{item.unit}</p>
+        <p className="text-xs text-muted-foreground">
+          {isLinearMeter ? `${item.unit} (preço/metro)` : item.unit}
+        </p>
       </div>
 
-      {/* Quantity controls with smart increment based on unit */}
+      {/* Quantity controls */}
       <div className="flex items-center gap-1">
         <Button
           type="button"
           variant="outline"
           size="icon"
           className="h-8 w-8"
-          onClick={() => {
-            const step = isFractionalUnit ? 0.1 : 1;
-            const newQty = Math.max(step, parseFloat((item.quantity - step).toFixed(2)));
-            onQuantityChange(item.id, newQty);
-          }}
+          onClick={() => handleIncrement(-step)}
         >
           <Minus className="h-3 w-3" />
         </Button>
         <div className="relative">
           <Input
             type="text"
-            inputMode="decimal"
-            value={item.quantity.toString().replace('.', ',')}
+            inputMode="numeric"
+            value={isLinearMeter ? displayQuantity.toString() : item.quantity.toString().replace('.', ',')}
             onChange={(e) => handleQuantityInput(e.target.value)}
-            className="w-20 h-8 text-center text-sm pr-6"
+            className="w-24 h-8 text-center text-sm pr-8"
           />
-          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-            {item.unit}
+          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-medium">
+            {displayUnit}
           </span>
         </div>
         <Button
@@ -81,11 +98,7 @@ export function VendaItemCard({
           variant="outline"
           size="icon"
           className="h-8 w-8"
-          onClick={() => {
-            const step = isFractionalUnit ? 0.1 : 1;
-            const newQty = parseFloat((item.quantity + step).toFixed(2));
-            onQuantityChange(item.id, newQty);
-          }}
+          onClick={() => handleIncrement(step)}
         >
           <Plus className="h-3 w-3" />
         </Button>
