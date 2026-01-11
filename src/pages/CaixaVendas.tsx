@@ -176,7 +176,8 @@ export default function CaixaVendas() {
             total_price,
             width,
             height,
-            company_product_id
+            company_product_id,
+            product_template_id
           )
         `)
         .eq('company_id', currentCompany.id)
@@ -289,6 +290,7 @@ export default function CaixaVendas() {
       discountAmount: number;
       subtotal: number;
       total: number;
+      quoteId?: string;
     }) => {
       if (!openCashRegister?.id || !currentCompany?.id || !user?.id) {
         throw new Error('Caixa não está aberto');
@@ -347,10 +349,16 @@ export default function CaixaVendas() {
 
       // Processar vendas de produtos - calcular componentes
       for (const item of data.items) {
-        if (item.isProduct && item.companyProductId && item.width && item.height) {
-          // Buscar o product_template_id do produto da empresa
-          const product = availableProducts.find(p => p.id === item.companyProductId);
-          if (!product?.product_template_id) continue;
+        if (item.isProduct && item.width && item.height) {
+          // Determinar o product_template_id: via productTemplateId direto OU via companyProductId
+          let productTemplateId = item.productTemplateId;
+          
+          if (!productTemplateId && item.companyProductId) {
+            const product = availableProducts.find(p => p.id === item.companyProductId);
+            productTemplateId = product?.product_template_id;
+          }
+          
+          if (!productTemplateId) continue;
 
           // Buscar os componentes do template do produto
           const { data: templateItems, error: templateError } = await supabase
@@ -365,7 +373,7 @@ export default function CaixaVendas() {
                 unit
               )
             `)
-            .eq('product_template_id', product.product_template_id)
+            .eq('product_template_id', productTemplateId)
             .or(`company_id.is.null,company_id.eq.${currentCompany.id}`);
 
           if (templateError) {
@@ -410,12 +418,21 @@ export default function CaixaVendas() {
         }
       }
 
+      // Marcar orçamento como faturado (se veio de um orçamento)
+      if (data.quoteId) {
+        await supabase
+          .from('quotes')
+          .update({ status: 'invoiced' })
+          .eq('id', data.quoteId);
+      }
+
       return sale;
     },
     onSuccess: (sale) => {
       toast.success(`Venda #${String(sale.sale_number).padStart(4, '0')} registrada!`);
       queryClient.invalidateQueries({ queryKey: ['sales-today'] });
       queryClient.invalidateQueries({ queryKey: ['company-stock'] });
+      queryClient.invalidateQueries({ queryKey: ['approved-quotes'] });
       setNovaVendaOpen(false);
     },
     onError: (error: Error) => {

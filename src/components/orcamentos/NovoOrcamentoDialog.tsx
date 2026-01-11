@@ -266,6 +266,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
           .insert(items.map(item => ({
             quote_id: newQuote.id,
             company_product_id: item.company_product_id || null,
+            product_template_id: item.product_template_id || null,
             description: item.description,
             width: item.width || null,
             height: item.height || null,
@@ -319,6 +320,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
           .insert(items.map(item => ({
             quote_id: quote.id,
             company_product_id: item.company_product_id || null,
+            product_template_id: item.product_template_id || null,
             description: item.description,
             width: item.width || null,
             height: item.height || null,

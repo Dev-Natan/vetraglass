@@ -6,6 +6,7 @@ export interface VendaItem {
   id: string;
   itemTemplateId?: string;
   companyProductId?: string;
+  productTemplateId?: string;
   name: string;
   unit: string;
   quantity: number;

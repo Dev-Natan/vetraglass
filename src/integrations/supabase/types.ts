@@ -525,6 +525,7 @@ export type Database = {
           height: number | null
           id: string
           notes: string | null
+          product_template_id: string | null
           quantity: number
           quote_id: string
           total_price: number
@@ -541,6 +542,7 @@ export type Database = {
           height?: number | null
           id?: string
           notes?: string | null
+          product_template_id?: string | null
           quantity?: number
           quote_id: string
           total_price?: number
@@ -557,6 +559,7 @@ export type Database = {
           height?: number | null
           id?: string
           notes?: string | null
+          product_template_id?: string | null
           quantity?: number
           quote_id?: string
           total_price?: number
@@ -569,6 +572,13 @@ export type Database = {
             columns: ["company_product_id"]
             isOneToOne: false
             referencedRelation: "company_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_items_product_template_id_fkey"
+            columns: ["product_template_id"]
+            isOneToOne: false
+            referencedRelation: "product_templates"
             referencedColumns: ["id"]
           },
           {
