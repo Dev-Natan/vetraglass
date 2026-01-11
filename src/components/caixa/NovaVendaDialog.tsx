@@ -71,7 +71,7 @@ interface QuoteItem {
 }
 
 type VendaMode = 'orcamento' | 'avulsa';
-type ViewMode = 'main' | 'add-product' | 'add-material';
+type ViewMode = 'main' | 'add-product' | 'add-material' | 'material-dimensions';
 
 interface NovaVendaDialogProps {
   open: boolean;
@@ -120,6 +120,10 @@ export function NovaVendaDialog({
   
   // Material mode navigation
   const [selectedLinha, setSelectedLinha] = useState<string | null>(null);
+  const [selectedMaterial, setSelectedMaterial] = useState<ItemTemplate | null>(null);
+  const [materialWidth, setMaterialWidth] = useState('');
+  const [materialHeight, setMaterialHeight] = useState('');
+  const [materialQuantity, setMaterialQuantity] = useState('1');
   
   const linhas = useMemo(() => getLinhas(availableItems), [availableItems]);
 
@@ -134,31 +138,54 @@ export function NovaVendaDialog({
 
   const total = subtotal - discountValue;
 
-  // Add material item
-  const addMaterialItem = (template: ItemTemplate) => {
-    const existingIndex = items.findIndex((i) => i.itemTemplateId === template.id && !i.isProduct);
+  // Select material for dimensions input
+  const selectMaterialForDimensions = (template: ItemTemplate) => {
+    setSelectedMaterial(template);
+    setMaterialWidth('');
+    setMaterialHeight('');
+    setMaterialQuantity('1');
+    setViewMode('material-dimensions');
+  };
+
+  // Add material item with dimensions
+  const addMaterialWithDimensions = () => {
+    if (!selectedMaterial) return;
     
-    if (existingIndex >= 0) {
-      setItems(prev => {
-        const updated = [...prev];
-        updated[existingIndex].quantity += 1;
-        updated[existingIndex].totalPrice = updated[existingIndex].quantity * updated[existingIndex].unitPrice;
-        return updated;
-      });
-    } else {
-      const newItem: VendaItem = {
-        id: crypto.randomUUID(),
-        itemTemplateId: template.id,
-        name: template.name,
-        unit: template.unit,
-        quantity: 1,
-        unitPrice: template.price,
-        totalPrice: template.price,
-        isProduct: false,
-        isDefaultPrice: template.isDefaultPrice,
-      };
-      setItems(prev => [...prev, newItem]);
+    const width = parseFloat(materialWidth.replace(',', '.')) || 0;
+    const height = parseFloat(materialHeight.replace(',', '.')) || 0;
+    const quantity = parseInt(materialQuantity) || 1;
+    
+    // Calculate based on unit type
+    let totalPrice = selectedMaterial.price * quantity;
+    const hasDimensions = width > 0 || height > 0;
+    
+    // For m² or m (linear), calculate based on dimensions
+    if (selectedMaterial.unit === 'm²' && width > 0 && height > 0) {
+      const areaM2 = (width / 1000) * (height / 1000);
+      totalPrice = areaM2 * selectedMaterial.price * quantity;
+    } else if (selectedMaterial.unit === 'm' && (width > 0 || height > 0)) {
+      const lengthM = Math.max(width, height) / 1000;
+      totalPrice = lengthM * selectedMaterial.price * quantity;
     }
+    
+    const newItem: VendaItem = {
+      id: crypto.randomUUID(),
+      itemTemplateId: selectedMaterial.id,
+      name: selectedMaterial.name,
+      unit: selectedMaterial.unit,
+      quantity,
+      unitPrice: selectedMaterial.price,
+      totalPrice,
+      width: width > 0 ? width : undefined,
+      height: height > 0 ? height : undefined,
+      isProduct: false,
+      isDefaultPrice: selectedMaterial.isDefaultPrice,
+    };
+    
+    setItems(prev => [...prev, newItem]);
+    setSelectedMaterial(null);
+    setSelectedLinha(null);
+    setViewMode('main');
   };
 
   // Add product with dimensions (from AddProductPanel)
@@ -257,6 +284,10 @@ export function NovaVendaDialog({
     setDiscountPercent('');
     setSelectedQuote(null);
     setSelectedLinha(null);
+    setSelectedMaterial(null);
+    setMaterialWidth('');
+    setMaterialHeight('');
+    setMaterialQuantity('1');
     setViewMode('main');
     setMode('avulsa');
   };
@@ -407,13 +438,19 @@ export function NovaVendaDialog({
                                     <Badge variant="outline" className="text-[10px] h-4">Preço padrão</Badge>
                                   )}
                                 </div>
-                                {item.isProduct && item.width && item.height ? (
+                                {item.width || item.height ? (
                                   <p className="text-xs text-muted-foreground">
-                                    {item.width}mm × {item.height}mm = {((item.width/1000)*(item.height/1000)).toFixed(2)} m²
+                                    {item.width}mm × {item.height}mm
+                                    {item.unit === 'm²' && item.width && item.height && (
+                                      <span> = {((item.width/1000)*(item.height/1000)).toFixed(2)} m²</span>
+                                    )}
+                                    {item.unit === 'm' && (
+                                      <span> = {(Math.max(item.width || 0, item.height || 0)/1000).toFixed(2)} m</span>
+                                    )}
                                   </p>
                                 ) : (
                                   <p className="text-xs text-muted-foreground">
-                                    {formatCurrency(item.unitPrice)} × {item.quantity}
+                                    {formatCurrency(item.unitPrice)} / {item.unit} × {item.quantity}
                                   </p>
                                 )}
                               </div>
@@ -641,7 +678,7 @@ export function NovaVendaDialog({
                 onCancel={() => setViewMode('main')}
               />
             </div>
-          ) : (
+          ) : viewMode === 'add-material' ? (
             /* ADD MATERIAL VIEW */
             <div className="py-4 space-y-4">
               {/* Back button */}
@@ -698,11 +735,7 @@ export function NovaVendaDialog({
                         <button
                           key={item.id}
                           type="button"
-                          onClick={() => {
-                            addMaterialItem(item);
-                            setViewMode('main');
-                            setSelectedLinha(null);
-                          }}
+                          onClick={() => selectMaterialForDimensions(item)}
                           className="p-3 rounded-lg border text-left hover:border-primary hover:bg-primary/5 transition-colors"
                         >
                           <p className="font-medium text-sm truncate">{item.name}</p>
@@ -721,7 +754,151 @@ export function NovaVendaDialog({
                 </div>
               )}
             </div>
-          )}
+          ) : viewMode === 'material-dimensions' && selectedMaterial ? (
+            /* MATERIAL DIMENSIONS VIEW */
+            <div className="py-4 space-y-6">
+              {/* Back button */}
+              <Button variant="outline" size="sm" onClick={() => {
+                setViewMode('add-material');
+                setSelectedMaterial(null);
+              }}>
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Voltar
+              </Button>
+
+              {/* Material Info */}
+              <div className="rounded-xl border bg-card p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Layers className="h-6 w-6 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold">{selectedMaterial.name}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className="text-sm text-muted-foreground">
+                        {formatCurrency(selectedMaterial.price)} / {selectedMaterial.unit}
+                      </p>
+                      {selectedMaterial.isDefaultPrice && (
+                        <Badge variant="outline" className="text-[10px] h-4">Preço padrão</Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Dimensions Input */}
+              <div className="rounded-xl border bg-card p-4 space-y-4">
+                <Label className="text-sm font-medium text-muted-foreground">
+                  Medidas (opcional)
+                </Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="material-width">Largura (mm)</Label>
+                    <Input
+                      id="material-width"
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="Ex: 1000"
+                      value={materialWidth}
+                      onChange={(e) => setMaterialWidth(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="material-height">Altura (mm)</Label>
+                    <Input
+                      id="material-height"
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="Ex: 2000"
+                      value={materialHeight}
+                      onChange={(e) => setMaterialHeight(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Quantity Input */}
+              <div className="rounded-xl border bg-card p-4 space-y-4">
+                <Label className="text-sm font-medium text-muted-foreground">Quantidade</Label>
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setMaterialQuantity(String(Math.max(1, parseInt(materialQuantity) - 1)))}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    value={materialQuantity}
+                    onChange={(e) => setMaterialQuantity(e.target.value)}
+                    className="w-20 text-center"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setMaterialQuantity(String(parseInt(materialQuantity) + 1))}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Preview and Actions */}
+              <div className="rounded-xl border bg-gradient-to-br from-primary/5 to-primary/10 p-4 space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Preço unitário</span>
+                  <span>{formatCurrency(selectedMaterial.price)} / {selectedMaterial.unit}</span>
+                </div>
+                {(parseFloat(materialWidth) > 0 || parseFloat(materialHeight) > 0) && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Medidas</span>
+                    <span>
+                      {parseFloat(materialWidth) || 0}mm × {parseFloat(materialHeight) || 0}mm
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Quantidade</span>
+                  <span>{parseInt(materialQuantity) || 1}</span>
+                </div>
+                <div className="flex justify-between text-lg font-bold border-t pt-3">
+                  <span>Total estimado</span>
+                  <span className="text-primary">
+                    {(() => {
+                      const width = parseFloat(materialWidth.replace(',', '.')) || 0;
+                      const height = parseFloat(materialHeight.replace(',', '.')) || 0;
+                      const qty = parseInt(materialQuantity) || 1;
+                      
+                      if (selectedMaterial.unit === 'm²' && width > 0 && height > 0) {
+                        const areaM2 = (width / 1000) * (height / 1000);
+                        return formatCurrency(areaM2 * selectedMaterial.price * qty);
+                      } else if (selectedMaterial.unit === 'm' && (width > 0 || height > 0)) {
+                        const lengthM = Math.max(width, height) / 1000;
+                        return formatCurrency(lengthM * selectedMaterial.price * qty);
+                      }
+                      return formatCurrency(selectedMaterial.price * qty);
+                    })()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3">
+                <Button variant="outline" onClick={() => {
+                  setViewMode('add-material');
+                  setSelectedMaterial(null);
+                }}>
+                  Cancelar
+                </Button>
+                <Button onClick={addMaterialWithDimensions}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Adicionar à Venda
+                </Button>
+              </div>
+            </div>
+          ) : null}
         </div>
       </DialogContent>
     </Dialog>
