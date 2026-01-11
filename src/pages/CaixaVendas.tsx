@@ -150,6 +150,43 @@ export default function CaixaVendas() {
     enabled: !!currentCompany?.id,
   });
 
+  // Buscar orçamentos aprovados
+  const { data: approvedQuotes = [] } = useQuery({
+    queryKey: ['approved-quotes', currentCompany?.id],
+    queryFn: async () => {
+      if (!currentCompany?.id) return [];
+      
+      const { data, error } = await supabase
+        .from('quotes')
+        .select(`
+          id,
+          quote_number,
+          customer_name,
+          total_amount,
+          final_amount,
+          status,
+          created_at,
+          quote_items (
+            id,
+            description,
+            quantity,
+            unit_price,
+            total_price,
+            width,
+            height,
+            company_product_id
+          )
+        `)
+        .eq('company_id', currentCompany.id)
+        .eq('status', 'approved')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!currentCompany?.id,
+  });
+
   // Calcular resumo do caixa
   const cashSummary = useMemo(() => {
     const openingAmount = openCashRegister?.opening_amount || 0;
@@ -493,6 +530,7 @@ export default function CaixaVendas() {
         onConfirm={(data) => newSaleMutation.mutateAsync(data)}
         availableItems={availableItems}
         availableProducts={availableProducts}
+        approvedQuotes={approvedQuotes}
         isLoading={newSaleMutation.isPending}
       />
     </MainLayout>
