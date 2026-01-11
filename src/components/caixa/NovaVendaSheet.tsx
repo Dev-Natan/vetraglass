@@ -105,15 +105,15 @@ function getLinhas(items: ItemTemplate[]): string[] {
   return Array.from(linhas).sort();
 }
 
-// Get unique linhas from products
-function getProductLinhas(products: CompanyProduct[]): string[] {
-  const linhas = new Set<string>();
-  products.forEach(product => {
-    const linha = product.product_template?.linha;
-    if (linha) linhas.add(linha);
-  });
-  return Array.from(linhas).sort();
-}
+// Fixed product lines
+const PRODUCT_LINHAS = [
+  'Suprema',
+  'Gold',
+  'Temperados',
+  'Box',
+  'Espelhos',
+  'Guarda Corpo',
+];
 
 export function NovaVendaSheet({
   open,
@@ -144,7 +144,7 @@ export function NovaVendaSheet({
   const [productQuantity, setProductQuantity] = useState('1');
   
   const linhas = useMemo(() => getLinhas(availableItems), [availableItems]);
-  const productLinhas = useMemo(() => getProductLinhas(availableProducts), [availableProducts]);
+  const productLinhas = PRODUCT_LINHAS;
 
   const subtotal = useMemo(() => {
     return items.reduce((sum, item) => sum + item.totalPrice, 0);
