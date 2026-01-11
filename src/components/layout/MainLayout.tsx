@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
+import { format } from 'date-fns';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -51,11 +52,20 @@ export function MainLayout({ children }: MainLayoutProps) {
           <div className="pl-12 lg:pl-0">
               <Button 
                 variant={isCaixaAberto ? "default" : "destructive"} 
-                className="gap-2 rounded-full px-5"
+                className="gap-2 rounded-full px-5 h-auto py-2"
                 onClick={() => navigate('/caixa')}
               >
                 <Wallet className="w-4 h-4" />
-                {isCaixaAberto ? 'Caixa Aberto' : 'Caixa Fechado'}
+                <div className="flex flex-col items-start text-left">
+                  <span className="text-sm font-medium">
+                    {isCaixaAberto ? 'Caixa Aberto' : 'Caixa Fechado'}
+                  </span>
+                  {isCaixaAberto && openCashRegister?.opened_at && (
+                    <span className="text-[10px] opacity-80">
+                      desde {format(new Date(openCashRegister.opened_at), 'HH:mm')}
+                    </span>
+                  )}
+                </div>
               </Button>
             </div>
             <div className="flex items-center gap-2">
