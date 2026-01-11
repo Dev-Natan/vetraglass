@@ -32,6 +32,7 @@ interface CompanyProduct {
   id: string;
   commercial_name: string;
   base_price: number | null;
+  product_template_id: string;
   product_template?: {
     name: string;
     category: string;

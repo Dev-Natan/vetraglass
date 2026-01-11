@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { Parser } from 'expr-eval';
 
 import { AbrirCaixaDialog } from '@/components/caixa/AbrirCaixaDialog';
 import { FecharCaixaDialog } from '@/components/caixa/FecharCaixaDialog';
@@ -17,6 +18,30 @@ import { NovaVendaSheet } from '@/components/caixa/NovaVendaSheet';
 import { CaixaResumo } from '@/components/caixa/CaixaResumo';
 import { VendasTable } from '@/components/caixa/VendasTable';
 import { VendaItem } from '@/components/caixa/VendaItemCard';
+
+// Função para calcular quantidade baseada na fórmula do componente
+function calculateFormulaQuantity(formula: string, width: number, height: number, piecesQty: number): number {
+  try {
+    // Converter mm para metros para cálculos
+    const L = width / 1000; // Largura em metros
+    const A = height / 1000; // Altura em metros
+    
+    // Substituir variáveis comuns na fórmula
+    let processedFormula = formula
+      .replace(/largura/gi, 'L')
+      .replace(/altura/gi, 'A')
+      .replace(/,/g, '.'); // Tratar vírgulas decimais
+    
+    const parser = new Parser();
+    const result = parser.evaluate(processedFormula, { L, A, l: L, a: A });
+    
+    // Multiplicar pela quantidade de peças e converter para metros
+    return (result / 1000) * piecesQty;
+  } catch (error) {
+    console.error('Erro ao calcular fórmula:', formula, error);
+    return 0;
+  }
+}
 
 export default function CaixaVendas() {
   const { currentCompany, user } = useAuth();
@@ -98,7 +123,7 @@ export default function CaixaVendas() {
     enabled: !!currentCompany?.id,
   });
 
-  // Buscar produtos da empresa
+  // Buscar produtos da empresa com product_template_id
   const { data: availableProducts = [] } = useQuery({
     queryKey: ['available-products', currentCompany?.id],
     queryFn: async () => {
@@ -110,6 +135,7 @@ export default function CaixaVendas() {
           id,
           commercial_name,
           base_price,
+          product_template_id,
           product_template:product_templates (
             name,
             category
@@ -269,22 +295,79 @@ export default function CaixaVendas() {
 
       if (itemsError) throw itemsError;
 
-      // Atualizar estoque (baixa) - apenas para materiais
-      for (const item of data.items) {
-        if (item.itemTemplateId) {
-          const { data: stockItem } = await supabase
-            .from('company_stock')
-            .select('id, quantity')
-            .eq('company_id', currentCompany.id)
-            .eq('item_template_id', item.itemTemplateId)
-            .maybeSingle();
+      // Mapa para acumular as quantidades a subtrair de cada item_template_id
+      const stockDeductions: Map<string, number> = new Map();
 
-          if (stockItem) {
-            await supabase
-              .from('company_stock')
-              .update({ quantity: stockItem.quantity - item.quantity })
-              .eq('id', stockItem.id);
+      // Processar vendas de materiais diretos
+      for (const item of data.items) {
+        if (item.itemTemplateId && !item.isProduct) {
+          const currentQty = stockDeductions.get(item.itemTemplateId) || 0;
+          stockDeductions.set(item.itemTemplateId, currentQty + item.quantity);
+        }
+      }
+
+      // Processar vendas de produtos - calcular componentes
+      for (const item of data.items) {
+        if (item.isProduct && item.companyProductId && item.width && item.height) {
+          // Buscar o product_template_id do produto da empresa
+          const product = availableProducts.find(p => p.id === item.companyProductId);
+          if (!product?.product_template_id) continue;
+
+          // Buscar os componentes do template do produto
+          const { data: templateItems, error: templateError } = await supabase
+            .from('product_template_items')
+            .select(`
+              item_template_id,
+              quantity_formula,
+              pieces_quantity,
+              item_template:item_templates (
+                id,
+                name,
+                unit
+              )
+            `)
+            .eq('product_template_id', product.product_template_id)
+            .or(`company_id.is.null,company_id.eq.${currentCompany.id}`);
+
+          if (templateError) {
+            console.error('Erro ao buscar componentes:', templateError);
+            continue;
           }
+
+          // Calcular quantidade de cada componente baseado nas dimensões
+          for (const templateItem of templateItems || []) {
+            if (!templateItem.item_template_id || !templateItem.quantity_formula) continue;
+
+            // Calcular quantidade usando a fórmula (item.quantity é a quantidade de produtos vendidos)
+            const componentQty = calculateFormulaQuantity(
+              templateItem.quantity_formula,
+              item.width,
+              item.height,
+              templateItem.pieces_quantity || 1
+            ) * item.quantity;
+
+            if (componentQty > 0) {
+              const currentQty = stockDeductions.get(templateItem.item_template_id) || 0;
+              stockDeductions.set(templateItem.item_template_id, currentQty + componentQty);
+            }
+          }
+        }
+      }
+
+      // Aplicar todas as deduções de estoque
+      for (const [itemTemplateId, deductionQty] of stockDeductions) {
+        const { data: stockItem } = await supabase
+          .from('company_stock')
+          .select('id, quantity')
+          .eq('company_id', currentCompany.id)
+          .eq('item_template_id', itemTemplateId)
+          .maybeSingle();
+
+        if (stockItem) {
+          await supabase
+            .from('company_stock')
+            .update({ quantity: Math.max(0, stockItem.quantity - deductionQty) })
+            .eq('id', stockItem.id);
         }
       }
 
