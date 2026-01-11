@@ -246,11 +246,21 @@ export function UniversalProductSearch({
   };
 
   const handleSelectProduct = (product: CompanyProduct) => {
+    console.log('Selected product:', product);
     onSelectProduct(product);
+    // Reset to allow adding more items
+    setStep('linhas');
+    setSelectedLinha(null);
+    setSelectedCategory(null);
   };
 
   const handleSelectMaterial = (item: ItemTemplate) => {
+    console.log('Selected material:', item);
     onSelectMaterial(item);
+    // Reset to allow adding more items
+    setStep('linhas');
+    setSelectedLinha(null);
+    setSelectedCategory(null);
   };
 
   const getImageUrl = (url: string | null | undefined) => {
