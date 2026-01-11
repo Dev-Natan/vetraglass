@@ -849,7 +849,9 @@ export function NovaVendaDialog({
 
               {/* Quantity Input */}
               <div className="rounded-xl border bg-card p-4 space-y-4">
-                <Label className="text-sm font-medium text-muted-foreground">Quantidade</Label>
+                <Label className="text-sm font-medium text-muted-foreground">
+                  {selectedMaterial.type === 'profile' ? 'Quantidade de barras' : 'Quantidade'}
+                </Label>
                 <div className="flex items-center gap-3">
                   <Button
                     variant="outline"
