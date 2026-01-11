@@ -287,7 +287,7 @@ export function EditItemPriceDialog({
               <p className="text-sm font-medium text-foreground">Estoque</p>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="quantity">Quantidade Atual</Label>
+                  <Label htmlFor="quantity">Quantidade Atual (barras)</Label>
                   <Input
                     id="quantity"
                     type="number"
@@ -297,10 +297,15 @@ export function EditItemPriceDialog({
                     onChange={(e) => setQuantity(e.target.value)}
                     placeholder="0"
                   />
+                  {parseFloat(quantity) > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      = {(parseFloat(quantity) * 6).toFixed(1)} metros lineares
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="minQuantity">Quantidade Mínima</Label>
+                  <Label htmlFor="minQuantity">Quantidade Mínima (barras)</Label>
                   <Input
                     id="minQuantity"
                     type="number"
@@ -310,6 +315,11 @@ export function EditItemPriceDialog({
                     onChange={(e) => setMinQuantity(e.target.value)}
                     placeholder="0"
                   />
+                  {parseFloat(minQuantity) > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      = {(parseFloat(minQuantity) * 6).toFixed(1)} metros lineares
+                    </p>
+                  )}
                 </div>
               </div>
 
