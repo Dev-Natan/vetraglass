@@ -98,6 +98,32 @@ export default function CaixaVendas() {
     enabled: !!currentCompany?.id,
   });
 
+  // Buscar produtos da empresa
+  const { data: availableProducts = [] } = useQuery({
+    queryKey: ['available-products', currentCompany?.id],
+    queryFn: async () => {
+      if (!currentCompany?.id) return [];
+      
+      const { data, error } = await supabase
+        .from('company_products')
+        .select(`
+          id,
+          commercial_name,
+          base_price,
+          product_template:product_templates (
+            name,
+            category
+          )
+        `)
+        .eq('company_id', currentCompany.id)
+        .eq('is_active', true);
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!currentCompany?.id,
+  });
+
   // Calcular resumo do caixa
   const cashSummary = useMemo(() => {
     const openingAmount = openCashRegister?.opening_amount || 0;
@@ -226,12 +252,15 @@ export default function CaixaVendas() {
       // Criar itens da venda
       const saleItems = data.items.map((item) => ({
         sale_id: sale.id,
-        item_template_id: item.itemTemplateId,
+        item_template_id: item.itemTemplateId || null,
+        company_product_id: item.companyProductId || null,
         item_name: item.name,
         item_unit: item.unit,
         quantity: item.quantity,
         unit_price: item.unitPrice,
         total_price: item.totalPrice,
+        width: item.width || null,
+        height: item.height || null,
       }));
 
       const { error: itemsError } = await supabase
@@ -240,20 +269,22 @@ export default function CaixaVendas() {
 
       if (itemsError) throw itemsError;
 
-      // Atualizar estoque (baixa)
+      // Atualizar estoque (baixa) - apenas para materiais
       for (const item of data.items) {
-        const { data: stockItem } = await supabase
-          .from('company_stock')
-          .select('id, quantity')
-          .eq('company_id', currentCompany.id)
-          .eq('item_template_id', item.itemTemplateId)
-          .maybeSingle();
-
-        if (stockItem) {
-          await supabase
+        if (item.itemTemplateId) {
+          const { data: stockItem } = await supabase
             .from('company_stock')
-            .update({ quantity: stockItem.quantity - item.quantity })
-            .eq('id', stockItem.id);
+            .select('id, quantity')
+            .eq('company_id', currentCompany.id)
+            .eq('item_template_id', item.itemTemplateId)
+            .maybeSingle();
+
+          if (stockItem) {
+            await supabase
+              .from('company_stock')
+              .update({ quantity: stockItem.quantity - item.quantity })
+              .eq('id', stockItem.id);
+          }
         }
       }
 
@@ -378,6 +409,7 @@ export default function CaixaVendas() {
         onOpenChange={setNovaVendaOpen}
         onConfirm={(data) => newSaleMutation.mutateAsync(data)}
         availableItems={availableItems}
+        availableProducts={availableProducts}
         isLoading={newSaleMutation.isPending}
       />
     </MainLayout>

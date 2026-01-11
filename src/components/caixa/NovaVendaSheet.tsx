@@ -12,7 +12,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Loader2, Search, DollarSign, CreditCard, Smartphone, ShoppingCart } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Loader2, Search, DollarSign, CreditCard, Smartphone, ShoppingCart, Package, Layers } from 'lucide-react';
 import { VendaItemCard, VendaItem } from './VendaItemCard';
 
 interface ItemTemplate {
@@ -21,6 +22,16 @@ interface ItemTemplate {
   unit: string;
   type: string;
   price: number;
+}
+
+interface CompanyProduct {
+  id: string;
+  commercial_name: string;
+  base_price: number | null;
+  product_template?: {
+    name: string;
+    category: string;
+  };
 }
 
 interface NovaVendaSheetProps {
@@ -36,6 +47,7 @@ interface NovaVendaSheetProps {
     total: number;
   }) => Promise<unknown>;
   availableItems: ItemTemplate[];
+  availableProducts?: CompanyProduct[];
   isLoading?: boolean;
 }
 
@@ -44,6 +56,7 @@ export function NovaVendaSheet({
   onOpenChange,
   onConfirm,
   availableItems,
+  availableProducts = [],
   isLoading = false,
 }: NovaVendaSheetProps) {
   const [items, setItems] = useState<VendaItem[]>([]);
@@ -51,6 +64,7 @@ export function NovaVendaSheet({
   const [paymentMethod, setPaymentMethod] = useState<'dinheiro' | 'cartao' | 'pix'>('dinheiro');
   const [discountPercent, setDiscountPercent] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState<'materiais' | 'produtos'>('materiais');
 
   const subtotal = useMemo(() => {
     return items.reduce((sum, item) => sum + item.totalPrice, 0);
@@ -71,8 +85,16 @@ export function NovaVendaSheet({
       .slice(0, 20);
   }, [availableItems, searchTerm]);
 
+  const filteredProducts = useMemo(() => {
+    if (!searchTerm) return availableProducts.slice(0, 20);
+    const term = searchTerm.toLowerCase();
+    return availableProducts
+      .filter((p) => p.commercial_name.toLowerCase().includes(term))
+      .slice(0, 20);
+  }, [availableProducts, searchTerm]);
+
   const addItem = (template: ItemTemplate) => {
-    const existingIndex = items.findIndex((i) => i.itemTemplateId === template.id);
+    const existingIndex = items.findIndex((i) => i.itemTemplateId === template.id && !i.isProduct);
     
     if (existingIndex >= 0) {
       const updated = [...items];
@@ -88,9 +110,27 @@ export function NovaVendaSheet({
         quantity: 1,
         unitPrice: template.price,
         totalPrice: template.price,
+        isProduct: false,
       };
       setItems([...items, newItem]);
     }
+  };
+
+  const addProduct = (product: CompanyProduct) => {
+    const newItem: VendaItem = {
+      id: crypto.randomUUID(),
+      companyProductId: product.id,
+      name: product.commercial_name,
+      unit: 'un',
+      quantity: 1,
+      unitPrice: product.base_price || 0,
+      totalPrice: product.base_price || 0,
+      width: 1000,
+      height: 1000,
+      isProduct: true,
+    };
+    setItems([...items, newItem]);
+    setSearchTerm('');
   };
 
   const handleQuantityChange = (id: string, quantity: number) => {
@@ -105,6 +145,14 @@ export function NovaVendaSheet({
     setItems(items.map((item) => 
       item.id === id 
         ? { ...item, unitPrice: price, totalPrice: item.quantity * price }
+        : item
+    ));
+  };
+
+  const handleDimensionsChange = (id: string, width: number, height: number) => {
+    setItems(items.map((item) => 
+      item.id === id 
+        ? { ...item, width, height }
         : item
     ));
   };
@@ -132,6 +180,7 @@ export function NovaVendaSheet({
     setPaymentMethod('dinheiro');
     setDiscountPercent('');
     setSearchTerm('');
+    setActiveTab('materiais');
   };
 
   const handleClose = () => {
@@ -154,50 +203,109 @@ export function NovaVendaSheet({
             Nova Venda
           </SheetTitle>
           <SheetDescription>
-            Adicione itens do estoque para registrar a venda.
+            Adicione materiais ou produtos para registrar a venda.
           </SheetDescription>
         </SheetHeader>
 
         <div className="flex-1 overflow-hidden flex flex-col gap-4 py-4">
-          {/* Busca de Itens */}
-          <div className="space-y-2">
-            <Label>Adicionar Item</Label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar item do estoque..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            {searchTerm && (
-              <div className="border rounded-lg max-h-40 overflow-auto">
-                {filteredItems.length === 0 ? (
-                  <p className="p-3 text-sm text-muted-foreground text-center">
-                    Nenhum item encontrado
-                  </p>
-                ) : (
-                  filteredItems.map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      className="w-full px-3 py-2 text-left hover:bg-muted flex items-center justify-between text-sm"
-                      onClick={() => {
-                        addItem(item);
-                        setSearchTerm('');
-                      }}
-                    >
-                      <span>{item.name}</span>
-                      <span className="text-muted-foreground">
-                        {formatCurrency(item.price)}/{item.unit}
-                      </span>
-                    </button>
-                  ))
-                )}
+          {/* Tabs for Materials vs Products */}
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'materiais' | 'produtos')}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="materiais" className="gap-2">
+                <Layers className="h-4 w-4" />
+                Materiais
+              </TabsTrigger>
+              <TabsTrigger value="produtos" className="gap-2">
+                <Package className="h-4 w-4" />
+                Produtos
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="materiais" className="mt-4 space-y-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar perfil, vidro, acessório..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
               </div>
-            )}
-          </div>
+              {searchTerm && (
+                <div className="border rounded-lg max-h-40 overflow-auto">
+                  {filteredItems.length === 0 ? (
+                    <p className="p-3 text-sm text-muted-foreground text-center">
+                      Nenhum material encontrado
+                    </p>
+                  ) : (
+                    filteredItems.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className="w-full px-3 py-2 text-left hover:bg-muted flex items-center justify-between text-sm"
+                        onClick={() => {
+                          addItem(item);
+                          setSearchTerm('');
+                        }}
+                      >
+                        <span>{item.name}</span>
+                        <span className="text-muted-foreground">
+                          {formatCurrency(item.price)}/{item.unit}
+                        </span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="produtos" className="mt-4 space-y-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar janela, porta, box..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              {searchTerm && (
+                <div className="border rounded-lg max-h-40 overflow-auto">
+                  {filteredProducts.length === 0 ? (
+                    <p className="p-3 text-sm text-muted-foreground text-center">
+                      Nenhum produto encontrado
+                    </p>
+                  ) : (
+                    filteredProducts.map((product) => (
+                      <button
+                        key={product.id}
+                        type="button"
+                        className="w-full px-3 py-2 text-left hover:bg-muted flex items-center justify-between text-sm"
+                        onClick={() => addProduct(product)}
+                      >
+                        <div>
+                          <span className="font-medium">{product.commercial_name}</span>
+                          {product.product_template?.category && (
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              ({product.product_template.category})
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-muted-foreground">
+                          {product.base_price ? formatCurrency(product.base_price) : 'Sob consulta'}
+                        </span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+              {availableProducts.length === 0 && !searchTerm && (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Nenhum produto ativo. Ative produtos na aba Produtos.
+                </p>
+              )}
+            </TabsContent>
+          </Tabs>
 
           {/* Lista de Itens */}
           <div className="flex-1 overflow-hidden">
@@ -217,6 +325,7 @@ export function NovaVendaSheet({
                       item={item}
                       onQuantityChange={handleQuantityChange}
                       onPriceChange={handlePriceChange}
+                      onDimensionsChange={handleDimensionsChange}
                       onRemove={handleRemove}
                     />
                   ))}
