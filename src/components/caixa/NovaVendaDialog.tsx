@@ -183,6 +183,13 @@ export function NovaVendaDialog({
     return companyStock.some(stock => stock.item_template_id === itemTemplateId);
   };
   
+  // Get stock quantity for an item
+  const getStockQuantity = (itemTemplateId: string): number => {
+    if (!companyStock) return 0;
+    const stockItem = companyStock.find(stock => stock.item_template_id === itemTemplateId);
+    return stockItem?.quantity || 0;
+  };
+  
   // Add item to stock
   const addItemToStock = async (itemTemplateId: string, quantity: number) => {
     if (!currentCompany?.id) return;
@@ -281,6 +288,21 @@ export function NovaVendaDialog({
       setPendingItem(newItem);
       setShowStockDialog(true);
     } else {
+      // Check if quantity sold exceeds stock
+      const stockQuantity = getStockQuantity(selectedMaterial.id);
+      const quantitySold = parseInt(materialQuantity) || 1;
+      
+      if (quantitySold > stockQuantity) {
+        const isProfile = selectedMaterial.type === 'profile';
+        const stockDisplay = isProfile ? `${stockQuantity} barras (${stockQuantity * 6}m)` : `${stockQuantity} ${selectedMaterial.unit}`;
+        const soldDisplay = isProfile ? `${quantitySold} barras` : `${quantitySold} ${selectedMaterial.unit}`;
+        
+        toast.warning(
+          `Atenção: Quantidade vendida (${soldDisplay}) é maior que o estoque disponível (${stockDisplay}).`,
+          { duration: 5000 }
+        );
+      }
+      
       // Item is in stock, add directly
       finalizeAddItem(newItem);
     }
