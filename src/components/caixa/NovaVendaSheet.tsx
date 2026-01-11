@@ -62,6 +62,7 @@ interface QuoteItem {
   width?: number | null;
   height?: number | null;
   company_product_id?: string | null;
+  product_template_id?: string | null;
 }
 
 type VendaMode = 'orcamento' | 'avulsa';
@@ -161,6 +162,7 @@ export function NovaVendaSheet({
     const vendaItems: VendaItem[] = (quote.quote_items || []).map(qi => ({
       id: crypto.randomUUID(),
       companyProductId: qi.company_product_id || undefined,
+      productTemplateId: qi.product_template_id || undefined,
       name: qi.description,
       unit: 'm²',
       quantity: qi.quantity,
@@ -168,7 +170,7 @@ export function NovaVendaSheet({
       totalPrice: qi.total_price,
       width: qi.width || undefined,
       height: qi.height || undefined,
-      isProduct: !!qi.company_product_id,
+      isProduct: !!(qi.company_product_id || qi.product_template_id),
     }));
     
     setItems(vendaItems);
