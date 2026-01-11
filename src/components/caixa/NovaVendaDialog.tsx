@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -20,6 +20,8 @@ import {
   DollarSign, CreditCard, Smartphone, Loader2, ArrowLeft, Layers, Box, User
 } from 'lucide-react';
 import { AddProductPanel } from '@/components/orcamentos/AddProductPanel';
+import { AddToStockDialog } from './AddToStockDialog';
+import { toast } from 'sonner';
 
 export interface VendaItem {
   id: string;
@@ -126,6 +128,29 @@ export function NovaVendaDialog({
   const [materialHeight, setMaterialHeight] = useState('');
   const [materialQuantity, setMaterialQuantity] = useState('1');
   
+  // Stock check dialog state
+  const [showStockDialog, setShowStockDialog] = useState(false);
+  const [pendingItem, setPendingItem] = useState<VendaItem | null>(null);
+  const [isAddingStock, setIsAddingStock] = useState(false);
+  
+  const queryClient = useQueryClient();
+  
+  // Fetch company stock to check if item exists
+  const { data: companyStock } = useQuery({
+    queryKey: ['company-stock', currentCompany?.id],
+    queryFn: async () => {
+      if (!currentCompany?.id) return [];
+      const { data, error } = await supabase
+        .from('company_stock')
+        .select('item_template_id, quantity')
+        .eq('company_id', currentCompany.id)
+        .eq('is_active', true);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!currentCompany?.id,
+  });
+  
   const linhas = useMemo(() => getLinhas(availableItems), [availableItems]);
 
   const subtotal = useMemo(() => {
@@ -152,8 +177,44 @@ export function NovaVendaDialog({
   // Profile price is always per bar (6000mm = 6m), calculate proportionally when selling fractional
   const PROFILE_BAR_LENGTH_MM = 6000;
   
-  const addMaterialWithDimensions = () => {
-    if (!selectedMaterial) return;
+  // Check if item exists in stock
+  const checkItemInStock = (itemTemplateId: string): boolean => {
+    if (!companyStock) return false;
+    return companyStock.some(stock => stock.item_template_id === itemTemplateId);
+  };
+  
+  // Add item to stock
+  const addItemToStock = async (itemTemplateId: string, quantity: number) => {
+    if (!currentCompany?.id) return;
+    
+    setIsAddingStock(true);
+    try {
+      const { error } = await supabase
+        .from('company_stock')
+        .insert({
+          company_id: currentCompany.id,
+          item_template_id: itemTemplateId,
+          quantity,
+          min_quantity: 0,
+          is_active: true,
+          allow_fractional: false,
+        });
+      
+      if (error) throw error;
+      
+      toast.success('Item adicionado ao estoque com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['company-stock', currentCompany.id] });
+    } catch (error) {
+      console.error('Error adding to stock:', error);
+      toast.error('Erro ao adicionar item ao estoque');
+    } finally {
+      setIsAddingStock(false);
+    }
+  };
+  
+  // Create VendaItem from selected material
+  const createVendaItem = (): VendaItem | null => {
+    if (!selectedMaterial) return null;
     
     const width = parseFloat(materialWidth.replace(',', '.')) || 0;
     const height = parseFloat(materialHeight.replace(',', '.')) || 0;
@@ -180,7 +241,7 @@ export function NovaVendaDialog({
       totalPrice = lengthM * selectedMaterial.price * quantity;
     }
     
-    const newItem: VendaItem = {
+    return {
       id: crypto.randomUUID(),
       itemTemplateId: selectedMaterial.id,
       name: selectedMaterial.name,
@@ -194,11 +255,50 @@ export function NovaVendaDialog({
       isProduct: false,
       isDefaultPrice: selectedMaterial.isDefaultPrice,
     };
-    
-    setItems(prev => [...prev, newItem]);
+  };
+  
+  // Finalize adding item to sale
+  const finalizeAddItem = (item: VendaItem) => {
+    setItems(prev => [...prev, item]);
     setSelectedMaterial(null);
     setSelectedLinha(null);
+    setPendingItem(null);
+    setShowStockDialog(false);
     setViewMode('main');
+  };
+  
+  const addMaterialWithDimensions = () => {
+    if (!selectedMaterial) return;
+    
+    const newItem = createVendaItem();
+    if (!newItem) return;
+    
+    // Check if item exists in stock
+    const isInStock = checkItemInStock(selectedMaterial.id);
+    
+    if (!isInStock) {
+      // Show dialog to add to stock
+      setPendingItem(newItem);
+      setShowStockDialog(true);
+    } else {
+      // Item is in stock, add directly
+      finalizeAddItem(newItem);
+    }
+  };
+  
+  // Handle stock dialog confirm
+  const handleStockDialogConfirm = async (quantity: number) => {
+    if (!selectedMaterial || !pendingItem) return;
+    
+    await addItemToStock(selectedMaterial.id, quantity);
+    finalizeAddItem(pendingItem);
+  };
+  
+  // Handle stock dialog skip
+  const handleStockDialogSkip = () => {
+    if (pendingItem) {
+      finalizeAddItem(pendingItem);
+    }
   };
 
   // Add product with dimensions (from AddProductPanel)
@@ -303,6 +403,8 @@ export function NovaVendaDialog({
     setMaterialQuantity('1');
     setViewMode('main');
     setMode('avulsa');
+    setPendingItem(null);
+    setShowStockDialog(false);
   };
 
   const handleClose = () => {
@@ -947,6 +1049,18 @@ export function NovaVendaDialog({
           ) : null}
         </div>
       </DialogContent>
+      
+      {/* Add to Stock Dialog */}
+      <AddToStockDialog
+        open={showStockDialog}
+        onOpenChange={setShowStockDialog}
+        itemName={selectedMaterial?.name || pendingItem?.name || ''}
+        itemUnit={selectedMaterial?.unit || pendingItem?.unit || ''}
+        itemType={selectedMaterial?.type || pendingItem?.type}
+        onConfirm={handleStockDialogConfirm}
+        onSkip={handleStockDialogSkip}
+        isLoading={isAddingStock}
+      />
     </Dialog>
   );
 }
