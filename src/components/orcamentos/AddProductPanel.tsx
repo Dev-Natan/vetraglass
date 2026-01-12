@@ -149,10 +149,19 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   const unitPrice = area > 0 ? basePrice * area : 0;
   const totalPrice = unitPrice * quantity;
 
-  // Reset custom price when product changes
+  // Check if the selected product is from "Temperado" line (always has glass)
+  const isTemperadoLine = selectedProduct?.linha?.toLowerCase().includes('temperado');
+
+  // Reset custom price when product changes and set glass based on line
   const handleProductSelect = (productId: string) => {
     setSelectedProductId(productId);
     setCustomPrice(null);
+    
+    // Auto-enable glass for Temperado line products
+    const product = productTemplates?.find(p => p.id === productId);
+    if (product?.linha?.toLowerCase().includes('temperado')) {
+      setHasGlass(true);
+    }
   };
 
   const getProductImage = (imageUrl: string | null) => {
@@ -378,11 +387,20 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
               </Badge>
               <Badge
                 variant={!hasGlass ? 'default' : 'outline'}
-                className="cursor-pointer h-8 px-4"
-                onClick={() => setHasGlass(false)}
+                className={cn(
+                  "cursor-pointer h-8 px-4",
+                  isTemperadoLine && "opacity-50 cursor-not-allowed"
+                )}
+                onClick={() => !isTemperadoLine && setHasGlass(false)}
+                title={isTemperadoLine ? "Produtos da linha Temperado sempre incluem vidro" : undefined}
               >
                 Sem Vidro
               </Badge>
+              {isTemperadoLine && (
+                <span className="text-xs text-muted-foreground italic ml-2">
+                  (Linha Temperado sempre inclui vidro)
+                </span>
+              )}
             </div>
           </div>
           
