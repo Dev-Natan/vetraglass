@@ -22,6 +22,7 @@ import Funcionarios from "./pages/Funcionarios";
 import CaixaVendas from "./pages/CaixaVendas";
 import PlanoCorte from "./pages/PlanoCorte";
 import Configuracoes from "./pages/Configuracoes";
+import NotasFiscais from "./pages/NotasFiscais";
 import ItemTemplates from "./pages/admin/ItemTemplates";
 import ProductTemplates from "./pages/admin/ProductTemplates";
 import AdminLinhas from "./pages/admin/AdminLinhas";
@@ -165,6 +166,11 @@ function AppRoutes() {
       <Route path="/configuracoes" element={
         <ProtectedRoute>
           <Configuracoes />
+        </ProtectedRoute>
+      } />
+      <Route path="/notas-fiscais" element={
+        <ProtectedRoute>
+          <NotasFiscais />
         </ProtectedRoute>
       } />
       <Route path="/admin" element={
