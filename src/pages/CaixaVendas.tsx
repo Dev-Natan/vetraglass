@@ -8,9 +8,16 @@ import { ShoppingCart, Lock, Plus, Unlock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { format, startOfDay, endOfDay, subDays, startOfWeek, startOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Parser } from 'expr-eval';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 import { AbrirCaixaDialog } from '@/components/caixa/AbrirCaixaDialog';
 import { FecharCaixaDialog } from '@/components/caixa/FecharCaixaDialog';
@@ -18,7 +25,10 @@ import { NovaVendaDialog, VendaItem } from '@/components/caixa/NovaVendaDialog';
 import { CaixaResumo } from '@/components/caixa/CaixaResumo';
 import { VendasTable } from '@/components/caixa/VendasTable';
 import { CancelarVendaDialog } from '@/components/caixa/CancelarVendaDialog';
+import { DetalhesVendaDialog } from '@/components/caixa/DetalhesVendaDialog';
 import { generateSalePdf } from '@/utils/generateSalePdf';
+
+type PeriodFilter = 'today' | 'yesterday' | 'week' | 'month' | 'all';
 
 // Função para calcular quantidade baseada na fórmula do componente
 function calculateFormulaQuantity(formula: string, width: number, height: number, piecesQty: number): number {
@@ -49,9 +59,13 @@ interface Sale {
   sale_number: number;
   customer_name: string | null;
   total_amount: number;
+  subtotal: number;
+  discount_amount: number | null;
+  discount_percent: number | null;
   payment_method: string;
   payment_status: string;
   created_at: string;
+  notes: string | null;
 }
 
 export default function CaixaVendas() {
@@ -62,7 +76,9 @@ export default function CaixaVendas() {
   const [fecharCaixaOpen, setFecharCaixaOpen] = useState(false);
   const [novaVendaOpen, setNovaVendaOpen] = useState(false);
   const [cancelarVendaOpen, setCancelarVendaOpen] = useState(false);
+  const [detalhesVendaOpen, setDetalhesVendaOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('today');
 
   // Buscar caixa aberto
   const { data: openCashRegister, isLoading: loadingCashRegister } = useQuery({
@@ -83,7 +99,7 @@ export default function CaixaVendas() {
     enabled: !!currentCompany?.id,
   });
 
-  // Buscar vendas do dia (se caixa aberto)
+  // Buscar vendas do dia (se caixa aberto) - para resumo do caixa atual
   const { data: todaySales = [] } = useQuery({
     queryKey: ['sales-today', openCashRegister?.id],
     queryFn: async () => {
@@ -99,6 +115,55 @@ export default function CaixaVendas() {
       return data || [];
     },
     enabled: !!openCashRegister?.id,
+  });
+
+  // Calcular datas para filtro de período
+  const getDateRange = (period: PeriodFilter) => {
+    const now = new Date();
+    switch (period) {
+      case 'today':
+        return { start: startOfDay(now), end: endOfDay(now) };
+      case 'yesterday':
+        const yesterday = subDays(now, 1);
+        return { start: startOfDay(yesterday), end: endOfDay(yesterday) };
+      case 'week':
+        return { start: startOfWeek(now, { locale: ptBR }), end: endOfDay(now) };
+      case 'month':
+        return { start: startOfMonth(now), end: endOfDay(now) };
+      case 'all':
+        return { start: null, end: null };
+      default:
+        return { start: startOfDay(now), end: endOfDay(now) };
+    }
+  };
+
+  // Buscar vendas com filtro de período
+  const { data: filteredSales = [], isLoading: loadingSales } = useQuery({
+    queryKey: ['sales-filtered', currentCompany?.id, periodFilter],
+    queryFn: async () => {
+      if (!currentCompany?.id) return [];
+      
+      const { start, end } = getDateRange(periodFilter);
+      
+      let query = supabase
+        .from('sales')
+        .select('*')
+        .eq('company_id', currentCompany.id)
+        .order('created_at', { ascending: false });
+      
+      if (start) {
+        query = query.gte('created_at', start.toISOString());
+      }
+      if (end) {
+        query = query.lte('created_at', end.toISOString());
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!currentCompany?.id,
   });
 
   // Buscar todos os itens disponíveis com fallback de preço
@@ -621,6 +686,19 @@ export default function CaixaVendas() {
     }
   };
 
+  const handleViewDetails = (sale: Sale) => {
+    setSelectedSale(sale);
+    setDetalhesVendaOpen(true);
+  };
+
+  const periodLabels: Record<PeriodFilter, string> = {
+    today: 'Hoje',
+    yesterday: 'Ontem',
+    week: 'Esta Semana',
+    month: 'Este Mês',
+    all: 'Todas',
+  };
+
   const isCashOpen = !!openCashRegister;
 
   return (
@@ -680,7 +758,7 @@ export default function CaixaVendas() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-lg font-semibold">
-                  Vendas de Hoje
+                  Vendas do Caixa Atual
                 </CardTitle>
                 <Badge variant="secondary">
                   {todaySales.filter(s => s.payment_status !== 'cancelled').length} vendas
@@ -689,9 +767,50 @@ export default function CaixaVendas() {
               <CardContent>
                 <VendasTable 
                   sales={todaySales} 
+                  onViewDetails={handleViewDetails}
                   onCancelSale={handleCancelSale}
                   onPrintReceipt={handlePrintReceipt}
                 />
+              </CardContent>
+            </Card>
+
+            {/* Histórico de Vendas com Filtro */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-lg font-semibold">
+                  Histórico de Vendas
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <Select value={periodFilter} onValueChange={(v) => setPeriodFilter(v as PeriodFilter)}>
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue placeholder="Período" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="today">Hoje</SelectItem>
+                      <SelectItem value="yesterday">Ontem</SelectItem>
+                      <SelectItem value="week">Esta Semana</SelectItem>
+                      <SelectItem value="month">Este Mês</SelectItem>
+                      <SelectItem value="all">Todas</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Badge variant="secondary">
+                    {filteredSales.filter(s => s.payment_status !== 'cancelled').length} vendas
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {loadingSales ? (
+                  <div className="h-20 flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+                  </div>
+                ) : (
+                  <VendasTable 
+                    sales={filteredSales} 
+                    onViewDetails={handleViewDetails}
+                    onCancelSale={handleCancelSale}
+                    onPrintReceipt={handlePrintReceipt}
+                  />
+                )}
               </CardContent>
             </Card>
           </>
@@ -745,6 +864,13 @@ export default function CaixaVendas() {
         sale={selectedSale}
         onConfirm={(saleId, reason) => cancelSaleMutation.mutateAsync({ saleId, reason })}
         isLoading={cancelSaleMutation.isPending}
+      />
+
+      <DetalhesVendaDialog
+        open={detalhesVendaOpen}
+        onOpenChange={setDetalhesVendaOpen}
+        sale={selectedSale}
+        onPrint={handlePrintReceipt}
       />
     </MainLayout>
   );
