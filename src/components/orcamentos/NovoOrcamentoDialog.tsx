@@ -273,6 +273,9 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
             quantity: item.quantity,
             unit_price: item.unit_price,
             total_price: item.total_price,
+            has_glass: item.has_glass ?? false,
+            glass_color: item.glass_color || null,
+            glass_thickness: item.glass_thickness || null,
           })));
 
         if (itemsError) throw itemsError;
@@ -327,6 +330,9 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
             quantity: item.quantity,
             unit_price: item.unit_price,
             total_price: item.total_price,
+            has_glass: item.has_glass ?? false,
+            glass_color: item.glass_color || null,
+            glass_thickness: item.glass_thickness || null,
           })));
 
         if (itemsError) throw itemsError;
