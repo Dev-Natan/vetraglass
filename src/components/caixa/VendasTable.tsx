@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye, DollarSign, CreditCard, Smartphone, XCircle } from 'lucide-react';
+import { Eye, DollarSign, CreditCard, Smartphone, XCircle, Printer } from 'lucide-react';
 
 interface Sale {
   id: string;
@@ -26,6 +26,7 @@ interface VendasTableProps {
   sales: Sale[];
   onViewDetails?: (sale: Sale) => void;
   onCancelSale?: (sale: Sale) => void;
+  onPrintReceipt?: (sale: Sale) => void;
 }
 
 const paymentMethodConfig = {
@@ -34,7 +35,7 @@ const paymentMethodConfig = {
   pix: { label: 'PIX', icon: Smartphone, color: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' },
 };
 
-export function VendasTable({ sales, onViewDetails, onCancelSale }: VendasTableProps) {
+export function VendasTable({ sales, onViewDetails, onCancelSale, onPrintReceipt }: VendasTableProps) {
   const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
@@ -105,8 +106,18 @@ export function VendasTable({ sales, onViewDetails, onCancelSale }: VendasTableP
                       size="icon"
                       className="h-8 w-8"
                       onClick={() => onViewDetails?.(sale)}
+                      title="Ver detalhes"
                     >
                       <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => onPrintReceipt?.(sale)}
+                      title="Imprimir comprovante"
+                    >
+                      <Printer className="h-4 w-4" />
                     </Button>
                     {!isCancelled && (
                       <Button

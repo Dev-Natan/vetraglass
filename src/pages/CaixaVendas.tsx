@@ -18,6 +18,7 @@ import { NovaVendaDialog, VendaItem } from '@/components/caixa/NovaVendaDialog';
 import { CaixaResumo } from '@/components/caixa/CaixaResumo';
 import { VendasTable } from '@/components/caixa/VendasTable';
 import { CancelarVendaDialog } from '@/components/caixa/CancelarVendaDialog';
+import { generateSalePdf } from '@/utils/generateSalePdf';
 
 // Função para calcular quantidade baseada na fórmula do componente
 function calculateFormulaQuantity(formula: string, width: number, height: number, piecesQty: number): number {
@@ -581,6 +582,45 @@ export default function CaixaVendas() {
     setCancelarVendaOpen(true);
   };
 
+  const handlePrintReceipt = async (sale: Sale) => {
+    try {
+      // Buscar dados completos da venda
+      const { data: fullSale, error: saleError } = await supabase
+        .from('sales')
+        .select('*')
+        .eq('id', sale.id)
+        .single();
+
+      if (saleError) throw saleError;
+
+      // Buscar itens da venda
+      const { data: saleItems, error: itemsError } = await supabase
+        .from('sale_items')
+        .select('*')
+        .eq('sale_id', sale.id);
+
+      if (itemsError) throw itemsError;
+
+      // Gerar PDF
+      generateSalePdf(
+        fullSale,
+        saleItems || [],
+        currentCompany ? {
+          name: currentCompany.name,
+          cnpj: currentCompany.cnpj,
+          phone: currentCompany.phone,
+          email: currentCompany.email,
+          address: currentCompany.address,
+        } : null
+      );
+
+      toast.success('Comprovante gerado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao gerar comprovante:', error);
+      toast.error('Erro ao gerar comprovante');
+    }
+  };
+
   const isCashOpen = !!openCashRegister;
 
   return (
@@ -650,6 +690,7 @@ export default function CaixaVendas() {
                 <VendasTable 
                   sales={todaySales} 
                   onCancelSale={handleCancelSale}
+                  onPrintReceipt={handlePrintReceipt}
                 />
               </CardContent>
             </Card>
