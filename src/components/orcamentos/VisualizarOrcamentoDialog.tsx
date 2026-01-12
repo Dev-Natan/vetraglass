@@ -36,7 +36,7 @@ import {
 } from '@/components/ui/select';
 import { AprovarOrcamentoDialog } from './AprovarOrcamentoDialog';
 
-type QuoteStatus = 'pending' | 'approved' | 'rejected' | 'expired';
+type QuoteStatus = 'pending' | 'approved' | 'rejected' | 'expired' | 'converted';
 
 interface Quote {
   id: string;
@@ -68,6 +68,7 @@ interface QuoteItem {
 const statusConfig: Record<QuoteStatus, { label: string; icon: typeof Clock; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   pending: { label: 'Pendente', icon: Clock, variant: 'secondary' },
   approved: { label: 'Aprovado', icon: CheckCircle, variant: 'default' },
+  converted: { label: 'Convertido', icon: CheckCircle, variant: 'default' },
   rejected: { label: 'Rejeitado', icon: XCircle, variant: 'destructive' },
   expired: { label: 'Expirado', icon: Clock, variant: 'outline' },
 };

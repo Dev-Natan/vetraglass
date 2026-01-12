@@ -199,10 +199,10 @@ export function AprovarOrcamentoDialog({
           .eq('id', ordemServico.id);
       }
 
-      // 3. Update quote status to approved
+      // 3. Update quote status to converted (can only be sold once)
       const { error: quoteError } = await supabase
         .from('quotes')
-        .update({ status: 'approved' })
+        .update({ status: 'converted' })
         .eq('id', quote.id);
 
       if (quoteError) throw quoteError;
