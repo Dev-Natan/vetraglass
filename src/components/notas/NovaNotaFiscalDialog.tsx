@@ -45,7 +45,8 @@ export default function NovaNotaFiscalDialog({
   saleId,
   ordemServicoId,
 }: NovaNotaFiscalDialogProps) {
-  const { companyId, user } = useAuth();
+  const { currentCompany, user } = useAuth();
+  const companyId = currentCompany?.id;
   const queryClient = useQueryClient();
 
   // Estados do formulário
