@@ -206,35 +206,50 @@ export type Database = {
       companies: {
         Row: {
           address: string | null
+          ambiente_fiscal: string | null
           cnpj: string
+          codigo_municipio_ibge: string | null
           created_at: string
           email: string | null
           id: string
+          inscricao_estadual: string | null
+          inscricao_municipal: string | null
           logo_url: string | null
           name: string
           phone: string | null
+          regime_tributario: string | null
           updated_at: string
         }
         Insert: {
           address?: string | null
+          ambiente_fiscal?: string | null
           cnpj: string
+          codigo_municipio_ibge?: string | null
           created_at?: string
           email?: string | null
           id?: string
+          inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
           logo_url?: string | null
           name: string
           phone?: string | null
+          regime_tributario?: string | null
           updated_at?: string
         }
         Update: {
           address?: string | null
+          ambiente_fiscal?: string | null
           cnpj?: string
+          codigo_municipio_ibge?: string | null
           created_at?: string
           email?: string | null
           id?: string
+          inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
           logo_url?: string | null
           name?: string
           phone?: string | null
+          regime_tributario?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1636,13 +1651,18 @@ export type Database = {
         }
         Returns: {
           address: string | null
+          ambiente_fiscal: string | null
           cnpj: string
+          codigo_municipio_ibge: string | null
           created_at: string
           email: string | null
           id: string
+          inscricao_estadual: string | null
+          inscricao_municipal: string | null
           logo_url: string | null
           name: string
           phone: string | null
+          regime_tributario: string | null
           updated_at: string
         }
         SetofOptions: {
