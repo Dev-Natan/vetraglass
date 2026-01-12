@@ -251,7 +251,36 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
                 <tbody>
                   {items?.map((item) => (
                     <tr key={item.id} className="border-t">
-                      <td className="p-3">{item.description}</td>
+                      <td className="p-3">
+                        <div>{item.description}</div>
+                        {item.has_glass !== undefined && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {item.has_glass ? (
+                              <>
+                                <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                                  Com Vidro
+                                </Badge>
+                                {item.glass_color && (
+                                  <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                    {item.glass_color === 'incolor' ? 'Incolor' : 
+                                     item.glass_color === 'verde' ? 'Verde' : 
+                                     item.glass_color === 'fume' ? 'Fumê' : item.glass_color}
+                                  </Badge>
+                                )}
+                                {item.glass_thickness && (
+                                  <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                                    {item.glass_thickness}
+                                  </Badge>
+                                )}
+                              </>
+                            ) : (
+                              <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">
+                                Sem Vidro
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                      </td>
                       <td className="p-3 text-center text-muted-foreground">
                         {item.width && item.height ? `${item.width} x ${item.height} mm` : '-'}
                       </td>
