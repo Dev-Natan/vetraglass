@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import { OverdueOrdersNotification } from '@/components/notifications/OverdueOrdersNotification';
 import { SupportButton } from '@/components/support/SupportButton';
+import { AnnouncementBanner } from '@/components/announcements/AnnouncementBanner';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -69,6 +70,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
         {/* Page Content */}
         <div className="p-6">
+          <AnnouncementBanner />
           {children}
         </div>
       </main>
