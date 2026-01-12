@@ -762,7 +762,8 @@ export default function Financeiro() {
           <TabsContent value="relatorios" className="mt-6">
             <TaxReports 
               sales={sales} 
-              taxConfig={taxConfig} 
+              taxConfig={taxConfig}
+              company={currentCompany ? { name: currentCompany.name, cnpj: currentCompany.cnpj } : null}
             />
           </TabsContent>
 
