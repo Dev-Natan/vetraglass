@@ -17,6 +17,8 @@ import { Send, Loader2, User, Shield, Building2, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { MessageAttachments } from '@/components/support/MessageAttachments';
+import { FileUploadButton } from '@/components/support/FileUploadButton';
 
 interface AdminTicketViewProps {
   ticket: SupportTicket;
@@ -57,6 +59,7 @@ export function AdminTicketView({ ticket, onClose }: AdminTicketViewProps) {
   } = useSupportTickets();
   const { data: messages = [], isLoading } = useTicketMessages(ticket.id);
   const [newMessage, setNewMessage] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -66,12 +69,15 @@ export function AdminTicketView({ ticket, onClose }: AdminTicketViewProps) {
   }, [messages]);
 
   const handleSend = () => {
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() && files.length === 0) return;
 
     sendMessage(
-      { ticketId: ticket.id, content: newMessage },
+      { ticketId: ticket.id, content: newMessage || '(arquivo anexado)', files: files.length > 0 ? files : undefined },
       {
-        onSuccess: () => setNewMessage(''),
+        onSuccess: () => {
+          setNewMessage('');
+          setFiles([]);
+        },
       }
     );
   };
@@ -183,6 +189,9 @@ export function AdminTicketView({ ticket, onClose }: AdminTicketViewProps) {
                     )}
                   >
                     <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                    {message.attachments && message.attachments.length > 0 && (
+                      <MessageAttachments attachments={message.attachments} isOwn={isOwn} />
+                    )}
                     <p
                       className={cn(
                         'text-xs mt-1',
@@ -205,18 +214,25 @@ export function AdminTicketView({ ticket, onClose }: AdminTicketViewProps) {
 
       {/* Input */}
       <div className="pt-3">
-        <div className="flex gap-2">
-          <Textarea
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Digite sua resposta..."
-            rows={2}
-            className="resize-none text-sm"
+        <div className="flex items-end gap-2">
+          <FileUploadButton
+            files={files}
+            onFilesChange={setFiles}
+            disabled={sendMessageLoading}
           />
+          <div className="flex-1">
+            <Textarea
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Digite sua resposta..."
+              rows={2}
+              className="resize-none text-sm"
+            />
+          </div>
           <Button
             onClick={handleSend}
-            disabled={!newMessage.trim() || sendMessageLoading}
+            disabled={(!newMessage.trim() && files.length === 0) || sendMessageLoading}
             size="icon"
             className="shrink-0"
           >
