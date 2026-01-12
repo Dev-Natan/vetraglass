@@ -45,7 +45,7 @@ import {
 import { NovoOrcamentoDialog } from '@/components/orcamentos/NovoOrcamentoDialog';
 import { VisualizarOrcamentoDialog } from '@/components/orcamentos/VisualizarOrcamentoDialog';
 
-type QuoteStatus = 'pending' | 'approved' | 'rejected' | 'expired';
+type QuoteStatus = 'pending' | 'approved' | 'rejected' | 'expired' | 'converted';
 
 interface Quote {
   id: string;
@@ -63,6 +63,7 @@ interface Quote {
 const statusConfig: Record<QuoteStatus, { label: string; icon: typeof Clock; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   pending: { label: 'Pendente', icon: Clock, variant: 'secondary' },
   approved: { label: 'Aprovado', icon: CheckCircle, variant: 'default' },
+  converted: { label: 'Convertido', icon: CheckCircle, variant: 'default' },
   rejected: { label: 'Rejeitado', icon: XCircle, variant: 'destructive' },
   expired: { label: 'Expirado', icon: AlertCircle, variant: 'outline' },
 };
@@ -126,7 +127,7 @@ export default function Orcamentos() {
   // Stats
   const totalQuotes = quotes?.length || 0;
   const pendingQuotes = quotes?.filter(q => q.status === 'pending').length || 0;
-  const approvedQuotes = quotes?.filter(q => q.status === 'approved').length || 0;
+  const approvedQuotes = quotes?.filter(q => q.status === 'approved' || q.status === 'converted').length || 0;
   const totalValue = quotes?.reduce((sum, q) => sum + Number(q.final_amount), 0) || 0;
 
   const formatCurrency = (value: number) => {
