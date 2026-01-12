@@ -27,6 +27,8 @@ import {
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, subMonths, getMonth, getYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { generateDasFromMonthData } from '@/utils/generateDasPdf';
+import { toast } from 'sonner';
 
 interface TaxReportsProps {
   sales: {
@@ -41,6 +43,11 @@ interface TaxReportsProps {
   taxConfig: {
     aliquota_efetiva: number;
     anexo_simples: string;
+    faixa_simples: number;
+  } | null;
+  company?: {
+    name: string;
+    cnpj: string;
   } | null;
 }
 
@@ -51,7 +58,7 @@ const monthNames = [
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ];
 
-export function TaxReports({ sales, taxConfig }: TaxReportsProps) {
+export function TaxReports({ sales, taxConfig, company }: TaxReportsProps) {
   const [period, setPeriod] = useState<ReportPeriod>('current_month');
 
   const formatCurrency = (value: number) => {
@@ -241,6 +248,7 @@ export function TaxReports({ sales, taxConfig }: TaxReportsProps) {
                   <TableHead className="text-center">Vendas</TableHead>
                   <TableHead>Vencimento</TableHead>
                   <TableHead className="text-center">Status</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -248,6 +256,24 @@ export function TaxReports({ sales, taxConfig }: TaxReportsProps) {
                   const isPast = m.vencimentoDAS < new Date();
                   const isCurrentMonth = getMonth(new Date()) === getMonth(m.month) && getYear(new Date()) === getYear(m.month);
                   
+                  const handleExportDas = () => {
+                    if (!company) {
+                      toast.error('Dados da empresa não disponíveis');
+                      return;
+                    }
+                    generateDasFromMonthData(
+                      {
+                        month: m.month,
+                        faturamento: m.faturamento,
+                        imposto: m.imposto,
+                        vencimentoDAS: m.vencimentoDAS,
+                      },
+                      company,
+                      taxConfig
+                    );
+                    toast.success(`DAS de ${m.monthName}/${m.year} exportado!`);
+                  };
+
                   return (
                     <TableRow key={idx}>
                       <TableCell className="font-medium">
@@ -271,16 +297,28 @@ export function TaxReports({ sales, taxConfig }: TaxReportsProps) {
                           <Badge variant="outline">Futuro</Badge>
                         )}
                       </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleExportDas}
+                          disabled={!company || m.faturamento === 0}
+                          title="Exportar DAS em PDF"
+                        >
+                          <Printer className="w-4 h-4 mr-1" />
+                          DAS
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   );
                 })}
-                {/* Total Row */}
                 <TableRow className="bg-muted/50 font-bold">
                   <TableCell>TOTAL</TableCell>
                   <TableCell className="text-right">{formatCurrency(totals.faturamento)}</TableCell>
                   <TableCell className="text-right text-red-600">{formatCurrency(totals.imposto)}</TableCell>
                   <TableCell className="text-right text-green-600">{formatCurrency(totals.liquido)}</TableCell>
                   <TableCell className="text-center">{totals.countSales}</TableCell>
+                  <TableCell></TableCell>
                   <TableCell></TableCell>
                   <TableCell></TableCell>
                 </TableRow>
