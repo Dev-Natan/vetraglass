@@ -4,6 +4,16 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 
+export interface SupportAttachment {
+  id: string;
+  message_id: string;
+  file_name: string;
+  file_path: string;
+  file_type: string;
+  file_size: number;
+  created_at: string;
+}
+
 export interface SupportTicket {
   id: string;
   ticket_number: number;
@@ -29,6 +39,7 @@ export interface SupportMessage {
   is_admin: boolean;
   content: string;
   created_at: string;
+  attachments?: SupportAttachment[];
 }
 
 export function useSupportTickets() {
@@ -73,20 +84,38 @@ export function useSupportTickets() {
     enabled: !!user && isSaasAdmin,
   });
 
-  // Fetch messages for a specific ticket
+  // Fetch messages for a specific ticket with attachments
   const useTicketMessages = (ticketId: string | null) => {
     return useQuery({
       queryKey: ['support-messages', ticketId],
       queryFn: async () => {
         if (!ticketId) return [];
-        const { data, error } = await supabase
+        
+        // Get messages
+        const { data: messages, error: messagesError } = await supabase
           .from('support_messages')
           .select('*')
           .eq('ticket_id', ticketId)
           .order('created_at', { ascending: true });
 
-        if (error) throw error;
-        return data as SupportMessage[];
+        if (messagesError) throw messagesError;
+
+        // Get attachments for all messages
+        const messageIds = messages.map(m => m.id);
+        const { data: attachments, error: attachmentsError } = await supabase
+          .from('support_attachments')
+          .select('*')
+          .in('message_id', messageIds);
+
+        if (attachmentsError) throw attachmentsError;
+
+        // Merge attachments into messages
+        const messagesWithAttachments = messages.map(message => ({
+          ...message,
+          attachments: attachments?.filter(a => a.message_id === message.id) || [],
+        }));
+
+        return messagesWithAttachments as SupportMessage[];
       },
       enabled: !!ticketId,
     });
@@ -140,12 +169,20 @@ export function useSupportTickets() {
     },
   });
 
-  // Send message
+  // Send message with optional attachments
   const sendMessageMutation = useMutation({
-    mutationFn: async ({ ticketId, content }: { ticketId: string; content: string }) => {
+    mutationFn: async ({ 
+      ticketId, 
+      content, 
+      files 
+    }: { 
+      ticketId: string; 
+      content: string; 
+      files?: File[];
+    }) => {
       if (!user) throw new Error('Usuário não autenticado');
 
-      const { data, error } = await supabase
+      const { data: message, error } = await supabase
         .from('support_messages')
         .insert({
           ticket_id: ticketId,
@@ -157,6 +194,33 @@ export function useSupportTickets() {
         .single();
 
       if (error) throw error;
+
+      // Upload files if any
+      if (files && files.length > 0) {
+        for (const file of files) {
+          const filePath = `${ticketId}/${message.id}/${Date.now()}-${file.name}`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from('support-attachments')
+            .upload(filePath, file);
+
+          if (uploadError) {
+            console.error('Upload error:', uploadError);
+            continue;
+          }
+
+          // Save attachment record
+          await supabase
+            .from('support_attachments')
+            .insert({
+              message_id: message.id,
+              file_name: file.name,
+              file_path: filePath,
+              file_type: file.type,
+              file_size: file.size,
+            });
+        }
+      }
 
       // Update ticket status if admin is responding
       if (isSaasAdmin) {
@@ -171,7 +235,7 @@ export function useSupportTickets() {
           .eq('id', ticketId);
       }
 
-      return data;
+      return message;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['support-messages', variables.ticketId] });
