@@ -496,6 +496,33 @@ export type Database = {
         }
         Relationships: []
       }
+      municipios_ibge: {
+        Row: {
+          codigo_ibge: string
+          created_at: string
+          id: string
+          nome_municipio: string
+          uf_codigo: string
+          uf_nome: string
+        }
+        Insert: {
+          codigo_ibge: string
+          created_at?: string
+          id?: string
+          nome_municipio: string
+          uf_codigo: string
+          uf_nome: string
+        }
+        Update: {
+          codigo_ibge?: string
+          created_at?: string
+          id?: string
+          nome_municipio?: string
+          uf_codigo?: string
+          uf_nome?: string
+        }
+        Relationships: []
+      }
       nota_fiscal_itens: {
         Row: {
           cfop: string | null

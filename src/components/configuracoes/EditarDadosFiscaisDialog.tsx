@@ -15,8 +15,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Save, Building2, FileText, MapPin } from "lucide-react";
+import { Save, Building2, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import MunicipioIbgeSearch from "./MunicipioIbgeSearch";
 
 interface EditarDadosFiscaisDialogProps {
   open: boolean;
@@ -216,22 +217,16 @@ export default function EditarDadosFiscaisDialog({
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
                   Município e Regime Tributário
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Código IBGE do Município</Label>
-                    <Input
+                  <div className="col-span-2">
+                    <MunicipioIbgeSearch
                       value={codigoMunicipioIbge}
-                      onChange={(e) => setCodigoMunicipioIbge(e.target.value)}
-                      placeholder="Ex: 3550308 (São Paulo)"
+                      onChange={(codigo) => setCodigoMunicipioIbge(codigo)}
                     />
-                    <p className="text-xs text-muted-foreground">
-                      Código de 7 dígitos do IBGE
-                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label>Regime Tributário</Label>
