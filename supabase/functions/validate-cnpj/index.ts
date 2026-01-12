@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -44,6 +45,41 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // Authentication check
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ 
+          valid: false, 
+          active: false,
+          error: 'Autenticação necessária' 
+        }),
+        { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
+    // Verify JWT
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { 
+        global: { headers: { Authorization: authHeader } },
+        auth: { persistSession: false }
+      }
+    );
+    
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ 
+          valid: false, 
+          active: false,
+          error: 'Autenticação inválida' 
+        }),
+        { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
     const { cnpj } = await req.json();
     
     if (!cnpj) {
@@ -63,7 +99,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`Validating CNPJ: ${cleanCNPJ}`);
+    console.log(`User ${user.id} validating CNPJ: ${cleanCNPJ}`);
 
     // Query BrasilAPI
     const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cleanCNPJ}`, {
@@ -88,11 +124,11 @@ const handler = async (req: Request): Promise<Response> => {
         console.log('Rate limit exceeded');
         return new Response(
           JSON.stringify({ 
-            valid: true, 
-            active: true, 
+            valid: false, 
+            active: false, 
             error: 'Limite de consultas excedido. Tente novamente em alguns minutos.' 
           }),
-          { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+          { status: 429, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
         );
       }
 
