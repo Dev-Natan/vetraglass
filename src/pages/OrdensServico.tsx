@@ -3,7 +3,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { 
   ClipboardList, Search, Filter, Clock, CheckCircle, AlertCircle, 
   User, Calendar, DollarSign, ChevronRight, Play, XCircle,
-  MoreHorizontal, Eye
+  MoreHorizontal, Eye, AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -117,6 +117,27 @@ export default function OrdensServico() {
   const pendingCount = ordens?.filter(os => os.status === 'pending').length || 0;
   const inProgressCount = ordens?.filter(os => os.status === 'in_progress').length || 0;
   const completedCount = ordens?.filter(os => os.status === 'completed').length || 0;
+  
+  // Overdue check
+  const today = new Date().toISOString().split('T')[0];
+  const overdueCount = ordens?.filter(os => 
+    (os.status === 'pending' || os.status === 'in_progress') && 
+    os.estimated_end && 
+    os.estimated_end < today
+  ).length || 0;
+
+  const isOverdue = (os: OrdemServico) => {
+    return (os.status === 'pending' || os.status === 'in_progress') && 
+      os.estimated_end && 
+      os.estimated_end < today;
+  };
+
+  const getDaysOverdue = (estimated_end: string) => {
+    const estimatedDate = new Date(estimated_end);
+    const todayDate = new Date(today);
+    const diffTime = todayDate.getTime() - estimatedDate.getTime();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -136,7 +157,7 @@ export default function OrdensServico() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
           <div className="section-card flex items-center gap-4">
             <div className="w-12 h-12 rounded-lg bg-action-orange/20 flex items-center justify-center">
               <AlertCircle className="w-6 h-6 text-action-orange" />
@@ -162,6 +183,17 @@ export default function OrdensServico() {
             <div>
               <p className="text-2xl font-display font-bold text-foreground">{completedCount}</p>
               <p className="text-sm text-muted-foreground">Concluídas</p>
+            </div>
+          </div>
+          <div className={`section-card flex items-center gap-4 ${overdueCount > 0 ? 'border-destructive/50 bg-destructive/5' : ''}`}>
+            <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${overdueCount > 0 ? 'bg-destructive/20' : 'bg-muted'}`}>
+              <AlertTriangle className={`w-6 h-6 ${overdueCount > 0 ? 'text-destructive' : 'text-muted-foreground'}`} />
+            </div>
+            <div>
+              <p className={`text-2xl font-display font-bold ${overdueCount > 0 ? 'text-destructive' : 'text-foreground'}`}>
+                {overdueCount}
+              </p>
+              <p className="text-sm text-muted-foreground">Atrasadas</p>
             </div>
           </div>
         </div>
@@ -221,16 +253,22 @@ export default function OrdensServico() {
               const status = statusConfig[os.status];
               const priority = priorityConfig[os.priority || 'normal'];
               const StatusIcon = status.icon;
+              const overdue = isOverdue(os);
+              const daysLate = os.estimated_end ? getDaysOverdue(os.estimated_end) : 0;
               
               return (
                 <div
                   key={os.id}
-                  className="section-card p-4 hover:shadow-md transition-shadow"
+                  className={`section-card p-4 hover:shadow-md transition-shadow ${overdue ? 'border-destructive/50 bg-destructive/5' : ''}`}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-4 flex-1 min-w-0">
-                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                        <ClipboardList className="w-5 h-5 text-primary" />
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${overdue ? 'bg-destructive/20' : 'bg-primary/10'}`}>
+                        {overdue ? (
+                          <AlertTriangle className="w-5 h-5 text-destructive" />
+                        ) : (
+                          <ClipboardList className="w-5 h-5 text-primary" />
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -244,6 +282,12 @@ export default function OrdensServico() {
                             <StatusIcon className="w-3 h-3" />
                             {status.label}
                           </Badge>
+                          {overdue && (
+                            <Badge variant="destructive" className="gap-1">
+                              <AlertTriangle className="w-3 h-3" />
+                              {daysLate} {daysLate === 1 ? 'dia atrasado' : 'dias atrasado'}
+                            </Badge>
+                          )}
                           <span className={`text-xs font-medium ${priority.color}`}>
                             {priority.label}
                           </span>
