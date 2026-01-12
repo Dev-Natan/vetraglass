@@ -27,6 +27,7 @@ interface VendasTableProps {
   onViewDetails?: (sale: Sale) => void;
   onCancelSale?: (sale: Sale) => void;
   onPrintReceipt?: (sale: Sale) => void;
+  showCancelButton?: boolean;
 }
 
 const paymentMethodConfig = {
@@ -35,7 +36,7 @@ const paymentMethodConfig = {
   pix: { label: 'PIX', icon: Smartphone, color: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' },
 };
 
-export function VendasTable({ sales, onViewDetails, onCancelSale, onPrintReceipt }: VendasTableProps) {
+export function VendasTable({ sales, onViewDetails, onCancelSale, onPrintReceipt, showCancelButton = false }: VendasTableProps) {
   const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
@@ -119,7 +120,7 @@ export function VendasTable({ sales, onViewDetails, onCancelSale, onPrintReceipt
                     >
                       <Printer className="h-4 w-4" />
                     </Button>
-                    {!isCancelled && (
+                    {showCancelButton && !isCancelled && (
                       <Button
                         variant="ghost"
                         size="icon"
