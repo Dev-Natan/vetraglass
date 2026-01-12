@@ -455,275 +455,328 @@ export default function Financeiro() {
               <DollarSign className="w-7 h-7 text-primary" />
               Financeiro
             </h1>
-            <p className="text-muted-foreground">Gestão de vendas e movimentações financeiras</p>
+            <p className="text-muted-foreground">Gestão de vendas, impostos e movimentações financeiras</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" className="gap-2">
-              <Download className="w-4 h-4" />
-              Exportar
+            <Button variant="outline" className="gap-2" onClick={() => setTaxConfigOpen(true)}>
+              <Settings className="w-4 h-4" />
+              Configurar Impostos
             </Button>
           </div>
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-muted-foreground">Total Receitas</span>
-                <ArrowUpRight className="w-5 h-5 text-green-500" />
-              </div>
-              <p className="text-2xl font-bold text-green-600">{formatCurrency(summary.totalReceitas)}</p>
-              <p className="text-xs text-muted-foreground mt-1">{summary.countActive} vendas</p>
-            </CardContent>
-          </Card>
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
+            <TabsTrigger value="vendas" className="gap-2">
+              <FileText className="w-4 h-4 hidden sm:inline" />
+              Vendas
+            </TabsTrigger>
+            <TabsTrigger value="impostos" className="gap-2">
+              <Receipt className="w-4 h-4 hidden sm:inline" />
+              Impostos
+            </TabsTrigger>
+            <TabsTrigger value="relatorios" className="gap-2">
+              <BarChart3 className="w-4 h-4 hidden sm:inline" />
+              Relatórios
+            </TabsTrigger>
+            <TabsTrigger value="categorias" className="gap-2">
+              <Settings className="w-4 h-4 hidden sm:inline" />
+              Categorias
+            </TabsTrigger>
+          </TabsList>
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-muted-foreground">Dinheiro</span>
-                <DollarSign className="w-5 h-5 text-green-500" />
-              </div>
-              <p className="text-2xl font-bold">{formatCurrency(summary.totalDinheiro)}</p>
-            </CardContent>
-          </Card>
+          {/* Tab: Vendas */}
+          <TabsContent value="vendas" className="space-y-6 mt-6">
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-muted-foreground">Total Receitas</span>
+                    <ArrowUpRight className="w-5 h-5 text-green-500" />
+                  </div>
+                  <p className="text-2xl font-bold text-green-600">{formatCurrency(summary.totalReceitas)}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{summary.countActive} vendas</p>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-muted-foreground">Cartão</span>
-                <CreditCard className="w-5 h-5 text-blue-500" />
-              </div>
-              <p className="text-2xl font-bold">{formatCurrency(summary.totalCartao)}</p>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-muted-foreground">Dinheiro</span>
+                    <DollarSign className="w-5 h-5 text-green-500" />
+                  </div>
+                  <p className="text-2xl font-bold">{formatCurrency(summary.totalDinheiro)}</p>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-muted-foreground">PIX</span>
-                <Smartphone className="w-5 h-5 text-purple-500" />
-              </div>
-              <p className="text-2xl font-bold">{formatCurrency(summary.totalPix)}</p>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-muted-foreground">Cartão</span>
+                    <CreditCard className="w-5 h-5 text-blue-500" />
+                  </div>
+                  <p className="text-2xl font-bold">{formatCurrency(summary.totalCartao)}</p>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-muted-foreground">Cancelados</span>
-                <XCircle className="w-5 h-5 text-destructive" />
-              </div>
-              <p className="text-2xl font-bold text-destructive">{formatCurrency(summary.totalCancelado)}</p>
-              <p className="text-xs text-muted-foreground mt-1">{summary.countCancelled} vendas</p>
-            </CardContent>
-          </Card>
-        </div>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-muted-foreground">PIX</span>
+                    <Smartphone className="w-5 h-5 text-purple-500" />
+                  </div>
+                  <p className="text-2xl font-bold">{formatCurrency(summary.totalPix)}</p>
+                </CardContent>
+              </Card>
 
-        {/* Filters */}
-        <Card>
-          <CardHeader className="pb-4">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Filter className="w-5 h-5" />
-              Filtros
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-4">
-              <div className="flex-1 min-w-[200px]">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por número ou cliente..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-muted-foreground">Cancelados</span>
+                    <XCircle className="w-5 h-5 text-destructive" />
+                  </div>
+                  <p className="text-2xl font-bold text-destructive">{formatCurrency(summary.totalCancelado)}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{summary.countCancelled} vendas</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Filters */}
+            <Card>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Filter className="w-5 h-5" />
+                  Filtros
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-4">
+                  <div className="flex-1 min-w-[200px]">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Buscar por número ou cliente..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+
+                  <Select value={periodFilter} onValueChange={(v) => setPeriodFilter(v as PeriodFilter)}>
+                    <SelectTrigger className="w-[160px]">
+                      <Calendar className="w-4 h-4 mr-2" />
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="today">Hoje</SelectItem>
+                      <SelectItem value="week">Esta semana</SelectItem>
+                      <SelectItem value="month">Este mês</SelectItem>
+                      <SelectItem value="last_month">Mês passado</SelectItem>
+                      <SelectItem value="all">Todo período</SelectItem>
+                      <SelectItem value="custom">Personalizado</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {periodFilter === 'custom' && (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="gap-2">
+                          <Calendar className="w-4 h-4" />
+                          {customDateRange.from ? (
+                            customDateRange.to ? (
+                              <>
+                                {format(customDateRange.from, 'dd/MM')} - {format(customDateRange.to, 'dd/MM')}
+                              </>
+                            ) : (
+                              format(customDateRange.from, 'dd/MM/yyyy')
+                            )
+                          ) : (
+                            'Selecionar período'
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="range"
+                          selected={customDateRange as { from: Date | undefined; to?: Date | undefined }}
+                          onSelect={(range) => setCustomDateRange({ from: range?.from, to: range?.to })}
+                          locale={ptBR}
+                          numberOfMonths={2}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  )}
+
+                  <Select value={paymentFilter} onValueChange={(v) => setPaymentFilter(v as PaymentFilter)}>
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue placeholder="Pagamento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                      <SelectItem value="cartao">Cartão</SelectItem>
+                      <SelectItem value="pix">PIX</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="paid">Pagos</SelectItem>
+                      <SelectItem value="pending">Pendentes</SelectItem>
+                      <SelectItem value="cancelled">Cancelados</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-              </div>
+              </CardContent>
+            </Card>
 
-              <Select value={periodFilter} onValueChange={(v) => setPeriodFilter(v as PeriodFilter)}>
-                <SelectTrigger className="w-[160px]">
-                  <Calendar className="w-4 h-4 mr-2" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="today">Hoje</SelectItem>
-                  <SelectItem value="week">Esta semana</SelectItem>
-                  <SelectItem value="month">Este mês</SelectItem>
-                  <SelectItem value="last_month">Mês passado</SelectItem>
-                  <SelectItem value="all">Todo período</SelectItem>
-                  <SelectItem value="custom">Personalizado</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {periodFilter === 'custom' && (
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="gap-2">
-                      <Calendar className="w-4 h-4" />
-                      {customDateRange.from ? (
-                        customDateRange.to ? (
-                          <>
-                            {format(customDateRange.from, 'dd/MM')} - {format(customDateRange.to, 'dd/MM')}
-                          </>
-                        ) : (
-                          format(customDateRange.from, 'dd/MM/yyyy')
-                        )
-                      ) : (
-                        'Selecionar período'
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <CalendarComponent
-                      mode="range"
-                      selected={customDateRange as { from: Date | undefined; to?: Date | undefined }}
-                      onSelect={(range) => setCustomDateRange({ from: range?.from, to: range?.to })}
-                      locale={ptBR}
-                      numberOfMonths={2}
-                    />
-                  </PopoverContent>
-                </Popover>
-              )}
-
-              <Select value={paymentFilter} onValueChange={(v) => setPaymentFilter(v as PaymentFilter)}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Pagamento" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="dinheiro">Dinheiro</SelectItem>
-                  <SelectItem value="cartao">Cartão</SelectItem>
-                  <SelectItem value="pix">PIX</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="paid">Pagos</SelectItem>
-                  <SelectItem value="pending">Pendentes</SelectItem>
-                  <SelectItem value="cancelled">Cancelados</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Sales Table */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <FileText className="w-5 h-5" />
-                Vendas
-              </CardTitle>
-              <Badge variant="secondary">{filteredSales.length} registros</Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              </div>
-            ) : filteredSales.length === 0 ? (
-              <div className="text-center py-12">
-                <DollarSign className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
-                <p className="text-muted-foreground">Nenhuma venda encontrada com os filtros aplicados.</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Venda</TableHead>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Cliente</TableHead>
-                      <TableHead>Valor</TableHead>
-                      <TableHead>Pagamento</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredSales.map((sale) => {
-                      const paymentConfig = paymentMethodConfig[sale.payment_method as keyof typeof paymentMethodConfig] || paymentMethodConfig.dinheiro;
-                      const PaymentIcon = paymentConfig.icon;
-                      const status = statusConfig[sale.payment_status as keyof typeof statusConfig] || statusConfig.paid;
-                      const isCancelled = sale.payment_status === 'cancelled';
-
-                      return (
-                        <TableRow key={sale.id} className={isCancelled ? 'opacity-60' : ''}>
-                          <TableCell className="font-medium">
-                            #{String(sale.sale_number).padStart(4, '0')}
-                            {sale.sale_type === 'partial' && (
-                              <Badge variant="outline" className="ml-2 text-xs">Entrada</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {format(new Date(sale.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                          </TableCell>
-                          <TableCell>{sale.customer_name || '-'}</TableCell>
-                          <TableCell className={isCancelled ? 'line-through' : 'font-medium'}>
-                            {formatCurrency(sale.total_amount)}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="secondary" className={paymentConfig.color}>
-                              <PaymentIcon className="w-3 h-3 mr-1" />
-                              {paymentConfig.label}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="secondary" className={status.color}>
-                              {status.label}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center justify-end gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => handleViewDetails(sale)}
-                                title="Ver detalhes"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => handlePrintReceipt(sale)}
-                                title="Imprimir comprovante"
-                              >
-                                <Printer className="h-4 w-4" />
-                              </Button>
-                              {!isCancelled && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-destructive hover:text-destructive"
-                                  onClick={() => handleCancelSale(sale)}
-                                  title="Cancelar venda"
-                                >
-                                  <XCircle className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                          </TableCell>
+            {/* Sales Table */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <FileText className="w-5 h-5" />
+                    Vendas
+                  </CardTitle>
+                  <Badge variant="secondary">{filteredSales.length} registros</Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                ) : filteredSales.length === 0 ? (
+                  <div className="text-center py-12">
+                    <DollarSign className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
+                    <p className="text-muted-foreground">Nenhuma venda encontrada com os filtros aplicados.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Venda</TableHead>
+                          <TableHead>Data</TableHead>
+                          <TableHead>Cliente</TableHead>
+                          <TableHead>Valor</TableHead>
+                          <TableHead>Pagamento</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Ações</TableHead>
                         </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredSales.map((sale) => {
+                          const paymentConfig = paymentMethodConfig[sale.payment_method as keyof typeof paymentMethodConfig] || paymentMethodConfig.dinheiro;
+                          const PaymentIcon = paymentConfig.icon;
+                          const status = statusConfig[sale.payment_status as keyof typeof statusConfig] || statusConfig.paid;
+                          const isCancelled = sale.payment_status === 'cancelled';
+
+                          return (
+                            <TableRow key={sale.id} className={isCancelled ? 'opacity-60' : ''}>
+                              <TableCell className="font-medium">
+                                #{String(sale.sale_number).padStart(4, '0')}
+                                {sale.sale_type === 'partial' && (
+                                  <Badge variant="outline" className="ml-2 text-xs">Entrada</Badge>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {format(new Date(sale.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                              </TableCell>
+                              <TableCell>{sale.customer_name || '-'}</TableCell>
+                              <TableCell className={isCancelled ? 'line-through' : 'font-medium'}>
+                                {formatCurrency(sale.total_amount)}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="secondary" className={paymentConfig.color}>
+                                  <PaymentIcon className="w-3 h-3 mr-1" />
+                                  {paymentConfig.label}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="secondary" className={status.color}>
+                                  {status.label}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center justify-end gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => handleViewDetails(sale)}
+                                    title="Ver detalhes"
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => handlePrintReceipt(sale)}
+                                    title="Imprimir comprovante"
+                                  >
+                                    <Printer className="h-4 w-4" />
+                                  </Button>
+                                  {!isCancelled && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-destructive hover:text-destructive"
+                                      onClick={() => handleCancelSale(sale)}
+                                      title="Cancelar venda"
+                                    >
+                                      <XCircle className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Tab: Impostos */}
+          <TabsContent value="impostos" className="mt-6">
+            <TaxDashboard 
+              sales={sales} 
+              taxConfig={taxConfig} 
+              saleTaxes={saleTaxes} 
+            />
+          </TabsContent>
+
+          {/* Tab: Relatórios */}
+          <TabsContent value="relatorios" className="mt-6">
+            <TaxReports 
+              sales={sales} 
+              taxConfig={taxConfig} 
+            />
+          </TabsContent>
+
+          {/* Tab: Categorias */}
+          <TabsContent value="categorias" className="mt-6">
+            <TaxCategories
+              categories={taxCategories}
+              onAdd={async (cat) => { await addCategoryMutation.mutateAsync(cat); }}
+              onUpdate={async (id, data) => { await updateCategoryMutation.mutateAsync({ id, data }); }}
+              onDelete={async (id) => { await deleteCategoryMutation.mutateAsync(id); }}
+              isLoading={addCategoryMutation.isPending || updateCategoryMutation.isPending || deleteCategoryMutation.isPending}
+            />
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Dialogs */}
@@ -740,6 +793,14 @@ export default function Financeiro() {
         onOpenChange={setDetailsDialogOpen}
         sale={selectedSale}
         onPrint={handlePrintReceipt}
+      />
+
+      <TaxConfigDialog
+        open={taxConfigOpen}
+        onOpenChange={setTaxConfigOpen}
+        config={taxConfig}
+        onSave={(config) => saveTaxConfigMutation.mutateAsync(config)}
+        isLoading={saveTaxConfigMutation.isPending}
       />
     </MainLayout>
   );
