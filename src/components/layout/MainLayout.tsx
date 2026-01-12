@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import { OverdueOrdersNotification } from '@/components/notifications/OverdueOrdersNotification';
+import { SupportButton } from '@/components/support/SupportButton';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -71,6 +72,9 @@ export function MainLayout({ children }: MainLayoutProps) {
           {children}
         </div>
       </main>
+
+      {/* Support Button */}
+      <SupportButton />
     </div>
   );
 }
