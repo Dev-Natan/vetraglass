@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -14,12 +15,14 @@ import {
   ChevronRight,
   Upload,
   Shield,
+  Headphones,
 } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useSupportTickets } from "@/hooks/useSupportTickets";
 
 const adminMenuItems = [
   {
@@ -46,6 +49,11 @@ const adminMenuItems = [
     title: "Empresas",
     path: "/admin/companies",
     icon: Users,
+  },
+  {
+    title: "Suporte",
+    path: "/admin/support",
+    icon: Headphones,
   },
   {
     title: "Configurações",
