@@ -63,6 +63,15 @@ interface QuoteItem {
   quantity: number;
   unit_price: number;
   total_price: number;
+  has_glass?: boolean;
+  glass_color?: string | null;
+  glass_thickness?: string | null;
+  product_template_id?: string | null;
+  product_templates?: {
+    image_url: string | null;
+    linha: string | null;
+    category: string | null;
+  } | null;
 }
 
 const statusConfig: Record<QuoteStatus, { label: string; icon: typeof Clock; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
@@ -85,14 +94,21 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
   const queryClient = useQueryClient();
   const [aprovarDialogOpen, setAprovarDialogOpen] = useState(false);
 
-  // Fetch quote items
+  // Fetch quote items with product template info for images
   const { data: items } = useQuery({
     queryKey: ['quote-items', quote?.id],
     queryFn: async () => {
       if (!quote?.id) return [];
       const { data, error } = await supabase
         .from('quote_items')
-        .select('*')
+        .select(`
+          *,
+          product_templates (
+            image_url,
+            linha,
+            category
+          )
+        `)
         .eq('quote_id', quote.id);
       
       if (error) throw error;
@@ -139,8 +155,24 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
       address: currentCompany.address,
     } : null;
     
+    // Transform items to include image_url, linha, and category from product_templates
+    const itemsForPdf = items.map(item => ({
+      description: item.description,
+      width: item.width,
+      height: item.height,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      total_price: item.total_price,
+      has_glass: item.has_glass,
+      glass_color: item.glass_color,
+      glass_thickness: item.glass_thickness,
+      image_url: item.product_templates?.image_url || null,
+      linha: item.product_templates?.linha || null,
+      category: item.product_templates?.category || null,
+    }));
+    
     toast({ title: 'Gerando PDF...' });
-    await generateQuotePdf(quote, items, company);
+    await generateQuotePdf(quote, itemsForPdf, company);
     toast({ title: 'PDF gerado com sucesso!' });
   };
 
