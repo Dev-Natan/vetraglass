@@ -1,8 +1,9 @@
 import { Sidebar } from './Sidebar';
-import { Bell, Settings, Search } from 'lucide-react';
+import { Settings, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
+import { OverdueOrdersNotification } from '@/components/notifications/OverdueOrdersNotification';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -27,9 +28,7 @@ export function MainLayout({ children }: MainLayoutProps) {
           <div className="flex items-center justify-between px-6 py-3">
             <div className="pl-12 lg:pl-0" />
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-                <Bell className="w-5 h-5" />
-              </Button>
+              <OverdueOrdersNotification />
               <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
                 <Settings className="w-5 h-5" />
               </Button>
