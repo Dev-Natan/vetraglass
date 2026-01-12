@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -33,6 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { AprovarOrcamentoDialog } from './AprovarOrcamentoDialog';
 
 type QuoteStatus = 'pending' | 'approved' | 'rejected' | 'expired';
 
@@ -80,6 +82,7 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
   const { toast } = useToast();
   const { currentCompany } = useAuth();
   const queryClient = useQueryClient();
+  const [aprovarDialogOpen, setAprovarDialogOpen] = useState(false);
 
   // Fetch quote items
   const { data: items } = useQuery({
@@ -262,6 +265,7 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
               <Select
                 value={quote.status}
                 onValueChange={(value) => updateStatusMutation.mutate(value as QuoteStatus)}
+                disabled={quote.status === 'approved'}
               >
                 <SelectTrigger className="w-40">
                   <SelectValue />
@@ -278,7 +282,7 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button variant="outline" onClick={handleDownloadPdf} className="gap-2">
                 <Download className="w-4 h-4" />
                 Baixar PDF
@@ -287,13 +291,34 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
                 <Printer className="w-4 h-4" />
                 Imprimir
               </Button>
-              <Button onClick={() => onOpenChange(false)}>
+              {quote.status === 'pending' && (
+                <Button 
+                  onClick={() => setAprovarDialogOpen(true)} 
+                  className="gap-2 bg-green-600 hover:bg-green-700"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  Aprovar
+                </Button>
+              )}
+              <Button variant="secondary" onClick={() => onOpenChange(false)}>
                 Fechar
               </Button>
             </div>
           </div>
         </div>
       </DialogContent>
+
+      {/* Aprovar Dialog */}
+      <AprovarOrcamentoDialog
+        open={aprovarDialogOpen}
+        onOpenChange={setAprovarDialogOpen}
+        quote={quote}
+        items={items || []}
+        onSuccess={() => {
+          setAprovarDialogOpen(false);
+          onOpenChange(false);
+        }}
+      />
     </Dialog>
   );
 }

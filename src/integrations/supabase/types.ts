@@ -369,6 +369,109 @@ export type Database = {
         }
         Relationships: []
       }
+      ordens_servico: {
+        Row: {
+          actual_end: string | null
+          actual_start: string | null
+          assigned_to: string | null
+          company_id: string
+          created_at: string
+          current_stage: string | null
+          customer_address: string | null
+          customer_email: string | null
+          customer_name: string
+          customer_phone: string | null
+          estimated_end: string | null
+          estimated_start: string | null
+          id: string
+          notes: string | null
+          os_number: number
+          paid_amount: number
+          pending_amount: number
+          priority: string | null
+          quote_id: string
+          sale_id: string | null
+          stages: Json | null
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          actual_end?: string | null
+          actual_start?: string | null
+          assigned_to?: string | null
+          company_id: string
+          created_at?: string
+          current_stage?: string | null
+          customer_address?: string | null
+          customer_email?: string | null
+          customer_name: string
+          customer_phone?: string | null
+          estimated_end?: string | null
+          estimated_start?: string | null
+          id?: string
+          notes?: string | null
+          os_number?: number
+          paid_amount?: number
+          pending_amount?: number
+          priority?: string | null
+          quote_id: string
+          sale_id?: string | null
+          stages?: Json | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          actual_end?: string | null
+          actual_start?: string | null
+          assigned_to?: string | null
+          company_id?: string
+          created_at?: string
+          current_stage?: string | null
+          customer_address?: string | null
+          customer_email?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          estimated_end?: string | null
+          estimated_start?: string | null
+          id?: string
+          notes?: string | null
+          os_number?: number
+          paid_amount?: number
+          pending_amount?: number
+          priority?: string | null
+          quote_id?: string
+          sale_id?: string | null
+          stages?: Json | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ordens_servico_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordens_servico_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordens_servico_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_template_items: {
         Row: {
           company_id: string | null
@@ -754,9 +857,15 @@ export type Database = {
           discount_percent: number | null
           id: string
           notes: string | null
+          ordem_servico_id: string | null
+          paid_amount: number | null
+          parent_sale_id: string | null
           payment_method: string
           payment_status: string
+          pending_amount: number | null
+          quote_id: string | null
           sale_number: number
+          sale_type: string | null
           sold_by: string
           subtotal: number
           total_amount: number
@@ -772,9 +881,15 @@ export type Database = {
           discount_percent?: number | null
           id?: string
           notes?: string | null
+          ordem_servico_id?: string | null
+          paid_amount?: number | null
+          parent_sale_id?: string | null
           payment_method: string
           payment_status?: string
+          pending_amount?: number | null
+          quote_id?: string | null
           sale_number?: number
+          sale_type?: string | null
           sold_by: string
           subtotal?: number
           total_amount?: number
@@ -790,9 +905,15 @@ export type Database = {
           discount_percent?: number | null
           id?: string
           notes?: string | null
+          ordem_servico_id?: string | null
+          paid_amount?: number | null
+          parent_sale_id?: string | null
           payment_method?: string
           payment_status?: string
+          pending_amount?: number | null
+          quote_id?: string | null
           sale_number?: number
+          sale_type?: string | null
           sold_by?: string
           subtotal?: number
           total_amount?: number
@@ -818,6 +939,27 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_ordem_servico_id_fkey"
+            columns: ["ordem_servico_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_parent_sale_id_fkey"
+            columns: ["parent_sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
             referencedColumns: ["id"]
           },
         ]
