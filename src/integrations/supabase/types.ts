@@ -392,6 +392,50 @@ export type Database = {
           },
         ]
       }
+      company_tax_config: {
+        Row: {
+          aliquota_efetiva: number
+          anexo_simples: string
+          company_id: string
+          created_at: string
+          faixa_simples: number
+          id: string
+          receita_bruta_12_meses: number | null
+          regime_tributario: string
+          updated_at: string
+        }
+        Insert: {
+          aliquota_efetiva?: number
+          anexo_simples?: string
+          company_id: string
+          created_at?: string
+          faixa_simples?: number
+          id?: string
+          receita_bruta_12_meses?: number | null
+          regime_tributario?: string
+          updated_at?: string
+        }
+        Update: {
+          aliquota_efetiva?: number
+          anexo_simples?: string
+          company_id?: string
+          created_at?: string
+          faixa_simples?: number
+          id?: string
+          receita_bruta_12_meses?: number | null
+          regime_tributario?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_tax_config_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       item_templates: {
         Row: {
           created_at: string
@@ -914,6 +958,63 @@ export type Database = {
           },
         ]
       }
+      sale_taxes: {
+        Row: {
+          aliquota_total: number
+          base_calculo: number
+          company_id: string
+          created_at: string
+          id: string
+          regime_tributario: string
+          sale_id: string
+          valor_cbs: number
+          valor_ibs: number
+          valor_simples: number
+          valor_total_impostos: number
+        }
+        Insert: {
+          aliquota_total?: number
+          base_calculo?: number
+          company_id: string
+          created_at?: string
+          id?: string
+          regime_tributario?: string
+          sale_id: string
+          valor_cbs?: number
+          valor_ibs?: number
+          valor_simples?: number
+          valor_total_impostos?: number
+        }
+        Update: {
+          aliquota_total?: number
+          base_calculo?: number
+          company_id?: string
+          created_at?: string
+          id?: string
+          regime_tributario?: string
+          sale_id?: string
+          valor_cbs?: number
+          valor_ibs?: number
+          valor_simples?: number
+          valor_total_impostos?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_taxes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_taxes_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales: {
         Row: {
           cash_register_id: string
@@ -1145,6 +1246,56 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "support_tickets_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tax_categories: {
+        Row: {
+          aliquota_cbs: number | null
+          aliquota_ibs: number | null
+          aliquota_is: number | null
+          company_id: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          ncm_code: string | null
+          updated_at: string
+        }
+        Insert: {
+          aliquota_cbs?: number | null
+          aliquota_ibs?: number | null
+          aliquota_is?: number | null
+          company_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          ncm_code?: string | null
+          updated_at?: string
+        }
+        Update: {
+          aliquota_cbs?: number | null
+          aliquota_ibs?: number | null
+          aliquota_is?: number | null
+          company_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          ncm_code?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_categories_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"

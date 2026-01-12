@@ -6,11 +6,8 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { 
   DollarSign, 
   TrendingUp, 
-  TrendingDown, 
   CreditCard, 
-  Wallet, 
   ArrowUpRight, 
-  ArrowDownRight,
   Search,
   Filter,
   Calendar,
@@ -19,12 +16,16 @@ import {
   XCircle,
   Smartphone,
   FileText,
-  Download
+  Download,
+  Settings,
+  Receipt,
+  BarChart3
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
   SelectContent,
@@ -42,13 +43,17 @@ import {
 } from '@/components/ui/table';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { format, startOfMonth, endOfMonth, startOfWeek, subMonths, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { format, startOfMonth, endOfMonth, startOfWeek, subMonths, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { CancelarVendaDialog } from '@/components/caixa/CancelarVendaDialog';
 import { DetalhesVendaDialog } from '@/components/caixa/DetalhesVendaDialog';
 import { generateSalePdf } from '@/utils/generateSalePdf';
 import { Parser } from 'expr-eval';
+import { TaxDashboard } from '@/components/financeiro/TaxDashboard';
+import { TaxReports } from '@/components/financeiro/TaxReports';
+import { TaxCategories } from '@/components/financeiro/TaxCategories';
+import { TaxConfigDialog } from '@/components/financeiro/TaxConfigDialog';
 
 type PeriodFilter = 'today' | 'week' | 'month' | 'last_month' | 'custom' | 'all';
 type PaymentFilter = 'all' | 'dinheiro' | 'cartao' | 'pix';
@@ -113,6 +118,8 @@ export default function Financeiro() {
     from: undefined,
     to: undefined,
   });
+  const [activeTab, setActiveTab] = useState('vendas');
+  const [taxConfigOpen, setTaxConfigOpen] = useState(false);
 
   // Dialogs
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -169,6 +176,95 @@ export default function Financeiro() {
       return data || [];
     },
     enabled: !!currentCompany?.id,
+  });
+
+  // Fetch tax config
+  const { data: taxConfig } = useQuery({
+    queryKey: ['tax-config', currentCompany?.id],
+    queryFn: async () => {
+      if (!currentCompany?.id) return null;
+      const { data } = await supabase
+        .from('company_tax_config')
+        .select('*')
+        .eq('company_id', currentCompany.id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!currentCompany?.id,
+  });
+
+  // Fetch tax categories
+  const { data: taxCategories = [] } = useQuery({
+    queryKey: ['tax-categories', currentCompany?.id],
+    queryFn: async () => {
+      if (!currentCompany?.id) return [];
+      const { data } = await supabase
+        .from('tax_categories')
+        .select('*')
+        .eq('company_id', currentCompany.id)
+        .order('name');
+      return data || [];
+    },
+    enabled: !!currentCompany?.id,
+  });
+
+  // Fetch sale taxes
+  const { data: saleTaxes = [] } = useQuery({
+    queryKey: ['sale-taxes', currentCompany?.id],
+    queryFn: async () => {
+      if (!currentCompany?.id) return [];
+      const { data } = await supabase
+        .from('sale_taxes')
+        .select('*')
+        .eq('company_id', currentCompany.id);
+      return data || [];
+    },
+    enabled: !!currentCompany?.id,
+  });
+
+  // Save tax config mutation
+  const saveTaxConfigMutation = useMutation({
+    mutationFn: async (config: { regime_tributario: string; faixa_simples: number; aliquota_efetiva: number; anexo_simples: string; receita_bruta_12_meses: number }) => {
+      if (!currentCompany?.id) throw new Error('Empresa não encontrada');
+      const { data, error } = await supabase
+        .from('company_tax_config')
+        .upsert({ ...config, company_id: currentCompany.id }, { onConflict: 'company_id' })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success('Configuração tributária salva!');
+      queryClient.invalidateQueries({ queryKey: ['tax-config'] });
+      setTaxConfigOpen(false);
+    },
+  });
+
+  // Tax category mutations
+  const addCategoryMutation = useMutation({
+    mutationFn: async (cat: { name: string; ncm_code: string | null; description: string | null; aliquota_ibs: number; aliquota_cbs: number; aliquota_is: number }) => {
+      if (!currentCompany?.id) throw new Error('Empresa não encontrada');
+      const { error } = await supabase.from('tax_categories').insert({ ...cat, company_id: currentCompany.id });
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tax-categories'] }),
+  });
+
+  const updateCategoryMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<{ name: string; ncm_code: string | null; description: string | null; aliquota_ibs: number; aliquota_cbs: number; aliquota_is: number }> }) => {
+      const { error } = await supabase.from('tax_categories').update(data).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tax-categories'] }),
+  });
+
+  const deleteCategoryMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('tax_categories').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tax-categories'] }),
   });
 
   // Apply client-side filters
