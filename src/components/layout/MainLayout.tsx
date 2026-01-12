@@ -1,12 +1,8 @@
 import { Sidebar } from './Sidebar';
-import { Bell, Settings, Search, Wallet } from 'lucide-react';
+import { Bell, Settings, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
-import { format } from 'date-fns';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -14,26 +10,6 @@ interface MainLayoutProps {
 
 export function MainLayout({ children }: MainLayoutProps) {
   const { profile, currentCompany } = useAuth();
-  const navigate = useNavigate();
-
-  // Query cash register status
-  const { data: openCashRegister } = useQuery({
-    queryKey: ['cash-register-status', currentCompany?.id],
-    queryFn: async () => {
-      if (!currentCompany?.id) return null;
-      const { data, error } = await supabase
-        .from('cash_registers')
-        .select('id, opened_at, opening_amount')
-        .eq('company_id', currentCompany.id)
-        .eq('status', 'open')
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!currentCompany?.id,
-  });
-
-  const isCaixaAberto = !!openCashRegister;
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -49,25 +25,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         {/* Top Header */}
         <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-sm border-b border-border">
           <div className="flex items-center justify-between px-6 py-3">
-          <div className="pl-12 lg:pl-0">
-              <Button 
-                variant={isCaixaAberto ? "default" : "destructive"} 
-                className="gap-2 rounded-full px-5 h-auto py-2"
-                onClick={() => navigate('/caixa')}
-              >
-                <Wallet className="w-4 h-4" />
-                <div className="flex flex-col items-start text-left">
-                  <span className="text-sm font-medium">
-                    {isCaixaAberto ? 'Caixa Aberto' : 'Caixa Fechado'}
-                  </span>
-                  {isCaixaAberto && openCashRegister?.opened_at && (
-                    <span className="text-[10px] opacity-80">
-                      desde {format(new Date(openCashRegister.opened_at), 'HH:mm')}
-                    </span>
-                  )}
-                </div>
-              </Button>
-            </div>
+            <div className="pl-12 lg:pl-0" />
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
                 <Bell className="w-5 h-5" />
