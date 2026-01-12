@@ -16,6 +16,7 @@ import {
   Upload,
   Shield,
   Headphones,
+  Megaphone,
 } from "lucide-react";
 import {
   Tooltip,
@@ -49,6 +50,11 @@ const adminMenuItems = [
     title: "Empresas",
     path: "/admin/companies",
     icon: Users,
+  },
+  {
+    title: "Avisos",
+    path: "/admin/announcements",
+    icon: Megaphone,
   },
   {
     title: "Suporte",
