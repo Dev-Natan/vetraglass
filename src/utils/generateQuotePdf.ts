@@ -362,7 +362,7 @@ export async function generateQuotePdf(quote: Quote, items: QuoteItem[], company
   
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
-  doc.text('💵 À VISTA (PIX/Dinheiro/Transferência)', marginLeft + 5, y + 7);
+  doc.text('A VISTA (PIX / Dinheiro / Transferencia)', marginLeft + 5, y + 7);
   
   if (hasDiscount) {
     doc.setFont('helvetica', 'normal');
@@ -386,7 +386,7 @@ export async function generateQuotePdf(quote: Quote, items: QuoteItem[], company
   
   doc.setTextColor(...textColor);
   doc.setFont('helvetica', 'bold');
-  doc.text('💳 CARTÃO DE CRÉDITO', marginLeft + 5, y + 8);
+  doc.text('CARTAO DE CREDITO', marginLeft + 5, y + 8);
   doc.setFont('helvetica', 'normal');
   doc.text(formatCurrency(quote.total_amount), marginRight - 5, y + 8, { align: 'right' });
   
@@ -398,7 +398,7 @@ export async function generateQuotePdf(quote: Quote, items: QuoteItem[], company
     doc.rect(marginLeft, y, contentWidth, 12, 'S');
     
     doc.setFont('helvetica', 'bold');
-    doc.text('📋 CONDIÇÕES ESPECIAIS:', marginLeft + 5, y + 8);
+    doc.text('CONDICOES ESPECIAIS:', marginLeft + 5, y + 8);
     doc.setFont('helvetica', 'normal');
     const termsText = quote.payment_terms.length > 60 ? quote.payment_terms.substring(0, 60) + '...' : quote.payment_terms;
     doc.text(termsText, marginLeft + 48, y + 8);
