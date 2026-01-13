@@ -324,56 +324,97 @@ export async function generateQuotePdf(quote: Quote, items: QuoteItem[], company
     y = cardBodyStartY + cardBodyHeight + 8;
   }
   
-  // ========== TOTALS SECTION ==========
+  // ========== TOTALS AND PAYMENT SECTION ==========
   // Check if we need a new page for totals
-  if (y + 60 > pageHeight - 20) {
+  if (y + 100 > pageHeight - 20) {
     doc.addPage();
     y = 15;
   }
   
-  // Valor total row
-  doc.setFillColor(...lightBlue);
+  // Valor total dos produtos row
+  doc.setFillColor(...headerBlue);
   doc.rect(marginLeft, y, contentWidth, 10, 'F');
   
   doc.setTextColor(...textColor);
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text('Valor total', marginLeft + 5, y + 7);
+  doc.text('VALOR TOTAL DOS PRODUTOS', marginLeft + 5, y + 7);
   doc.text(formatCurrency(quote.total_amount), marginRight - 5, y + 7, { align: 'right' });
-  
-  y += 10;
-  
-  // Desconto row
-  doc.setFillColor(255, 255, 255);
-  doc.setDrawColor(...cardBorder);
-  doc.rect(marginLeft, y, contentWidth, 10, 'S');
-  
-  doc.setFont('helvetica', 'bold');
-  doc.text('Desconto', marginLeft + 5, y + 7);
-  const discountDisplay = quote.discount_amount && quote.discount_amount > 0 
-    ? formatCurrency(quote.discount_amount) 
-    : '0';
-  doc.setFont('helvetica', 'normal');
-  doc.text(discountDisplay, marginRight - 5, y + 7, { align: 'right' });
-  
-  y += 10;
-  
-  // Valor líquido row
-  doc.setFillColor(...lightBlue);
-  doc.rect(marginLeft, y, contentWidth, 10, 'F');
-  
-  doc.setFont('helvetica', 'bold');
-  doc.text('Valor líquido', marginLeft + 5, y + 7);
-  doc.text(formatCurrency(quote.final_amount), marginRight - 5, y + 7, { align: 'right' });
   
   y += 15;
   
-  // Formas de pagamento row
+  // ========== FORMAS DE PAGAMENTO ==========
   doc.setFillColor(...lightBlue);
   doc.rect(marginLeft, y, contentWidth, 10, 'F');
   
   doc.setFont('helvetica', 'bold');
-  doc.text(`Formas de pagamento: ${quote.payment_terms || 'A combinar'}`, marginLeft + 5, y + 7);
+  doc.setFontSize(10);
+  doc.text('FORMAS DE PAGAMENTO', marginLeft + 5, y + 7);
+  
+  y += 15;
+  
+  // À Vista com desconto
+  const hasDiscount = quote.discount_percent && quote.discount_percent > 0;
+  
+  doc.setDrawColor(...cardBorder);
+  doc.setLineWidth(0.5);
+  doc.rect(marginLeft, y, contentWidth, hasDiscount ? 20 : 12, 'S');
+  
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.text('💵 À VISTA (PIX/Dinheiro/Transferência)', marginLeft + 5, y + 7);
+  
+  if (hasDiscount) {
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...mutedColor);
+    doc.text(`Desconto de ${quote.discount_percent}%: -${formatCurrency(quote.discount_amount || 0)}`, marginLeft + 5, y + 14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 128, 0); // Green for discount price
+    doc.text(formatCurrency(quote.final_amount), marginRight - 5, y + 14, { align: 'right' });
+    y += 20;
+  } else {
+    doc.setTextColor(...textColor);
+    doc.text(formatCurrency(quote.total_amount), marginRight - 5, y + 7, { align: 'right' });
+    y += 12;
+  }
+  
+  y += 5;
+  
+  // Cartão de Crédito
+  doc.setDrawColor(...cardBorder);
+  doc.rect(marginLeft, y, contentWidth, 12, 'S');
+  
+  doc.setTextColor(...textColor);
+  doc.setFont('helvetica', 'bold');
+  doc.text('💳 CARTÃO DE CRÉDITO', marginLeft + 5, y + 8);
+  doc.setFont('helvetica', 'normal');
+  doc.text(formatCurrency(quote.total_amount), marginRight - 5, y + 8, { align: 'right' });
+  
+  y += 17;
+  
+  // Condições de pagamento personalizadas
+  if (quote.payment_terms) {
+    doc.setDrawColor(...cardBorder);
+    doc.rect(marginLeft, y, contentWidth, 12, 'S');
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('📋 CONDIÇÕES ESPECIAIS:', marginLeft + 5, y + 8);
+    doc.setFont('helvetica', 'normal');
+    const termsText = quote.payment_terms.length > 60 ? quote.payment_terms.substring(0, 60) + '...' : quote.payment_terms;
+    doc.text(termsText, marginLeft + 48, y + 8);
+    
+    y += 17;
+  }
+  
+  // Valor final destacado
+  doc.setFillColor(...headerBlue);
+  doc.rect(marginLeft, y, contentWidth, 12, 'F');
+  
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(...textColor);
+  doc.text('VALOR À VISTA COM DESCONTO', marginLeft + 5, y + 8);
+  doc.text(formatCurrency(quote.final_amount), marginRight - 5, y + 8, { align: 'right' });
   
   // Save PDF
   const customerSlug = quote.customer_name
