@@ -469,6 +469,19 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
                           <FormLabel>Válido até</FormLabel>
                           <FormControl>
                             <Input type="date" {...field} />
+                      </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="payment_terms"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Forma de Pagamento</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ex: 50% entrada + 50% na entrega" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -569,19 +582,6 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
                     />
                   </div>
 
-                  <FormField
-                    control={form.control}
-                    name="payment_terms"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Forma de Pagamento</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Ex: 50% entrada + 50% na entrega" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </div>
 
                 {/* Items Section */}
