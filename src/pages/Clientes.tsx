@@ -3,7 +3,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
-  Plus, Search, Users, Phone, MapPin, Globe, User, Trash2, Map
+  Plus, Search, Users, Phone, MapPin, Navigation, User, Trash2, Map
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -195,14 +195,16 @@ export default function Clientes() {
     setDeleteDialogOpen(true);
   };
 
-  const openGoogleMaps = (client: Client) => {
+  const getWazeUrl = (client: Client): string | null => {
+    if (client.latitude && client.longitude) {
+      return `https://waze.com/ul?ll=${client.latitude},${client.longitude}&navigate=yes`;
+    }
     const addressParts = [client.address, client.city, client.state].filter(Boolean);
     if (addressParts.length > 0) {
       const query = encodeURIComponent(addressParts.join(', '));
-      window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
-    } else {
-      toast.info('Endereço não cadastrado para este cliente');
+      return `https://waze.com/ul?q=${query}&navigate=yes`;
     }
+    return null;
   };
 
   const filteredClients = clients.filter(client => {
@@ -334,16 +336,27 @@ export default function Clientes() {
                   </div>
                 </div>
 
-                {/* Location button */}
-                <button
-                  onClick={() => openGoogleMaps(client)}
-                  className="flex items-center gap-2 mb-4 group"
-                >
-                  <div className="w-10 h-10 rounded-full border-2 border-muted flex items-center justify-center group-hover:border-primary transition-colors">
-                    <Globe className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                {/* Waze navigation link */}
+                {getWazeUrl(client) ? (
+                  <a
+                    href={getWazeUrl(client)!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 mb-4 group"
+                  >
+                    <div className="w-10 h-10 rounded-full border-2 border-muted flex items-center justify-center group-hover:border-primary transition-colors">
+                      <Navigation className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                    </div>
+                    <span className="text-xs text-primary font-medium">Ir com Waze</span>
+                  </a>
+                ) : (
+                  <div className="flex items-center gap-2 mb-4 opacity-50">
+                    <div className="w-10 h-10 rounded-full border-2 border-muted flex items-center justify-center">
+                      <Navigation className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                    <span className="text-xs text-muted-foreground">Sem endereço</span>
                   </div>
-                  <span className="text-xs text-primary font-medium">Localização</span>
-                </button>
+                )}
 
                 {/* Edit button */}
                 <Button

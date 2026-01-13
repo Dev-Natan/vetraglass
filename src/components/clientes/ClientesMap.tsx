@@ -80,16 +80,16 @@ export function ClientesMap({ clients, onEdit, onClose, isGeocoding }: ClientesM
     window.open(`https://wa.me/${fullPhone}`, '_blank');
   };
 
-  const openGoogleMaps = (client: Client) => {
+  const getWazeUrl = (client: Client): string | null => {
     if (client.latitude && client.longitude) {
-      window.open(`https://www.google.com/maps/dir/?api=1&destination=${client.latitude},${client.longitude}`, '_blank');
-    } else {
-      const addressParts = [client.address, client.city, client.state].filter(Boolean);
-      if (addressParts.length > 0) {
-        const query = encodeURIComponent(addressParts.join(', '));
-        window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
-      }
+      return `https://waze.com/ul?ll=${client.latitude},${client.longitude}&navigate=yes`;
     }
+    const addressParts = [client.address, client.city, client.state].filter(Boolean);
+    if (addressParts.length > 0) {
+      const query = encodeURIComponent(addressParts.join(', '));
+      return `https://waze.com/ul?q=${query}&navigate=yes`;
+    }
+    return null;
   };
 
   return (
@@ -168,15 +168,23 @@ export function ClientesMap({ clients, onEdit, onClose, isGeocoding }: ClientesM
                         WhatsApp
                       </Button>
                     )}
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      className="flex-1 text-xs"
-                      onClick={() => openGoogleMaps(client)}
-                    >
-                      <Navigation className="w-3 h-3 mr-1" />
-                      Rota
-                    </Button>
+                    {getWazeUrl(client) && (
+                      <a
+                        href={getWazeUrl(client)!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1"
+                      >
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="w-full text-xs"
+                        >
+                          <Navigation className="w-3 h-3 mr-1" />
+                          Waze
+                        </Button>
+                      </a>
+                    )}
                     <Button 
                       size="sm" 
                       className="flex-1 text-xs"
