@@ -1110,14 +1110,19 @@ export type Database = {
           company_id: string
           created_at: string
           customer_address: string | null
+          customer_document: string | null
+          customer_document_type: string | null
           customer_email: string | null
+          customer_marital_status: string | null
           customer_name: string
           customer_phone: string | null
+          customer_profession: string | null
           discount_amount: number | null
           discount_percent: number | null
           final_amount: number
           id: string
           notes: string | null
+          payment_terms: string | null
           quote_number: number
           status: string
           total_amount: number
@@ -1128,14 +1133,19 @@ export type Database = {
           company_id: string
           created_at?: string
           customer_address?: string | null
+          customer_document?: string | null
+          customer_document_type?: string | null
           customer_email?: string | null
+          customer_marital_status?: string | null
           customer_name: string
           customer_phone?: string | null
+          customer_profession?: string | null
           discount_amount?: number | null
           discount_percent?: number | null
           final_amount?: number
           id?: string
           notes?: string | null
+          payment_terms?: string | null
           quote_number?: number
           status?: string
           total_amount?: number
@@ -1146,14 +1156,19 @@ export type Database = {
           company_id?: string
           created_at?: string
           customer_address?: string | null
+          customer_document?: string | null
+          customer_document_type?: string | null
           customer_email?: string | null
+          customer_marital_status?: string | null
           customer_name?: string
           customer_phone?: string | null
+          customer_profession?: string | null
           discount_amount?: number | null
           discount_percent?: number | null
           final_amount?: number
           id?: string
           notes?: string | null
+          payment_terms?: string | null
           quote_number?: number
           status?: string
           total_amount?: number
