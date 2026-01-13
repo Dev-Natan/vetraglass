@@ -1,15 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
-  Plus, Search, Users, Phone, MapPin, Globe, User, Trash2
+  Plus, Search, Users, Phone, MapPin, Globe, User, Trash2, Map
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ClientDialog } from '@/components/clientes/ClientDialog';
+import { ClientesMap } from '@/components/clientes/ClientesMap';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,6 +37,8 @@ interface Client {
   notes: string | null;
   is_active: boolean;
   created_at: string;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export default function Clientes() {
@@ -48,6 +51,8 @@ export default function Clientes() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
+  const [showMap, setShowMap] = useState(false);
+  const [isGeocoding, setIsGeocoding] = useState(false);
 
   const { data: clients = [], isLoading } = useQuery({
     queryKey: ['clients', currentCompany?.id],
@@ -128,6 +133,49 @@ export default function Clientes() {
       toast.error('Erro ao remover cliente');
     },
   });
+
+  // Geocode clients without coordinates
+  const geocodeClients = async () => {
+    const clientsToGeocode = clients.filter(
+      c => c.address && (!c.latitude || !c.longitude)
+    );
+    
+    if (clientsToGeocode.length === 0) return;
+    
+    setIsGeocoding(true);
+    
+    for (const client of clientsToGeocode) {
+      try {
+        await supabase.functions.invoke('geocode-address', {
+          body: {
+            client_id: client.id,
+            address: client.address,
+            city: client.city,
+            state: client.state,
+          },
+        });
+        // Small delay to respect Nominatim rate limits (1 req/sec)
+        await new Promise(resolve => setTimeout(resolve, 1100));
+      } catch (error) {
+        console.error('Error geocoding client:', client.name, error);
+      }
+    }
+    
+    setIsGeocoding(false);
+    queryClient.invalidateQueries({ queryKey: ['clients'] });
+  };
+
+  // Trigger geocoding when map is opened
+  useEffect(() => {
+    if (showMap && clients.length > 0) {
+      const hasClientsWithoutCoords = clients.some(
+        c => c.address && (!c.latitude || !c.longitude)
+      );
+      if (hasClientsWithoutCoords) {
+        geocodeClients();
+      }
+    }
+  }, [showMap, clients.length]);
 
   const handleSave = async (clientData: any) => {
     if (selectedClient?.id) {
@@ -312,7 +360,7 @@ export default function Clientes() {
 
       {/* Bottom navigation */}
       <div className="fixed bottom-0 left-0 right-0 lg:left-64 bg-card border-t border-border py-4 px-6 z-40">
-        <div className="flex items-center justify-center gap-12 max-w-2xl mx-auto">
+        <div className="flex items-center justify-center gap-8 max-w-2xl mx-auto">
           {/* Search button */}
           <button
             onClick={() => setShowSearch(true)}
@@ -335,10 +383,34 @@ export default function Clientes() {
             <div className="w-14 h-14 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center shadow-lg transition-colors">
               <Plus className="w-7 h-7 text-white" />
             </div>
-            <span className="text-xs font-medium text-foreground">Cadastrar novo cliente</span>
+            <span className="text-xs font-medium text-foreground">Cadastrar</span>
+          </button>
+
+          {/* Map button */}
+          <button
+            onClick={() => setShowMap(true)}
+            className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+              <Map className="w-5 h-5 text-primary" />
+            </div>
+            <span className="text-xs font-medium">Ver Mapa</span>
           </button>
         </div>
       </div>
+
+      {/* Map Modal */}
+      {showMap && (
+        <ClientesMap
+          clients={filteredClients}
+          onEdit={(client) => {
+            setShowMap(false);
+            handleEdit(client as Client);
+          }}
+          onClose={() => setShowMap(false)}
+          isGeocoding={isGeocoding}
+        />
+      )}
 
       <ClientDialog
         open={dialogOpen}
