@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { generateQuotePdf } from '@/utils/generateQuotePdf';
+import { generateContractPdf } from '@/utils/generateContractPdf';
 import {
   Dialog,
   DialogContent,
@@ -25,7 +26,8 @@ import {
   Clock,
   FileText,
   Printer,
-  Download
+  Download,
+  FileSignature
 } from 'lucide-react';
 import {
   Select,
@@ -45,6 +47,11 @@ interface Quote {
   customer_phone: string | null;
   customer_email: string | null;
   customer_address?: string | null;
+  customer_document?: string | null;
+  customer_document_type?: string | null;
+  customer_profession?: string | null;
+  customer_marital_status?: string | null;
+  payment_terms?: string | null;
   status: QuoteStatus;
   total_amount: number;
   discount_percent?: number;
@@ -174,6 +181,35 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
     toast({ title: 'Gerando PDF...' });
     await generateQuotePdf(quote, itemsForPdf, company);
     toast({ title: 'PDF gerado com sucesso!' });
+  };
+
+  const handleDownloadContract = async () => {
+    if (!quote || !items) return;
+    
+    const company = currentCompany ? {
+      name: currentCompany.name,
+      cnpj: currentCompany.cnpj,
+      phone: currentCompany.phone,
+      email: currentCompany.email,
+      address: currentCompany.address,
+    } : null;
+    
+    // Transform items for contract
+    const itemsForContract = items.map(item => ({
+      description: item.description,
+      width: item.width,
+      height: item.height,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      total_price: item.total_price,
+      has_glass: item.has_glass,
+      glass_color: item.glass_color,
+      glass_thickness: item.glass_thickness,
+    }));
+    
+    toast({ title: 'Gerando Contrato...' });
+    await generateContractPdf(quote, itemsForContract, company);
+    toast({ title: 'Contrato gerado com sucesso!' });
   };
 
   if (!quote) return null;
@@ -348,6 +384,10 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
               <Button variant="outline" onClick={handleDownloadPdf} className="gap-2">
                 <Download className="w-4 h-4" />
                 Baixar PDF
+              </Button>
+              <Button variant="outline" onClick={handleDownloadContract} className="gap-2">
+                <FileSignature className="w-4 h-4" />
+                Gerar Contrato
               </Button>
               <Button variant="outline" onClick={handlePrint} className="gap-2">
                 <Printer className="w-4 h-4" />

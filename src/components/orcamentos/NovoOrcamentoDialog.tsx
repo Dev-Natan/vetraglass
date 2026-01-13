@@ -24,7 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Package, ShoppingCart, User } from 'lucide-react';
+import { Plus, Package, ShoppingCart, User, FileText } from 'lucide-react';
 import { AddProductPanel } from './AddProductPanel';
 import { QuoteItemCard } from './QuoteItemCard';
 
@@ -33,6 +33,11 @@ const quoteSchema = z.object({
   customer_phone: z.string().optional(),
   customer_email: z.string().email('Email inválido').optional().or(z.literal('')),
   customer_address: z.string().optional(),
+  customer_document: z.string().optional(),
+  customer_document_type: z.string().optional(),
+  customer_profession: z.string().optional(),
+  customer_marital_status: z.string().optional(),
+  payment_terms: z.string().optional(),
   valid_until: z.string().optional(),
   notes: z.string().optional(),
 });
@@ -65,6 +70,11 @@ interface Quote {
   customer_phone: string | null;
   customer_email: string | null;
   customer_address?: string | null;
+  customer_document?: string | null;
+  customer_document_type?: string | null;
+  customer_profession?: string | null;
+  customer_marital_status?: string | null;
+  payment_terms?: string | null;
   notes?: string | null;
   valid_until: string | null;
 }
@@ -94,6 +104,11 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
       customer_phone: '',
       customer_email: '',
       customer_address: '',
+      customer_document: '',
+      customer_document_type: 'fisica',
+      customer_profession: '',
+      customer_marital_status: '',
+      payment_terms: '',
       valid_until: '',
       notes: '',
     },
@@ -128,6 +143,11 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
         customer_phone: quote.customer_phone || '',
         customer_email: quote.customer_email || '',
         customer_address: quote.customer_address || '',
+        customer_document: quote.customer_document || '',
+        customer_document_type: quote.customer_document_type || 'fisica',
+        customer_profession: quote.customer_profession || '',
+        customer_marital_status: quote.customer_marital_status || '',
+        payment_terms: quote.payment_terms || '',
         valid_until: quote.valid_until || '',
         notes: quote.notes || '',
       });
@@ -138,6 +158,11 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
         customer_phone: '',
         customer_email: '',
         customer_address: '',
+        customer_document: '',
+        customer_document_type: 'fisica',
+        customer_profession: '',
+        customer_marital_status: '',
+        payment_terms: '',
         valid_until: '',
         notes: '',
       });
@@ -248,6 +273,11 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
           customer_phone: data.customer_phone || null,
           customer_email: data.customer_email || null,
           customer_address: data.customer_address || null,
+          customer_document: data.customer_document || null,
+          customer_document_type: data.customer_document_type || 'fisica',
+          customer_profession: data.customer_profession || null,
+          customer_marital_status: data.customer_marital_status || null,
+          payment_terms: data.payment_terms || null,
           valid_until: data.valid_until || null,
           notes: data.notes || null,
           total_amount: totalAmount,
@@ -304,6 +334,11 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
           customer_phone: data.customer_phone || null,
           customer_email: data.customer_email || null,
           customer_address: data.customer_address || null,
+          customer_document: data.customer_document || null,
+          customer_document_type: data.customer_document_type || 'fisica',
+          customer_profession: data.customer_profession || null,
+          customer_marital_status: data.customer_marital_status || null,
+          payment_terms: data.payment_terms || null,
           valid_until: data.valid_until || null,
           notes: data.notes || null,
           total_amount: totalAmount,
@@ -449,6 +484,99 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
                         <FormLabel>Endereço</FormLabel>
                         <FormControl>
                           <Input placeholder="Endereço completo" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {/* Contract Fields Section */}
+                <div className="rounded-xl border bg-card p-4 space-y-4">
+                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                    <FileText className="w-4 h-4" />
+                    Dados para Contrato (opcional)
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="customer_document"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>CPF/CNPJ</FormLabel>
+                          <FormControl>
+                            <Input placeholder="000.000.000-00" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="customer_document_type"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tipo de Pessoa</FormLabel>
+                          <FormControl>
+                            <select 
+                              {...field} 
+                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            >
+                              <option value="fisica">Pessoa Física</option>
+                              <option value="juridica">Pessoa Jurídica</option>
+                            </select>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="customer_profession"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Profissão</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ex: Empresário, Autônomo..." {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="customer_marital_status"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Estado Civil</FormLabel>
+                          <FormControl>
+                            <select 
+                              {...field} 
+                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            >
+                              <option value="">Selecione...</option>
+                              <option value="Solteiro(a)">Solteiro(a)</option>
+                              <option value="Casado(a)">Casado(a)</option>
+                              <option value="Divorciado(a)">Divorciado(a)</option>
+                              <option value="Viúvo(a)">Viúvo(a)</option>
+                              <option value="União Estável">União Estável</option>
+                            </select>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="payment_terms"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Forma de Pagamento</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Ex: 50% entrada + 50% na entrega" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

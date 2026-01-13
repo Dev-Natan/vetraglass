@@ -53,8 +53,17 @@ interface Quote {
   customer_name: string;
   customer_phone: string | null;
   customer_email: string | null;
+  customer_address?: string | null;
+  customer_document?: string | null;
+  customer_document_type?: string | null;
+  customer_profession?: string | null;
+  customer_marital_status?: string | null;
+  payment_terms?: string | null;
+  notes?: string | null;
   status: QuoteStatus;
   total_amount: number;
+  discount_percent?: number | null;
+  discount_amount?: number | null;
   final_amount: number;
   valid_until: string | null;
   created_at: string;
