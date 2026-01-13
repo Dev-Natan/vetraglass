@@ -2,22 +2,14 @@ import { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { 
-  Plus, Search, Filter, Users, Pencil, Trash2, 
-  Phone, Mail, MapPin, MoreHorizontal, Building2, User
+  Plus, Search, Users, Phone, MapPin, Globe, User, Trash2
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ClientDialog } from '@/components/clientes/ClientDialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,7 +20,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { formatCPFOrCNPJ } from '@/utils/documentValidation';
 
 interface Client {
   id: string;
@@ -52,6 +43,7 @@ export default function Clientes() {
   const queryClient = useQueryClient();
   
   const [searchTerm, setSearchTerm] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -155,6 +147,16 @@ export default function Clientes() {
     setDeleteDialogOpen(true);
   };
 
+  const openGoogleMaps = (client: Client) => {
+    const addressParts = [client.address, client.city, client.state].filter(Boolean);
+    if (addressParts.length > 0) {
+      const query = encodeURIComponent(addressParts.join(', '));
+      window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+    } else {
+      toast.info('Endereço não cadastrado para este cliente');
+    }
+  };
+
   const filteredClients = clients.filter(client => {
     const search = searchTerm.toLowerCase();
     return (
@@ -165,59 +167,65 @@ export default function Clientes() {
     );
   });
 
+  const formatPhone = (phone: string | null) => {
+    if (!phone) return '(00) 00000-0000';
+    return phone;
+  };
+
+  const formatAddress = (client: Client) => {
+    const parts = [client.address, client.city, client.state].filter(Boolean);
+    if (parts.length === 0) return 'Endereço não cadastrado';
+    const fullAddress = parts.join(', ');
+    return fullAddress.length > 35 ? fullAddress.substring(0, 35) + '...' : fullAddress;
+  };
+
   return (
     <MainLayout>
-      <div className="space-y-6 pt-12 lg:pt-0">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="animate-fade-in">
-            <h1 className="text-3xl font-display font-bold text-foreground">Clientes</h1>
-            <p className="text-muted-foreground mt-1">
-              {clients.length} cliente{clients.length !== 1 ? 's' : ''} cadastrado{clients.length !== 1 ? 's' : ''}
-            </p>
+      <div className="pb-32">
+        {/* Search bar when active */}
+        {showSearch && (
+          <div className="fixed top-0 left-0 right-0 z-50 bg-background p-4 shadow-lg lg:left-64 animate-fade-in">
+            <div className="relative max-w-2xl mx-auto">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Buscar por nome, CPF/CNPJ, email ou telefone..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="pl-10"
+                autoFocus
+              />
+              <Button 
+                variant="ghost" 
+                size="sm"
+                className="absolute right-2 top-1/2 -translate-y-1/2"
+                onClick={() => {
+                  setShowSearch(false);
+                  setSearchTerm('');
+                }}
+              >
+                Fechar
+              </Button>
+            </div>
           </div>
-          <Button 
-            variant="default" 
-            className="gap-2"
-            onClick={() => {
-              setSelectedClient(null);
-              setDialogOpen(true);
-            }}
-          >
-            <Plus className="w-4 h-4" />
-            Novo Cliente
-          </Button>
-        </div>
-
-        {/* Search */}
-        <div className="flex flex-col sm:flex-row gap-4 animate-slide-up">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Buscar por nome, CPF/CNPJ, email ou telefone..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </div>
+        )}
 
         {/* Content */}
         {isLoading ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="section-card p-6 animate-pulse">
-                <div className="h-6 bg-muted rounded w-3/4 mb-4" />
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 pt-4">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+              <div key={i} className="bg-card rounded-xl border border-border p-5 animate-pulse">
+                <div className="h-5 bg-muted rounded w-3/4 mb-3" />
                 <div className="h-4 bg-muted rounded w-1/2 mb-2" />
-                <div className="h-4 bg-muted rounded w-2/3" />
+                <div className="h-4 bg-muted rounded w-2/3 mb-4" />
+                <div className="h-10 bg-muted rounded w-full" />
               </div>
             ))}
           </div>
         ) : filteredClients.length === 0 ? (
-          <div className="section-card flex flex-col items-center justify-center py-12 text-center animate-slide-up">
-            <Users className="w-12 h-12 text-muted-foreground/50 mb-4" />
-            <h3 className="font-medium text-foreground mb-1">
+          <div className="flex flex-col items-center justify-center py-20 text-center animate-slide-up">
+            <Users className="w-16 h-16 text-muted-foreground/50 mb-4" />
+            <h3 className="font-medium text-foreground text-lg mb-1">
               {searchTerm ? 'Nenhum cliente encontrado' : 'Nenhum cliente cadastrado'}
             </h3>
             <p className="text-sm text-muted-foreground mb-4">
@@ -239,79 +247,97 @@ export default function Clientes() {
             )}
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 animate-slide-up">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 pt-4 animate-slide-up">
             {filteredClients.map(client => (
               <div 
                 key={client.id} 
-                className="section-card p-5 hover:shadow-lg transition-shadow"
+                className="bg-card rounded-xl border border-border p-5 relative hover:shadow-lg transition-all duration-200"
               >
-                <div className="flex items-start justify-between gap-2 mb-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      {client.document_type === 'CNPJ' ? (
-                        <Building2 className="w-5 h-5 text-primary" />
-                      ) : (
-                        <User className="w-5 h-5 text-primary" />
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="font-semibold text-foreground truncate">{client.name}</h3>
-                      {client.document && (
-                        <Badge variant="secondary" className="text-xs mt-1">
-                          {client.document_type}: {formatCPFOrCNPJ(client.document)}
-                        </Badge>
-                      )}
-                    </div>
+                {/* Delete button */}
+                <button
+                  onClick={() => handleDelete(client)}
+                  className="absolute top-3 right-3 flex items-center gap-1 text-xs text-destructive hover:bg-destructive/10 px-2 py-1 rounded-md transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Excluir
+                </button>
+
+                {/* Client info */}
+                <div className="space-y-2 mb-4 pr-16">
+                  <div className="flex items-start gap-2">
+                    <User className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                    <span className="font-semibold text-foreground text-sm leading-tight">
+                      {client.name}
+                    </span>
                   </div>
                   
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleEdit(client)}>
-                        <Pencil className="w-4 h-4 mr-2" />
-                        Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => handleDelete(client)}
-                        className="text-destructive focus:text-destructive"
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Remover
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-4 h-4 text-primary flex-shrink-0" />
+                    <span className="text-sm text-muted-foreground">
+                      {formatPhone(client.phone)}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-start gap-2">
+                    <MapPin className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                    <span className="text-sm text-muted-foreground leading-tight">
+                      {formatAddress(client)}
+                    </span>
+                  </div>
                 </div>
 
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  {client.phone && (
-                    <div className="flex items-center gap-2">
-                      <Phone className="w-4 h-4 flex-shrink-0" />
-                      <span className="truncate">{client.phone}</span>
-                    </div>
-                  )}
-                  {client.email && (
-                    <div className="flex items-center gap-2">
-                      <Mail className="w-4 h-4 flex-shrink-0" />
-                      <span className="truncate">{client.email}</span>
-                    </div>
-                  )}
-                  {(client.city || client.state) && (
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 flex-shrink-0" />
-                      <span className="truncate">
-                        {[client.city, client.state].filter(Boolean).join(' - ')}
-                      </span>
-                    </div>
-                  )}
-                </div>
+                {/* Location button */}
+                <button
+                  onClick={() => openGoogleMaps(client)}
+                  className="flex items-center gap-2 mb-4 group"
+                >
+                  <div className="w-10 h-10 rounded-full border-2 border-muted flex items-center justify-center group-hover:border-primary transition-colors">
+                    <Globe className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </div>
+                  <span className="text-xs text-primary font-medium">Localização</span>
+                </button>
+
+                {/* Edit button */}
+                <Button
+                  onClick={() => handleEdit(client)}
+                  className="w-full bg-primary hover:bg-primary/90"
+                >
+                  Editar
+                </Button>
               </div>
             ))}
           </div>
         )}
+      </div>
+
+      {/* Bottom navigation */}
+      <div className="fixed bottom-0 left-0 right-0 lg:left-64 bg-card border-t border-border py-4 px-6 z-40">
+        <div className="flex items-center justify-center gap-12 max-w-2xl mx-auto">
+          {/* Search button */}
+          <button
+            onClick={() => setShowSearch(true)}
+            className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+              <Search className="w-5 h-5" />
+            </div>
+            <span className="text-xs font-medium">Buscar</span>
+          </button>
+
+          {/* New client button */}
+          <button
+            onClick={() => {
+              setSelectedClient(null);
+              setDialogOpen(true);
+            }}
+            className="flex flex-col items-center gap-1"
+          >
+            <div className="w-14 h-14 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center shadow-lg transition-colors">
+              <Plus className="w-7 h-7 text-white" />
+            </div>
+            <span className="text-xs font-medium text-foreground">Cadastrar novo cliente</span>
+          </button>
+        </div>
       </div>
 
       <ClientDialog
