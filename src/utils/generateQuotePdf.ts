@@ -17,6 +17,7 @@ interface QuoteItem {
   glass_color?: string;
   glass_thickness?: string;
   notes?: string | null;
+  location?: string | null;
 }
 
 interface Quote {
@@ -43,17 +44,6 @@ interface Company {
   address?: string | null;
   logo_url?: string | null;
 }
-
-const categoryLabels: Record<string, string> = {
-  window: 'Janela',
-  door: 'Porta',
-  partition: 'Divisória',
-  mirror: 'Espelho',
-  shower: 'Box',
-  facade: 'Fachada',
-  guarda_corpo: 'Guarda Corpo',
-  other: 'Outros',
-};
 
 // Helper to load image as base64
 async function loadImageAsBase64(url: string): Promise<string | null> {
@@ -91,192 +81,216 @@ export async function generateQuotePdf(quote: Quote, items: QuoteItem[], company
   const pageHeight = doc.internal.pageSize.getHeight();
   
   // Colors
-  const primaryColor: [number, number, number] = [0, 102, 204]; // Blue
+  const lightBlue: [number, number, number] = [204, 229, 255]; // Light blue background
+  const headerBlue: [number, number, number] = [173, 216, 230]; // Header blue
   const textColor: [number, number, number] = [0, 0, 0]; // Black
-  const mutedColor: [number, number, number] = [100, 100, 100]; // Gray
-  const headerBg: [number, number, number] = [240, 240, 240]; // Light gray
+  const mutedColor: [number, number, number] = [80, 80, 80]; // Dark gray
+  const cardBorder: [number, number, number] = [200, 200, 200]; // Card border
   
   let y = 15;
   const marginLeft = 15;
   const marginRight = pageWidth - 15;
+  const contentWidth = pageWidth - 30;
   
-  // ========== HEADER ==========
-  // Title "Orçamento"
-  doc.setFontSize(24);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...primaryColor);
-  doc.text('Orçamento', marginLeft, y);
+  // ========== HEADER WITH LOGO ==========
+  // Try to load company logo
+  let logoLoaded = false;
+  if (company?.logo_url) {
+    try {
+      const logoBase64 = await loadImageAsBase64(company.logo_url);
+      if (logoBase64) {
+        doc.addImage(logoBase64, 'PNG', marginLeft, y, 40, 25);
+        logoLoaded = true;
+      }
+    } catch {
+      // Logo failed to load
+    }
+  }
   
-  y += 12;
+  // Company info (next to logo or at start)
+  const companyInfoX = logoLoaded ? marginLeft + 45 : marginLeft;
   
-  // Company info section
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...mutedColor);
+  
+  doc.text('Empresa:', companyInfoX, y + 5);
+  doc.setFont('helvetica', 'bold');
   doc.setTextColor(...textColor);
+  doc.text(company?.name || '-', companyInfoX + 22, y + 5);
   
-  doc.setFont('helvetica', 'bold');
-  doc.text('Empresa:', marginLeft, y);
   doc.setFont('helvetica', 'normal');
-  doc.text(company?.name || '-', marginLeft + 25, y);
+  doc.setTextColor(...mutedColor);
+  doc.text('CNPJ:', companyInfoX, y + 11);
+  doc.setTextColor(...textColor);
+  doc.text(company?.cnpj || '-', companyInfoX + 22, y + 11);
+  
+  doc.setTextColor(...mutedColor);
+  doc.text('Telefone:', companyInfoX, y + 17);
+  doc.setTextColor(...textColor);
+  doc.text(company?.phone || '-', companyInfoX + 22, y + 17);
+  
+  doc.setTextColor(...mutedColor);
+  doc.text('Email:', companyInfoX, y + 23);
+  doc.setTextColor(...textColor);
+  doc.text(company?.email || '-', companyInfoX + 22, y + 23);
   
   // Quote code on the right
+  doc.setTextColor(...mutedColor);
+  doc.setFontSize(9);
+  doc.text('Código:', marginRight - 35, y + 5);
   doc.setFont('helvetica', 'bold');
-  doc.text('Código:', marginRight - 60, y);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`ORC${quote.quote_number.toString().padStart(2, '0')}`, marginRight - 35, y);
+  doc.setTextColor(...textColor);
+  doc.setFontSize(11);
+  doc.text(`ORC${quote.quote_number.toString().padStart(2, '0')}`, marginRight - 35, y + 12);
   
-  y += 6;
-  
-  doc.setFont('helvetica', 'bold');
-  doc.text('CNPJ:', marginLeft, y);
-  doc.setFont('helvetica', 'normal');
-  doc.text(company?.cnpj || '-', marginLeft + 25, y);
-  
-  y += 6;
-  
-  doc.setFont('helvetica', 'bold');
-  doc.text('Telefone:', marginLeft, y);
-  doc.setFont('helvetica', 'normal');
-  doc.text(company?.phone || '-', marginLeft + 25, y);
-  
-  y += 6;
-  
-  doc.setFont('helvetica', 'bold');
-  doc.text('Email:', marginLeft, y);
-  doc.setFont('helvetica', 'normal');
-  doc.text(company?.email || '-', marginLeft + 25, y);
-  
-  y += 12;
+  y += 35;
   
   // ========== CLIENT SECTION ==========
-  doc.setFillColor(...primaryColor);
-  doc.rect(marginLeft, y, pageWidth - 30, 7, 'F');
-  
-  doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(255, 255, 255);
-  doc.text('Cliente:', marginLeft + 3, y + 5);
-  
-  y += 7;
-  
-  // Client name
-  doc.setFillColor(...headerBg);
-  doc.rect(marginLeft, y, pageWidth - 30, 7, 'F');
-  
-  doc.setTextColor(...textColor);
   doc.setFontSize(10);
+  doc.setTextColor(...textColor);
+  doc.text('Cliente:', marginLeft, y);
+  
+  y += 5;
+  
   doc.setFont('helvetica', 'normal');
-  doc.text(quote.customer_name.toUpperCase(), marginLeft + 3, y + 5);
-  
-  y += 10;
-  
-  // Date
-  doc.setTextColor(...textColor);
   doc.setFontSize(10);
-  doc.text(`Data de elaboração do orçamento: ${format(new Date(quote.created_at), "dd/MM/yyyy", { locale: ptBR })}`, marginLeft, y);
+  doc.text(quote.customer_name.toUpperCase(), marginLeft, y);
+  
+  y += 6;
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text('Data de elaboração do orçamento:', marginLeft, y);
+  
+  y += 5;
+  
+  doc.setFont('helvetica', 'normal');
+  doc.text(format(new Date(quote.created_at), "dd/MM/yyyy", { locale: ptBR }), marginLeft, y);
   
   y += 12;
   
   // ========== ITEMS SECTION ==========
-  doc.setFillColor(...primaryColor);
-  doc.rect(marginLeft, y, pageWidth - 30, 7, 'F');
-  
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(255, 255, 255);
-  doc.text('Itens', marginLeft + 3, y + 5);
-  
-  y += 12;
-  
-  // Loop through items
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
     
+    // Calculate item card height (approximate)
+    const itemCardHeight = 75;
+    
     // Check if we need a new page
-    if (y + 60 > pageHeight - 40) {
+    if (y + itemCardHeight > pageHeight - 60) {
       doc.addPage();
       y = 15;
     }
     
-    // Item header with number
-    doc.setFillColor(...headerBg);
-    doc.rect(marginLeft, y, pageWidth - 30, 7, 'F');
+    // Item card header (light blue bar)
+    doc.setFillColor(...headerBlue);
+    doc.rect(marginLeft, y, contentWidth, 8, 'F');
     
-    doc.setTextColor(...primaryColor);
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`Item: ${i + 1}`, marginLeft + 3, y + 5);
-    
-    y += 10;
-    
-    // Item details
     doc.setTextColor(...textColor);
     doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    
-    // Localização (if notes contain location info)
     doc.setFont('helvetica', 'bold');
-    doc.text('Localização:', marginLeft, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text('', marginLeft + 30, y); // Empty or could be derived from notes
-    
-    y += 5;
-    
-    // Linha
-    doc.setFont('helvetica', 'bold');
-    doc.text('Linha:', marginLeft, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(item.linha || '-', marginLeft + 30, y);
-    
-    y += 5;
-    
-    // Modelo (description)
-    doc.setFont('helvetica', 'bold');
-    doc.text('Modelo:', marginLeft, y);
-    doc.setFont('helvetica', 'normal');
-    const modelText = item.description.length > 60 ? item.description.substring(0, 60) + '...' : item.description;
-    doc.text(modelText, marginLeft + 30, y);
-    
-    y += 5;
-    
-    // Cor (from category or could be extracted)
-    doc.setFont('helvetica', 'bold');
-    doc.text('Cor:', marginLeft, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(item.glass_color || '-', marginLeft + 30, y);
-    
-    y += 5;
-    
-    // Vidro(s)
-    doc.setFont('helvetica', 'bold');
-    doc.text('Vidro(s):', marginLeft, y);
-    doc.setFont('helvetica', 'normal');
-    let glassInfo = '-';
-    if (item.has_glass && item.glass_thickness) {
-      glassInfo = `${item.glass_color || 'Vidro'} ${item.glass_thickness}`;
-    } else if (item.has_glass === false) {
-      glassInfo = 'Sem vidro';
-    }
-    doc.text(glassInfo, marginLeft + 30, y);
-    
-    y += 5;
-    
-    // Observação
-    doc.setFont('helvetica', 'bold');
-    doc.text('Observação:', marginLeft, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(item.notes || '', marginLeft + 30, y);
+    doc.text('Localização:', marginLeft + 3, y + 5.5);
+    doc.text(`Item: ${i + 1}`, marginRight - 3, y + 5.5, { align: 'right' });
     
     y += 8;
     
-    // Calculate area (in cm² as shown in the example: 1900x2100 = 3990)
+    // Card body with border
+    const cardBodyStartY = y;
+    const cardBodyHeight = 60;
+    
+    doc.setDrawColor(...cardBorder);
+    doc.setLineWidth(0.5);
+    doc.rect(marginLeft, y, contentWidth, cardBodyHeight, 'S');
+    
+    // Product image
+    const imgSize = 45;
+    const imgX = marginLeft + 5;
+    const imgY = y + 7;
+    
+    // Draw image placeholder/border
+    doc.setDrawColor(...cardBorder);
+    doc.rect(imgX, imgY, imgSize, imgSize, 'S');
+    
+    // Try to load product image
+    const imageUrl = getProductImageUrl(item.image_url);
+    if (imageUrl) {
+      try {
+        const base64 = await loadImageAsBase64(imageUrl);
+        if (base64) {
+          doc.addImage(base64, 'PNG', imgX + 1, imgY + 1, imgSize - 2, imgSize - 2);
+        }
+      } catch {
+        // Image failed to load
+      }
+    }
+    
+    // Item details (right of image)
+    const detailsX = imgX + imgSize + 8;
+    let detailsY = y + 7;
+    
+    doc.setFontSize(9);
+    doc.setTextColor(...textColor);
+    
+    // Linha
+    doc.setFont('helvetica', 'bold');
+    doc.text('Linha:', detailsX, detailsY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(item.linha || '-', detailsX + 20, detailsY);
+    
+    detailsY += 5;
+    
+    // Modelo
+    doc.setFont('helvetica', 'bold');
+    doc.text('Modelo:', detailsX, detailsY);
+    doc.setFont('helvetica', 'normal');
+    const modelText = item.description.length > 50 ? item.description.substring(0, 50) + '...' : item.description;
+    doc.text(modelText, detailsX + 20, detailsY);
+    
+    detailsY += 5;
+    
+    // Cor
+    doc.setFont('helvetica', 'bold');
+    doc.text('Cor:', detailsX, detailsY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(item.glass_color || '-', detailsX + 20, detailsY);
+    
+    detailsY += 5;
+    
+    // Vidro(s)
+    doc.setFont('helvetica', 'bold');
+    doc.text('Vidro(s):', detailsX, detailsY);
+    doc.setFont('helvetica', 'normal');
+    let glassInfo = '-';
+    if (item.has_glass && item.glass_thickness) {
+      const glassColor = item.glass_color || 'Vidro';
+      glassInfo = `${glassColor} ${item.glass_thickness}`;
+    } else if (item.has_glass === false) {
+      glassInfo = 'Sem vidro';
+    }
+    const glassText = glassInfo.length > 45 ? glassInfo.substring(0, 45) + '...' : glassInfo;
+    doc.text(glassText, detailsX + 20, detailsY);
+    
+    detailsY += 5;
+    
+    // Observação
+    doc.setFont('helvetica', 'bold');
+    doc.text('Observação:', detailsX, detailsY);
+    doc.setFont('helvetica', 'normal');
+    const obsText = item.notes || '';
+    doc.text(obsText.length > 40 ? obsText.substring(0, 40) + '...' : obsText, detailsX + 28, detailsY);
+    
+    // Table inside card
+    const tableY = cardBodyStartY + 32;
+    const tableWidth = contentWidth - imgSize - 18;
+    
+    // Calculate area
     const width = item.width || 0;
     const height = item.height || 0;
-    const areaValue = Math.round((width * height) / 1000); // Simplified area calc
+    const areaValue = Math.round((width * height) / 1000);
     
-    // Table for dimensions
     autoTable(doc, {
-      startY: y,
+      startY: tableY,
       head: [['Largura', 'Altura', 'Quantidade', 'Área', 'Valor unitário', 'Valor total']],
       body: [[
         width.toString(),
@@ -288,110 +302,78 @@ export async function generateQuotePdf(quote: Quote, items: QuoteItem[], company
       ]],
       theme: 'grid',
       styles: {
-        fontSize: 9,
-        cellPadding: 3,
+        fontSize: 8,
+        cellPadding: 2,
         halign: 'center',
         valign: 'middle',
       },
       headStyles: {
-        fillColor: [220, 220, 220],
+        fillColor: [230, 230, 230],
         textColor: [0, 0, 0],
         fontStyle: 'bold',
         halign: 'center',
+        fontSize: 7,
       },
       bodyStyles: {
         textColor: [0, 0, 0],
       },
-      margin: { left: marginLeft, right: 15 },
-      tableWidth: pageWidth - 30,
+      margin: { left: detailsX - 2, right: marginLeft },
+      tableWidth: tableWidth,
     });
     
-    y = (doc as any).lastAutoTable.finalY + 10;
+    y = cardBodyStartY + cardBodyHeight + 8;
   }
   
   // ========== TOTALS SECTION ==========
   // Check if we need a new page for totals
-  if (y + 50 > pageHeight - 20) {
+  if (y + 60 > pageHeight - 20) {
     doc.addPage();
     y = 15;
   }
   
-  // Valor total header
-  doc.setFillColor(...primaryColor);
-  doc.rect(marginLeft, y, pageWidth - 30, 7, 'F');
+  // Valor total row
+  doc.setFillColor(...lightBlue);
+  doc.rect(marginLeft, y, contentWidth, 10, 'F');
   
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(255, 255, 255);
-  doc.text('Valor total', marginLeft + 3, y + 5);
-  
-  y += 12;
-  
-  // Total value
   doc.setTextColor(...textColor);
-  doc.setFontSize(12);
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text(formatCurrency(quote.total_amount), marginLeft, y);
+  doc.text('Valor total', marginLeft + 5, y + 7);
+  doc.text(formatCurrency(quote.total_amount), marginRight - 5, y + 7, { align: 'right' });
   
   y += 10;
   
-  // Desconto header
-  doc.setFillColor(...primaryColor);
-  doc.rect(marginLeft, y, pageWidth - 30, 7, 'F');
+  // Desconto row
+  doc.setFillColor(255, 255, 255);
+  doc.setDrawColor(...cardBorder);
+  doc.rect(marginLeft, y, contentWidth, 10, 'S');
   
-  doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(255, 255, 255);
-  doc.text('Desconto', marginLeft + 3, y + 5);
-  
-  y += 12;
-  
-  // Discount value
-  doc.setTextColor(...textColor);
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
+  doc.text('Desconto', marginLeft + 5, y + 7);
   const discountDisplay = quote.discount_amount && quote.discount_amount > 0 
     ? formatCurrency(quote.discount_amount) 
     : '0';
-  doc.text(discountDisplay, marginLeft, y);
-  
-  y += 10;
-  
-  // Valor líquido header
-  doc.setFillColor(...primaryColor);
-  doc.rect(marginLeft, y, pageWidth - 30, 7, 'F');
-  
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(255, 255, 255);
-  doc.text('Valor líquido', marginLeft + 3, y + 5);
-  
-  y += 12;
-  
-  // Final value
-  doc.setTextColor(...textColor);
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.text(formatCurrency(quote.final_amount), marginLeft, y);
-  
-  y += 10;
-  
-  // Formas de pagamento header
-  doc.setFillColor(...primaryColor);
-  doc.rect(marginLeft, y, pageWidth - 30, 7, 'F');
-  
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(255, 255, 255);
-  doc.text('Formas de pagamento', marginLeft + 3, y + 5);
-  
-  y += 12;
-  
-  // Payment terms
-  doc.setTextColor(...textColor);
-  doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text(quote.payment_terms || 'A combinar', marginLeft, y);
+  doc.text(discountDisplay, marginRight - 5, y + 7, { align: 'right' });
+  
+  y += 10;
+  
+  // Valor líquido row
+  doc.setFillColor(...lightBlue);
+  doc.rect(marginLeft, y, contentWidth, 10, 'F');
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text('Valor líquido', marginLeft + 5, y + 7);
+  doc.text(formatCurrency(quote.final_amount), marginRight - 5, y + 7, { align: 'right' });
+  
+  y += 15;
+  
+  // Formas de pagamento row
+  doc.setFillColor(...lightBlue);
+  doc.rect(marginLeft, y, contentWidth, 10, 'F');
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text(`Formas de pagamento: ${quote.payment_terms || 'A combinar'}`, marginLeft + 5, y + 7);
   
   // Save PDF
   const customerSlug = quote.customer_name
