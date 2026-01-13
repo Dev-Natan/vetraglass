@@ -6,7 +6,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { generateQuotePdf } from '@/utils/generateQuotePdf';
-import { generateContractPdf } from '@/utils/generateContractPdf';
 import {
   Dialog,
   DialogContent,
@@ -37,6 +36,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { AprovarOrcamentoDialog } from './AprovarOrcamentoDialog';
+import { EditarContratoDialog } from './EditarContratoDialog';
 
 type QuoteStatus = 'pending' | 'approved' | 'rejected' | 'expired' | 'converted';
 
@@ -100,6 +100,7 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
   const { currentCompany } = useAuth();
   const queryClient = useQueryClient();
   const [aprovarDialogOpen, setAprovarDialogOpen] = useState(false);
+  const [contractDialogOpen, setContractDialogOpen] = useState(false);
 
   // Fetch quote items with product template info for images
   const { data: items } = useQuery({
@@ -183,19 +184,14 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
     toast({ title: 'PDF gerado com sucesso!' });
   };
 
-  const handleDownloadContract = async () => {
+  const handleDownloadContract = () => {
     if (!quote || !items) return;
-    
-    const company = currentCompany ? {
-      name: currentCompany.name,
-      cnpj: currentCompany.cnpj,
-      phone: currentCompany.phone,
-      email: currentCompany.email,
-      address: currentCompany.address,
-    } : null;
-    
-    // Transform items for contract
-    const itemsForContract = items.map(item => ({
+    setContractDialogOpen(true);
+  };
+
+  const getContractItems = () => {
+    if (!items) return [];
+    return items.map(item => ({
       description: item.description,
       width: item.width,
       height: item.height,
@@ -206,10 +202,17 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
       glass_color: item.glass_color,
       glass_thickness: item.glass_thickness,
     }));
-    
-    toast({ title: 'Gerando Contrato...' });
-    await generateContractPdf(quote, itemsForContract, company);
-    toast({ title: 'Contrato gerado com sucesso!' });
+  };
+
+  const getCompanyData = () => {
+    if (!currentCompany) return null;
+    return {
+      name: currentCompany.name,
+      cnpj: currentCompany.cnpj,
+      phone: currentCompany.phone,
+      email: currentCompany.email,
+      address: currentCompany.address,
+    };
   };
 
   if (!quote) return null;
@@ -420,6 +423,15 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
           setAprovarDialogOpen(false);
           onOpenChange(false);
         }}
+      />
+
+      {/* Editar Contrato Dialog */}
+      <EditarContratoDialog
+        open={contractDialogOpen}
+        onOpenChange={setContractDialogOpen}
+        quote={quote}
+        items={getContractItems()}
+        company={getCompanyData()}
       />
     </Dialog>
   );

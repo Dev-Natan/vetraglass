@@ -45,7 +45,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { NovoOrcamentoDialog } from '@/components/orcamentos/NovoOrcamentoDialog';
 import { VisualizarOrcamentoDialog } from '@/components/orcamentos/VisualizarOrcamentoDialog';
-import { generateContractPdf } from '@/utils/generateContractPdf';
+import { EditarContratoDialog } from '@/components/orcamentos/EditarContratoDialog';
 
 type QuoteStatus = 'pending' | 'approved' | 'rejected' | 'expired' | 'converted';
 
@@ -89,6 +89,8 @@ export default function Orcamentos() {
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [quoteToDelete, setQuoteToDelete] = useState<Quote | null>(null);
+  const [isContractDialogOpen, setIsContractDialogOpen] = useState(false);
+  const [contractItems, setContractItems] = useState<any[]>([]);
 
   // Fetch quotes
   const { data: quotes, isLoading } = useQuery({
@@ -154,14 +156,6 @@ export default function Orcamentos() {
       .select('*')
       .eq('quote_id', quote.id);
 
-    const company = currentCompany ? {
-      name: currentCompany.name,
-      cnpj: currentCompany.cnpj,
-      phone: currentCompany.phone,
-      email: currentCompany.email,
-      address: currentCompany.address,
-    } : null;
-
     const itemsForContract = (items || []).map(item => ({
       description: item.description,
       width: item.width,
@@ -174,9 +168,9 @@ export default function Orcamentos() {
       glass_thickness: item.glass_thickness,
     }));
 
-    toast({ title: 'Gerando Contrato...' });
-    await generateContractPdf(quote, itemsForContract, company);
-    toast({ title: 'Contrato gerado com sucesso!' });
+    setContractItems(itemsForContract);
+    setSelectedQuote(quote);
+    setIsContractDialogOpen(true);
   };
 
   const handlePrint = (quote: Quote) => {
@@ -484,6 +478,20 @@ export default function Orcamentos() {
         open={isViewDialogOpen}
         onOpenChange={setIsViewDialogOpen}
         quote={selectedQuote}
+      />
+
+      <EditarContratoDialog
+        open={isContractDialogOpen}
+        onOpenChange={setIsContractDialogOpen}
+        quote={selectedQuote}
+        items={contractItems}
+        company={currentCompany ? {
+          name: currentCompany.name,
+          cnpj: currentCompany.cnpj,
+          phone: currentCompany.phone,
+          email: currentCompany.email,
+          address: currentCompany.address,
+        } : null}
       />
 
       <AlertDialog open={!!quoteToDelete} onOpenChange={() => setQuoteToDelete(null)}>
