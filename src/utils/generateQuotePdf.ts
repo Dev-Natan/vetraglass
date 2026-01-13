@@ -16,6 +16,7 @@ interface QuoteItem {
   has_glass?: boolean;
   glass_color?: string;
   glass_thickness?: string;
+  notes?: string | null;
 }
 
 interface Quote {
@@ -31,6 +32,7 @@ interface Quote {
   notes?: string | null;
   valid_until: string | null;
   created_at: string;
+  payment_terms?: string | null;
 }
 
 interface Company {
@@ -41,12 +43,6 @@ interface Company {
   address?: string | null;
   logo_url?: string | null;
 }
-
-const glassColorLabels: Record<string, string> = {
-  incolor: 'Incolor',
-  verde: 'Verde',
-  fume: 'Fumê',
-};
 
 const categoryLabels: Record<string, string> = {
   window: 'Janela',
@@ -81,314 +77,329 @@ function getProductImageUrl(imageUrl: string | null | undefined): string | null 
   return `${window.location.origin}/products/${imageUrl}`;
 }
 
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+}
+
+function formatCurrencyValue(value: number): string {
+  return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+}
+
 export async function generateQuotePdf(quote: Quote, items: QuoteItem[], company: Company | null) {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   
   // Colors
-  const primaryColor: [number, number, number] = [59, 130, 246]; // blue-500
-  const textColor: [number, number, number] = [30, 41, 59]; // slate-800
-  const mutedColor: [number, number, number] = [100, 116, 139]; // slate-500
-  const successColor: [number, number, number] = [34, 197, 94]; // green-500
-  const warningColor: [number, number, number] = [234, 179, 8]; // yellow-500
+  const primaryColor: [number, number, number] = [0, 102, 204]; // Blue
+  const textColor: [number, number, number] = [0, 0, 0]; // Black
+  const mutedColor: [number, number, number] = [100, 100, 100]; // Gray
+  const headerBg: [number, number, number] = [240, 240, 240]; // Light gray
   
-  let y = 20;
+  let y = 15;
+  const marginLeft = 15;
+  const marginRight = pageWidth - 15;
   
-  // Header with company info
-  doc.setFillColor(...primaryColor);
-  doc.rect(0, 0, pageWidth, 40, 'F');
-  
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(20);
+  // ========== HEADER ==========
+  // Title "Orçamento"
+  doc.setFontSize(24);
   doc.setFont('helvetica', 'bold');
-  doc.text(company?.name || 'Empresa', 15, 25);
+  doc.setTextColor(...primaryColor);
+  doc.text('Orçamento', marginLeft, y);
   
+  y += 12;
+  
+  // Company info section
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  if (company?.phone) doc.text(`Tel: ${company.phone}`, 15, 33);
-  if (company?.email) doc.text(company.email, 80, 33);
-  
-  // Quote number on the right
-  doc.setFontSize(14);
-  doc.setFont('helvetica', 'bold');
-  doc.text(`ORÇAMENTO #${quote.quote_number.toString().padStart(4, '0')}`, pageWidth - 15, 25, { align: 'right' });
-  
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Emissão: ${format(new Date(quote.created_at), "dd/MM/yyyy", { locale: ptBR })}`, pageWidth - 15, 33, { align: 'right' });
-  
-  y = 55;
-  
-  // Customer info section
-  doc.setFillColor(248, 250, 252); // slate-50
-  doc.roundedRect(15, y, pageWidth - 30, 35, 3, 3, 'F');
-  
   doc.setTextColor(...textColor);
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text('Empresa:', marginLeft, y);
+  doc.setFont('helvetica', 'normal');
+  doc.text(company?.name || '-', marginLeft + 25, y);
+  
+  // Quote code on the right
+  doc.setFont('helvetica', 'bold');
+  doc.text('Código:', marginRight - 60, y);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`ORC${quote.quote_number.toString().padStart(2, '0')}`, marginRight - 35, y);
+  
+  y += 6;
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text('CNPJ:', marginLeft, y);
+  doc.setFont('helvetica', 'normal');
+  doc.text(company?.cnpj || '-', marginLeft + 25, y);
+  
+  y += 6;
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text('Telefone:', marginLeft, y);
+  doc.setFont('helvetica', 'normal');
+  doc.text(company?.phone || '-', marginLeft + 25, y);
+  
+  y += 6;
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text('Email:', marginLeft, y);
+  doc.setFont('helvetica', 'normal');
+  doc.text(company?.email || '-', marginLeft + 25, y);
+  
+  y += 12;
+  
+  // ========== CLIENT SECTION ==========
+  doc.setFillColor(...primaryColor);
+  doc.rect(marginLeft, y, pageWidth - 30, 7, 'F');
+  
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.text('CLIENTE', 20, y + 10);
+  doc.setTextColor(255, 255, 255);
+  doc.text('Cliente:', marginLeft + 3, y + 5);
   
+  y += 7;
+  
+  // Client name
+  doc.setFillColor(...headerBg);
+  doc.rect(marginLeft, y, pageWidth - 30, 7, 'F');
+  
+  doc.setTextColor(...textColor);
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text(quote.customer_name, 20, y + 18);
+  doc.text(quote.customer_name.toUpperCase(), marginLeft + 3, y + 5);
   
-  doc.setTextColor(...mutedColor);
-  doc.setFontSize(9);
-  const contactInfo: string[] = [];
-  if (quote.customer_phone) contactInfo.push(`Tel: ${quote.customer_phone}`);
-  if (quote.customer_email) contactInfo.push(quote.customer_email);
-  doc.text(contactInfo.join('  |  '), 20, y + 25);
+  y += 10;
   
-  if (quote.customer_address) {
-    doc.text(quote.customer_address, 20, y + 31);
-  }
-  
-  // Validity info
-  if (quote.valid_until) {
-    doc.setTextColor(...primaryColor);
-    doc.setFontSize(9);
-    doc.text(`Válido até: ${format(new Date(quote.valid_until), "dd/MM/yyyy", { locale: ptBR })}`, pageWidth - 20, y + 10, { align: 'right' });
-  }
-  
-  y += 45;
-  
-  // Section title - Products
+  // Date
   doc.setTextColor(...textColor);
-  doc.setFontSize(12);
+  doc.setFontSize(10);
+  doc.text(`Data de elaboração do orçamento: ${format(new Date(quote.created_at), "dd/MM/yyyy", { locale: ptBR })}`, marginLeft, y);
+  
+  y += 12;
+  
+  // ========== ITEMS SECTION ==========
+  doc.setFillColor(...primaryColor);
+  doc.rect(marginLeft, y, pageWidth - 30, 7, 'F');
+  
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.text('PRODUTOS', 15, y);
-  y += 8;
+  doc.setTextColor(255, 255, 255);
+  doc.text('Itens', marginLeft + 3, y + 5);
   
-  // Product cards with images
-  const cardHeight = 45;
-  const imageSize = 35;
+  y += 12;
   
+  // Loop through items
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
     
     // Check if we need a new page
-    if (y + cardHeight > pageHeight - 60) {
+    if (y + 60 > pageHeight - 40) {
       doc.addPage();
-      y = 20;
+      y = 15;
     }
     
-    // Card background
-    doc.setFillColor(255, 255, 255);
-    doc.setDrawColor(226, 232, 240); // slate-200
-    doc.roundedRect(15, y, pageWidth - 30, cardHeight, 3, 3, 'FD');
-    
-    // Item number badge
-    doc.setFillColor(...primaryColor);
-    doc.circle(22, y + 8, 4, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    doc.text((i + 1).toString(), 22, y + 9.5, { align: 'center' });
-    
-    // Product image placeholder
-    const imgX = 30;
-    const imgY = y + 5;
-    doc.setFillColor(248, 250, 252);
-    doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(imgX, imgY, imageSize, imageSize, 2, 2, 'FD');
-    
-    // Try to load and add product image
-    const imageUrl = getProductImageUrl(item.image_url);
-    if (imageUrl) {
-      try {
-        const base64 = await loadImageAsBase64(imageUrl);
-        if (base64) {
-          doc.addImage(base64, 'PNG', imgX + 2, imgY + 2, imageSize - 4, imageSize - 4);
-        }
-      } catch {
-        // Image failed to load, keep placeholder
-      }
-    }
-    
-    // Product info - starts after image
-    const infoX = imgX + imageSize + 8;
-    
-    // Product name
-    doc.setTextColor(...textColor);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    const productName = item.description.length > 40 ? item.description.substring(0, 40) + '...' : item.description;
-    doc.text(productName, infoX, y + 10);
-    
-    // Linha and Category badges
-    let badgeX = infoX;
-    doc.setFontSize(7);
-    
-    if (item.linha) {
-      doc.setFillColor(229, 231, 235); // gray-200
-      const linhaWidth = doc.getTextWidth(item.linha) + 6;
-      doc.roundedRect(badgeX, y + 13, linhaWidth, 6, 1, 1, 'F');
-      doc.setTextColor(...mutedColor);
-      doc.setFont('helvetica', 'normal');
-      doc.text(item.linha, badgeX + 3, y + 17);
-      badgeX += linhaWidth + 3;
-    }
-    
-    if (item.category) {
-      const catLabel = categoryLabels[item.category] || item.category;
-      doc.setFillColor(219, 234, 254); // blue-100
-      const catWidth = doc.getTextWidth(catLabel) + 6;
-      doc.roundedRect(badgeX, y + 13, catWidth, 6, 1, 1, 'F');
-      doc.setTextColor(59, 130, 246); // blue-500
-      doc.text(catLabel, badgeX + 3, y + 17);
-      badgeX += catWidth + 3;
-    }
-    
-    // Glass info badges
-    if (item.has_glass !== undefined) {
-      if (item.has_glass) {
-        // Com Vidro badge
-        doc.setFillColor(220, 252, 231); // green-100
-        const glassText = 'Com Vidro';
-        const glassWidth = doc.getTextWidth(glassText) + 6;
-        doc.roundedRect(badgeX, y + 13, glassWidth, 6, 1, 1, 'F');
-        doc.setTextColor(34, 197, 94); // green-500
-        doc.text(glassText, badgeX + 3, y + 17);
-        badgeX += glassWidth + 3;
-        
-        // Glass color
-        if (item.glass_color) {
-          const colorLabel = glassColorLabels[item.glass_color] || item.glass_color;
-          doc.setFillColor(191, 219, 254); // blue-200
-          const colorWidth = doc.getTextWidth(colorLabel) + 6;
-          doc.roundedRect(badgeX, y + 13, colorWidth, 6, 1, 1, 'F');
-          doc.setTextColor(30, 64, 175); // blue-800
-          doc.text(colorLabel, badgeX + 3, y + 17);
-          badgeX += colorWidth + 3;
-        }
-        
-        // Glass thickness
-        if (item.glass_thickness) {
-          doc.setFillColor(187, 247, 208); // green-200
-          const thickWidth = doc.getTextWidth(item.glass_thickness) + 6;
-          doc.roundedRect(badgeX, y + 13, thickWidth, 6, 1, 1, 'F');
-          doc.setTextColor(21, 128, 61); // green-700
-          doc.text(item.glass_thickness, badgeX + 3, y + 17);
-        }
-      } else {
-        // Sem Vidro badge
-        doc.setFillColor(254, 226, 226); // red-100
-        const noGlassText = 'Sem Vidro';
-        const noGlassWidth = doc.getTextWidth(noGlassText) + 6;
-        doc.roundedRect(badgeX, y + 13, noGlassWidth, 6, 1, 1, 'F');
-        doc.setTextColor(220, 38, 38); // red-600
-        doc.text(noGlassText, badgeX + 3, y + 17);
-      }
-    }
-    
-    // Dimensions and quantity row
-    doc.setTextColor(...mutedColor);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    
-    const dimensions = item.width && item.height ? `${item.width} x ${item.height} mm` : '-';
-    const area = item.width && item.height ? ((item.width / 1000) * (item.height / 1000)).toFixed(2) + ' m²' : '';
-    doc.text(`Medidas: ${dimensions}  ${area ? '|  Área: ' + area : ''}  |  Qtd: ${item.quantity}`, infoX, y + 28);
-    
-    // Price info on the right
-    const priceX = pageWidth - 20;
-    
-    doc.setTextColor(...mutedColor);
-    doc.setFontSize(8);
-    doc.text('Unitário:', priceX - 35, y + 12);
-    doc.setTextColor(...textColor);
-    doc.setFont('helvetica', 'normal');
-    doc.text(formatCurrency(item.unit_price), priceX, y + 12, { align: 'right' });
+    // Item header with number
+    doc.setFillColor(...headerBg);
+    doc.rect(marginLeft, y, pageWidth - 30, 7, 'F');
     
     doc.setTextColor(...primaryColor);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.text(formatCurrency(item.total_price), priceX, y + 24, { align: 'right' });
+    doc.text(`Item: ${i + 1}`, marginLeft + 3, y + 5);
     
-    doc.setTextColor(...mutedColor);
-    doc.setFontSize(7);
+    y += 10;
+    
+    // Item details
+    doc.setTextColor(...textColor);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.text('Total do item', priceX, y + 30, { align: 'right' });
     
-    y += cardHeight + 5;
+    // Localização (if notes contain location info)
+    doc.setFont('helvetica', 'bold');
+    doc.text('Localização:', marginLeft, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text('', marginLeft + 30, y); // Empty or could be derived from notes
+    
+    y += 5;
+    
+    // Linha
+    doc.setFont('helvetica', 'bold');
+    doc.text('Linha:', marginLeft, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(item.linha || '-', marginLeft + 30, y);
+    
+    y += 5;
+    
+    // Modelo (description)
+    doc.setFont('helvetica', 'bold');
+    doc.text('Modelo:', marginLeft, y);
+    doc.setFont('helvetica', 'normal');
+    const modelText = item.description.length > 60 ? item.description.substring(0, 60) + '...' : item.description;
+    doc.text(modelText, marginLeft + 30, y);
+    
+    y += 5;
+    
+    // Cor (from category or could be extracted)
+    doc.setFont('helvetica', 'bold');
+    doc.text('Cor:', marginLeft, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(item.glass_color || '-', marginLeft + 30, y);
+    
+    y += 5;
+    
+    // Vidro(s)
+    doc.setFont('helvetica', 'bold');
+    doc.text('Vidro(s):', marginLeft, y);
+    doc.setFont('helvetica', 'normal');
+    let glassInfo = '-';
+    if (item.has_glass && item.glass_thickness) {
+      glassInfo = `${item.glass_color || 'Vidro'} ${item.glass_thickness}`;
+    } else if (item.has_glass === false) {
+      glassInfo = 'Sem vidro';
+    }
+    doc.text(glassInfo, marginLeft + 30, y);
+    
+    y += 5;
+    
+    // Observação
+    doc.setFont('helvetica', 'bold');
+    doc.text('Observação:', marginLeft, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(item.notes || '', marginLeft + 30, y);
+    
+    y += 8;
+    
+    // Calculate area (in cm² as shown in the example: 1900x2100 = 3990)
+    const width = item.width || 0;
+    const height = item.height || 0;
+    const areaValue = Math.round((width * height) / 1000); // Simplified area calc
+    
+    // Table for dimensions
+    autoTable(doc, {
+      startY: y,
+      head: [['Largura', 'Altura', 'Quantidade', 'Área', 'Valor unitário', 'Valor total']],
+      body: [[
+        width.toString(),
+        height.toString(),
+        item.quantity.toString(),
+        areaValue.toString(),
+        formatCurrency(item.unit_price),
+        formatCurrencyValue(item.total_price)
+      ]],
+      theme: 'grid',
+      styles: {
+        fontSize: 9,
+        cellPadding: 3,
+        halign: 'center',
+        valign: 'middle',
+      },
+      headStyles: {
+        fillColor: [220, 220, 220],
+        textColor: [0, 0, 0],
+        fontStyle: 'bold',
+        halign: 'center',
+      },
+      bodyStyles: {
+        textColor: [0, 0, 0],
+      },
+      margin: { left: marginLeft, right: 15 },
+      tableWidth: pageWidth - 30,
+    });
+    
+    y = (doc as any).lastAutoTable.finalY + 10;
   }
   
+  // ========== TOTALS SECTION ==========
   // Check if we need a new page for totals
-  if (y + 60 > pageHeight - 30) {
+  if (y + 50 > pageHeight - 20) {
     doc.addPage();
-    y = 20;
+    y = 15;
   }
+  
+  // Valor total header
+  doc.setFillColor(...primaryColor);
+  doc.rect(marginLeft, y, pageWidth - 30, 7, 'F');
+  
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(255, 255, 255);
+  doc.text('Valor total', marginLeft + 3, y + 5);
+  
+  y += 12;
+  
+  // Total value
+  doc.setTextColor(...textColor);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text(formatCurrency(quote.total_amount), marginLeft, y);
   
   y += 10;
   
-  // Totals section
-  doc.setFillColor(248, 250, 252); // slate-50
-  doc.roundedRect(pageWidth - 95, y, 80, 50, 3, 3, 'F');
+  // Desconto header
+  doc.setFillColor(...primaryColor);
+  doc.rect(marginLeft, y, pageWidth - 30, 7, 'F');
   
-  let totalsY = y + 12;
-  const totalsX = pageWidth - 90;
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(255, 255, 255);
+  doc.text('Desconto', marginLeft + 3, y + 5);
   
-  doc.setTextColor(...mutedColor);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Subtotal:', totalsX, totalsY);
+  y += 12;
+  
+  // Discount value
   doc.setTextColor(...textColor);
-  doc.text(formatCurrency(quote.total_amount), pageWidth - 20, totalsY, { align: 'right' });
-  
-  if (quote.discount_amount && quote.discount_amount > 0) {
-    totalsY += 10;
-    doc.setTextColor(220, 38, 38); // red-600
-    doc.text(`Desconto (${quote.discount_percent || 0}%):`, totalsX, totalsY);
-    doc.text(`-${formatCurrency(quote.discount_amount)}`, pageWidth - 20, totalsY, { align: 'right' });
-  }
-  
-  totalsY += 15;
-  doc.setDrawColor(203, 213, 225); // slate-300
-  doc.line(totalsX, totalsY - 5, pageWidth - 20, totalsY - 5);
-  
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...primaryColor);
-  doc.text('TOTAL:', totalsX, totalsY);
-  doc.text(formatCurrency(quote.final_amount), pageWidth - 20, totalsY, { align: 'right' });
+  const discountDisplay = quote.discount_amount && quote.discount_amount > 0 
+    ? formatCurrency(quote.discount_amount) 
+    : '0';
+  doc.text(discountDisplay, marginLeft, y);
   
-  // Notes
-  if (quote.notes) {
-    const notesY = y;
-    const notesWidth = pageWidth - 115;
-    
-    doc.setFillColor(254, 249, 195); // yellow-100
-    doc.roundedRect(15, notesY, notesWidth, 50, 3, 3, 'F');
-    
-    doc.setTextColor(...textColor);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Observações:', 20, notesY + 10);
-    
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...mutedColor);
-    const splitNotes = doc.splitTextToSize(quote.notes, notesWidth - 15);
-    doc.text(splitNotes.slice(0, 4), 20, notesY + 18);
-  }
+  y += 10;
   
-  // Footer
-  const footerY = pageHeight - 15;
-  doc.setDrawColor(226, 232, 240);
-  doc.line(15, footerY - 8, pageWidth - 15, footerY - 8);
+  // Valor líquido header
+  doc.setFillColor(...primaryColor);
+  doc.rect(marginLeft, y, pageWidth - 30, 7, 'F');
   
-  doc.setTextColor(...mutedColor);
-  doc.setFontSize(8);
-  doc.text('Este orçamento é válido conforme as condições estabelecidas.', pageWidth / 2, footerY - 2, { align: 'center' });
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(255, 255, 255);
+  doc.text('Valor líquido', marginLeft + 3, y + 5);
   
-  if (company?.cnpj) {
-    doc.text(`CNPJ: ${company.cnpj}`, pageWidth / 2, footerY + 4, { align: 'center' });
-  }
+  y += 12;
+  
+  // Final value
+  doc.setTextColor(...textColor);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text(formatCurrency(quote.final_amount), marginLeft, y);
+  
+  y += 10;
+  
+  // Formas de pagamento header
+  doc.setFillColor(...primaryColor);
+  doc.rect(marginLeft, y, pageWidth - 30, 7, 'F');
+  
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(255, 255, 255);
+  doc.text('Formas de pagamento', marginLeft + 3, y + 5);
+  
+  y += 12;
+  
+  // Payment terms
+  doc.setTextColor(...textColor);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text(quote.payment_terms || 'A combinar', marginLeft, y);
   
   // Save PDF
-  doc.save(`orcamento-${quote.quote_number.toString().padStart(4, '0')}.pdf`);
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+  const customerSlug = quote.customer_name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  
+  doc.save(`orcamento-orc${quote.quote_number.toString().padStart(2, '0')}-${customerSlug}.pdf`);
 }
