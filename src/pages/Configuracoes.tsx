@@ -233,14 +233,44 @@ export default function Configuracoes() {
                 className="hidden"
               />
             </div>
-            <div className="flex-1">
-              <h3 className="font-medium text-foreground mb-1">Logo da Empresa</h3>
-              <p className="text-sm text-muted-foreground mb-2">
-                Este logo será exibido nos orçamentos e contratos em PDF.
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Formatos aceitos: PNG, JPG, WEBP. Tamanho máximo: 2MB.
-              </p>
+            <div className="flex-1 space-y-4">
+              <div>
+                <h3 className="font-medium text-foreground mb-1">Logo da Empresa</h3>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Este logo será exibido nos orçamentos e contratos em PDF.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Formatos aceitos: PNG, JPG, WEBP. Tamanho máximo: 2MB.
+                </p>
+              </div>
+              
+              {/* Logo Size Slider */}
+              {company?.logo_url && (
+                <div className="pt-2">
+                  <label className="text-sm font-medium text-muted-foreground block mb-2">
+                    Tamanho do logo no PDF: {(company as any)?.logo_size || 40}mm
+                  </label>
+                  <input
+                    type="range"
+                    min="20"
+                    max="80"
+                    value={(company as any)?.logo_size || 40}
+                    onChange={async (e) => {
+                      const newSize = parseInt(e.target.value);
+                      await supabase
+                        .from('companies')
+                        .update({ logo_size: newSize })
+                        .eq('id', currentCompany?.id);
+                      queryClient.invalidateQueries({ queryKey: ["company-config"] });
+                    }}
+                    className="w-full max-w-xs h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground max-w-xs mt-1">
+                    <span>Pequeno (20mm)</span>
+                    <span>Grande (80mm)</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
