@@ -225,6 +225,7 @@ export type Database = {
           inscricao_municipal: string | null
           logo_size: number | null
           logo_url: string | null
+          modo_fiscal_ativo: boolean
           name: string
           phone: string | null
           regime_tributario: string | null
@@ -245,6 +246,7 @@ export type Database = {
           inscricao_municipal?: string | null
           logo_size?: number | null
           logo_url?: string | null
+          modo_fiscal_ativo?: boolean
           name: string
           phone?: string | null
           regime_tributario?: string | null
@@ -265,6 +267,7 @@ export type Database = {
           inscricao_municipal?: string | null
           logo_size?: number | null
           logo_url?: string | null
+          modo_fiscal_ativo?: boolean
           name?: string
           phone?: string | null
           regime_tributario?: string | null
@@ -471,6 +474,11 @@ export type Database = {
       }
       item_templates: {
         Row: {
+          aliquota_iss: number | null
+          cest: string | null
+          cfop_venda: string | null
+          cfop_venda_interestadual: string | null
+          codigo_servico: string | null
           created_at: string
           default_price: number | null
           description: string | null
@@ -479,12 +487,19 @@ export type Database = {
           is_active: boolean
           linha: string | null
           name: string
+          ncm: string | null
+          origem: string | null
           specifications: Json | null
           type: Database["public"]["Enums"]["item_type"]
           unit: string
           updated_at: string
         }
         Insert: {
+          aliquota_iss?: number | null
+          cest?: string | null
+          cfop_venda?: string | null
+          cfop_venda_interestadual?: string | null
+          codigo_servico?: string | null
           created_at?: string
           default_price?: number | null
           description?: string | null
@@ -493,12 +508,19 @@ export type Database = {
           is_active?: boolean
           linha?: string | null
           name: string
+          ncm?: string | null
+          origem?: string | null
           specifications?: Json | null
           type: Database["public"]["Enums"]["item_type"]
           unit?: string
           updated_at?: string
         }
         Update: {
+          aliquota_iss?: number | null
+          cest?: string | null
+          cfop_venda?: string | null
+          cfop_venda_interestadual?: string | null
+          codigo_servico?: string | null
           created_at?: string
           default_price?: number | null
           description?: string | null
@@ -507,6 +529,8 @@ export type Database = {
           is_active?: boolean
           linha?: string | null
           name?: string
+          ncm?: string | null
+          origem?: string | null
           specifications?: Json | null
           type?: Database["public"]["Enums"]["item_type"]
           unit?: string
@@ -971,8 +995,13 @@ export type Database = {
       }
       product_templates: {
         Row: {
+          aliquota_iss: number | null
           base_price: number | null
           category: Database["public"]["Enums"]["product_category"]
+          cest: string | null
+          cfop_venda: string | null
+          cfop_venda_interestadual: string | null
+          codigo_servico: string | null
           created_at: string
           description: string | null
           id: string
@@ -984,11 +1013,18 @@ export type Database = {
           min_height: number | null
           min_width: number | null
           name: string
+          ncm: string | null
+          origem: string | null
           updated_at: string
         }
         Insert: {
+          aliquota_iss?: number | null
           base_price?: number | null
           category: Database["public"]["Enums"]["product_category"]
+          cest?: string | null
+          cfop_venda?: string | null
+          cfop_venda_interestadual?: string | null
+          codigo_servico?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -1000,11 +1036,18 @@ export type Database = {
           min_height?: number | null
           min_width?: number | null
           name: string
+          ncm?: string | null
+          origem?: string | null
           updated_at?: string
         }
         Update: {
+          aliquota_iss?: number | null
           base_price?: number | null
           category?: Database["public"]["Enums"]["product_category"]
+          cest?: string | null
+          cfop_venda?: string | null
+          cfop_venda_interestadual?: string | null
+          codigo_servico?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -1016,6 +1059,8 @@ export type Database = {
           min_height?: number | null
           min_width?: number | null
           name?: string
+          ncm?: string | null
+          origem?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1724,6 +1769,7 @@ export type Database = {
           inscricao_municipal: string | null
           logo_size: number | null
           logo_url: string | null
+          modo_fiscal_ativo: boolean
           name: string
           phone: string | null
           regime_tributario: string | null

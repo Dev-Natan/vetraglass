@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FormulaEditor } from '@/components/produtos/FormulaEditor';
 import { GlassFormulaEditor } from '@/components/produtos/GlassFormulaEditor';
+import { FiscalFieldsCard, FiscalFieldsData } from '@/components/produtos/FiscalFieldsCard';
 import {
   Select,
   SelectContent,
@@ -32,6 +33,7 @@ import {
 } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 type ProductTemplate = {
   id: string;
@@ -101,8 +103,6 @@ const itemTypeTabs = [
   { value: 'accessory', label: 'ACESSÓRIOS E FERRAGENS', dbType: 'accessory' },
 ];
 
-import { useAuth } from '@/contexts/AuthContext';
-
 export default function EditarProduto() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -127,6 +127,34 @@ export default function EditarProduto() {
     gap_type: 'normal',
     base_price: '',
   });
+
+  const [fiscalData, setFiscalData] = useState<FiscalFieldsData>({
+    ncm: '',
+    cfop_venda: '5102',
+    cfop_venda_interestadual: '6102',
+    cest: '',
+    origem: '0',
+    codigo_servico: '',
+    aliquota_iss: '0',
+  });
+
+  // Check if fiscal mode is enabled for the company
+  const { data: companyConfig } = useQuery({
+    queryKey: ['company-fiscal-mode', currentCompany?.id],
+    queryFn: async () => {
+      if (!currentCompany?.id) return null;
+      const { data, error } = await supabase
+        .from('companies')
+        .select('modo_fiscal_ativo')
+        .eq('id', currentCompany.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!currentCompany?.id,
+  });
+
+  const modoFiscalAtivo = companyConfig?.modo_fiscal_ativo ?? false;
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -255,19 +283,42 @@ export default function EditarProduto() {
         gap_type: 'normal',
         base_price: product.base_price?.toString() || '',
       });
+      // Load fiscal data
+      setFiscalData({
+        ncm: (product as any).ncm || '',
+        cfop_venda: (product as any).cfop_venda || '5102',
+        cfop_venda_interestadual: (product as any).cfop_venda_interestadual || '6102',
+        cest: (product as any).cest || '',
+        origem: (product as any).origem || '0',
+        codigo_servico: (product as any).codigo_servico || '',
+        aliquota_iss: (product as any).aliquota_iss?.toString() || '0',
+      });
     }
   }, [product]);
 
   // Save product mutation
   const saveProductMutation = useMutation({
     mutationFn: async () => {
+      const updateData: Record<string, any> = {
+        name: formData.name,
+        description: formData.description,
+        base_price: formData.base_price ? parseFloat(formData.base_price) : 0,
+      };
+
+      // Include fiscal data if fiscal mode is enabled
+      if (modoFiscalAtivo) {
+        updateData.ncm = fiscalData.ncm || null;
+        updateData.cfop_venda = fiscalData.cfop_venda || '5102';
+        updateData.cfop_venda_interestadual = fiscalData.cfop_venda_interestadual || '6102';
+        updateData.cest = fiscalData.cest || null;
+        updateData.origem = fiscalData.origem || '0';
+        updateData.codigo_servico = fiscalData.codigo_servico || null;
+        updateData.aliquota_iss = fiscalData.aliquota_iss ? parseFloat(fiscalData.aliquota_iss) : 0;
+      }
+
       const { error } = await supabase
         .from('product_templates')
-        .update({
-          name: formData.name,
-          description: formData.description,
-          base_price: formData.base_price ? parseFloat(formData.base_price) : 0,
-        })
+        .update(updateData)
         .eq('id', id);
       if (error) throw error;
     },
@@ -499,6 +550,17 @@ export default function EditarProduto() {
                 rows={3}
               />
             </div>
+
+            {/* Fiscal Fields Card - Only shown when fiscal mode is active */}
+            {modoFiscalAtivo && (
+              <div className="mt-4">
+                <FiscalFieldsCard
+                  data={fiscalData}
+                  onChange={setFiscalData}
+                  type="produto"
+                />
+              </div>
+            )}
           </div>
         </div>
 

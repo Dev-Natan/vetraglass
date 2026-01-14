@@ -4,9 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
-import { Building2, Users, Bell, Shield, Database, FileText, CheckCircle, AlertCircle, Upload, ImageIcon, Trash2, KeyRound, Calendar, Clock } from 'lucide-react';
+import { Building2, Users, Bell, Shield, Database, FileText, CheckCircle, AlertCircle, Upload, ImageIcon, Trash2, KeyRound, Calendar, Clock, Receipt } from 'lucide-react';
 import EditarDadosFiscaisDialog from "@/components/configuracoes/EditarDadosFiscaisDialog";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { format, isPast, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -77,6 +78,7 @@ export default function Configuracoes() {
   const hasCodigoIbge = !!(company as any)?.codigo_municipio_ibge;
   const isProducao = (company as any)?.ambiente_fiscal === "producao";
   const hasCertificate = !!(company as any)?.certificado_digital_url;
+  const modoFiscalAtivo = !!(company as any)?.modo_fiscal_ativo;
   const certificateExpiration = (company as any)?.certificado_digital_validade 
     ? new Date((company as any).certificado_digital_validade) 
     : null;
@@ -84,6 +86,26 @@ export default function Configuracoes() {
   const daysUntilExpiration = certificateExpiration 
     ? differenceInDays(certificateExpiration, new Date()) 
     : null;
+
+  const toggleModoFiscalMutation = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      if (!currentCompany?.id) throw new Error("Empresa não encontrada");
+      
+      const { error } = await supabase
+        .from('companies')
+        .update({ modo_fiscal_ativo: enabled })
+        .eq('id', currentCompany.id);
+      
+      if (error) throw error;
+    },
+    onSuccess: (_, enabled) => {
+      queryClient.invalidateQueries({ queryKey: ["company-config"] });
+      toast.success(enabled ? "Modo fiscal ativado!" : "Modo fiscal desativado!");
+    },
+    onError: (error) => {
+      toast.error("Erro ao alterar modo fiscal: " + error.message);
+    },
+  });
 
   const uploadLogoMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -442,6 +464,35 @@ export default function Configuracoes() {
               <label className="text-sm font-medium text-muted-foreground">Endereço</label>
               <p className="text-foreground mt-1">{company?.address || "-"}</p>
             </div>
+          </div>
+
+          {/* Modo Fiscal Toggle */}
+          <div className="mt-6 pt-6 border-t border-border">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Receipt className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-foreground">Modo Fiscal</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Ative para exibir campos fiscais (NCM, CFOP, etc.) nos produtos e itens
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={modoFiscalAtivo}
+                onCheckedChange={(checked) => toggleModoFiscalMutation.mutate(checked)}
+                disabled={toggleModoFiscalMutation.isPending}
+              />
+            </div>
+            {modoFiscalAtivo && (
+              <div className="mt-3 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                <p className="text-sm text-green-600 dark:text-green-400">
+                  ✓ Modo fiscal ativo. Os campos fiscais serão exibidos na edição de produtos e itens.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Fiscal Info */}
