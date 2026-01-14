@@ -213,9 +213,14 @@ export type Database = {
         Row: {
           address: string | null
           ambiente_fiscal: string | null
+          certificado_cnpj: string | null
           certificado_digital_nome: string | null
           certificado_digital_url: string | null
           certificado_digital_validade: string | null
+          certificado_emissor: string | null
+          certificado_serial: string | null
+          certificado_status: string | null
+          certificado_ultima_verificacao: string | null
           cnpj: string
           codigo_municipio_ibge: string | null
           created_at: string
@@ -234,9 +239,14 @@ export type Database = {
         Insert: {
           address?: string | null
           ambiente_fiscal?: string | null
+          certificado_cnpj?: string | null
           certificado_digital_nome?: string | null
           certificado_digital_url?: string | null
           certificado_digital_validade?: string | null
+          certificado_emissor?: string | null
+          certificado_serial?: string | null
+          certificado_status?: string | null
+          certificado_ultima_verificacao?: string | null
           cnpj: string
           codigo_municipio_ibge?: string | null
           created_at?: string
@@ -255,9 +265,14 @@ export type Database = {
         Update: {
           address?: string | null
           ambiente_fiscal?: string | null
+          certificado_cnpj?: string | null
           certificado_digital_nome?: string | null
           certificado_digital_url?: string | null
           certificado_digital_validade?: string | null
+          certificado_emissor?: string | null
+          certificado_serial?: string | null
+          certificado_status?: string | null
+          certificado_ultima_verificacao?: string | null
           cnpj?: string
           codigo_municipio_ibge?: string | null
           created_at?: string
@@ -1757,9 +1772,14 @@ export type Database = {
         Returns: {
           address: string | null
           ambiente_fiscal: string | null
+          certificado_cnpj: string | null
           certificado_digital_nome: string | null
           certificado_digital_url: string | null
           certificado_digital_validade: string | null
+          certificado_emissor: string | null
+          certificado_serial: string | null
+          certificado_status: string | null
+          certificado_ultima_verificacao: string | null
           cnpj: string
           codigo_municipio_ibge: string | null
           created_at: string

@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.validate-ncm]
 verify_jwt = false
+
+[functions.validate-certificate]
+verify_jwt = false
