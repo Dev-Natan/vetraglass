@@ -373,14 +373,17 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(statusConfig).map(([key, config]) => (
-                    <SelectItem key={key} value={key}>
-                      <span className="flex items-center gap-2">
-                        <config.icon className="w-4 h-4" />
-                        {config.label}
-                      </span>
-                    </SelectItem>
-                  ))}
+                  {Object.entries(statusConfig).map(([key, config]) => {
+                    const ConfigIcon = config.icon;
+                    return (
+                      <SelectItem key={key} value={key}>
+                        <span className="flex items-center gap-2">
+                          <ConfigIcon className="w-4 h-4" />
+                          {config.label}
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
