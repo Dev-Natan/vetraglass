@@ -148,8 +148,35 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handlePrint = async () => {
+    if (!quote || !items) return;
+    
+    const company = currentCompany ? {
+      name: currentCompany.name,
+      cnpj: currentCompany.cnpj,
+      phone: currentCompany.phone,
+      email: currentCompany.email,
+      address: currentCompany.address,
+      logo_url: currentCompany.logo_url,
+    } : null;
+    
+    const itemsForPdf = items.map(item => ({
+      description: item.description,
+      width: item.width,
+      height: item.height,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      total_price: item.total_price,
+      has_glass: item.has_glass,
+      glass_color: item.glass_color,
+      glass_thickness: item.glass_thickness,
+      image_url: item.product_templates?.image_url || null,
+      linha: item.product_templates?.linha || null,
+      category: item.product_templates?.category || null,
+    }));
+    
+    toast({ title: 'Preparando impressão...' });
+    await generateQuotePdf(quote, itemsForPdf, company, 'print');
   };
 
   const handleDownloadPdf = async () => {
@@ -161,6 +188,7 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
       phone: currentCompany.phone,
       email: currentCompany.email,
       address: currentCompany.address,
+      logo_url: currentCompany.logo_url,
     } : null;
     
     // Transform items to include image_url, linha, and category from product_templates

@@ -75,7 +75,7 @@ function formatCurrencyValue(value: number): string {
   return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
 }
 
-export async function generateQuotePdf(quote: Quote, items: QuoteItem[], company: Company | null) {
+export async function generateQuotePdf(quote: Quote, items: QuoteItem[], company: Company | null, mode: 'download' | 'print' = 'download') {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -416,7 +416,7 @@ export async function generateQuotePdf(quote: Quote, items: QuoteItem[], company
   doc.text('VALOR À VISTA COM DESCONTO', marginLeft + 5, y + 8);
   doc.text(formatCurrency(quote.final_amount), marginRight - 5, y + 8, { align: 'right' });
   
-  // Save PDF
+  // Save or Print PDF
   const customerSlug = quote.customer_name
     .toLowerCase()
     .normalize('NFD')
@@ -424,5 +424,17 @@ export async function generateQuotePdf(quote: Quote, items: QuoteItem[], company
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
   
-  doc.save(`orcamento-orc${quote.quote_number.toString().padStart(2, '0')}-${customerSlug}.pdf`);
+  if (mode === 'print') {
+    // Open PDF in new window for printing
+    const pdfBlob = doc.output('blob');
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+    const printWindow = window.open(pdfUrl, '_blank');
+    if (printWindow) {
+      printWindow.onload = () => {
+        printWindow.print();
+      };
+    }
+  } else {
+    doc.save(`orcamento-orc${quote.quote_number.toString().padStart(2, '0')}-${customerSlug}.pdf`);
+  }
 }
