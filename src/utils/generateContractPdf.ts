@@ -42,6 +42,23 @@ interface Company {
   phone?: string | null;
   email?: string | null;
   address?: string | null;
+  logo_url?: string | null;
+}
+
+// Helper to load image as base64
+async function loadImageAsBase64(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
 }
 
 const formatCurrency = (value: number): string => {
@@ -95,6 +112,21 @@ export async function generateContractPdf(
       yPos = 30;
     }
   };
+
+  // Try to load company logo
+  let logoLoaded = false;
+  if (company?.logo_url) {
+    try {
+      const logoBase64 = await loadImageAsBase64(company.logo_url);
+      if (logoBase64) {
+        doc.addImage(logoBase64, 'PNG', pageWidth / 2 - 20, yPos, 40, 25);
+        logoLoaded = true;
+        yPos += 30;
+      }
+    } catch {
+      // Logo failed to load
+    }
+  }
 
   // Title
   doc.setFont('helvetica', 'bold');
