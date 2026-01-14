@@ -16,7 +16,13 @@ import {
   Receipt, 
   Building2,
   Settings,
-  ArrowLeft
+  ArrowLeft,
+  RefreshCw,
+  ShieldCheck,
+  ShieldX,
+  ShieldAlert,
+  User,
+  Award
 } from 'lucide-react';
 import EditarDadosFiscaisDialog from "@/components/configuracoes/EditarDadosFiscaisDialog";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +48,28 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+interface CertificateValidationResult {
+  valid: boolean;
+  passwordCorrect: boolean;
+  expired: boolean;
+  cnpj: string | null;
+  cnpjMatch: boolean;
+  subject: {
+    commonName: string | null;
+    organizationName: string | null;
+  };
+  issuer: {
+    commonName: string | null;
+    organizationName: string | null;
+  };
+  validFrom: string | null;
+  validUntil: string | null;
+  daysUntilExpiration: number | null;
+  serialNumber: string | null;
+  error?: string;
+}
 
 export default function ConfiguracoesFiscais() {
   const { currentCompany } = useAuth();
@@ -49,8 +77,10 @@ export default function ConfiguracoesFiscais() {
   const [uploadingCertificate, setUploadingCertificate] = useState(false);
   const [certificateDialogOpen, setCertificateDialogOpen] = useState(false);
   const [certificatePassword, setCertificatePassword] = useState("");
-  const [certificateValidity, setCertificateValidity] = useState("");
   const [certificateFile, setCertificateFile] = useState<File | null>(null);
+  const [validationResult, setValidationResult] = useState<CertificateValidationResult | null>(null);
+  const [validating, setValidating] = useState(false);
+  const [verifying, setVerifying] = useState(false);
   const certInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
@@ -104,7 +134,11 @@ export default function ConfiguracoesFiscais() {
   });
 
   const uploadCertificateMutation = useMutation({
-    mutationFn: async ({ file, password, validUntil }: { file: File; password: string; validUntil: Date }) => {
+    mutationFn: async ({ file, password, validationData }: { 
+      file: File; 
+      password: string; 
+      validationData: CertificateValidationResult;
+    }) => {
       if (!currentCompany?.id) throw new Error("Empresa não encontrada");
       
       setUploadingCertificate(true);
@@ -125,12 +159,25 @@ export default function ConfiguracoesFiscais() {
         .from('company-certificates')
         .createSignedUrl(fileName, 60 * 60 * 24 * 365);
       
+      // Determine certificate status
+      let certStatus: string = 'valido';
+      if (validationData.expired) {
+        certStatus = 'expirado';
+      } else if (validationData.daysUntilExpiration !== null && validationData.daysUntilExpiration < 30) {
+        certStatus = 'expirando';
+      }
+      
       const { error: updateError } = await supabase
         .from('companies')
         .update({ 
           certificado_digital_url: signedData?.signedUrl || fileName,
-          certificado_digital_validade: validUntil.toISOString(),
-          certificado_digital_nome: file.name
+          certificado_digital_validade: validationData.validUntil,
+          certificado_digital_nome: file.name,
+          certificado_cnpj: validationData.cnpj,
+          certificado_emissor: validationData.issuer?.commonName || validationData.issuer?.organizationName,
+          certificado_serial: validationData.serialNumber,
+          certificado_status: certStatus,
+          certificado_ultima_verificacao: new Date().toISOString()
         })
         .eq('id', currentCompany.id);
       
@@ -140,11 +187,12 @@ export default function ConfiguracoesFiscais() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["company-config"] });
-      toast.success("Certificado digital enviado com sucesso!");
+      toast.success("Certificado digital validado e enviado com sucesso!");
       setUploadingCertificate(false);
       setCertificateDialogOpen(false);
       setCertificateFile(null);
       setCertificatePassword("");
+      setValidationResult(null);
     },
     onError: (error) => {
       toast.error(`Erro ao fazer upload do certificado: ${error.message}`);
@@ -164,7 +212,12 @@ export default function ConfiguracoesFiscais() {
         .update({ 
           certificado_digital_url: null,
           certificado_digital_validade: null,
-          certificado_digital_nome: null
+          certificado_digital_nome: null,
+          certificado_cnpj: null,
+          certificado_emissor: null,
+          certificado_serial: null,
+          certificado_status: null,
+          certificado_ultima_verificacao: null
         })
         .eq('id', currentCompany.id);
       
@@ -196,22 +249,123 @@ export default function ConfiguracoesFiscais() {
     }
     
     setCertificateFile(file);
+    setValidationResult(null);
     setCertificateDialogOpen(true);
   };
 
-  const handleCertificateUpload = () => {
-    if (!certificateFile || !certificatePassword || !certificateValidity) {
-      toast.error("Preencha todos os campos obrigatórios.");
+  const validateCertificate = async () => {
+    if (!certificateFile || !certificatePassword) {
+      toast.error("Informe o arquivo e a senha do certificado.");
       return;
     }
-    
-    const validUntil = new Date(certificateValidity);
+
+    setValidating(true);
+    setValidationResult(null);
+
+    try {
+      // Convert file to Base64
+      const arrayBuffer = await certificateFile.arrayBuffer();
+      const bytes = new Uint8Array(arrayBuffer);
+      let binary = '';
+      bytes.forEach(byte => binary += String.fromCharCode(byte));
+      const pfxBase64 = btoa(binary);
+
+      const { data, error } = await supabase.functions.invoke('validate-certificate', {
+        body: {
+          pfxBase64,
+          password: certificatePassword,
+          companyCnpj: currentCompany?.cnpj
+        }
+      });
+
+      if (error) throw error;
+
+      setValidationResult(data as CertificateValidationResult);
+
+      if (data.error) {
+        toast.error(data.error);
+      } else if (!data.passwordCorrect) {
+        toast.error("Senha do certificado incorreta");
+      } else if (data.expired) {
+        toast.warning("Certificado expirado! Você ainda pode fazer o upload, mas não poderá emitir notas fiscais.");
+      } else if (!data.cnpjMatch) {
+        toast.warning("O CNPJ do certificado não corresponde ao CNPJ da empresa.");
+      } else {
+        toast.success("Certificado validado com sucesso!");
+      }
+    } catch (error: any) {
+      console.error("Error validating certificate:", error);
+      toast.error(`Erro ao validar certificado: ${error.message}`);
+    } finally {
+      setValidating(false);
+    }
+  };
+
+  const handleCertificateUpload = () => {
+    if (!certificateFile || !certificatePassword || !validationResult) {
+      toast.error("Valide o certificado antes de salvar.");
+      return;
+    }
+
+    if (!validationResult.passwordCorrect) {
+      toast.error("Corrija a senha do certificado.");
+      return;
+    }
     
     uploadCertificateMutation.mutate({
       file: certificateFile,
       password: certificatePassword,
-      validUntil
+      validationData: validationResult
     });
+  };
+
+  const verifyCertificate = async () => {
+    if (!currentCompany?.id || !hasCertificate) return;
+
+    setVerifying(true);
+    try {
+      // Download the certificate from storage
+      const fileName = `${currentCompany.id}/certificate.pfx`;
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from('company-certificates')
+        .download(fileName);
+
+      if (downloadError) throw downloadError;
+
+      // Get stored password (we don't have it, so just verify expiration from DB)
+      // In production, you might want to re-prompt for password
+      // For now, we'll just update the status based on expiration date
+      
+      const now = new Date();
+      const expiration = certificateExpiration;
+      
+      let newStatus: string = 'valido';
+      let daysLeft = daysUntilExpiration;
+      
+      if (expiration && isPast(expiration)) {
+        newStatus = 'expirado';
+      } else if (daysLeft !== null && daysLeft < 30) {
+        newStatus = 'expirando';
+      }
+
+      const { error: updateError } = await supabase
+        .from('companies')
+        .update({ 
+          certificado_status: newStatus,
+          certificado_ultima_verificacao: new Date().toISOString()
+        })
+        .eq('id', currentCompany.id);
+
+      if (updateError) throw updateError;
+
+      queryClient.invalidateQueries({ queryKey: ["company-config"] });
+      toast.success("Status do certificado atualizado!");
+    } catch (error: any) {
+      console.error("Error verifying certificate:", error);
+      toast.error(`Erro ao verificar certificado: ${error.message}`);
+    } finally {
+      setVerifying(false);
+    }
   };
 
   // Calculate fiscal readiness
@@ -434,6 +588,19 @@ export default function ConfiguracoesFiscais() {
                     <Button 
                       variant="outline" 
                       size="sm"
+                      onClick={verifyCertificate}
+                      disabled={verifying}
+                    >
+                      {verifying ? (
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                      )}
+                      Verificar
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
                       onClick={() => removeCertificateMutation.mutate()}
                       disabled={removeCertificateMutation.isPending}
                     >
@@ -447,42 +614,104 @@ export default function ConfiguracoesFiscais() {
           </CardHeader>
           <CardContent>
             {hasCertificate ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50">
-                  <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Arquivo</label>
-                    <p className="text-foreground font-medium">
-                      {(company as any)?.certificado_digital_nome || "certificate.pfx"}
-                    </p>
+              <div className="space-y-4">
+                {/* Certificate Main Info */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50">
+                    <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Arquivo</label>
+                      <p className="text-foreground font-medium">
+                        {(company as any)?.certificado_digital_nome || "certificate.pfx"}
+                      </p>
+                    </div>
                   </div>
-                </div>
-                
-                <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50">
-                  <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Validade</label>
-                    <p className={`font-medium ${isCertificateExpired ? 'text-destructive' : 'text-foreground'}`}>
-                      {certificateExpiration 
-                        ? format(certificateExpiration, "dd/MM/yyyy", { locale: ptBR })
-                        : "Não informada"
-                      }
-                    </p>
+                  
+                  <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50">
+                    <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Validade</label>
+                      <p className={`font-medium ${isCertificateExpired ? 'text-destructive' : 'text-foreground'}`}>
+                        {certificateExpiration 
+                          ? format(certificateExpiration, "dd/MM/yyyy", { locale: ptBR })
+                          : "Não informada"
+                        }
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50">
+                    <Clock className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Status</label>
+                      <p className={`font-medium ${isCertificateExpired ? 'text-destructive' : 'text-green-600 dark:text-green-400'}`}>
+                        {isCertificateExpired 
+                          ? "Certificado expirado"
+                          : "Pronto para emitir"
+                        }
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50">
+                    <Award className="h-5 w-5 text-muted-foreground mt-0.5" />
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Emissor</label>
+                      <p className="text-foreground font-medium text-sm">
+                        {(company as any)?.certificado_emissor || "N/A"}
+                      </p>
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50">
-                  <Clock className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Status</label>
-                    <p className={`font-medium ${isCertificateExpired ? 'text-destructive' : 'text-green-600 dark:text-green-400'}`}>
-                      {isCertificateExpired 
-                        ? "Certificado expirado"
-                        : "Pronto para emitir"
-                      }
-                    </p>
+                {/* Certificate Extended Info (only if validated) */}
+                {((company as any)?.certificado_cnpj || (company as any)?.certificado_serial) && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50">
+                      <Building2 className="h-5 w-5 text-muted-foreground mt-0.5" />
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">CNPJ do Certificado</label>
+                        <p className="text-foreground font-medium">
+                          {(company as any)?.certificado_cnpj || "N/A"}
+                        </p>
+                        {(company as any)?.certificado_cnpj && currentCompany?.cnpj && (
+                          <span className={`text-xs ${(company as any).certificado_cnpj.replace(/\D/g, '') === currentCompany.cnpj.replace(/\D/g, '') ? 'text-green-600' : 'text-amber-600'}`}>
+                            {(company as any).certificado_cnpj.replace(/\D/g, '') === currentCompany.cnpj.replace(/\D/g, '') 
+                              ? '✓ Corresponde à empresa' 
+                              : '⚠ Não corresponde'
+                            }
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50">
+                      <KeyRound className="h-5 w-5 text-muted-foreground mt-0.5" />
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Serial</label>
+                        <p className="text-foreground font-medium text-xs font-mono">
+                          {(company as any)?.certificado_serial ? 
+                            (company as any).certificado_serial.substring(0, 16) + '...' : 
+                            "N/A"
+                          }
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50">
+                      <Clock className="h-5 w-5 text-muted-foreground mt-0.5" />
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Última Verificação</label>
+                        <p className="text-foreground font-medium text-sm">
+                          {(company as any)?.certificado_ultima_verificacao 
+                            ? format(new Date((company as any).certificado_ultima_verificacao), "dd/MM/yyyy HH:mm", { locale: ptBR })
+                            : "Nunca verificado"
+                          }
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             ) : (
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-6 rounded-lg bg-muted/50 border border-border">
@@ -570,12 +799,18 @@ export default function ConfiguracoesFiscais() {
       />
 
       {/* Certificate Password Dialog */}
-      <Dialog open={certificateDialogOpen} onOpenChange={setCertificateDialogOpen}>
-        <DialogContent>
+      <Dialog open={certificateDialogOpen} onOpenChange={(open) => {
+        setCertificateDialogOpen(open);
+        if (!open) {
+          setValidationResult(null);
+          setCertificatePassword("");
+        }
+      }}>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Configurar Certificado Digital</DialogTitle>
+            <DialogTitle>Validar Certificado Digital</DialogTitle>
             <DialogDescription>
-              Informe a senha do certificado e a data de validade para continuar.
+              Informe a senha para validar tecnicamente o certificado.
             </DialogDescription>
           </DialogHeader>
           
@@ -587,28 +822,123 @@ export default function ConfiguracoesFiscais() {
             
             <div className="space-y-2">
               <Label htmlFor="cert-password">Senha do Certificado *</Label>
-              <Input
-                id="cert-password"
-                type="password"
-                value={certificatePassword}
-                onChange={(e) => setCertificatePassword(e.target.value)}
-                placeholder="Digite a senha do certificado"
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="cert-password"
+                  type="password"
+                  value={certificatePassword}
+                  onChange={(e) => {
+                    setCertificatePassword(e.target.value);
+                    setValidationResult(null);
+                  }}
+                  placeholder="Digite a senha do certificado"
+                  className="flex-1"
+                />
+                <Button 
+                  type="button"
+                  variant="secondary"
+                  onClick={validateCertificate}
+                  disabled={!certificatePassword || validating}
+                >
+                  {validating ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Validar"
+                  )}
+                </Button>
+              </div>
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="cert-validity">Data de Validade *</Label>
-              <Input
-                id="cert-validity"
-                type="date"
-                value={certificateValidity}
-                onChange={(e) => setCertificateValidity(e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
-              />
-              <p className="text-xs text-muted-foreground">
-                Informe a data de vencimento do certificado (geralmente 1 ano após a emissão)
-              </p>
-            </div>
+            {/* Validation Results */}
+            {validationResult && (
+              <div className="space-y-3">
+                {validationResult.error ? (
+                  <Alert variant="destructive">
+                    <ShieldX className="h-4 w-4" />
+                    <AlertDescription>{validationResult.error}</AlertDescription>
+                  </Alert>
+                ) : (
+                  <>
+                    {/* Password Check */}
+                    <div className={`flex items-center gap-2 p-2 rounded ${validationResult.passwordCorrect ? 'bg-green-50 dark:bg-green-950/30' : 'bg-red-50 dark:bg-red-950/30'}`}>
+                      {validationResult.passwordCorrect ? (
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <AlertCircle className="h-4 w-4 text-red-600" />
+                      )}
+                      <span className={`text-sm ${validationResult.passwordCorrect ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
+                        {validationResult.passwordCorrect ? 'Senha correta' : 'Senha incorreta'}
+                      </span>
+                    </div>
+
+                    {validationResult.valid && (
+                      <>
+                        {/* Expiration Status */}
+                        <div className={`flex items-center gap-2 p-2 rounded ${validationResult.expired ? 'bg-red-50 dark:bg-red-950/30' : validationResult.daysUntilExpiration !== null && validationResult.daysUntilExpiration < 30 ? 'bg-amber-50 dark:bg-amber-950/30' : 'bg-green-50 dark:bg-green-950/30'}`}>
+                          {validationResult.expired ? (
+                            <ShieldX className="h-4 w-4 text-red-600" />
+                          ) : validationResult.daysUntilExpiration !== null && validationResult.daysUntilExpiration < 30 ? (
+                            <ShieldAlert className="h-4 w-4 text-amber-600" />
+                          ) : (
+                            <ShieldCheck className="h-4 w-4 text-green-600" />
+                          )}
+                          <span className={`text-sm ${validationResult.expired ? 'text-red-700 dark:text-red-400' : validationResult.daysUntilExpiration !== null && validationResult.daysUntilExpiration < 30 ? 'text-amber-700 dark:text-amber-400' : 'text-green-700 dark:text-green-400'}`}>
+                            {validationResult.expired 
+                              ? 'Certificado expirado' 
+                              : validationResult.daysUntilExpiration !== null && validationResult.daysUntilExpiration < 30
+                                ? `Expira em ${validationResult.daysUntilExpiration} dias`
+                                : `Válido até ${validationResult.validUntil ? format(new Date(validationResult.validUntil), "dd/MM/yyyy", { locale: ptBR }) : 'N/A'}`
+                            }
+                          </span>
+                        </div>
+
+                        {/* CNPJ Match */}
+                        <div className={`flex items-center gap-2 p-2 rounded ${validationResult.cnpjMatch ? 'bg-green-50 dark:bg-green-950/30' : 'bg-amber-50 dark:bg-amber-950/30'}`}>
+                          {validationResult.cnpjMatch ? (
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <AlertCircle className="h-4 w-4 text-amber-600" />
+                          )}
+                          <span className={`text-sm ${validationResult.cnpjMatch ? 'text-green-700 dark:text-green-400' : 'text-amber-700 dark:text-amber-400'}`}>
+                            {validationResult.cnpjMatch 
+                              ? `CNPJ: ${validationResult.cnpj || 'N/A'} (corresponde)` 
+                              : `CNPJ: ${validationResult.cnpj || 'N/A'} (não corresponde)`
+                            }
+                          </span>
+                        </div>
+
+                        {/* Certificate Details */}
+                        <div className="p-3 rounded bg-muted/50 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <User className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm text-muted-foreground">Titular:</span>
+                            <span className="text-sm font-medium">
+                              {validationResult.subject?.commonName || validationResult.subject?.organizationName || 'N/A'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Award className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm text-muted-foreground">Emissor:</span>
+                            <span className="text-sm font-medium">
+                              {validationResult.issuer?.commonName || validationResult.issuer?.organizationName || 'N/A'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm text-muted-foreground">Validade:</span>
+                            <span className="text-sm font-medium">
+                              {validationResult.validFrom ? format(new Date(validationResult.validFrom), "dd/MM/yyyy", { locale: ptBR }) : 'N/A'}
+                              {' → '}
+                              {validationResult.validUntil ? format(new Date(validationResult.validUntil), "dd/MM/yyyy", { locale: ptBR }) : 'N/A'}
+                            </span>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
           </div>
           
           <DialogFooter>
@@ -616,13 +946,13 @@ export default function ConfiguracoesFiscais() {
               setCertificateDialogOpen(false);
               setCertificateFile(null);
               setCertificatePassword("");
-              setCertificateValidity("");
+              setValidationResult(null);
             }}>
               Cancelar
             </Button>
             <Button 
               onClick={handleCertificateUpload}
-              disabled={!certificatePassword || !certificateValidity || uploadingCertificate}
+              disabled={!validationResult || !validationResult.passwordCorrect || uploadingCertificate}
             >
               {uploadingCertificate ? (
                 <>
