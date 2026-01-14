@@ -1,11 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Receipt, Info } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Receipt, Info, CheckCircle2, XCircle, Loader2, Lightbulb } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { supabase } from "@/integrations/supabase/client";
+import { useDebounce } from "@/hooks/useDebounce";
 
 interface FiscalFieldsData {
   ncm: string;
@@ -22,6 +26,20 @@ interface FiscalFieldsCardProps {
   onChange: (data: FiscalFieldsData) => void;
   type?: 'produto' | 'item';
   itemType?: 'glass' | 'profile' | 'accessory' | 'service';
+}
+
+interface NCMValidationResult {
+  valid: boolean;
+  ncm: string;
+  description?: string;
+  category?: string;
+  source: 'local' | 'api';
+  message: string;
+}
+
+interface NCMSuggestion {
+  ncm: string;
+  description: string;
 }
 
 const origemOptions = [
@@ -57,9 +75,83 @@ const cfopInterestadualOptions = [
 
 export function FiscalFieldsCard({ data, onChange, type = 'produto', itemType }: FiscalFieldsCardProps) {
   const isService = itemType === 'service';
+  const [ncmValidation, setNcmValidation] = useState<NCMValidationResult | null>(null);
+  const [ncmLoading, setNcmLoading] = useState(false);
+  const [ncmSuggestions, setNcmSuggestions] = useState<NCMSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  
+  const debouncedNCM = useDebounce(data.ncm, 500);
+  
+  const validateNCM = useCallback(async (ncm: string) => {
+    if (!ncm || ncm.length < 8) {
+      setNcmValidation(null);
+      return;
+    }
+    
+    setNcmLoading(true);
+    try {
+      const { data: responseData, error } = await supabase.functions.invoke('validate-ncm', {
+        body: { ncm, itemType }
+      });
+      
+      if (error) throw error;
+      
+      if (responseData?.success && responseData.result) {
+        setNcmValidation(responseData.result);
+        if (responseData.suggestions) {
+          setNcmSuggestions(responseData.suggestions);
+        }
+      }
+    } catch (error) {
+      console.error('Error validating NCM:', error);
+      setNcmValidation({
+        valid: false,
+        ncm,
+        source: 'local',
+        message: 'Erro ao validar NCM'
+      });
+    } finally {
+      setNcmLoading(false);
+    }
+  }, [itemType]);
+  
+  const fetchSuggestions = useCallback(async () => {
+    try {
+      const { data: responseData, error } = await supabase.functions.invoke('validate-ncm', {
+        body: { getSuggestions: true, itemType }
+      });
+      
+      if (error) throw error;
+      
+      if (responseData?.success && responseData.suggestions) {
+        setNcmSuggestions(responseData.suggestions);
+      }
+    } catch (error) {
+      console.error('Error fetching NCM suggestions:', error);
+    }
+  }, [itemType]);
+  
+  useEffect(() => {
+    if (debouncedNCM && debouncedNCM.length === 8) {
+      validateNCM(debouncedNCM);
+    } else {
+      setNcmValidation(null);
+    }
+  }, [debouncedNCM, validateNCM]);
+  
+  useEffect(() => {
+    if (!isService) {
+      fetchSuggestions();
+    }
+  }, [isService, fetchSuggestions]);
   
   const handleChange = (field: keyof FiscalFieldsData, value: string) => {
     onChange({ ...data, [field]: value });
+  };
+  
+  const selectSuggestion = (ncm: string) => {
+    handleChange('ncm', ncm);
+    setShowSuggestions(false);
   };
 
   const LabelWithTooltip = ({ label, tooltip }: { label: string; tooltip: string }) => (
@@ -77,6 +169,61 @@ export function FiscalFieldsCard({ data, onChange, type = 'produto', itemType }:
       </TooltipProvider>
     </div>
   );
+  
+  const NCMValidationBadge = () => {
+    if (ncmLoading) {
+      return (
+        <Badge variant="outline" className="text-xs gap-1">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Validando...
+        </Badge>
+      );
+    }
+    
+    if (!ncmValidation) return null;
+    
+    if (ncmValidation.valid) {
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Badge variant="outline" className="text-xs gap-1 bg-green-50 text-green-700 border-green-200">
+                <CheckCircle2 className="h-3 w-3" />
+                Válido
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-sm">
+              <div className="space-y-1">
+                <p className="text-xs font-medium">{ncmValidation.message}</p>
+                {ncmValidation.description && (
+                  <p className="text-xs text-muted-foreground">{ncmValidation.description}</p>
+                )}
+                {ncmValidation.category && (
+                  <Badge variant="secondary" className="text-xs mt-1">{ncmValidation.category}</Badge>
+                )}
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
+    
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge variant="outline" className="text-xs gap-1 bg-red-50 text-red-700 border-red-200">
+              <XCircle className="h-3 w-3" />
+              Inválido
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-sm">
+            <p className="text-xs">{ncmValidation.message}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  };
 
   return (
     <Card className="border-primary/20 bg-primary/5">
@@ -100,17 +247,63 @@ export function FiscalFieldsCard({ data, onChange, type = 'produto', itemType }:
             {/* NCM */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <LabelWithTooltip 
-                  label="NCM" 
-                  tooltip="Nomenclatura Comum do Mercosul - código de 8 dígitos que classifica a mercadoria"
-                />
+                <div className="flex items-center justify-between">
+                  <LabelWithTooltip 
+                    label="NCM" 
+                    tooltip="Nomenclatura Comum do Mercosul - código de 8 dígitos que classifica a mercadoria"
+                  />
+                  <div className="flex items-center gap-1">
+                    <NCMValidationBadge />
+                    <Popover open={showSuggestions} onOpenChange={setShowSuggestions}>
+                      <PopoverTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-6 w-6 p-0"
+                          type="button"
+                        >
+                          <Lightbulb className="h-3.5 w-3.5 text-amber-500" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-80 p-2" align="start">
+                        <div className="space-y-2">
+                          <p className="text-xs font-medium text-muted-foreground">
+                            NCMs comuns para {itemType === 'glass' ? 'vidros' : itemType === 'profile' ? 'perfis' : itemType === 'accessory' ? 'acessórios' : 'o segmento'}:
+                          </p>
+                          <div className="space-y-1 max-h-48 overflow-y-auto">
+                            {ncmSuggestions.map((suggestion) => (
+                              <Button
+                                key={suggestion.ncm}
+                                variant="ghost"
+                                size="sm"
+                                className="w-full justify-start text-left h-auto py-2 px-2"
+                                onClick={() => selectSuggestion(suggestion.ncm)}
+                                type="button"
+                              >
+                                <div className="flex flex-col items-start">
+                                  <span className="font-mono text-xs font-medium">{suggestion.ncm}</span>
+                                  <span className="text-xs text-muted-foreground line-clamp-1">{suggestion.description}</span>
+                                </div>
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
                 <Input
                   value={data.ncm}
                   onChange={(e) => handleChange('ncm', e.target.value.replace(/\D/g, '').slice(0, 8))}
                   placeholder="00000000"
                   maxLength={8}
-                  className="font-mono"
+                  className={`font-mono ${ncmValidation?.valid === false ? 'border-red-300 focus-visible:ring-red-300' : ncmValidation?.valid ? 'border-green-300 focus-visible:ring-green-300' : ''}`}
                 />
+                {ncmValidation?.valid && ncmValidation.description && (
+                  <p className="text-xs text-muted-foreground truncate" title={ncmValidation.description}>
+                    {ncmValidation.description}
+                  </p>
+                )}
               </div>
               <div className="space-y-1">
                 <LabelWithTooltip 
