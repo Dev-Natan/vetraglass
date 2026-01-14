@@ -102,6 +102,22 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
   const [aprovarDialogOpen, setAprovarDialogOpen] = useState(false);
   const [contractDialogOpen, setContractDialogOpen] = useState(false);
 
+  // Fetch fresh company data for PDF generation (includes updated logo)
+  const { data: companyData } = useQuery({
+    queryKey: ['company-for-pdf', currentCompany?.id],
+    queryFn: async () => {
+      if (!currentCompany?.id) return null;
+      const { data, error } = await supabase
+        .from('companies')
+        .select('id, name, cnpj, phone, email, address, logo_url')
+        .eq('id', currentCompany.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!currentCompany?.id && open
+  });
+
   // Fetch quote items with product template info for images
   const { data: items } = useQuery({
     queryKey: ['quote-items', quote?.id],
@@ -151,13 +167,13 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
   const handlePrint = async () => {
     if (!quote || !items) return;
     
-    const company = currentCompany ? {
-      name: currentCompany.name,
-      cnpj: currentCompany.cnpj,
-      phone: currentCompany.phone,
-      email: currentCompany.email,
-      address: currentCompany.address,
-      logo_url: currentCompany.logo_url,
+    const company = companyData ? {
+      name: companyData.name,
+      cnpj: companyData.cnpj,
+      phone: companyData.phone,
+      email: companyData.email,
+      address: companyData.address,
+      logo_url: companyData.logo_url,
     } : null;
     
     const itemsForPdf = items.map(item => ({
@@ -182,13 +198,13 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
   const handleDownloadPdf = async () => {
     if (!quote || !items) return;
     
-    const company = currentCompany ? {
-      name: currentCompany.name,
-      cnpj: currentCompany.cnpj,
-      phone: currentCompany.phone,
-      email: currentCompany.email,
-      address: currentCompany.address,
-      logo_url: currentCompany.logo_url,
+    const company = companyData ? {
+      name: companyData.name,
+      cnpj: companyData.cnpj,
+      phone: companyData.phone,
+      email: companyData.email,
+      address: companyData.address,
+      logo_url: companyData.logo_url,
     } : null;
     
     // Transform items to include image_url, linha, and category from product_templates
