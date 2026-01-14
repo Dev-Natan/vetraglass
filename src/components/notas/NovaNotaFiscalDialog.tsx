@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,8 +17,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { Plus, Trash2, Send } from "lucide-react";
+import { Plus, Trash2, Send, AlertTriangle, CheckCircle, ShieldAlert, Settings } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface NovaNotaFiscalDialogProps {
   open: boolean;
@@ -38,6 +40,14 @@ interface ItemNota {
   valorUnitario: number;
 }
 
+interface ConfigValidation {
+  valid: boolean;
+  error?: string;
+  field?: string;
+  ambiente?: string;
+  message?: string;
+}
+
 export default function NovaNotaFiscalDialog({
   open,
   onOpenChange,
@@ -48,6 +58,7 @@ export default function NovaNotaFiscalDialog({
   const { currentCompany, user } = useAuth();
   const companyId = currentCompany?.id;
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   // Estados do formulário
   const [destinatarioTipo, setDestinatarioTipo] = useState<"cpf" | "cnpj">("cpf");
@@ -76,6 +87,10 @@ export default function NovaNotaFiscalDialog({
     { codigo: "", descricao: "", ncm: "", cfop: "5102", unidade: "UN", quantidade: 1, valorUnitario: 0 }
   ]);
 
+  // Estado de validação de configuração
+  const [configValidation, setConfigValidation] = useState<ConfigValidation | null>(null);
+  const [validatingConfig, setValidatingConfig] = useState(false);
+
   const { data: company } = useQuery({
     queryKey: ["company", companyId],
     queryFn: async () => {
@@ -90,6 +105,41 @@ export default function NovaNotaFiscalDialog({
     },
     enabled: !!companyId,
   });
+
+  // Validar configuração fiscal ao abrir o dialog
+  useEffect(() => {
+    if (open && companyId) {
+      validateFiscalConfig();
+    }
+  }, [open, companyId, tipo]);
+
+  const validateFiscalConfig = async () => {
+    if (!companyId) return;
+    
+    setValidatingConfig(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("focusnfe", {
+        body: {
+          action: "validar_configuracao",
+          company_id: companyId,
+          tipo,
+        },
+      });
+
+      if (error) {
+        setConfigValidation({ valid: false, error: error.message });
+      } else {
+        setConfigValidation(data as ConfigValidation);
+      }
+    } catch (err) {
+      setConfigValidation({ 
+        valid: false, 
+        error: err instanceof Error ? err.message : "Erro ao validar configuração" 
+      });
+    } finally {
+      setValidatingConfig(false);
+    }
+  };
 
   const criarNotaMutation = useMutation({
     mutationFn: async () => {
@@ -226,6 +276,7 @@ export default function NovaNotaFiscalDialog({
         body: {
           action: tipo === "nfe" ? "emitir_nfe" : "emitir_nfse",
           nota_id: nota.id,
+          company_id: companyId,
           tipo,
           payload,
         },
@@ -290,6 +341,11 @@ export default function NovaNotaFiscalDialog({
 
   const totalItens = itens.reduce((acc, item) => acc + (item.quantidade * item.valorUnitario), 0);
 
+  const goToSettings = () => {
+    onOpenChange(false);
+    navigate("/configuracoes");
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -298,9 +354,54 @@ export default function NovaNotaFiscalDialog({
             {tipo === "nfe" ? "Nova Nota Fiscal Eletrônica (NF-e)" : "Nova Nota Fiscal de Serviços (NFS-e)"}
           </DialogTitle>
           <DialogDescription>
-            Preencha os dados para emitir a nota fiscal via Focusnfe
+            Preencha os dados para emitir a nota fiscal
           </DialogDescription>
         </DialogHeader>
+
+        {/* Alert de validação de configuração */}
+        {validatingConfig && (
+          <Alert>
+            <AlertDescription className="flex items-center gap-2">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              Verificando configuração fiscal...
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {configValidation && !configValidation.valid && (
+          <Alert variant="destructive">
+            <ShieldAlert className="h-4 w-4" />
+            <AlertTitle>Configuração Incompleta</AlertTitle>
+            <AlertDescription className="space-y-2">
+              <p>{configValidation.error}</p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={goToSettings}
+                className="mt-2"
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Ir para Configurações
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {configValidation?.valid && (
+          <Alert className={configValidation.ambiente === 'homologacao' ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950' : 'border-green-500 bg-green-50 dark:bg-green-950'}>
+            {configValidation.ambiente === 'homologacao' ? (
+              <AlertTriangle className="h-4 w-4 text-yellow-600" />
+            ) : (
+              <CheckCircle className="h-4 w-4 text-green-600" />
+            )}
+            <AlertTitle>
+              {configValidation.ambiente === 'homologacao' ? 'Ambiente de Homologação' : 'Ambiente de Produção'}
+            </AlertTitle>
+            <AlertDescription>
+              {configValidation.message}
+            </AlertDescription>
+          </Alert>
+        )}
 
         <Tabs defaultValue="destinatario" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
@@ -586,7 +687,12 @@ export default function NovaNotaFiscalDialog({
           </Button>
           <Button 
             onClick={() => criarNotaMutation.mutate()}
-            disabled={criarNotaMutation.isPending || !destinatarioNome}
+            disabled={
+              criarNotaMutation.isPending || 
+              !destinatarioNome || 
+              validatingConfig || 
+              !configValidation?.valid
+            }
             className="gap-2"
           >
             <Send className="h-4 w-4" />
