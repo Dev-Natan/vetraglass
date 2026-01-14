@@ -43,11 +43,19 @@ export function MainLayout({ children }: MainLayoutProps) {
           <div className="px-6 py-5 border-b border-border bg-card">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-xl bg-primary flex items-center justify-center">
-                  <span className="font-display font-bold text-primary-foreground text-xl">
-                    {currentCompany.logo_url || currentCompany.name.charAt(0)}
-                  </span>
-                </div>
+                {currentCompany.logo_url ? (
+                  <img 
+                    src={currentCompany.logo_url} 
+                    alt={currentCompany.name}
+                    className="w-14 h-14 rounded-xl object-contain bg-background border border-border"
+                  />
+                ) : (
+                  <div className="w-14 h-14 rounded-xl bg-primary flex items-center justify-center">
+                    <span className="font-display font-bold text-primary-foreground text-xl">
+                      {currentCompany.name.charAt(0)}
+                    </span>
+                  </div>
+                )}
                 <div>
                   <h1 className="font-display font-bold text-xl text-foreground uppercase tracking-wide">
                     {currentCompany.name}
