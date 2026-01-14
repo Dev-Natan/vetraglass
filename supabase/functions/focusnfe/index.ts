@@ -7,8 +7,12 @@ const corsHeaders = {
 };
 
 const FOCUSNFE_TOKEN = Deno.env.get('FOCUSNFE_TOKEN') || '';
-const FOCUSNFE_BASE_URL = 'https://api.focusnfe.com.br/v2';
-// Para ambiente de homologação, use: 'https://homologacao.focusnfe.com.br/v2'
+
+// URLs para cada ambiente
+const FOCUSNFE_URLS = {
+  producao: 'https://api.focusnfe.com.br/v2',
+  homologacao: 'https://homologacao.focusnfe.com.br/v2'
+};
 
 interface NFEPayload {
   natureza_operacao: string;
@@ -16,6 +20,7 @@ interface NFEPayload {
   tipo_documento: number;
   finalidade_emissao: number;
   cnpj_emitente: string;
+  inscricao_estadual_emitente?: string;
   nome_destinatario: string;
   cpf_destinatario?: string;
   cnpj_destinatario?: string;
@@ -76,6 +81,61 @@ interface NFSEPayload {
   };
 }
 
+interface CompanyData {
+  id: string;
+  cnpj: string;
+  name: string;
+  inscricao_estadual?: string | null;
+  inscricao_municipal?: string | null;
+  codigo_municipio_ibge?: string | null;
+  ambiente_fiscal?: string | null;
+  certificado_digital_url?: string | null;
+  certificado_digital_validade?: string | null;
+  certificado_digital_nome?: string | null;
+}
+
+// Função para validar certificado digital
+function validateCertificate(company: CompanyData): { valid: boolean; error?: string } {
+  if (!company.certificado_digital_url) {
+    return { valid: false, error: 'Certificado digital não configurado. Acesse Configurações > Área Fiscal para fazer upload do certificado A1.' };
+  }
+
+  if (!company.certificado_digital_validade) {
+    return { valid: false, error: 'Data de validade do certificado não informada.' };
+  }
+
+  const validadeDate = new Date(company.certificado_digital_validade);
+  const hoje = new Date();
+
+  if (validadeDate < hoje) {
+    return { valid: false, error: `Certificado digital vencido em ${validadeDate.toLocaleDateString('pt-BR')}. Por favor, faça upload de um novo certificado.` };
+  }
+
+  return { valid: true };
+}
+
+// Função para validar dados fiscais obrigatórios
+function validateFiscalData(company: CompanyData, tipo: 'nfe' | 'nfse'): { valid: boolean; error?: string } {
+  if (!company.cnpj) {
+    return { valid: false, error: 'CNPJ da empresa não configurado.' };
+  }
+
+  if (tipo === 'nfe' && !company.inscricao_estadual) {
+    return { valid: false, error: 'Inscrição Estadual (IE) não configurada. Acesse Configurações > Área Fiscal para preencher.' };
+  }
+
+  if (tipo === 'nfse') {
+    if (!company.inscricao_municipal) {
+      return { valid: false, error: 'Inscrição Municipal (IM) não configurada. Acesse Configurações > Área Fiscal para preencher.' };
+    }
+    if (!company.codigo_municipio_ibge) {
+      return { valid: false, error: 'Código do município IBGE não configurado. Acesse Configurações > Área Fiscal para preencher.' };
+    }
+  }
+
+  return { valid: true };
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -106,23 +166,128 @@ serve(async (req) => {
       );
     }
 
-    const { action, nota_id, tipo, payload } = await req.json();
+    const { action, nota_id, tipo, payload, company_id } = await req.json();
     console.log(`[FocusNFe] Action: ${action}, Tipo: ${tipo}, NotaID: ${nota_id}`);
 
     // Verificar se o token está configurado
     if (!FOCUSNFE_TOKEN) {
       return new Response(
-        JSON.stringify({ error: 'FOCUSNFE_TOKEN não configurado' }),
+        JSON.stringify({ error: 'FOCUSNFE_TOKEN não configurado. Entre em contato com o suporte.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    // Buscar dados da empresa
+    let companyData: CompanyData | null = null;
+    
+    if (company_id) {
+      const { data, error } = await supabase
+        .from('companies')
+        .select('id, cnpj, name, inscricao_estadual, inscricao_municipal, codigo_municipio_ibge, ambiente_fiscal, certificado_digital_url, certificado_digital_validade, certificado_digital_nome')
+        .eq('id', company_id)
+        .single();
+      
+      if (error) {
+        console.error('[FocusNFe] Erro ao buscar empresa:', error);
+      } else {
+        companyData = data;
+      }
+    }
+
+    // Se não encontrou pelo company_id, buscar pela nota
+    if (!companyData && nota_id) {
+      const { data: nota } = await supabase
+        .from('notas_fiscais')
+        .select('company_id')
+        .eq('id', nota_id)
+        .single();
+
+      if (nota?.company_id) {
+        const { data, error } = await supabase
+          .from('companies')
+          .select('id, cnpj, name, inscricao_estadual, inscricao_municipal, codigo_municipio_ibge, ambiente_fiscal, certificado_digital_url, certificado_digital_validade, certificado_digital_nome')
+          .eq('id', nota.company_id)
+          .single();
+        
+        if (!error) {
+          companyData = data;
+        }
+      }
+    }
+
+    if (!companyData) {
+      return new Response(
+        JSON.stringify({ error: 'Empresa não encontrada' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Determinar ambiente (default: homologação para segurança)
+    const ambiente = companyData.ambiente_fiscal === 'producao' ? 'producao' : 'homologacao';
+    const FOCUSNFE_BASE_URL = FOCUSNFE_URLS[ambiente];
+    console.log(`[FocusNFe] Ambiente: ${ambiente}, URL: ${FOCUSNFE_BASE_URL}`);
+
     const authHeaderFocus = 'Basic ' + btoa(FOCUSNFE_TOKEN + ':');
 
     switch (action) {
+      case 'validar_configuracao': {
+        // Validar se a empresa está pronta para emitir notas
+        const certValidation = validateCertificate(companyData);
+        if (!certValidation.valid) {
+          return new Response(
+            JSON.stringify({ valid: false, error: certValidation.error, field: 'certificado' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const fiscalValidation = validateFiscalData(companyData, tipo);
+        if (!fiscalValidation.valid) {
+          return new Response(
+            JSON.stringify({ valid: false, error: fiscalValidation.error, field: 'dados_fiscais' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        return new Response(
+          JSON.stringify({ 
+            valid: true, 
+            ambiente,
+            message: ambiente === 'homologacao' 
+              ? 'Configuração válida. Atenção: Você está em ambiente de HOMOLOGAÇÃO.' 
+              : 'Configuração válida para emissão em ambiente de PRODUÇÃO.' 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       case 'emitir_nfe': {
+        // Validar certificado antes de emitir
+        const certValidation = validateCertificate(companyData);
+        if (!certValidation.valid) {
+          return new Response(
+            JSON.stringify({ error: certValidation.error }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Validar dados fiscais
+        const fiscalValidation = validateFiscalData(companyData, 'nfe');
+        if (!fiscalValidation.valid) {
+          return new Response(
+            JSON.stringify({ error: fiscalValidation.error }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Adicionar IE ao payload se não estiver
+        if (payload && companyData.inscricao_estadual) {
+          payload.inscricao_estadual_emitente = companyData.inscricao_estadual.replace(/\D/g, '');
+        }
+
         // Emitir NF-e
         const ref = `nfe_${nota_id}_${Date.now()}`;
+        
+        console.log(`[FocusNFe] Emitindo NF-e - Ref: ${ref}, Ambiente: ${ambiente}`);
         
         const response = await fetch(`${FOCUSNFE_BASE_URL}/nfe?ref=${ref}`, {
           method: 'POST',
@@ -142,6 +307,7 @@ serve(async (req) => {
           focusnfe_status: result.status || 'enviado',
           status: result.status === 'autorizado' ? 'autorizada' : 
                   result.status === 'erro_autorizacao' ? 'rejeitada' : 'processando',
+          emitente_ie: companyData.inscricao_estadual,
         };
 
         if (result.status === 'autorizado') {
@@ -163,14 +329,40 @@ serve(async (req) => {
           .eq('id', nota_id);
 
         return new Response(
-          JSON.stringify({ success: true, ref, result }),
+          JSON.stringify({ success: true, ref, result, ambiente }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
       case 'emitir_nfse': {
+        // Validar certificado antes de emitir
+        const certValidation = validateCertificate(companyData);
+        if (!certValidation.valid) {
+          return new Response(
+            JSON.stringify({ error: certValidation.error }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Validar dados fiscais
+        const fiscalValidation = validateFiscalData(companyData, 'nfse');
+        if (!fiscalValidation.valid) {
+          return new Response(
+            JSON.stringify({ error: fiscalValidation.error }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Atualizar payload com dados fiscais da empresa
+        if (payload?.prestador) {
+          payload.prestador.inscricao_municipal = companyData.inscricao_municipal?.replace(/\D/g, '') || '';
+          payload.prestador.codigo_municipio = companyData.codigo_municipio_ibge || '';
+        }
+
         // Emitir NFS-e
         const ref = `nfse_${nota_id}_${Date.now()}`;
+        
+        console.log(`[FocusNFe] Emitindo NFS-e - Ref: ${ref}, Ambiente: ${ambiente}`);
         
         const response = await fetch(`${FOCUSNFE_BASE_URL}/nfse?ref=${ref}`, {
           method: 'POST',
@@ -190,6 +382,7 @@ serve(async (req) => {
           focusnfe_status: result.status || 'enviado',
           status: result.status === 'autorizado' ? 'autorizada' : 
                   result.status === 'erro_autorizacao' ? 'rejeitada' : 'processando',
+          emitente_im: companyData.inscricao_municipal,
         };
 
         if (result.status === 'autorizado') {
@@ -208,7 +401,7 @@ serve(async (req) => {
           .eq('id', nota_id);
 
         return new Response(
-          JSON.stringify({ success: true, ref, result }),
+          JSON.stringify({ success: true, ref, result, ambiente }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
