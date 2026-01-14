@@ -221,7 +221,8 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
   const StatusIcon = status.icon;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between">
@@ -412,27 +413,28 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
           </div>
         </div>
       </DialogContent>
-
-      {/* Aprovar Dialog */}
-      <AprovarOrcamentoDialog
-        open={aprovarDialogOpen}
-        onOpenChange={setAprovarDialogOpen}
-        quote={quote}
-        items={items || []}
-        onSuccess={() => {
-          setAprovarDialogOpen(false);
-          onOpenChange(false);
-        }}
-      />
-
-      {/* Editar Contrato Dialog */}
-      <EditarContratoDialog
-        open={contractDialogOpen}
-        onOpenChange={setContractDialogOpen}
-        quote={quote}
-        items={getContractItems()}
-        company={getCompanyData()}
-      />
     </Dialog>
+
+    {/* Aprovar Dialog - Outside parent Dialog */}
+    <AprovarOrcamentoDialog
+      open={aprovarDialogOpen}
+      onOpenChange={setAprovarDialogOpen}
+      quote={quote}
+      items={items || []}
+      onSuccess={() => {
+        setAprovarDialogOpen(false);
+        onOpenChange(false);
+      }}
+    />
+
+    {/* Editar Contrato Dialog - Outside parent Dialog */}
+    <EditarContratoDialog
+      open={contractDialogOpen}
+      onOpenChange={setContractDialogOpen}
+      quote={quote}
+      items={getContractItems()}
+      company={getCompanyData()}
+    />
+  </>
   );
 }
