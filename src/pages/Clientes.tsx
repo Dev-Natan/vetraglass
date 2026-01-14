@@ -1,16 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
-  Plus, Search, Users, Phone, MapPin, Navigation, User, Trash2, Map
+  Plus, Search, Users, Phone, MapPin, Navigation, User, Trash2
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ClientDialog } from '@/components/clientes/ClientDialog';
-import { ClientesMap } from '@/components/clientes/ClientesMap';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,8 +50,6 @@ export default function Clientes() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
-  const [showMap, setShowMap] = useState(false);
-  const [isGeocoding, setIsGeocoding] = useState(false);
 
   const { data: clients = [], isLoading } = useQuery({
     queryKey: ['clients', currentCompany?.id],
@@ -133,49 +130,6 @@ export default function Clientes() {
       toast.error('Erro ao remover cliente');
     },
   });
-
-  // Geocode clients without coordinates
-  const geocodeClients = async () => {
-    const clientsToGeocode = clients.filter(
-      c => c.address && (!c.latitude || !c.longitude)
-    );
-    
-    if (clientsToGeocode.length === 0) return;
-    
-    setIsGeocoding(true);
-    
-    for (const client of clientsToGeocode) {
-      try {
-        await supabase.functions.invoke('geocode-address', {
-          body: {
-            client_id: client.id,
-            address: client.address,
-            city: client.city,
-            state: client.state,
-          },
-        });
-        // Small delay to respect Nominatim rate limits (1 req/sec)
-        await new Promise(resolve => setTimeout(resolve, 1100));
-      } catch (error) {
-        console.error('Error geocoding client:', client.name, error);
-      }
-    }
-    
-    setIsGeocoding(false);
-    queryClient.invalidateQueries({ queryKey: ['clients'] });
-  };
-
-  // Trigger geocoding when map is opened
-  useEffect(() => {
-    if (showMap && clients.length > 0) {
-      const hasClientsWithoutCoords = clients.some(
-        c => c.address && (!c.latitude || !c.longitude)
-      );
-      if (hasClientsWithoutCoords) {
-        geocodeClients();
-      }
-    }
-  }, [showMap, clients.length]);
 
   const handleSave = async (clientData: any) => {
     if (selectedClient?.id) {
@@ -399,31 +353,8 @@ export default function Clientes() {
             <span className="text-xs font-medium text-foreground">Cadastrar</span>
           </button>
 
-          {/* Map button */}
-          <button
-            onClick={() => setShowMap(true)}
-            className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-              <Map className="w-5 h-5 text-primary" />
-            </div>
-            <span className="text-xs font-medium">Ver Mapa</span>
-          </button>
         </div>
       </div>
-
-      {/* Map Modal */}
-      {showMap && (
-        <ClientesMap
-          clients={filteredClients}
-          onEdit={(client) => {
-            setShowMap(false);
-            handleEdit(client as Client);
-          }}
-          onClose={() => setShowMap(false)}
-          isGeocoding={isGeocoding}
-        />
-      )}
 
       <ClientDialog
         open={dialogOpen}
