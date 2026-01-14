@@ -2,3 +2,6 @@ project_id = "ozghdguhibqssyfbgomh"
 
 [functions.validate-cnpj]
 verify_jwt = false
+
+[functions.validate-ncm]
+verify_jwt = false
