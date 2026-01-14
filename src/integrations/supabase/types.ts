@@ -220,6 +220,7 @@ export type Database = {
           id: string
           inscricao_estadual: string | null
           inscricao_municipal: string | null
+          logo_size: number | null
           logo_url: string | null
           name: string
           phone: string | null
@@ -236,6 +237,7 @@ export type Database = {
           id?: string
           inscricao_estadual?: string | null
           inscricao_municipal?: string | null
+          logo_size?: number | null
           logo_url?: string | null
           name: string
           phone?: string | null
@@ -252,6 +254,7 @@ export type Database = {
           id?: string
           inscricao_estadual?: string | null
           inscricao_municipal?: string | null
+          logo_size?: number | null
           logo_url?: string | null
           name?: string
           phone?: string | null
@@ -1707,6 +1710,7 @@ export type Database = {
           id: string
           inscricao_estadual: string | null
           inscricao_municipal: string | null
+          logo_size: number | null
           logo_url: string | null
           name: string
           phone: string | null

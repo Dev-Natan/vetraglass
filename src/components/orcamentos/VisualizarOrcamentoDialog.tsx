@@ -109,7 +109,7 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
       if (!currentCompany?.id) return null;
       const { data, error } = await supabase
         .from('companies')
-        .select('id, name, cnpj, phone, email, address, logo_url')
+        .select('id, name, cnpj, phone, email, address, logo_url, logo_size')
         .eq('id', currentCompany.id)
         .single();
       if (error) throw error;
@@ -174,6 +174,7 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
       email: companyData.email,
       address: companyData.address,
       logo_url: companyData.logo_url,
+      logo_size: companyData.logo_size,
     } : null;
     
     const itemsForPdf = items.map(item => ({
@@ -205,6 +206,7 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
       email: companyData.email,
       address: companyData.address,
       logo_url: companyData.logo_url,
+      logo_size: companyData.logo_size,
     } : null;
     
     // Transform items to include image_url, linha, and category from product_templates

@@ -43,6 +43,7 @@ interface Company {
   email?: string | null;
   address?: string | null;
   logo_url?: string | null;
+  logo_size?: number | null;
 }
 
 // Helper to load image as base64
@@ -95,11 +96,15 @@ export async function generateQuotePdf(quote: Quote, items: QuoteItem[], company
   // ========== HEADER WITH LOGO ==========
   // Try to load company logo
   let logoLoaded = false;
+  let logoWidth = 0;
   if (company?.logo_url) {
     try {
       const logoBase64 = await loadImageAsBase64(company.logo_url);
       if (logoBase64) {
-        doc.addImage(logoBase64, 'PNG', marginLeft, y, 40, 25);
+        // Use configured logo size or default to 40mm
+        logoWidth = company.logo_size || 40;
+        const logoHeight = logoWidth * 0.625; // Maintain 8:5 aspect ratio
+        doc.addImage(logoBase64, 'PNG', marginLeft, y, logoWidth, logoHeight);
         logoLoaded = true;
       }
     } catch {
@@ -108,7 +113,7 @@ export async function generateQuotePdf(quote: Quote, items: QuoteItem[], company
   }
   
   // Company info (next to logo or at start)
-  const companyInfoX = logoLoaded ? marginLeft + 45 : marginLeft;
+  const companyInfoX = logoLoaded ? marginLeft + logoWidth + 5 : marginLeft;
   
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
