@@ -15,7 +15,8 @@ import {
   ShoppingCart,
   Scissors,
   Settings,
-  Tag
+  Tag,
+  Receipt
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,7 @@ const menuItems = [
   { icon: UserCog, label: 'Funcionários', path: '/funcionarios' },
   { icon: ShoppingCart, label: 'Caixa & Vendas', path: '/caixa-vendas' },
   { icon: Scissors, label: 'Plano de Corte', path: '/plano-corte' },
+  { icon: Receipt, label: 'Módulo Fiscal', path: '/configuracoes/fiscal' },
   { icon: Settings, label: 'Configurações', path: '/configuracoes' },
 ];
 

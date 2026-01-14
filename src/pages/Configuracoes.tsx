@@ -288,35 +288,6 @@ export default function Configuracoes() {
           </div>
         </div>
 
-        {/* Fiscal Module Link */}
-        <Link to="/configuracoes/fiscal">
-          <div className="glass-card rounded-2xl p-6 animate-slide-up hover:border-primary/50 transition-colors cursor-pointer group">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                  <Receipt className="w-6 h-6 text-primary" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-xl font-display font-semibold text-foreground">Módulo Fiscal</h2>
-                    <Badge variant={modoFiscalAtivo ? "default" : "secondary"}>
-                      {modoFiscalAtivo ? "Ativo" : "Inativo"}
-                    </Badge>
-                    {hasCertificate && (
-                      <Badge variant="outline" className="text-green-600 border-green-300">
-                        Certificado OK
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Configurações fiscais, certificado digital, NCM, CFOP e emissão de notas
-                  </p>
-                </div>
-              </div>
-              <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
-            </div>
-          </div>
-        </Link>
 
         {/* Other Settings */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 animate-slide-up">
