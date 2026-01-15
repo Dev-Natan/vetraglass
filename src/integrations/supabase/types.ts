@@ -553,6 +553,170 @@ export type Database = {
         }
         Relationships: []
       }
+      measurement_checklist: {
+        Row: {
+          created_at: string
+          id: string
+          is_checked: boolean | null
+          item_label: string
+          measurement_id: string
+          notes: string | null
+          sort_order: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_checked?: boolean | null
+          item_label: string
+          measurement_id: string
+          notes?: string | null
+          sort_order?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_checked?: boolean | null
+          item_label?: string
+          measurement_id?: string
+          notes?: string | null
+          sort_order?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "measurement_checklist_measurement_id_fkey"
+            columns: ["measurement_id"]
+            isOneToOne: false
+            referencedRelation: "site_measurements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      measurement_items: {
+        Row: {
+          created_at: string
+          depth: number | null
+          height: number | null
+          id: string
+          item_name: string
+          item_type: string | null
+          measurement_id: string
+          notes: string | null
+          peitoril: number | null
+          position: string | null
+          product_template_id: string | null
+          quantity: number | null
+          room: string | null
+          sort_order: number | null
+          suggested_product: string | null
+          vao_altura: number | null
+          vao_largura: number | null
+          width: number | null
+        }
+        Insert: {
+          created_at?: string
+          depth?: number | null
+          height?: number | null
+          id?: string
+          item_name: string
+          item_type?: string | null
+          measurement_id: string
+          notes?: string | null
+          peitoril?: number | null
+          position?: string | null
+          product_template_id?: string | null
+          quantity?: number | null
+          room?: string | null
+          sort_order?: number | null
+          suggested_product?: string | null
+          vao_altura?: number | null
+          vao_largura?: number | null
+          width?: number | null
+        }
+        Update: {
+          created_at?: string
+          depth?: number | null
+          height?: number | null
+          id?: string
+          item_name?: string
+          item_type?: string | null
+          measurement_id?: string
+          notes?: string | null
+          peitoril?: number | null
+          position?: string | null
+          product_template_id?: string | null
+          quantity?: number | null
+          room?: string | null
+          sort_order?: number | null
+          suggested_product?: string | null
+          vao_altura?: number | null
+          vao_largura?: number | null
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "measurement_items_measurement_id_fkey"
+            columns: ["measurement_id"]
+            isOneToOne: false
+            referencedRelation: "site_measurements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "measurement_items_product_template_id_fkey"
+            columns: ["product_template_id"]
+            isOneToOne: false
+            referencedRelation: "product_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      measurement_photos: {
+        Row: {
+          caption: string | null
+          created_at: string
+          id: string
+          measurement_id: string
+          measurement_item_id: string | null
+          photo_type: string | null
+          photo_url: string
+          sort_order: number | null
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          measurement_id: string
+          measurement_item_id?: string | null
+          photo_type?: string | null
+          photo_url: string
+          sort_order?: number | null
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          measurement_id?: string
+          measurement_item_id?: string | null
+          photo_type?: string | null
+          photo_url?: string
+          sort_order?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "measurement_photos_measurement_id_fkey"
+            columns: ["measurement_id"]
+            isOneToOne: false
+            referencedRelation: "site_measurements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "measurement_photos_measurement_item_id_fkey"
+            columns: ["measurement_item_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       municipios_ibge: {
         Row: {
           codigo_ibge: string
@@ -1519,6 +1683,209 @@ export type Database = {
           },
           {
             foreignKeyName: "sales_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_appointments: {
+        Row: {
+          all_day: boolean | null
+          appointment_type: string
+          assigned_to: string | null
+          assigned_to_name: string | null
+          client_id: string | null
+          color: string | null
+          company_id: string
+          created_at: string
+          customer_address: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          description: string | null
+          id: string
+          notes: string | null
+          ordem_servico_id: string | null
+          quote_id: string | null
+          scheduled_date: string
+          scheduled_time_end: string | null
+          scheduled_time_start: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          all_day?: boolean | null
+          appointment_type?: string
+          assigned_to?: string | null
+          assigned_to_name?: string | null
+          client_id?: string | null
+          color?: string | null
+          company_id: string
+          created_at?: string
+          customer_address?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          description?: string | null
+          id?: string
+          notes?: string | null
+          ordem_servico_id?: string | null
+          quote_id?: string | null
+          scheduled_date: string
+          scheduled_time_end?: string | null
+          scheduled_time_start?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          all_day?: boolean | null
+          appointment_type?: string
+          assigned_to?: string | null
+          assigned_to_name?: string | null
+          client_id?: string | null
+          color?: string | null
+          company_id?: string
+          created_at?: string
+          customer_address?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          description?: string | null
+          id?: string
+          notes?: string | null
+          ordem_servico_id?: string | null
+          quote_id?: string | null
+          scheduled_date?: string
+          scheduled_time_end?: string | null
+          scheduled_time_start?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_appointments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_appointments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_appointments_ordem_servico_id_fkey"
+            columns: ["ordem_servico_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_appointments_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      site_measurements: {
+        Row: {
+          appointment_id: string | null
+          client_id: string | null
+          company_id: string
+          created_at: string
+          id: string
+          location_address: string | null
+          location_name: string | null
+          measured_at: string | null
+          measured_by: string
+          measured_by_name: string | null
+          measurement_number: number
+          notes: string | null
+          observations: string | null
+          ordem_servico_id: string | null
+          quote_id: string | null
+          room_name: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          client_id?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          location_address?: string | null
+          location_name?: string | null
+          measured_at?: string | null
+          measured_by: string
+          measured_by_name?: string | null
+          measurement_number?: number
+          notes?: string | null
+          observations?: string | null
+          ordem_servico_id?: string | null
+          quote_id?: string | null
+          room_name?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          client_id?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          location_address?: string | null
+          location_name?: string | null
+          measured_at?: string | null
+          measured_by?: string
+          measured_by_name?: string | null
+          measurement_number?: number
+          notes?: string | null
+          observations?: string | null
+          ordem_servico_id?: string | null
+          quote_id?: string | null
+          room_name?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_measurements_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "service_appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_measurements_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_measurements_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_measurements_ordem_servico_id_fkey"
+            columns: ["ordem_servico_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_measurements_quote_id_fkey"
             columns: ["quote_id"]
             isOneToOne: false
             referencedRelation: "quotes"
