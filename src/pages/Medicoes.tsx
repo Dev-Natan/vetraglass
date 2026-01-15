@@ -625,11 +625,11 @@ export default function Medicoes() {
                   </TabsList>
 
                   <TabsContent value="items" className="space-y-4 mt-4">
-                    {/* Add Item Form */}
+                    {/* Add Item Form - Simplified */}
                     <Card className="bg-muted/50">
                       <CardContent className="pt-4 space-y-4">
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                          <div className="col-span-2">
+                        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+                          <div className="md:col-span-2">
                             <Label>Nome do item *</Label>
                             <Input
                               value={newItemForm.item_name}
@@ -637,33 +637,6 @@ export default function Medicoes() {
                               placeholder="Ex: Janela Sala"
                             />
                           </div>
-                          <div>
-                            <Label>Tipo</Label>
-                            <Select
-                              value={newItemForm.item_type}
-                              onValueChange={(v) => setNewItemForm(prev => ({ ...prev, item_type: v }))}
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {Object.entries(itemTypeConfig).map(([key, label]) => (
-                                  <SelectItem key={key} value={key}>{label}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <Label>Cômodo</Label>
-                            <Input
-                              value={newItemForm.room}
-                              onChange={(e) => setNewItemForm(prev => ({ ...prev, room: e.target.value }))}
-                              placeholder="Ex: Sala"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
                           <div>
                             <Label>Largura (mm)</Label>
                             <Input
@@ -683,48 +656,11 @@ export default function Medicoes() {
                             />
                           </div>
                           <div>
-                            <Label>Vão L (mm)</Label>
-                            <Input
-                              type="number"
-                              value={newItemForm.vao_largura}
-                              onChange={(e) => setNewItemForm(prev => ({ ...prev, vao_largura: e.target.value }))}
-                              placeholder="1210"
-                            />
+                            <Button onClick={handleAddItem} disabled={addItemMutation.isPending} className="w-full">
+                              <Plus className="h-4 w-4 mr-2" />
+                              Adicionar
+                            </Button>
                           </div>
-                          <div>
-                            <Label>Vão A (mm)</Label>
-                            <Input
-                              type="number"
-                              value={newItemForm.vao_altura}
-                              onChange={(e) => setNewItemForm(prev => ({ ...prev, vao_altura: e.target.value }))}
-                              placeholder="1510"
-                            />
-                          </div>
-                          <div>
-                            <Label>Peitoril (mm)</Label>
-                            <Input
-                              type="number"
-                              value={newItemForm.peitoril}
-                              onChange={(e) => setNewItemForm(prev => ({ ...prev, peitoril: e.target.value }))}
-                              placeholder="1100"
-                            />
-                          </div>
-                          <div>
-                            <Label>Qtd</Label>
-                            <Input
-                              type="number"
-                              value={newItemForm.quantity}
-                              onChange={(e) => setNewItemForm(prev => ({ ...prev, quantity: e.target.value }))}
-                              min="1"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="flex justify-end">
-                          <Button onClick={handleAddItem} disabled={addItemMutation.isPending}>
-                            <Plus className="h-4 w-4 mr-2" />
-                            Adicionar Item
-                          </Button>
                         </div>
                       </CardContent>
                     </Card>
