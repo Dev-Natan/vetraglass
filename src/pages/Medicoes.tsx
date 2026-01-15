@@ -253,10 +253,14 @@ export default function Medicoes() {
   });
 
   const updateChecklistMutation = useMutation({
-    mutationFn: async ({ id, is_checked }: { id: string; is_checked: boolean }) => {
+    mutationFn: async ({ id, is_checked, notes }: { id: string; is_checked?: boolean; notes?: string }) => {
+      const updateData: { is_checked?: boolean; notes?: string } = {};
+      if (is_checked !== undefined) updateData.is_checked = is_checked;
+      if (notes !== undefined) updateData.notes = notes;
+      
       const { error } = await supabase
         .from("measurement_checklist")
-        .update({ is_checked })
+        .update(updateData)
         .eq("id", id);
       if (error) throw error;
     },
@@ -730,20 +734,30 @@ export default function Medicoes() {
                     {checklist.map(item => (
                       <div
                         key={item.id}
-                        className="flex items-center gap-3 p-3 rounded-lg border"
+                        className="p-3 rounded-lg border space-y-2"
                       >
-                        <Checkbox
-                          checked={item.is_checked}
-                          onCheckedChange={(checked) => 
-                            updateChecklistMutation.mutate({ id: item.id, is_checked: !!checked })
+                        <div className="flex items-center gap-3">
+                          <Checkbox
+                            checked={item.is_checked}
+                            onCheckedChange={(checked) => 
+                              updateChecklistMutation.mutate({ id: item.id, is_checked: !!checked })
+                            }
+                          />
+                          <span className={cn(
+                            "flex-1 font-medium",
+                            item.is_checked && "line-through text-muted-foreground"
+                          )}>
+                            {item.item_label}
+                          </span>
+                        </div>
+                        <Input
+                          placeholder="Observação..."
+                          value={item.notes || ""}
+                          onChange={(e) => 
+                            updateChecklistMutation.mutate({ id: item.id, notes: e.target.value })
                           }
+                          className="text-sm h-8"
                         />
-                        <span className={cn(
-                          "flex-1",
-                          item.is_checked && "line-through text-muted-foreground"
-                        )}>
-                          {item.item_label}
-                        </span>
                       </div>
                     ))}
                   </TabsContent>
