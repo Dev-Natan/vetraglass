@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Calendar, ChevronLeft, ChevronRight, Plus, Clock, MapPin, User, Phone, Wrench, Ruler, Eye, Trash2, Printer } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Plus, Clock, MapPin, User, Phone, Wrench, Ruler, Eye, Trash2, Printer, FileText, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Appointment {
@@ -37,6 +37,13 @@ interface Appointment {
   assigned_to_name: string | null;
   notes: string | null;
   color: string;
+  quote?: {
+    id: string;
+    quote_number: number;
+    customer_name: string;
+    final_amount: number;
+    status: string;
+  } | null;
 }
 
 const appointmentTypeConfig: Record<string, { label: string; icon: React.ElementType; color: string }> = {
@@ -74,6 +81,7 @@ export default function Agenda() {
     customer_address: "",
     assigned_to_name: "",
     notes: "",
+    quote_id: "",
   });
 
   const monthStart = startOfMonth(currentDate);
@@ -90,7 +98,7 @@ export default function Agenda() {
       if (!companyId) return [];
       const { data, error } = await supabase
         .from("service_appointments")
-        .select("*")
+        .select("*, quote:quotes(id, quote_number, customer_name, final_amount, status)")
         .eq("company_id", companyId)
         .gte("scheduled_date", format(monthStart, "yyyy-MM-dd"))
         .lte("scheduled_date", format(monthEnd, "yyyy-MM-dd"))
@@ -119,6 +127,22 @@ export default function Agenda() {
     enabled: !!companyId,
   });
 
+  const { data: quotes = [] } = useQuery({
+    queryKey: ["quotes-for-agenda", companyId],
+    queryFn: async () => {
+      if (!companyId) return [];
+      const { data, error } = await supabase
+        .from("quotes")
+        .select("id, quote_number, customer_name, customer_phone, customer_address, final_amount, status")
+        .eq("company_id", companyId)
+        .in("status", ["pending", "approved"])
+        .order("quote_number", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!companyId,
+  });
+
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       if (!companyId || !user) throw new Error("Não autenticado");
@@ -135,6 +159,7 @@ export default function Agenda() {
         customer_address: data.customer_address || null,
         assigned_to_name: data.assigned_to_name || null,
         notes: data.notes || null,
+        quote_id: data.quote_id || null,
         color: appointmentTypeConfig[data.appointment_type]?.color || "#3b82f6",
       });
       if (error) throw error;
@@ -192,6 +217,7 @@ export default function Agenda() {
       customer_address: "",
       assigned_to_name: "",
       notes: "",
+      quote_id: "",
     });
   };
 
@@ -303,6 +329,24 @@ export default function Agenda() {
         customer_address: client.address || "",
       }));
     }
+  };
+
+  const handleQuoteSelect = (quoteId: string) => {
+    const quote = quotes.find(q => q.id === quoteId);
+    if (quote) {
+      setFormData(prev => ({
+        ...prev,
+        quote_id: quoteId,
+        customer_name: quote.customer_name,
+        customer_phone: quote.customer_phone || "",
+        customer_address: quote.customer_address || "",
+        title: prev.title || `${appointmentTypeConfig[prev.appointment_type]?.label || "Serviço"} - Orç. #${quote.quote_number}`,
+      }));
+    }
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
   };
 
   return (
@@ -486,6 +530,33 @@ export default function Agenda() {
                       onChange={(e) => setFormData(prev => ({ ...prev, scheduled_time_end: e.target.value }))}
                     />
                   </div>
+                </div>
+
+                <div>
+                  <Label className="flex items-center gap-1">
+                    <FileText className="h-3.5 w-3.5" />
+                    Vincular Orçamento
+                  </Label>
+                  <Select value={formData.quote_id} onValueChange={handleQuoteSelect}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um orçamento..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {quotes.map(quote => (
+                        <SelectItem key={quote.id} value={quote.id}>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">#{quote.quote_number}</span>
+                            <span className="text-muted-foreground">-</span>
+                            <span className="truncate">{quote.customer_name}</span>
+                            <span className="text-muted-foreground">({formatCurrency(quote.final_amount)})</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Vincule para saber a data de conclusão do serviço
+                  </p>
                 </div>
 
                 <div>
@@ -698,6 +769,32 @@ export default function Agenda() {
                   </div>
                 )}
               </div>
+
+              {selectedAppointment.quote && (
+                <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <FileText className="h-4 w-4 text-primary" />
+                    <span className="font-medium text-sm">Orçamento Vinculado</span>
+                  </div>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Número:</span>
+                      <span className="font-medium">#{selectedAppointment.quote.quote_number}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Cliente:</span>
+                      <span>{selectedAppointment.quote.customer_name}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Valor:</span>
+                      <span className="font-medium text-primary flex items-center gap-1">
+                        <DollarSign className="h-3 w-3" />
+                        {formatCurrency(selectedAppointment.quote.final_amount)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {selectedAppointment.notes && (
                 <div className="p-3 bg-muted rounded-lg">
