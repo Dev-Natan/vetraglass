@@ -24,6 +24,8 @@ import PlanoCorte from "./pages/PlanoCorte";
 import Configuracoes from "./pages/Configuracoes";
 import ConfiguracoesFiscais from "./pages/ConfiguracoesFiscais";
 import NotasFiscais from "./pages/NotasFiscais";
+import Agenda from "./pages/Agenda";
+import Medicoes from "./pages/Medicoes";
 import ItemTemplates from "./pages/admin/ItemTemplates";
 import ProductTemplates from "./pages/admin/ProductTemplates";
 import AdminLinhas from "./pages/admin/AdminLinhas";
@@ -177,6 +179,16 @@ function AppRoutes() {
       <Route path="/notas-fiscais" element={
         <ProtectedRoute>
           <NotasFiscais />
+        </ProtectedRoute>
+      } />
+      <Route path="/agenda" element={
+        <ProtectedRoute>
+          <Agenda />
+        </ProtectedRoute>
+      } />
+      <Route path="/medicoes" element={
+        <ProtectedRoute>
+          <Medicoes />
         </ProtectedRoute>
       } />
       <Route path="/admin" element={
