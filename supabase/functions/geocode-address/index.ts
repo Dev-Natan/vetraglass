@@ -20,6 +20,38 @@ serve(async (req) => {
   }
 
   try {
+    // Verify authentication
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "Authentication required" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Create auth client to verify user
+    const authClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      { 
+        global: { headers: { Authorization: authHeader } },
+        auth: { persistSession: false }
+      }
+    );
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
+    
+    if (claimsError || !claimsData?.claims) {
+      return new Response(
+        JSON.stringify({ error: "Invalid authentication" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const userId = claimsData.claims.sub;
+
+    // Create service client for database operations
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
@@ -31,6 +63,36 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ error: "client_id and address are required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Verify client exists and user has permission
+    const { data: client, error: clientError } = await supabaseClient
+      .from("clients")
+      .select("company_id")
+      .eq("id", client_id)
+      .single();
+
+    if (clientError || !client) {
+      return new Response(
+        JSON.stringify({ error: "Client not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Verify user belongs to the company
+    const { data: membership, error: membershipError } = await supabaseClient
+      .from("user_companies")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("company_id", client.company_id)
+      .eq("is_active", true)
+      .single();
+
+    if (membershipError || !membership) {
+      return new Response(
+        JSON.stringify({ error: "Access denied - not authorized for this company" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 

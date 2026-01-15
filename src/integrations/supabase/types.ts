@@ -1812,6 +1812,10 @@ export type Database = {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
       }
+      user_has_elevated_role_in_company: {
+        Args: { _company_id: string; _user_id: string }
+        Returns: boolean
+      }
       user_has_role_in_company: {
         Args: {
           _company_id: string
