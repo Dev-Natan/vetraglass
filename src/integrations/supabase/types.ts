@@ -2521,6 +2521,19 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      get_company_daily_summary: {
+        Args: { _company_id: string; _end_date?: string; _start_date?: string }
+        Returns: {
+          paid_revenue: number
+          payment_method: string
+          pending_revenue: number
+          sale_date: string
+          total_revenue: number
+          total_sales: number
+          unique_clients: number
+        }[]
+      }
+      get_user_company_ids: { Args: { _user_id: string }; Returns: string[] }
       initialize_company_item_prices: {
         Args: { _company_id: string }
         Returns: undefined
@@ -2548,6 +2561,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      refresh_daily_summary: { Args: never; Returns: undefined }
       user_belongs_to_company: {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
