@@ -16,7 +16,9 @@ import {
   Scissors,
   Settings,
   Tag,
-  Receipt
+  Receipt,
+  Calendar,
+  Ruler
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -29,6 +31,8 @@ const menuItems = [
   { icon: Tag, label: 'Preços', path: '/precos' },
   { icon: FileText, label: 'Orçamentos', path: '/orcamentos' },
   { icon: ClipboardList, label: 'Ordens de Serviço', path: '/ordens-servico' },
+  { icon: Calendar, label: 'Agenda', path: '/agenda' },
+  { icon: Ruler, label: 'Medições', path: '/medicoes' },
   { icon: DollarSign, label: 'Financeiro', path: '/financeiro' },
   { icon: UserCog, label: 'Funcionários', path: '/funcionarios' },
   { icon: ShoppingCart, label: 'Caixa & Vendas', path: '/caixa-vendas' },

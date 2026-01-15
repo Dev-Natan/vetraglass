@@ -4,7 +4,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSam
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import MainLayout from "@/components/layout/MainLayout";
+import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -54,7 +54,8 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
 };
 
 export default function Agenda() {
-  const { companyId, user } = useAuth();
+  const { currentCompany, user } = useAuth();
+  const companyId = currentCompany?.id;
   const queryClient = useQueryClient();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -218,10 +219,11 @@ export default function Agenda() {
   };
 
   return (
-    <MainLayout 
-      title="Agenda de Serviços" 
-      description="Gerencie agendamentos de medições, instalações e visitas"
-    >
+    <MainLayout>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold">Agenda de Serviços</h1>
+        <p className="text-muted-foreground">Gerencie agendamentos de medições, instalações e visitas</p>
+      </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Calendar */}
         <Card className="lg:col-span-2">

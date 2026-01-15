@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import MainLayout from "@/components/layout/MainLayout";
+import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -94,7 +94,8 @@ const defaultChecklist = [
 ];
 
 export default function Medicoes() {
-  const { companyId, user, profile } = useAuth();
+  const { currentCompany, user, profile } = useAuth();
+  const companyId = currentCompany?.id;
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -228,7 +229,20 @@ export default function Medicoes() {
       if (!selectedMeasurement) throw new Error("Nenhuma medição selecionada");
       const { error } = await supabase.from("measurement_items").insert({
         measurement_id: selectedMeasurement.id,
-        ...data,
+        item_name: data.item_name || "Novo item",
+        item_type: data.item_type || null,
+        room: data.room || null,
+        position: data.position || null,
+        width: data.width || null,
+        height: data.height || null,
+        depth: data.depth || null,
+        vao_largura: data.vao_largura || null,
+        vao_altura: data.vao_altura || null,
+        peitoril: data.peitoril || null,
+        suggested_product: data.suggested_product || null,
+        notes: data.notes || null,
+        quantity: data.quantity || 1,
+        sort_order: data.sort_order || 0,
       });
       if (error) throw error;
     },
@@ -363,10 +377,11 @@ export default function Medicoes() {
   };
 
   return (
-    <MainLayout 
-      title="Medições de Obra" 
-      description="Registre medições em campo com dimensões, checklist e fotos"
-    >
+    <MainLayout>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold">Medições de Obra</h1>
+        <p className="text-muted-foreground">Registre medições em campo com dimensões, checklist e fotos</p>
+      </div>
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <Card>
