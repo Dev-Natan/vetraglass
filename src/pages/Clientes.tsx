@@ -20,6 +20,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { usePagination } from '@/hooks/usePagination';
+import { PaginationControls } from '@/components/common/PaginationControls';
+import { CACHE_TIMES, queryKeys } from '@/lib/queryConfig';
 
 interface Client {
   id: string;
@@ -51,14 +54,15 @@ export default function Clientes() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
 
+  // Optimized query with specific fields and caching
   const { data: clients = [], isLoading } = useQuery({
-    queryKey: ['clients', currentCompany?.id],
+    queryKey: queryKeys.clients.all(currentCompany?.id || ''),
     queryFn: async () => {
       if (!currentCompany?.id) return [];
       
       const { data, error } = await supabase
         .from('clients')
-        .select('*')
+        .select('id, company_id, name, document, document_type, email, phone, address, city, state, zip_code, notes, is_active, created_at, latitude, longitude')
         .eq('company_id', currentCompany.id)
         .eq('is_active', true)
         .order('name');
@@ -67,6 +71,7 @@ export default function Clientes() {
       return data as Client[];
     },
     enabled: !!currentCompany?.id,
+    ...CACHE_TIMES.SEMI_STATIC,
   });
 
   const createMutation = useMutation({
@@ -160,6 +165,9 @@ export default function Clientes() {
     );
   });
 
+  // Pagination
+  const pagination = usePagination(filteredClients, { initialPageSize: 50 });
+
   const formatPhone = (phone: string | null) => {
     if (!phone) return '(00) 00000-0000';
     return phone;
@@ -240,8 +248,9 @@ export default function Clientes() {
             )}
           </div>
         ) : (
+          <>
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 pt-4 animate-slide-up">
-            {filteredClients.map(client => (
+            {pagination.paginatedData.map(client => (
               <div 
                 key={client.id} 
                 className="bg-card rounded-xl border border-border p-5 relative hover:shadow-lg transition-all duration-200"
@@ -289,6 +298,21 @@ export default function Clientes() {
               </div>
             ))}
           </div>
+          
+          {/* Pagination */}
+          {pagination.totalPages > 1 && (
+            <div className="mt-6">
+              <PaginationControls
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                totalItems={pagination.totalItems}
+                pageSize={pagination.pageSize}
+                onPageChange={pagination.setPage}
+                onPageSizeChange={pagination.setPageSize}
+              />
+            </div>
+          )}
+          </>
         )}
       </div>
 

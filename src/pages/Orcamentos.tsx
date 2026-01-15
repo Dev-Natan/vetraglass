@@ -46,6 +46,9 @@ import {
 import { NovoOrcamentoDialog } from '@/components/orcamentos/NovoOrcamentoDialog';
 import { VisualizarOrcamentoDialog } from '@/components/orcamentos/VisualizarOrcamentoDialog';
 import { EditarContratoDialog } from '@/components/orcamentos/EditarContratoDialog';
+import { usePagination } from '@/hooks/usePagination';
+import { PaginationControls } from '@/components/common/PaginationControls';
+import { CACHE_TIMES, queryKeys } from '@/lib/queryConfig';
 
 type QuoteStatus = 'pending' | 'approved' | 'rejected' | 'expired' | 'converted';
 
@@ -92,21 +95,22 @@ export default function Orcamentos() {
   const [isContractDialogOpen, setIsContractDialogOpen] = useState(false);
   const [contractItems, setContractItems] = useState<any[]>([]);
 
-  // Fetch quotes
+  // Fetch quotes with optimized query (only needed fields)
   const { data: quotes, isLoading } = useQuery({
-    queryKey: ['quotes', currentCompany?.id],
+    queryKey: queryKeys.quotes.all(currentCompany?.id || ''),
     queryFn: async () => {
       if (!currentCompany?.id) return [];
       const { data, error } = await supabase
         .from('quotes')
-        .select('*')
+        .select('id, quote_number, customer_name, customer_phone, customer_email, customer_address, customer_document, customer_document_type, customer_profession, customer_marital_status, payment_terms, notes, status, total_amount, discount_percent, discount_amount, final_amount, valid_until, created_at')
         .eq('company_id', currentCompany.id)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       return data as Quote[];
     },
-    enabled: !!currentCompany?.id
+    enabled: !!currentCompany?.id,
+    ...CACHE_TIMES.SEMI_STATIC,
   });
 
   // Delete mutation
@@ -134,6 +138,9 @@ export default function Orcamentos() {
       quote.quote_number.toString().includes(searchTerm);
     return matchesSearch;
   }) || [];
+
+  // Pagination
+  const pagination = usePagination(filteredQuotes, { initialPageSize: 50 });
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -292,8 +299,9 @@ export default function Orcamentos() {
             )}
           </div>
         ) : (
+          <>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {filteredQuotes.map((quote) => {
+            {pagination.paginatedData.map((quote) => {
               const status = statusConfig[quote.status];
               const StatusIcon = status.icon;
               
@@ -418,6 +426,21 @@ export default function Orcamentos() {
               );
             })}
           </div>
+          
+          {/* Pagination Controls */}
+          {pagination.totalPages > 1 && (
+            <div className="mt-6">
+              <PaginationControls
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                totalItems={pagination.totalItems}
+                pageSize={pagination.pageSize}
+                onPageChange={pagination.setPage}
+                onPageSizeChange={pagination.setPageSize}
+              />
+            </div>
+          )}
+          </>
         )}
 
         {/* Bottom Navigation Bar */}
