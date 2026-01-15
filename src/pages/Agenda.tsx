@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Calendar, ChevronLeft, ChevronRight, Plus, Clock, MapPin, User, Phone, Wrench, Ruler, Eye, Trash2 } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Plus, Clock, MapPin, User, Phone, Wrench, Ruler, Eye, Trash2, Printer } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Appointment {
@@ -206,6 +206,93 @@ export default function Agenda() {
     setFormData(prev => ({ ...prev, scheduled_date: format(date, "yyyy-MM-dd") }));
   };
 
+  const handlePrintAgenda = () => {
+    const monthName = format(currentDate, "MMMM yyyy", { locale: ptBR });
+    const sortedAppointments = [...appointments].sort((a, b) => {
+      const dateCompare = a.scheduled_date.localeCompare(b.scheduled_date);
+      if (dateCompare !== 0) return dateCompare;
+      return (a.scheduled_time_start || "").localeCompare(b.scheduled_time_start || "");
+    });
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Agenda - ${monthName}</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; color: #333; }
+          h1 { text-align: center; margin-bottom: 5px; }
+          .subtitle { text-align: center; color: #666; margin-bottom: 30px; }
+          .company { text-align: center; font-weight: bold; margin-bottom: 20px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+          th { background-color: #f5f5f5; font-weight: bold; }
+          .type-badge { padding: 2px 8px; border-radius: 4px; font-size: 12px; display: inline-block; }
+          .status-badge { padding: 2px 8px; border-radius: 4px; font-size: 11px; background: #eee; }
+          .info-row { font-size: 12px; color: #666; margin-top: 4px; }
+          @media print { 
+            body { padding: 0; }
+            @page { margin: 1cm; }
+          }
+        </style>
+      </head>
+      <body>
+        <h1>Agenda de Serviços</h1>
+        <p class="subtitle">${monthName}</p>
+        ${currentCompany ? `<p class="company">${currentCompany.name}</p>` : ''}
+        
+        ${sortedAppointments.length === 0 ? '<p style="text-align: center;">Nenhum agendamento para este mês.</p>' : `
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 100px;">Data</th>
+              <th style="width: 80px;">Horário</th>
+              <th>Título / Cliente</th>
+              <th style="width: 100px;">Tipo</th>
+              <th style="width: 90px;">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${sortedAppointments.map(apt => {
+              const typeConfig = appointmentTypeConfig[apt.appointment_type];
+              const statusCfg = statusConfig[apt.status];
+              return `
+                <tr>
+                  <td>${format(parseISO(apt.scheduled_date), "dd/MM/yyyy")}</td>
+                  <td>${apt.scheduled_time_start ? apt.scheduled_time_start.slice(0, 5) : 'Dia todo'}${apt.scheduled_time_end ? ' - ' + apt.scheduled_time_end.slice(0, 5) : ''}</td>
+                  <td>
+                    <strong>${apt.title}</strong>
+                    ${apt.customer_name ? `<div class="info-row">👤 ${apt.customer_name}</div>` : ''}
+                    ${apt.customer_phone ? `<div class="info-row">📞 ${apt.customer_phone}</div>` : ''}
+                    ${apt.customer_address ? `<div class="info-row">📍 ${apt.customer_address}</div>` : ''}
+                    ${apt.assigned_to_name ? `<div class="info-row">🔧 ${apt.assigned_to_name}</div>` : ''}
+                    ${apt.notes ? `<div class="info-row">📝 ${apt.notes}</div>` : ''}
+                  </td>
+                  <td><span class="type-badge" style="background-color: ${typeConfig?.color}20; color: ${typeConfig?.color}">${typeConfig?.label || apt.appointment_type}</span></td>
+                  <td><span class="status-badge">${statusCfg?.label || apt.status}</span></td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+        `}
+        
+        <p style="margin-top: 30px; font-size: 12px; color: #999; text-align: center;">
+          Impresso em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")}
+        </p>
+      </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => printWindow.print(), 250);
+    }
+  };
+
   const handleClientSelect = (clientId: string) => {
     const client = clients.find(c => c.id === clientId);
     if (client) {
@@ -233,6 +320,9 @@ export default function Agenda() {
               {format(currentDate, "MMMM yyyy", { locale: ptBR })}
             </CardTitle>
             <div className="flex items-center gap-2">
+              <Button variant="outline" size="icon" onClick={handlePrintAgenda} title="Imprimir agenda">
+                <Printer className="h-4 w-4" />
+              </Button>
               <Button variant="outline" size="icon" onClick={() => setCurrentDate(subMonths(currentDate, 1))}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
