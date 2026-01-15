@@ -4,20 +4,24 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Loader2, ShieldAlert } from 'lucide-react';
 import { z } from 'zod';
+import { useRateLimiting } from '@/hooks/useRateLimiting';
+import { PasswordStrengthIndicator } from '@/components/auth/PasswordStrengthIndicator';
+import { strongPasswordSchema } from '@/utils/passwordValidation';
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
+  password: z.string().min(1, 'Senha é obrigatória'),
 });
 
 const signupSchema = z.object({
-  fullName: z.string().min(2, 'Nome deve ter no mínimo 2 caracteres'),
-  email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'Senha deve ter no mínimo 6 caracteres'),
+  fullName: z.string().min(2, 'Nome deve ter no mínimo 2 caracteres').max(100),
+  email: z.string().email('Email inválido').max(255),
+  password: strongPasswordSchema,
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'Senhas não conferem',
@@ -29,6 +33,7 @@ export default function Auth() {
   const { user, loading: authLoading, signIn, signUp } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const { rateLimitStatus, checkRateLimit, recordLoginAttempt, formatRemainingTime } = useRateLimiting();
   
   // Login form
   const [loginEmail, setLoginEmail] = useState('');
@@ -65,9 +70,22 @@ export default function Auth() {
       setErrors(fieldErrors);
       return;
     }
+
+    // Check rate limit before attempting login
+    const rateLimit = await checkRateLimit(loginEmail);
+    if (rateLimit?.isBlocked) {
+      setErrors({
+        email: `Conta bloqueada temporariamente. Tente novamente em ${formatRemainingTime(rateLimit.remainingSeconds)}`
+      });
+      return;
+    }
     
     setIsLoading(true);
     const { error } = await signIn(loginEmail, loginPassword);
+    
+    // Record login attempt
+    await recordLoginAttempt(loginEmail, !error);
+    
     setIsLoading(false);
     
     if (!error) {
@@ -114,6 +132,8 @@ export default function Auth() {
     );
   }
 
+  const isBlocked = rateLimitStatus?.isBlocked ?? false;
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sidebar via-background to-background p-4">
       <div className="w-full max-w-md">
@@ -136,6 +156,15 @@ export default function Auth() {
             </CardHeader>
             
             <CardContent>
+              {isBlocked && (
+                <Alert variant="destructive" className="mb-4">
+                  <ShieldAlert className="h-4 w-4" />
+                  <AlertDescription>
+                    Muitas tentativas de login. Aguarde {formatRemainingTime(rateLimitStatus?.remainingSeconds ?? 0)} para tentar novamente.
+                  </AlertDescription>
+                </Alert>
+              )}
+              
               <TabsContent value="login" className="mt-0">
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
@@ -146,7 +175,7 @@ export default function Auth() {
                       placeholder="seu@email.com"
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
-                      disabled={isLoading}
+                      disabled={isLoading || isBlocked}
                     />
                     {errors.email && (
                       <p className="text-sm text-destructive">{errors.email}</p>
@@ -160,13 +189,13 @@ export default function Auth() {
                       placeholder="••••••••"
                       value={loginPassword}
                       onChange={(e) => setLoginPassword(e.target.value)}
-                      disabled={isLoading}
+                      disabled={isLoading || isBlocked}
                     />
                     {errors.password && (
                       <p className="text-sm text-destructive">{errors.password}</p>
                     )}
                   </div>
-                  <Button type="submit" className="w-full" disabled={isLoading}>
+                  <Button type="submit" className="w-full" disabled={isLoading || isBlocked}>
                     {isLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -198,6 +227,7 @@ export default function Auth() {
                       value={signupFullName}
                       onChange={(e) => setSignupFullName(e.target.value)}
                       disabled={isLoading}
+                      maxLength={100}
                     />
                     {errors.fullName && (
                       <p className="text-sm text-destructive">{errors.fullName}</p>
@@ -212,6 +242,7 @@ export default function Auth() {
                       value={signupEmail}
                       onChange={(e) => setSignupEmail(e.target.value)}
                       disabled={isLoading}
+                      maxLength={255}
                     />
                     {errors.email && (
                       <p className="text-sm text-destructive">{errors.email}</p>
@@ -226,7 +257,9 @@ export default function Auth() {
                       value={signupPassword}
                       onChange={(e) => setSignupPassword(e.target.value)}
                       disabled={isLoading}
+                      maxLength={128}
                     />
+                    <PasswordStrengthIndicator password={signupPassword} />
                     {errors.password && (
                       <p className="text-sm text-destructive">{errors.password}</p>
                     )}
@@ -240,6 +273,7 @@ export default function Auth() {
                       value={signupConfirmPassword}
                       onChange={(e) => setSignupConfirmPassword(e.target.value)}
                       disabled={isLoading}
+                      maxLength={128}
                     />
                     {errors.confirmPassword && (
                       <p className="text-sm text-destructive">{errors.confirmPassword}</p>
