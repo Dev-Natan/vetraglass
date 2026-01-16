@@ -12,6 +12,10 @@ import {
   Zap
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { DashboardKPIs } from '@/components/dashboard/DashboardKPIs';
+import { SalesChart } from '@/components/dashboard/SalesChart';
+import { RecentActivity } from '@/components/dashboard/RecentActivity';
+import { useAuth } from '@/contexts/AuthContext';
 
 const quickActions = [
   { 
@@ -98,9 +102,18 @@ const financeMenuItems = [
 ];
 
 export default function Index() {
+  const { currentCompany } = useAuth();
+
   return (
     <MainLayout>
       <div className="space-y-8">
+        {/* KPIs Section */}
+        {currentCompany && (
+          <section className="animate-fade-in">
+            <DashboardKPIs />
+          </section>
+        )}
+
         {/* Quick Actions */}
         <section className="section-card bg-amber-50/50 border-amber-200/50 animate-fade-in">
           <div className="flex items-center gap-2 mb-5">
@@ -120,6 +133,14 @@ export default function Index() {
             ))}
           </div>
         </section>
+
+        {/* Charts and Activity Row */}
+        {currentCompany && (
+          <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-slide-up">
+            <SalesChart />
+            <RecentActivity />
+          </section>
+        )}
 
         {/* Sales & Service Section */}
         <section className="animate-slide-up">
