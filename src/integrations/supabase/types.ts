@@ -2405,11 +2405,22 @@ export type Database = {
       companies_safe: {
         Row: {
           address: string | null
+          ambiente_fiscal: string | null
+          certificado_cnpj: string | null
+          certificado_digital_nome: string | null
+          certificado_digital_url: string | null
+          certificado_digital_validade: string | null
+          certificado_emissor: string | null
+          certificado_serial: string | null
+          certificado_status: string | null
+          certificado_ultima_verificacao: string | null
           cnpj: string | null
           codigo_municipio_ibge: string | null
           created_at: string | null
           email: string | null
           id: string | null
+          inscricao_estadual: string | null
+          inscricao_municipal: string | null
           logo_size: number | null
           logo_url: string | null
           modo_fiscal_ativo: boolean | null
@@ -2420,32 +2431,54 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          ambiente_fiscal?: never
+          certificado_cnpj?: never
+          certificado_digital_nome?: never
+          certificado_digital_url?: never
+          certificado_digital_validade?: never
+          certificado_emissor?: never
+          certificado_serial?: never
+          certificado_status?: never
+          certificado_ultima_verificacao?: never
           cnpj?: string | null
-          codigo_municipio_ibge?: string | null
+          codigo_municipio_ibge?: never
           created_at?: string | null
           email?: string | null
           id?: string | null
+          inscricao_estadual?: never
+          inscricao_municipal?: never
           logo_size?: number | null
           logo_url?: string | null
           modo_fiscal_ativo?: boolean | null
           name?: string | null
           phone?: string | null
-          regime_tributario?: string | null
+          regime_tributario?: never
           updated_at?: string | null
         }
         Update: {
           address?: string | null
+          ambiente_fiscal?: never
+          certificado_cnpj?: never
+          certificado_digital_nome?: never
+          certificado_digital_url?: never
+          certificado_digital_validade?: never
+          certificado_emissor?: never
+          certificado_serial?: never
+          certificado_status?: never
+          certificado_ultima_verificacao?: never
           cnpj?: string | null
-          codigo_municipio_ibge?: string | null
+          codigo_municipio_ibge?: never
           created_at?: string | null
           email?: string | null
           id?: string | null
+          inscricao_estadual?: never
+          inscricao_municipal?: never
           logo_size?: number | null
           logo_url?: string | null
           modo_fiscal_ativo?: boolean | null
           name?: string | null
           phone?: string | null
-          regime_tributario?: string | null
+          regime_tributario?: never
           updated_at?: string | null
         }
         Relationships: []
@@ -2485,6 +2518,7 @@ export type Database = {
         }
         Returns: Json
       }
+      cleanup_login_attempts: { Args: never; Returns: undefined }
       cleanup_old_logs: { Args: never; Returns: undefined }
       create_company_and_assign_admin: {
         Args: {
@@ -2542,6 +2576,15 @@ export type Database = {
       get_user_company_ids: { Args: { _user_id: string }; Returns: string[] }
       initialize_company_item_prices: {
         Args: { _company_id: string }
+        Returns: undefined
+      }
+      insert_login_attempt: {
+        Args: {
+          _email: string
+          _ip_address?: string
+          _success: boolean
+          _user_agent?: string
+        }
         Returns: undefined
       }
       is_saas_admin: { Args: { _user_id: string }; Returns: boolean }

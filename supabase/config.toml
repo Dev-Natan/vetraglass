@@ -1,10 +1,22 @@
 project_id = "ozghdguhibqssyfbgomh"
 
 [functions.validate-cnpj]
-verify_jwt = false
+verify_jwt = true
 
 [functions.validate-ncm]
-verify_jwt = false
+verify_jwt = true
 
 [functions.validate-certificate]
+verify_jwt = true
+
+[functions.geocode-address]
+verify_jwt = true
+
+[functions.admin-delete-item-template]
+verify_jwt = true
+
+[functions.focusnfe]
+verify_jwt = true
+
+[functions.import-municipios-ibge]
 verify_jwt = true
