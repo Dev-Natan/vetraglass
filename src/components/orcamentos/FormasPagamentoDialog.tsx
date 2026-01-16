@@ -63,6 +63,7 @@ export interface PaymentSettings {
   showFeesToCustomer: boolean;
   displayMode: 'simple' | 'detailed';
   showOtherMethods: boolean;
+  showInstallments: boolean;
 }
 
 interface FormasPagamentoDialogProps {
@@ -120,6 +121,7 @@ export function FormasPagamentoDialog({ open, onOpenChange }: FormasPagamentoDia
   const [customConditions, setCustomConditions] = useState('');
   const [showFeesToCustomer, setShowFeesToCustomer] = useState(false);
   const [showOtherMethods, setShowOtherMethods] = useState(true);
+  const [showInstallments, setShowInstallments] = useState(true);
   const [displayMode, setDisplayMode] = useState<'simple' | 'detailed'>('simple');
   const [newMethodName, setNewMethodName] = useState('');
   const [showInstallmentDetails, setShowInstallmentDetails] = useState(false);
@@ -150,6 +152,7 @@ export function FormasPagamentoDialog({ open, onOpenChange }: FormasPagamentoDia
       setCustomConditions(savedSettings.custom_conditions || '');
       setShowFeesToCustomer(savedSettings.show_fees_to_customer || false);
       setShowOtherMethods((savedSettings as { show_other_methods?: boolean }).show_other_methods ?? true);
+      setShowInstallments((savedSettings as { show_installments?: boolean }).show_installments ?? true);
       setDisplayMode((savedSettings.display_mode as 'simple' | 'detailed') || 'simple');
     } else if (!savedSettings && !isLoading) {
       // Reset to defaults if no saved settings
@@ -157,6 +160,7 @@ export function FormasPagamentoDialog({ open, onOpenChange }: FormasPagamentoDia
       setCustomConditions('');
       setShowFeesToCustomer(false);
       setShowOtherMethods(true);
+      setShowInstallments(true);
       setDisplayMode('simple');
     }
   }, [savedSettings, isLoading]);
@@ -175,6 +179,7 @@ export function FormasPagamentoDialog({ open, onOpenChange }: FormasPagamentoDia
             custom_conditions: customConditions,
             show_fees_to_customer: showFeesToCustomer,
             show_other_methods: showOtherMethods,
+            show_installments: showInstallments,
             display_mode: displayMode,
           } as never,
           { onConflict: 'company_id' }
@@ -378,6 +383,25 @@ export function FormasPagamentoDialog({ open, onOpenChange }: FormasPagamentoDia
               <Switch
                 checked={showOtherMethods}
                 onCheckedChange={setShowOtherMethods}
+              />
+            </div>
+
+            {/* Toggle Show Installments */}
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  {showInstallments ? <Eye className="w-4 h-4 text-primary" /> : <EyeOff className="w-4 h-4 text-muted-foreground" />}
+                  Exibir "Parcelamento no Cartão" no PDF
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  {showInstallments 
+                    ? 'Mostra opções de parcelamento com/sem juros' 
+                    : 'Oculta a seção de parcelamento'}
+                </p>
+              </div>
+              <Switch
+                checked={showInstallments}
+                onCheckedChange={setShowInstallments}
               />
             </div>
           </div>
