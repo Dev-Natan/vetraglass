@@ -121,7 +121,7 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
 
   // Fetch payment settings for PDF
   const { data: paymentSettingsData } = useQuery({
-    queryKey: ['payment-settings-for-pdf', currentCompany?.id],
+    queryKey: ['payment-settings', currentCompany?.id],
     queryFn: async () => {
       if (!currentCompany?.id) return null;
       const { data, error } = await supabase
