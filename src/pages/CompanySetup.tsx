@@ -166,14 +166,14 @@ export default function CompanySetup() {
       
       if (companyError) throw companyError;
       
-      setCurrentCompany(companyData);
-      
       toast({
         title: "Empresa cadastrada!",
-        description: "Sua empresa foi criada com sucesso.",
+        description: "Sua empresa foi criada com sucesso. Faça login para continuar.",
       });
       
-      navigate('/');
+      // Sign out and redirect to login so user can login with the new company
+      await supabase.auth.signOut();
+      navigate('/auth');
     } catch (error: any) {
       console.error('Error creating company:', error);
       toast({
