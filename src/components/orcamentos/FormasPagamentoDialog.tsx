@@ -164,13 +164,16 @@ export function FormasPagamentoDialog({ open, onOpenChange }: FormasPagamentoDia
       
       const { error } = await supabase
         .from('company_payment_settings')
-        .upsert({
-          company_id: currentCompany.id,
-          payment_methods: JSON.parse(JSON.stringify(paymentMethods)),
-          custom_conditions: customConditions,
-          show_fees_to_customer: showFeesToCustomer,
-          display_mode: displayMode,
-        } as never);
+        .upsert(
+          {
+            company_id: currentCompany.id,
+            payment_methods: JSON.parse(JSON.stringify(paymentMethods)),
+            custom_conditions: customConditions,
+            show_fees_to_customer: showFeesToCustomer,
+            display_mode: displayMode,
+          } as never,
+          { onConflict: 'company_id' }
+        );
       
       if (error) throw error;
     },
