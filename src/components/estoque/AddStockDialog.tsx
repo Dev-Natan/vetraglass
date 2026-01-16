@@ -280,7 +280,7 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
           </div>
 
           {/* Items Grid */}
-          <ScrollArea className="flex-1 min-h-0" style={{ height: '350px' }}>
+          <div className="flex-1 min-h-0 overflow-y-auto" style={{ maxHeight: '350px' }}>
             <div className="px-6 py-4 space-y-6">
               {loadingItems ? (
                 <div className="flex items-center justify-center py-12">
@@ -366,7 +366,7 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
                 ))
               )}
             </div>
-          </ScrollArea>
+          </div>
 
           {/* Selected Item Preview */}
           {selectedItem && (
