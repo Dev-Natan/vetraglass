@@ -31,6 +31,7 @@ interface PaymentMethod {
   enabled: boolean;
   maxInstallments?: number;
   discountPercent?: number;
+  feePercent?: number;
 }
 
 interface FormasPagamentoDialogProps {
@@ -41,8 +42,8 @@ interface FormasPagamentoDialogProps {
 const defaultPaymentMethods: PaymentMethod[] = [
   { id: 'pix', name: 'PIX', icon: 'qrcode', enabled: true, discountPercent: 5 },
   { id: 'dinheiro', name: 'Dinheiro', icon: 'banknote', enabled: true, discountPercent: 5 },
-  { id: 'credito', name: 'Cartão de Crédito', icon: 'creditcard', enabled: true, maxInstallments: 12 },
-  { id: 'debito', name: 'Cartão de Débito', icon: 'creditcard', enabled: true },
+  { id: 'credito', name: 'Cartão de Crédito', icon: 'creditcard', enabled: true, maxInstallments: 12, feePercent: 0 },
+  { id: 'debito', name: 'Cartão de Débito', icon: 'creditcard', enabled: true, feePercent: 0 },
   { id: 'boleto', name: 'Boleto Bancário', icon: 'building', enabled: true },
   { id: 'transferencia', name: 'Transferência Bancária', icon: 'building', enabled: true },
 ];
@@ -96,6 +97,12 @@ export function FormasPagamentoDialog({ open, onOpenChange }: FormasPagamentoDia
     );
   };
 
+  const updateFee = (id: string, value: number) => {
+    setPaymentMethods(prev => 
+      prev.map(m => m.id === id ? { ...m, feePercent: value } : m)
+    );
+  };
+
   const addCustomMethod = () => {
     if (!newMethodName.trim()) return;
     
@@ -135,7 +142,13 @@ export function FormasPagamentoDialog({ open, onOpenChange }: FormasPagamentoDia
         text += ` (${method.discountPercent}% de desconto)`;
       }
       if (method.maxInstallments && method.maxInstallments > 1) {
-        text += ` (em até ${method.maxInstallments}x)`;
+        text += ` (em até ${method.maxInstallments}x`;
+        if (method.feePercent && method.feePercent > 0) {
+          text += ` + ${method.feePercent}% de taxa`;
+        }
+        text += ')';
+      } else if (method.feePercent && method.feePercent > 0) {
+        text += ` (+ ${method.feePercent}% de taxa)`;
       }
       text += '\n';
     });
@@ -191,16 +204,49 @@ export function FormasPagamentoDialog({ open, onOpenChange }: FormasPagamentoDia
                   {method.enabled && (
                     <div className="flex items-center gap-3">
                       {(method.id === 'credito') && (
+                        <>
+                          <div className="flex items-center gap-2">
+                            <Label className="text-xs text-muted-foreground whitespace-nowrap">
+                              Parcelas:
+                            </Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              max="24"
+                              value={method.maxInstallments || 1}
+                              onChange={(e) => updateInstallments(method.id, parseInt(e.target.value) || 1)}
+                              className="w-16 h-8 text-center"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Label className="text-xs text-muted-foreground whitespace-nowrap">
+                              Taxa %:
+                            </Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              max="100"
+                              step="0.1"
+                              value={method.feePercent || 0}
+                              onChange={(e) => updateFee(method.id, parseFloat(e.target.value) || 0)}
+                              className="w-16 h-8 text-center"
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {(method.id === 'debito') && (
                         <div className="flex items-center gap-2">
                           <Label className="text-xs text-muted-foreground whitespace-nowrap">
-                            Parcelas:
+                            Taxa %:
                           </Label>
                           <Input
                             type="number"
-                            min="1"
-                            max="24"
-                            value={method.maxInstallments || 1}
-                            onChange={(e) => updateInstallments(method.id, parseInt(e.target.value) || 1)}
+                            min="0"
+                            max="100"
+                            step="0.1"
+                            value={method.feePercent || 0}
+                            onChange={(e) => updateFee(method.id, parseFloat(e.target.value) || 0)}
                             className="w-16 h-8 text-center"
                           />
                         </div>
