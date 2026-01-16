@@ -446,10 +446,6 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
               <FileSignature className="w-4 h-4" />
               Gerar Contrato
             </Button>
-            <Button variant="outline" onClick={handlePrint} className="gap-2">
-              <Printer className="w-4 h-4" />
-              Imprimir
-            </Button>
             {quote.status === 'pending' && (
               <Button 
                 onClick={() => setAprovarDialogOpen(true)} 
