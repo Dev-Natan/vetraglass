@@ -210,8 +210,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    localStorage.removeItem('currentCompanyId');
+    try {
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.warn('Erro ao fazer logout no servidor:', error.message);
+      }
+    } catch (error) {
+      console.warn('Erro inesperado no logout:', error);
+    } finally {
+      // SEMPRE limpar o estado local, independente do resultado
+      localStorage.removeItem('currentCompanyId');
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+      setCompanies([]);
+      setCurrentCompany(null);
+      setIsSaasAdmin(false);
+    }
   };
 
   return (
