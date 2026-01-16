@@ -389,14 +389,13 @@ export async function generateQuotePdf(
   const hasConfiguredMethods = methods.length > 0;
 
   if (hasConfiguredMethods) {
-    // ===== MELHOR PREÇO (PIX/Dinheiro with discount) =====
+    // ===== À VISTA (PIX/Dinheiro with discount) =====
     const discountMethods = methods.filter(m => m.enabled && m.discountPercent && m.discountPercent > 0);
     
     if (discountMethods.length > 0) {
       const maxDiscount = Math.max(...discountMethods.map(m => m.discountPercent || 0));
       const methodNames = discountMethods.map(m => m.name).join(' / ');
       const discountedValue = quote.total_amount * (1 - maxDiscount / 100);
-      const savings = quote.total_amount - discountedValue;
       
       doc.setDrawColor(...cardBorder);
       doc.setLineWidth(0.5);
@@ -405,7 +404,7 @@ export async function generateQuotePdf(
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
       doc.setTextColor(...greenColor);
-      doc.text('MELHOR PRECO', marginLeft + 5, y + 6);
+      doc.text('A VISTA', marginLeft + 5, y + 6);
       
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
@@ -415,10 +414,6 @@ export async function generateQuotePdf(
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(...greenColor);
       doc.text(formatCurrency(discountedValue), marginLeft + 45, y + 13);
-      
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...mutedColor);
-      doc.text(`(economia de ${formatCurrency(savings)})`, marginLeft + 85, y + 13);
       
       y += 23;
     }
