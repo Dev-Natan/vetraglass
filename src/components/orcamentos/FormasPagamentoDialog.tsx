@@ -162,17 +162,15 @@ export function FormasPagamentoDialog({ open, onOpenChange }: FormasPagamentoDia
     mutationFn: async () => {
       if (!currentCompany?.id) throw new Error('Empresa não encontrada');
       
-      const payload = {
-        company_id: currentCompany.id,
-        payment_methods: paymentMethods as unknown as Record<string, unknown>,
-        custom_conditions: customConditions,
-        show_fees_to_customer: showFeesToCustomer,
-        display_mode: displayMode,
-      };
-
       const { error } = await supabase
         .from('company_payment_settings')
-        .upsert(payload, { onConflict: 'company_id' });
+        .upsert({
+          company_id: currentCompany.id,
+          payment_methods: JSON.parse(JSON.stringify(paymentMethods)),
+          custom_conditions: customConditions,
+          show_fees_to_customer: showFeesToCustomer,
+          display_mode: displayMode,
+        } as never);
       
       if (error) throw error;
     },
