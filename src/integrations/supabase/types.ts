@@ -2338,6 +2338,8 @@ export type Database = {
           email: string | null
           id: string | null
           is_active: boolean | null
+          latitude: number | null
+          longitude: number | null
           name: string | null
           notes: string | null
           phone: string | null
@@ -2351,16 +2353,18 @@ export type Database = {
           company_id?: string | null
           created_at?: string | null
           document?: never
-          document_type?: string | null
+          document_type?: never
           email?: never
           id?: string | null
           is_active?: boolean | null
+          latitude?: never
+          longitude?: never
           name?: string | null
           notes?: string | null
           phone?: never
           state?: string | null
           updated_at?: string | null
-          zip_code?: string | null
+          zip_code?: never
         }
         Update: {
           address?: never
@@ -2368,16 +2372,18 @@ export type Database = {
           company_id?: string | null
           created_at?: string | null
           document?: never
-          document_type?: string | null
+          document_type?: never
           email?: never
           id?: string | null
           is_active?: boolean | null
+          latitude?: never
+          longitude?: never
           name?: string | null
           notes?: string | null
           phone?: never
           state?: string | null
           updated_at?: string | null
-          zip_code?: string | null
+          zip_code?: never
         }
         Relationships: [
           {
