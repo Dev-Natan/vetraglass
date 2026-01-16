@@ -416,6 +416,54 @@ export type Database = {
           },
         ]
       }
+      company_payment_settings: {
+        Row: {
+          company_id: string
+          created_at: string
+          custom_conditions: string | null
+          display_mode: string
+          id: string
+          payment_methods: Json
+          show_fees_to_customer: boolean
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          custom_conditions?: string | null
+          display_mode?: string
+          id?: string
+          payment_methods?: Json
+          show_fees_to_customer?: boolean
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          custom_conditions?: string | null
+          display_mode?: string
+          id?: string
+          payment_methods?: Json
+          show_fees_to_customer?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_payment_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_payment_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_products: {
         Row: {
           base_price: number | null

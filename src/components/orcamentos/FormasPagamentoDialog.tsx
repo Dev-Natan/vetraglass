@@ -1,4 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Dialog,
   DialogContent,
@@ -22,17 +25,27 @@ import {
   Save,
   Percent,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Eye,
+  EyeOff,
+  Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
-interface InstallmentFee {
+export interface InstallmentFee {
   installment: number;
   fee: number;
 }
 
-interface PaymentMethod {
+export interface PaymentMethod {
   id: string;
   name: string;
   icon: string;
@@ -41,7 +54,14 @@ interface PaymentMethod {
   discountPercent?: number;
   feePercent?: number;
   installmentFees?: InstallmentFee[];
-  noFeeInstallments?: number; // Parcelas sem juros (empresa assume)
+  noFeeInstallments?: number;
+}
+
+export interface PaymentSettings {
+  methods: PaymentMethod[];
+  customConditions: string;
+  showFeesToCustomer: boolean;
+  displayMode: 'simple' | 'detailed';
 }
 
 interface FormasPagamentoDialogProps {
@@ -81,8 +101,6 @@ const defaultPaymentMethods: PaymentMethod[] = [
   { id: 'transferencia', name: 'Transferência Bancária', icon: 'building', enabled: true },
 ];
 
-const STORAGE_KEY = 'payment_methods_config';
-
 const getIcon = (iconType: string) => {
   switch (iconType) {
     case 'qrcode': return QrCode;
@@ -94,24 +112,79 @@ const getIcon = (iconType: string) => {
 };
 
 export function FormasPagamentoDialog({ open, onOpenChange }: FormasPagamentoDialogProps) {
+  const { currentCompany } = useAuth();
+  const queryClient = useQueryClient();
+  
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>(defaultPaymentMethods);
   const [customConditions, setCustomConditions] = useState('');
+  const [showFeesToCustomer, setShowFeesToCustomer] = useState(false);
+  const [displayMode, setDisplayMode] = useState<'simple' | 'detailed'>('simple');
   const [newMethodName, setNewMethodName] = useState('');
   const [showInstallmentDetails, setShowInstallmentDetails] = useState(false);
 
-  // Load saved config
+  // Fetch saved settings from database
+  const { data: savedSettings, isLoading } = useQuery({
+    queryKey: ['payment-settings', currentCompany?.id],
+    queryFn: async () => {
+      if (!currentCompany?.id) return null;
+      const { data, error } = await supabase
+        .from('company_payment_settings')
+        .select('*')
+        .eq('company_id', currentCompany.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!currentCompany?.id && open
+  });
+
+  // Load saved settings when available
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        const config = JSON.parse(saved);
-        setPaymentMethods(config.methods || defaultPaymentMethods);
-        setCustomConditions(config.customConditions || '');
-      } catch {
-        // Use defaults
+    if (savedSettings) {
+      const methods = savedSettings.payment_methods as unknown as PaymentMethod[] | null;
+      if (methods && Array.isArray(methods)) {
+        setPaymentMethods(methods);
       }
+      setCustomConditions(savedSettings.custom_conditions || '');
+      setShowFeesToCustomer(savedSettings.show_fees_to_customer || false);
+      setDisplayMode((savedSettings.display_mode as 'simple' | 'detailed') || 'simple');
+    } else if (!savedSettings && !isLoading) {
+      // Reset to defaults if no saved settings
+      setPaymentMethods(defaultPaymentMethods);
+      setCustomConditions('');
+      setShowFeesToCustomer(false);
+      setDisplayMode('simple');
     }
-  }, [open]);
+  }, [savedSettings, isLoading]);
+
+  // Save mutation
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentCompany?.id) throw new Error('Empresa não encontrada');
+      
+      const payload = {
+        company_id: currentCompany.id,
+        payment_methods: paymentMethods as unknown as Record<string, unknown>,
+        custom_conditions: customConditions,
+        show_fees_to_customer: showFeesToCustomer,
+        display_mode: displayMode,
+      };
+
+      const { error } = await supabase
+        .from('company_payment_settings')
+        .upsert(payload, { onConflict: 'company_id' });
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payment-settings'] });
+      toast.success('Formas de pagamento salvas!');
+      onOpenChange(false);
+    },
+    onError: () => {
+      toast.error('Erro ao salvar configurações');
+    }
+  });
 
   const toggleMethod = (id: string) => {
     setPaymentMethods(prev => 
@@ -175,13 +248,7 @@ export function FormasPagamentoDialog({ open, onOpenChange }: FormasPagamentoDia
   };
 
   const handleSave = () => {
-    const config = {
-      methods: paymentMethods,
-      customConditions,
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-    toast.success('Formas de pagamento salvas!');
-    onOpenChange(false);
+    saveMutation.mutate();
   };
 
   const generatePaymentTermsText = () => {
@@ -219,6 +286,18 @@ export function FormasPagamentoDialog({ open, onOpenChange }: FormasPagamentoDia
 
   const creditMethod = paymentMethods.find(m => m.id === 'credito');
 
+  if (isLoading) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl">
+          <div className="flex items-center justify-center p-8">
+            <Loader2 className="w-6 h-6 animate-spin" />
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -230,6 +309,54 @@ export function FormasPagamentoDialog({ open, onOpenChange }: FormasPagamentoDia
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Display Settings Card */}
+          <div className="p-4 bg-muted/50 rounded-lg border space-y-4">
+            <h3 className="font-medium text-sm flex items-center gap-2">
+              <Eye className="w-4 h-4" />
+              Configurações de Exibição no PDF
+            </h3>
+            
+            {/* Toggle Show Fees */}
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  {showFeesToCustomer ? <Eye className="w-4 h-4 text-primary" /> : <EyeOff className="w-4 h-4 text-muted-foreground" />}
+                  Exibir taxas para o cliente
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  {showFeesToCustomer 
+                    ? 'Mostra valor da parcela + taxa percentual + valor total' 
+                    : 'Mostra apenas o valor da parcela (modo comercial)'}
+                </p>
+              </div>
+              <Switch
+                checked={showFeesToCustomer}
+                onCheckedChange={setShowFeesToCustomer}
+              />
+            </div>
+
+            {/* Display Mode */}
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label className="text-sm font-medium">Modo de exibição</Label>
+                <p className="text-xs text-muted-foreground">
+                  {displayMode === 'simple' 
+                    ? 'Mostra parcelas principais (1x, 3x, 6x, 10x, 12x)' 
+                    : 'Mostra todas as parcelas habilitadas'}
+                </p>
+              </div>
+              <Select value={displayMode} onValueChange={(v) => setDisplayMode(v as 'simple' | 'detailed')}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="simple">Simples</SelectItem>
+                  <SelectItem value="detailed">Detalhado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           {/* Payment Methods List */}
           <div className="space-y-3">
             <Label className="text-sm font-medium">Métodos Aceitos</Label>
@@ -441,8 +568,12 @@ export function FormasPagamentoDialog({ open, onOpenChange }: FormasPagamentoDia
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleSave} className="gap-2">
-              <Save className="w-4 h-4" />
+            <Button onClick={handleSave} disabled={saveMutation.isPending} className="gap-2">
+              {saveMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
               Salvar Configurações
             </Button>
           </div>
