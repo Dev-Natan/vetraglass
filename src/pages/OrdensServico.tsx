@@ -19,6 +19,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { usePagination } from '@/hooks/usePagination';
 import { PaginationControls } from '@/components/common/PaginationControls';
@@ -62,6 +72,8 @@ export default function OrdensServico() {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<OSStatus | 'all'>('all');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [osToDelete, setOsToDelete] = useState<string | null>(null);
 
   // Fetch ordens de serviço com campos específicos
   const { data: ordens, isLoading } = useQuery({
@@ -407,9 +419,8 @@ export default function OrdensServico() {
                           <DropdownMenuItem 
                             className="text-destructive"
                             onClick={() => {
-                              if (confirm('Tem certeza que deseja excluir esta ordem de serviço?')) {
-                                deleteMutation.mutate(os.id);
-                              }
+                              setOsToDelete(os.id);
+                              setDeleteDialogOpen(true);
                             }}
                           >
                             <Trash2 className="w-4 h-4 mr-2" />
@@ -436,6 +447,33 @@ export default function OrdensServico() {
           />
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Ordem de Serviço</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta ordem de serviço? Esta ação não pode ser desfeita.
+              Você poderá regerar a OS a partir do orçamento aprovado, se necessário.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (osToDelete) {
+                  deleteMutation.mutate(osToDelete);
+                }
+                setOsToDelete(null);
+              }}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 }

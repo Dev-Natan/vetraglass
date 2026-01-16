@@ -26,7 +26,8 @@ import {
   FileText,
   Printer,
   Download,
-  FileSignature
+  FileSignature,
+  ClipboardList
 } from 'lucide-react';
 import {
   Select,
@@ -141,6 +142,22 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
     enabled: !!quote?.id && open
   });
 
+  // Check if OS exists for this quote
+  const { data: existingOS, refetch: refetchOS } = useQuery({
+    queryKey: ['ordem-servico-for-quote', quote?.id],
+    queryFn: async () => {
+      if (!quote?.id) return null;
+      const { data, error } = await supabase
+        .from('ordens_servico')
+        .select('id')
+        .eq('quote_id', quote.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!quote?.id && open && (quote?.status === 'approved' || quote?.status === 'converted')
+  });
+
   // Update status mutation
   const updateStatusMutation = useMutation({
     mutationFn: async (newStatus: QuoteStatus) => {
@@ -157,6 +174,46 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
     },
     onError: () => {
       toast({ title: 'Erro ao atualizar status', variant: 'destructive' });
+    }
+  });
+
+  // Create OS mutation
+  const createOSMutation = useMutation({
+    mutationFn: async () => {
+      if (!quote || !currentCompany?.id) throw new Error('Dados inválidos');
+      
+      const estimatedEnd = new Date();
+      estimatedEnd.setDate(estimatedEnd.getDate() + 7);
+      
+      const { data, error } = await supabase
+        .from('ordens_servico')
+        .insert({
+          company_id: currentCompany.id,
+          quote_id: quote.id,
+          customer_name: quote.customer_name,
+          customer_phone: quote.customer_phone,
+          customer_email: quote.customer_email,
+          customer_address: quote.customer_address,
+          total_amount: quote.final_amount,
+          pending_amount: quote.final_amount,
+          status: 'pending',
+          priority: 'normal',
+          current_stage: 'Aguardando início',
+          estimated_end: estimatedEnd.toISOString().split('T')[0],
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ordens-servico'] });
+      refetchOS();
+      toast({ title: 'Ordem de serviço criada com sucesso!' });
+    },
+    onError: () => {
+      toast({ title: 'Erro ao criar ordem de serviço', variant: 'destructive' });
     }
   });
 
@@ -446,6 +503,16 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
               <FileSignature className="w-4 h-4" />
               Gerar Contrato
             </Button>
+            {(quote.status === 'approved' || quote.status === 'converted') && !existingOS && (
+              <Button 
+                onClick={() => createOSMutation.mutate()} 
+                disabled={createOSMutation.isPending}
+                className="gap-2 bg-primary hover:bg-primary/90"
+              >
+                <ClipboardList className="w-4 h-4" />
+                {createOSMutation.isPending ? 'Criando...' : 'Gerar OS'}
+              </Button>
+            )}
             {quote.status === 'pending' && (
               <Button 
                 onClick={() => setAprovarDialogOpen(true)} 
