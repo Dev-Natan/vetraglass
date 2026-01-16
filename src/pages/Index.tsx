@@ -21,25 +21,25 @@ const quickActions = [
   { 
     icon: Plus, 
     label: 'Novo Orçamento', 
-    path: '/orcamentos/novo',
+    path: '/orcamentos',
     colorClass: 'action-card-green'
   },
   { 
     icon: ShoppingCart, 
     label: 'Nova Venda', 
-    path: '/vendas/nova',
+    path: '/caixa-vendas',
     colorClass: 'action-card-blue'
   },
   { 
     icon: ClipboardList, 
     label: 'Nova OS', 
-    path: '/ordens-servico/nova',
+    path: '/ordens-servico',
     colorClass: 'action-card-purple'
   },
   { 
     icon: Users, 
     label: 'Novo Cliente', 
-    path: '/clientes/novo',
+    path: '/clientes',
     colorClass: 'action-card-orange'
   },
 ];
