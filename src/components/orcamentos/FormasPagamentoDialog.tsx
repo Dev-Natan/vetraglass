@@ -169,7 +169,7 @@ export function FormasPagamentoDialog({ open, onOpenChange }: FormasPagamentoDia
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!currentCompany?.id) throw new Error('Empresa não encontrada');
-      
+
       const { error } = await supabase
         .from('company_payment_settings')
         .upsert(
@@ -184,7 +184,7 @@ export function FormasPagamentoDialog({ open, onOpenChange }: FormasPagamentoDia
           } as never,
           { onConflict: 'company_id' }
         );
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -192,9 +192,13 @@ export function FormasPagamentoDialog({ open, onOpenChange }: FormasPagamentoDia
       toast.success('Formas de pagamento salvas!');
       onOpenChange(false);
     },
-    onError: () => {
-      toast.error('Erro ao salvar configurações');
-    }
+    onError: (error) => {
+      // Ajuda a diagnosticar quando o backend retorna mensagem específica
+      console.error('Erro ao salvar formas de pagamento:', error);
+      const message =
+        (error as { message?: string } | null)?.message || 'Erro ao salvar configurações';
+      toast.error(message);
+    },
   });
 
   const toggleMethod = (id: string) => {
