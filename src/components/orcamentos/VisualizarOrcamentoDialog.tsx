@@ -474,6 +474,7 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
       quote={quote}
       items={items || []}
       onSuccess={() => {
+        queryClient.invalidateQueries({ queryKey: ['quotes'] });
         setAprovarDialogOpen(false);
         onOpenChange(false);
       }}
