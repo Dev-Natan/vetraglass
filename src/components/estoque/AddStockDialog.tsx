@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,15 +13,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Package } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Loader2, Package, Check, Search, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface AddStockDialogProps {
   open: boolean;
@@ -40,8 +35,8 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  const [selectedLinha, setSelectedLinha] = useState('');
-  const [selectedType, setSelectedType] = useState('');
+  const [linhaFilter, setLinhaFilter] = useState('');
+  const [nameFilter, setNameFilter] = useState('');
   const [selectedItemId, setSelectedItemId] = useState('');
   const [quantity, setQuantity] = useState('');
   const [minQuantity, setMinQuantity] = useState('');
@@ -143,8 +138,8 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
   });
 
   const resetForm = () => {
-    setSelectedLinha('');
-    setSelectedType('');
+    setLinhaFilter('');
+    setNameFilter('');
     setSelectedItemId('');
     setQuantity('');
     setMinQuantity('');
@@ -154,17 +149,15 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
     setAllowFractional(false);
   };
 
-  const handleLinhaChange = (linha: string) => {
-    setSelectedLinha(linha);
-    setSelectedType('');
-    setSelectedItemId('');
-  };
-
-  const handleTypeChange = (type: string) => {
-    setSelectedType(type);
-    setSelectedItemId('');
-    // Perfis têm venda fracionada habilitada por padrão
-    setAllowFractional(type === 'profile');
+  const handleItemSelect = (itemId: string, itemType: string) => {
+    if (selectedItemId === itemId) {
+      setSelectedItemId('');
+      setAllowFractional(false);
+    } else {
+      setSelectedItemId(itemId);
+      // Perfis têm venda fracionada habilitada por padrão
+      setAllowFractional(itemType === 'profile');
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -181,201 +174,268 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
   };
 
   // Filter out items already in stock
-  const availableItems = itemTemplates?.filter(
-    item => !existingStock?.includes(item.id)
-  );
+  const availableItems = useMemo(() => {
+    return itemTemplates?.filter(item => !existingStock?.includes(item.id)) || [];
+  }, [itemTemplates, existingStock]);
 
-  // Get unique linhas from available items
-  const availableLinhas = [...new Set(availableItems?.map(item => item.linha || 'Sem Linha') || [])].sort();
+  // Apply filters
+  const filteredItems = useMemo(() => {
+    return availableItems.filter(item => {
+      const matchesLinha = !linhaFilter || 
+        (item.linha || 'Sem Linha').toLowerCase().includes(linhaFilter.toLowerCase());
+      const matchesName = !nameFilter || 
+        item.name.toLowerCase().includes(nameFilter.toLowerCase());
+      return matchesLinha && matchesName;
+    });
+  }, [availableItems, linhaFilter, nameFilter]);
 
-  // Filter items by selected linha
-  const itemsByLinha = selectedLinha
-    ? availableItems?.filter(item => (item.linha || 'Sem Linha') === selectedLinha)
-    : [];
+  // Group items by linha
+  const itemsByLinha = useMemo(() => {
+    const grouped: Record<string, typeof filteredItems> = {};
+    
+    filteredItems.forEach(item => {
+      const linha = item.linha || 'Sem Linha';
+      if (!grouped[linha]) {
+        grouped[linha] = [];
+      }
+      grouped[linha].push(item);
+    });
 
-  // Get unique types from items in selected linha
-  const availableTypes = [...new Set(itemsByLinha?.map(item => item.type) || [])];
+    // Sort keys with "Sem Linha" first
+    const sortedKeys = Object.keys(grouped).sort((a, b) => {
+      if (a === 'Sem Linha') return -1;
+      if (b === 'Sem Linha') return 1;
+      return a.localeCompare(b);
+    });
 
-  // Filter items by selected type
-  const filteredItems = selectedType
-    ? itemsByLinha?.filter(item => item.type === selectedType)
-    : [];
+    return { grouped, sortedKeys };
+  }, [filteredItems]);
 
   const selectedItem = itemTemplates?.find((item) => item.id === selectedItemId);
+
+  // Get weight from specifications if available
+  const getItemWeight = (item: typeof selectedItem) => {
+    if (!item?.specifications) return null;
+    const specs = item.specifications as Record<string, unknown>;
+    return specs.peso_kg_ml || specs.weight_kg_ml || specs.peso;
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b">
           <DialogTitle>Adicionar Item ao Estoque</DialogTitle>
           <DialogDescription>
-            Configure o item, quantidade e preços em um só lugar.
+            Selecione um item visualmente e configure quantidade e preços.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="linha">Linha *</Label>
-            <Select value={selectedLinha} onValueChange={handleLinhaChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a linha..." />
-              </SelectTrigger>
-              <SelectContent>
-                {availableLinhas.map(linha => (
-                  <SelectItem key={linha} value={linha}>
-                    {linha}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          {/* Filters */}
+          <div className="px-6 py-4 border-b bg-muted/30">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Filtrar por Linha</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    value={linhaFilter}
+                    onChange={(e) => setLinhaFilter(e.target.value)}
+                    placeholder="Digite para filtrar..."
+                    className="pl-9 pr-8"
+                  />
+                  {linhaFilter && (
+                    <button
+                      type="button"
+                      onClick={() => setLinhaFilter('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded"
+                    >
+                      <X className="h-3.5 w-3.5 text-muted-foreground" />
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Filtrar por Nome</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    value={nameFilter}
+                    onChange={(e) => setNameFilter(e.target.value)}
+                    placeholder="Digite para filtrar..."
+                    className="pl-9 pr-8"
+                  />
+                  {nameFilter && (
+                    <button
+                      type="button"
+                      onClick={() => setNameFilter('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded"
+                    >
+                      <X className="h-3.5 w-3.5 text-muted-foreground" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="type">Tipo *</Label>
-            <Select 
-              value={selectedType} 
-              onValueChange={handleTypeChange}
-              disabled={!selectedLinha}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={selectedLinha ? "Selecione o tipo..." : "Selecione a linha primeiro"} />
-              </SelectTrigger>
-              <SelectContent>
-                {availableTypes.map(type => (
-                  <SelectItem key={type} value={type}>
-                    {itemTypeLabels[type] || type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="item">Item *</Label>
-            <Select 
-              value={selectedItemId} 
-              onValueChange={setSelectedItemId}
-              disabled={!selectedType}
-            >
-              <SelectTrigger>
-                {selectedItem ? (
-                  <div className="flex items-center gap-2 min-w-0">
-                    {selectedItem.image_url ? (
-                      <div className="h-6 w-6 rounded border bg-background p-0.5 flex items-center justify-center shrink-0">
-                        <img
-                          src={selectedItem.image_url}
-                          alt={selectedItem.name}
-                          loading="lazy"
-                          className="max-h-full max-w-full object-contain"
-                        />
-                      </div>
-                    ) : (
-                      <div className="h-6 w-6 rounded border bg-background flex items-center justify-center shrink-0">
-                        <Package className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    )}
-                    <span className="truncate">{selectedItem.name}</span>
+          {/* Items Grid */}
+          <ScrollArea className="flex-1 min-h-0" style={{ height: '350px' }}>
+            <div className="px-6 py-4 space-y-6">
+              {loadingItems ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : filteredItems.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <Package className="h-12 w-12 text-muted-foreground/50 mb-3" />
+                  <p className="text-sm text-muted-foreground">
+                    {availableItems.length === 0 
+                      ? 'Todos os itens já estão no estoque.'
+                      : 'Nenhum item encontrado com os filtros aplicados.'}
+                  </p>
+                </div>
+              ) : (
+                itemsByLinha.sortedKeys.map((linha) => (
+                  <div key={linha}>
+                    <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                      <span className="h-px flex-1 bg-border" />
+                      <span className="px-2">{linha}</span>
+                      <span className="h-px flex-1 bg-border" />
+                    </h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                      {itemsByLinha.grouped[linha].map((item) => {
+                        const isSelected = selectedItemId === item.id;
+                        const weight = getItemWeight(item);
+                        
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => handleItemSelect(item.id, item.type)}
+                            className={cn(
+                              "relative flex flex-col items-center p-3 rounded-lg border-2 transition-all duration-200",
+                              "hover:shadow-md hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20",
+                              isSelected 
+                                ? "border-primary bg-primary/5 shadow-md" 
+                                : "border-border bg-card"
+                            )}
+                          >
+                            {/* Selection indicator */}
+                            {isSelected && (
+                              <div className="absolute top-2 left-2 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
+                                <Check className="h-3 w-3 text-primary-foreground" />
+                              </div>
+                            )}
+                            
+                            {/* Image */}
+                            <div className="w-20 h-20 rounded-lg border bg-background flex items-center justify-center mb-2 overflow-hidden">
+                              {item.image_url ? (
+                                <img
+                                  src={item.image_url}
+                                  alt={item.name}
+                                  loading="lazy"
+                                  className="max-h-full max-w-full object-contain"
+                                />
+                              ) : (
+                                <Package className="h-8 w-8 text-muted-foreground/50" />
+                              )}
+                            </div>
+                            
+                            {/* Name */}
+                            <p className="text-xs font-medium text-center line-clamp-2 leading-tight mb-1">
+                              {item.name}
+                            </p>
+                            
+                            {/* Weight */}
+                            {weight && (
+                              <p className="text-[10px] text-muted-foreground">
+                                {String(weight)} Kg/ML
+                              </p>
+                            )}
+                            
+                            {/* Type badge */}
+                            <span className="mt-1 text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                              {itemTypeLabels[item.type] || item.type}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                ) : (
-                  <SelectValue placeholder={selectedType ? "Selecione um item..." : "Selecione o tipo primeiro"} />
-                )}
-              </SelectTrigger>
-              <SelectContent className="max-h-64">
-                {loadingItems ? (
-                  <SelectItem value="__loading" disabled>
-                    Carregando...
-                  </SelectItem>
-                ) : filteredItems && filteredItems.length > 0 ? (
-                  filteredItems.map(item => (
-                    <SelectItem key={item.id} value={item.id}>
-                      <div className="flex items-center gap-2 min-w-0">
-                        {item.image_url ? (
-                          <div className="h-7 w-7 rounded border bg-background p-0.5 flex items-center justify-center shrink-0">
-                            <img
-                              src={item.image_url}
-                              alt={item.name}
-                              loading="lazy"
-                              className="max-h-full max-w-full object-contain"
-                            />
-                          </div>
-                        ) : (
-                          <div className="h-7 w-7 rounded border bg-background flex items-center justify-center shrink-0">
-                            <Package className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                        )}
-                        <span className="truncate">{item.name}</span>
-                      </div>
-                    </SelectItem>
-                  ))
-                ) : (
-                  <SelectItem value="__empty" disabled>
-                    {selectedType
-                      ? 'Todos os itens deste tipo já estão no estoque.'
-                      : 'Selecione o tipo primeiro.'}
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="quantity">Quantidade</Label>
-              <Input
-                id="quantity"
-                type="number"
-                min="0"
-                step="0.01"
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-                placeholder="0"
-              />
+                ))
+              )}
             </div>
+          </ScrollArea>
 
-            <div className="space-y-2">
-              <Label htmlFor="minQuantity">Quantidade Mínima</Label>
-              <Input
-                id="minQuantity"
-                type="number"
-                min="0"
-                step="0.01"
-                value={minQuantity}
-                onChange={(e) => setMinQuantity(e.target.value)}
-                placeholder="0"
-              />
+          {/* Selected Item Preview */}
+          {selectedItem && (
+            <div className="px-6 py-4 border-t bg-primary/5">
+              <p className="text-xs font-medium text-muted-foreground mb-2">Item selecionado:</p>
+              <div className="flex items-center gap-4 p-3 rounded-lg bg-card border">
+                <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center shrink-0">
+                  <Check className="h-3 w-3 text-primary-foreground" />
+                </div>
+                <div className="w-16 h-16 rounded-lg border bg-background flex items-center justify-center overflow-hidden shrink-0">
+                  {selectedItem.image_url ? (
+                    <img
+                      src={selectedItem.image_url}
+                      alt={selectedItem.name}
+                      className="max-h-full max-w-full object-contain"
+                    />
+                  ) : (
+                    <Package className="h-6 w-6 text-muted-foreground/50" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm">{selectedItem.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {itemTypeLabels[selectedItem.type] || selectedItem.type}
+                    {selectedItem.linha && ` • ${selectedItem.linha}`}
+                  </p>
+                  {getItemWeight(selectedItem) && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {String(getItemWeight(selectedItem))} Kg/ML
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
+          )}
 
-          <div className="space-y-2">
-            <Label htmlFor="location">Localização (opcional)</Label>
-            <Input
-              id="location"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="Ex: Prateleira A1, Galpão 2..."
-              maxLength={100}
-            />
-          </div>
+          {/* Form Fields */}
+          <div className="px-6 py-4 border-t space-y-4 bg-muted/20">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="quantity" className="text-xs">Quantidade</Label>
+                <Input
+                  id="quantity"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
+                  placeholder="0"
+                  className="h-9"
+                />
+              </div>
 
-          <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
-            <div className="space-y-0.5">
-              <Label htmlFor="allowFractionalAdd" className="cursor-pointer">Venda Fracionada</Label>
-              <p className="text-xs text-muted-foreground">
-                Permitir vender quantidades fracionadas
-              </p>
-            </div>
-            <Switch
-              id="allowFractionalAdd"
-              checked={allowFractional}
-              onCheckedChange={setAllowFractional}
-            />
-          </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="minQuantity" className="text-xs">Qtd. Mínima</Label>
+                <Input
+                  id="minQuantity"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={minQuantity}
+                  onChange={(e) => setMinQuantity(e.target.value)}
+                  placeholder="0"
+                  className="h-9"
+                />
+              </div>
 
-          {/* Separator for pricing */}
-          <div className="border-t pt-4 mt-4">
-            <p className="text-sm font-medium text-muted-foreground mb-3">Preços (opcional)</p>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="cost">Preço de Custo (R$)</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="cost" className="text-xs">Custo (R$)</Label>
                 <Input
                   id="cost"
                   type="number"
@@ -384,12 +444,12 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
                   value={cost}
                   onChange={(e) => setCost(e.target.value)}
                   placeholder="0,00"
+                  className="h-9"
                 />
-                <p className="text-xs text-muted-foreground">Por barra (6m)</p>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="price">Preço de Venda (R$)</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="price" className="text-xs">Venda (R$)</Label>
                 <Input
                   id="price"
                   type="number"
@@ -398,16 +458,45 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
                   placeholder="0,00"
+                  className="h-9"
                 />
-                <p className="text-xs text-muted-foreground">Por barra (6m)</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="location" className="text-xs">Localização</Label>
+                <Input
+                  id="location"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="Ex: Prateleira A1, Galpão 2..."
+                  maxLength={100}
+                  className="h-9"
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-2.5 rounded-lg bg-background border h-9">
+                <Label htmlFor="allowFractionalAdd" className="text-xs cursor-pointer">
+                  Venda Fracionada
+                </Label>
+                <Switch
+                  id="allowFractionalAdd"
+                  checked={allowFractional}
+                  onCheckedChange={setAllowFractional}
+                  className="scale-75"
+                />
               </div>
             </div>
 
             {/* Margin indicator */}
             {parseFloat(cost) > 0 && parseFloat(price) > 0 && (
-              <div className="mt-3 p-2 rounded bg-muted/50 text-xs flex items-center justify-between">
+              <div className="p-2 rounded bg-background border text-xs flex items-center justify-between">
                 <span className="text-muted-foreground">Margem:</span>
-                <span className={`font-medium ${parseFloat(price) >= parseFloat(cost) ? 'text-green-600' : 'text-destructive'}`}>
+                <span className={cn(
+                  "font-medium",
+                  parseFloat(price) >= parseFloat(cost) ? 'text-green-600' : 'text-destructive'
+                )}>
                   {(((parseFloat(price) - parseFloat(cost)) / parseFloat(cost)) * 100).toFixed(1)}%
                   {' • '}R$ {(parseFloat(price) - parseFloat(cost)).toFixed(2)} lucro
                 </span>
@@ -415,7 +504,8 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
             )}
           </div>
 
-          <div className="flex justify-end gap-2 pt-4">
+          {/* Actions */}
+          <div className="px-6 py-4 border-t flex justify-end gap-2 bg-background">
             <Button
               type="button"
               variant="outline"
@@ -423,7 +513,10 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={addStockMutation.isPending}>
+            <Button 
+              type="submit" 
+              disabled={addStockMutation.isPending || !selectedItemId}
+            >
               {addStockMutation.isPending && (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               )}
