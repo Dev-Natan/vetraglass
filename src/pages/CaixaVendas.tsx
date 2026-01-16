@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -71,6 +72,7 @@ interface Sale {
 export default function CaixaVendas() {
   const { currentCompany, user } = useAuth();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   
   const [abrirCaixaOpen, setAbrirCaixaOpen] = useState(false);
   const [fecharCaixaOpen, setFecharCaixaOpen] = useState(false);
@@ -79,6 +81,7 @@ export default function CaixaVendas() {
   const [detalhesVendaOpen, setDetalhesVendaOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('today');
+  const [pendingOpenNewSale, setPendingOpenNewSale] = useState(false);
 
   // Buscar caixa aberto
   const { data: openCashRegister, isLoading: loadingCashRegister } = useQuery({
@@ -98,6 +101,23 @@ export default function CaixaVendas() {
     },
     enabled: !!currentCompany?.id,
   });
+
+  // Open new sale dialog if ?novo=true in URL (after cash register loads)
+  useEffect(() => {
+    if (searchParams.get('novo') === 'true') {
+      setPendingOpenNewSale(true);
+      searchParams.delete('novo');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
+  // Open dialog once cash register is loaded and open
+  useEffect(() => {
+    if (pendingOpenNewSale && openCashRegister) {
+      setNovaVendaOpen(true);
+      setPendingOpenNewSale(false);
+    }
+  }, [pendingOpenNewSale, openCashRegister]);
 
   // Buscar vendas do dia (se caixa aberto) - para resumo do caixa atual
   const { data: todaySales = [] } = useQuery({

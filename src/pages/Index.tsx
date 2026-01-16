@@ -21,13 +21,13 @@ const quickActions = [
   { 
     icon: Plus, 
     label: 'Novo Orçamento', 
-    path: '/orcamentos',
+    path: '/orcamentos?novo=true',
     colorClass: 'action-card-green'
   },
   { 
     icon: ShoppingCart, 
     label: 'Nova Venda', 
-    path: '/caixa-vendas',
+    path: '/caixa-vendas?novo=true',
     colorClass: 'action-card-blue'
   },
   { 
@@ -39,7 +39,7 @@ const quickActions = [
   { 
     icon: Users, 
     label: 'Novo Cliente', 
-    path: '/clientes',
+    path: '/clientes?novo=true',
     colorClass: 'action-card-orange'
   },
 ];
