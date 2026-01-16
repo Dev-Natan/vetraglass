@@ -274,37 +274,37 @@ export function UniversalProductSearch({
   };
 
   return (
-    <div className="border rounded-lg bg-card overflow-hidden">
+    <div className="border rounded-xl bg-card overflow-hidden shadow-lg">
       {/* Header with navigation */}
-      <div className="flex items-center gap-2 px-3 py-2 bg-muted/50 border-b">
+      <div className="flex items-center gap-3 px-4 py-3 bg-muted/50 border-b">
         {step !== 'linhas' && (
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 px-2"
+            className="h-8 px-2"
             onClick={handleBack}
           >
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="w-5 h-5" />
           </Button>
         )}
-        <div className="flex items-center gap-1 text-sm flex-1 min-w-0">
+        <div className="flex items-center gap-2 text-sm flex-1 min-w-0">
           <button
             onClick={() => { setStep('linhas'); setSelectedLinha(null); setSelectedCategory(null); }}
             className={cn(
-              "transition-colors truncate",
-              step === 'linhas' ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground"
+              "transition-colors truncate text-base",
+              step === 'linhas' ? "text-primary font-semibold" : "text-muted-foreground hover:text-foreground"
             )}
           >
             Linhas
           </button>
           {selectedLinha && (
             <>
-              <ChevronRight className="w-3 h-3 text-muted-foreground shrink-0" />
+              <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
               <button
                 onClick={() => { setStep('categories'); setSelectedCategory(null); }}
                 className={cn(
-                  "transition-colors truncate",
-                  step === 'categories' ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground"
+                  "transition-colors truncate text-base",
+                  step === 'categories' ? "text-primary font-semibold" : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 {selectedLinha}
@@ -313,8 +313,8 @@ export function UniversalProductSearch({
           )}
           {selectedCategory && (
             <>
-              <ChevronRight className="w-3 h-3 text-muted-foreground shrink-0" />
-              <span className="text-primary font-medium truncate">
+              <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+              <span className="text-primary font-semibold truncate text-base">
                 {categories.find(c => c.id === selectedCategory)?.label || selectedCategory}
               </span>
             </>
@@ -322,14 +322,14 @@ export function UniversalProductSearch({
         </div>
       </div>
 
-      <ScrollArea className="h-64">
+      <ScrollArea className="h-[450px]">
         {/* Step 1: Linhas */}
         {step === 'linhas' && (
-          <div className="p-2 grid grid-cols-2 gap-2">
+          <div className="p-4 grid grid-cols-2 sm:grid-cols-3 gap-4">
             {linhas.length === 0 ? (
-              <div className="col-span-2 py-8 text-center text-muted-foreground">
-                <Package className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Nenhuma linha disponível</p>
+              <div className="col-span-full py-12 text-center text-muted-foreground">
+                <Package className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p className="text-base">Nenhuma linha disponível</p>
               </div>
             ) : (
               linhas.map((linha) => {
@@ -338,22 +338,22 @@ export function UniversalProductSearch({
                   <button
                     key={linha.name}
                     onClick={() => handleSelectLinha(linha.name)}
-                    className="group relative flex flex-col items-center p-3 rounded-lg border bg-background hover:border-primary hover:shadow-md transition-all text-center"
+                    className="group relative flex flex-col items-center p-4 rounded-xl border-2 bg-background hover:border-primary hover:shadow-lg transition-all text-center"
                   >
-                    <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center mb-2 overflow-hidden">
+                    <div className="w-20 h-20 rounded-xl bg-muted flex items-center justify-center mb-3 overflow-hidden">
                       {imageUrl ? (
-                        <img src={imageUrl} alt={linha.name} className="w-full h-full object-contain p-1" />
+                        <img src={imageUrl} alt={linha.name} className="w-full h-full object-contain p-2" />
                       ) : (
-                        <Package className="w-5 h-5 text-muted-foreground" />
+                        <Package className="w-8 h-8 text-muted-foreground" />
                       )}
                     </div>
-                    <h3 className="font-medium text-sm group-hover:text-primary transition-colors">
+                    <h3 className="font-semibold text-base group-hover:text-primary transition-colors">
                       {linha.name}
                     </h3>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                    <p className="text-xs text-muted-foreground mt-1">
                       {linha.totalCount} itens
                     </p>
-                    <ChevronRight className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                   </button>
                 );
               })
@@ -363,11 +363,11 @@ export function UniversalProductSearch({
 
         {/* Step 2: Categories */}
         {step === 'categories' && (
-          <div className="p-2 space-y-1">
+          <div className="p-4 grid grid-cols-2 gap-4">
             {categories.length === 0 ? (
-              <div className="py-8 text-center text-muted-foreground">
-                <Package className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Nenhuma categoria nesta linha</p>
+              <div className="col-span-full py-12 text-center text-muted-foreground">
+                <Package className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p className="text-base">Nenhuma categoria nesta linha</p>
               </div>
             ) : (
               categories.map((category) => {
@@ -376,32 +376,31 @@ export function UniversalProductSearch({
                   <button
                     key={category.id}
                     onClick={() => handleSelectCategory(category.id)}
-                    className="w-full flex items-center gap-3 p-3 rounded-lg border bg-background hover:border-primary hover:shadow-sm transition-all group"
+                    className="group flex flex-col items-center p-4 rounded-xl border-2 bg-background hover:border-primary hover:shadow-lg transition-all"
                   >
-                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+                    <div className="w-16 h-16 rounded-xl bg-muted flex items-center justify-center mb-3 overflow-hidden">
                       {imageUrl ? (
-                        <img src={imageUrl} alt={category.label} className="w-full h-full object-contain p-1" />
+                        <img src={imageUrl} alt={category.label} className="w-full h-full object-contain p-2" />
                       ) : (
-                        <span className="text-muted-foreground">{category.icon}</span>
+                        <span className="text-muted-foreground scale-150">{category.icon}</span>
                       )}
                     </div>
-                    <div className="flex-1 text-left min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-medium text-sm group-hover:text-primary transition-colors">
-                          {category.label}
-                        </h3>
+                    <div className="text-center">
+                      <h3 className="font-semibold text-base group-hover:text-primary transition-colors">
+                        {category.label}
+                      </h3>
+                      <div className="flex items-center justify-center gap-2 mt-1">
                         <Badge 
                           variant={category.type === 'product' ? 'default' : 'secondary'} 
-                          className="text-[9px] px-1.5 py-0"
+                          className="text-[10px] px-2 py-0.5"
                         >
                           {category.type === 'product' ? 'Produto' : 'Material'}
                         </Badge>
                       </div>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground mt-1">
                         {category.count} {category.count === 1 ? 'item' : 'itens'}
                       </p>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
                   </button>
                 );
               })
@@ -411,11 +410,11 @@ export function UniversalProductSearch({
 
         {/* Step 3: Items (Products or Materials) */}
         {step === 'items' && (
-          <div className="p-2 space-y-1">
+          <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
             {items.products.length === 0 && items.materials.length === 0 ? (
-              <div className="py-8 text-center text-muted-foreground">
-                <Package className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Nenhum item disponível</p>
+              <div className="col-span-full py-12 text-center text-muted-foreground">
+                <Package className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p className="text-base">Nenhum item disponível</p>
               </div>
             ) : (
               <>
@@ -427,24 +426,24 @@ export function UniversalProductSearch({
                     <button
                       key={product.id}
                       onClick={() => handleSelectProduct(product)}
-                      className="w-full flex items-center gap-3 p-3 rounded-lg border bg-background hover:border-primary hover:shadow-sm transition-all group"
+                      className="w-full flex items-center gap-4 p-4 rounded-xl border-2 bg-background hover:border-primary hover:shadow-lg transition-all group"
                     >
-                      <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+                      <div className="w-16 h-16 rounded-xl bg-muted flex items-center justify-center shrink-0 overflow-hidden">
                         {imageUrl ? (
-                          <img src={imageUrl} alt={product.commercial_name} className="w-full h-full object-contain p-1" />
+                          <img src={imageUrl} alt={product.commercial_name} className="w-full h-full object-contain p-2" />
                         ) : (
-                          <Package className="w-5 h-5 text-muted-foreground" />
+                          <Package className="w-7 h-7 text-muted-foreground" />
                         )}
                       </div>
                       <div className="flex-1 text-left min-w-0">
-                        <h3 className="font-medium text-sm group-hover:text-primary transition-colors truncate">
+                        <h3 className="font-semibold text-base group-hover:text-primary transition-colors truncate">
                           {product.commercial_name}
                         </h3>
-                        <p className="text-xs text-muted-foreground">Produto</p>
+                        <p className="text-sm text-muted-foreground">Produto</p>
+                        <span className="text-base font-bold text-primary mt-1 block">
+                          {product.base_price ? formatCurrency(product.base_price) : 'Sob consulta'}
+                        </span>
                       </div>
-                      <span className="text-sm font-semibold text-primary shrink-0">
-                        {product.base_price ? formatCurrency(product.base_price) : 'Sob consulta'}
-                      </span>
                     </button>
                   );
                 })}
@@ -456,30 +455,30 @@ export function UniversalProductSearch({
                     <button
                       key={item.id}
                       onClick={() => handleSelectMaterial(item)}
-                      className="w-full flex items-center gap-3 p-3 rounded-lg border bg-background hover:border-primary hover:shadow-sm transition-all group"
+                      className="w-full flex items-center gap-4 p-4 rounded-xl border-2 bg-background hover:border-primary hover:shadow-lg transition-all group"
                     >
-                      <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+                      <div className="w-16 h-16 rounded-xl bg-muted flex items-center justify-center shrink-0 overflow-hidden">
                         {imageUrl ? (
-                          <img src={imageUrl} alt={item.name} className="w-full h-full object-contain p-1" />
+                          <img src={imageUrl} alt={item.name} className="w-full h-full object-contain p-2" />
                         ) : (
-                          <span className="text-muted-foreground">
-                            {materialTypeIcons[item.type] || <Package className="w-4 h-4" />}
+                          <span className="text-muted-foreground scale-150">
+                            {materialTypeIcons[item.type] || <Package className="w-6 h-6" />}
                           </span>
                         )}
                       </div>
                       <div className="flex-1 text-left min-w-0">
-                        <h3 className="font-medium text-sm group-hover:text-primary transition-colors truncate">
+                        <h3 className="font-semibold text-base group-hover:text-primary transition-colors truncate">
                           {item.name}
                         </h3>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <span>{materialTypeLabels[item.type] || item.type}</span>
                           <span>•</span>
                           <span>{item.unit}</span>
                         </div>
+                        <span className="text-base font-bold text-primary mt-1 block">
+                          {formatCurrency(item.price)}
+                        </span>
                       </div>
-                      <span className="text-sm font-semibold text-primary shrink-0">
-                        {formatCurrency(item.price)}
-                      </span>
                     </button>
                   );
                 })}
