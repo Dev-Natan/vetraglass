@@ -513,19 +513,7 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="location" className="text-xs">Localização</Label>
-                <Input
-                  id="location"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="Ex: Prateleira A1, Galpão 2..."
-                  maxLength={100}
-                  className="h-9"
-                />
-              </div>
-
+            <div className="grid grid-cols-1 gap-3">
               <div className="flex items-center justify-between p-2.5 rounded-lg bg-background border h-9">
                 <Label htmlFor="allowFractionalAdd" className="text-xs cursor-pointer">
                   Venda Fracionada
