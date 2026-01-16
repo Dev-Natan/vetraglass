@@ -13,7 +13,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Package, Trash2 } from 'lucide-react';
+import { Loader2, Package, Trash2, FileText, ChevronDown, ChevronUp } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -56,6 +57,16 @@ export function EditItemPriceDialog({
   const [minQuantity, setMinQuantity] = useState('');
   const [location, setLocation] = useState('');
   const [allowFractional, setAllowFractional] = useState(false);
+  const [fiscalOpen, setFiscalOpen] = useState(false);
+  
+  // Fiscal fields state
+  const [ncm, setNcm] = useState('');
+  const [cest, setCest] = useState('');
+  const [cfopVenda, setCfopVenda] = useState('');
+  const [cfopVendaInterestadual, setCfopVendaInterestadual] = useState('');
+  const [origem, setOrigem] = useState('');
+  const [codigoServico, setCodigoServico] = useState('');
+  const [aliquotaIss, setAliquotaIss] = useState('');
 
   // Fetch existing price
   const { data: existingPrice, isLoading: loadingPrice } = useQuery({
@@ -95,6 +106,24 @@ export function EditItemPriceDialog({
     enabled: !!currentCompany?.id && !!itemTemplateId && open,
   });
 
+  // Fetch item template for fiscal fields
+  const { data: itemTemplate, isLoading: loadingTemplate } = useQuery({
+    queryKey: ['item-template-fiscal', itemTemplateId],
+    queryFn: async () => {
+      if (!itemTemplateId) return null;
+
+      const { data, error } = await supabase
+        .from('item_templates')
+        .select('ncm, cest, cfop_venda, cfop_venda_interestadual, origem, codigo_servico, aliquota_iss')
+        .eq('id', itemTemplateId)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!itemTemplateId && open,
+  });
+
   // Update form when data loads
   useEffect(() => {
     if (existingPrice) {
@@ -119,6 +148,26 @@ export function EditItemPriceDialog({
       setAllowFractional(false);
     }
   }, [existingStock]);
+
+  useEffect(() => {
+    if (itemTemplate) {
+      setNcm(itemTemplate.ncm ?? '');
+      setCest(itemTemplate.cest ?? '');
+      setCfopVenda(itemTemplate.cfop_venda ?? '');
+      setCfopVendaInterestadual(itemTemplate.cfop_venda_interestadual ?? '');
+      setOrigem(itemTemplate.origem ?? '');
+      setCodigoServico(itemTemplate.codigo_servico ?? '');
+      setAliquotaIss(itemTemplate.aliquota_iss?.toString() ?? '');
+    } else {
+      setNcm('');
+      setCest('');
+      setCfopVenda('');
+      setCfopVendaInterestadual('');
+      setOrigem('');
+      setCodigoServico('');
+      setAliquotaIss('');
+    }
+  }, [itemTemplate]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -166,6 +215,22 @@ export function EditItemPriceDialog({
 
         if (error) throw error;
       }
+
+      // Save fiscal fields on item template
+      const { error: fiscalError } = await supabase
+        .from('item_templates')
+        .update({
+          ncm: ncm || null,
+          cest: cest || null,
+          cfop_venda: cfopVenda || null,
+          cfop_venda_interestadual: cfopVendaInterestadual || null,
+          origem: origem || null,
+          codigo_servico: codigoServico || null,
+          aliquota_iss: parseFloat(aliquotaIss) || null,
+        })
+        .eq('id', itemTemplateId);
+
+      if (fiscalError) throw fiscalError;
     },
     onSuccess: () => {
       toast({
@@ -176,6 +241,7 @@ export function EditItemPriceDialog({
       queryClient.invalidateQueries({ queryKey: ['company-item-price'] });
       queryClient.invalidateQueries({ queryKey: ['company-stock'] });
       queryClient.invalidateQueries({ queryKey: ['company-stock-item'] });
+      queryClient.invalidateQueries({ queryKey: ['item-template-fiscal'] });
       onOpenChange(false);
     },
     onError: (error: Error) => {
@@ -240,7 +306,7 @@ export function EditItemPriceDialog({
   const priceValue = parseFloat(price) || 0;
   const margin = costValue > 0 ? ((priceValue - costValue) / costValue) * 100 : 0;
 
-  const isLoading = loadingPrice || loadingStock;
+  const isLoading = loadingPrice || loadingStock || loadingTemplate;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -401,6 +467,119 @@ export function EditItemPriceDialog({
                 </div>
               )}
             </div>
+
+            {/* Separator */}
+            <div className="border-t" />
+
+            {/* Fiscal Fields Section - Collapsible */}
+            <Collapsible open={fiscalOpen} onOpenChange={setFiscalOpen}>
+              <CollapsibleTrigger asChild>
+                <button
+                  type="button"
+                  className="flex items-center justify-between w-full p-3 rounded-lg bg-muted/50 border hover:bg-muted transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">Dados Fiscais</span>
+                  </div>
+                  {fiscalOpen ? (
+                    <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                  )}
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-3 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="ncm" className="text-xs">NCM</Label>
+                    <Input
+                      id="ncm"
+                      value={ncm}
+                      onChange={(e) => setNcm(e.target.value)}
+                      placeholder="00000000"
+                      maxLength={8}
+                      className="h-9"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="cest" className="text-xs">CEST</Label>
+                    <Input
+                      id="cest"
+                      value={cest}
+                      onChange={(e) => setCest(e.target.value)}
+                      placeholder="0000000"
+                      maxLength={7}
+                      className="h-9"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="cfopVenda" className="text-xs">CFOP Venda</Label>
+                    <Input
+                      id="cfopVenda"
+                      value={cfopVenda}
+                      onChange={(e) => setCfopVenda(e.target.value)}
+                      placeholder="5102"
+                      maxLength={4}
+                      className="h-9"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="cfopVendaInterestadual" className="text-xs">CFOP Interestadual</Label>
+                    <Input
+                      id="cfopVendaInterestadual"
+                      value={cfopVendaInterestadual}
+                      onChange={(e) => setCfopVendaInterestadual(e.target.value)}
+                      placeholder="6102"
+                      maxLength={4}
+                      className="h-9"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="origem" className="text-xs">Origem</Label>
+                    <Input
+                      id="origem"
+                      value={origem}
+                      onChange={(e) => setOrigem(e.target.value)}
+                      placeholder="0"
+                      maxLength={1}
+                      className="h-9"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="aliquotaIss" className="text-xs">Alíquota ISS (%)</Label>
+                    <Input
+                      id="aliquotaIss"
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      value={aliquotaIss}
+                      onChange={(e) => setAliquotaIss(e.target.value)}
+                      placeholder="0,00"
+                      className="h-9"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="codigoServico" className="text-xs">Código de Serviço</Label>
+                  <Input
+                    id="codigoServico"
+                    value={codigoServico}
+                    onChange={(e) => setCodigoServico(e.target.value)}
+                    placeholder="Ex: 14.01"
+                    className="h-9"
+                  />
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
 
             <div className="flex justify-between gap-2 pt-4 border-t">
               <AlertDialog>
