@@ -389,16 +389,6 @@ export function EditItemPriceDialog({
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="location">Localização</Label>
-                <Input
-                  id="location"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="Ex: Prateleira A1, Galpão 2..."
-                  maxLength={100}
-                />
-              </div>
 
               <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
                 <div className="space-y-0.5">
