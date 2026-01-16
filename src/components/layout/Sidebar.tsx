@@ -48,8 +48,12 @@ export function Sidebar() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   const handleSignOut = async () => {
-    await signOut();
-    navigate('/auth');
+    try {
+      await signOut();
+    } finally {
+      // Sempre navegar para auth, mesmo se houver erro
+      navigate('/auth');
+    }
   };
 
   return (
