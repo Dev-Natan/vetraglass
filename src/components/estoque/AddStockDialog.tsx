@@ -368,15 +368,11 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
             </div>
           </div>
 
-          {/* Selected Item Preview */}
+          {/* Selected Item Preview - Compact */}
           {selectedItem && (
-            <div className="px-6 py-4 border-t bg-primary/5">
-              <p className="text-xs font-medium text-muted-foreground mb-2">Item selecionado:</p>
-              <div className="flex items-center gap-4 p-3 rounded-lg bg-card border">
-                <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center shrink-0">
-                  <Check className="h-3 w-3 text-primary-foreground" />
-                </div>
-                <div className="w-16 h-16 rounded-lg border bg-background flex items-center justify-center overflow-hidden shrink-0">
+            <div className="px-6 py-2 border-t bg-primary/5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded border bg-background flex items-center justify-center overflow-hidden shrink-0">
                   {selectedItem.image_url ? (
                     <img
                       src={selectedItem.image_url}
@@ -384,21 +380,26 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
                       className="max-h-full max-w-full object-contain"
                     />
                   ) : (
-                    <Package className="h-6 w-6 text-muted-foreground/50" />
+                    <Package className="h-4 w-4 text-muted-foreground/50" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm">{selectedItem.name}</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="font-medium text-sm truncate">{selectedItem.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">
                     {itemTypeLabels[selectedItem.type] || selectedItem.type}
                     {selectedItem.linha && ` • ${selectedItem.linha}`}
+                    {getItemWeight(selectedItem) && ` • ${String(getItemWeight(selectedItem))} Kg/ML`}
                   </p>
-                  {getItemWeight(selectedItem) && (
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {String(getItemWeight(selectedItem))} Kg/ML
-                    </p>
-                  )}
                 </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedItemId('')}
+                  className="h-8 w-8 p-0 shrink-0 hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
             </div>
           )}
