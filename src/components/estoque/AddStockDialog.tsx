@@ -35,7 +35,8 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  const [linhaFilter, setLinhaFilter] = useState('');
+  const [selectedLinha, setSelectedLinha] = useState<string | null>(null);
+  const [selectedType, setSelectedType] = useState<string | null>(null);
   const [nameFilter, setNameFilter] = useState('');
   const [selectedItemId, setSelectedItemId] = useState('');
   const [quantity, setQuantity] = useState('');
@@ -138,7 +139,8 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
   });
 
   const resetForm = () => {
-    setLinhaFilter('');
+    setSelectedLinha(null);
+    setSelectedType(null);
     setNameFilter('');
     setSelectedItemId('');
     setQuantity('');
@@ -178,16 +180,34 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
     return itemTemplates?.filter(item => !existingStock?.includes(item.id)) || [];
   }, [itemTemplates, existingStock]);
 
+  // Get unique linhas and types for filter chips
+  const uniqueLinhas = useMemo(() => {
+    const linhas = new Set<string>();
+    availableItems.forEach(item => linhas.add(item.linha || 'Sem Linha'));
+    return Array.from(linhas).sort((a, b) => {
+      if (a === 'Sem Linha') return -1;
+      if (b === 'Sem Linha') return 1;
+      return a.localeCompare(b);
+    });
+  }, [availableItems]);
+
+  const uniqueTypes = useMemo(() => {
+    const types = new Set<string>();
+    availableItems.forEach(item => types.add(item.type));
+    return Array.from(types).sort();
+  }, [availableItems]);
+
   // Apply filters
   const filteredItems = useMemo(() => {
     return availableItems.filter(item => {
-      const matchesLinha = !linhaFilter || 
-        (item.linha || 'Sem Linha').toLowerCase().includes(linhaFilter.toLowerCase());
+      const itemLinha = item.linha || 'Sem Linha';
+      const matchesLinha = !selectedLinha || itemLinha === selectedLinha;
+      const matchesType = !selectedType || item.type === selectedType;
       const matchesName = !nameFilter || 
         item.name.toLowerCase().includes(nameFilter.toLowerCase());
-      return matchesLinha && matchesName;
+      return matchesLinha && matchesType && matchesName;
     });
-  }, [availableItems, linhaFilter, nameFilter]);
+  }, [availableItems, selectedLinha, selectedType, nameFilter]);
 
   // Group items by linha
   const itemsByLinha = useMemo(() => {
@@ -232,49 +252,95 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
 
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           {/* Filters */}
-          <div className="px-6 py-4 border-b bg-muted/30">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Filtrar por Linha</Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    value={linhaFilter}
-                    onChange={(e) => setLinhaFilter(e.target.value)}
-                    placeholder="Digite para filtrar..."
-                    className="pl-9 pr-8"
-                  />
-                  {linhaFilter && (
-                    <button
-                      type="button"
-                      onClick={() => setLinhaFilter('')}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded"
-                    >
-                      <X className="h-3.5 w-3.5 text-muted-foreground" />
-                    </button>
-                  )}
-                </div>
+          <div className="px-6 py-4 border-b bg-muted/30 space-y-3">
+            {/* Name search */}
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Buscar por Nome</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={nameFilter}
+                  onChange={(e) => setNameFilter(e.target.value)}
+                  placeholder="Digite para buscar..."
+                  className="pl-9 pr-8"
+                />
+                {nameFilter && (
+                  <button
+                    type="button"
+                    onClick={() => setNameFilter('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded"
+                  >
+                    <X className="h-3.5 w-3.5 text-muted-foreground" />
+                  </button>
+                )}
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Filtrar por Nome</Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    value={nameFilter}
-                    onChange={(e) => setNameFilter(e.target.value)}
-                    placeholder="Digite para filtrar..."
-                    className="pl-9 pr-8"
-                  />
-                  {nameFilter && (
-                    <button
-                      type="button"
-                      onClick={() => setNameFilter('')}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded"
-                    >
-                      <X className="h-3.5 w-3.5 text-muted-foreground" />
-                    </button>
+            </div>
+
+            {/* Linha filter chips */}
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Linha</Label>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setSelectedLinha(null)}
+                  className={cn(
+                    "px-2.5 py-1 text-xs rounded-full border transition-colors",
+                    !selectedLinha 
+                      ? "bg-primary text-primary-foreground border-primary" 
+                      : "bg-background hover:bg-muted border-border"
                   )}
-                </div>
+                >
+                  Todas
+                </button>
+                {uniqueLinhas.map((linha) => (
+                  <button
+                    key={linha}
+                    type="button"
+                    onClick={() => setSelectedLinha(selectedLinha === linha ? null : linha)}
+                    className={cn(
+                      "px-2.5 py-1 text-xs rounded-full border transition-colors",
+                      selectedLinha === linha 
+                        ? "bg-primary text-primary-foreground border-primary" 
+                        : "bg-background hover:bg-muted border-border"
+                    )}
+                  >
+                    {linha}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Type filter chips */}
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Categoria</Label>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setSelectedType(null)}
+                  className={cn(
+                    "px-2.5 py-1 text-xs rounded-full border transition-colors",
+                    !selectedType 
+                      ? "bg-primary text-primary-foreground border-primary" 
+                      : "bg-background hover:bg-muted border-border"
+                  )}
+                >
+                  Todas
+                </button>
+                {uniqueTypes.map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setSelectedType(selectedType === type ? null : type)}
+                    className={cn(
+                      "px-2.5 py-1 text-xs rounded-full border transition-colors",
+                      selectedType === type 
+                        ? "bg-primary text-primary-foreground border-primary" 
+                        : "bg-background hover:bg-muted border-border"
+                    )}
+                  >
+                    {itemTypeLabels[type] || type}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
