@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -86,6 +87,7 @@ export default function Orcamentos() {
   const { currentCompany } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [isNewDialogOpen, setIsNewDialogOpen] = useState(false);
@@ -94,6 +96,15 @@ export default function Orcamentos() {
   const [quoteToDelete, setQuoteToDelete] = useState<Quote | null>(null);
   const [isContractDialogOpen, setIsContractDialogOpen] = useState(false);
   const [contractItems, setContractItems] = useState<any[]>([]);
+
+  // Open new dialog if ?novo=true in URL
+  useEffect(() => {
+    if (searchParams.get('novo') === 'true') {
+      setIsNewDialogOpen(true);
+      searchParams.delete('novo');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   // Fetch quotes with optimized query (only needed fields)
   const { data: quotes, isLoading } = useQuery({
