@@ -20,6 +20,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
+import { usePagination } from '@/hooks/usePagination';
+import { PaginationControls } from '@/components/common/PaginationControls';
+import { CACHE_TIMES } from '@/lib/queryConfig';
 
 type OSStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
 type OSPriority = 'low' | 'normal' | 'high' | 'urgent';
@@ -60,21 +63,22 @@ export default function OrdensServico() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<OSStatus | 'all'>('all');
 
-  // Fetch ordens de serviço
+  // Fetch ordens de serviço com campos específicos
   const { data: ordens, isLoading } = useQuery({
     queryKey: ['ordens-servico', currentCompany?.id],
     queryFn: async () => {
       if (!currentCompany?.id) return [];
       const { data, error } = await supabase
         .from('ordens_servico')
-        .select('*')
+        .select('id, os_number, customer_name, customer_phone, status, priority, total_amount, paid_amount, pending_amount, current_stage, estimated_end, created_at, quote_id')
         .eq('company_id', currentCompany.id)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       return data as OrdemServico[];
     },
-    enabled: !!currentCompany?.id
+    enabled: !!currentCompany?.id,
+    ...CACHE_TIMES.SEMI_STATIC,
   });
 
   // Update status mutation
@@ -112,6 +116,18 @@ export default function OrdensServico() {
     const matchesStatus = statusFilter === 'all' || os.status === statusFilter;
     return matchesSearch && matchesStatus;
   }) || [];
+
+  // Pagination
+  const {
+    paginatedData,
+    currentPage,
+    totalPages,
+    setPage,
+    pageSize,
+    setPageSize,
+    startIndex,
+    endIndex,
+  } = usePagination(filteredOrdens, { initialPageSize: 20 });
 
   // Stats
   const pendingCount = ordens?.filter(os => os.status === 'pending').length || 0;
@@ -249,7 +265,7 @@ export default function OrdensServico() {
           </div>
         ) : (
           <div className="space-y-3">
-            {filteredOrdens.map((os) => {
+            {paginatedData.map((os) => {
               const status = statusConfig[os.status];
               const priority = priorityConfig[os.priority || 'normal'];
               const StatusIcon = status.icon;
@@ -378,6 +394,17 @@ export default function OrdensServico() {
               );
             })}
           </div>
+        )}
+
+        {/* Pagination */}
+        {filteredOrdens.length > 0 && (
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setPage}
+            totalItems={filteredOrdens.length}
+            pageSize={pageSize}
+          />
         )}
       </div>
     </MainLayout>
