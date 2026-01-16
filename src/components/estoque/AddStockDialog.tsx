@@ -10,11 +10,17 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2, Package, Check, Search, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -253,94 +259,71 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           {/* Filters */}
           <div className="px-6 py-4 border-b bg-muted/30 space-y-3">
-            {/* Name search */}
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Buscar por Nome</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  value={nameFilter}
-                  onChange={(e) => setNameFilter(e.target.value)}
-                  placeholder="Digite para buscar..."
-                  className="pl-9 pr-8"
-                />
-                {nameFilter && (
-                  <button
-                    type="button"
-                    onClick={() => setNameFilter('')}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded"
-                  >
-                    <X className="h-3.5 w-3.5 text-muted-foreground" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Linha filter chips */}
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Linha</Label>
-              <div className="flex flex-wrap gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setSelectedLinha(null)}
-                  className={cn(
-                    "px-2.5 py-1 text-xs rounded-full border transition-colors",
-                    !selectedLinha 
-                      ? "bg-primary text-primary-foreground border-primary" 
-                      : "bg-background hover:bg-muted border-border"
+            {/* Name search + Selects row */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Name search */}
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Buscar por Nome</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    value={nameFilter}
+                    onChange={(e) => setNameFilter(e.target.value)}
+                    placeholder="Digite para buscar..."
+                    className="pl-9 pr-8 h-9"
+                  />
+                  {nameFilter && (
+                    <button
+                      type="button"
+                      onClick={() => setNameFilter('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded"
+                    >
+                      <X className="h-3.5 w-3.5 text-muted-foreground" />
+                    </button>
                   )}
-                >
-                  Todas
-                </button>
-                {uniqueLinhas.map((linha) => (
-                  <button
-                    key={linha}
-                    type="button"
-                    onClick={() => setSelectedLinha(selectedLinha === linha ? null : linha)}
-                    className={cn(
-                      "px-2.5 py-1 text-xs rounded-full border transition-colors",
-                      selectedLinha === linha 
-                        ? "bg-primary text-primary-foreground border-primary" 
-                        : "bg-background hover:bg-muted border-border"
-                    )}
-                  >
-                    {linha}
-                  </button>
-                ))}
+                </div>
               </div>
-            </div>
 
-            {/* Type filter chips */}
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Categoria</Label>
-              <div className="flex flex-wrap gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setSelectedType(null)}
-                  className={cn(
-                    "px-2.5 py-1 text-xs rounded-full border transition-colors",
-                    !selectedType 
-                      ? "bg-primary text-primary-foreground border-primary" 
-                      : "bg-background hover:bg-muted border-border"
-                  )}
+              {/* Linha select */}
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Linha</Label>
+                <Select
+                  value={selectedLinha || 'all'}
+                  onValueChange={(value) => setSelectedLinha(value === 'all' ? null : value)}
                 >
-                  Todas
-                </button>
-                {uniqueTypes.map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => setSelectedType(selectedType === type ? null : type)}
-                    className={cn(
-                      "px-2.5 py-1 text-xs rounded-full border transition-colors",
-                      selectedType === type 
-                        ? "bg-primary text-primary-foreground border-primary" 
-                        : "bg-background hover:bg-muted border-border"
-                    )}
-                  >
-                    {itemTypeLabels[type] || type}
-                  </button>
-                ))}
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Todas as linhas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as linhas</SelectItem>
+                    {uniqueLinhas.map((linha) => (
+                      <SelectItem key={linha} value={linha}>
+                        {linha}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Category select */}
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Categoria</Label>
+                <Select
+                  value={selectedType || 'all'}
+                  onValueChange={(value) => setSelectedType(value === 'all' ? null : value)}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Todas as categorias" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as categorias</SelectItem>
+                    {uniqueTypes.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {itemTypeLabels[type] || type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>
