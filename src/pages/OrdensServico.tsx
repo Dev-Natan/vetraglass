@@ -3,7 +3,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { 
   ClipboardList, Search, Filter, Clock, CheckCircle, AlertCircle, 
   User, Calendar, DollarSign, ChevronRight, Play, XCircle,
-  MoreHorizontal, Eye, AlertTriangle
+  MoreHorizontal, Eye, AlertTriangle, Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -106,6 +106,24 @@ export default function OrdensServico() {
     },
     onError: () => {
       toast.error('Erro ao atualizar status');
+    }
+  });
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('ordens_servico')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ordens-servico'] });
+      toast.success('Ordem de serviço excluída!');
+    },
+    onError: () => {
+      toast.error('Erro ao excluir ordem de serviço');
     }
   });
 
@@ -386,6 +404,17 @@ export default function OrdensServico() {
                               Cancelar
                             </DropdownMenuItem>
                           )}
+                          <DropdownMenuItem 
+                            className="text-destructive"
+                            onClick={() => {
+                              if (confirm('Tem certeza que deseja excluir esta ordem de serviço?')) {
+                                deleteMutation.mutate(os.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Excluir
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
