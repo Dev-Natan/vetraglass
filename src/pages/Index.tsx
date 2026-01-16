@@ -9,26 +9,25 @@ import {
   Package,
   Boxes,
   DollarSign,
-  Zap
+  Zap,
+  Sparkles
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { DashboardKPIs } from '@/components/dashboard/DashboardKPIs';
 import { SalesChart } from '@/components/dashboard/SalesChart';
 import { RecentActivity } from '@/components/dashboard/RecentActivity';
+import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
+import { QuickFlowCard } from '@/components/dashboard/QuickFlowCard';
 import { useAuth } from '@/contexts/AuthContext';
+import { Badge } from '@/components/ui/badge';
 
-const quickActions = [
+// Ações secundárias (exceto Nova Venda que é hero)
+const secondaryActions = [
   { 
     icon: Plus, 
     label: 'Novo Orçamento', 
     path: '/orcamentos?novo=true',
     colorClass: 'action-card-green'
-  },
-  { 
-    icon: ShoppingCart, 
-    label: 'Nova Venda', 
-    path: '/caixa-vendas?novo=true',
-    colorClass: 'action-card-blue'
   },
   { 
     icon: ClipboardList, 
@@ -55,7 +54,7 @@ const salesMenuItems = [
     icon: ShoppingCart, 
     label: 'Vendas', 
     description: 'Finalize vendas e emita notas',
-    path: '/vendas'
+    path: '/caixa-vendas'
   },
   { 
     icon: Users, 
@@ -106,7 +105,10 @@ export default function Index() {
 
   return (
     <MainLayout>
-      <div className="space-y-8">
+      <div className="space-y-6">
+        {/* Onboarding Checklist - Shows for new users */}
+        {currentCompany && <OnboardingChecklist />}
+
         {/* KPIs Section */}
         {currentCompany && (
           <section className="animate-fade-in">
@@ -120,19 +122,55 @@ export default function Index() {
             <Zap className="w-5 h-5 text-primary" />
             <h2 className="font-display font-semibold text-lg text-foreground">Ações Rápidas</h2>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {quickActions.map((action) => (
+          
+          {/* Hero Card - Nova Venda */}
+          <Link
+            to="/caixa-vendas?novo=true"
+            className="action-card-hero group mb-4"
+          >
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <ShoppingCart className="w-7 h-7" />
+                </div>
+                <div className="text-left">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-lg">Nova Venda</span>
+                    <Badge className="bg-white/20 text-white border-white/30 hover:bg-white/30">
+                      <Sparkles className="w-3 h-3 mr-1" />
+                      Mais usado
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-white/80 mt-0.5">
+                    Registrar venda rapidamente no balcão
+                  </p>
+                </div>
+              </div>
+              <div className="hidden sm:block">
+                <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-colors">
+                  <Plus className="w-5 h-5" />
+                </div>
+              </div>
+            </div>
+          </Link>
+
+          {/* Secondary Actions Grid */}
+          <div className="grid grid-cols-3 gap-3">
+            {secondaryActions.map((action) => (
               <Link
                 key={action.label}
                 to={action.path}
                 className={action.colorClass}
               >
-                <action.icon className="w-6 h-6" />
-                <span className="font-medium text-sm">{action.label}</span>
+                <action.icon className="w-5 h-5" />
+                <span className="font-medium text-xs sm:text-sm text-center">{action.label}</span>
               </Link>
             ))}
           </div>
         </section>
+
+        {/* Quick Flow Card - Educational */}
+        {currentCompany && <QuickFlowCard />}
 
         {/* Charts and Activity Row */}
         {currentCompany && (

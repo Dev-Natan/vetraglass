@@ -158,6 +158,18 @@
     background: linear-gradient(135deg, hsl(var(--action-orange)), hsl(45 95% 50%));
   }
 
+  /* Hero Action Card - Nova Venda */
+  .action-card-hero {
+    @apply rounded-2xl p-5 flex items-center justify-between transition-all duration-200 cursor-pointer text-white;
+    background: linear-gradient(135deg, hsl(var(--action-blue)), hsl(220 85% 50%));
+    box-shadow: 0 8px 32px -4px hsl(var(--action-blue) / 0.4);
+  }
+
+  .action-card-hero:hover {
+    @apply -translate-y-1;
+    box-shadow: 0 12px 40px -4px hsl(var(--action-blue) / 0.5);
+  }
+
   .menu-card {
     @apply bg-card rounded-xl border border-border p-4 flex items-center gap-4 transition-all duration-200 cursor-pointer hover:border-primary/30;
     box-shadow: var(--shadow-card);

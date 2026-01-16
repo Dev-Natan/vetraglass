@@ -139,7 +139,7 @@ export function RecentActivity() {
   const getLink = (type: ActivityItem['type']) => {
     switch (type) {
       case 'sale':
-        return '/vendas';
+        return '/caixa-vendas';
       case 'quote':
         return '/orcamentos';
       case 'order':

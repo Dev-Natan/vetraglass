@@ -163,6 +163,8 @@ function AppRoutes() {
           <CaixaVendas />
         </ProtectedRoute>
       } />
+      {/* Redirect /vendas to /caixa-vendas for consistency */}
+      <Route path="/vendas" element={<Navigate to="/caixa-vendas" replace />} />
       <Route path="/plano-corte" element={
         <ProtectedRoute>
           <PlanoCorte />
