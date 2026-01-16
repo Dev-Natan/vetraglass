@@ -46,6 +46,30 @@ interface Company {
   logo_size?: number | null;
 }
 
+interface InstallmentFee {
+  installment: number;
+  fee: number;
+}
+
+interface PaymentMethod {
+  id: string;
+  name: string;
+  icon: string;
+  enabled: boolean;
+  maxInstallments?: number;
+  discountPercent?: number;
+  feePercent?: number;
+  installmentFees?: InstallmentFee[];
+  noFeeInstallments?: number;
+}
+
+export interface PaymentSettings {
+  methods: PaymentMethod[];
+  customConditions: string;
+  showFeesToCustomer: boolean;
+  displayMode: 'simple' | 'detailed';
+}
+
 // Helper to load image as base64
 async function loadImageAsBase64(url: string): Promise<string | null> {
   try {
@@ -76,17 +100,30 @@ function formatCurrencyValue(value: number): string {
   return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
 }
 
-export async function generateQuotePdf(quote: Quote, items: QuoteItem[], company: Company | null, mode: 'download' | 'print' = 'download') {
+// Calculate installment value with fee
+function calculateInstallmentValue(baseValue: number, installments: number, feePercent: number): number {
+  const totalWithFee = baseValue * (1 + feePercent / 100);
+  return totalWithFee / installments;
+}
+
+export async function generateQuotePdf(
+  quote: Quote, 
+  items: QuoteItem[], 
+  company: Company | null, 
+  mode: 'download' | 'print' = 'download',
+  paymentSettings?: PaymentSettings | null
+) {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   
   // Colors
-  const lightBlue: [number, number, number] = [204, 229, 255]; // Light blue background
-  const headerBlue: [number, number, number] = [173, 216, 230]; // Header blue
-  const textColor: [number, number, number] = [0, 0, 0]; // Black
-  const mutedColor: [number, number, number] = [80, 80, 80]; // Dark gray
-  const cardBorder: [number, number, number] = [200, 200, 200]; // Card border
+  const lightBlue: [number, number, number] = [204, 229, 255];
+  const headerBlue: [number, number, number] = [173, 216, 230];
+  const textColor: [number, number, number] = [0, 0, 0];
+  const mutedColor: [number, number, number] = [80, 80, 80];
+  const cardBorder: [number, number, number] = [200, 200, 200];
+  const greenColor: [number, number, number] = [34, 139, 34];
   
   let y = 15;
   const marginLeft = 15;
@@ -94,16 +131,14 @@ export async function generateQuotePdf(quote: Quote, items: QuoteItem[], company
   const contentWidth = pageWidth - 30;
   
   // ========== HEADER WITH LOGO ==========
-  // Try to load company logo
   let logoLoaded = false;
   let logoWidth = 0;
   if (company?.logo_url) {
     try {
       const logoBase64 = await loadImageAsBase64(company.logo_url);
       if (logoBase64) {
-        // Use configured logo size or default to 40mm
         logoWidth = company.logo_size || 40;
-        const logoHeight = logoWidth * 0.625; // Maintain 8:5 aspect ratio
+        const logoHeight = logoWidth * 0.625;
         doc.addImage(logoBase64, 'PNG', marginLeft, y, logoWidth, logoHeight);
         logoLoaded = true;
       }
@@ -112,7 +147,6 @@ export async function generateQuotePdf(quote: Quote, items: QuoteItem[], company
     }
   }
   
-  // Company info (next to logo or at start)
   const companyInfoX = logoLoaded ? marginLeft + logoWidth + 5 : marginLeft;
   
   doc.setFontSize(9);
@@ -179,16 +213,13 @@ export async function generateQuotePdf(quote: Quote, items: QuoteItem[], company
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
     
-    // Calculate item card height (approximate)
     const itemCardHeight = 75;
     
-    // Check if we need a new page
     if (y + itemCardHeight > pageHeight - 60) {
       doc.addPage();
       y = 15;
     }
     
-    // Item card header (light blue bar)
     doc.setFillColor(...headerBlue);
     doc.rect(marginLeft, y, contentWidth, 8, 'F');
     
@@ -200,7 +231,6 @@ export async function generateQuotePdf(quote: Quote, items: QuoteItem[], company
     
     y += 8;
     
-    // Card body with border
     const cardBodyStartY = y;
     const cardBodyHeight = 60;
     
@@ -208,16 +238,13 @@ export async function generateQuotePdf(quote: Quote, items: QuoteItem[], company
     doc.setLineWidth(0.5);
     doc.rect(marginLeft, y, contentWidth, cardBodyHeight, 'S');
     
-    // Product image
     const imgSize = 45;
     const imgX = marginLeft + 5;
     const imgY = y + 7;
     
-    // Draw image placeholder/border
     doc.setDrawColor(...cardBorder);
     doc.rect(imgX, imgY, imgSize, imgSize, 'S');
     
-    // Try to load product image
     const imageUrl = getProductImageUrl(item.image_url);
     if (imageUrl) {
       try {
@@ -230,14 +257,12 @@ export async function generateQuotePdf(quote: Quote, items: QuoteItem[], company
       }
     }
     
-    // Item details (right of image)
     const detailsX = imgX + imgSize + 8;
     let detailsY = y + 7;
     
     doc.setFontSize(9);
     doc.setTextColor(...textColor);
     
-    // Linha
     doc.setFont('helvetica', 'bold');
     doc.text('Linha:', detailsX, detailsY);
     doc.setFont('helvetica', 'normal');
@@ -245,7 +270,6 @@ export async function generateQuotePdf(quote: Quote, items: QuoteItem[], company
     
     detailsY += 5;
     
-    // Modelo
     doc.setFont('helvetica', 'bold');
     doc.text('Modelo:', detailsX, detailsY);
     doc.setFont('helvetica', 'normal');
@@ -254,7 +278,6 @@ export async function generateQuotePdf(quote: Quote, items: QuoteItem[], company
     
     detailsY += 5;
     
-    // Cor
     doc.setFont('helvetica', 'bold');
     doc.text('Cor:', detailsX, detailsY);
     doc.setFont('helvetica', 'normal');
@@ -262,7 +285,6 @@ export async function generateQuotePdf(quote: Quote, items: QuoteItem[], company
     
     detailsY += 5;
     
-    // Vidro(s)
     doc.setFont('helvetica', 'bold');
     doc.text('Vidro(s):', detailsX, detailsY);
     doc.setFont('helvetica', 'normal');
@@ -278,18 +300,15 @@ export async function generateQuotePdf(quote: Quote, items: QuoteItem[], company
     
     detailsY += 5;
     
-    // Observação
     doc.setFont('helvetica', 'bold');
     doc.text('Observação:', detailsX, detailsY);
     doc.setFont('helvetica', 'normal');
     const obsText = item.notes || '';
     doc.text(obsText.length > 40 ? obsText.substring(0, 40) + '...' : obsText, detailsX + 28, detailsY);
     
-    // Table inside card
     const tableY = cardBodyStartY + 32;
     const tableWidth = contentWidth - imgSize - 18;
     
-    // Calculate area
     const width = item.width || 0;
     const height = item.height || 0;
     const areaValue = Math.round((width * height) / 1000);
@@ -330,13 +349,11 @@ export async function generateQuotePdf(quote: Quote, items: QuoteItem[], company
   }
   
   // ========== TOTALS AND PAYMENT SECTION ==========
-  // Check if we need a new page for totals
   if (y + 100 > pageHeight - 20) {
     doc.addPage();
     y = 15;
   }
   
-  // Valor total dos produtos row
   doc.setFillColor(...headerBlue);
   doc.rect(marginLeft, y, contentWidth, 10, 'F');
   
@@ -348,7 +365,7 @@ export async function generateQuotePdf(quote: Quote, items: QuoteItem[], company
   
   y += 15;
   
-  // ========== FORMAS DE PAGAMENTO ==========
+  // ========== FORMAS DE PAGAMENTO (ENHANCED) ==========
   doc.setFillColor(...lightBlue);
   doc.rect(marginLeft, y, contentWidth, 10, 'F');
   
@@ -357,68 +374,269 @@ export async function generateQuotePdf(quote: Quote, items: QuoteItem[], company
   doc.text('FORMAS DE PAGAMENTO', marginLeft + 5, y + 7);
   
   y += 15;
-  
-  // À Vista com desconto
-  const hasDiscount = quote.discount_percent && quote.discount_percent > 0;
-  
-  doc.setDrawColor(...cardBorder);
-  doc.setLineWidth(0.5);
-  doc.rect(marginLeft, y, contentWidth, hasDiscount ? 20 : 12, 'S');
-  
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.text('A VISTA (PIX / Dinheiro / Transferencia)', marginLeft + 5, y + 7);
-  
-  if (hasDiscount) {
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...mutedColor);
-    doc.text(`Desconto de ${quote.discount_percent}%: -${formatCurrency(quote.discount_amount || 0)}`, marginLeft + 5, y + 14);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 128, 0); // Green for discount price
-    doc.text(formatCurrency(quote.final_amount), marginRight - 5, y + 14, { align: 'right' });
-    y += 20;
+
+  // Get payment methods and settings
+  const methods = paymentSettings?.methods || [];
+  const showFees = paymentSettings?.showFeesToCustomer ?? false;
+  const displayMode = paymentSettings?.displayMode || 'simple';
+  const customConditions = paymentSettings?.customConditions || '';
+
+  // Check if we have configured payment methods
+  const hasConfiguredMethods = methods.length > 0;
+
+  if (hasConfiguredMethods) {
+    // ===== MELHOR PREÇO (PIX/Dinheiro with discount) =====
+    const discountMethods = methods.filter(m => m.enabled && m.discountPercent && m.discountPercent > 0);
+    
+    if (discountMethods.length > 0) {
+      const maxDiscount = Math.max(...discountMethods.map(m => m.discountPercent || 0));
+      const methodNames = discountMethods.map(m => m.name).join(' / ');
+      const discountedValue = quote.total_amount * (1 - maxDiscount / 100);
+      const savings = quote.total_amount - discountedValue;
+      
+      doc.setDrawColor(...cardBorder);
+      doc.setLineWidth(0.5);
+      doc.rect(marginLeft, y, contentWidth, 18, 'S');
+      
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(...greenColor);
+      doc.text('MELHOR PRECO', marginLeft + 5, y + 6);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(...textColor);
+      doc.text(`${methodNames}: `, marginLeft + 5, y + 13);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...greenColor);
+      doc.text(formatCurrency(discountedValue), marginLeft + 45, y + 13);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...mutedColor);
+      doc.text(`(economia de ${formatCurrency(savings)})`, marginLeft + 85, y + 13);
+      
+      y += 23;
+    }
+
+    // ===== CARTÃO DE CRÉDITO =====
+    const creditMethod = methods.find(m => m.id === 'credito' && m.enabled);
+    
+    if (creditMethod && creditMethod.maxInstallments && creditMethod.maxInstallments > 0) {
+      const noFeeInstallments = creditMethod.noFeeInstallments || 0;
+      const maxInstallments = creditMethod.maxInstallments;
+      const installmentFees = creditMethod.installmentFees || [];
+      
+      // Determine which installments to show
+      let installmentsToShow: number[] = [];
+      if (displayMode === 'simple') {
+        // Show main installments: 1, 3, 6, 10, 12 (if available)
+        installmentsToShow = [1, 3, 6, 10, 12].filter(i => i <= maxInstallments);
+      } else {
+        // Show all installments
+        installmentsToShow = Array.from({ length: maxInstallments }, (_, i) => i + 1);
+      }
+      
+      // Calculate card height based on content
+      const cardHeight = displayMode === 'simple' ? 35 : 20 + (Math.ceil(installmentsToShow.length / 3) * 8);
+      
+      doc.setDrawColor(...cardBorder);
+      doc.rect(marginLeft, y, contentWidth, cardHeight, 'S');
+      
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(...textColor);
+      doc.text('PARCELAMENTO NO CARTAO', marginLeft + 5, y + 6);
+      
+      y += 10;
+      
+      // Separate interest-free and with-interest installments
+      const noFeeOptions = installmentsToShow.filter(i => i <= noFeeInstallments);
+      const withFeeOptions = installmentsToShow.filter(i => i > noFeeInstallments);
+      
+      // Interest-free installments
+      if (noFeeOptions.length > 0) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(...greenColor);
+        doc.text('SEM JUROS', marginLeft + 5, y + 4);
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...textColor);
+        
+        let xPos = marginLeft + 35;
+        noFeeOptions.forEach((inst, idx) => {
+          const value = quote.total_amount / inst;
+          const text = `${inst}x ${formatCurrency(value)}`;
+          doc.text(text, xPos, y + 4);
+          xPos += 45;
+          if (idx < noFeeOptions.length - 1 && xPos < marginRight - 50) {
+            doc.text('|', xPos - 5, y + 4);
+          }
+        });
+        
+        y += 8;
+      }
+      
+      // With-interest installments
+      if (withFeeOptions.length > 0) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(...mutedColor);
+        doc.text('PARCELADO', marginLeft + 5, y + 4);
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...textColor);
+        
+        let xPos = marginLeft + 35;
+        withFeeOptions.forEach((inst, idx) => {
+          const fee = installmentFees.find(f => f.installment === inst)?.fee || 0;
+          const installmentValue = calculateInstallmentValue(quote.total_amount, inst, fee);
+          
+          let text = `${inst}x ${formatCurrency(installmentValue)}`;
+          
+          // Show fees if enabled
+          if (showFees && fee > 0) {
+            const totalWithFee = quote.total_amount * (1 + fee / 100);
+            text = `${inst}x ${formatCurrency(installmentValue)} (${fee.toFixed(2)}% - Total ${formatCurrency(totalWithFee)})`;
+          }
+          
+          doc.text(text, xPos, y + 4);
+          
+          if (showFees) {
+            xPos += 90;
+          } else {
+            xPos += 45;
+            if (idx < withFeeOptions.length - 1 && xPos < marginRight - 50) {
+              doc.text('|', xPos - 5, y + 4);
+            }
+          }
+          
+          // Line break for detailed mode with fees
+          if (showFees && idx < withFeeOptions.length - 1) {
+            y += 6;
+            xPos = marginLeft + 35;
+          }
+        });
+        
+        y += 8;
+      }
+      
+      y += 5;
+    }
+
+    // ===== OTHER PAYMENT METHODS =====
+    const otherMethods = methods.filter(m => 
+      m.enabled && 
+      m.id !== 'pix' && 
+      m.id !== 'dinheiro' && 
+      m.id !== 'credito' &&
+      !m.discountPercent
+    );
+    
+    if (otherMethods.length > 0) {
+      doc.setDrawColor(...cardBorder);
+      doc.rect(marginLeft, y, contentWidth, 12, 'S');
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(...textColor);
+      
+      const methodTexts = otherMethods.map(m => {
+        if (m.feePercent && m.feePercent > 0 && showFees) {
+          return `${m.name} (+${m.feePercent}%)`;
+        }
+        return m.name;
+      });
+      
+      doc.text(`Também aceitamos: ${methodTexts.join(', ')}`, marginLeft + 5, y + 8);
+      
+      y += 17;
+    }
+
+    // ===== CONDIÇÕES ESPECIAIS =====
+    if (customConditions.trim()) {
+      const lines = customConditions.split('\n');
+      const boxHeight = 10 + (lines.length * 5);
+      
+      doc.setDrawColor(...cardBorder);
+      doc.rect(marginLeft, y, contentWidth, boxHeight, 'S');
+      
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(...mutedColor);
+      doc.text('CONDICOES ESPECIAIS:', marginLeft + 5, y + 6);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...textColor);
+      lines.forEach((line, idx) => {
+        doc.text(line.substring(0, 80), marginLeft + 5, y + 11 + (idx * 5));
+      });
+      
+      y += boxHeight + 5;
+    }
+
   } else {
-    doc.setTextColor(...textColor);
-    doc.text(formatCurrency(quote.total_amount), marginRight - 5, y + 7, { align: 'right' });
-    y += 12;
-  }
-  
-  y += 5;
-  
-  // Cartão de Crédito
-  doc.setDrawColor(...cardBorder);
-  doc.rect(marginLeft, y, contentWidth, 12, 'S');
-  
-  doc.setTextColor(...textColor);
-  doc.setFont('helvetica', 'bold');
-  doc.text('CARTAO DE CREDITO', marginLeft + 5, y + 8);
-  doc.setFont('helvetica', 'normal');
-  doc.text(formatCurrency(quote.total_amount), marginRight - 5, y + 8, { align: 'right' });
-  
-  y += 17;
-  
-  // Condições de pagamento personalizadas
-  if (quote.payment_terms) {
+    // ===== FALLBACK: Original payment section when no settings configured =====
+    const hasDiscount = quote.discount_percent && quote.discount_percent > 0;
+    
+    doc.setDrawColor(...cardBorder);
+    doc.setLineWidth(0.5);
+    doc.rect(marginLeft, y, contentWidth, hasDiscount ? 20 : 12, 'S');
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.text('A VISTA (PIX / Dinheiro / Transferencia)', marginLeft + 5, y + 7);
+    
+    if (hasDiscount) {
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...mutedColor);
+      doc.text(`Desconto de ${quote.discount_percent}%: -${formatCurrency(quote.discount_amount || 0)}`, marginLeft + 5, y + 14);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0, 128, 0);
+      doc.text(formatCurrency(quote.final_amount), marginRight - 5, y + 14, { align: 'right' });
+      y += 20;
+    } else {
+      doc.setTextColor(...textColor);
+      doc.text(formatCurrency(quote.total_amount), marginRight - 5, y + 7, { align: 'right' });
+      y += 12;
+    }
+    
+    y += 5;
+    
     doc.setDrawColor(...cardBorder);
     doc.rect(marginLeft, y, contentWidth, 12, 'S');
     
+    doc.setTextColor(...textColor);
     doc.setFont('helvetica', 'bold');
-    doc.text('CONDICOES ESPECIAIS:', marginLeft + 5, y + 8);
+    doc.text('CARTAO DE CREDITO', marginLeft + 5, y + 8);
     doc.setFont('helvetica', 'normal');
-    const termsText = quote.payment_terms.length > 60 ? quote.payment_terms.substring(0, 60) + '...' : quote.payment_terms;
-    doc.text(termsText, marginLeft + 48, y + 8);
+    doc.text(formatCurrency(quote.total_amount), marginRight - 5, y + 8, { align: 'right' });
     
     y += 17;
+    
+    if (quote.payment_terms) {
+      doc.setDrawColor(...cardBorder);
+      doc.rect(marginLeft, y, contentWidth, 12, 'S');
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('CONDICOES ESPECIAIS:', marginLeft + 5, y + 8);
+      doc.setFont('helvetica', 'normal');
+      const termsText = quote.payment_terms.length > 60 ? quote.payment_terms.substring(0, 60) + '...' : quote.payment_terms;
+      doc.text(termsText, marginLeft + 48, y + 8);
+      
+      y += 17;
+    }
   }
   
-  // Valor final destacado
+  // ===== VALOR FINAL DESTACADO =====
   doc.setFillColor(...headerBlue);
   doc.rect(marginLeft, y, contentWidth, 12, 'F');
   
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   doc.setTextColor(...textColor);
-  doc.text('VALOR À VISTA COM DESCONTO', marginLeft + 5, y + 8);
+  doc.text('VALOR A VISTA COM DESCONTO', marginLeft + 5, y + 8);
   doc.text(formatCurrency(quote.final_amount), marginRight - 5, y + 8, { align: 'right' });
   
   // Save or Print PDF
@@ -430,7 +648,6 @@ export async function generateQuotePdf(quote: Quote, items: QuoteItem[], company
     .replace(/^-+|-+$/g, '');
   
   if (mode === 'print') {
-    // Open PDF in new window for printing
     const pdfBlob = doc.output('blob');
     const pdfUrl = URL.createObjectURL(pdfBlob);
     const printWindow = window.open(pdfUrl, '_blank');

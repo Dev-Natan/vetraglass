@@ -5,7 +5,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { generateQuotePdf } from '@/utils/generateQuotePdf';
+import { generateQuotePdf, PaymentSettings } from '@/utils/generateQuotePdf';
+import { PaymentMethod } from './FormasPagamentoDialog';
 import {
   Dialog,
   DialogContent,
@@ -24,7 +25,6 @@ import {
   XCircle,
   Clock,
   FileText,
-  Printer,
   Download,
   FileSignature,
   ClipboardList
@@ -113,6 +113,22 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
         .select('id, name, cnpj, phone, email, address, logo_url, logo_size')
         .eq('id', currentCompany.id)
         .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!currentCompany?.id && open
+  });
+
+  // Fetch payment settings for PDF
+  const { data: paymentSettingsData } = useQuery({
+    queryKey: ['payment-settings-for-pdf', currentCompany?.id],
+    queryFn: async () => {
+      if (!currentCompany?.id) return null;
+      const { data, error } = await supabase
+        .from('company_payment_settings')
+        .select('*')
+        .eq('company_id', currentCompany.id)
+        .maybeSingle();
       if (error) throw error;
       return data;
     },
@@ -221,6 +237,21 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   };
 
+  // Transform payment settings for PDF
+  const getPaymentSettings = (): PaymentSettings | null => {
+    if (!paymentSettingsData) return null;
+    
+    const methods = paymentSettingsData.payment_methods as unknown as PaymentMethod[] | null;
+    if (!methods || !Array.isArray(methods)) return null;
+    
+    return {
+      methods,
+      customConditions: paymentSettingsData.custom_conditions || '',
+      showFeesToCustomer: paymentSettingsData.show_fees_to_customer || false,
+      displayMode: (paymentSettingsData.display_mode as 'simple' | 'detailed') || 'simple',
+    };
+  };
+
   const handlePrint = async () => {
     if (!quote || !items) return;
     
@@ -250,7 +281,7 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
     }));
     
     toast({ title: 'Preparando impressão...' });
-    await generateQuotePdf(quote, itemsForPdf, company, 'print');
+    await generateQuotePdf(quote, itemsForPdf, company, 'print', getPaymentSettings());
   };
 
   const handleDownloadPdf = async () => {
@@ -266,7 +297,6 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
       logo_size: companyData.logo_size,
     } : null;
     
-    // Transform items to include image_url, linha, and category from product_templates
     const itemsForPdf = items.map(item => ({
       description: item.description,
       width: item.width,
@@ -283,7 +313,7 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
     }));
     
     toast({ title: 'Gerando PDF...' });
-    await generateQuotePdf(quote, itemsForPdf, company);
+    await generateQuotePdf(quote, itemsForPdf, company, 'download', getPaymentSettings());
     toast({ title: 'PDF gerado com sucesso!' });
   };
 
