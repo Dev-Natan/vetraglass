@@ -47,6 +47,7 @@ import {
 import { NovoOrcamentoDialog } from '@/components/orcamentos/NovoOrcamentoDialog';
 import { VisualizarOrcamentoDialog } from '@/components/orcamentos/VisualizarOrcamentoDialog';
 import { EditarContratoDialog } from '@/components/orcamentos/EditarContratoDialog';
+import { AprovarOrcamentoDialog } from '@/components/orcamentos/AprovarOrcamentoDialog';
 import { usePagination } from '@/hooks/usePagination';
 import { PaginationControls } from '@/components/common/PaginationControls';
 import { CACHE_TIMES, queryKeys } from '@/lib/queryConfig';
@@ -96,6 +97,8 @@ export default function Orcamentos() {
   const [quoteToDelete, setQuoteToDelete] = useState<Quote | null>(null);
   const [isContractDialogOpen, setIsContractDialogOpen] = useState(false);
   const [contractItems, setContractItems] = useState<any[]>([]);
+  const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
+  const [approveQuoteItems, setApproveQuoteItems] = useState<any[]>([]);
 
   // Open new dialog if ?novo=true in URL
   useEffect(() => {
@@ -194,6 +197,18 @@ export default function Orcamentos() {
   const handlePrint = (quote: Quote) => {
     handleView(quote);
     // Print will be triggered from the view dialog
+  };
+
+  const handleApprove = async (quote: Quote) => {
+    // Fetch quote items
+    const { data: items } = await supabase
+      .from('quote_items')
+      .select('*')
+      .eq('quote_id', quote.id);
+
+    setApproveQuoteItems(items || []);
+    setSelectedQuote(quote);
+    setIsApproveDialogOpen(true);
   };
 
   const handleDuplicate = async (quote: Quote) => {
@@ -414,6 +429,17 @@ export default function Orcamentos() {
                         </div>
                         <span className="text-xs">Imprimir</span>
                       </button>
+                      {quote.status === 'pending' && (
+                        <button
+                          onClick={() => handleApprove(quote)}
+                          className="flex flex-col items-center gap-1 text-green-600 hover:text-green-700 transition-colors"
+                        >
+                          <div className="w-10 h-10 rounded-lg border border-green-200 bg-green-50 flex items-center justify-center hover:bg-green-100 transition-colors">
+                            <CheckCircle className="w-5 h-5" />
+                          </div>
+                          <span className="text-xs font-medium">Aprovar</span>
+                        </button>
+                      )}
                     </div>
 
                     {/* Action Buttons */}
@@ -547,6 +573,18 @@ export default function Orcamentos() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Aprovar Orçamento Dialog */}
+      <AprovarOrcamentoDialog
+        open={isApproveDialogOpen}
+        onOpenChange={setIsApproveDialogOpen}
+        quote={selectedQuote}
+        items={approveQuoteItems}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['quotes'] });
+          setIsApproveDialogOpen(false);
+        }}
+      />
     </MainLayout>
   );
 }
