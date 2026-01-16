@@ -51,6 +51,7 @@ import { AprovarOrcamentoDialog } from '@/components/orcamentos/AprovarOrcamento
 import { usePagination } from '@/hooks/usePagination';
 import { PaginationControls } from '@/components/common/PaginationControls';
 import { CACHE_TIMES, queryKeys } from '@/lib/queryConfig';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 type QuoteStatus = 'pending' | 'approved' | 'rejected' | 'expired' | 'converted';
 
@@ -91,6 +92,7 @@ export default function Orcamentos() {
   const [searchParams, setSearchParams] = useSearchParams();
   
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<QuoteStatus | 'all'>('all');
   const [isNewDialogOpen, setIsNewDialogOpen] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
@@ -150,8 +152,19 @@ export default function Orcamentos() {
   const filteredQuotes = quotes?.filter(quote => {
     const matchesSearch = quote.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       quote.quote_number.toString().includes(searchTerm);
-    return matchesSearch;
+    const matchesStatus = statusFilter === 'all' || quote.status === statusFilter;
+    return matchesSearch && matchesStatus;
   }) || [];
+
+  // Count by status
+  const statusCounts = {
+    all: quotes?.length || 0,
+    pending: quotes?.filter(q => q.status === 'pending').length || 0,
+    approved: quotes?.filter(q => q.status === 'approved').length || 0,
+    converted: quotes?.filter(q => q.status === 'converted').length || 0,
+    rejected: quotes?.filter(q => q.status === 'rejected').length || 0,
+    expired: quotes?.filter(q => q.status === 'expired').length || 0,
+  };
 
   // Pagination
   const pagination = usePagination(filteredQuotes, { initialPageSize: 50 });
@@ -286,6 +299,41 @@ export default function Orcamentos() {
             <p className="text-muted-foreground">Gerencie todos os orçamentos da sua vidraçaria.</p>
           </div>
         </div>
+
+        {/* Status Tabs */}
+        <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as QuoteStatus | 'all')} className="w-full">
+          <TabsList className="w-full justify-start overflow-x-auto flex-nowrap">
+            <TabsTrigger value="all" className="gap-2">
+              Todos
+              <Badge variant="secondary" className="ml-1">{statusCounts.all}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="pending" className="gap-2">
+              <Clock className="w-3.5 h-3.5" />
+              Pendentes
+              <Badge variant="secondary" className="ml-1">{statusCounts.pending}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="approved" className="gap-2">
+              <CheckCircle className="w-3.5 h-3.5" />
+              Aprovados
+              <Badge variant="secondary" className="ml-1">{statusCounts.approved}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="converted" className="gap-2">
+              <CheckCircle className="w-3.5 h-3.5" />
+              Convertidos
+              <Badge variant="secondary" className="ml-1">{statusCounts.converted}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="rejected" className="gap-2">
+              <XCircle className="w-3.5 h-3.5" />
+              Rejeitados
+              <Badge variant="secondary" className="ml-1">{statusCounts.rejected}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="expired" className="gap-2">
+              <AlertCircle className="w-3.5 h-3.5" />
+              Expirados
+              <Badge variant="secondary" className="ml-1">{statusCounts.expired}</Badge>
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
 
         {/* Search */}
         <div className="relative">
