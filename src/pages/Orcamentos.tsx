@@ -48,6 +48,7 @@ import { NovoOrcamentoDialog } from '@/components/orcamentos/NovoOrcamentoDialog
 import { VisualizarOrcamentoDialog } from '@/components/orcamentos/VisualizarOrcamentoDialog';
 import { EditarContratoDialog } from '@/components/orcamentos/EditarContratoDialog';
 import { AprovarOrcamentoDialog } from '@/components/orcamentos/AprovarOrcamentoDialog';
+import { FormasPagamentoDialog } from '@/components/orcamentos/FormasPagamentoDialog';
 import { usePagination } from '@/hooks/usePagination';
 import { PaginationControls } from '@/components/common/PaginationControls';
 import { CACHE_TIMES, queryKeys } from '@/lib/queryConfig';
@@ -101,6 +102,7 @@ export default function Orcamentos() {
   const [contractItems, setContractItems] = useState<any[]>([]);
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
   const [approveQuoteItems, setApproveQuoteItems] = useState<any[]>([]);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
 
   // Open new dialog if ?novo=true in URL
   useEffect(() => {
@@ -553,7 +555,10 @@ export default function Orcamentos() {
                 </div>
                 <span className="text-xs">Configurar contrato</span>
               </button>
-              <button className="flex flex-col items-center gap-1 text-muted-foreground hover:text-primary transition-colors">
+              <button 
+                className="flex flex-col items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
+                onClick={() => setIsPaymentDialogOpen(true)}
+              >
                 <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
                   <CreditCard className="w-6 h-6" />
                 </div>
@@ -632,6 +637,12 @@ export default function Orcamentos() {
           queryClient.invalidateQueries({ queryKey: ['quotes'] });
           setIsApproveDialogOpen(false);
         }}
+      />
+
+      {/* Formas de Pagamento Dialog */}
+      <FormasPagamentoDialog
+        open={isPaymentDialogOpen}
+        onOpenChange={setIsPaymentDialogOpen}
       />
     </MainLayout>
   );
