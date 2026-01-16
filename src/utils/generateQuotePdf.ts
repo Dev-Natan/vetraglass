@@ -69,6 +69,7 @@ export interface PaymentSettings {
   showFeesToCustomer: boolean;
   displayMode: 'simple' | 'detailed';
   showOtherMethods: boolean;
+  showInstallments: boolean;
 }
 
 // Helper to load image as base64
@@ -380,6 +381,7 @@ export async function generateQuotePdf(
   const methods = paymentSettings?.methods || [];
   const showFees = paymentSettings?.showFeesToCustomer ?? false;
   const showOtherMethods = paymentSettings?.showOtherMethods ?? true;
+  const showInstallments = paymentSettings?.showInstallments ?? true;
   const displayMode = paymentSettings?.displayMode || 'simple';
   const customConditions = paymentSettings?.customConditions || '';
 
@@ -422,109 +424,111 @@ export async function generateQuotePdf(
     }
 
     // ===== CARTÃO DE CRÉDITO =====
-    const creditMethod = methods.find(m => m.id === 'credito' && m.enabled);
-    
-    if (creditMethod && creditMethod.maxInstallments && creditMethod.maxInstallments > 0) {
-      const noFeeInstallments = creditMethod.noFeeInstallments || 0;
-      const maxInstallments = creditMethod.maxInstallments;
-      const installmentFees = creditMethod.installmentFees || [];
+    if (showInstallments) {
+      const creditMethod = methods.find(m => m.id === 'credito' && m.enabled);
       
-      // Determine which installments to show
-      let installmentsToShow: number[] = [];
-      if (displayMode === 'simple') {
-        // Show main installments: 1, 3, 6, 10, 12 (if available)
-        installmentsToShow = [1, 3, 6, 10, 12].filter(i => i <= maxInstallments);
-      } else {
-        // Show all installments
-        installmentsToShow = Array.from({ length: maxInstallments }, (_, i) => i + 1);
-      }
-      
-      // Calculate card height based on content
-      const cardHeight = displayMode === 'simple' ? 35 : 20 + (Math.ceil(installmentsToShow.length / 3) * 8);
-      
-      doc.setDrawColor(...cardBorder);
-      doc.rect(marginLeft, y, contentWidth, cardHeight, 'S');
-      
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9);
-      doc.setTextColor(...textColor);
-      doc.text('PARCELAMENTO NO CARTAO', marginLeft + 5, y + 6);
-      
-      y += 10;
-      
-      // Separate interest-free and with-interest installments
-      const noFeeOptions = installmentsToShow.filter(i => i <= noFeeInstallments);
-      const withFeeOptions = installmentsToShow.filter(i => i > noFeeInstallments);
-      
-      // Interest-free installments
-      if (noFeeOptions.length > 0) {
+      if (creditMethod && creditMethod.maxInstallments && creditMethod.maxInstallments > 0) {
+        const noFeeInstallments = creditMethod.noFeeInstallments || 0;
+        const maxInstallments = creditMethod.maxInstallments;
+        const installmentFees = creditMethod.installmentFees || [];
+        
+        // Determine which installments to show
+        let installmentsToShow: number[] = [];
+        if (displayMode === 'simple') {
+          // Show main installments: 1, 3, 6, 10, 12 (if available)
+          installmentsToShow = [1, 3, 6, 10, 12].filter(i => i <= maxInstallments);
+        } else {
+          // Show all installments
+          installmentsToShow = Array.from({ length: maxInstallments }, (_, i) => i + 1);
+        }
+        
+        // Calculate card height based on content
+        const cardHeight = displayMode === 'simple' ? 35 : 20 + (Math.ceil(installmentsToShow.length / 3) * 8);
+        
+        doc.setDrawColor(...cardBorder);
+        doc.rect(marginLeft, y, contentWidth, cardHeight, 'S');
+        
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(8);
-        doc.setTextColor(...greenColor);
-        doc.text('SEM JUROS', marginLeft + 5, y + 4);
-        
-        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
         doc.setTextColor(...textColor);
+        doc.text('PARCELAMENTO NO CARTAO', marginLeft + 5, y + 6);
         
-        let xPos = marginLeft + 35;
-        noFeeOptions.forEach((inst, idx) => {
-          const value = quote.total_amount / inst;
-          const text = `${inst}x ${formatCurrency(value)}`;
-          doc.text(text, xPos, y + 4);
-          xPos += 45;
-          if (idx < noFeeOptions.length - 1 && xPos < marginRight - 50) {
-            doc.text('|', xPos - 5, y + 4);
-          }
-        });
+        y += 10;
         
-        y += 8;
-      }
-      
-      // With-interest installments
-      if (withFeeOptions.length > 0) {
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(8);
-        doc.setTextColor(...mutedColor);
-        doc.text('PARCELADO', marginLeft + 5, y + 4);
+        // Separate interest-free and with-interest installments
+        const noFeeOptions = installmentsToShow.filter(i => i <= noFeeInstallments);
+        const withFeeOptions = installmentsToShow.filter(i => i > noFeeInstallments);
         
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...textColor);
-        
-        let xPos = marginLeft + 35;
-        withFeeOptions.forEach((inst, idx) => {
-          const fee = installmentFees.find(f => f.installment === inst)?.fee || 0;
-          const installmentValue = calculateInstallmentValue(quote.total_amount, inst, fee);
+        // Interest-free installments
+        if (noFeeOptions.length > 0) {
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(8);
+          doc.setTextColor(...greenColor);
+          doc.text('SEM JUROS', marginLeft + 5, y + 4);
           
-          let text = `${inst}x ${formatCurrency(installmentValue)}`;
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(...textColor);
           
-          // Show fees if enabled
-          if (showFees && fee > 0) {
-            const totalWithFee = quote.total_amount * (1 + fee / 100);
-            text = `${inst}x ${formatCurrency(installmentValue)} (${fee.toFixed(2)}% - Total ${formatCurrency(totalWithFee)})`;
-          }
-          
-          doc.text(text, xPos, y + 4);
-          
-          if (showFees) {
-            xPos += 90;
-          } else {
+          let xPos = marginLeft + 35;
+          noFeeOptions.forEach((inst, idx) => {
+            const value = quote.total_amount / inst;
+            const text = `${inst}x ${formatCurrency(value)}`;
+            doc.text(text, xPos, y + 4);
             xPos += 45;
-            if (idx < withFeeOptions.length - 1 && xPos < marginRight - 50) {
+            if (idx < noFeeOptions.length - 1 && xPos < marginRight - 50) {
               doc.text('|', xPos - 5, y + 4);
             }
-          }
+          });
           
-          // Line break for detailed mode with fees
-          if (showFees && idx < withFeeOptions.length - 1) {
-            y += 6;
-            xPos = marginLeft + 35;
-          }
-        });
+          y += 8;
+        }
         
-        y += 8;
+        // With-interest installments
+        if (withFeeOptions.length > 0) {
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(8);
+          doc.setTextColor(...mutedColor);
+          doc.text('PARCELADO', marginLeft + 5, y + 4);
+          
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(...textColor);
+          
+          let xPos = marginLeft + 35;
+          withFeeOptions.forEach((inst, idx) => {
+            const fee = installmentFees.find(f => f.installment === inst)?.fee || 0;
+            const installmentValue = calculateInstallmentValue(quote.total_amount, inst, fee);
+            
+            let text = `${inst}x ${formatCurrency(installmentValue)}`;
+            
+            // Show fees if enabled
+            if (showFees && fee > 0) {
+              const totalWithFee = quote.total_amount * (1 + fee / 100);
+              text = `${inst}x ${formatCurrency(installmentValue)} (${fee.toFixed(2)}% - Total ${formatCurrency(totalWithFee)})`;
+            }
+            
+            doc.text(text, xPos, y + 4);
+            
+            if (showFees) {
+              xPos += 90;
+            } else {
+              xPos += 45;
+              if (idx < withFeeOptions.length - 1 && xPos < marginRight - 50) {
+                doc.text('|', xPos - 5, y + 4);
+              }
+            }
+            
+            // Line break for detailed mode with fees
+            if (showFees && idx < withFeeOptions.length - 1) {
+              y += 6;
+              xPos = marginLeft + 35;
+            }
+          });
+          
+          y += 8;
+        }
+        
+        y += 5;
       }
-      
-      y += 5;
     }
 
     // ===== OTHER PAYMENT METHODS =====

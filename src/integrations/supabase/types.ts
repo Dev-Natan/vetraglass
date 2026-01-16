@@ -425,6 +425,7 @@ export type Database = {
           id: string
           payment_methods: Json
           show_fees_to_customer: boolean
+          show_installments: boolean | null
           show_other_methods: boolean | null
           updated_at: string
         }
@@ -436,6 +437,7 @@ export type Database = {
           id?: string
           payment_methods?: Json
           show_fees_to_customer?: boolean
+          show_installments?: boolean | null
           show_other_methods?: boolean | null
           updated_at?: string
         }
@@ -447,6 +449,7 @@ export type Database = {
           id?: string
           payment_methods?: Json
           show_fees_to_customer?: boolean
+          show_installments?: boolean | null
           show_other_methods?: boolean | null
           updated_at?: string
         }

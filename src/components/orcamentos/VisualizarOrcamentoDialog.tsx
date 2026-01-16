@@ -250,6 +250,7 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
       showFeesToCustomer: paymentSettingsData.show_fees_to_customer || false,
       displayMode: (paymentSettingsData.display_mode as 'simple' | 'detailed') || 'simple',
       showOtherMethods: (paymentSettingsData as { show_other_methods?: boolean }).show_other_methods ?? true,
+      showInstallments: (paymentSettingsData as { show_installments?: boolean }).show_installments ?? true,
     };
   };
 
