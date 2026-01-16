@@ -320,6 +320,36 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
             )}
           </div>
 
+          {/* Status Selector - Visible Area */}
+          <div className="flex items-center justify-between p-3 bg-primary/5 rounded-lg border">
+            <div className="flex items-center gap-2">
+              <StatusIcon className="w-4 h-4" />
+              <span className="font-medium">Alterar Status:</span>
+            </div>
+            <Select
+              value={quote.status}
+              onValueChange={(value) => updateStatusMutation.mutate(value as QuoteStatus)}
+              disabled={quote.status === 'approved'}
+            >
+              <SelectTrigger className="w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(statusConfig).map(([key, config]) => {
+                  const ConfigIcon = config.icon;
+                  return (
+                    <SelectItem key={key} value={key}>
+                      <span className="flex items-center gap-2">
+                        <ConfigIcon className="w-4 h-4" />
+                        {config.label}
+                      </span>
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Items */}
           <div>
             <h3 className="font-medium mb-3">Itens</h3>
@@ -407,58 +437,31 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
           )}
 
           {/* Actions */}
-          <div className="flex flex-col sm:flex-row justify-between gap-4 border-t pt-4">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Status:</span>
-              <Select
-                value={quote.status}
-                onValueChange={(value) => updateStatusMutation.mutate(value as QuoteStatus)}
-                disabled={quote.status === 'approved'}
+          <div className="flex flex-wrap justify-end gap-2 border-t pt-4">
+            <Button variant="outline" onClick={handleDownloadPdf} className="gap-2">
+              <Download className="w-4 h-4" />
+              Baixar PDF
+            </Button>
+            <Button variant="outline" onClick={handleDownloadContract} className="gap-2">
+              <FileSignature className="w-4 h-4" />
+              Gerar Contrato
+            </Button>
+            <Button variant="outline" onClick={handlePrint} className="gap-2">
+              <Printer className="w-4 h-4" />
+              Imprimir
+            </Button>
+            {quote.status === 'pending' && (
+              <Button 
+                onClick={() => setAprovarDialogOpen(true)} 
+                className="gap-2 bg-green-600 hover:bg-green-700"
               >
-                <SelectTrigger className="w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(statusConfig).map(([key, config]) => {
-                    const ConfigIcon = config.icon;
-                    return (
-                      <SelectItem key={key} value={key}>
-                        <span className="flex items-center gap-2">
-                          <ConfigIcon className="w-4 h-4" />
-                          {config.label}
-                        </span>
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={handleDownloadPdf} className="gap-2">
-                <Download className="w-4 h-4" />
-                Baixar PDF
+                <CheckCircle className="w-4 h-4" />
+                Aprovar
               </Button>
-              <Button variant="outline" onClick={handleDownloadContract} className="gap-2">
-                <FileSignature className="w-4 h-4" />
-                Gerar Contrato
-              </Button>
-              <Button variant="outline" onClick={handlePrint} className="gap-2">
-                <Printer className="w-4 h-4" />
-                Imprimir
-              </Button>
-              {quote.status === 'pending' && (
-                <Button 
-                  onClick={() => setAprovarDialogOpen(true)} 
-                  className="gap-2 bg-green-600 hover:bg-green-700"
-                >
-                  <CheckCircle className="w-4 h-4" />
-                  Aprovar
-                </Button>
-              )}
-              <Button variant="secondary" onClick={() => onOpenChange(false)}>
-                Fechar
-              </Button>
-            </div>
+            )}
+            <Button variant="secondary" onClick={() => onOpenChange(false)}>
+              Fechar
+            </Button>
           </div>
         </div>
       </DialogContent>
