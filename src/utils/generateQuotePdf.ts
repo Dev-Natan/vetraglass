@@ -68,6 +68,7 @@ export interface PaymentSettings {
   customConditions: string;
   showFeesToCustomer: boolean;
   displayMode: 'simple' | 'detailed';
+  showOtherMethods: boolean;
 }
 
 // Helper to load image as base64
@@ -378,6 +379,7 @@ export async function generateQuotePdf(
   // Get payment methods and settings
   const methods = paymentSettings?.methods || [];
   const showFees = paymentSettings?.showFeesToCustomer ?? false;
+  const showOtherMethods = paymentSettings?.showOtherMethods ?? true;
   const displayMode = paymentSettings?.displayMode || 'simple';
   const customConditions = paymentSettings?.customConditions || '';
 
@@ -526,32 +528,34 @@ export async function generateQuotePdf(
     }
 
     // ===== OTHER PAYMENT METHODS =====
-    const otherMethods = methods.filter(m => 
-      m.enabled && 
-      m.id !== 'pix' && 
-      m.id !== 'dinheiro' && 
-      m.id !== 'credito' &&
-      !m.discountPercent
-    );
-    
-    if (otherMethods.length > 0) {
-      doc.setDrawColor(...cardBorder);
-      doc.rect(marginLeft, y, contentWidth, 12, 'S');
+    if (showOtherMethods) {
+      const otherMethods = methods.filter(m => 
+        m.enabled && 
+        m.id !== 'pix' && 
+        m.id !== 'dinheiro' && 
+        m.id !== 'credito' &&
+        !m.discountPercent
+      );
       
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(...textColor);
-      
-      const methodTexts = otherMethods.map(m => {
-        if (m.feePercent && m.feePercent > 0 && showFees) {
-          return `${m.name} (+${m.feePercent}%)`;
-        }
-        return m.name;
-      });
-      
-      doc.text(`Também aceitamos: ${methodTexts.join(', ')}`, marginLeft + 5, y + 8);
-      
-      y += 17;
+      if (otherMethods.length > 0) {
+        doc.setDrawColor(...cardBorder);
+        doc.rect(marginLeft, y, contentWidth, 12, 'S');
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(...textColor);
+        
+        const methodTexts = otherMethods.map(m => {
+          if (m.feePercent && m.feePercent > 0 && showFees) {
+            return `${m.name} (+${m.feePercent}%)`;
+          }
+          return m.name;
+        });
+        
+        doc.text(`Também aceitamos: ${methodTexts.join(', ')}`, marginLeft + 5, y + 8);
+        
+        y += 17;
+      }
     }
 
     // ===== CONDIÇÕES ESPECIAIS =====

@@ -425,6 +425,7 @@ export type Database = {
           id: string
           payment_methods: Json
           show_fees_to_customer: boolean
+          show_other_methods: boolean | null
           updated_at: string
         }
         Insert: {
@@ -435,6 +436,7 @@ export type Database = {
           id?: string
           payment_methods?: Json
           show_fees_to_customer?: boolean
+          show_other_methods?: boolean | null
           updated_at?: string
         }
         Update: {
@@ -445,6 +447,7 @@ export type Database = {
           id?: string
           payment_methods?: Json
           show_fees_to_customer?: boolean
+          show_other_methods?: boolean | null
           updated_at?: string
         }
         Relationships: [

@@ -62,6 +62,7 @@ export interface PaymentSettings {
   customConditions: string;
   showFeesToCustomer: boolean;
   displayMode: 'simple' | 'detailed';
+  showOtherMethods: boolean;
 }
 
 interface FormasPagamentoDialogProps {
@@ -118,6 +119,7 @@ export function FormasPagamentoDialog({ open, onOpenChange }: FormasPagamentoDia
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>(defaultPaymentMethods);
   const [customConditions, setCustomConditions] = useState('');
   const [showFeesToCustomer, setShowFeesToCustomer] = useState(false);
+  const [showOtherMethods, setShowOtherMethods] = useState(true);
   const [displayMode, setDisplayMode] = useState<'simple' | 'detailed'>('simple');
   const [newMethodName, setNewMethodName] = useState('');
   const [showInstallmentDetails, setShowInstallmentDetails] = useState(false);
@@ -147,12 +149,14 @@ export function FormasPagamentoDialog({ open, onOpenChange }: FormasPagamentoDia
       }
       setCustomConditions(savedSettings.custom_conditions || '');
       setShowFeesToCustomer(savedSettings.show_fees_to_customer || false);
+      setShowOtherMethods((savedSettings as { show_other_methods?: boolean }).show_other_methods ?? true);
       setDisplayMode((savedSettings.display_mode as 'simple' | 'detailed') || 'simple');
     } else if (!savedSettings && !isLoading) {
       // Reset to defaults if no saved settings
       setPaymentMethods(defaultPaymentMethods);
       setCustomConditions('');
       setShowFeesToCustomer(false);
+      setShowOtherMethods(true);
       setDisplayMode('simple');
     }
   }, [savedSettings, isLoading]);
@@ -170,6 +174,7 @@ export function FormasPagamentoDialog({ open, onOpenChange }: FormasPagamentoDia
             payment_methods: JSON.parse(JSON.stringify(paymentMethods)),
             custom_conditions: customConditions,
             show_fees_to_customer: showFeesToCustomer,
+            show_other_methods: showOtherMethods,
             display_mode: displayMode,
           } as never,
           { onConflict: 'company_id' }
@@ -355,6 +360,25 @@ export function FormasPagamentoDialog({ open, onOpenChange }: FormasPagamentoDia
                   <SelectItem value="detailed">Detalhado</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Toggle Show Other Methods */}
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  {showOtherMethods ? <Eye className="w-4 h-4 text-primary" /> : <EyeOff className="w-4 h-4 text-muted-foreground" />}
+                  Exibir "Também aceitamos" no PDF
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  {showOtherMethods 
+                    ? 'Mostra Débito, Boleto, Transferência, etc.' 
+                    : 'Oculta a seção de métodos adicionais'}
+                </p>
+              </div>
+              <Switch
+                checked={showOtherMethods}
+                onCheckedChange={setShowOtherMethods}
+              />
             </div>
           </div>
 

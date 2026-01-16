@@ -249,6 +249,7 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
       customConditions: paymentSettingsData.custom_conditions || '',
       showFeesToCustomer: paymentSettingsData.show_fees_to_customer || false,
       displayMode: (paymentSettingsData.display_mode as 'simple' | 'detailed') || 'simple',
+      showOtherMethods: (paymentSettingsData as { show_other_methods?: boolean }).show_other_methods ?? true,
     };
   };
 
