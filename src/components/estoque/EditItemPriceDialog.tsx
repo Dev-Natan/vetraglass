@@ -145,9 +145,9 @@ export function EditItemPriceDialog({
     enabled: !!itemTemplateId && open,
   });
 
-  // Fetch tax categories for the company
+  // Fetch tax categories for the company (all categories)
   const { data: taxCategories } = useQuery({
-    queryKey: ['tax-categories-active', currentCompany?.id],
+    queryKey: ['tax-categories-all', currentCompany?.id],
     queryFn: async () => {
       if (!currentCompany?.id) return [];
 
@@ -155,7 +155,6 @@ export function EditItemPriceDialog({
         .from('tax_categories')
         .select('id, name, ncm_code, aliquota_ibs, aliquota_cbs, aliquota_is')
         .eq('company_id', currentCompany.id)
-        .eq('is_active', true)
         .order('name');
 
       if (error) throw error;
