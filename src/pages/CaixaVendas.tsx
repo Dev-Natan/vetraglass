@@ -536,6 +536,24 @@ export default function CaixaVendas() {
           .eq('id', data.quoteId);
       }
 
+      // Calculate commission for employees with commission enabled
+      // Get seller employee (if user is linked to an employee)
+      const { data: sellerEmployee } = await supabase
+        .from('employees')
+        .select('id, commission_enabled, commission_percent, commission_type')
+        .eq('company_id', currentCompany.id)
+        .eq('user_id', user.id)
+        .eq('commission_enabled', true)
+        .maybeSingle();
+
+      if (sellerEmployee && sellerEmployee.commission_enabled) {
+        // Calculate commission using the database function
+        await supabase.rpc('calculate_sale_commission', {
+          _sale_id: sale.id,
+          _employee_id: sellerEmployee.id,
+        });
+      }
+
       return sale;
     },
     onSuccess: (sale) => {
