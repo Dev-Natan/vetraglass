@@ -279,7 +279,7 @@ export default function ProdutosLinha() {
                 >
                   {/* Product info */}
                   <div className="col-span-6 sm:col-span-5 flex items-center gap-3">
-                    <div className={`w-16 h-16 rounded-lg flex items-center justify-center text-2xl shrink-0 p-1 relative ${
+                    <div className={`w-16 h-16 rounded-lg flex items-center justify-center text-2xl shrink-0 p-1 ${
                       isActivated ? 'bg-muted' : 'bg-muted/50 grayscale'
                     }`}>
                       {product.image_url ? (
@@ -290,15 +290,6 @@ export default function ProdutosLinha() {
                         />
                       ) : (
                         getCategoryIcon(product.category)
-                      )}
-                      {isActivated ? (
-                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                          <Check className="w-3 h-3 text-white" />
-                        </div>
-                      ) : (
-                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-muted-foreground/50 rounded-full flex items-center justify-center">
-                          <Download className="w-3 h-3 text-white" />
-                        </div>
                       )}
                     </div>
                     <div className="min-w-0">
