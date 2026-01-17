@@ -24,7 +24,14 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Package, ShoppingCart, User, FileText } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Plus, Package, ShoppingCart, User, FileText, UserPlus } from 'lucide-react';
 import { AddProductPanel } from './AddProductPanel';
 import { QuoteItemCard } from './QuoteItemCard';
 
@@ -94,8 +101,26 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
   const [items, setItems] = useState<QuoteItem[]>([]);
   const [discountPercent, setDiscountPercent] = useState(0);
   const [viewMode, setViewMode] = useState<ViewMode>('form');
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
 
   const isEditing = !!quote;
+
+  // Fetch registered clients
+  const { data: clients } = useQuery({
+    queryKey: ['clients', currentCompany?.id],
+    queryFn: async () => {
+      if (!currentCompany?.id) return [];
+      const { data, error } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('company_id', currentCompany.id)
+        .eq('is_active', true)
+        .order('name');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!currentCompany?.id,
+  });
 
   const form = useForm<QuoteFormData>({
     resolver: zodResolver(quoteSchema),
@@ -113,6 +138,41 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
       notes: '',
     },
   });
+
+  // Handle client selection - auto-fill form fields
+  const handleClientSelect = (clientId: string) => {
+    setSelectedClientId(clientId);
+    
+    if (clientId === 'new') {
+      // Clear form for new client
+      form.setValue('customer_name', '');
+      form.setValue('customer_phone', '');
+      form.setValue('customer_email', '');
+      form.setValue('customer_address', '');
+      form.setValue('customer_document', '');
+      form.setValue('customer_document_type', 'fisica');
+      return;
+    }
+    
+    const client = clients?.find(c => c.id === clientId);
+    if (client) {
+      form.setValue('customer_name', client.name || '');
+      form.setValue('customer_phone', client.phone || '');
+      form.setValue('customer_email', client.email || '');
+      
+      // Build full address
+      const addressParts = [
+        client.address,
+        client.city,
+        client.state,
+        client.zip_code
+      ].filter(Boolean);
+      form.setValue('customer_address', addressParts.join(', '));
+      
+      form.setValue('customer_document', client.document || '');
+      form.setValue('customer_document_type', client.document_type === 'CNPJ' ? 'juridica' : 'fisica');
+    }
+  };
 
   // Fetch quote items when editing
   const { data: existingItems } = useQuery({
@@ -421,6 +481,34 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
                     Dados do Cliente
                   </div>
                   
+                  {/* Client Selector */}
+                  <div className="space-y-2">
+                    <FormLabel>Selecionar Cliente Cadastrado</FormLabel>
+                    <Select value={selectedClientId} onValueChange={handleClientSelect}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um cliente ou digite novo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="new">
+                          <div className="flex items-center gap-2">
+                            <UserPlus className="w-4 h-4" />
+                            Novo Cliente (digitar dados)
+                          </div>
+                        </SelectItem>
+                        {clients?.map((client) => (
+                          <SelectItem key={client.id} value={client.id}>
+                            <div className="flex flex-col">
+                              <span>{client.name}</span>
+                              {client.phone && (
+                                <span className="text-xs text-muted-foreground">{client.phone}</span>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
