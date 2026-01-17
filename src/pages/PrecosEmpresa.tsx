@@ -50,6 +50,11 @@ export default function PrecosEmpresa() {
   const [prices, setPrices] = useState<Record<string, ProductPrice>>({});
   const [hasChanges, setHasChanges] = useState(false);
 
+  // Controlled currency inputs need a raw string state while the user is typing
+  // (otherwise reformatting on each keypress breaks values like "450,00").
+  const [inputTexts, setInputTexts] = useState<Record<string, string>>({});
+  const [activeInputKey, setActiveInputKey] = useState<string | null>(null);
+
   // Fetch all product templates
   const { data: productTemplates, isLoading: loadingTemplates } = useQuery({
     queryKey: ['product-templates'],
@@ -202,22 +207,50 @@ export default function PrecosEmpresa() {
   // Format number for display (Brazilian format: 1.234,56)
   const formatCurrencyInput = (value: number): string => {
     if (!value) return '';
-    return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return value.toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
   };
 
-  // Parse Brazilian format to number
+  // Sanitize what the user types (keep digits + separators)
+  const sanitizeCurrencyTyping = (value: string) => {
+    const cleaned = value.replace(/[^\d.,]/g, '');
+
+    // Keep only the last comma as decimal separator (others become "thousands")
+    const parts = cleaned.split(',');
+    if (parts.length <= 2) return cleaned;
+    return `${parts.slice(0, -1).join('')},${parts[parts.length - 1]}`;
+  };
+
+  // Parse Brazilian typed string to number.
+  // Accepts: "450,00", "1.234,56", "1234".
   const parseCurrencyInput = (value: string): number => {
-    // Remove everything except digits and comma/dot
-    const cleaned = value.replace(/[^\d,]/g, '');
-    // Replace comma with dot for parsing
-    const normalized = cleaned.replace(',', '.');
-    return parseFloat(normalized) || 0;
+    const cleaned = value.replace(/[^\d.,]/g, '');
+    const noThousands = cleaned.replace(/\./g, '');
+
+    // If multiple commas exist, treat the LAST one as decimal separator
+    const parts = noThousands.split(',');
+    const normalized =
+      parts.length > 1
+        ? `${parts.slice(0, -1).join('')}.${parts[parts.length - 1]}`
+        : noThousands;
+
+    const num = Number.parseFloat(normalized);
+    return Number.isFinite(num) ? num : 0;
   };
 
-  const handlePriceChange = (templateId: string, field: 'cost_per_sqm' | 'price_per_sqm', value: string) => {
-    const template = productTemplates?.find(t => t.id === templateId);
+  const getInputKey = (templateId: string, field: 'cost_per_sqm' | 'price_per_sqm') =>
+    `${templateId}:${field}`;
+
+  const handlePriceChange = (
+    templateId: string,
+    field: 'cost_per_sqm' | 'price_per_sqm',
+    value: string,
+  ) => {
+    const template = productTemplates?.find((t) => t.id === templateId);
     const numValue = parseCurrencyInput(value);
-    
+
     setPrices((prev) => ({
       ...prev,
       [templateId]: {
@@ -393,11 +426,35 @@ export default function PrecosEmpresa() {
                                     <Input
                                       type="text"
                                       inputMode="decimal"
-                                      value={formatCurrencyInput(costValue)}
-                                      onChange={(e) => handlePriceChange(product.id, 'cost_per_sqm', e.target.value)}
+                                      value={(() => {
+                                        const key = getInputKey(product.id, 'cost_per_sqm');
+                                        return activeInputKey === key
+                                          ? (inputTexts[key] ?? '')
+                                          : formatCurrencyInput(costValue);
+                                      })()}
+                                      onFocus={() => {
+                                        const key = getInputKey(product.id, 'cost_per_sqm');
+                                        setActiveInputKey(key);
+                                        setInputTexts((prev) =>
+                                          prev[key] !== undefined
+                                            ? prev
+                                            : { ...prev, [key]: formatCurrencyInput(costValue) },
+                                        );
+                                      }}
+                                      onChange={(e) => {
+                                        const key = getInputKey(product.id, 'cost_per_sqm');
+                                        const nextText = sanitizeCurrencyTyping(e.target.value);
+                                        setInputTexts((prev) => ({ ...prev, [key]: nextText }));
+                                        handlePriceChange(product.id, 'cost_per_sqm', nextText);
+                                      }}
                                       onBlur={(e) => {
-                                        const num = parseCurrencyInput(e.target.value);
-                                        handlePriceChange(product.id, 'cost_per_sqm', formatCurrencyInput(num));
+                                        const key = getInputKey(product.id, 'cost_per_sqm');
+                                        const raw = sanitizeCurrencyTyping(e.currentTarget.value);
+                                        const num = parseCurrencyInput(raw);
+                                        const formatted = num ? formatCurrencyInput(num) : '';
+                                        setInputTexts((prev) => ({ ...prev, [key]: formatted }));
+                                        handlePriceChange(product.id, 'cost_per_sqm', formatted);
+                                        setActiveInputKey((prev) => (prev === key ? null : prev));
                                       }}
                                       placeholder="0,00"
                                       className="pl-8 text-right font-mono text-sm h-9"
@@ -417,11 +474,35 @@ export default function PrecosEmpresa() {
                                     <Input
                                       type="text"
                                       inputMode="decimal"
-                                      value={formatCurrencyInput(priceValue)}
-                                      onChange={(e) => handlePriceChange(product.id, 'price_per_sqm', e.target.value)}
+                                      value={(() => {
+                                        const key = getInputKey(product.id, 'price_per_sqm');
+                                        return activeInputKey === key
+                                          ? (inputTexts[key] ?? '')
+                                          : formatCurrencyInput(priceValue);
+                                      })()}
+                                      onFocus={() => {
+                                        const key = getInputKey(product.id, 'price_per_sqm');
+                                        setActiveInputKey(key);
+                                        setInputTexts((prev) =>
+                                          prev[key] !== undefined
+                                            ? prev
+                                            : { ...prev, [key]: formatCurrencyInput(priceValue) },
+                                        );
+                                      }}
+                                      onChange={(e) => {
+                                        const key = getInputKey(product.id, 'price_per_sqm');
+                                        const nextText = sanitizeCurrencyTyping(e.target.value);
+                                        setInputTexts((prev) => ({ ...prev, [key]: nextText }));
+                                        handlePriceChange(product.id, 'price_per_sqm', nextText);
+                                      }}
                                       onBlur={(e) => {
-                                        const num = parseCurrencyInput(e.target.value);
-                                        handlePriceChange(product.id, 'price_per_sqm', formatCurrencyInput(num));
+                                        const key = getInputKey(product.id, 'price_per_sqm');
+                                        const raw = sanitizeCurrencyTyping(e.currentTarget.value);
+                                        const num = parseCurrencyInput(raw);
+                                        const formatted = num ? formatCurrencyInput(num) : '';
+                                        setInputTexts((prev) => ({ ...prev, [key]: formatted }));
+                                        handlePriceChange(product.id, 'price_per_sqm', formatted);
+                                        setActiveInputKey((prev) => (prev === key ? null : prev));
                                       }}
                                       placeholder="0,00"
                                       className="pl-8 text-right font-mono text-sm h-9"
