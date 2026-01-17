@@ -18,11 +18,16 @@ import {
   Tag,
   Receipt,
   Calendar,
-  Ruler
+  Ruler,
+  Headphones
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
+import { Badge } from '@/components/ui/badge';
+import { SupportSidebar } from '@/components/support/SupportSidebar';
+import { useSupportTickets } from '@/hooks/useSupportTickets';
+
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
   { icon: Users, label: 'Clientes', path: '/clientes' },
@@ -46,6 +51,8 @@ export function Sidebar() {
   const navigate = useNavigate();
   const { signOut, currentCompany } = useAuth();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
+  const { openTicketsCount } = useSupportTickets();
 
   const handleSignOut = async () => {
     try {
@@ -84,14 +91,32 @@ export function Sidebar() {
       )}>
         {/* Logo */}
         <div className="p-5 border-b border-sidebar-border">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-sidebar-primary flex items-center justify-center font-display font-bold text-sidebar-primary-foreground text-lg">
-              V
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-sidebar-primary flex items-center justify-center font-display font-bold text-sidebar-primary-foreground text-lg">
+                V
+              </div>
+              <div>
+                <h1 className="font-display font-bold text-lg text-sidebar-foreground">Vetra</h1>
+                <p className="text-xs text-sidebar-foreground/50">Sistema de Gestão</p>
+              </div>
             </div>
-            <div>
-              <h1 className="font-display font-bold text-lg text-sidebar-foreground">Vetra</h1>
-              <p className="text-xs text-sidebar-foreground/50">Sistema de Gestão</p>
-            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSupportOpen(true)}
+              className="relative text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+            >
+              <Headphones className="h-5 w-5" />
+              {openTicketsCount > 0 && (
+                <Badge 
+                  variant="destructive" 
+                  className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px]"
+                >
+                  {openTicketsCount}
+                </Badge>
+              )}
+            </Button>
           </div>
         </div>
 
@@ -129,6 +154,9 @@ export function Sidebar() {
           </button>
         </div>
       </aside>
+
+      {/* Support Sidebar */}
+      <SupportSidebar open={supportOpen} onOpenChange={setSupportOpen} />
     </>
   );
 }
