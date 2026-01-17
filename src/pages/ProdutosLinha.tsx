@@ -307,17 +307,9 @@ export default function ProdutosLinha() {
                       }`}>
                         {product.name}
                       </span>
-                      {isActivated ? (
-                        <Badge variant="secondary" className="text-xs mt-1 bg-green-100 text-green-700">
-                          <ShoppingCart className="w-3 h-3 mr-1" />
-                          Ativado para venda
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-xs mt-1 text-muted-foreground">
-                          <Download className="w-3 h-3 mr-1" />
-                          Não ativado
-                        </Badge>
-                      )}
+                      <Badge variant="secondary" className="text-xs mt-1">
+                        {categoryLabels[product.category] || product.category}
+                      </Badge>
                     </div>
                   </div>
 
@@ -328,7 +320,7 @@ export default function ProdutosLinha() {
 
                   {/* Actions */}
                   <div className="col-span-6 sm:col-span-5 flex items-center justify-end gap-2 flex-wrap">
-                    {/* Activate/Deactivate for sale */}
+                    {/* Activate/Deactivate */}
                     {isProductActivated(product.id) ? (
                       <Button
                         variant="outline"
@@ -337,8 +329,7 @@ export default function ProdutosLinha() {
                         onClick={() => deactivateProductMutation.mutate(product.id)}
                         disabled={deactivateProductMutation.isPending}
                       >
-                        <ShoppingCart className="w-4 h-4 mr-1" />
-                        Desativar Venda
+                        Desativar
                       </Button>
                     ) : (
                       <Button
@@ -350,8 +341,7 @@ export default function ProdutosLinha() {
                           setActivateDialogOpen(true);
                         }}
                       >
-                        <ShoppingCart className="w-4 h-4 mr-1" />
-                        Ativar para Venda
+                        Ativar
                       </Button>
                     )}
                     <Button
