@@ -57,6 +57,7 @@ export function EditItemPriceDialog({
   const [minQuantity, setMinQuantity] = useState('');
   const [location, setLocation] = useState('');
   const [allowFractional, setAllowFractional] = useState(false);
+  const [isActive, setIsActive] = useState(true);
   const [fiscalOpen, setFiscalOpen] = useState(false);
   
   // Fiscal fields state
@@ -141,11 +142,13 @@ export function EditItemPriceDialog({
       setMinQuantity(existingStock.min_quantity?.toString() ?? '');
       setLocation(existingStock.location ?? '');
       setAllowFractional((existingStock as any).allow_fractional ?? false);
+      setIsActive(existingStock.is_active !== false);
     } else {
       setQuantity('');
       setMinQuantity('');
       setLocation('');
       setAllowFractional(false);
+      setIsActive(true);
     }
   }, [existingStock]);
 
@@ -210,6 +213,7 @@ export function EditItemPriceDialog({
             min_quantity: parseFloat(minQuantity) || 0,
             location: location || null,
             allow_fractional: allowFractional,
+            is_active: isActive,
           } as any)
           .eq('id', existingStock.id);
 
@@ -319,26 +323,38 @@ export function EditItemPriceDialog({
         </DialogHeader>
 
         {/* Item Info */}
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border">
-          {itemImageUrl ? (
-            <div className="h-14 w-14 rounded-md border bg-white p-1 flex items-center justify-center shrink-0">
-              <img
-                src={itemImageUrl}
-                alt={itemName}
-                loading="lazy"
-                className="max-h-full max-w-full object-contain"
-              />
+        <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-muted/50 border">
+          <div className="flex items-center gap-3">
+            {itemImageUrl ? (
+              <div className="h-14 w-14 rounded-md border bg-white p-1 flex items-center justify-center shrink-0">
+                <img
+                  src={itemImageUrl}
+                  alt={itemName}
+                  loading="lazy"
+                  className="max-h-full max-w-full object-contain"
+                />
+              </div>
+            ) : (
+              <div className="h-14 w-14 rounded-md border bg-background flex items-center justify-center shrink-0">
+                <Package className="h-7 w-7 text-muted-foreground" />
+              </div>
+            )}
+            <div>
+              <p className="font-semibold text-lg">{itemName}</p>
+              <p className="text-xs text-muted-foreground">
+                Barra padrão: 6000mm | Unidade: {itemUnit}
+              </p>
             </div>
-          ) : (
-            <div className="h-14 w-14 rounded-md border bg-background flex items-center justify-center shrink-0">
-              <Package className="h-7 w-7 text-muted-foreground" />
-            </div>
-          )}
-          <div>
-            <p className="font-semibold text-lg">{itemName}</p>
-            <p className="text-xs text-muted-foreground">
-              Barra padrão: 6000mm | Unidade: {itemUnit}
-            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Label htmlFor="isActive" className="text-sm">
+              {isActive ? 'Ativo' : 'Inativo'}
+            </Label>
+            <Switch
+              id="isActive"
+              checked={isActive}
+              onCheckedChange={setIsActive}
+            />
           </div>
         </div>
 
