@@ -321,7 +321,7 @@ export function EditItemPriceDialog({
         {/* Item Info */}
         <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border">
           {itemImageUrl ? (
-            <div className="h-14 w-14 rounded-md border bg-background p-1 flex items-center justify-center shrink-0">
+            <div className="h-14 w-14 rounded-md border bg-white p-1 flex items-center justify-center shrink-0">
               <img
                 src={itemImageUrl}
                 alt={itemName}
