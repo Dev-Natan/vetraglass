@@ -645,6 +645,9 @@ export type Database = {
       }
       item_templates: {
         Row: {
+          aliquota_cbs: number | null
+          aliquota_ibs: number | null
+          aliquota_is: number | null
           aliquota_iss: number | null
           cest: string | null
           cfop_venda: string | null
@@ -666,6 +669,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          aliquota_cbs?: number | null
+          aliquota_ibs?: number | null
+          aliquota_is?: number | null
           aliquota_iss?: number | null
           cest?: string | null
           cfop_venda?: string | null
@@ -687,6 +693,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          aliquota_cbs?: number | null
+          aliquota_ibs?: number | null
+          aliquota_is?: number | null
           aliquota_iss?: number | null
           cest?: string | null
           cfop_venda?: string | null

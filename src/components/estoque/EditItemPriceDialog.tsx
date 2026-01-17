@@ -13,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Package, Trash2, FileText, ChevronDown, ChevronUp } from 'lucide-react';
+import { Loader2, Package, Trash2, FileText, ChevronDown, ChevronUp, Tags } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   AlertDialog,
@@ -27,6 +27,22 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+interface TaxCategory {
+  id: string;
+  name: string;
+  ncm_code: string | null;
+  aliquota_ibs: number | null;
+  aliquota_cbs: number | null;
+  aliquota_is: number | null;
+}
 
 interface EditItemPriceDialogProps {
   open: boolean;
@@ -59,6 +75,7 @@ export function EditItemPriceDialog({
   const [allowFractional, setAllowFractional] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [fiscalOpen, setFiscalOpen] = useState(false);
+  const [selectedTaxCategory, setSelectedTaxCategory] = useState<string>('');
   
   // Fiscal fields state
   const [ncm, setNcm] = useState('');
@@ -68,6 +85,9 @@ export function EditItemPriceDialog({
   const [origem, setOrigem] = useState('');
   const [codigoServico, setCodigoServico] = useState('');
   const [aliquotaIss, setAliquotaIss] = useState('');
+  const [aliquotaIbs, setAliquotaIbs] = useState('');
+  const [aliquotaCbs, setAliquotaCbs] = useState('');
+  const [aliquotaIs, setAliquotaIs] = useState('');
 
   // Fetch existing price
   const { data: existingPrice, isLoading: loadingPrice } = useQuery({
@@ -115,7 +135,7 @@ export function EditItemPriceDialog({
 
       const { data, error } = await supabase
         .from('item_templates')
-        .select('ncm, cest, cfop_venda, cfop_venda_interestadual, origem, codigo_servico, aliquota_iss')
+        .select('ncm, cest, cfop_venda, cfop_venda_interestadual, origem, codigo_servico, aliquota_iss, aliquota_ibs, aliquota_cbs, aliquota_is')
         .eq('id', itemTemplateId)
         .single();
 
@@ -124,6 +144,45 @@ export function EditItemPriceDialog({
     },
     enabled: !!itemTemplateId && open,
   });
+
+  // Fetch tax categories for the company
+  const { data: taxCategories } = useQuery({
+    queryKey: ['tax-categories-active', currentCompany?.id],
+    queryFn: async () => {
+      if (!currentCompany?.id) return [];
+
+      const { data, error } = await supabase
+        .from('tax_categories')
+        .select('id, name, ncm_code, aliquota_ibs, aliquota_cbs, aliquota_is')
+        .eq('company_id', currentCompany.id)
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+      return data as TaxCategory[];
+    },
+    enabled: !!currentCompany?.id && open,
+  });
+
+  // Handle tax category selection - auto-fill fiscal fields
+  const handleTaxCategoryChange = (categoryId: string) => {
+    setSelectedTaxCategory(categoryId);
+    
+    if (categoryId && taxCategories) {
+      const category = taxCategories.find(c => c.id === categoryId);
+      if (category) {
+        if (category.ncm_code) setNcm(category.ncm_code);
+        if (category.aliquota_ibs !== null) setAliquotaIbs(category.aliquota_ibs.toString());
+        if (category.aliquota_cbs !== null) setAliquotaCbs(category.aliquota_cbs.toString());
+        if (category.aliquota_is !== null) setAliquotaIs(category.aliquota_is.toString());
+        setFiscalOpen(true);
+        toast({
+          title: 'Categoria aplicada',
+          description: `Dados fiscais de "${category.name}" foram preenchidos.`,
+        });
+      }
+    }
+  };
 
   // Update form when data loads
   useEffect(() => {
@@ -161,6 +220,9 @@ export function EditItemPriceDialog({
       setOrigem(itemTemplate.origem ?? '');
       setCodigoServico(itemTemplate.codigo_servico ?? '');
       setAliquotaIss(itemTemplate.aliquota_iss?.toString() ?? '');
+      setAliquotaIbs((itemTemplate as any).aliquota_ibs?.toString() ?? '');
+      setAliquotaCbs((itemTemplate as any).aliquota_cbs?.toString() ?? '');
+      setAliquotaIs((itemTemplate as any).aliquota_is?.toString() ?? '');
     } else {
       setNcm('');
       setCest('');
@@ -169,7 +231,11 @@ export function EditItemPriceDialog({
       setOrigem('');
       setCodigoServico('');
       setAliquotaIss('');
+      setAliquotaIbs('');
+      setAliquotaCbs('');
+      setAliquotaIs('');
     }
+    setSelectedTaxCategory('');
   }, [itemTemplate]);
 
   const saveMutation = useMutation({
@@ -231,6 +297,9 @@ export function EditItemPriceDialog({
           origem: origem || null,
           codigo_servico: codigoServico || null,
           aliquota_iss: parseFloat(aliquotaIss) || null,
+          aliquota_ibs: parseFloat(aliquotaIbs) || null,
+          aliquota_cbs: parseFloat(aliquotaCbs) || null,
+          aliquota_is: parseFloat(aliquotaIs) || null,
         })
         .eq('id', itemTemplateId);
 
@@ -496,6 +565,33 @@ export function EditItemPriceDialog({
                 </button>
               </CollapsibleTrigger>
               <CollapsibleContent className="pt-3 space-y-3">
+                {/* Tax Category Selector */}
+                {taxCategories && taxCategories.length > 0 && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="taxCategory" className="text-xs flex items-center gap-1">
+                      <Tags className="w-3 h-3" />
+                      Categoria Fiscal (auto-preencher)
+                    </Label>
+                    <Select value={selectedTaxCategory} onValueChange={handleTaxCategoryChange}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Selecione uma categoria..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {taxCategories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name} {category.ncm_code && `(${category.ncm_code})`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Ao selecionar, os campos NCM e alíquotas serão preenchidos automaticamente
+                    </p>
+                  </div>
+                )}
+
+                <div className="border-t pt-3" />
+
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label htmlFor="ncm" className="text-xs">NCM</Label>
@@ -571,6 +667,55 @@ export function EditItemPriceDialog({
                       placeholder="0,00"
                       className="h-9"
                     />
+                  </div>
+                </div>
+
+                {/* New Tax Reform Fields */}
+                <div className="border-t pt-3">
+                  <p className="text-xs font-medium text-muted-foreground mb-2">Reforma Tributária (IBS/CBS/IS)</p>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="aliquotaIbs" className="text-xs">Alíquota IBS (%)</Label>
+                      <Input
+                        id="aliquotaIbs"
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        value={aliquotaIbs}
+                        onChange={(e) => setAliquotaIbs(e.target.value)}
+                        placeholder="17,7"
+                        className="h-9"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="aliquotaCbs" className="text-xs">Alíquota CBS (%)</Label>
+                      <Input
+                        id="aliquotaCbs"
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        value={aliquotaCbs}
+                        onChange={(e) => setAliquotaCbs(e.target.value)}
+                        placeholder="8,8"
+                        className="h-9"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="aliquotaIs" className="text-xs">Alíquota IS (%)</Label>
+                      <Input
+                        id="aliquotaIs"
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        value={aliquotaIs}
+                        onChange={(e) => setAliquotaIs(e.target.value)}
+                        placeholder="0"
+                        className="h-9"
+                      />
+                    </div>
                   </div>
                 </div>
 
