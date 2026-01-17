@@ -95,28 +95,36 @@ export function ProductSelectionSheet({ open, onOpenChange, onSelectProduct }: P
     enabled: !!currentCompany?.id && open
   });
 
-  // Get unique linhas
+  // Get unique linhas - only from products activated by the company
+  const activatedTemplateIds = useMemo(() => {
+    return new Set(companyProducts?.map(cp => cp.product_template_id) || []);
+  }, [companyProducts]);
+
+  const activatedProducts = useMemo(() => {
+    return productTemplates?.filter(p => activatedTemplateIds.has(p.id)) || [];
+  }, [productTemplates, activatedTemplateIds]);
+
   const linhas = useMemo(() => {
-    return [...new Set(productTemplates?.map(p => p.linha).filter(Boolean) || [])];
-  }, [productTemplates]);
+    return [...new Set(activatedProducts.map(p => p.linha).filter(Boolean))];
+  }, [activatedProducts]);
 
   // Get categories for selected linha
   const categories = useMemo(() => {
     if (!selectedLinha) return [];
-    const cats = productTemplates
-      ?.filter(p => p.linha === selectedLinha)
+    const cats = activatedProducts
+      .filter(p => p.linha === selectedLinha)
       .map(p => p.category)
-      .filter(Boolean) || [];
+      .filter(Boolean);
     return [...new Set(cats)];
-  }, [productTemplates, selectedLinha]);
+  }, [activatedProducts, selectedLinha]);
 
   // Get products for selected linha and category
   const products = useMemo(() => {
     if (!selectedLinha || !selectedCategory) return [];
-    return productTemplates?.filter(
+    return activatedProducts.filter(
       p => p.linha === selectedLinha && p.category === selectedCategory
-    ) || [];
-  }, [productTemplates, selectedLinha, selectedCategory]);
+    );
+  }, [activatedProducts, selectedLinha, selectedCategory]);
 
   // Filtered products by search
   const filteredProducts = useMemo(() => {
