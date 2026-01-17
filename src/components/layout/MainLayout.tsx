@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import { OverdueOrdersNotification } from '@/components/notifications/OverdueOrdersNotification';
-import { SupportButton } from '@/components/support/SupportButton';
 import { AnnouncementBanner } from '@/components/announcements/AnnouncementBanner';
 
 interface MainLayoutProps {
@@ -82,9 +81,6 @@ export function MainLayout({ children }: MainLayoutProps) {
           {children}
         </div>
       </main>
-
-      {/* Support Button */}
-      <SupportButton />
     </div>
   );
 }
