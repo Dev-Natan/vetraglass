@@ -160,7 +160,7 @@ export default function Estoque() {
     >
       <div className="flex items-center gap-3 min-w-0 flex-1">
         {item.item_template?.image_url ? (
-          <div className="h-12 w-12 rounded-md border bg-background p-1 flex items-center justify-center shrink-0">
+          <div className="h-12 w-12 rounded-md border bg-white p-1 flex items-center justify-center shrink-0">
             <img
               src={item.item_template.image_url}
               alt={item.item_template?.name ?? 'Item'}
