@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { ArrowLeft, Upload, MoreHorizontal, Plus } from 'lucide-react';
+import { ArrowLeft, Upload, MoreHorizontal, Plus, ChevronRight, Home, Package, CheckCircle2, Circle, CircleDot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -505,14 +505,77 @@ export default function EditarProduto() {
   return (
     <MainLayout>
       <div className="space-y-6 animate-fade-in pb-8">
+        {/* Breadcrumb Navigation */}
+        <nav className="flex items-center gap-2 text-sm text-muted-foreground">
+          <button 
+            onClick={() => navigate('/')}
+            className="flex items-center gap-1 hover:text-foreground transition-colors"
+          >
+            <Home className="w-4 h-4" />
+            <span className="hidden sm:inline">Início</span>
+          </button>
+          <ChevronRight className="w-4 h-4" />
+          <button 
+            onClick={() => navigate('/produtos')}
+            className="hover:text-foreground transition-colors"
+          >
+            Produtos
+          </button>
+          {product?.linha && (
+            <>
+              <ChevronRight className="w-4 h-4" />
+              <button 
+                onClick={() => navigate(`/produtos/linha/${product.linha}`)}
+                className="hover:text-foreground transition-colors"
+              >
+                {product.linha}
+              </button>
+            </>
+          )}
+          <ChevronRight className="w-4 h-4" />
+          <span className="text-foreground font-medium truncate max-w-[150px]">
+            {product?.name}
+          </span>
+        </nav>
+
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <h1 className="font-display font-bold text-xl text-foreground">
-            Editar Produto
-          </h1>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <div>
+              <h1 className="font-display font-bold text-xl text-foreground">
+                Editar Produto
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Configure os componentes e informações do produto
+              </p>
+            </div>
+          </div>
+          
+          {/* Quick status */}
+          <div className="hidden md:flex items-center gap-4">
+            {itemTypeTabs.map((tab) => {
+              const count = getItemsByType(tab.value).length;
+              return (
+                <div 
+                  key={tab.value}
+                  className={`flex items-center gap-1.5 text-xs ${
+                    count > 0 ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'
+                  }`}
+                >
+                  {count > 0 ? (
+                    <CheckCircle2 className="w-4 h-4" />
+                  ) : (
+                    <Circle className="w-4 h-4" />
+                  )}
+                  <span>{tab.label.split(' ')[0]}</span>
+                  <span className="font-medium">({count})</span>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* Product Info Section */}
@@ -601,33 +664,79 @@ export default function EditarProduto() {
           </div>
         </div>
 
-        {/* Items Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full h-auto flex-wrap bg-primary rounded-lg p-0 overflow-hidden">
-            {itemTypeTabs.map((tab) => (
-              <TabsTrigger
-                key={tab.value}
-                value={tab.value}
-                className="flex-1 py-3 text-xs sm:text-sm font-medium text-primary-foreground/70 data-[state=active]:text-primary-foreground data-[state=active]:bg-primary-foreground/20 rounded-none border-0"
-              >
-                {tab.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+        {/* Items Tabs with Progress Indicators */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold text-lg">Composição do Produto</h2>
+            <p className="text-sm text-muted-foreground">
+              {productItems?.length || 0} itens configurados
+            </p>
+          </div>
+          
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            {/* Enhanced Tab Navigation */}
+            <div className="bg-muted/50 rounded-xl p-1.5">
+              <TabsList className="w-full h-auto bg-transparent gap-1">
+                {itemTypeTabs.map((tab, index) => {
+                  const itemCount = getItemsByType(tab.value).length;
+                  const isActive = activeTab === tab.value;
+                  const hasItems = itemCount > 0;
+                  
+                  return (
+                    <TabsTrigger
+                      key={tab.value}
+                      value={tab.value}
+                      className={`flex-1 py-3 text-xs sm:text-sm font-medium rounded-lg transition-all data-[state=active]:shadow-sm ${
+                        hasItems && !isActive
+                          ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground'
+                          : 'data-[state=active]:bg-primary data-[state=active]:text-primary-foreground'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {hasItems ? (
+                          <CheckCircle2 className={`w-4 h-4 ${isActive ? '' : 'text-green-600 dark:text-green-400'}`} />
+                        ) : isActive ? (
+                          <CircleDot className="w-4 h-4" />
+                        ) : (
+                          <Circle className="w-4 h-4" />
+                        )}
+                        <span className="hidden sm:inline">{tab.label}</span>
+                        <span className="sm:hidden">{tab.label.split(' ')[0]}</span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                          isActive 
+                            ? 'bg-primary-foreground/20' 
+                            : hasItems 
+                              ? 'bg-green-600/20 text-green-700 dark:bg-green-400/20 dark:text-green-300'
+                              : 'bg-muted'
+                        }`}>
+                          {itemCount}
+                        </span>
+                      </div>
+                    </TabsTrigger>
+                  );
+                })}
+              </TabsList>
+            </div>
 
-          {itemTypeTabs.map((tab) => (
-            <TabsContent key={tab.value} value={tab.value} className="mt-4">
-              {/* Actions bar */}
-              <div className="flex justify-end gap-2 mb-4">
-                <Button 
-                  size="sm" 
-                  className="gap-2"
-                  onClick={() => setIsAddItemDialogOpen(true)}
-                >
-                  <Plus className="w-4 h-4" />
-                  Adicionar item
-                </Button>
-              </div>
+            {itemTypeTabs.map((tab) => (
+              <TabsContent key={tab.value} value={tab.value} className="mt-4">
+                {/* Actions bar with navigation hints */}
+                <div className="flex justify-between items-center gap-2 mb-4">
+                  <p className="text-sm text-muted-foreground">
+                    {getItemsByType(tab.value).length === 0 
+                      ? `Adicione ${tab.label.toLowerCase()} à composição`
+                      : `${getItemsByType(tab.value).length} ${tab.label.toLowerCase()} configurados`
+                    }
+                  </p>
+                  <Button 
+                    size="sm" 
+                    className="gap-2"
+                    onClick={() => setIsAddItemDialogOpen(true)}
+                  >
+                    <Plus className="w-4 h-4" />
+                    Adicionar item
+                  </Button>
+                </div>
 
               {/* Items grid */}
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
@@ -753,9 +862,10 @@ export default function EditarProduto() {
                   </div>
                 )}
               </div>
-            </TabsContent>
-          ))}
-        </Tabs>
+              </TabsContent>
+            ))}
+          </Tabs>
+        </div>
 
         {/* Bottom actions */}
         <div className="flex justify-between pt-4 border-t">
