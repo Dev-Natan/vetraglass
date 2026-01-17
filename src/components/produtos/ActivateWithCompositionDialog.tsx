@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -111,6 +111,7 @@ export function ActivateWithCompositionDialog({
 }: ActivateWithCompositionDialogProps) {
   const { currentCompany } = useAuth();
   const queryClient = useQueryClient();
+  const formRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState('glass');
   const [localItems, setLocalItems] = useState<ComponentItem[]>([]);
   const [isAddingItem, setIsAddingItem] = useState(false);
@@ -931,7 +932,13 @@ export function ActivateWithCompositionDialog({
                                 ? 'bg-primary text-primary-foreground shadow-sm'
                                 : 'hover:bg-background border border-transparent hover:border-border'
                             }`}
-                            onClick={() => setSelectedItemTemplateId(item.id)}
+                            onClick={() => {
+                              setSelectedItemTemplateId(item.id);
+                              // Scroll to form after selection
+                              setTimeout(() => {
+                                formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                              }, 100);
+                            }}
                           >
                             <div className={`w-10 h-10 rounded flex items-center justify-center shrink-0 ${
                               selectedItemTemplateId === item.id ? 'bg-primary-foreground/20' : 'bg-muted'
@@ -973,7 +980,7 @@ export function ActivateWithCompositionDialog({
 
             {/* Form fields based on type */}
             {selectedItemTemplateId ? (
-              <div className="space-y-4 pt-4 border-t">
+              <div ref={formRef} className="space-y-4 pt-4 border-t">
                 {/* Quantidade de peças - para todos os tipos */}
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
