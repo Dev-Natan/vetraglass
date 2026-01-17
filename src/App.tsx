@@ -24,6 +24,10 @@ import CaixaVendas from "./pages/CaixaVendas";
 import PlanoCorte from "./pages/PlanoCorte";
 import Configuracoes from "./pages/Configuracoes";
 import ConfiguracoesFiscais from "./pages/ConfiguracoesFiscais";
+import ConfiguracoesUsuarios from "./pages/ConfiguracoesUsuarios";
+import ConfiguracoesNotificacoes from "./pages/ConfiguracoesNotificacoes";
+import ConfiguracoesSeguranca from "./pages/ConfiguracoesSeguranca";
+import ConfiguracoesDados from "./pages/ConfiguracoesDados";
 import NotasFiscais from "./pages/NotasFiscais";
 import Agenda from "./pages/Agenda";
 import Medicoes from "./pages/Medicoes";
@@ -180,6 +184,26 @@ function AppRoutes() {
       <Route path="/configuracoes/fiscal" element={
         <ProtectedRoute>
           <ConfiguracoesFiscais />
+        </ProtectedRoute>
+      } />
+      <Route path="/configuracoes/usuarios" element={
+        <ProtectedRoute>
+          <ConfiguracoesUsuarios />
+        </ProtectedRoute>
+      } />
+      <Route path="/configuracoes/notificacoes" element={
+        <ProtectedRoute>
+          <ConfiguracoesNotificacoes />
+        </ProtectedRoute>
+      } />
+      <Route path="/configuracoes/seguranca" element={
+        <ProtectedRoute>
+          <ConfiguracoesSeguranca />
+        </ProtectedRoute>
+      } />
+      <Route path="/configuracoes/dados" element={
+        <ProtectedRoute>
+          <ConfiguracoesDados />
         </ProtectedRoute>
       } />
       <Route path="/notas-fiscais" element={

@@ -15,21 +15,25 @@ const settingsGroups = [
     icon: Users,
     title: 'Usuários e Permissões',
     description: 'Controle o acesso dos funcionários ao sistema.',
+    path: '/configuracoes/usuarios',
   },
   {
     icon: Bell,
     title: 'Notificações',
     description: 'Configure alertas por email e notificações do sistema.',
+    path: '/configuracoes/notificacoes',
   },
   {
     icon: Shield,
     title: 'Segurança',
     description: 'Configurações de senha, autenticação e backups.',
+    path: '/configuracoes/seguranca',
   },
   {
     icon: Database,
     title: 'Dados e Exportação',
     description: 'Exporte dados e gerencie backups do sistema.',
+    path: '/configuracoes/dados',
   },
 ];
 
@@ -292,8 +296,9 @@ export default function Configuracoes() {
         {/* Other Settings */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 animate-slide-up">
           {settingsGroups.map((group, index) => (
-            <button
+            <Link
               key={group.title}
+              to={group.path}
               className="glass-card rounded-2xl p-6 text-left hover-lift group"
               style={{ animationDelay: `${(index + 1) * 50}ms` }}
             >
@@ -302,7 +307,7 @@ export default function Configuracoes() {
               </div>
               <h3 className="font-display font-semibold text-foreground mb-2">{group.title}</h3>
               <p className="text-sm text-muted-foreground">{group.description}</p>
-            </button>
+            </Link>
           ))}
         </div>
       </div>
