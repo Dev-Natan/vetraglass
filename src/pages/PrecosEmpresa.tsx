@@ -199,9 +199,24 @@ export default function PrecosEmpresa() {
     return groups;
   }, [filteredProducts]);
 
+  // Format number for display (Brazilian format: 1.234,56)
+  const formatCurrencyInput = (value: number): string => {
+    if (!value) return '';
+    return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  // Parse Brazilian format to number
+  const parseCurrencyInput = (value: string): number => {
+    // Remove everything except digits and comma/dot
+    const cleaned = value.replace(/[^\d,]/g, '');
+    // Replace comma with dot for parsing
+    const normalized = cleaned.replace(',', '.');
+    return parseFloat(normalized) || 0;
+  };
+
   const handlePriceChange = (templateId: string, field: 'cost_per_sqm' | 'price_per_sqm', value: string) => {
     const template = productTemplates?.find(t => t.id === templateId);
-    const numValue = parseFloat(value.replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+    const numValue = parseCurrencyInput(value);
     
     setPrices((prev) => ({
       ...prev,
@@ -377,8 +392,13 @@ export default function PrecosEmpresa() {
                                     </span>
                                     <Input
                                       type="text"
-                                      value={costValue ? costValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : ''}
+                                      inputMode="decimal"
+                                      value={formatCurrencyInput(costValue)}
                                       onChange={(e) => handlePriceChange(product.id, 'cost_per_sqm', e.target.value)}
+                                      onBlur={(e) => {
+                                        const num = parseCurrencyInput(e.target.value);
+                                        handlePriceChange(product.id, 'cost_per_sqm', formatCurrencyInput(num));
+                                      }}
                                       placeholder="0,00"
                                       className="pl-8 text-right font-mono text-sm h-9"
                                     />
@@ -396,8 +416,13 @@ export default function PrecosEmpresa() {
                                     </span>
                                     <Input
                                       type="text"
-                                      value={priceValue ? priceValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : ''}
+                                      inputMode="decimal"
+                                      value={formatCurrencyInput(priceValue)}
                                       onChange={(e) => handlePriceChange(product.id, 'price_per_sqm', e.target.value)}
+                                      onBlur={(e) => {
+                                        const num = parseCurrencyInput(e.target.value);
+                                        handlePriceChange(product.id, 'price_per_sqm', formatCurrencyInput(num));
+                                      }}
                                       placeholder="0,00"
                                       className="pl-8 text-right font-mono text-sm h-9"
                                     />
