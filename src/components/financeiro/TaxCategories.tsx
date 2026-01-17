@@ -56,6 +56,8 @@ const defaultCategoryData: Record<string, { ncm: string; ibs: number; cbs: numbe
   'Vidros Laminados': { ncm: '7007.29.00', ibs: 17.7, cbs: 8.8, is: 0 },
   'Espelhos': { ncm: '7009.91.00', ibs: 17.7, cbs: 8.8, is: 0 },
   'Perfis de Alumínio': { ncm: '7604.29.19', ibs: 17.7, cbs: 8.8, is: 0 },
+  'Acessórios': { ncm: '8302.41.00', ibs: 17.7, cbs: 8.8, is: 0 },
+  'Ferragens': { ncm: '8302.10.00', ibs: 17.7, cbs: 8.8, is: 0 },
   'Serviços de Instalação': { ncm: '', ibs: 17.7, cbs: 8.8, is: 0 },
 };
 
@@ -64,6 +66,8 @@ const defaultCategories = [
   { name: 'Vidros Laminados', ncm: '7007.29.00', desc: 'Vidros de segurança laminados' },
   { name: 'Espelhos', ncm: '7009.91.00', desc: 'Espelhos de vidro' },
   { name: 'Perfis de Alumínio', ncm: '7604.29.19', desc: 'Perfis ocos de alumínio' },
+  { name: 'Acessórios', ncm: '8302.41.00', desc: 'Acessórios de alumínio e metal para esquadrias' },
+  { name: 'Ferragens', ncm: '8302.10.00', desc: 'Dobradiças, fechaduras e similares' },
   { name: 'Serviços de Instalação', ncm: '', desc: 'Mão de obra de instalação' },
 ];
 
