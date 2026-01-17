@@ -578,34 +578,6 @@ export default function EditarProduto() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>Preço Base (R$/m²):</Label>
-                <Input
-                  type="number"
-                  value={formData.base_price}
-                  onChange={(e) => setFormData({ ...formData, base_price: e.target.value })}
-                  placeholder="0,00"
-                  min={0}
-                  step={0.01}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Possui vidro?</Label>
-                <Select
-                  value={formData.has_glass ? 'yes' : 'no'}
-                  onValueChange={(value) => setFormData({ ...formData, has_glass: value === 'yes' })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background border shadow-lg z-50">
-                    <SelectItem value="yes">Sim</SelectItem>
-                    <SelectItem value="no">Não</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
             <div className="space-y-2">
               <Label>Descritivo do produto: (opcional)</Label>
               <Textarea
