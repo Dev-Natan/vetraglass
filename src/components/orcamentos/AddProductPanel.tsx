@@ -118,9 +118,14 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     return [...new Set(cats)];
   }, [productTemplates, selectedLinha]);
 
-  // Get products based on filters
+  // Get products based on filters - only show products activated by the company
   const filteredProducts = useMemo(() => {
-    let products = productTemplates || [];
+    // Get IDs of products activated by the company
+    const activatedTemplateIds = new Set(
+      companyProducts?.map(cp => cp.product_template_id) || []
+    );
+    
+    let products = (productTemplates || []).filter(p => activatedTemplateIds.has(p.id));
     
     if (selectedLinha) {
       products = products.filter(p => p.linha === selectedLinha);
@@ -137,7 +142,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     }
     
     return products;
-  }, [productTemplates, selectedLinha, selectedCategory, searchQuery]);
+  }, [productTemplates, companyProducts, selectedLinha, selectedCategory, searchQuery]);
 
   const selectedProduct = productTemplates?.find(p => p.id === selectedProductId);
   const companyProduct = companyProducts?.find(cp => cp.product_template_id === selectedProductId);

@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { ActivateProductDialog } from '@/components/produtos/ActivateProductDialog';
 
 type ProductTemplate = {
   id: string;
@@ -29,6 +30,8 @@ export default function ProdutosLinha() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showActive, setShowActive] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [activateDialogOpen, setActivateDialogOpen] = useState(false);
+  const [selectedProductForActivation, setSelectedProductForActivation] = useState<{ id: string; name: string } | null>(null);
 
   // Category labels
   const categoryLabels: Record<string, string> = {
@@ -320,8 +323,10 @@ export default function ProdutosLinha() {
                         variant="default"
                         size="sm"
                         className="bg-green-600 hover:bg-green-700"
-                        onClick={() => activateProductMutation.mutate(product.id)}
-                        disabled={activateProductMutation.isPending}
+                        onClick={() => {
+                          setSelectedProductForActivation({ id: product.id, name: product.name });
+                          setActivateDialogOpen(true);
+                        }}
                       >
                         <ShoppingCart className="w-4 h-4 mr-1" />
                         Ativar para Venda
@@ -375,6 +380,19 @@ export default function ProdutosLinha() {
             </button>
           </div>
         </div>
+
+        {/* Activate Product Dialog */}
+        {selectedProductForActivation && (
+          <ActivateProductDialog
+            open={activateDialogOpen}
+            onOpenChange={setActivateDialogOpen}
+            productTemplateId={selectedProductForActivation.id}
+            productName={selectedProductForActivation.name}
+            onSuccess={() => {
+              queryClient.invalidateQueries({ queryKey: ['company-products'] });
+            }}
+          />
+        )}
       </div>
     </MainLayout>
   );
