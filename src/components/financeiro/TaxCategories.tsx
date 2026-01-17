@@ -26,7 +26,8 @@ import {
   Edit,
   Trash2,
   Search,
-  Info
+  Info,
+  Power
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -128,6 +129,15 @@ export function TaxCategories({ categories, onAdd, onUpdate, onDelete, isLoading
       } catch (error) {
         toast.error('Erro ao excluir categoria');
       }
+    }
+  };
+
+  const handleToggleActive = async (category: TaxCategory) => {
+    try {
+      await onUpdate(category.id, { is_active: !category.is_active });
+      toast.success(category.is_active ? 'Categoria desativada!' : 'Categoria ativada!');
+    } catch (error) {
+      toast.error('Erro ao alterar status da categoria');
     }
   };
 
@@ -260,9 +270,15 @@ export function TaxCategories({ categories, onAdd, onUpdate, onDelete, isLoading
                       <TableCell className="text-right">{category.aliquota_cbs.toFixed(2)}%</TableCell>
                       <TableCell className="text-right">{category.aliquota_is.toFixed(2)}%</TableCell>
                       <TableCell className="text-center">
-                        <Badge variant={category.is_active ? 'default' : 'secondary'}>
+                        <Button
+                          variant={category.is_active ? 'default' : 'secondary'}
+                          size="sm"
+                          className="gap-1.5"
+                          onClick={() => handleToggleActive(category)}
+                        >
+                          <Power className="h-3 w-3" />
                           {category.is_active ? 'Ativo' : 'Inativo'}
-                        </Badge>
+                        </Button>
                       </TableCell>
                       <TableCell>
                         <div className="flex justify-end gap-1">
