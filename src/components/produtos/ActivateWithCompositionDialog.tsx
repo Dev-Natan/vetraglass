@@ -824,9 +824,9 @@ export function ActivateWithCompositionDialog({
 
       {/* Add Item Dialog - Enhanced with better navigation */}
       <Dialog open={isAddingItem} onOpenChange={setIsAddingItem}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0">
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
           {/* Header with category tabs */}
-          <div className="p-4 pb-0 space-y-4">
+          <div className="p-4 pb-0 space-y-4 shrink-0">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Plus className="w-5 h-5 text-primary" />
@@ -887,17 +887,18 @@ export function ActivateWithCompositionDialog({
             </div>
           </div>
 
-          {/* Item selection list */}
-          <div className="flex-1 overflow-hidden px-4">
-            <div className="h-[180px] border rounded-lg overflow-y-auto bg-muted/30">
+          {/* Scrollable content */}
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 pt-4 pb-2 space-y-4">
+            {/* Item selection list */}
+            <div className="border rounded-lg bg-muted/30">
               {filteredAvailableItems?.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
                   <Package className="w-8 h-8 mb-2 opacity-50" />
                   <p className="text-sm">Nenhum item encontrado</p>
                   {searchTerm && (
-                    <Button 
-                      variant="link" 
-                      size="sm" 
+                    <Button
+                      variant="link"
+                      size="sm"
                       onClick={() => setSearchTerm('')}
                       className="mt-1"
                     >
@@ -915,7 +916,7 @@ export function ActivateWithCompositionDialog({
                       acc[linha].push(item);
                       return acc;
                     }, {} as Record<string, typeof filteredAvailableItems>);
-                    
+
                     return Object.entries(groupedItems || {}).map(([linha, items]) => (
                       <div key={linha}>
                         <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1.5 sticky top-0 bg-muted/80 backdrop-blur-sm">
@@ -959,20 +960,18 @@ export function ActivateWithCompositionDialog({
                 </div>
               )}
             </div>
-            
+
             {/* Selected item indicator */}
             {selectedItemTemplateId && (
-              <div className="mt-2 p-2 bg-primary/10 rounded-lg flex items-center gap-2">
+              <div className="p-2 bg-primary/10 rounded-lg flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
                 <span className="text-sm font-medium truncate">
                   {filteredAvailableItems?.find(i => i.id === selectedItemTemplateId)?.name}
                 </span>
               </div>
             )}
-          </div>
 
-          {/* Form fields based on type */}
-          <div className="px-4 pb-4">
+            {/* Form fields based on type */}
             {selectedItemTemplateId ? (
               <div className="space-y-4 pt-4 border-t">
                 {activeTab === 'glass' ? (
