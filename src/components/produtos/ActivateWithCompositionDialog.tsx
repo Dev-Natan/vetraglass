@@ -594,6 +594,48 @@ export function ActivateWithCompositionDialog({
                                   {/* Editor based on type */}
                                   {itemType === 'glass' ? (
                                     <div className="space-y-3">
+                                      {/* Quantidade de peças */}
+                                      <div className="space-y-2">
+                                        <Label className="flex items-center gap-2">
+                                          <Package className="w-4 h-4" />
+                                          Quantidade de peças
+                                        </Label>
+                                        <div className="flex items-center gap-2">
+                                          <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="icon"
+                                            className="h-9 w-9"
+                                            onClick={() => setPiecesQuantity(Math.max(1, piecesQuantity - 1))}
+                                            disabled={piecesQuantity <= 1}
+                                          >
+                                            <span className="text-lg font-medium">-</span>
+                                          </Button>
+                                          <Input
+                                            type="number"
+                                            min={1}
+                                            value={piecesQuantity}
+                                            onChange={e => setPiecesQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                                            className="w-20 text-center font-medium"
+                                          />
+                                          <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="icon"
+                                            className="h-9 w-9"
+                                            onClick={() => setPiecesQuantity(piecesQuantity + 1)}
+                                          >
+                                            <span className="text-lg font-medium">+</span>
+                                          </Button>
+                                          <span className="text-sm text-muted-foreground">
+                                            {piecesQuantity === 1 ? 'peça' : 'peças'}
+                                          </span>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground">
+                                          Quantas unidades deste vidro compõem o produto
+                                        </p>
+                                      </div>
+                                      
                                       <div className="space-y-2">
                                         <Label className="text-sm">Nome do vidro (opcional)</Label>
                                         <Input
