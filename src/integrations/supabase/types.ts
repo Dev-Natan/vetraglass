@@ -416,6 +416,78 @@ export type Database = {
           },
         ]
       }
+      company_notification_settings: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          daily_digest: boolean | null
+          email_expense_due: boolean | null
+          email_low_stock: boolean | null
+          email_new_quote: boolean | null
+          email_order_status: boolean | null
+          email_payment_received: boolean | null
+          email_quote_approved: boolean | null
+          id: string
+          notify_expense_alerts: boolean | null
+          notify_low_stock: boolean | null
+          notify_overdue_orders: boolean | null
+          notify_pending_quotes: boolean | null
+          updated_at: string | null
+          weekly_report: boolean | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          daily_digest?: boolean | null
+          email_expense_due?: boolean | null
+          email_low_stock?: boolean | null
+          email_new_quote?: boolean | null
+          email_order_status?: boolean | null
+          email_payment_received?: boolean | null
+          email_quote_approved?: boolean | null
+          id?: string
+          notify_expense_alerts?: boolean | null
+          notify_low_stock?: boolean | null
+          notify_overdue_orders?: boolean | null
+          notify_pending_quotes?: boolean | null
+          updated_at?: string | null
+          weekly_report?: boolean | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          daily_digest?: boolean | null
+          email_expense_due?: boolean | null
+          email_low_stock?: boolean | null
+          email_new_quote?: boolean | null
+          email_order_status?: boolean | null
+          email_payment_received?: boolean | null
+          email_quote_approved?: boolean | null
+          id?: string
+          notify_expense_alerts?: boolean | null
+          notify_low_stock?: boolean | null
+          notify_overdue_orders?: boolean | null
+          notify_pending_quotes?: boolean | null
+          updated_at?: string | null
+          weekly_report?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_notification_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_notification_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_payment_settings: {
         Row: {
           company_id: string
@@ -533,6 +605,60 @@ export type Database = {
             columns: ["product_template_id"]
             isOneToOne: false
             referencedRelation: "product_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_security_settings: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          id: string
+          lockout_duration_minutes: number | null
+          max_login_attempts: number | null
+          password_expiry_days: number | null
+          require_strong_password: boolean | null
+          session_timeout_minutes: number | null
+          two_factor_enabled: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          id?: string
+          lockout_duration_minutes?: number | null
+          max_login_attempts?: number | null
+          password_expiry_days?: number | null
+          require_strong_password?: boolean | null
+          session_timeout_minutes?: number | null
+          two_factor_enabled?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          id?: string
+          lockout_duration_minutes?: number | null
+          max_login_attempts?: number | null
+          password_expiry_days?: number | null
+          require_strong_password?: boolean | null
+          session_timeout_minutes?: number | null
+          two_factor_enabled?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_security_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_security_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies_safe"
             referencedColumns: ["id"]
           },
         ]
