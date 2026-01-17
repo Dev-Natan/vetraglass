@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { ActivateProductDialog } from '@/components/produtos/ActivateProductDialog';
+import { TipologiasSheet } from '@/components/produtos/TipologiasSheet';
 
 type ProductTemplate = {
   id: string;
@@ -32,6 +33,7 @@ export default function ProdutosLinha() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [activateDialogOpen, setActivateDialogOpen] = useState(false);
   const [selectedProductForActivation, setSelectedProductForActivation] = useState<{ id: string; name: string } | null>(null);
+  const [tipologiasSheetOpen, setTipologiasSheetOpen] = useState(false);
 
   // Category labels
   const categoryLabels: Record<string, string> = {
@@ -361,7 +363,10 @@ export default function ProdutosLinha() {
               <Trash2 className="w-5 h-5" />
               <span className="text-xs">Lixeira</span>
             </button>
-            <button className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
+            <button 
+              onClick={() => setTipologiasSheetOpen(true)}
+              className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+            >
               <Download className="w-5 h-5" />
               <span className="text-xs">Baixar tipologias</span>
             </button>
@@ -380,6 +385,13 @@ export default function ProdutosLinha() {
             </button>
           </div>
         </div>
+
+        {/* Tipologias Sheet */}
+        <TipologiasSheet
+          open={tipologiasSheetOpen}
+          onOpenChange={setTipologiasSheetOpen}
+          linha={currentLinha}
+        />
 
         {/* Activate Product Dialog */}
         {selectedProductForActivation && (
