@@ -146,10 +146,12 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
 
   const selectedProduct = productTemplates?.find(p => p.id === selectedProductId);
   const companyProduct = companyProducts?.find(cp => cp.product_template_id === selectedProductId);
-  const defaultBasePrice = Number(companyProduct?.base_price) || 0;
-  const basePrice = customPrice !== null ? customPrice : defaultBasePrice;
+  
+  // Use price_per_sqm as the primary pricing method
+  const pricePerSqm = Number((companyProduct as any)?.price_per_sqm) || Number(companyProduct?.base_price) || 0;
+  const basePrice = customPrice !== null ? customPrice : pricePerSqm;
 
-  // Calculate prices
+  // Calculate prices: area in m² × price per m²
   const area = width && height ? (width / 1000) * (height / 1000) : 0;
   const unitPrice = area > 0 ? basePrice * area : 0;
   const totalPrice = unitPrice * quantity;
@@ -482,7 +484,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
             </label>
             <Input
               type="number"
-              value={customPrice !== null ? customPrice : defaultBasePrice || ''}
+              value={customPrice !== null ? customPrice : pricePerSqm || ''}
               onChange={(e) => setCustomPrice(e.target.value ? Number(e.target.value) : null)}
               placeholder="0.00"
               min={0}
