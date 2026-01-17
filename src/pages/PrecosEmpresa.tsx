@@ -132,29 +132,21 @@ export default function PrecosEmpresa() {
       for (const price of pricesToSave) {
         const template = productTemplates?.find(t => t.id === price.product_template_id);
         
-        if (price.id) {
-          const { error } = await supabase
-            .from('company_products')
-            .update({
-              cost_per_sqm: price.cost_per_sqm,
-              price_per_sqm: price.price_per_sqm,
-              commercial_name: price.commercial_name,
-            } as any)
-            .eq('id', price.id);
-          if (error) throw error;
-        } else {
-          const { error } = await supabase
-            .from('company_products')
-            .insert({
-              company_id: currentCompany.id,
-              product_template_id: price.product_template_id,
-              cost_per_sqm: price.cost_per_sqm,
-              price_per_sqm: price.price_per_sqm,
-              commercial_name: price.commercial_name || template?.name || '',
-              is_active: true,
-            });
-          if (error) throw error;
-        }
+        // Use upsert to handle both insert and update cases
+        const { error } = await supabase
+          .from('company_products')
+          .upsert({
+            id: price.id || undefined,
+            company_id: currentCompany.id,
+            product_template_id: price.product_template_id,
+            cost_per_sqm: price.cost_per_sqm,
+            price_per_sqm: price.price_per_sqm,
+            commercial_name: price.commercial_name || template?.name || '',
+            is_active: true,
+          }, {
+            onConflict: 'company_id,product_template_id',
+          });
+        if (error) throw error;
       }
     },
     onSuccess: () => {
