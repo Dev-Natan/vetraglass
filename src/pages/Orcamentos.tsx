@@ -564,16 +564,17 @@ export default function Orcamentos() {
                 </div>
                 <span className="text-xs">Formas de pagamento</span>
               </button>
+              <button 
+                className="flex flex-col items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
+                onClick={() => { setSelectedQuote(null); setIsNewDialogOpen(true); }}
+              >
+                <div className="w-12 h-12 rounded-full bg-green-600 flex items-center justify-center">
+                  <Plus className="w-6 h-6 text-white" />
+                </div>
+                <span className="text-xs">Novo orçamento</span>
+              </button>
             </div>
           </div>
-          
-          {/* Floating Add Button */}
-          <Button
-            onClick={() => { setSelectedQuote(null); setIsNewDialogOpen(true); }}
-            className="absolute -top-7 right-6 w-14 h-14 rounded-full bg-green-600 hover:bg-green-700 shadow-lg p-0"
-          >
-            <Plus className="w-7 h-7" />
-          </Button>
         </div>
       </div>
 
