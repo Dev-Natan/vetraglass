@@ -42,12 +42,16 @@ export function usePermissions() {
 
   // Get user role from companies array
   const userCompanyData = companies.find(c => c.id === currentCompany?.id);
-  const currentRole = (userCompanyData as any)?.role as AppRole | undefined;
+  const explicitRole = (userCompanyData as any)?.role as AppRole | undefined;
+  
+  // If no explicit role found, default to 'admin' for company owners
+  // This handles the case where the original company creator doesn't have a user_companies record
+  const currentRole: AppRole = explicitRole || 'admin';
 
   const { data: permissions = [], isLoading } = useQuery({
     queryKey: ['role-permissions', currentCompany?.id, currentRole],
     queryFn: async () => {
-      if (!currentCompany?.id || !currentRole) return [];
+      if (!currentCompany?.id) return [];
       
       // Admin has all permissions, no need to fetch
       if (currentRole === 'admin') return [];
@@ -65,7 +69,7 @@ export function usePermissions() {
 
       return data as Permission[];
     },
-    enabled: !!currentCompany?.id && !!currentRole && currentRole !== 'admin',
+    enabled: !!currentCompany?.id && currentRole !== 'admin',
   });
 
   const isAdmin = currentRole === 'admin';
