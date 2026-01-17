@@ -692,7 +692,7 @@ export default function EditarProduto() {
                     </DropdownMenu>
 
                     {/* Item image */}
-                    <div className="aspect-square bg-muted rounded-lg mb-3 flex items-center justify-center overflow-hidden">
+                    <div className="aspect-square rounded-lg mb-3 flex items-center justify-center overflow-hidden">
                       {item.item_template?.image_url ? (
                         <img
                           src={getStorageUrl(item.item_template.image_url)}
@@ -700,7 +700,7 @@ export default function EditarProduto() {
                           className="w-full h-full object-contain"
                         />
                       ) : (
-                        <div className="text-3xl text-muted-foreground/30">📦</div>
+                        <div className="text-3xl text-muted-foreground/30 bg-muted w-full h-full flex items-center justify-center">📦</div>
                       )}
                     </div>
 
