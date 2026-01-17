@@ -822,75 +822,158 @@ export function ActivateWithCompositionDialog({
         </DialogContent>
       </Dialog>
 
-      {/* Add Item Dialog - Separate from main dialog */}
+      {/* Add Item Dialog - Enhanced with better navigation */}
       <Dialog open={isAddingItem} onOpenChange={setIsAddingItem}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Adicionar Item</DialogTitle>
-            <DialogDescription>
-              Selecione um item para adicionar à composição do produto
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex-1 overflow-hidden flex flex-col space-y-4">
-            {/* Search */}
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0">
+          {/* Header with category tabs */}
+          <div className="p-4 pb-0 space-y-4">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Plus className="w-5 h-5 text-primary" />
+                Adicionar Item
+              </DialogTitle>
+              <DialogDescription>
+                Selecione a categoria e o item para adicionar
+              </DialogDescription>
+            </DialogHeader>
+            
+            {/* Category Navigation Tabs */}
+            <div className="flex gap-1 p-1 bg-muted rounded-lg">
+              {itemTypeTabs.map((tab) => {
+                const isActive = activeTab === tab.value;
+                return (
+                  <button
+                    key={tab.value}
+                    type="button"
+                    onClick={() => {
+                      setActiveTab(tab.value);
+                      setSelectedItemTemplateId('');
+                      setSearchTerm('');
+                    }}
+                    className={`flex-1 px-3 py-2.5 text-xs font-medium rounded-md transition-all flex items-center justify-center gap-1.5 ${
+                      isActive
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-background'
+                    }`}
+                  >
+                    {tab.value === 'glass' && '🪟'}
+                    {tab.value === 'profile' && '📐'}
+                    {tab.value === 'accessory' && '🔩'}
+                    <span className="hidden sm:inline">{tab.label}</span>
+                    <span className="sm:hidden">{tab.label.slice(0, 3)}</span>
+                  </button>
+                );
+              })}
+            </div>
+            
+            {/* Search with clear button */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar item..."
+                placeholder={`Buscar ${itemTypeTabs.find(t => t.value === activeTab)?.label.toLowerCase() || 'item'}...`}
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="pl-9"
+                className="pl-9 pr-9"
               />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
+          </div>
 
-            {/* Item selection */}
-            <div className="flex-1 max-h-[200px] border rounded-lg overflow-y-auto">
-              <div className="p-2 space-y-1">
-                {filteredAvailableItems?.length === 0 ? (
-                  <div className="text-center py-4 text-muted-foreground text-sm">
-                    Nenhum item encontrado
-                  </div>
-                ) : (
-                  filteredAvailableItems?.map(item => (
-                    <button
-                      type="button"
-                      key={item.id}
-                      className={`flex items-center gap-3 p-2 rounded-lg w-full text-left transition-colors ${
-                        selectedItemTemplateId === item.id
-                          ? 'bg-primary/10 border border-primary'
-                          : 'hover:bg-muted border border-transparent'
-                      }`}
-                      onClick={() => setSelectedItemTemplateId(item.id)}
+          {/* Item selection list */}
+          <div className="flex-1 overflow-hidden px-4">
+            <div className="h-[180px] border rounded-lg overflow-y-auto bg-muted/30">
+              {filteredAvailableItems?.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                  <Package className="w-8 h-8 mb-2 opacity-50" />
+                  <p className="text-sm">Nenhum item encontrado</p>
+                  {searchTerm && (
+                    <Button 
+                      variant="link" 
+                      size="sm" 
+                      onClick={() => setSearchTerm('')}
+                      className="mt-1"
                     >
-                      <div className="w-10 h-10 rounded bg-muted flex items-center justify-center shrink-0">
-                        {item.image_url ? (
-                          <img
-                            src={getItemImage(item.image_url)}
-                            alt={item.name}
-                            className="w-full h-full object-contain p-1"
-                          />
-                        ) : (
-                          <Package className="w-5 h-5 text-muted-foreground/50" />
-                        )}
+                      Limpar busca
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="p-2 space-y-1">
+                  {/* Group items by linha */}
+                  {(() => {
+                    const groupedItems = filteredAvailableItems?.reduce((acc, item) => {
+                      const linha = item.linha || 'Sem Linha';
+                      if (!acc[linha]) acc[linha] = [];
+                      acc[linha].push(item);
+                      return acc;
+                    }, {} as Record<string, typeof filteredAvailableItems>);
+                    
+                    return Object.entries(groupedItems || {}).map(([linha, items]) => (
+                      <div key={linha}>
+                        <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1.5 sticky top-0 bg-muted/80 backdrop-blur-sm">
+                          {linha}
+                        </div>
+                        {items?.map(item => (
+                          <button
+                            type="button"
+                            key={item.id}
+                            className={`flex items-center gap-3 p-2 rounded-lg w-full text-left transition-all ${
+                              selectedItemTemplateId === item.id
+                                ? 'bg-primary text-primary-foreground shadow-sm'
+                                : 'hover:bg-background border border-transparent hover:border-border'
+                            }`}
+                            onClick={() => setSelectedItemTemplateId(item.id)}
+                          >
+                            <div className={`w-10 h-10 rounded flex items-center justify-center shrink-0 ${
+                              selectedItemTemplateId === item.id ? 'bg-primary-foreground/20' : 'bg-muted'
+                            }`}>
+                              {item.image_url ? (
+                                <img
+                                  src={getItemImage(item.image_url)}
+                                  alt={item.name}
+                                  className="w-full h-full object-contain p-1"
+                                />
+                              ) : (
+                                <Package className="w-5 h-5 opacity-50" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm truncate">{item.name}</p>
+                            </div>
+                            {selectedItemTemplateId === item.id && (
+                              <CheckCircle2 className="w-5 h-5 shrink-0" />
+                            )}
+                          </button>
+                        ))}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{item.name}</p>
-                        {item.linha && (
-                          <p className="text-xs text-muted-foreground">{item.linha}</p>
-                        )}
-                      </div>
-                      {selectedItemTemplateId === item.id && (
-                        <Check className="w-5 h-5 text-primary shrink-0" />
-                      )}
-                    </button>
-                  ))
-                )}
-              </div>
+                    ));
+                  })()}
+                </div>
+              )}
             </div>
-
-            {/* Form fields based on type */}
+            
+            {/* Selected item indicator */}
             {selectedItemTemplateId && (
+              <div className="mt-2 p-2 bg-primary/10 rounded-lg flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
+                <span className="text-sm font-medium truncate">
+                  {filteredAvailableItems?.find(i => i.id === selectedItemTemplateId)?.name}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Form fields based on type */}
+          <div className="px-4 pb-4">
+            {selectedItemTemplateId ? (
               <div className="space-y-4 pt-4 border-t">
                 {activeTab === 'glass' ? (
                   <>
@@ -921,32 +1004,68 @@ export function ActivateWithCompositionDialog({
                     {activeTab === 'profile' && (
                       <div className="space-y-2">
                         <Label>Ângulo de corte</Label>
-                        <Select value={cutAngle.toString()} onValueChange={v => setCutAngle(Number(v))}>
-                          <SelectTrigger className="w-32">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="45">45°</SelectItem>
-                            <SelectItem value="90">90°</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <div className="flex gap-2">
+                          {[45, 90].map((angle) => (
+                            <Button
+                              key={angle}
+                              type="button"
+                              variant={cutAngle === angle ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => setCutAngle(angle)}
+                              className="flex-1"
+                            >
+                              {angle}°
+                            </Button>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </>
                 )}
               </div>
+            ) : (
+              <div className="pt-4 border-t">
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  👆 Selecione um item acima para configurar
+                </p>
+              </div>
             )}
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setIsAddingItem(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleAddItem} disabled={!selectedItemTemplateId}>
-              <Plus className="w-4 h-4 mr-1" />
-              Adicionar
-            </Button>
-          </DialogFooter>
+          {/* Footer with navigation */}
+          <div className="p-4 border-t bg-muted/30 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1">
+              {itemTypeTabs.map((tab, index) => {
+                const isActive = activeTab === tab.value;
+                return (
+                  <button
+                    key={tab.value}
+                    type="button"
+                    onClick={() => setActiveTab(tab.value)}
+                    className={`w-2 h-2 rounded-full transition-all ${
+                      isActive ? 'bg-primary w-4' : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
+                    }`}
+                    aria-label={tab.label}
+                  />
+                );
+              })}
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setIsAddingItem(false)}>
+                Cancelar
+              </Button>
+              <Button 
+                size="sm" 
+                onClick={handleAddItem} 
+                disabled={!selectedItemTemplateId}
+                className="gap-1"
+              >
+                <Plus className="w-4 h-4" />
+                Adicionar
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </>
