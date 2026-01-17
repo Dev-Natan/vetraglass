@@ -480,6 +480,7 @@ export type Database = {
           id: string
           is_active: boolean
           margin_percent: number | null
+          price_per_sqm: number | null
           product_template_id: string
           updated_at: string
         }
@@ -492,6 +493,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           margin_percent?: number | null
+          price_per_sqm?: number | null
           product_template_id: string
           updated_at?: string
         }
@@ -504,6 +506,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           margin_percent?: number | null
+          price_per_sqm?: number | null
           product_template_id?: string
           updated_at?: string
         }
@@ -2563,6 +2566,7 @@ export type Database = {
           id: string
           is_active: boolean
           margin_percent: number | null
+          price_per_sqm: number | null
           product_template_id: string
           updated_at: string
         }
