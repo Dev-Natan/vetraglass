@@ -475,6 +475,7 @@ export type Database = {
           base_price: number | null
           commercial_name: string
           company_id: string
+          cost_per_sqm: number | null
           created_at: string
           description: string | null
           id: string
@@ -488,6 +489,7 @@ export type Database = {
           base_price?: number | null
           commercial_name: string
           company_id: string
+          cost_per_sqm?: number | null
           created_at?: string
           description?: string | null
           id?: string
@@ -501,6 +503,7 @@ export type Database = {
           base_price?: number | null
           commercial_name?: string
           company_id?: string
+          cost_per_sqm?: number | null
           created_at?: string
           description?: string | null
           id?: string
@@ -2561,6 +2564,7 @@ export type Database = {
           base_price: number | null
           commercial_name: string
           company_id: string
+          cost_per_sqm: number | null
           created_at: string
           description: string | null
           id: string

@@ -25,6 +25,7 @@ import {
 interface ProductPrice {
   id?: string;
   product_template_id: string;
+  cost_per_sqm: number;
   price_per_sqm: number;
   commercial_name: string;
 }
@@ -104,7 +105,8 @@ export default function PrecosEmpresa() {
         pricesMap[product.product_template_id] = {
           id: product.id,
           product_template_id: product.product_template_id,
-          price_per_sqm: Number(product.price_per_sqm) || 0,
+          cost_per_sqm: Number((product as any).cost_per_sqm) || 0,
+          price_per_sqm: Number((product as any).price_per_sqm) || 0,
           commercial_name: product.commercial_name,
         };
       });
@@ -129,9 +131,10 @@ export default function PrecosEmpresa() {
           const { error } = await supabase
             .from('company_products')
             .update({
+              cost_per_sqm: price.cost_per_sqm,
               price_per_sqm: price.price_per_sqm,
               commercial_name: price.commercial_name,
-            })
+            } as any)
             .eq('id', price.id);
           if (error) throw error;
         } else {
@@ -140,6 +143,7 @@ export default function PrecosEmpresa() {
             .insert({
               company_id: currentCompany.id,
               product_template_id: price.product_template_id,
+              cost_per_sqm: price.cost_per_sqm,
               price_per_sqm: price.price_per_sqm,
               commercial_name: price.commercial_name || template?.name || '',
               is_active: true,
@@ -195,7 +199,7 @@ export default function PrecosEmpresa() {
     return groups;
   }, [filteredProducts]);
 
-  const handlePriceChange = (templateId: string, value: string) => {
+  const handlePriceChange = (templateId: string, field: 'cost_per_sqm' | 'price_per_sqm', value: string) => {
     const template = productTemplates?.find(t => t.id === templateId);
     const numValue = parseFloat(value.replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
     
@@ -205,7 +209,7 @@ export default function PrecosEmpresa() {
         ...prev[templateId],
         product_template_id: templateId,
         commercial_name: prev[templateId]?.commercial_name || template?.name || '',
-        price_per_sqm: numValue,
+        [field]: numValue,
       },
     }));
     setHasChanges(true);
@@ -321,7 +325,12 @@ export default function PrecosEmpresa() {
                         {products.map((product) => {
                           const priceData = prices[product.id];
                           const componentsCount = productItemsCounts?.[product.id] || 0;
-                          const hasPrice = (priceData?.price_per_sqm || 0) > 0;
+                          const costValue = priceData?.cost_per_sqm || 0;
+                          const priceValue = priceData?.price_per_sqm || 0;
+                          const margin = priceValue > 0 && costValue > 0 
+                            ? ((priceValue - costValue) / costValue * 100).toFixed(1) 
+                            : null;
+                          const hasPrice = priceValue > 0 || costValue > 0;
                           
                           return (
                             <div
@@ -355,23 +364,52 @@ export default function PrecosEmpresa() {
                                 </div>
                               </div>
 
-                              {/* Price Input */}
-                              <div className="flex items-center gap-2 w-full sm:w-auto">
-                                <span className="text-sm text-muted-foreground whitespace-nowrap">
-                                  Preço por m²:
-                                </span>
-                                <div className="relative w-full sm:w-40">
-                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                                    R$
+                              {/* Price Inputs */}
+                              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
+                                {/* Cost Input */}
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-muted-foreground whitespace-nowrap w-16">
+                                    Custo/m²:
                                   </span>
-                                  <Input
-                                    type="text"
-                                    value={priceData?.price_per_sqm ? priceData.price_per_sqm.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : ''}
-                                    onChange={(e) => handlePriceChange(product.id, e.target.value)}
-                                    placeholder="0,00"
-                                    className="pl-10 text-right font-mono"
-                                  />
+                                  <div className="relative w-28">
+                                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                                      R$
+                                    </span>
+                                    <Input
+                                      type="text"
+                                      value={costValue ? costValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : ''}
+                                      onChange={(e) => handlePriceChange(product.id, 'cost_per_sqm', e.target.value)}
+                                      placeholder="0,00"
+                                      className="pl-8 text-right font-mono text-sm h-9"
+                                    />
+                                  </div>
                                 </div>
+
+                                {/* Sale Price Input */}
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-muted-foreground whitespace-nowrap w-16">
+                                    Venda/m²:
+                                  </span>
+                                  <div className="relative w-28">
+                                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                                      R$
+                                    </span>
+                                    <Input
+                                      type="text"
+                                      value={priceValue ? priceValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : ''}
+                                      onChange={(e) => handlePriceChange(product.id, 'price_per_sqm', e.target.value)}
+                                      placeholder="0,00"
+                                      className="pl-8 text-right font-mono text-sm h-9"
+                                    />
+                                  </div>
+                                </div>
+
+                                {/* Margin Badge */}
+                                {margin && (
+                                  <Badge variant={Number(margin) > 0 ? 'default' : 'destructive'} className="text-xs">
+                                    {Number(margin) > 0 ? '+' : ''}{margin}%
+                                  </Badge>
+                                )}
                               </div>
                             </div>
                           );
