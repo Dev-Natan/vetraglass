@@ -20,7 +20,8 @@ import {
   Settings,
   Receipt,
   BarChart3,
-  Wallet
+  Wallet,
+  Users
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -56,6 +57,7 @@ import { TaxReports } from '@/components/financeiro/TaxReports';
 import { TaxCategories } from '@/components/financeiro/TaxCategories';
 import { TaxConfigDialog } from '@/components/financeiro/TaxConfigDialog';
 import { ExpensesTab } from '@/components/financeiro/ExpensesTab';
+import { CommissionsTab } from '@/components/financeiro/CommissionsTab';
 
 type PeriodFilter = 'today' | 'week' | 'month' | 'last_month' | 'custom' | 'all';
 type PaymentFilter = 'all' | 'dinheiro' | 'cartao' | 'pix';
@@ -469,10 +471,14 @@ export default function Financeiro() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
+          <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid">
             <TabsTrigger value="vendas" className="gap-2">
               <FileText className="w-4 h-4 hidden sm:inline" />
               Vendas
+            </TabsTrigger>
+            <TabsTrigger value="comissoes" className="gap-2">
+              <Users className="w-4 h-4 hidden sm:inline" />
+              Comissões
             </TabsTrigger>
             <TabsTrigger value="despesas" className="gap-2">
               <Wallet className="w-4 h-4 hidden sm:inline" />
@@ -491,6 +497,11 @@ export default function Financeiro() {
               Categorias
             </TabsTrigger>
           </TabsList>
+
+          {/* Tab: Comissões */}
+          <TabsContent value="comissoes" className="mt-6">
+            <CommissionsTab />
+          </TabsContent>
 
           {/* Tab: Despesas */}
           <TabsContent value="despesas" className="mt-6">
