@@ -856,6 +856,82 @@ export type Database = {
           },
         ]
       }
+      expenses: {
+        Row: {
+          amount: number
+          category: string
+          company_id: string
+          created_at: string | null
+          created_by: string | null
+          description: string
+          due_date: string | null
+          employee_id: string | null
+          id: string
+          notes: string | null
+          paid_date: string | null
+          payment_method: string | null
+          recurrence: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount?: number
+          category: string
+          company_id: string
+          created_at?: string | null
+          created_by?: string | null
+          description: string
+          due_date?: string | null
+          employee_id?: string | null
+          id?: string
+          notes?: string | null
+          paid_date?: string | null
+          payment_method?: string | null
+          recurrence?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          category?: string
+          company_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string
+          due_date?: string | null
+          employee_id?: string | null
+          id?: string
+          notes?: string | null
+          paid_date?: string | null
+          payment_method?: string | null
+          recurrence?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       item_templates: {
         Row: {
           aliquota_cbs: number | null
