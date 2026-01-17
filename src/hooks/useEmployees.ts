@@ -57,10 +57,37 @@ export function useEmployees() {
         .single();
 
       if (error) throw error;
+
+      // Create automatic expense if employee has a salary (hourly_rate)
+      if (employeeData.hourly_rate && employeeData.hourly_rate > 0) {
+        const monthlyAmount = employeeData.hourly_rate;
+        const nextDueDate = new Date();
+        nextDueDate.setDate(5); // Day 5 of each month as default payment day
+        if (nextDueDate.getDate() < 5) {
+          // If we're before day 5, use current month
+        } else {
+          // If we're past day 5, use next month
+          nextDueDate.setMonth(nextDueDate.getMonth() + 1);
+        }
+
+        await supabase.from('expenses').insert({
+          company_id: currentCompany.id,
+          category: 'funcionarios',
+          description: `Salário - ${employeeData.name}`,
+          amount: monthlyAmount,
+          due_date: nextDueDate.toISOString().split('T')[0],
+          status: 'pending',
+          recurrence: 'monthly',
+          employee_id: data.id,
+          notes: 'Despesa gerada automaticamente ao cadastrar funcionário',
+        });
+      }
+
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees', currentCompany?.id] });
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
       toast.success('Funcionário cadastrado com sucesso!');
     },
     onError: (error: Error) => {
@@ -79,10 +106,59 @@ export function useEmployees() {
         .single();
 
       if (error) throw error;
+
+      // Update or create expense when salary changes
+      if (currentCompany?.id && employeeData.hourly_rate !== undefined) {
+        // Check if expense already exists for this employee
+        const { data: existingExpense } = await supabase
+          .from('expenses')
+          .select('id')
+          .eq('company_id', currentCompany.id)
+          .eq('employee_id', id)
+          .eq('category', 'funcionarios')
+          .single();
+
+        if (employeeData.hourly_rate > 0) {
+          const nextDueDate = new Date();
+          nextDueDate.setDate(5);
+          if (nextDueDate.getDate() >= 5) {
+            nextDueDate.setMonth(nextDueDate.getMonth() + 1);
+          }
+
+          if (existingExpense) {
+            // Update existing expense
+            await supabase
+              .from('expenses')
+              .update({
+                description: `Salário - ${employeeData.name || data.name}`,
+                amount: employeeData.hourly_rate,
+              })
+              .eq('id', existingExpense.id);
+          } else {
+            // Create new expense
+            await supabase.from('expenses').insert({
+              company_id: currentCompany.id,
+              category: 'funcionarios',
+              description: `Salário - ${employeeData.name || data.name}`,
+              amount: employeeData.hourly_rate,
+              due_date: nextDueDate.toISOString().split('T')[0],
+              status: 'pending',
+              recurrence: 'monthly',
+              employee_id: id,
+              notes: 'Despesa gerada automaticamente ao atualizar funcionário',
+            });
+          }
+        } else if (existingExpense) {
+          // Remove expense if salary is zero or removed
+          await supabase.from('expenses').delete().eq('id', existingExpense.id);
+        }
+      }
+
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees', currentCompany?.id] });
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
       toast.success('Funcionário atualizado com sucesso!');
     },
     onError: (error: Error) => {
