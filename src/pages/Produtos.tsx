@@ -8,6 +8,9 @@ import { ProductsSearchBar } from '@/components/produtos/ProductsSearchBar';
 import { ProductsGridSkeleton } from '@/components/produtos/ProductsGridSkeleton';
 import { EmptyProductsState } from '@/components/produtos/EmptyProductsState';
 import { TipologiasSheet } from '@/components/produtos/TipologiasSheet';
+import { AddLinhaSheet } from '@/components/produtos/AddLinhaSheet';
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -25,6 +28,7 @@ export default function Produtos() {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [tipologiasSheetOpen, setTipologiasSheetOpen] = useState(false);
   const [selectedLinhaForDownload, setSelectedLinhaForDownload] = useState<string | null>(null);
+  const [addLinhaSheetOpen, setAddLinhaSheetOpen] = useState(false);
 
   // Load favorites from localStorage on mount
   useEffect(() => {
@@ -159,6 +163,11 @@ export default function Produtos() {
     setTipologiasSheetOpen(true);
   };
 
+  const handleSelectLinhaFromSheet = (linha: string) => {
+    setSelectedLinhaForDownload(linha);
+    setTipologiasSheetOpen(true);
+  };
+
   const handleViewProducts = (linha: string) => {
     navigate(`/produtos/linha/${encodeURIComponent(linha)}`);
   };
@@ -168,6 +177,9 @@ export default function Produtos() {
     if (showFavoritesOnly) return 'no-favorites';
     return 'empty';
   };
+
+  // Get list of activated linhas for the AddLinhaSheet
+  const activatedLinhas = filteredLinhas.map(l => l.linha);
 
   return (
     <MainLayout>
@@ -183,14 +195,25 @@ export default function Produtos() {
           onSortChange={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
         />
 
-        {/* Search */}
+        {/* Search and Add Button */}
         <div className="section-card">
-          <ProductsSearchBar
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            resultsCount={filteredLinhas.length}
-            totalCount={linhasWithActivatedCount?.length || 0}
-          />
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div className="flex-1 w-full sm:w-auto">
+              <ProductsSearchBar
+                searchTerm={searchTerm}
+                onSearchChange={setSearchTerm}
+                resultsCount={filteredLinhas.length}
+                totalCount={linhasWithActivatedCount?.length || 0}
+              />
+            </div>
+            <Button 
+              onClick={() => setAddLinhaSheetOpen(true)}
+              className="gap-2 shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              Baixar Linha
+            </Button>
+          </div>
 
           {/* Content */}
           <div className={cn("mt-8", searchTerm && "mt-10")}>
@@ -238,6 +261,14 @@ export default function Produtos() {
         open={tipologiasSheetOpen}
         onOpenChange={setTipologiasSheetOpen}
         linha={selectedLinhaForDownload || ''}
+      />
+
+      {/* Add Linha Sheet */}
+      <AddLinhaSheet
+        open={addLinhaSheetOpen}
+        onOpenChange={setAddLinhaSheetOpen}
+        onSelectLinha={handleSelectLinhaFromSheet}
+        activatedLinhas={activatedLinhas}
       />
     </MainLayout>
   );
