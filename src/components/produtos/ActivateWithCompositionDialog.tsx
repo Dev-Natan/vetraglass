@@ -33,6 +33,7 @@ import {
   Trash2,
   Edit2,
   X,
+  ChevronUp,
   Search,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -257,7 +258,33 @@ export function ActivateWithCompositionDialog({
     toast.success('Item removido');
   };
 
+  // Save current edit before switching
+  const saveCurrentEdit = () => {
+    if (!editingItemId) return;
+
+    setLocalItems(prev =>
+      prev.map(item => {
+        if (item.id !== editingItemId) return item;
+        const itemType = item.item_template?.type;
+        return {
+          ...item,
+          quantity_formula: itemType === 'glass' ? item.quantity_formula : quantityFormula,
+          pieces_quantity: piecesQuantity,
+          cut_angle: cutAngle,
+          width_formula: itemType === 'glass' ? widthFormula : null,
+          height_formula: itemType === 'glass' ? heightFormula : null,
+          notes: itemType === 'glass' ? glassName : item.notes,
+        };
+      })
+    );
+  };
+
   const handleEditItem = (item: ComponentItem) => {
+    // Save current edit before switching to another item
+    if (editingItemId && editingItemId !== item.id) {
+      saveCurrentEdit();
+    }
+
     setEditingItemId(item.id);
     setQuantityFormula(item.quantity_formula);
     setPiecesQuantity(item.pieces_quantity);
@@ -485,9 +512,13 @@ export function ActivateWithCompositionDialog({
                           if (isEditing) {
                             // Edit mode
                             return (
-                              <div key={item.id} className="p-4 rounded-lg border-2 border-primary bg-primary/5 space-y-4">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-10 h-10 rounded bg-muted flex items-center justify-center">
+                              <div key={item.id} className="rounded-lg border-2 border-primary bg-primary/5 overflow-hidden">
+                                {/* Collapsible header - click to close */}
+                                <div 
+                                  className="flex items-center gap-3 p-3 cursor-pointer hover:bg-primary/10 transition-colors"
+                                  onClick={handleSaveEdit}
+                                >
+                                  <div className="w-10 h-10 rounded bg-muted flex items-center justify-center shrink-0">
                                     {item.item_template?.image_url ? (
                                       <img
                                         src={getItemImage(item.item_template.image_url)}
@@ -498,13 +529,15 @@ export function ActivateWithCompositionDialog({
                                       <Package className="w-5 h-5 text-muted-foreground/50" />
                                     )}
                                   </div>
-                                  <div className="flex-1">
-                                    <p className="font-medium text-sm">{item.item_template?.name}</p>
-                                    <Badge variant="secondary" className={`text-xs ${typeColors[itemType] || ''}`}>
-                                      Editando
-                                    </Badge>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-medium text-sm truncate">{item.item_template?.name}</p>
+                                    <p className="text-xs text-primary">Clique para fechar e salvar</p>
                                   </div>
+                                  <ChevronUp className="w-5 h-5 text-primary shrink-0" />
                                 </div>
+
+                                {/* Edit form */}
+                                <div className="p-4 pt-2 space-y-4 border-t border-primary/20">
 
                                 {/* Editor based on type */}
                                 {itemType === 'glass' ? (
@@ -550,24 +583,26 @@ export function ActivateWithCompositionDialog({
                                   </div>
                                 )}
 
-                                <div className="flex justify-end gap-2 pt-2">
-                                  <Button variant="ghost" size="sm" onClick={handleCancelEdit}>
-                                    Cancelar
-                                  </Button>
-                                  <Button size="sm" onClick={handleSaveEdit}>
-                                    <Check className="w-4 h-4 mr-1" />
-                                    Salvar
-                                  </Button>
+                                  <div className="flex justify-end gap-2 pt-2 border-t border-border/50 mt-4">
+                                    <Button variant="ghost" size="sm" onClick={handleCancelEdit}>
+                                      Descartar alterações
+                                    </Button>
+                                    <Button size="sm" onClick={handleSaveEdit} className="gap-1">
+                                      <Check className="w-4 h-4" />
+                                      Salvar e fechar
+                                    </Button>
+                                  </div>
                                 </div>
                               </div>
                             );
                           }
 
-                          // Display mode
+                          // Display mode - clickable to edit
                           return (
                             <div
                               key={item.id}
-                              className="flex items-center gap-3 p-3 rounded-lg border hover:border-primary/50 transition-colors group"
+                              className="flex items-center gap-3 p-3 rounded-lg border hover:border-primary/50 transition-colors group cursor-pointer"
+                              onClick={() => handleEditItem(item)}
                             >
                               <div className="w-12 h-12 rounded bg-muted flex items-center justify-center shrink-0">
                                 {item.item_template?.image_url ? (
@@ -630,23 +665,19 @@ export function ActivateWithCompositionDialog({
                                 </div>
                               </div>
 
-                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="flex items-center gap-1 shrink-0">
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-8 w-8"
-                                  onClick={() => handleEditItem(item)}
-                                >
-                                  <Edit2 className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-destructive hover:text-destructive"
-                                  onClick={() => handleRemoveItem(item.id)}
+                                  className="h-8 w-8 text-destructive hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRemoveItem(item.id);
+                                  }}
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </Button>
+                                <Edit2 className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
                               </div>
                             </div>
                           );
