@@ -130,7 +130,8 @@ export default function Produtos() {
   const filteredLinhas = useMemo(() => {
     if (!linhasWithActivatedCount) return [];
     
-    let result = [...linhasWithActivatedCount];
+    // Only show lines that have activated products
+    let result = linhasWithActivatedCount.filter(item => item.hasActivatedProducts);
     
     // Filter by search
     if (searchTerm) {
