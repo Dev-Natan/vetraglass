@@ -1,24 +1,28 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Star, ArrowRight, Package } from 'lucide-react';
+import { Star, ArrowRight, Package, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface LinhaCardModernProps {
   linha: string;
   productCount?: number;
   onViewProducts: () => void;
+  onDownloadLinha?: () => void;
   isFavorite?: boolean;
   onToggleFavorite?: () => void;
   viewMode?: 'grid' | 'list';
+  hasActivatedProducts?: boolean;
 }
 
 export function LinhaCardModern({ 
   linha, 
   productCount, 
-  onViewProducts, 
+  onViewProducts,
+  onDownloadLinha,
   isFavorite = false,
   onToggleFavorite,
-  viewMode = 'grid'
+  viewMode = 'grid',
+  hasActivatedProducts = true
 }: LinhaCardModernProps) {
   // Generate a gradient based on the linha name for visual variety
   const getGradientClass = (name: string) => {
@@ -149,18 +153,36 @@ export function LinhaCardModern({
             </h3>
             {productCount !== undefined && (
               <p className="text-xs text-muted-foreground">
-                {productCount} {productCount === 1 ? 'produto disponível' : 'produtos disponíveis'}
+                {productCount} {productCount === 1 ? 'produto ativo' : 'produtos ativos'}
               </p>
             )}
           </div>
           
-          <Button 
-            className="w-full gap-2 group/btn"
-            size="sm"
-          >
-            Ver produtos
-            <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
-          </Button>
+          <div className="flex flex-col gap-2">
+            {hasActivatedProducts && (
+              <Button 
+                className="w-full gap-2 group/btn"
+                size="sm"
+              >
+                Ver produtos
+                <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
+              </Button>
+            )}
+            {onDownloadLinha && (
+              <Button 
+                variant={hasActivatedProducts ? "outline" : "default"}
+                className="w-full gap-2"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDownloadLinha();
+                }}
+              >
+                <Download className="w-4 h-4" />
+                Baixar produtos
+              </Button>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>

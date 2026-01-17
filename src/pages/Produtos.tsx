@@ -7,6 +7,7 @@ import { ProductsHeader } from '@/components/produtos/ProductsHeader';
 import { ProductsSearchBar } from '@/components/produtos/ProductsSearchBar';
 import { ProductsGridSkeleton } from '@/components/produtos/ProductsGridSkeleton';
 import { EmptyProductsState } from '@/components/produtos/EmptyProductsState';
+import { TipologiasSheet } from '@/components/produtos/TipologiasSheet';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -22,6 +23,8 @@ export default function Produtos() {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [tipologiasSheetOpen, setTipologiasSheetOpen] = useState(false);
+  const [selectedLinhaForDownload, setSelectedLinhaForDownload] = useState<string | null>(null);
 
   // Load favorites from localStorage on mount
   useEffect(() => {
@@ -63,19 +66,14 @@ export default function Produtos() {
     enabled: !!currentCompany?.id,
   });
 
-  // Fetch unique linhas with product count (only activated products)
-  const { data: linhas, isLoading } = useQuery({
-    queryKey: ['product-linhas', companyProducts],
+  // Fetch ALL unique linhas with product count
+  const { data: allLinhas, isLoading } = useQuery({
+    queryKey: ['all-product-linhas'],
     queryFn: async () => {
-      if (companyProducts.length === 0) return [];
-      
-      const activatedTemplateIds = companyProducts.map(cp => cp.product_template_id);
-      
       const { data, error } = await supabase
         .from('product_templates')
-        .select('linha')
-        .eq('is_active', true)
-        .in('id', activatedTemplateIds);
+        .select('id, linha')
+        .eq('is_active', true);
       
       if (error) throw error;
       
@@ -89,14 +87,50 @@ export default function Produtos() {
       return Array.from(linhaMap.entries())
         .map(([linha, count]) => ({ linha, count }));
     },
-    enabled: companyProducts.length > 0,
   });
+
+  // Count activated products per linha
+  const getActivatedCountForLinha = (linha: string) => {
+    // We need to check how many products from this linha are activated
+    return companyProducts.length; // This will be refined below
+  };
+
+  // Fetch product templates to map linha to products
+  const { data: allProducts = [] } = useQuery({
+    queryKey: ['all-products-for-linhas'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('product_templates')
+        .select('id, linha')
+        .eq('is_active', true);
+      
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Calculate activated count per linha
+  const linhasWithActivatedCount = useMemo(() => {
+    if (!allLinhas) return [];
+    
+    const activatedIds = new Set(companyProducts.map(cp => cp.product_template_id));
+    
+    return allLinhas.map(linhaItem => {
+      const productsInLinha = allProducts.filter(p => (p.linha || 'Sem Linha') === linhaItem.linha);
+      const activatedCount = productsInLinha.filter(p => activatedIds.has(p.id)).length;
+      return {
+        ...linhaItem,
+        activatedCount,
+        hasActivatedProducts: activatedCount > 0
+      };
+    });
+  }, [allLinhas, allProducts, companyProducts]);
 
   // Filter and sort linhas
   const filteredLinhas = useMemo(() => {
-    if (!linhas) return [];
+    if (!linhasWithActivatedCount) return [];
     
-    let result = [...linhas];
+    let result = [...linhasWithActivatedCount];
     
     // Filter by search
     if (searchTerm) {
@@ -117,7 +151,12 @@ export default function Produtos() {
     });
     
     return result;
-  }, [linhas, searchTerm, showFavoritesOnly, sortOrder, favorites]);
+  }, [linhasWithActivatedCount, searchTerm, showFavoritesOnly, sortOrder, favorites]);
+
+  const handleDownloadLinha = (linha: string) => {
+    setSelectedLinhaForDownload(linha);
+    setTipologiasSheetOpen(true);
+  };
 
   const handleViewProducts = (linha: string) => {
     navigate(`/produtos/linha/${encodeURIComponent(linha)}`);
@@ -138,7 +177,7 @@ export default function Produtos() {
           onViewModeChange={setViewMode}
           showFavoritesOnly={showFavoritesOnly}
           onToggleFavorites={() => setShowFavoritesOnly(!showFavoritesOnly)}
-          totalCount={linhas?.length || 0}
+          totalCount={linhasWithActivatedCount?.length || 0}
           sortOrder={sortOrder}
           onSortChange={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
         />
@@ -149,7 +188,7 @@ export default function Produtos() {
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
             resultsCount={filteredLinhas.length}
-            totalCount={linhas?.length || 0}
+            totalCount={linhasWithActivatedCount?.length || 0}
           />
 
           {/* Content */}
@@ -170,11 +209,13 @@ export default function Produtos() {
                   >
                     <LinhaCardModern
                       linha={item.linha}
-                      productCount={item.count}
+                      productCount={item.activatedCount}
                       onViewProducts={() => handleViewProducts(item.linha)}
+                      onDownloadLinha={() => handleDownloadLinha(item.linha)}
                       isFavorite={favorites.includes(item.linha)}
                       onToggleFavorite={() => toggleFavorite(item.linha)}
                       viewMode={viewMode}
+                      hasActivatedProducts={item.hasActivatedProducts}
                     />
                   </div>
                 ))}
@@ -190,6 +231,13 @@ export default function Produtos() {
           </div>
         </div>
       </div>
+
+      {/* Tipologias Sheet for downloading products */}
+      <TipologiasSheet
+        open={tipologiasSheetOpen}
+        onOpenChange={setTipologiasSheetOpen}
+        linha={selectedLinhaForDownload || ''}
+      />
     </MainLayout>
   );
 }
