@@ -373,7 +373,7 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
                                     className="text-xs bg-green-100 text-green-700"
                                   >
                                     <Check className="w-3 h-3 mr-1" />
-                                    Ativo para venda
+                                    Ativo
                                   </Badge>
                                 ) : (
                                   <Badge variant="outline" className="text-xs">
