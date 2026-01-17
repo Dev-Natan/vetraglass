@@ -19,7 +19,8 @@ import {
   Receipt,
   Calendar,
   Ruler,
-  Headphones
+  Headphones,
+  LucideIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -27,35 +28,43 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import { SupportSidebar } from '@/components/support/SupportSidebar';
 import { useSupportTickets } from '@/hooks/useSupportTickets';
+import { usePermissions, Module } from '@/hooks/usePermissions';
+
+interface MenuItem {
+  icon: LucideIcon;
+  label: string;
+  path: string;
+  module?: Module;
+}
 
 // Menu organizado por fluxo de trabalho
-const menuItems = [
+const menuItems: MenuItem[] = [
   // Visão Geral
-  { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
+  { icon: LayoutDashboard, label: 'Dashboard', path: '/', module: 'dashboard' },
   
   // Comercial (fluxo de vendas)
-  { icon: Users, label: 'Clientes', path: '/clientes' },
-  { icon: FileText, label: 'Orçamentos', path: '/orcamentos' },
-  { icon: ClipboardList, label: 'Ordens de Serviço', path: '/ordens-servico' },
+  { icon: Users, label: 'Clientes', path: '/clientes', module: 'clientes' },
+  { icon: FileText, label: 'Orçamentos', path: '/orcamentos', module: 'orcamentos' },
+  { icon: ClipboardList, label: 'Ordens de Serviço', path: '/ordens-servico', module: 'ordens-servico' },
   
   // Operacional (produção)
-  { icon: Calendar, label: 'Agenda', path: '/agenda' },
-  { icon: Ruler, label: 'Medições', path: '/medicoes' },
-  { icon: Scissors, label: 'Plano de Corte', path: '/plano-corte' },
+  { icon: Calendar, label: 'Agenda', path: '/agenda', module: 'agenda' },
+  { icon: Ruler, label: 'Medições', path: '/medicoes', module: 'medicoes' },
+  { icon: Scissors, label: 'Plano de Corte', path: '/plano-corte', module: 'plano-corte' },
   
   // Produtos & Estoque
-  { icon: Package, label: 'Produtos', path: '/produtos' },
-  { icon: Tag, label: 'Preços', path: '/precos' },
-  { icon: Boxes, label: 'Estoque', path: '/estoque' },
+  { icon: Package, label: 'Produtos', path: '/produtos', module: 'produtos' },
+  { icon: Tag, label: 'Preços', path: '/precos', module: 'precos' },
+  { icon: Boxes, label: 'Estoque', path: '/estoque', module: 'estoque' },
   
   // Financeiro
-  { icon: ShoppingCart, label: 'Caixa & Vendas', path: '/caixa-vendas' },
-  { icon: DollarSign, label: 'Financeiro', path: '/financeiro' },
-  { icon: Receipt, label: 'Notas Fiscais', path: '/notas-fiscais' },
+  { icon: ShoppingCart, label: 'Caixa & Vendas', path: '/caixa-vendas', module: 'caixa-vendas' },
+  { icon: DollarSign, label: 'Financeiro', path: '/financeiro', module: 'financeiro' },
+  { icon: Receipt, label: 'Notas Fiscais', path: '/notas-fiscais', module: 'notas-fiscais' },
   
   // Administração
-  { icon: UserCog, label: 'Funcionários', path: '/funcionarios' },
-  { icon: Settings, label: 'Configurações', path: '/configuracoes' },
+  { icon: UserCog, label: 'Funcionários', path: '/funcionarios', module: 'funcionarios' },
+  { icon: Settings, label: 'Configurações', path: '/configuracoes', module: 'configuracoes' },
 ];
 
 export function Sidebar() {
@@ -65,6 +74,7 @@ export function Sidebar() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
   const { openTicketsCount } = useSupportTickets();
+  const { canAccess, isAdmin } = usePermissions();
 
   const handleSignOut = async () => {
     try {
@@ -74,6 +84,16 @@ export function Sidebar() {
       navigate('/auth');
     }
   };
+
+  // Filter menu items based on permissions
+  const visibleMenuItems = menuItems.filter(item => {
+    // If no module defined, always show (like dashboard)
+    if (!item.module) return true;
+    // Admin sees everything
+    if (isAdmin) return true;
+    // Check permission for the module
+    return canAccess(item.module);
+  });
 
   return (
     <>
@@ -134,7 +154,7 @@ export function Sidebar() {
 
         {/* Navigation */}
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          {menuItems.map((item) => {
+          {visibleMenuItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
               <Link

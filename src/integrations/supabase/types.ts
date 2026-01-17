@@ -649,6 +649,67 @@ export type Database = {
           },
         ]
       }
+      employee_invites: {
+        Row: {
+          accepted_at: string | null
+          company_id: string
+          created_at: string | null
+          created_by: string | null
+          email: string
+          employee_id: string
+          expires_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          company_id: string
+          created_at?: string | null
+          created_by?: string | null
+          email: string
+          employee_id: string
+          expires_at: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          token: string
+        }
+        Update: {
+          accepted_at?: string | null
+          company_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          email?: string
+          employee_id?: string
+          expires_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_invites_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_invites_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_invites_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees: {
         Row: {
           company_id: string
@@ -663,6 +724,7 @@ export type Database = {
           role: string | null
           specialty: string | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           company_id: string
@@ -677,6 +739,7 @@ export type Database = {
           role?: string | null
           specialty?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           company_id?: string
@@ -691,6 +754,7 @@ export type Database = {
           role?: string | null
           specialty?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -1713,6 +1777,60 @@ export type Database = {
           },
         ]
       }
+      role_permissions: {
+        Row: {
+          can_create: boolean | null
+          can_delete: boolean | null
+          can_edit: boolean | null
+          can_view: boolean | null
+          company_id: string
+          created_at: string | null
+          id: string
+          module: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string | null
+        }
+        Insert: {
+          can_create?: boolean | null
+          can_delete?: boolean | null
+          can_edit?: boolean | null
+          can_view?: boolean | null
+          company_id: string
+          created_at?: string | null
+          id?: string
+          module: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string | null
+        }
+        Update: {
+          can_create?: boolean | null
+          can_delete?: boolean | null
+          can_edit?: boolean | null
+          can_view?: boolean | null
+          company_id?: string
+          created_at?: string | null
+          id?: string
+          module?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_permissions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       saas_admins: {
         Row: {
           created_at: string
@@ -2614,6 +2732,10 @@ export type Database = {
       }
     }
     Functions: {
+      accept_employee_invite: {
+        Args: { _token: string; _user_id: string }
+        Returns: Json
+      }
       activate_product_template_for_company: {
         Args: {
           _commercial_name?: string
@@ -2692,6 +2814,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_default_permissions: {
+        Args: { _company_id: string }
+        Returns: undefined
+      }
       get_company_daily_summary: {
         Args: { _company_id: string; _end_date?: string; _start_date?: string }
         Returns: {
@@ -2705,6 +2831,10 @@ export type Database = {
         }[]
       }
       get_user_company_ids: { Args: { _user_id: string }; Returns: string[] }
+      get_user_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
       initialize_company_item_prices: {
         Args: { _company_id: string }
         Returns: undefined
@@ -2750,6 +2880,10 @@ export type Database = {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
       }
+      user_has_permission: {
+        Args: { _action: string; _module: string; _user_id: string }
+        Returns: boolean
+      }
       user_has_role_in_company: {
         Args: {
           _company_id: string
@@ -2758,6 +2892,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      validate_invite_token: { Args: { _token: string }; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "manager" | "employee"

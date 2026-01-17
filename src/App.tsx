@@ -35,6 +35,7 @@ import AdminCompanies from "./pages/admin/AdminCompanies";
 import ImportProducts from "./pages/admin/ImportProducts";
 import AdminSupport from "./pages/admin/AdminSupport";
 import AdminAnnouncements from "./pages/admin/AdminAnnouncements";
+import AceitarConvite from "./pages/AceitarConvite";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
@@ -98,6 +99,7 @@ function AppRoutes() {
       <Route path="/auth" element={<Auth />} />
       <Route path="/recuperar-senha" element={<RecuperarSenha />} />
       <Route path="/redefinir-senha" element={<RedefinirSenha />} />
+      <Route path="/aceitar-convite" element={<AceitarConvite />} />
       <Route path="/empresa/nova" element={
         <CompanySetupRoute>
           <CompanySetup />
