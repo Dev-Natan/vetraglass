@@ -28,7 +28,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { ActivateProductDialog } from './ActivateProductDialog';
+import { ActivateWithCompositionDialog } from './ActivateWithCompositionDialog';
 
 interface TipologiasSheetProps {
   open: boolean;
@@ -66,6 +66,7 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
   const [selectedProductForActivation, setSelectedProductForActivation] = useState<{
     id: string;
     name: string;
+    image_url: string | null;
   } | null>(null);
   const [activeTab, setActiveTab] = useState<'todos' | 'ativos'>('todos');
 
@@ -231,7 +232,11 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
   };
 
   const handleActivateClick = (product: ProductTemplate) => {
-    setSelectedProductForActivation({ id: product.id, name: product.name });
+    setSelectedProductForActivation({ 
+      id: product.id, 
+      name: product.name, 
+      image_url: product.image_url 
+    });
     setActivateDialogOpen(true);
   };
 
@@ -429,13 +434,14 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
         </SheetContent>
       </Sheet>
 
-      {/* Activate Dialog */}
+      {/* Activate Dialog with Composition */}
       {selectedProductForActivation && (
-        <ActivateProductDialog
+        <ActivateWithCompositionDialog
           open={activateDialogOpen}
           onOpenChange={setActivateDialogOpen}
           productTemplateId={selectedProductForActivation.id}
           productName={selectedProductForActivation.name}
+          productImageUrl={selectedProductForActivation.image_url}
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ['company-products'] });
           }}
