@@ -265,37 +265,56 @@ export default function ProdutosLinha() {
             </div>
           ) : filteredProducts && filteredProducts.length > 0 ? (
             <div className="divide-y">
-              {filteredProducts.map((product) => (
+              {filteredProducts.map((product) => {
+                const isActivated = isProductActivated(product.id);
+                return (
                 <div
                   key={product.id}
-                  className="grid grid-cols-12 gap-4 p-4 items-center hover:bg-muted/30 transition-colors"
+                  className={`grid grid-cols-12 gap-4 p-4 items-center transition-colors ${
+                    isActivated 
+                      ? 'hover:bg-muted/30' 
+                      : 'opacity-60 hover:opacity-80 bg-muted/20'
+                  }`}
                 >
                   {/* Product info */}
                   <div className="col-span-6 sm:col-span-5 flex items-center gap-3">
-                    <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center text-2xl shrink-0 p-1 relative">
+                    <div className={`w-16 h-16 rounded-lg flex items-center justify-center text-2xl shrink-0 p-1 relative ${
+                      isActivated ? 'bg-muted' : 'bg-muted/50 grayscale'
+                    }`}>
                       {product.image_url ? (
                         <img 
                           src={product.image_url} 
                           alt={product.name}
-                          className="w-full h-full object-contain"
+                          className={`w-full h-full object-contain ${!isActivated ? 'grayscale' : ''}`}
                         />
                       ) : (
                         getCategoryIcon(product.category)
                       )}
-                      {isProductActivated(product.id) && (
+                      {isActivated ? (
                         <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
                           <Check className="w-3 h-3 text-white" />
+                        </div>
+                      ) : (
+                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-muted-foreground/50 rounded-full flex items-center justify-center">
+                          <Download className="w-3 h-3 text-white" />
                         </div>
                       )}
                     </div>
                     <div className="min-w-0">
-                      <span className="font-medium text-foreground uppercase text-sm truncate block">
+                      <span className={`font-medium uppercase text-sm truncate block ${
+                        isActivated ? 'text-foreground' : 'text-muted-foreground'
+                      }`}>
                         {product.name}
                       </span>
-                      {isProductActivated(product.id) && (
+                      {isActivated ? (
                         <Badge variant="secondary" className="text-xs mt-1 bg-green-100 text-green-700">
                           <ShoppingCart className="w-3 h-3 mr-1" />
                           Ativado para venda
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs mt-1 text-muted-foreground">
+                          <Download className="w-3 h-3 mr-1" />
+                          Não ativado
                         </Badge>
                       )}
                     </div>
@@ -343,7 +362,8 @@ export default function ProdutosLinha() {
                     </Button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="p-8 text-center text-muted-foreground">
