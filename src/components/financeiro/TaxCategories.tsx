@@ -50,6 +50,15 @@ interface TaxCategoriesProps {
   isLoading?: boolean;
 }
 
+// Dados padrão por categoria com alíquotas típicas para o setor de vidraçaria
+const defaultCategoryData: Record<string, { ncm: string; ibs: number; cbs: number; is: number }> = {
+  'Vidros Temperados': { ncm: '7007.19.00', ibs: 17.7, cbs: 8.8, is: 0 },
+  'Vidros Laminados': { ncm: '7007.29.00', ibs: 17.7, cbs: 8.8, is: 0 },
+  'Espelhos': { ncm: '7009.91.00', ibs: 17.7, cbs: 8.8, is: 0 },
+  'Perfis de Alumínio': { ncm: '7604.29.19', ibs: 17.7, cbs: 8.8, is: 0 },
+  'Serviços de Instalação': { ncm: '', ibs: 17.7, cbs: 8.8, is: 0 },
+};
+
 const defaultCategories = [
   { name: 'Vidros Temperados', ncm: '7007.19.00', desc: 'Vidros de segurança temperados' },
   { name: 'Vidros Laminados', ncm: '7007.29.00', desc: 'Vidros de segurança laminados' },
@@ -134,6 +143,24 @@ export function TaxCategories({ categories, onAdd, onUpdate, onDelete, isLoading
 
   const handleToggleActive = async (category: TaxCategory) => {
     try {
+      // Se estiver ativando e as alíquotas estiverem zeradas, preencher com dados padrão
+      if (!category.is_active) {
+        const defaultData = defaultCategoryData[category.name];
+        const needsDefaults = category.aliquota_ibs === 0 && category.aliquota_cbs === 0;
+        
+        if (defaultData && needsDefaults) {
+          await onUpdate(category.id, { 
+            is_active: true,
+            ncm_code: category.ncm_code || defaultData.ncm,
+            aliquota_ibs: defaultData.ibs,
+            aliquota_cbs: defaultData.cbs,
+            aliquota_is: defaultData.is,
+          });
+          toast.success('Categoria ativada com dados padrão!');
+          return;
+        }
+      }
+      
       await onUpdate(category.id, { is_active: !category.is_active });
       toast.success(category.is_active ? 'Categoria desativada!' : 'Categoria ativada!');
     } catch (error) {
