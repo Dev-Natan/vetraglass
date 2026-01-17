@@ -745,7 +745,7 @@ export default function PlanoCorte() {
                         <TableRow key={cut.id} className="hover:bg-muted/50">
                           <TableCell>
                             <div className="flex items-center gap-3">
-                              <div className="w-16 h-12 bg-muted rounded border flex items-center justify-center overflow-hidden">
+                              <div className="w-16 h-12 bg-white rounded border flex items-center justify-center overflow-hidden">
                                 {cut.imageUrl ? (
                                   <img 
                                     src={getStorageUrl(cut.imageUrl)} 
