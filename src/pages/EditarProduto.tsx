@@ -213,11 +213,12 @@ export default function EditarProduto() {
     enabled: !!id,
   });
 
-  // Fetch product items (global + company-specific)
+  // Fetch product items
+  // For SaaS admins: show global items (company_id IS NULL)
+  // For company users: show only their company items (items they configured when activating)
   const { data: productItems, isLoading: itemsLoading } = useQuery({
-    queryKey: ['product-template-items', id, currentCompany?.id],
+    queryKey: ['product-template-items', id, currentCompany?.id, isSaasAdmin],
     queryFn: async () => {
-      // Fetch items that are either global (company_id IS NULL) or belong to the current company
       let query = supabase
         .from('product_template_items')
         .select(`
@@ -226,7 +227,14 @@ export default function EditarProduto() {
         `)
         .eq('product_template_id', id);
       
-      // RLS will handle filtering, but we can optimize by requesting only what we need
+      if (isSaasAdmin) {
+        // SaaS admins see global items only
+        query = query.is('company_id', null);
+      } else if (currentCompany?.id) {
+        // Company users see only their own items (configured during activation)
+        query = query.eq('company_id', currentCompany.id);
+      }
+      
       const { data, error } = await query;
       if (error) throw error;
       return data as (ProductTemplateItem & { company_id?: string | null })[];
