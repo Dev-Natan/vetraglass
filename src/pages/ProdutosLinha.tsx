@@ -165,7 +165,8 @@ export default function ProdutosLinha() {
   const filteredProducts = products?.filter((p) => {
     const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+    const isActivated = companyProducts.some(cp => cp.product_template_id === p.id && cp.is_active);
+    return matchesSearch && matchesCategory && isActivated;
   });
 
   const getCategoryIcon = (category: string) => {
