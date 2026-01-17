@@ -110,9 +110,12 @@ export default function EditarProduto() {
   const { currentCompany, isSaasAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState('glass');
   const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
+  const [isEditItemDialogOpen, setIsEditItemDialogOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<ProductTemplateItem | null>(null);
   const [selectedItemToAdd, setSelectedItemToAdd] = useState('');
   const [quantityFormula, setQuantityFormula] = useState('1');
   const [piecesQuantity, setPiecesQuantity] = useState(1);
+  const [cutAngle, setCutAngle] = useState(90);
   const [widthFormula, setWidthFormula] = useState('');
   const [heightFormula, setHeightFormula] = useState('');
   const [glassName, setGlassName] = useState('');
@@ -401,6 +404,60 @@ export default function EditarProduto() {
     },
   });
 
+  // Update item mutation
+  const updateItemMutation = useMutation({
+    mutationFn: async () => {
+      if (!editingItem) throw new Error('Nenhum item selecionado');
+      
+      const itemType = editingItem.item_template?.type;
+      
+      const updateData: Record<string, any> = {};
+      
+      if (itemType === 'glass') {
+        updateData.width_formula = widthFormula || null;
+        updateData.height_formula = heightFormula || null;
+        updateData.notes = glassName || null;
+      } else {
+        updateData.quantity_formula = quantityFormula;
+        updateData.pieces_quantity = piecesQuantity;
+        updateData.cut_angle = cutAngle;
+      }
+      
+      const { error } = await supabase
+        .from('product_template_items')
+        .update(updateData)
+        .eq('id', editingItem.id);
+        
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['product-template-items', id] });
+      toast.success('Item atualizado!');
+      setIsEditItemDialogOpen(false);
+      setEditingItem(null);
+    },
+    onError: (error) => {
+      toast.error('Erro ao atualizar: ' + error.message);
+    },
+  });
+
+  const handleEditItem = (item: ProductTemplateItem) => {
+    setEditingItem(item);
+    const itemType = item.item_template?.type;
+    
+    if (itemType === 'glass') {
+      setWidthFormula(item.width_formula || '');
+      setHeightFormula(item.height_formula || '');
+      setGlassName(item.notes || '');
+    } else {
+      setQuantityFormula(item.quantity_formula || '1');
+      setPiecesQuantity(item.pieces_quantity || 1);
+      setCutAngle(item.cut_angle || 90);
+    }
+    
+    setIsEditItemDialogOpen(true);
+  };
+
   const getItemsByType = (tabValue: string) => {
     const currentTab = itemTypeTabs.find(t => t.value === tabValue);
     const dbType = currentTab?.dbType;
@@ -597,7 +654,8 @@ export default function EditarProduto() {
                 {getItemsByType(tab.value).map((item) => (
                   <div
                     key={item.id}
-                    className="bg-card border rounded-lg p-4 relative group hover:shadow-md transition-shadow"
+                    onClick={() => handleEditItem(item)}
+                    className="bg-card border rounded-lg p-4 relative group hover:shadow-md hover:border-primary/50 transition-all cursor-pointer"
                   >
                     {/* Menu button */}
                     <DropdownMenu>
@@ -605,15 +663,28 @@ export default function EditarProduto() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="absolute top-2 right-2 w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute top-2 right-2 w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                          onClick={(e) => e.stopPropagation()}
                         >
                           <MoreHorizontal className="w-4 h-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="bg-background border shadow-lg z-50">
                         <DropdownMenuItem
+                          className="cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditItem(item);
+                          }}
+                        >
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
                           className="text-destructive cursor-pointer"
-                          onClick={() => removeItemMutation.mutate(item.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeItemMutation.mutate(item.id);
+                          }}
                         >
                           Remover
                         </DropdownMenuItem>
@@ -876,6 +947,95 @@ export default function EditarProduto() {
                   disabled={!selectedItemToAdd || addItemMutation.isPending}
                 >
                   Adicionar
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Item Dialog */}
+        <Dialog open={isEditItemDialogOpen} onOpenChange={setIsEditItemDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-3">
+                {editingItem?.item_template?.image_url && (
+                  <div className="w-10 h-10 rounded bg-muted overflow-hidden shrink-0">
+                    <img
+                      src={getStorageUrl(editingItem.item_template.image_url)}
+                      alt={editingItem.item_template.name}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                )}
+                Editar {editingItem?.item_template?.name}
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              {/* Show GlassFormulaEditor for glass items, FormulaEditor for others */}
+              {editingItem?.item_template?.type === 'glass' ? (
+                <>
+                  {/* Glass Name Input */}
+                  <div className="space-y-2">
+                    <Label>Nome do Vidro (opcional)</Label>
+                    <Input
+                      placeholder="Ex: Vidro Fixo, Vidro Móvel, Bandeira..."
+                      value={glassName}
+                      onChange={(e) => setGlassName(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Identifique o vidro para facilitar no plano de corte
+                    </p>
+                  </div>
+                  
+                  <GlassFormulaEditor
+                    widthFormula={widthFormula}
+                    heightFormula={heightFormula}
+                    onWidthFormulaChange={setWidthFormula}
+                    onHeightFormulaChange={setHeightFormula}
+                  />
+                </>
+              ) : (
+                <>
+                  <FormulaEditor
+                    value={quantityFormula}
+                    onChange={setQuantityFormula}
+                    showPiecesQuantity={editingItem?.item_template?.type === 'profile'}
+                    piecesQuantity={piecesQuantity}
+                    onPiecesChange={setPiecesQuantity}
+                  />
+                  
+                  {/* Cut Angle for profiles */}
+                  {editingItem?.item_template?.type === 'profile' && (
+                    <div className="space-y-2">
+                      <Label>Ângulo de corte</Label>
+                      <div className="flex gap-2">
+                        {[45, 90].map((angle) => (
+                          <Button
+                            key={angle}
+                            type="button"
+                            variant={cutAngle === angle ? 'default' : 'outline'}
+                            onClick={() => setCutAngle(angle)}
+                            className="flex-1"
+                          >
+                            {angle}°
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+              
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsEditItemDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={() => updateItemMutation.mutate()}
+                  disabled={updateItemMutation.isPending}
+                >
+                  {updateItemMutation.isPending ? 'Salvando...' : 'Salvar Alterações'}
                 </Button>
               </div>
             </div>
