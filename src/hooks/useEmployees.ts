@@ -14,6 +14,10 @@ export interface Employee {
   hourly_rate: number;
   is_active: boolean;
   notes: string | null;
+  commission_enabled: boolean;
+  commission_percent: number;
+  commission_type: string;
+  user_id: string | null;
   created_at: string;
   updated_at: string;
 }

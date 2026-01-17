@@ -18,6 +18,9 @@ interface Employee {
   hourly_rate: number;
   is_active: boolean;
   notes: string | null;
+  commission_enabled: boolean;
+  commission_percent: number;
+  commission_type: string;
 }
 
 interface EmployeeDialogProps {
@@ -58,6 +61,9 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
     hourly_rate: 0,
     is_active: true,
     notes: '',
+    commission_enabled: false,
+    commission_percent: 0,
+    commission_type: 'sales',
   });
 
   useEffect(() => {
@@ -71,6 +77,9 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
         hourly_rate: employee.hourly_rate,
         is_active: employee.is_active,
         notes: employee.notes || '',
+        commission_enabled: employee.commission_enabled ?? false,
+        commission_percent: employee.commission_percent ?? 0,
+        commission_type: employee.commission_type || 'sales',
       });
     } else {
       setFormData({
@@ -82,6 +91,9 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
         hourly_rate: 0,
         is_active: true,
         notes: '',
+        commission_enabled: false,
+        commission_percent: 0,
+        commission_type: 'sales',
       });
     }
   }, [employee, open]);
@@ -97,6 +109,9 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
       hourly_rate: formData.hourly_rate,
       is_active: formData.is_active,
       notes: formData.notes || null,
+      commission_enabled: formData.commission_enabled,
+      commission_percent: formData.commission_percent,
+      commission_type: formData.commission_type,
     });
   };
 
@@ -201,6 +216,53 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
               onChange={(e) => setFormData({ ...formData, hourly_rate: parseFloat(e.target.value) || 0 })}
               placeholder="0,00"
             />
+          </div>
+
+          {/* Commission Section */}
+          <div className="space-y-3 p-3 rounded-lg border border-border bg-muted/30">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="commission_enabled" className="cursor-pointer font-medium">
+                Comissão sobre vendas
+              </Label>
+              <Switch
+                id="commission_enabled"
+                checked={formData.commission_enabled}
+                onCheckedChange={(checked) => setFormData({ ...formData, commission_enabled: checked })}
+              />
+            </div>
+            
+            {formData.commission_enabled && (
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <div className="space-y-2">
+                  <Label htmlFor="commission_percent">Percentual (%)</Label>
+                  <Input
+                    id="commission_percent"
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    max="100"
+                    value={formData.commission_percent}
+                    onChange={(e) => setFormData({ ...formData, commission_percent: parseFloat(e.target.value) || 0 })}
+                    placeholder="5"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="commission_type">Tipo</Label>
+                  <Select
+                    value={formData.commission_type}
+                    onValueChange={(value) => setFormData({ ...formData, commission_type: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sales">Sobre vendas</SelectItem>
+                      <SelectItem value="profit">Sobre lucro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">

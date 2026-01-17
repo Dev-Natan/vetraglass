@@ -649,6 +649,80 @@ export type Database = {
           },
         ]
       }
+      employee_commissions: {
+        Row: {
+          commission_amount: number
+          commission_percent: number
+          company_id: string
+          created_at: string | null
+          employee_id: string
+          id: string
+          notes: string | null
+          paid_at: string | null
+          sale_amount: number
+          sale_id: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          commission_amount?: number
+          commission_percent?: number
+          company_id: string
+          created_at?: string | null
+          employee_id: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          sale_amount?: number
+          sale_id: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          commission_amount?: number
+          commission_percent?: number
+          company_id?: string
+          created_at?: string | null
+          employee_id?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          sale_amount?: number
+          sale_id?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_commissions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_commissions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_commissions_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_commissions_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_invites: {
         Row: {
           accepted_at: string | null
@@ -712,6 +786,9 @@ export type Database = {
       }
       employees: {
         Row: {
+          commission_enabled: boolean | null
+          commission_percent: number | null
+          commission_type: string | null
           company_id: string
           created_at: string
           email: string | null
@@ -727,6 +804,9 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          commission_enabled?: boolean | null
+          commission_percent?: number | null
+          commission_type?: string | null
           company_id: string
           created_at?: string
           email?: string | null
@@ -742,6 +822,9 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          commission_enabled?: boolean | null
+          commission_percent?: number | null
+          commission_type?: string | null
           company_id?: string
           created_at?: string
           email?: string | null
@@ -2762,6 +2845,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      calculate_sale_commission: {
+        Args: { _employee_id: string; _sale_id: string }
+        Returns: number
       }
       check_login_rate_limit: {
         Args: {
