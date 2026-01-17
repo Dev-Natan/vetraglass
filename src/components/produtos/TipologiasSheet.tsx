@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -25,6 +25,7 @@ import {
   Loader2,
   X,
   Filter,
+  Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ActivateProductDialog } from './ActivateProductDialog';
@@ -162,13 +163,71 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
     setSelectedForDownload(new Set());
   };
 
+  // Batch activation mutation
+  const batchActivateMutation = useMutation({
+    mutationFn: async (productIds: string[]) => {
+      if (!currentCompany?.id) throw new Error('Empresa não selecionada');
+
+      const results = [];
+      for (const productId of productIds) {
+        // Skip already activated products
+        if (isProductActivated(productId)) continue;
+
+        // Activate the product template for the company
+        const { data, error } = await supabase.rpc(
+          'activate_product_template_for_company',
+          {
+            _company_id: currentCompany.id,
+            _product_template_id: productId,
+          }
+        );
+
+        if (error) {
+          console.error(`Error activating product ${productId}:`, error);
+          continue;
+        }
+
+        results.push(data);
+      }
+
+      return results;
+    },
+    onSuccess: (results) => {
+      queryClient.invalidateQueries({ queryKey: ['company-products'] });
+      queryClient.invalidateQueries({ queryKey: ['linha-products'] });
+      queryClient.invalidateQueries({ queryKey: ['allLinhas'] });
+      
+      const count = results.length;
+      if (count > 0) {
+        toast.success(`${count} produto(s) ativado(s) com sucesso!`);
+        clearDownloadSelection();
+      } else {
+        toast.info('Nenhum produto novo foi ativado');
+      }
+    },
+    onError: (error) => {
+      console.error('Batch activation error:', error);
+      toast.error('Erro ao ativar produtos', {
+        description: error.message,
+      });
+    },
+  });
+
   const handleDownload = () => {
     if (selectedForDownload.size === 0) {
       toast.error('Selecione pelo menos um produto');
       return;
     }
-    // TODO: Implement PDF download
-    toast.info(`Download de ${selectedForDownload.size} tipologia(s) em desenvolvimento`);
+    
+    const productIds = Array.from(selectedForDownload);
+    const notActivatedIds = productIds.filter(id => !isProductActivated(id));
+    
+    if (notActivatedIds.length === 0) {
+      toast.info('Todos os produtos selecionados já estão ativados');
+      return;
+    }
+    
+    batchActivateMutation.mutate(notActivatedIds);
   };
 
   const handleActivateClick = (product: ProductTemplate) => {
@@ -355,11 +414,20 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
             </div>
             <Button
               onClick={handleDownload}
-              disabled={selectedForDownload.size === 0}
-              className="gap-2"
+              disabled={selectedForDownload.size === 0 || batchActivateMutation.isPending}
+              className="gap-2 bg-green-600 hover:bg-green-700"
             >
-              <Download className="w-4 h-4" />
-              Baixar ({selectedForDownload.size})
+              {batchActivateMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Ativando...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  Ativar ({selectedForDownload.size})
+                </>
+              )}
             </Button>
           </div>
         </SheetContent>
