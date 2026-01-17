@@ -28,21 +28,33 @@ import { Badge } from '@/components/ui/badge';
 import { SupportSidebar } from '@/components/support/SupportSidebar';
 import { useSupportTickets } from '@/hooks/useSupportTickets';
 
+// Menu organizado por fluxo de trabalho
 const menuItems = [
+  // Visão Geral
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
+  
+  // Comercial (fluxo de vendas)
   { icon: Users, label: 'Clientes', path: '/clientes' },
-  { icon: Package, label: 'Produtos', path: '/produtos' },
-  { icon: Boxes, label: 'Estoque', path: '/estoque' },
-  { icon: Tag, label: 'Preços', path: '/precos' },
   { icon: FileText, label: 'Orçamentos', path: '/orcamentos' },
   { icon: ClipboardList, label: 'Ordens de Serviço', path: '/ordens-servico' },
+  
+  // Operacional (produção)
   { icon: Calendar, label: 'Agenda', path: '/agenda' },
   { icon: Ruler, label: 'Medições', path: '/medicoes' },
-  { icon: DollarSign, label: 'Financeiro', path: '/financeiro' },
-  { icon: UserCog, label: 'Funcionários', path: '/funcionarios' },
-  { icon: ShoppingCart, label: 'Caixa & Vendas', path: '/caixa-vendas' },
   { icon: Scissors, label: 'Plano de Corte', path: '/plano-corte' },
-  { icon: Receipt, label: 'Módulo Fiscal', path: '/configuracoes/fiscal' },
+  
+  // Produtos & Estoque
+  { icon: Package, label: 'Produtos', path: '/produtos' },
+  { icon: Tag, label: 'Preços', path: '/precos' },
+  { icon: Boxes, label: 'Estoque', path: '/estoque' },
+  
+  // Financeiro
+  { icon: ShoppingCart, label: 'Caixa & Vendas', path: '/caixa-vendas' },
+  { icon: DollarSign, label: 'Financeiro', path: '/financeiro' },
+  { icon: Receipt, label: 'Notas Fiscais', path: '/notas-fiscais' },
+  
+  // Administração
+  { icon: UserCog, label: 'Funcionários', path: '/funcionarios' },
   { icon: Settings, label: 'Configurações', path: '/configuracoes' },
 ];
 
