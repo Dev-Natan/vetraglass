@@ -34,7 +34,12 @@ import {
   Edit2,
   X,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   Search,
+  CircleDot,
+  Circle,
+  CheckCircle2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { FormulaEditor } from './FormulaEditor';
@@ -434,11 +439,11 @@ export function ActivateWithCompositionDialog({
     <>
       <Dialog open={open} onOpenChange={handleDialogClose}>
         <DialogContent className="max-w-4xl max-h-[95vh] flex flex-col p-0 overflow-hidden">
-          {/* Header */}
+          {/* Header with Stepper */}
           <DialogHeader className="p-6 pb-4 border-b shrink-0">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 mb-4">
               {/* Product Image */}
-              <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+              <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center shrink-0 overflow-hidden">
                 {productImageUrl ? (
                   <img
                     src={getProductImage(productImageUrl)}
@@ -446,18 +451,61 @@ export function ActivateWithCompositionDialog({
                     className="w-full h-full object-contain p-1"
                   />
                 ) : (
-                  <Package className="w-8 h-8 text-muted-foreground/50" />
+                  <Package className="w-7 h-7 text-muted-foreground/50" />
                 )}
               </div>
               <div className="flex-1">
-                <DialogTitle className="flex items-center gap-2 text-lg">
-                  <Sparkles className="w-5 h-5 text-primary" />
+                <DialogTitle className="flex items-center gap-2 text-base">
+                  <Sparkles className="w-4 h-4 text-primary" />
                   Ativar: {productName}
                 </DialogTitle>
-                <DialogDescription className="mt-1">
-                  Configure os componentes do produto antes de ativar para venda
+                <DialogDescription className="mt-0.5 text-sm">
+                  Configure os componentes do produto
                 </DialogDescription>
               </div>
+            </div>
+            
+            {/* Progress Stepper */}
+            <div className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
+              {itemTypeTabs.map((tab, index) => {
+                const itemCount = getItemsByType(tab.value).length;
+                const isActive = activeTab === tab.value;
+                const isPast = itemTypeTabs.findIndex(t => t.value === activeTab) > index;
+                const hasItems = itemCount > 0;
+                
+                return (
+                  <button
+                    key={tab.value}
+                    onClick={() => setActiveTab(tab.value)}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-md transition-all flex-1 justify-center ${
+                      isActive 
+                        ? 'bg-primary text-primary-foreground shadow-sm' 
+                        : hasItems
+                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50'
+                          : 'text-muted-foreground hover:bg-muted'
+                    }`}
+                  >
+                    {hasItems && !isActive ? (
+                      <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    ) : isActive ? (
+                      <CircleDot className="w-4 h-4 shrink-0" />
+                    ) : (
+                      <Circle className="w-4 h-4 shrink-0" />
+                    )}
+                    <span className="text-xs font-medium hidden sm:inline">{tab.label}</span>
+                    <span className="text-xs font-medium sm:hidden">{tab.label.slice(0, 3)}</span>
+                    {itemCount > 0 && (
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                        isActive 
+                          ? 'bg-primary-foreground/20' 
+                          : 'bg-current/10'
+                      }`}>
+                        {itemCount}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </DialogHeader>
 
@@ -469,18 +517,6 @@ export function ActivateWithCompositionDialog({
               </div>
             ) : (
               <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-                <div className="px-6 pt-4 shrink-0">
-                  <TabsList className="grid w-full grid-cols-3">
-                    {itemTypeTabs.map(tab => (
-                      <TabsTrigger key={tab.value} value={tab.value} className="text-sm">
-                        {tab.label}
-                        <Badge variant="secondary" className="ml-2 text-xs">
-                          {getItemsByType(tab.value).length}
-                        </Badge>
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                </div>
 
                 {itemTypeTabs.map(tab => (
                   <TabsContent key={tab.value} value={tab.value} className="flex-1 flex flex-col min-h-0 mt-0 data-[state=inactive]:hidden">
@@ -713,31 +749,75 @@ export function ActivateWithCompositionDialog({
             )}
           </div>
 
-          {/* Footer */}
-          <DialogFooter className="p-6 pt-4 border-t gap-2 sm:gap-0 shrink-0">
-            <div className="flex-1 text-sm text-muted-foreground">
-              {localItems.length} componentes configurados
+          {/* Footer with Navigation */}
+          <DialogFooter className="p-4 border-t shrink-0">
+            <div className="flex items-center justify-between w-full gap-2">
+              {/* Left: Navigation */}
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    const currentIndex = itemTypeTabs.findIndex(t => t.value === activeTab);
+                    if (currentIndex > 0) {
+                      setActiveTab(itemTypeTabs[currentIndex - 1].value);
+                    }
+                  }}
+                  disabled={itemTypeTabs.findIndex(t => t.value === activeTab) === 0}
+                  className="gap-1"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  <span className="hidden sm:inline">Anterior</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    const currentIndex = itemTypeTabs.findIndex(t => t.value === activeTab);
+                    if (currentIndex < itemTypeTabs.length - 1) {
+                      setActiveTab(itemTypeTabs[currentIndex + 1].value);
+                    }
+                  }}
+                  disabled={itemTypeTabs.findIndex(t => t.value === activeTab) === itemTypeTabs.length - 1}
+                  className="gap-1"
+                >
+                  <span className="hidden sm:inline">Próximo</span>
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+
+              {/* Center: Status */}
+              <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground">
+                <Package className="w-4 h-4" />
+                {localItems.length} componentes
+              </div>
+              
+              {/* Right: Actions */}
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => handleDialogClose(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => activateMutation.mutate()}
+                  disabled={activateMutation.isPending || localItems.length === 0}
+                  className="bg-green-600 hover:bg-green-700 gap-1"
+                >
+                  {activateMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="hidden sm:inline">Ativando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      <span className="hidden sm:inline">Ativar Produto</span>
+                      <span className="sm:hidden">Ativar</span>
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
-            <Button variant="outline" onClick={() => handleDialogClose(false)}>
-              Cancelar
-            </Button>
-            <Button
-              onClick={() => activateMutation.mutate()}
-              disabled={activateMutation.isPending}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              {activateMutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Ativando...
-                </>
-              ) : (
-                <>
-                  <Check className="w-4 h-4 mr-2" />
-                  Ativar Produto
-                </>
-              )}
-            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
