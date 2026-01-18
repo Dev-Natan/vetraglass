@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, DollarSign, Wallet, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { usePermissions } from '@/hooks/usePermissions';
 
 interface CompanyCash {
   current_balance: number;
@@ -32,6 +33,7 @@ export function AbrirCaixaDialog({
   companyCash,
   isLoading = false,
 }: AbrirCaixaDialogProps) {
+  const { isAdmin, isManager } = usePermissions();
   const [openingAmount, setOpeningAmount] = useState('');
 
   // Pre-fill with fixed fund when dialog opens
@@ -79,8 +81,8 @@ export function AbrirCaixaDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {/* Saldo da Empresa */}
-          {hasCompanyCash && (
+          {/* Saldo da Empresa - apenas para admin/manager */}
+          {(isAdmin || isManager) && hasCompanyCash && (
             <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm flex items-center gap-2">
@@ -98,7 +100,7 @@ export function AbrirCaixaDialog({
             </div>
           )}
 
-          {!hasCompanyCash && (
+          {(isAdmin || isManager) && !hasCompanyCash && (
             <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-4">
               <div className="flex items-start gap-2">
                 <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5" />
