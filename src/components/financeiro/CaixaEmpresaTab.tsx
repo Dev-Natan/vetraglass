@@ -417,7 +417,15 @@ export function CaixaEmpresaTab() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Saldo da Empresa</CardTitle>
-            <Wallet className="h-5 w-5 text-muted-foreground" />
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8"
+              onClick={() => setDialogType('config')}
+              title="Configurar caixa da empresa"
+            >
+              <Settings className="h-4 w-4 text-muted-foreground" />
+            </Button>
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${companyCash.current_balance < 0 ? 'text-destructive' : 'text-green-600'}`}>
