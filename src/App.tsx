@@ -18,6 +18,7 @@ import Estoque from "./pages/Estoque";
 import PrecosEmpresa from "./pages/PrecosEmpresa";
 import Orcamentos from "./pages/Orcamentos";
 import OrdensServico from "./pages/OrdensServico";
+import OrdemServicoDetalhes from "./pages/OrdemServicoDetalhes";
 import Financeiro from "./pages/Financeiro";
 import Funcionarios from "./pages/Funcionarios";
 import CaixaVendas from "./pages/CaixaVendas";
@@ -154,6 +155,11 @@ function AppRoutes() {
       <Route path="/ordens-servico" element={
         <ProtectedRoute>
           <OrdensServico />
+        </ProtectedRoute>
+      } />
+      <Route path="/ordens-servico/:id" element={
+        <ProtectedRoute>
+          <OrdemServicoDetalhes />
         </ProtectedRoute>
       } />
       <Route path="/financeiro" element={

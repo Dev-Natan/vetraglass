@@ -1181,6 +1181,7 @@ export type Database = {
           aliquota_ibs: number | null
           aliquota_is: number | null
           aliquota_iss: number | null
+          bar_length_mm: number | null
           cest: string | null
           cfop_venda: string | null
           cfop_venda_interestadual: string | null
@@ -1205,6 +1206,7 @@ export type Database = {
           aliquota_ibs?: number | null
           aliquota_is?: number | null
           aliquota_iss?: number | null
+          bar_length_mm?: number | null
           cest?: string | null
           cfop_venda?: string | null
           cfop_venda_interestadual?: string | null
@@ -1229,6 +1231,7 @@ export type Database = {
           aliquota_ibs?: number | null
           aliquota_is?: number | null
           aliquota_iss?: number | null
+          bar_length_mm?: number | null
           cest?: string | null
           cfop_venda?: string | null
           cfop_venda_interestadual?: string | null
@@ -1839,6 +1842,209 @@ export type Database = {
             columns: ["sale_id"]
             isOneToOne: false
             referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      os_cutting_plan: {
+        Row: {
+          created_at: string
+          cuts_data: Json
+          glass_cuts_data: Json | null
+          id: string
+          ordem_servico_id: string
+          product_name: string
+          product_template_id: string | null
+          quantity: number
+          quote_item_id: string | null
+          vao_height: number
+          vao_width: number
+        }
+        Insert: {
+          created_at?: string
+          cuts_data?: Json
+          glass_cuts_data?: Json | null
+          id?: string
+          ordem_servico_id: string
+          product_name: string
+          product_template_id?: string | null
+          quantity?: number
+          quote_item_id?: string | null
+          vao_height: number
+          vao_width: number
+        }
+        Update: {
+          created_at?: string
+          cuts_data?: Json
+          glass_cuts_data?: Json | null
+          id?: string
+          ordem_servico_id?: string
+          product_name?: string
+          product_template_id?: string | null
+          quantity?: number
+          quote_item_id?: string | null
+          vao_height?: number
+          vao_width?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_cutting_plan_ordem_servico_id_fkey"
+            columns: ["ordem_servico_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_cutting_plan_product_template_id_fkey"
+            columns: ["product_template_id"]
+            isOneToOne: false
+            referencedRelation: "product_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_cutting_plan_quote_item_id_fkey"
+            columns: ["quote_item_id"]
+            isOneToOne: false
+            referencedRelation: "quote_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      os_glass_projects: {
+        Row: {
+          created_at: string
+          glass_color: string | null
+          glass_type: string | null
+          id: string
+          ordem_servico_id: string
+          panels_data: Json
+          product_name: string
+          product_template_id: string | null
+          quantity: number
+          quote_item_id: string | null
+          total_area_m2: number | null
+          vao_height: number
+          vao_width: number
+        }
+        Insert: {
+          created_at?: string
+          glass_color?: string | null
+          glass_type?: string | null
+          id?: string
+          ordem_servico_id: string
+          panels_data?: Json
+          product_name: string
+          product_template_id?: string | null
+          quantity?: number
+          quote_item_id?: string | null
+          total_area_m2?: number | null
+          vao_height: number
+          vao_width: number
+        }
+        Update: {
+          created_at?: string
+          glass_color?: string | null
+          glass_type?: string | null
+          id?: string
+          ordem_servico_id?: string
+          panels_data?: Json
+          product_name?: string
+          product_template_id?: string | null
+          quantity?: number
+          quote_item_id?: string | null
+          total_area_m2?: number | null
+          vao_height?: number
+          vao_width?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_glass_projects_ordem_servico_id_fkey"
+            columns: ["ordem_servico_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_glass_projects_product_template_id_fkey"
+            columns: ["product_template_id"]
+            isOneToOne: false
+            referencedRelation: "product_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_glass_projects_quote_item_id_fkey"
+            columns: ["quote_item_id"]
+            isOneToOne: false
+            referencedRelation: "quote_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      os_materials: {
+        Row: {
+          bar_length_mm: number | null
+          bars_needed: number | null
+          created_at: string
+          cut_length_mm: number | null
+          id: string
+          item_name: string
+          item_template_id: string | null
+          item_type: string
+          notes: string | null
+          ordem_servico_id: string
+          pieces_count: number
+          total_length_mm: number | null
+          unit: string | null
+          waste_mm: number | null
+          waste_percent: number | null
+        }
+        Insert: {
+          bar_length_mm?: number | null
+          bars_needed?: number | null
+          created_at?: string
+          cut_length_mm?: number | null
+          id?: string
+          item_name: string
+          item_template_id?: string | null
+          item_type: string
+          notes?: string | null
+          ordem_servico_id: string
+          pieces_count?: number
+          total_length_mm?: number | null
+          unit?: string | null
+          waste_mm?: number | null
+          waste_percent?: number | null
+        }
+        Update: {
+          bar_length_mm?: number | null
+          bars_needed?: number | null
+          created_at?: string
+          cut_length_mm?: number | null
+          id?: string
+          item_name?: string
+          item_template_id?: string | null
+          item_type?: string
+          notes?: string | null
+          ordem_servico_id?: string
+          pieces_count?: number
+          total_length_mm?: number | null
+          unit?: string | null
+          waste_mm?: number | null
+          waste_percent?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_materials_item_template_id_fkey"
+            columns: ["item_template_id"]
+            isOneToOne: false
+            referencedRelation: "item_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_materials_ordem_servico_id_fkey"
+            columns: ["ordem_servico_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico"
             referencedColumns: ["id"]
           },
         ]

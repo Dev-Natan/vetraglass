@@ -1,0 +1,230 @@
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Package, Ruler, AlertTriangle, CheckCircle } from 'lucide-react';
+import { formatMm, distributeAcrossBars } from '@/utils/profileOptimization';
+
+interface OSMaterialsListProps {
+  ordemServicoId: string;
+}
+
+export function OSMaterialsList({ ordemServicoId }: OSMaterialsListProps) {
+  const { data: materials, isLoading } = useQuery({
+    queryKey: ['os-materials', ordemServicoId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('os_materials')
+        .select('*')
+        .eq('ordem_servico_id', ordemServicoId)
+        .order('item_name');
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!materials || materials.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-8 text-center text-muted-foreground">
+          <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
+          <p>Nenhum material gerado para esta OS.</p>
+          <p className="text-sm mt-2">Os materiais são gerados automaticamente ao aprovar orçamentos com produtos configurados.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Group by item type
+  const profiles = materials.filter(m => m.item_type === 'profile');
+  const totalBars = profiles.reduce((sum, p) => sum + (p.bars_needed || 0), 0);
+  const totalWaste = profiles.reduce((sum, p) => sum + (p.waste_mm || 0), 0);
+  const totalLength = profiles.reduce((sum, p) => sum + (p.total_length_mm || 0), 0);
+  const avgWaste = totalLength > 0 
+    ? Math.round((totalWaste / (totalLength + totalWaste)) * 1000) / 10 
+    : 0;
+
+  return (
+    <div className="space-y-6">
+      {/* Summary Card */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Package className="w-5 h-5" />
+            Resumo de Materiais
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center p-3 bg-muted/50 rounded-lg">
+              <div className="text-2xl font-bold text-primary">{profiles.length}</div>
+              <div className="text-sm text-muted-foreground">Tipos de Perfis</div>
+            </div>
+            <div className="text-center p-3 bg-muted/50 rounded-lg">
+              <div className="text-2xl font-bold text-primary">{totalBars}</div>
+              <div className="text-sm text-muted-foreground">Barras Necessárias</div>
+            </div>
+            <div className="text-center p-3 bg-muted/50 rounded-lg">
+              <div className="text-2xl font-bold">{formatMm(totalLength)}</div>
+              <div className="text-sm text-muted-foreground">Comprimento Total</div>
+            </div>
+            <div className="text-center p-3 bg-muted/50 rounded-lg">
+              <div className={`text-2xl font-bold ${avgWaste > 20 ? 'text-destructive' : avgWaste > 10 ? 'text-yellow-600' : 'text-green-600'}`}>
+                {avgWaste}%
+              </div>
+              <div className="text-sm text-muted-foreground">Desperdício Médio</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Profiles List */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Ruler className="w-5 h-5" />
+            Perfis de Alumínio
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {profiles.map((profile) => {
+              // Parse cuts from notes
+              const cutsFromNotes = profile.notes?.split(', ').map(s => {
+                const match = s.match(/(\d+)x\s*(\d+)mm/);
+                if (match) {
+                  return { qty: parseInt(match[1]), length: parseInt(match[2]) };
+                }
+                return null;
+              }).filter(Boolean) || [];
+
+              const bars = distributeAcrossBars(
+                cutsFromNotes as Array<{ length: number; qty: number }>,
+                profile.bar_length_mm || 6000
+              );
+
+              return (
+                <div key={profile.id} className="border rounded-lg p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <h4 className="font-semibold text-lg">{profile.item_name}</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Barra: {formatMm(profile.bar_length_mm || 6000)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="font-mono">
+                        {profile.bars_needed} barra{profile.bars_needed !== 1 ? 's' : ''}
+                      </Badge>
+                      <Badge 
+                        variant={
+                          (profile.waste_percent || 0) > 20 ? 'destructive' : 
+                          (profile.waste_percent || 0) > 10 ? 'secondary' : 
+                          'default'
+                        }
+                      >
+                        {profile.waste_percent?.toFixed(1)}% sobra
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <Separator className="my-3" />
+
+                  {/* Cuts breakdown */}
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium">Cortes necessários:</div>
+                    <div className="flex flex-wrap gap-2">
+                      {cutsFromNotes.map((cut, idx) => (
+                        <Badge key={idx} variant="secondary" className="font-mono">
+                          {cut?.qty}x {cut?.length}mm
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Bar distribution visualization */}
+                  {bars.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                      <div className="text-sm font-medium">Distribuição nas barras:</div>
+                      <div className="space-y-2">
+                        {bars.slice(0, 5).map((bar) => (
+                          <div key={bar.barIndex} className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground w-16">
+                              Barra {bar.barIndex}
+                            </span>
+                            <div className="flex-1 h-6 bg-muted rounded overflow-hidden flex">
+                              {bar.cuts.map((cut, idx) => {
+                                const widthPercent = (cut.length / (profile.bar_length_mm || 6000)) * 100;
+                                return (
+                                  <div
+                                    key={idx}
+                                    className="h-full bg-primary flex items-center justify-center text-[10px] text-primary-foreground border-r border-background"
+                                    style={{ width: `${widthPercent * cut.qty}%` }}
+                                    title={`${cut.qty}x ${cut.length}mm`}
+                                  >
+                                    {widthPercent > 8 && `${cut.length}`}
+                                  </div>
+                                );
+                              })}
+                              {bar.remainingLength > 0 && (
+                                <div 
+                                  className="h-full bg-muted-foreground/20 flex items-center justify-center text-[10px]"
+                                  style={{ width: `${(bar.remainingLength / (profile.bar_length_mm || 6000)) * 100}%` }}
+                                >
+                                  {bar.remainingLength > 200 && `${bar.remainingLength}mm`}
+                                </div>
+                              )}
+                            </div>
+                            <span className="text-xs text-muted-foreground w-20 text-right">
+                              {bar.remainingLength > 0 ? (
+                                <span className="text-yellow-600">
+                                  <AlertTriangle className="w-3 h-3 inline mr-1" />
+                                  {formatMm(bar.remainingLength)}
+                                </span>
+                              ) : (
+                                <span className="text-green-600">
+                                  <CheckCircle className="w-3 h-3 inline mr-1" />
+                                  Exato
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                        ))}
+                        {bars.length > 5 && (
+                          <p className="text-xs text-muted-foreground">
+                            ... e mais {bars.length - 5} barras
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <Separator className="my-3" />
+
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      Total: {profile.pieces_count} peças = {formatMm(profile.total_length_mm || 0)}
+                    </span>
+                    <span className="text-muted-foreground">
+                      Sobra: {formatMm(profile.waste_mm || 0)}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
