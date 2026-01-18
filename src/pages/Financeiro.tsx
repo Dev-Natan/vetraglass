@@ -5,7 +5,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { 
   DollarSign, 
-  TrendingUp, 
   CreditCard, 
   ArrowUpRight, 
   Search,
@@ -17,9 +16,7 @@ import {
   Smartphone,
   FileText,
   Download,
-  Settings,
   Receipt,
-  BarChart3,
   Wallet,
   Users
 } from 'lucide-react';
@@ -52,10 +49,6 @@ import { CancelarVendaDialog } from '@/components/caixa/CancelarVendaDialog';
 import { DetalhesVendaDialog } from '@/components/caixa/DetalhesVendaDialog';
 import { generateSalePdf } from '@/utils/generateSalePdf';
 import { Parser } from 'expr-eval';
-import { TaxDashboard } from '@/components/financeiro/TaxDashboard';
-import { TaxReports } from '@/components/financeiro/TaxReports';
-import { TaxCategories } from '@/components/financeiro/TaxCategories';
-import { TaxConfigDialog } from '@/components/financeiro/TaxConfigDialog';
 import { ExpensesTab } from '@/components/financeiro/ExpensesTab';
 import { CommissionsTab } from '@/components/financeiro/CommissionsTab';
 import { ContasReceberTab } from '@/components/financeiro/ContasReceberTab';
@@ -125,7 +118,6 @@ export default function Financeiro() {
     to: undefined,
   });
   const [activeTab, setActiveTab] = useState('caixa-empresa');
-  const [taxConfigOpen, setTaxConfigOpen] = useState(false);
 
   // Dialogs
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -182,95 +174,6 @@ export default function Financeiro() {
       return data || [];
     },
     enabled: !!currentCompany?.id,
-  });
-
-  // Fetch tax config
-  const { data: taxConfig } = useQuery({
-    queryKey: ['tax-config', currentCompany?.id],
-    queryFn: async () => {
-      if (!currentCompany?.id) return null;
-      const { data } = await supabase
-        .from('company_tax_config')
-        .select('*')
-        .eq('company_id', currentCompany.id)
-        .maybeSingle();
-      return data;
-    },
-    enabled: !!currentCompany?.id,
-  });
-
-  // Fetch tax categories
-  const { data: taxCategories = [] } = useQuery({
-    queryKey: ['tax-categories', currentCompany?.id],
-    queryFn: async () => {
-      if (!currentCompany?.id) return [];
-      const { data } = await supabase
-        .from('tax_categories')
-        .select('*')
-        .eq('company_id', currentCompany.id)
-        .order('name');
-      return data || [];
-    },
-    enabled: !!currentCompany?.id,
-  });
-
-  // Fetch sale taxes
-  const { data: saleTaxes = [] } = useQuery({
-    queryKey: ['sale-taxes', currentCompany?.id],
-    queryFn: async () => {
-      if (!currentCompany?.id) return [];
-      const { data } = await supabase
-        .from('sale_taxes')
-        .select('*')
-        .eq('company_id', currentCompany.id);
-      return data || [];
-    },
-    enabled: !!currentCompany?.id,
-  });
-
-  // Save tax config mutation
-  const saveTaxConfigMutation = useMutation({
-    mutationFn: async (config: { regime_tributario: string; faixa_simples: number; aliquota_efetiva: number; anexo_simples: string; receita_bruta_12_meses: number }) => {
-      if (!currentCompany?.id) throw new Error('Empresa não encontrada');
-      const { data, error } = await supabase
-        .from('company_tax_config')
-        .upsert({ ...config, company_id: currentCompany.id }, { onConflict: 'company_id' })
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      toast.success('Configuração tributária salva!');
-      queryClient.invalidateQueries({ queryKey: ['tax-config'] });
-      setTaxConfigOpen(false);
-    },
-  });
-
-  // Tax category mutations
-  const addCategoryMutation = useMutation({
-    mutationFn: async (cat: { name: string; ncm_code: string | null; description: string | null; aliquota_ibs: number; aliquota_cbs: number; aliquota_is: number }) => {
-      if (!currentCompany?.id) throw new Error('Empresa não encontrada');
-      const { error } = await supabase.from('tax_categories').insert({ ...cat, company_id: currentCompany.id });
-      if (error) throw error;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tax-categories'] }),
-  });
-
-  const updateCategoryMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<{ name: string; ncm_code: string | null; description: string | null; aliquota_ibs: number; aliquota_cbs: number; aliquota_is: number }> }) => {
-      const { error } = await supabase.from('tax_categories').update(data).eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tax-categories'] }),
-  });
-
-  const deleteCategoryMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('tax_categories').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tax-categories'] }),
   });
 
   // Apply client-side filters
@@ -461,19 +364,13 @@ export default function Financeiro() {
               <DollarSign className="w-7 h-7 text-primary" />
               Financeiro
             </h1>
-            <p className="text-muted-foreground">Gestão de vendas, impostos e movimentações financeiras</p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" className="gap-2" onClick={() => setTaxConfigOpen(true)}>
-              <Settings className="w-4 h-4" />
-              Configurar Impostos
-            </Button>
+            <p className="text-muted-foreground">Gestão de vendas, caixa e movimentações financeiras</p>
           </div>
         </div>
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-8 lg:w-auto lg:inline-grid">
+          <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
             <TabsTrigger value="caixa-empresa" className="gap-2">
               <DollarSign className="w-4 h-4 hidden sm:inline" />
               Caixa Empresa
@@ -493,18 +390,6 @@ export default function Financeiro() {
             <TabsTrigger value="despesas" className="gap-2">
               <Wallet className="w-4 h-4 hidden sm:inline" />
               Despesas
-            </TabsTrigger>
-            <TabsTrigger value="impostos" className="gap-2">
-              <Receipt className="w-4 h-4 hidden sm:inline" />
-              Impostos
-            </TabsTrigger>
-            <TabsTrigger value="relatorios" className="gap-2">
-              <BarChart3 className="w-4 h-4 hidden sm:inline" />
-              Relatórios
-            </TabsTrigger>
-            <TabsTrigger value="categorias" className="gap-2">
-              <Settings className="w-4 h-4 hidden sm:inline" />
-              Categorias
             </TabsTrigger>
           </TabsList>
 
@@ -786,38 +671,9 @@ export default function Financeiro() {
             </Card>
           </TabsContent>
 
-          {/* Tab: Impostos */}
           {/* Tab: Contas a Receber */}
           <TabsContent value="receber" className="mt-6">
             <ContasReceberTab />
-          </TabsContent>
-
-          <TabsContent value="impostos" className="mt-6">
-            <TaxDashboard 
-              sales={sales} 
-              taxConfig={taxConfig} 
-              saleTaxes={saleTaxes} 
-            />
-          </TabsContent>
-
-          {/* Tab: Relatórios */}
-          <TabsContent value="relatorios" className="mt-6">
-            <TaxReports 
-              sales={sales} 
-              taxConfig={taxConfig}
-              company={currentCompany ? { name: currentCompany.name, cnpj: currentCompany.cnpj } : null}
-            />
-          </TabsContent>
-
-          {/* Tab: Categorias */}
-          <TabsContent value="categorias" className="mt-6">
-            <TaxCategories
-              categories={taxCategories}
-              onAdd={async (cat) => { await addCategoryMutation.mutateAsync(cat); }}
-              onUpdate={async (id, data) => { await updateCategoryMutation.mutateAsync({ id, data }); }}
-              onDelete={async (id) => { await deleteCategoryMutation.mutateAsync(id); }}
-              isLoading={addCategoryMutation.isPending || updateCategoryMutation.isPending || deleteCategoryMutation.isPending}
-            />
           </TabsContent>
         </Tabs>
       </div>
@@ -836,14 +692,6 @@ export default function Financeiro() {
         onOpenChange={setDetailsDialogOpen}
         sale={selectedSale}
         onPrint={handlePrintReceipt}
-      />
-
-      <TaxConfigDialog
-        open={taxConfigOpen}
-        onOpenChange={setTaxConfigOpen}
-        config={taxConfig}
-        onSave={(config) => saveTaxConfigMutation.mutateAsync(config)}
-        isLoading={saveTaxConfigMutation.isPending}
       />
     </MainLayout>
   );
