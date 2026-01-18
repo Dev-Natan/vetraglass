@@ -27,12 +27,9 @@ import { CaixaResumo } from '@/components/caixa/CaixaResumo';
 import { VendasTable } from '@/components/caixa/VendasTable';
 import { CancelarVendaDialog } from '@/components/caixa/CancelarVendaDialog';
 import { DetalhesVendaDialog } from '@/components/caixa/DetalhesVendaDialog';
-import { CaixaEmpresaCard } from '@/components/caixa/CaixaEmpresaCard';
-import { MovimentoCaixaEmpresaDialog } from '@/components/caixa/MovimentoCaixaEmpresaDialog';
 import { MovimentacaoCaixaDialog } from '@/components/caixa/MovimentacaoCaixaDialog';
 import { CaixaAlertasHoje } from '@/components/caixa/CaixaAlertasHoje';
 import { CaixaMovimentacoesTable } from '@/components/caixa/CaixaMovimentacoesTable';
-import { CaixaAdiantamentosCard } from '@/components/caixa/CaixaAdiantamentosCard';
 import { generateSalePdf } from '@/utils/generateSalePdf';
 
 type PeriodFilter = 'today' | 'yesterday' | 'week' | 'month' | 'all';
@@ -82,14 +79,11 @@ export default function CaixaVendas() {
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('today');
   const [pendingOpenNewSale, setPendingOpenNewSale] = useState(false);
   
-  // Dialogs do caixa da empresa
-  const [empresaDialogType, setEmpresaDialogType] = useState<'entrada' | 'saida' | 'config' | null>(null);
-  
   // Dialog movimentação do caixa do dia
   const [movimentacaoCaixaOpen, setMovimentacaoCaixaOpen] = useState(false);
 
-  // Buscar caixa da empresa
-  const { data: companyCash, isLoading: loadingCompanyCash } = useQuery({
+  // Buscar caixa da empresa (usado para abrir/fechar caixa)
+  const { data: companyCash } = useQuery({
     queryKey: ['company-cash', currentCompany?.id],
     queryFn: async () => {
       if (!currentCompany?.id) return null;
@@ -287,48 +281,6 @@ export default function CaixaVendas() {
 
     return { openingAmount, totalDinheiro, totalCartao, totalPix, totalVendas, expectedAmount, totalEntradas, totalSaidas };
   }, [openCashRegister, todaySales, cashMovements]);
-
-  // Mutation: Configurar caixa da empresa
-  const configCompanyCashMutation = useMutation({
-    mutationFn: async ({ initialBalance, fixedFund }: { initialBalance: number; fixedFund: number }) => {
-      if (!currentCompany?.id) throw new Error('Empresa não encontrada');
-      const { data, error } = await supabase.rpc('initialize_company_cash', {
-        _company_id: currentCompany.id,
-        _initial_balance: initialBalance,
-        _fixed_fund: fixedFund,
-      });
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      toast.success('Caixa da empresa configurado!');
-      queryClient.invalidateQueries({ queryKey: ['company-cash'] });
-      setEmpresaDialogType(null);
-    },
-    onError: (error: Error) => toast.error(`Erro: ${error.message}`),
-  });
-
-  // Mutation: Movimentação caixa empresa
-  const companyCashMovementMutation = useMutation({
-    mutationFn: async ({ type, category, amount, description }: { type: string; category: string; amount: number; description: string }) => {
-      if (!currentCompany?.id) throw new Error('Empresa não encontrada');
-      const { data, error } = await supabase.rpc('register_company_cash_movement', {
-        _company_id: currentCompany.id,
-        _type: type,
-        _category: category,
-        _amount: amount,
-        _description: description,
-      });
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      toast.success('Movimentação registrada!');
-      queryClient.invalidateQueries({ queryKey: ['company-cash'] });
-      setEmpresaDialogType(null);
-    },
-    onError: (error: Error) => toast.error(`Erro: ${error.message}`),
-  });
 
   // Mutation: Abrir caixa (usando função SQL com todas as regras)
   const openCashMutation = useMutation({
@@ -600,17 +552,6 @@ export default function CaixaVendas() {
           </div>
         </div>
 
-        {/* Card Caixa da Empresa */}
-        <div className="grid gap-4 md:grid-cols-2">
-          <CaixaEmpresaCard
-            companyCash={companyCash}
-            isLoading={loadingCompanyCash}
-            onDeposit={() => setEmpresaDialogType('entrada')}
-            onWithdraw={() => setEmpresaDialogType('saida')}
-            onConfigure={() => setEmpresaDialogType('config')}
-          />
-          <CaixaAdiantamentosCard />
-        </div>
 
         {loadingCashRegister ? (
           <div className="h-40 flex items-center justify-center">
@@ -701,23 +642,6 @@ export default function CaixaVendas() {
       <NovaVendaDialog open={novaVendaOpen} onOpenChange={setNovaVendaOpen} onConfirm={(data) => newSaleMutation.mutateAsync(data)} availableItems={availableItems} approvedQuotes={approvedQuotes} isLoading={newSaleMutation.isPending} />
       <CancelarVendaDialog open={cancelarVendaOpen} onOpenChange={setCancelarVendaOpen} sale={selectedSale} onConfirm={(saleId, reason) => cancelSaleMutation.mutateAsync({ saleId, reason })} isLoading={cancelSaleMutation.isPending} />
       <DetalhesVendaDialog open={detalhesVendaOpen} onOpenChange={setDetalhesVendaOpen} sale={selectedSale} onPrint={handlePrintReceipt} />
-      
-      {/* Dialog Caixa Empresa */}
-      <MovimentoCaixaEmpresaDialog
-        open={empresaDialogType !== null}
-        onOpenChange={(open) => !open && setEmpresaDialogType(null)}
-        type={empresaDialogType || 'config'}
-        currentBalance={companyCash?.current_balance || 0}
-        fixedFund={companyCash?.fixed_fund || 500}
-        onConfirm={async (data) => {
-          if (data.initialBalance !== undefined) {
-            await configCompanyCashMutation.mutateAsync({ initialBalance: data.initialBalance, fixedFund: data.fixedFund || 500 });
-          } else if (data.type && data.category && data.amount && data.description) {
-            await companyCashMovementMutation.mutateAsync({ type: data.type, category: data.category, amount: data.amount, description: data.description });
-          }
-        }}
-        isLoading={configCompanyCashMutation.isPending || companyCashMovementMutation.isPending}
-      />
 
       {/* Dialog Movimentação Caixa do Dia */}
       {openCashRegister && (
