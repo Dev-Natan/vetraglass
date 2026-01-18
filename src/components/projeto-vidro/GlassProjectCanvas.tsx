@@ -193,12 +193,12 @@ export function GlassProjectCanvas({
                     onClick={() => handleEditPanel(panel)}
                   />
                   
-                  {/* Draw holes - X from left edge, Y from bottom edge */}
+                  {/* Draw holes - X from left edge, Y from TOP edge */}
                   {mods.holes.map(hole => {
                     // X: distance from left edge of panel
                     const cx = panel.x + hole.x * layout.scale;
-                    // Y: distance from bottom edge (inverted for SVG)
-                    const cy = panel.y + panel.scaledHeight - (hole.y * layout.scale);
+                    // Y: distance from TOP edge (same direction as SVG)
+                    const cy = panel.y + hole.y * layout.scale;
                     // Diameter scaled
                     const r = (hole.diameter / 2) * layout.scale;
                     return (
@@ -225,9 +225,9 @@ export function GlassProjectCanvas({
                         />
                         <line
                           x1={cx}
-                          y1={panel.y + panel.scaledHeight}
+                          y1={panel.y}
                           x2={cx}
-                          y2={cy + Math.max(r, 4)}
+                          y2={cy - Math.max(r, 4)}
                           stroke="hsl(var(--primary))"
                           strokeWidth={0.5}
                           strokeDasharray="2,2"
