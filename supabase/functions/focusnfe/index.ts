@@ -143,9 +143,9 @@ serve(async (req) => {
   }
 
   try {
-    // Verificar autenticação
+    // Verificar autenticação usando getClaims
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
+    if (!authHeader?.startsWith('Bearer ')) {
       return new Response(
         JSON.stringify({ error: 'Authorization header required' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -158,13 +158,16 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } }, auth: { persistSession: false } }
     );
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
       return new Response(
         JSON.stringify({ error: 'Invalid authentication' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const userId = claimsData.claims.sub;
 
     const { action, nota_id, tipo, payload, company_id } = await req.json();
     console.log(`[FocusNFe] Action: ${action}, Tipo: ${tipo}, NotaID: ${nota_id}`);
