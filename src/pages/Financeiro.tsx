@@ -58,6 +58,7 @@ import { TaxCategories } from '@/components/financeiro/TaxCategories';
 import { TaxConfigDialog } from '@/components/financeiro/TaxConfigDialog';
 import { ExpensesTab } from '@/components/financeiro/ExpensesTab';
 import { CommissionsTab } from '@/components/financeiro/CommissionsTab';
+import { ContasReceberTab } from '@/components/financeiro/ContasReceberTab';
 
 type PeriodFilter = 'today' | 'week' | 'month' | 'last_month' | 'custom' | 'all';
 type PaymentFilter = 'all' | 'dinheiro' | 'cartao' | 'pix';
@@ -471,10 +472,14 @@ export default function Financeiro() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid">
+          <TabsList className="grid w-full grid-cols-7 lg:w-auto lg:inline-grid">
             <TabsTrigger value="vendas" className="gap-2">
               <FileText className="w-4 h-4 hidden sm:inline" />
               Vendas
+            </TabsTrigger>
+            <TabsTrigger value="receber" className="gap-2">
+              <Receipt className="w-4 h-4 hidden sm:inline" />
+              A Receber
             </TabsTrigger>
             <TabsTrigger value="comissoes" className="gap-2">
               <Users className="w-4 h-4 hidden sm:inline" />
@@ -772,6 +777,11 @@ export default function Financeiro() {
           </TabsContent>
 
           {/* Tab: Impostos */}
+          {/* Tab: Contas a Receber */}
+          <TabsContent value="receber" className="mt-6">
+            <ContasReceberTab />
+          </TabsContent>
+
           <TabsContent value="impostos" className="mt-6">
             <TaxDashboard 
               sales={sales} 

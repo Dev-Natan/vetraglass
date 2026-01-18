@@ -1,0 +1,497 @@
+import { useState, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { format, isPast, isToday, addDays, startOfDay, endOfDay } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import {
+  Calendar,
+  DollarSign,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  Search,
+  Filter,
+  Receipt,
+  Loader2,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { toast } from 'sonner';
+
+interface Receivable {
+  id: string;
+  customer_name: string;
+  description: string;
+  total_amount: number;
+  installment_number: number;
+  total_installments: number;
+  due_date: string;
+  paid_date: string | null;
+  paid_amount: number | null;
+  status: string;
+  payment_method: string | null;
+  sale_id: string | null;
+  ordem_servico_id: string | null;
+  client_id: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+type StatusFilter = 'all' | 'pending' | 'overdue' | 'paid';
+type PeriodFilter = 'all' | 'today' | 'week' | 'month' | 'overdue';
+
+const statusConfig = {
+  pending: { label: 'Pendente', color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300', icon: Clock },
+  overdue: { label: 'Vencido', color: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300', icon: AlertTriangle },
+  paid: { label: 'Pago', color: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300', icon: CheckCircle },
+  partial: { label: 'Parcial', color: 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300', icon: Clock },
+  cancelled: { label: 'Cancelado', color: 'bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300', icon: Clock },
+};
+
+export function ContasReceberTab() {
+  const { currentCompany, user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('pending');
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  const [receiveDialogOpen, setReceiveDialogOpen] = useState(false);
+  const [selectedReceivable, setSelectedReceivable] = useState<Receivable | null>(null);
+  const [receivePaymentMethod, setReceivePaymentMethod] = useState<'dinheiro' | 'pix' | 'transferencia' | 'cartao'>('dinheiro');
+
+  // Fetch receivables
+  const { data: receivables = [], isLoading } = useQuery({
+    queryKey: ['accounts-receivable', currentCompany?.id],
+    queryFn: async () => {
+      if (!currentCompany?.id) return [];
+
+      const { data, error } = await supabase
+        .from('accounts_receivable')
+        .select('*')
+        .eq('company_id', currentCompany.id)
+        .order('due_date', { ascending: true });
+
+      if (error) throw error;
+      return data as Receivable[];
+    },
+    enabled: !!currentCompany?.id,
+  });
+
+  // Filter receivables
+  const filteredReceivables = useMemo(() => {
+    let filtered = [...receivables];
+
+    // Status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(r => {
+        if (statusFilter === 'overdue') {
+          return r.status === 'pending' && isPast(new Date(r.due_date)) && !isToday(new Date(r.due_date));
+        }
+        return r.status === statusFilter;
+      });
+    }
+
+    // Period filter
+    if (periodFilter !== 'all') {
+      const today = startOfDay(new Date());
+      filtered = filtered.filter(r => {
+        const dueDate = new Date(r.due_date);
+        switch (periodFilter) {
+          case 'today':
+            return isToday(dueDate);
+          case 'week':
+            return dueDate >= today && dueDate <= addDays(today, 7);
+          case 'month':
+            return dueDate >= today && dueDate <= addDays(today, 30);
+          case 'overdue':
+            return isPast(dueDate) && !isToday(dueDate) && r.status !== 'paid';
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Search filter
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase();
+      filtered = filtered.filter(r => 
+        r.customer_name.toLowerCase().includes(search) ||
+        r.description.toLowerCase().includes(search)
+      );
+    }
+
+    return filtered;
+  }, [receivables, statusFilter, periodFilter, searchTerm]);
+
+  // Summary calculations
+  const summary = useMemo(() => {
+    const pending = receivables.filter(r => r.status === 'pending' || r.status === 'partial');
+    const overdue = pending.filter(r => isPast(new Date(r.due_date)) && !isToday(new Date(r.due_date)));
+    const dueThisWeek = pending.filter(r => {
+      const dueDate = new Date(r.due_date);
+      const today = startOfDay(new Date());
+      return dueDate >= today && dueDate <= addDays(today, 7);
+    });
+    const paid = receivables.filter(r => r.status === 'paid');
+
+    return {
+      totalPending: pending.reduce((sum, r) => sum + r.total_amount, 0),
+      totalOverdue: overdue.reduce((sum, r) => sum + r.total_amount, 0),
+      totalDueThisWeek: dueThisWeek.reduce((sum, r) => sum + r.total_amount, 0),
+      totalPaid: paid.reduce((sum, r) => sum + (r.paid_amount || r.total_amount), 0),
+      countPending: pending.length,
+      countOverdue: overdue.length,
+      countDueThisWeek: dueThisWeek.length,
+    };
+  }, [receivables]);
+
+  // Receive payment mutation
+  const receivePaymentMutation = useMutation({
+    mutationFn: async (receivable: Receivable) => {
+      if (!currentCompany?.id || !user?.id) throw new Error('Dados inválidos');
+
+      // Update receivable
+      const { error: updateError } = await supabase
+        .from('accounts_receivable')
+        .update({
+          status: 'paid',
+          paid_date: new Date().toISOString(),
+          paid_amount: receivable.total_amount,
+          payment_method: receivePaymentMethod,
+        })
+        .eq('id', receivable.id);
+
+      if (updateError) throw updateError;
+
+      // Check if there's an open cash register to add movement
+      const { data: openRegister } = await supabase
+        .from('cash_registers')
+        .select('id')
+        .eq('company_id', currentCompany.id)
+        .eq('status', 'open')
+        .maybeSingle();
+
+      if (openRegister) {
+        // Create cash movement for the received payment
+        const { error: movementError } = await supabase
+          .from('cash_movements')
+          .insert({
+            company_id: currentCompany.id,
+            cash_register_id: openRegister.id,
+            type: 'entrada',
+            category: 'recebimento_parcela',
+            amount: receivable.total_amount,
+            description: `Recebimento parcela ${receivable.installment_number}/${receivable.total_installments} - ${receivable.customer_name}`,
+            payment_method: receivePaymentMethod,
+            receivable_id: receivable.id,
+            sale_id: receivable.sale_id,
+            created_by: user.id,
+          });
+
+        if (movementError) console.error('Error creating cash movement:', movementError);
+      }
+
+      return receivable;
+    },
+    onSuccess: (receivable) => {
+      toast.success(`Pagamento de ${receivable.customer_name} registrado!`);
+      queryClient.invalidateQueries({ queryKey: ['accounts-receivable'] });
+      queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
+      setReceiveDialogOpen(false);
+      setSelectedReceivable(null);
+    },
+    onError: (error: Error) => {
+      toast.error(`Erro ao registrar pagamento: ${error.message}`);
+    },
+  });
+
+  const formatCurrency = (value: number) => {
+    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  };
+
+  const getStatusDisplay = (receivable: Receivable) => {
+    if (receivable.status === 'paid') return statusConfig.paid;
+    if (receivable.status === 'cancelled') return statusConfig.cancelled;
+    if (isPast(new Date(receivable.due_date)) && !isToday(new Date(receivable.due_date))) {
+      return statusConfig.overdue;
+    }
+    return statusConfig.pending;
+  };
+
+  const handleReceiveClick = (receivable: Receivable) => {
+    setSelectedReceivable(receivable);
+    setReceiveDialogOpen(true);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total a Receber</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(summary.totalPending)}</div>
+            <p className="text-xs text-muted-foreground">{summary.countPending} parcelas pendentes</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-red-200 dark:border-red-800">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-red-600">Vencido</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-red-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{formatCurrency(summary.totalOverdue)}</div>
+            <p className="text-xs text-muted-foreground">{summary.countOverdue} parcelas atrasadas</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-yellow-200 dark:border-yellow-800">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-yellow-600">Vence esta semana</CardTitle>
+            <Calendar className="h-4 w-4 text-yellow-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-600">{formatCurrency(summary.totalDueThisWeek)}</div>
+            <p className="text-xs text-muted-foreground">{summary.countDueThisWeek} parcelas</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-green-200 dark:border-green-800">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-green-600">Recebido (Total)</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{formatCurrency(summary.totalPaid)}</div>
+            <p className="text-xs text-muted-foreground">Histórico completo</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por cliente..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
+          <SelectTrigger className="w-[150px]">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="pending">Pendentes</SelectItem>
+            <SelectItem value="overdue">Vencidos</SelectItem>
+            <SelectItem value="paid">Pagos</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={periodFilter} onValueChange={(v) => setPeriodFilter(v as PeriodFilter)}>
+          <SelectTrigger className="w-[150px]">
+            <SelectValue placeholder="Período" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="today">Hoje</SelectItem>
+            <SelectItem value="week">Próx. 7 dias</SelectItem>
+            <SelectItem value="month">Próx. 30 dias</SelectItem>
+            <SelectItem value="overdue">Atrasados</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Table */}
+      <div className="rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Cliente</TableHead>
+              <TableHead>Descrição</TableHead>
+              <TableHead>Parcela</TableHead>
+              <TableHead>Vencimento</TableHead>
+              <TableHead>Valor</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                </TableCell>
+              </TableRow>
+            ) : filteredReceivables.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  Nenhuma parcela encontrada
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredReceivables.map((receivable) => {
+                const statusDisplay = getStatusDisplay(receivable);
+                const StatusIcon = statusDisplay.icon;
+                return (
+                  <TableRow key={receivable.id}>
+                    <TableCell className="font-medium">{receivable.customer_name}</TableCell>
+                    <TableCell className="text-muted-foreground max-w-[200px] truncate">
+                      {receivable.description}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {receivable.installment_number}/{receivable.total_installments}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {format(new Date(receivable.due_date), 'dd/MM/yyyy', { locale: ptBR })}
+                    </TableCell>
+                    <TableCell className="font-semibold">
+                      {formatCurrency(receivable.total_amount)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={statusDisplay.color}>
+                        <StatusIcon className="w-3 h-3 mr-1" />
+                        {statusDisplay.label}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {receivable.status !== 'paid' && (
+                        <Button 
+                          size="sm" 
+                          onClick={() => handleReceiveClick(receivable)}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          <Receipt className="w-4 h-4 mr-1" />
+                          Receber
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Receive Payment Dialog */}
+      <Dialog open={receiveDialogOpen} onOpenChange={setReceiveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Registrar Recebimento</DialogTitle>
+            <DialogDescription>
+              Confirme o recebimento da parcela de {selectedReceivable?.customer_name}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedReceivable && (
+            <div className="space-y-4 py-4">
+              <div className="rounded-lg border p-4 bg-muted/20">
+                <div className="flex justify-between mb-2">
+                  <span className="text-muted-foreground">Parcela</span>
+                  <span className="font-medium">
+                    {selectedReceivable.installment_number}/{selectedReceivable.total_installments}
+                  </span>
+                </div>
+                <div className="flex justify-between mb-2">
+                  <span className="text-muted-foreground">Vencimento</span>
+                  <span className="font-medium">
+                    {format(new Date(selectedReceivable.due_date), 'dd/MM/yyyy', { locale: ptBR })}
+                  </span>
+                </div>
+                <div className="flex justify-between text-lg font-bold border-t pt-2 mt-2">
+                  <span>Valor</span>
+                  <span className="text-green-600">{formatCurrency(selectedReceivable.total_amount)}</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Forma de Recebimento</Label>
+                <RadioGroup
+                  value={receivePaymentMethod}
+                  onValueChange={(v) => setReceivePaymentMethod(v as typeof receivePaymentMethod)}
+                  className="grid grid-cols-2 gap-2"
+                >
+                  <Label htmlFor="receive-dinheiro" className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 cursor-pointer ${receivePaymentMethod === 'dinheiro' ? 'border-primary bg-primary/5' : 'border-muted'}`}>
+                    <RadioGroupItem value="dinheiro" id="receive-dinheiro" className="sr-only" />
+                    <DollarSign className="w-4 h-4" />
+                    Dinheiro
+                  </Label>
+                  <Label htmlFor="receive-pix" className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 cursor-pointer ${receivePaymentMethod === 'pix' ? 'border-primary bg-primary/5' : 'border-muted'}`}>
+                    <RadioGroupItem value="pix" id="receive-pix" className="sr-only" />
+                    PIX
+                  </Label>
+                  <Label htmlFor="receive-transferencia" className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 cursor-pointer ${receivePaymentMethod === 'transferencia' ? 'border-primary bg-primary/5' : 'border-muted'}`}>
+                    <RadioGroupItem value="transferencia" id="receive-transferencia" className="sr-only" />
+                    Transferência
+                  </Label>
+                  <Label htmlFor="receive-cartao" className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 cursor-pointer ${receivePaymentMethod === 'cartao' ? 'border-primary bg-primary/5' : 'border-muted'}`}>
+                    <RadioGroupItem value="cartao" id="receive-cartao" className="sr-only" />
+                    Cartão
+                  </Label>
+                </RadioGroup>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReceiveDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={() => selectedReceivable && receivePaymentMutation.mutate(selectedReceivable)}
+              disabled={receivePaymentMutation.isPending}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {receivePaymentMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Registrando...
+                </>
+              ) : (
+                'Confirmar Recebimento'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
