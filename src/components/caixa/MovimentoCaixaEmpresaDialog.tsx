@@ -120,12 +120,12 @@ export function MovimentoCaixaEmpresaDialog({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Settings className="h-5 w-5 text-primary" />
-              {isEditMode ? 'Editar Fundo Fixo' : 'Configurar Caixa da Empresa'}
+              {isEditMode ? 'Configurar Caixa da Empresa' : 'Configurar Caixa da Empresa'}
             </DialogTitle>
             <DialogDescription>
               {isEditMode 
-                ? 'Altere o valor do fundo fixo para abertura do caixa do dia.'
-                : 'Defina o saldo inicial e o fundo fixo para o caixa do dia.'
+                ? 'Configure o saldo e fundo fixo do caixa da empresa.'
+                : 'Defina o saldo inicial e o fundo fixo do caixa da empresa.'
               }
             </DialogDescription>
           </DialogHeader>
@@ -133,7 +133,7 @@ export function MovimentoCaixaEmpresaDialog({
           <div className="space-y-4 py-4">
             {!isEditMode && (
               <div className="space-y-2">
-                <Label htmlFor="initial-balance">Saldo Inicial (R$)</Label>
+                <Label htmlFor="initial-balance">Saldo Inicial da Empresa (R$)</Label>
                 <Input
                   id="initial-balance"
                   type="text"
@@ -145,13 +145,13 @@ export function MovimentoCaixaEmpresaDialog({
                   className="text-lg"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Quanto a empresa tem disponível em caixa físico.
+                  Quanto a empresa tem disponível em caixa físico no momento.
                 </p>
               </div>
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="fixed-fund">Fundo Fixo do Caixa do Dia (R$)</Label>
+              <Label htmlFor="fixed-fund">Fundo Fixo (R$)</Label>
               <Input
                 id="fixed-fund"
                 type="text"
@@ -163,7 +163,7 @@ export function MovimentoCaixaEmpresaDialog({
                 className="text-lg"
               />
               <p className="text-xs text-muted-foreground">
-                Valor padrão para abrir o caixa do dia (troco).
+                Valor de referência para abertura do caixa diário (troco).
               </p>
             </div>
           </div>
