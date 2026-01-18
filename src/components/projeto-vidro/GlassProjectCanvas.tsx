@@ -193,39 +193,67 @@ export function GlassProjectCanvas({
                     onClick={() => handleEditPanel(panel)}
                   />
                   
-                  {/* Draw holes */}
+                  {/* Draw holes - X from left edge, Y from bottom edge */}
                   {mods.holes.map(hole => {
-                    const cx = panel.x + (hole.x / panel.width) * panel.scaledWidth;
-                    const cy = panel.y + panel.scaledHeight - (hole.y / panel.height) * panel.scaledHeight;
-                    const r = (hole.diameter / 2 / panel.width) * panel.scaledWidth;
+                    // X: distance from left edge of panel
+                    const cx = panel.x + hole.x * layout.scale;
+                    // Y: distance from bottom edge (inverted for SVG)
+                    const cy = panel.y + panel.scaledHeight - (hole.y * layout.scale);
+                    // Diameter scaled
+                    const r = (hole.diameter / 2) * layout.scale;
                     return (
-                      <circle
-                        key={hole.id}
-                        cx={cx}
-                        cy={cy}
-                        r={Math.max(r, 4)}
-                        fill="white"
-                        stroke={panel.color.stroke}
-                        strokeWidth={1.5}
-                      />
+                      <g key={hole.id}>
+                        {/* Hole circle */}
+                        <circle
+                          cx={cx}
+                          cy={cy}
+                          r={Math.max(r, 4)}
+                          fill="white"
+                          stroke="#ef4444"
+                          strokeWidth={1.5}
+                        />
+                        {/* Reference lines to show position */}
+                        <line
+                          x1={panel.x}
+                          y1={cy}
+                          x2={cx - Math.max(r, 4)}
+                          y2={cy}
+                          stroke="#ef4444"
+                          strokeWidth={0.5}
+                          strokeDasharray="2,2"
+                          opacity={0.7}
+                        />
+                        <line
+                          x1={cx}
+                          y1={panel.y + panel.scaledHeight}
+                          x2={cx}
+                          y2={cy + Math.max(r, 4)}
+                          stroke="#ef4444"
+                          strokeWidth={0.5}
+                          strokeDasharray="2,2"
+                          opacity={0.7}
+                        />
+                      </g>
                     );
                   })}
                   
-                  {/* Draw cutouts */}
+                  {/* Draw cutouts - X,Y from bottom-left corner (position is bottom-left of cutout) */}
                   {mods.cutouts.map(cutout => {
-                    const cx = panel.x + (cutout.x / panel.width) * panel.scaledWidth;
-                    const cy = panel.y + panel.scaledHeight - (cutout.y / panel.height) * panel.scaledHeight;
-                    const w = (cutout.width / panel.width) * panel.scaledWidth;
-                    const h = (cutout.height / panel.height) * panel.scaledHeight;
+                    // X: distance from left edge of panel to left edge of cutout
+                    const rectX = panel.x + cutout.x * layout.scale;
+                    // Y: distance from bottom, then subtract height for SVG (top-left origin)
+                    const rectY = panel.y + panel.scaledHeight - (cutout.y * layout.scale) - (cutout.height * layout.scale);
+                    const w = cutout.width * layout.scale;
+                    const h = cutout.height * layout.scale;
                     return (
                       <rect
                         key={cutout.id}
-                        x={cx - w / 2}
-                        y={cy - h / 2}
-                        width={w}
-                        height={h}
+                        x={rectX}
+                        y={rectY}
+                        width={Math.max(w, 4)}
+                        height={Math.max(h, 4)}
                         fill="white"
-                        stroke={panel.color.stroke}
+                        stroke="#f97316"
                         strokeWidth={1.5}
                       />
                     );
