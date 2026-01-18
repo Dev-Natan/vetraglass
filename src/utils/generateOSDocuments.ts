@@ -41,6 +41,7 @@ interface GlassFormula {
   height_formula: string;
   panel_index: number | null;
   description: string | null;
+  is_movable: boolean | null;
 }
 
 // Evaluate a formula with width/height variables
@@ -219,6 +220,7 @@ export async function generateOSDocuments(
         calculatedHeight: number;
         areaM2: number;
         quantity: number;
+        isMovable: boolean;
       }> = [];
 
       for (const formula of glassFormulas) {
@@ -238,6 +240,7 @@ export async function generateOSDocuments(
           calculatedHeight: calcHeight,
           areaM2: areaM2 * totalQty,
           quantity: totalQty,
+          isMovable: formula.is_movable ?? true, // Default to true for folhas
         });
       }
 
@@ -263,6 +266,7 @@ export async function generateOSDocuments(
           height: glass.calculatedHeight,
           areaM2: glass.areaM2 / quantity,
           quantity: glass.quantity,
+          isMovable: glass.isMovable,
         }));
 
         const totalArea = glassCuts.reduce((sum, g) => sum + g.areaM2, 0);
