@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AdminLayout } from '@/components/layout/AdminLayout';
-import { GlassWater, Plus, Search, Trash2, Pencil, Save, Copy, ChevronDown, ChevronRight, Package } from 'lucide-react';
+import { GlassWater, Plus, Search, Trash2, Pencil, Save, Copy, ChevronDown, ChevronRight, Package, Zap, Calculator, Info, Check } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -522,86 +522,230 @@ export default function AdminGlassFormulas() {
         )}
       </div>
 
-      {/* Edit/Create Dialog */}
+      {/* Edit/Create Dialog - Enhanced */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {editingFormula ? 'Editar Fórmula' : 'Nova Fórmula'}
+            <DialogTitle className="flex items-center gap-2">
+              <Calculator className="w-5 h-5" />
+              {editingFormula ? 'Editar Fórmula' : 'Nova Fórmula de Vidro'}
             </DialogTitle>
             {selectedProduct && (
-              <p className="text-sm text-muted-foreground">
-                Produto: {selectedProduct.name}
+              <p className="text-sm text-muted-foreground flex items-center gap-2">
+                <Package className="w-4 h-4" />
+                Produto: <strong>{selectedProduct.name}</strong>
               </p>
             )}
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Nome da Fórmula *</Label>
-              <Input
-                value={formData.formula_name}
-                onChange={e => setFormData({ ...formData, formula_name: e.target.value })}
-                placeholder="Ex: Vidro Fixo, Vidro Móvel, Vidro A, Vidro B"
-              />
+          
+          {/* Quick Templates - Only show when creating new */}
+          {!editingFormula && (
+            <div className="space-y-3">
+              <Label className="flex items-center gap-2 text-sm font-medium">
+                <Zap className="w-4 h-4 text-amber-500" />
+                Templates Rápidos
+              </Label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {[
+                  { name: 'Vidro Fixo', width: 'Largura - 6', height: 'Altura - 6', desc: 'Folga padrão de 6mm' },
+                  { name: 'Vidro Móvel', width: '(Largura / 2) - 3', height: 'Altura - 40', desc: 'Metade da largura com trilho' },
+                  { name: 'Vidro Inferior', width: 'Largura - 10', height: '(Altura / 2) - 15', desc: 'Parte inferior dividida' },
+                  { name: 'Vidro Superior', width: 'Largura - 10', height: '(Altura / 2) - 15', desc: 'Parte superior dividida' },
+                  { name: 'Bandeira', width: 'Largura - 6', height: '400', desc: 'Altura fixa de 400mm' },
+                  { name: 'Folha de Correr', width: '(Largura / 2) + 20', height: 'Altura - 50', desc: 'Sobreposição lateral' },
+                ].map((template) => (
+                  <button
+                    key={template.name}
+                    type="button"
+                    onClick={() => setFormData({
+                      ...formData,
+                      formula_name: template.name,
+                      description: template.desc,
+                      width_formula: template.width,
+                      height_formula: template.height,
+                    })}
+                    className={`p-3 text-left border rounded-lg hover:border-primary hover:bg-primary/5 transition-all ${
+                      formData.formula_name === template.name ? 'border-primary bg-primary/10' : 'border-border'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-sm">{template.name}</span>
+                      {formData.formula_name === template.name && (
+                        <Check className="w-4 h-4 text-primary" />
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">{template.desc}</p>
+                  </button>
+                ))}
+              </div>
             </div>
-            <div>
+          )}
+
+          <div className="space-y-4 pt-2">
+            {/* Nome e Descrição */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Nome da Fórmula *</Label>
+                <Input
+                  value={formData.formula_name}
+                  onChange={e => setFormData({ ...formData, formula_name: e.target.value })}
+                  placeholder="Ex: Vidro Fixo, Vidro Móvel"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Índice do Painel</Label>
+                <div className="flex gap-2">
+                  {[0, 1, 2, 3, 4].map((idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, panel_index: idx })}
+                      className={`flex-1 h-9 rounded-md border text-sm font-medium transition-colors ${
+                        formData.panel_index === idx
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'border-input hover:bg-muted'
+                      }`}
+                    >
+                      {idx === 0 ? 'Todos' : idx}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
               <Label>Descrição</Label>
-              <Textarea
+              <Input
                 value={formData.description}
                 onChange={e => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Descrição opcional..."
-                rows={2}
+                placeholder="Descrição opcional da fórmula..."
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Fórmula da Largura *</Label>
-                <Input
-                  value={formData.width_formula}
-                  onChange={e => setFormData({ ...formData, width_formula: e.target.value })}
-                  placeholder="Ex: Largura - 40"
+
+            {/* Fórmulas com ajuda visual */}
+            <Card className="border-dashed">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Info className="w-4 h-4 text-blue-500" />
+                  Fórmulas de Cálculo
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Use <code className="bg-muted px-1 rounded">Largura</code> ou <code className="bg-muted px-1 rounded">L</code> e <code className="bg-muted px-1 rounded">Altura</code> ou <code className="bg-muted px-1 rounded">A</code> nas expressões
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Largura do Vidro</Label>
+                    <div className="relative">
+                      <Input
+                        value={formData.width_formula}
+                        onChange={e => setFormData({ ...formData, width_formula: e.target.value })}
+                        placeholder="Largura - 40"
+                        className="font-mono text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Altura do Vidro</Label>
+                    <Input
+                      value={formData.height_formula}
+                      onChange={e => setFormData({ ...formData, height_formula: e.target.value })}
+                      placeholder="Altura - 20"
+                      className="font-mono text-sm"
+                    />
+                  </div>
+                </div>
+
+                {/* Preview do cálculo */}
+                <FormulaPreview 
+                  widthFormula={formData.width_formula}
+                  heightFormula={formData.height_formula}
                 />
-              </div>
+              </CardContent>
+            </Card>
+
+            {/* Ativo */}
+            <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
               <div>
-                <Label>Fórmula da Altura *</Label>
-                <Input
-                  value={formData.height_formula}
-                  onChange={e => setFormData({ ...formData, height_formula: e.target.value })}
-                  placeholder="Ex: Altura - 20"
-                />
+                <Label>Status da Fórmula</Label>
+                <p className="text-xs text-muted-foreground">
+                  Fórmulas inativas não serão aplicadas
+                </p>
               </div>
-            </div>
-            <div>
-              <Label>Índice do Painel (0 = todos)</Label>
-              <Input
-                type="number"
-                min={0}
-                value={formData.panel_index}
-                onChange={e => setFormData({ ...formData, panel_index: parseInt(e.target.value) || 0 })}
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Use 0 para aplicar a todos os painéis, ou especifique o índice (1, 2, 3...) para painéis específicos.
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
               <Switch
                 checked={formData.is_active}
                 onCheckedChange={checked => setFormData({ ...formData, is_active: checked })}
               />
-              <Label>Fórmula ativa</Label>
             </div>
           </div>
-          <DialogFooter>
+
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={handleCloseDialog}>
               Cancelar
             </Button>
             <Button onClick={handleSave} disabled={saveMutation.isPending}>
               <Save className="w-4 h-4 mr-2" />
-              {saveMutation.isPending ? 'Salvando...' : 'Salvar'}
+              {saveMutation.isPending ? 'Salvando...' : 'Salvar Fórmula'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </AdminLayout>
+  );
+}
+
+// Componente de preview das fórmulas
+function FormulaPreview({ widthFormula, heightFormula }: { widthFormula: string; heightFormula: string }) {
+  const testWidth = 1200;
+  const testHeight = 1000;
+
+  const calculate = (formula: string, width: number, height: number): number | null => {
+    try {
+      let expr = formula
+        .replace(/Largura/gi, width.toString())
+        .replace(/\bL\b/gi, width.toString())
+        .replace(/Altura/gi, height.toString())
+        .replace(/\bA\b/gi, height.toString());
+      
+      // Simple safe eval for basic math
+      const result = Function('"use strict"; return (' + expr + ')')();
+      return typeof result === 'number' && !isNaN(result) ? Math.round(result) : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const calculatedWidth = calculate(widthFormula, testWidth, testHeight);
+  const calculatedHeight = calculate(heightFormula, testWidth, testHeight);
+
+  return (
+    <div className="bg-muted/50 rounded-lg p-3 border">
+      <p className="text-xs text-muted-foreground mb-2">
+        <strong>Preview</strong> (vão de {testWidth} x {testHeight} mm):
+      </p>
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">Largura:</span>
+          {calculatedWidth !== null ? (
+            <Badge variant="secondary" className="font-mono">
+              {calculatedWidth} mm
+            </Badge>
+          ) : (
+            <Badge variant="destructive" className="text-xs">Erro</Badge>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">Altura:</span>
+          {calculatedHeight !== null ? (
+            <Badge variant="secondary" className="font-mono">
+              {calculatedHeight} mm
+            </Badge>
+          ) : (
+            <Badge variant="destructive" className="text-xs">Erro</Badge>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
