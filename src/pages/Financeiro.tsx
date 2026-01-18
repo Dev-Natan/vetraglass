@@ -53,6 +53,7 @@ import { ExpensesTab } from '@/components/financeiro/ExpensesTab';
 import { CommissionsTab } from '@/components/financeiro/CommissionsTab';
 import { ContasReceberTab } from '@/components/financeiro/ContasReceberTab';
 import { CaixaEmpresaTab } from '@/components/financeiro/CaixaEmpresaTab';
+import { CaixaReportTab } from '@/components/financeiro/CaixaReportTab';
 
 type PeriodFilter = 'today' | 'week' | 'month' | 'last_month' | 'custom' | 'all';
 type PaymentFilter = 'all' | 'dinheiro' | 'cartao' | 'pix';
@@ -370,17 +371,21 @@ export default function Financeiro() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
+          <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid">
             <TabsTrigger value="caixa-empresa" className="gap-2">
               <DollarSign className="w-4 h-4 hidden sm:inline" />
-              Caixa Empresa
+              Caixa
+            </TabsTrigger>
+            <TabsTrigger value="relatorios" className="gap-2">
+              <FileText className="w-4 h-4 hidden sm:inline" />
+              Relatórios
             </TabsTrigger>
             <TabsTrigger value="vendas" className="gap-2">
-              <FileText className="w-4 h-4 hidden sm:inline" />
+              <Receipt className="w-4 h-4 hidden sm:inline" />
               Vendas
             </TabsTrigger>
             <TabsTrigger value="receber" className="gap-2">
-              <Receipt className="w-4 h-4 hidden sm:inline" />
+              <CreditCard className="w-4 h-4 hidden sm:inline" />
               A Receber
             </TabsTrigger>
             <TabsTrigger value="comissoes" className="gap-2">
@@ -396,6 +401,11 @@ export default function Financeiro() {
           {/* Tab: Caixa Empresa */}
           <TabsContent value="caixa-empresa" className="mt-6">
             <CaixaEmpresaTab />
+          </TabsContent>
+
+          {/* Tab: Relatórios de Caixa */}
+          <TabsContent value="relatorios" className="mt-6">
+            <CaixaReportTab />
           </TabsContent>
 
           {/* Tab: Comissões */}
