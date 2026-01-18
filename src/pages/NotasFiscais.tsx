@@ -19,13 +19,16 @@ import {
   Clock, 
   AlertCircle,
   FileSpreadsheet,
-  Wrench
+  Wrench,
+  Settings,
+  Receipt
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import NovaNotaFiscalDialog from "@/components/notas/NovaNotaFiscalDialog";
 import DetalhesNotaDialog from "@/components/notas/DetalhesNotaDialog";
+import { FiscalConfigTab } from "@/components/fiscal/FiscalConfigTab";
 
 type NotaFiscal = {
   id: string;
@@ -58,7 +61,8 @@ export default function NotasFiscais() {
   const companyId = companies[0]?.id;
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState<"todas" | "nfe" | "nfse">("todas");
+  const [activeTab, setActiveTab] = useState<"notas" | "fiscal">("notas");
+  const [notaFilter, setNotaFilter] = useState<"todas" | "nfe" | "nfse">("todas");
   const [showNovaNotaDialog, setShowNovaNotaDialog] = useState(false);
   const [tipoNovaNota, setTipoNovaNota] = useState<"nfe" | "nfse">("nfe");
   const [selectedNota, setSelectedNota] = useState<NotaFiscal | null>(null);
@@ -102,9 +106,9 @@ export default function NotasFiscais() {
       nota.numero?.toString().includes(searchTerm) ||
       nota.chave_acesso?.includes(searchTerm);
     
-    const matchesTab = activeTab === "todas" || nota.tipo === activeTab;
+    const matchesFilter = notaFilter === "todas" || nota.tipo === notaFilter;
     
-    return matchesSearch && matchesTab;
+    return matchesSearch && matchesFilter;
   });
 
   const stats = {
@@ -130,185 +134,213 @@ export default function NotasFiscais() {
         {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Notas Fiscais</h1>
+            <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+              <Receipt className="h-7 w-7 text-primary" />
+              Fiscal
+            </h1>
             <p className="text-muted-foreground">
-              Emissão e gerenciamento de NF-e e NFS-e via Focusnfe
+              Notas fiscais, impostos e configurações tributárias
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button onClick={handleNovaNotaNFe} className="gap-2">
-              <FileSpreadsheet className="h-4 w-4" />
-              Nova NF-e
-            </Button>
-            <Button onClick={handleNovaNotaNFSe} variant="outline" className="gap-2">
-              <Wrench className="h-4 w-4" />
-              Nova NFS-e
-            </Button>
-          </div>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total de Notas</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Autorizadas</CardTitle>
-              <CheckCircle className="h-4 w-4 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.autorizadas}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
-              <Clock className="h-4 w-4 text-yellow-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">{stats.pendentes}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Rejeitadas</CardTitle>
-              <AlertCircle className="h-4 w-4 text-red-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">{stats.rejeitadas}</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Filters and List */}
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <CardTitle>Notas Emitidas</CardTitle>
-                <CardDescription>
-                  Histórico de notas fiscais emitidas
-                </CardDescription>
-              </div>
-              <div className="flex gap-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por nome, número ou chave..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9 w-[300px]"
-                  />
-                </div>
-              </div>
+          {activeTab === "notas" && (
+            <div className="flex gap-2">
+              <Button onClick={handleNovaNotaNFe} className="gap-2">
+                <FileSpreadsheet className="h-4 w-4" />
+                Nova NF-e
+              </Button>
+              <Button onClick={handleNovaNotaNFSe} variant="outline" className="gap-2">
+                <Wrench className="h-4 w-4" />
+                Nova NFS-e
+              </Button>
             </div>
-          </CardHeader>
-          <CardContent>
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
-              <TabsList>
-                <TabsTrigger value="todas">Todas</TabsTrigger>
-                <TabsTrigger value="nfe">NF-e</TabsTrigger>
-                <TabsTrigger value="nfse">NFS-e</TabsTrigger>
-              </TabsList>
+          )}
+        </div>
 
-              <TabsContent value={activeTab} className="mt-4">
-                {isLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+        {/* Main Tabs */}
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "notas" | "fiscal")}>
+          <TabsList>
+            <TabsTrigger value="notas" className="gap-2">
+              <FileText className="w-4 h-4" />
+              Notas Fiscais
+            </TabsTrigger>
+            <TabsTrigger value="fiscal" className="gap-2">
+              <Settings className="w-4 h-4" />
+              Configurações Fiscais
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Tab: Notas Fiscais */}
+          <TabsContent value="notas" className="space-y-6 mt-6">
+            {/* Stats Cards */}
+            <div className="grid gap-4 md:grid-cols-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total de Notas</CardTitle>
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.total}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Autorizadas</CardTitle>
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600">{stats.autorizadas}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
+                  <Clock className="h-4 w-4 text-yellow-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-yellow-600">{stats.pendentes}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Rejeitadas</CardTitle>
+                  <AlertCircle className="h-4 w-4 text-red-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-red-600">{stats.rejeitadas}</div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Notas List */}
+            <Card>
+              <CardHeader>
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <CardTitle>Notas Emitidas</CardTitle>
+                    <CardDescription>
+                      Histórico de notas fiscais emitidas
+                    </CardDescription>
                   </div>
-                ) : filteredNotas?.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-medium">Nenhuma nota fiscal encontrada</h3>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Clique em "Nova NF-e" ou "Nova NFS-e" para emitir uma nota fiscal
-                    </p>
+                  <div className="flex gap-2">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        placeholder="Buscar por nome, número ou chave..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-9 w-[300px]"
+                      />
+                    </div>
                   </div>
-                ) : (
-                  <div className="space-y-3">
-                    {filteredNotas?.map((nota) => {
-                      const statusInfo = statusConfig[nota.status] || statusConfig.pendente;
-                      const StatusIcon = statusInfo.icon;
-                      
-                      return (
-                        <div
-                          key={nota.id}
-                          className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer"
-                          onClick={() => setSelectedNota(nota)}
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className={`p-2 rounded-full ${nota.tipo === 'nfe' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>
-                              {nota.tipo === 'nfe' ? <FileSpreadsheet className="h-5 w-5" /> : <Wrench className="h-5 w-5" />}
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">
-                                  {nota.tipo.toUpperCase()} {nota.numero ? `#${nota.numero}` : '(Pendente)'}
-                                </span>
-                                <Badge variant={statusInfo.variant} className="gap-1">
-                                  <StatusIcon className="h-3 w-3" />
-                                  {statusInfo.label}
-                                </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {/* Filter tabs for NF types */}
+                <Tabs value={notaFilter} onValueChange={(v) => setNotaFilter(v as typeof notaFilter)}>
+                  <TabsList>
+                    <TabsTrigger value="todas">Todas</TabsTrigger>
+                    <TabsTrigger value="nfe">NF-e</TabsTrigger>
+                    <TabsTrigger value="nfse">NFS-e</TabsTrigger>
+                  </TabsList>
+
+                  <div className="mt-4">
+                    {isLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : filteredNotas?.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-12 text-center">
+                        <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+                        <h3 className="text-lg font-medium">Nenhuma nota fiscal encontrada</h3>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Clique em "Nova NF-e" ou "Nova NFS-e" para emitir uma nota fiscal
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {filteredNotas?.map((nota) => {
+                          const statusInfo = statusConfig[nota.status] || statusConfig.pendente;
+                          const StatusIcon = statusInfo.icon;
+                          
+                          return (
+                            <div
+                              key={nota.id}
+                              className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer"
+                              onClick={() => setSelectedNota(nota)}
+                            >
+                              <div className="flex items-center gap-4">
+                                <div className={`p-2 rounded-full ${nota.tipo === 'nfe' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>
+                                  {nota.tipo === 'nfe' ? <FileSpreadsheet className="h-5 w-5" /> : <Wrench className="h-5 w-5" />}
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">
+                                      {nota.tipo.toUpperCase()} {nota.numero ? `#${nota.numero}` : '(Pendente)'}
+                                    </span>
+                                    <Badge variant={statusInfo.variant} className="gap-1">
+                                      <StatusIcon className="h-3 w-3" />
+                                      {statusInfo.label}
+                                    </Badge>
+                                  </div>
+                                  <p className="text-sm text-muted-foreground">
+                                    {nota.destinatario_nome}
+                                    {nota.destinatario_documento && ` • ${nota.destinatario_documento}`}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {format(new Date(nota.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                  </p>
+                                </div>
                               </div>
-                              <p className="text-sm text-muted-foreground">
-                                {nota.destinatario_nome}
-                                {nota.destinatario_documento && ` • ${nota.destinatario_documento}`}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {format(new Date(nota.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                              </p>
+                              <div className="flex items-center gap-4">
+                                <div className="text-right">
+                                  <p className="font-semibold">
+                                    {nota.valor_total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                  </p>
+                                </div>
+                                <div className="flex gap-1">
+                                  {nota.status === 'processando' && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        consultarMutation.mutate(nota.id);
+                                      }}
+                                      disabled={consultarMutation.isPending}
+                                    >
+                                      <RefreshCw className={`h-4 w-4 ${consultarMutation.isPending ? 'animate-spin' : ''}`} />
+                                    </Button>
+                                  )}
+                                  {nota.pdf_url && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        window.open(nota.pdf_url!, '_blank');
+                                      }}
+                                    >
+                                      <Download className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <div className="text-right">
-                              <p className="font-semibold">
-                                {nota.valor_total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                              </p>
-                            </div>
-                            <div className="flex gap-1">
-                              {nota.status === 'processando' && (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    consultarMutation.mutate(nota.id);
-                                  }}
-                                  disabled={consultarMutation.isPending}
-                                >
-                                  <RefreshCw className={`h-4 w-4 ${consultarMutation.isPending ? 'animate-spin' : ''}`} />
-                                </Button>
-                              )}
-                              {nota.pdf_url && (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    window.open(nota.pdf_url!, '_blank');
-                                  }}
-                                >
-                                  <Download className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                )}
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
+                </Tabs>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Tab: Configurações Fiscais */}
+          <TabsContent value="fiscal" className="mt-6">
+            <FiscalConfigTab />
+          </TabsContent>
+        </Tabs>
       </div>
 
       <NovaNotaFiscalDialog
