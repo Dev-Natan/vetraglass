@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Circle, Square, Trash2, Plus, Copy, Check, X } from 'lucide-react';
+import { Circle, Square, Trash2, Plus, Copy, Check, X, Pencil } from 'lucide-react';
 
 export interface Hole {
   id: string;
@@ -56,25 +56,67 @@ function PanelPreview({
   const previewWidth = 200;
   const previewHeight = 150;
   const padding = 20;
-  
+
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const [draggingHoleId, setDraggingHoleId] = useState<string | null>(null);
+
   // Calculate scale to fit panel in preview
   const scaleX = (previewWidth - padding * 2) / panelWidth;
   const scaleY = (previewHeight - padding * 2) / panelHeight;
   const scale = Math.min(scaleX, scaleY);
-  
+
   const scaledWidth = panelWidth * scale;
   const scaledHeight = panelHeight * scale;
   const offsetX = (previewWidth - scaledWidth) / 2;
   const offsetY = (previewHeight - scaledHeight) / 2;
-  
+
   // Convert panel coordinates to SVG coordinates (origin at bottom-left of panel)
   const toSvgX = (x: number) => offsetX + x * scale;
   const toSvgY = (y: number) => offsetY + scaledHeight - y * scale; // Flip Y axis
 
+  const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
+
+  const updateHoleFromPointer = (clientX: number, clientY: number, holeId: string, snapStep: number) => {
+    const rect = svgRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    const svgX = clientX - rect.left;
+    const svgY = clientY - rect.top;
+
+    // Convert SVG -> panel (mm)
+    const xMmRaw = (svgX - offsetX) / (scale || 1);
+    const yMmRaw = (scaledHeight - (svgY - offsetY)) / (scale || 1);
+
+    const snap = (v: number) => Math.round(v / snapStep) * snapStep;
+
+    const xMm = clamp(snap(xMmRaw), 0, panelWidth);
+    const yMm = clamp(snap(yMmRaw), 0, panelHeight);
+
+    onUpdateHole(holeId, { x: xMm, y: yMm });
+  };
+
+  const stopDragging = () => setDraggingHoleId(null);
+
+  const handlePointerMove = (e: any) => {
+    if (!draggingHoleId) return;
+    e.preventDefault?.();
+    const snapStep = e.shiftKey ? 10 : 1;
+    updateHoleFromPointer(e.clientX, e.clientY, draggingHoleId, snapStep);
+  };
   return (
     <div className="border rounded-lg bg-muted/20 p-2">
-      <Label className="text-xs text-muted-foreground mb-1 block">Preview (origem: canto inferior esquerdo)</Label>
-      <svg width={previewWidth} height={previewHeight} className="bg-background rounded border">
+      <Label className="text-xs text-muted-foreground mb-1 block">
+        Preview (arraste o furo para mover; Shift = 10mm)
+      </Label>
+      <svg
+        ref={svgRef}
+        width={previewWidth}
+        height={previewHeight}
+        className="bg-background rounded border"
+        onPointerMove={handlePointerMove}
+        onPointerUp={stopDragging}
+        onPointerLeave={stopDragging}
+      >
         {/* Panel outline */}
         <rect
           x={offsetX}
@@ -147,17 +189,24 @@ function PanelPreview({
         {/* Holes */}
         {holes.map(hole => {
           const isSelected = hole.id === selectedHoleId;
+          const isDragging = hole.id === draggingHoleId;
           const radius = (hole.diameter / 2) * scale;
           return (
-            <g key={hole.id} onClick={() => onSelectHole(hole.id)} style={{ cursor: 'pointer' }}>
+            <g
+              key={hole.id}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectHole(hole.id);
+              }}
+              onPointerDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onSelectHole(hole.id);
+                setDraggingHoleId(hole.id);
+              }}
+              style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+            >
               <circle
-                cx={toSvgX(hole.x)}
-                cy={toSvgY(hole.y)}
-                r={Math.max(radius, 3)}
-                fill={isSelected ? 'hsl(var(--primary) / 0.3)' : 'hsl(var(--chart-1) / 0.3)'}
-                stroke={isSelected ? 'hsl(var(--primary))' : 'hsl(var(--chart-1))'}
-                strokeWidth={isSelected ? 2 : 1}
-              />
               {isSelected && (
                 <>
                   {/* Reference lines for selected hole */}
@@ -289,7 +338,7 @@ function HoleRow({
         Furo {index + 1}: X={hole.x}, Y={hole.y}, Ø={hole.diameter}mm
       </span>
       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); handleStartEdit(); }} title="Editar">
-        <span className="text-xs">✏️</span>
+        <Pencil className="w-3 h-3" />
       </Button>
       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); onDuplicate(); }} title="Duplicar">
         <Copy className="w-3 h-3" />
@@ -407,7 +456,7 @@ function CutoutRow({
         Recorte {index + 1}: X={cutout.x}, Y={cutout.y}, {cutout.width}x{cutout.height}mm
       </span>
       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); handleStartEdit(); }} title="Editar">
-        <span className="text-xs">✏️</span>
+        <Pencil className="w-3 h-3" />
       </Button>
       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); onDuplicate(); }} title="Duplicar">
         <Copy className="w-3 h-3" />
@@ -529,6 +578,11 @@ export function HoleCutoutEditor({
               selectedCutoutId={selectedCutoutId}
               onSelectHole={(id) => { setSelectedHoleId(id); setSelectedCutoutId(null); }}
               onSelectCutout={(id) => { setSelectedCutoutId(id); setSelectedHoleId(null); }}
+              onUpdateHole={(id, updates) => {
+                setSelectedHoleId(id);
+                setSelectedCutoutId(null);
+                updateHole(id, updates);
+              }}
             />
           </div>
           
