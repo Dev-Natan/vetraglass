@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { GlassPanelData } from '@/pages/ProjetoVidro';
-import { Circle, Square, Edit } from 'lucide-react';
+import { Circle, Square } from 'lucide-react';
 import { HoleCutoutEditor, Hole, Cutout } from './HoleCutoutEditor';
 
 interface GlassProjectCanvasProps {
@@ -13,18 +12,16 @@ interface GlassProjectCanvasProps {
   lockHeight: number;
   panelModifications: Record<string, { holes: Hole[]; cutouts: Cutout[] }>;
   onPanelModificationsChange: (mods: Record<string, { holes: Hole[]; cutouts: Cutout[] }>) => void;
+  glassType?: string;
+  hardwareType?: string;
 }
 
-// Colors for different panels
+// More subtle colors inspired by Excel templates
 const PANEL_COLORS = [
-  { fill: '#dbeafe', stroke: '#2563eb', text: '#1e40af' }, // Blue
-  { fill: '#dcfce7', stroke: '#16a34a', text: '#15803d' }, // Green
-  { fill: '#fef9c3', stroke: '#ca8a04', text: '#a16207' }, // Yellow
-  { fill: '#fed7aa', stroke: '#ea580c', text: '#c2410c' }, // Orange
-  { fill: '#f3e8ff', stroke: '#9333ea', text: '#7c3aed' }, // Purple
-  { fill: '#fce7f3', stroke: '#db2777', text: '#be185d' }, // Pink
-  { fill: '#cffafe', stroke: '#0891b2', text: '#0e7490' }, // Cyan
-  { fill: '#ecfccb', stroke: '#65a30d', text: '#4d7c0f' }, // Lime
+  { fill: '#e8f4fc', stroke: '#3b82f6', text: '#1d4ed8' },
+  { fill: '#e8f4fc', stroke: '#3b82f6', text: '#1d4ed8' },
+  { fill: '#e8f4fc', stroke: '#3b82f6', text: '#1d4ed8' },
+  { fill: '#e8f4fc', stroke: '#3b82f6', text: '#1d4ed8' },
 ];
 
 export function GlassProjectCanvas({ 
@@ -34,35 +31,36 @@ export function GlassProjectCanvas({
   quantity,
   lockHeight,
   panelModifications,
-  onPanelModificationsChange
+  onPanelModificationsChange,
+  glassType = 'CRISTAL INCOLOR 10MM - TEMPERADO',
+  hardwareType = 'Ferragens cromadas'
 }: GlassProjectCanvasProps) {
   const [editingPanel, setEditingPanel] = useState<GlassPanelData | null>(null);
 
   const layout = useMemo(() => {
-    // Calculate total glass width (sum of all widths)
-    const glassWidth = panels.reduce((sum, p) => sum + p.width, 0);
-    const maxGlassHeight = Math.max(...panels.map(p => p.height), 0);
-    
-    // SVG dimensions with padding for dimension lines
-    const padding = { top: 80, right: 100, bottom: 100, left: 100 };
-    const canvasWidth = 900;
-    const canvasHeight = 550;
+    const padding = { top: 100, right: 120, bottom: 80, left: 80 };
+    const canvasWidth = 850;
+    const canvasHeight = 520;
     const drawAreaWidth = canvasWidth - padding.left - padding.right;
     const drawAreaHeight = canvasHeight - padding.top - padding.bottom;
     
-    // Calculate scale to fit all glasses
+    // Calculate total glass width
+    const glassWidth = panels.reduce((sum, p) => sum + p.width, 0);
+    const maxGlassHeight = Math.max(...panels.map(p => p.height), 0);
+    
+    // Calculate scale
     const scaleX = drawAreaWidth / (glassWidth || 1);
     const scaleY = drawAreaHeight / (maxGlassHeight || 1);
-    const scale = Math.min(scaleX, scaleY, 0.35);
+    const scale = Math.min(scaleX, scaleY, 0.28);
     
-    // Position each panel
+    // Position panels
     let currentX = 0;
-    const gap = 6; // Gap between panels
+    const gap = 3;
     const positionedPanels = panels.map((panel, index) => {
       const scaledWidth = panel.width * scale;
       const scaledHeight = panel.height * scale;
       const x = padding.left + currentX;
-      const y = padding.top + (drawAreaHeight - scaledHeight); // Align to bottom
+      const y = padding.top + (drawAreaHeight - scaledHeight);
       currentX += scaledWidth + gap;
       
       return {
@@ -75,9 +73,9 @@ export function GlassProjectCanvas({
       };
     });
     
-    // Total scaled dimensions
     const totalScaledWidth = currentX - gap;
     const totalScaledHeight = maxGlassHeight * scale;
+    const bottomY = padding.top + drawAreaHeight;
     
     return {
       panels: positionedPanels,
@@ -87,7 +85,8 @@ export function GlassProjectCanvas({
       canvasHeight,
       padding,
       scale,
-      lockHeightY: padding.top + (drawAreaHeight - (lockHeight * scale)),
+      bottomY,
+      lockHeightY: bottomY - (lockHeight * scale),
       maxGlassHeight
     };
   }, [panels, lockHeight]);
@@ -120,33 +119,59 @@ export function GlassProjectCanvas({
 
   return (
     <Card className="h-full">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg flex items-center justify-between">
+      <CardHeader className="pb-2 border-b">
+        <CardTitle className="text-base flex items-center justify-between">
           <span>Visualização do Projeto</span>
-          <div className="flex items-center gap-2 text-sm font-normal text-muted-foreground">
-            <Circle className="w-4 h-4" /> Furos
-            <Square className="w-4 h-4 ml-2" /> Recortes
+          <div className="flex items-center gap-3 text-xs font-normal text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <Circle className="w-3 h-3" /> Furos
+            </span>
+            <span className="flex items-center gap-1">
+              <Square className="w-3 h-3" /> Recortes
+            </span>
           </div>
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="bg-muted/20 rounded-lg p-4 overflow-auto border">
+      <CardContent className="pt-4">
+        <div className="bg-white rounded-lg border-2 border-muted overflow-auto">
           <svg 
             viewBox={`0 0 ${layout.canvasWidth} ${layout.canvasHeight}`}
-            className="w-full h-auto min-h-[450px]"
-            style={{ maxHeight: '650px' }}
+            className="w-full h-auto"
+            style={{ minHeight: '420px', maxHeight: '520px' }}
           >
-            {/* Background grid pattern */}
-            <defs>
-              <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="hsl(var(--border))" strokeWidth="0.5" opacity="0.4" />
-              </pattern>
-              {/* Arrow marker */}
-              <marker id="arrowhead" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
-                <polygon points="0 0, 6 3, 0 6" fill="hsl(var(--foreground))" />
-              </marker>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#grid)" />
+            {/* White background */}
+            <rect width="100%" height="100%" fill="white" />
+            
+            {/* Header info - Glass type and hardware */}
+            <text
+              x={20}
+              y={28}
+              fontSize="13"
+              fontWeight="bold"
+              fill="#1f2937"
+            >
+              {glassType}
+            </text>
+            <text
+              x={20}
+              y={48}
+              fontSize="11"
+              fill="#6b7280"
+            >
+              {hardwareType}
+            </text>
+            
+            {/* VÃO indicators in top-right corner */}
+            <g transform={`translate(${layout.canvasWidth - 140}, 15)`}>
+              <rect x={0} y={0} width={130} height={50} fill="#f3f4f6" stroke="#d1d5db" rx={4} />
+              <text x={65} y={20} textAnchor="middle" fontSize="12" fontWeight="bold" fill="#374151">
+                {totalWidth} Vão
+              </text>
+              <line x1={10} y1={28} x2={120} y2={28} stroke="#d1d5db" />
+              <text x={65} y={42} textAnchor="middle" fontSize="12" fontWeight="bold" fill="#374151">
+                {totalHeight} Vão
+              </text>
+            </g>
             
             {/* Glass panels */}
             {layout.panels.map((panel, index) => {
@@ -155,15 +180,7 @@ export function GlassProjectCanvas({
               
               return (
                 <g key={panel.id}>
-                  {/* Panel rectangle with shadow */}
-                  <rect
-                    x={panel.x + 3}
-                    y={panel.y + 3}
-                    width={panel.scaledWidth}
-                    height={panel.scaledHeight}
-                    fill="rgba(0,0,0,0.1)"
-                    rx={3}
-                  />
+                  {/* Panel rectangle */}
                   <rect
                     x={panel.x}
                     y={panel.y}
@@ -171,9 +188,8 @@ export function GlassProjectCanvas({
                     height={panel.scaledHeight}
                     fill={panel.color.fill}
                     stroke={panel.color.stroke}
-                    strokeWidth={2.5}
-                    rx={3}
-                    className="cursor-pointer hover:stroke-[3.5px] transition-all"
+                    strokeWidth={2}
+                    className="cursor-pointer hover:stroke-[3px] transition-all"
                     onClick={() => handleEditPanel(panel)}
                   />
                   
@@ -215,29 +231,29 @@ export function GlassProjectCanvas({
                     );
                   })}
                   
-                  {/* Letter label in center */}
+                  {/* Letter label */}
                   <text
                     x={panel.x + panel.scaledWidth / 2}
-                    y={panel.y + panel.scaledHeight / 2}
+                    y={panel.y + panel.scaledHeight / 2 + 6}
                     textAnchor="middle"
                     dominantBaseline="middle"
                     fill={panel.color.text}
-                    fontSize="32"
+                    fontSize="28"
                     fontWeight="bold"
                     className="pointer-events-none select-none"
                   >
                     {panel.letter}
                   </text>
                   
-                  {/* Modification indicator */}
+                  {/* Modification count badge */}
                   {hasModifications && (
-                    <g transform={`translate(${panel.x + panel.scaledWidth - 16}, ${panel.y + 8})`}>
-                      <circle r="8" fill={panel.color.stroke} />
+                    <g transform={`translate(${panel.x + panel.scaledWidth - 12}, ${panel.y + 12})`}>
+                      <circle r="8" fill="#ef4444" />
                       <text
                         textAnchor="middle"
                         dominantBaseline="middle"
                         fill="white"
-                        fontSize="10"
+                        fontSize="9"
                         fontWeight="bold"
                       >
                         {mods.holes.length + mods.cutouts.length}
@@ -245,175 +261,139 @@ export function GlassProjectCanvas({
                     </g>
                   )}
                   
-                  {/* Edit button */}
-                  <g 
-                    transform={`translate(${panel.x + panel.scaledWidth - 16}, ${panel.y + panel.scaledHeight - 20})`}
-                    className="cursor-pointer"
-                    onClick={() => handleEditPanel(panel)}
+                  {/* Height dimension on left side of each panel (Excel style) */}
+                  <text
+                    x={panel.x - 8}
+                    y={panel.y + panel.scaledHeight / 2}
+                    textAnchor="end"
+                    dominantBaseline="middle"
+                    fontSize="12"
+                    fontWeight="600"
+                    fill="#1f2937"
                   >
-                    <rect x="-12" y="-8" width="24" height="16" fill={panel.color.stroke} rx="3" />
-                    <Edit x="-6" y="-4" width="12" height="12" className="text-white" />
-                  </g>
+                    {panel.height}
+                  </text>
                   
-                  {/* Width dimension (bottom of each panel) */}
-                  <g transform={`translate(${panel.x}, ${panel.y + panel.scaledHeight + 20})`}>
-                    <line x1={0} y1={0} x2={panel.scaledWidth} y2={0} stroke="hsl(var(--foreground))" strokeWidth={1.5} />
-                    <line x1={0} y1={-6} x2={0} y2={6} stroke="hsl(var(--foreground))" strokeWidth={1.5} />
-                    <line x1={panel.scaledWidth} y1={-6} x2={panel.scaledWidth} y2={6} stroke="hsl(var(--foreground))" strokeWidth={1.5} />
-                    <rect 
-                      x={panel.scaledWidth / 2 - 25} 
-                      y={4} 
-                      width={50} 
-                      height={18} 
-                      fill="hsl(var(--background))" 
-                      rx={3}
-                    />
-                    <text
-                      x={panel.scaledWidth / 2}
-                      y={16}
-                      textAnchor="middle"
-                      fontSize="13"
-                      fontWeight="700"
-                      fill="hsl(var(--foreground))"
-                    >
-                      {panel.width}
-                    </text>
-                  </g>
-                  
-                  {/* Height dimension (right side of panel) */}
-                  <g transform={`translate(${panel.x + panel.scaledWidth + 15}, ${panel.y})`}>
-                    <line x1={0} y1={0} x2={0} y2={panel.scaledHeight} stroke="hsl(var(--foreground))" strokeWidth={1.5} />
-                    <line x1={-6} y1={0} x2={6} y2={0} stroke="hsl(var(--foreground))" strokeWidth={1.5} />
-                    <line x1={-6} y1={panel.scaledHeight} x2={6} y2={panel.scaledHeight} stroke="hsl(var(--foreground))" strokeWidth={1.5} />
-                    <rect 
-                      x={8} 
-                      y={panel.scaledHeight / 2 - 10} 
-                      width={40} 
-                      height={20} 
-                      fill="hsl(var(--background))" 
-                      rx={3}
-                    />
-                    <text
-                      x={28}
-                      y={panel.scaledHeight / 2 + 4}
-                      textAnchor="middle"
-                      fontSize="13"
-                      fontWeight="700"
-                      fill="hsl(var(--foreground))"
-                    >
-                      {panel.height}
-                    </text>
-                  </g>
+                  {/* Width dimension below each panel (Excel style) */}
+                  <text
+                    x={panel.x + panel.scaledWidth / 2}
+                    y={layout.bottomY + 20}
+                    textAnchor="middle"
+                    fontSize="12"
+                    fontWeight="600"
+                    fill="#1f2937"
+                  >
+                    {panel.width}
+                  </text>
                 </g>
               );
             })}
             
-            {/* Total VÃO width dimension (bottom) */}
-            {layout.panels.length > 0 && (
-              <g transform={`translate(${layout.padding.left}, ${layout.canvasHeight - 35})`}>
-                <line x1={0} y1={0} x2={layout.totalScaledWidth} y2={0} stroke="hsl(var(--primary))" strokeWidth={2.5} />
-                <line x1={0} y1={-8} x2={0} y2={8} stroke="hsl(var(--primary))" strokeWidth={2.5} />
-                <line x1={layout.totalScaledWidth} y1={-8} x2={layout.totalScaledWidth} y2={8} stroke="hsl(var(--primary))" strokeWidth={2.5} />
-                <rect 
-                  x={layout.totalScaledWidth / 2 - 60} 
-                  y={-14} 
-                  width={120} 
-                  height={28} 
-                  fill="hsl(var(--primary))" 
-                  rx={4}
-                />
-                <text
-                  x={layout.totalScaledWidth / 2}
-                  y={4}
-                  textAnchor="middle"
-                  fontSize="14"
-                  fontWeight="bold"
-                  fill="hsl(var(--primary-foreground))"
-                >
-                  VÃO: {totalWidth} mm
-                </text>
-              </g>
-            )}
-            
-            {/* Total height dimension (left side) */}
-            {layout.panels.length > 0 && (
-              <g transform={`translate(${layout.padding.left - 30}, ${layout.padding.top + (layout.canvasHeight - layout.padding.top - layout.padding.bottom - layout.totalScaledHeight)})`}>
-                <line x1={0} y1={0} x2={0} y2={layout.totalScaledHeight} stroke="hsl(var(--primary))" strokeWidth={2.5} />
-                <line x1={-8} y1={0} x2={8} y2={0} stroke="hsl(var(--primary))" strokeWidth={2.5} />
-                <line x1={-8} y1={layout.totalScaledHeight} x2={8} y2={layout.totalScaledHeight} stroke="hsl(var(--primary))" strokeWidth={2.5} />
-                <rect 
-                  x={-55} 
-                  y={layout.totalScaledHeight / 2 - 12} 
-                  width={50} 
-                  height={24} 
-                  fill="hsl(var(--primary))" 
-                  rx={4}
-                />
-                <text
-                  x={-30}
-                  y={layout.totalScaledHeight / 2 + 4}
-                  textAnchor="middle"
-                  fontSize="12"
-                  fontWeight="bold"
-                  fill="hsl(var(--primary-foreground))"
-                >
-                  {totalHeight}
-                </text>
-              </g>
-            )}
-            
-            {/* Lock height indicator */}
+            {/* Lock height indicator with dimension */}
             {lockHeight > 0 && lockHeight < totalHeight && layout.panels.length > 0 && (
               <g>
+                {/* Dashed horizontal line for lock position */}
                 <line
-                  x1={layout.padding.left - 15}
+                  x1={layout.padding.left - 20}
                   y1={layout.lockHeightY}
-                  x2={layout.padding.left + layout.totalScaledWidth + 15}
+                  x2={layout.padding.left + layout.totalScaledWidth + 20}
                   y2={layout.lockHeightY}
-                  stroke="hsl(var(--destructive))"
+                  stroke="#dc2626"
                   strokeWidth={1.5}
-                  strokeDasharray="6 3"
+                  strokeDasharray="4 2"
                 />
-                <rect 
-                  x={layout.padding.left + layout.totalScaledWidth + 20} 
-                  y={layout.lockHeightY - 10} 
-                  width={65} 
-                  height={20} 
-                  fill="hsl(var(--destructive))" 
-                  rx={3}
-                />
+                
+                {/* Lock position dimension */}
                 <text
-                  x={layout.padding.left + layout.totalScaledWidth + 52}
+                  x={layout.padding.left + layout.totalScaledWidth + 28}
                   y={layout.lockHeightY + 4}
-                  textAnchor="middle"
-                  fontSize="10"
-                  fontWeight="bold"
-                  fill="white"
+                  fontSize="11"
+                  fontWeight="600"
+                  fill="#dc2626"
                 >
-                  Fecho: {lockHeight}
+                  {lockHeight}
                 </text>
               </g>
             )}
             
-            {/* Quantity indicator */}
-            <text
-              x={layout.padding.left}
-              y={25}
-              fontSize="16"
-              fontWeight="bold"
-              fill="hsl(var(--muted-foreground))"
-            >
-              Quantidade: {quantity} unidade{quantity > 1 ? 's' : ''}
-            </text>
+            {/* Total VÃO dimensions - Excel style */}
+            {layout.panels.length > 0 && (
+              <>
+                {/* Bottom total width with VÃO label */}
+                <g transform={`translate(${layout.padding.left}, ${layout.bottomY + 45})`}>
+                  <line x1={0} y1={0} x2={layout.totalScaledWidth} y2={0} stroke="#374151" strokeWidth={1.5} />
+                  <line x1={0} y1={-5} x2={0} y2={5} stroke="#374151" strokeWidth={1.5} />
+                  <line x1={layout.totalScaledWidth} y1={-5} x2={layout.totalScaledWidth} y2={5} stroke="#374151" strokeWidth={1.5} />
+                  <text
+                    x={layout.totalScaledWidth / 2}
+                    y={16}
+                    textAnchor="middle"
+                    fontSize="13"
+                    fontWeight="bold"
+                    fill="#1f2937"
+                  >
+                    {totalWidth} VÃO
+                  </text>
+                </g>
+                
+                {/* Right side total height with VÃO label */}
+                <g transform={`translate(${layout.padding.left + layout.totalScaledWidth + 60}, ${layout.bottomY - layout.totalScaledHeight})`}>
+                  <line x1={0} y1={0} x2={0} y2={layout.totalScaledHeight} stroke="#374151" strokeWidth={1.5} />
+                  <line x1={-5} y1={0} x2={5} y2={0} stroke="#374151" strokeWidth={1.5} />
+                  <line x1={-5} y1={layout.totalScaledHeight} x2={5} y2={layout.totalScaledHeight} stroke="#374151" strokeWidth={1.5} />
+                  <text
+                    x={0}
+                    y={layout.totalScaledHeight / 2}
+                    textAnchor="start"
+                    dominantBaseline="middle"
+                    fontSize="12"
+                    fontWeight="bold"
+                    fill="#1f2937"
+                    transform={`translate(12, 0)`}
+                  >
+                    VÃO
+                  </text>
+                  <text
+                    x={0}
+                    y={layout.totalScaledHeight / 2 + 14}
+                    textAnchor="start"
+                    fontSize="12"
+                    fontWeight="bold"
+                    fill="#1f2937"
+                    transform={`translate(12, 0)`}
+                  >
+                    {totalHeight}
+                  </text>
+                </g>
+              </>
+            )}
+            
+            {/* Quantity indicator (X indicator like Excel) */}
+            <g transform={`translate(${layout.padding.left}, ${layout.bottomY + 65})`}>
+              <text
+                fontSize="14"
+                fontWeight="bold"
+                fill="#374151"
+              >
+                X
+              </text>
+              <text
+                x={16}
+                fontSize="14"
+                fontWeight="bold"
+                fill="#374151"
+              >
+                {quantity}
+              </text>
+            </g>
           </svg>
         </div>
         
-        <p className="text-xs text-muted-foreground mt-3 text-center">
+        <p className="text-xs text-muted-foreground mt-2 text-center">
           Clique em um vidro para adicionar furos e recortes
         </p>
       </CardContent>
       
-      {/* Hole/Cutout Editor Dialog */}
       {editingPanel && (
         <HoleCutoutEditor
           open={!!editingPanel}
