@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Layers, Maximize2 } from 'lucide-react';
-import { GlassPreview } from '@/components/plano-corte/GlassPreview';
+import { OSGlassCanvas } from './OSGlassCanvas';
 
 interface OSGlassProjectProps {
   ordemServicoId: string;
@@ -16,6 +16,8 @@ interface PanelData {
   height: number;
   areaM2: number;
   quantity: number;
+  holes?: Array<{ x: number; y: number; diameter: number }>;
+  cutouts?: Array<{ x: number; y: number; width: number; height: number }>;
 }
 
 interface GlassProject {
@@ -28,6 +30,7 @@ interface GlassProject {
   total_area_m2: number | null;
   glass_type: string | null;
   glass_color: string | null;
+  lock_height?: number;
 }
 
 export function OSGlassProject({ ordemServicoId }: OSGlassProjectProps) {
@@ -129,26 +132,15 @@ export function OSGlassProject({ ordemServicoId }: OSGlassProjectProps) {
             </div>
           </CardHeader>
           <CardContent>
-            {/* Glass Panels Visualization */}
-            <div className="flex items-end justify-center gap-4 p-4 bg-muted/30 rounded-lg mb-4">
-              {project.panels_data?.map((panel: PanelData, idx: number) => (
-                <div key={idx} className="flex flex-col items-center">
-                  <GlassPreview 
-                    width={panel.width} 
-                    height={panel.height}
-                    maxSize={120}
-                  />
-                  <div className="mt-2 text-center">
-                    <div className="font-medium text-sm">{panel.name}</div>
-                    <div className="text-xs text-muted-foreground font-mono">
-                      {panel.width} x {panel.height}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {panel.areaM2.toFixed(3)} m²
-                    </div>
-                  </div>
-                </div>
-              ))}
+            {/* Glass Panels Visualization - Excel style canvas */}
+            <div className="mb-4">
+              <OSGlassCanvas
+                panels={project.panels_data || []}
+                vaoWidth={project.vao_width}
+                vaoHeight={project.vao_height}
+                quantity={project.quantity}
+                lockHeight={(project as any).lock_height || 0}
+              />
             </div>
 
             {/* Panels Table */}
