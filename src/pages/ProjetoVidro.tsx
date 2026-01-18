@@ -1,12 +1,12 @@
 import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { ArrowLeft, Printer, Save } from 'lucide-react';
+import { ArrowLeft, Printer, Save, FileDown, FolderOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useQuery } from '@tanstack/react-query';
+import { Card, CardContent } from '@/components/ui/card';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { Parser } from 'expr-eval';
@@ -14,6 +14,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { GlassProjectCanvas } from '@/components/projeto-vidro/GlassProjectCanvas';
 import { PiecesTable } from '@/components/projeto-vidro/PiecesTable';
 import { ProductInfoHeader } from '@/components/projeto-vidro/ProductInfoHeader';
+import { SaveProjectDialog } from '@/components/projeto-vidro/SaveProjectDialog';
+import { Hole, Cutout } from '@/components/projeto-vidro/HoleCutoutEditor';
+import { generateGlassProjectPdf } from '@/utils/generateGlassProjectPdf';
+import { toast } from 'sonner';
 
 // Tradução de categorias
 const categoryLabels: Record<string, string> = {
@@ -78,6 +82,7 @@ const getStorageUrl = (path: string | null) => {
 
 export default function ProjetoVidro() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { currentCompany, isSaasAdmin } = useAuth();
   const [selectedLinha, setSelectedLinha] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -86,6 +91,8 @@ export default function ProjetoVidro() {
   const [height, setHeight] = useState<number>(2000);
   const [quantity, setQuantity] = useState<number>(1);
   const [lockHeight, setLockHeight] = useState<number>(1000);
+  const [panelModifications, setPanelModifications] = useState<Record<string, { holes: Hole[]; cutouts: Cutout[] }>>({});
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
 
   // Fetch product templates
   const { data: productTemplates } = useQuery({
@@ -149,11 +156,18 @@ export default function ProjetoVidro() {
     setSelectedLinha(value === '__all__' ? '' : value);
     setSelectedCategory('');
     setSelectedProduct('');
+    setPanelModifications({});
   };
 
   const handleCategoryChange = (value: string) => {
     setSelectedCategory(value === '__all__' ? '' : value);
     setSelectedProduct('');
+    setPanelModifications({});
+  };
+
+  const handleProductChange = (value: string) => {
+    setSelectedProduct(value);
+    setPanelModifications({});
   };
 
   // Fetch product template items (only glass items)
@@ -260,22 +274,83 @@ export default function ProjetoVidro() {
 
   const selectedProductData = productTemplates?.find(p => p.id === selectedProduct);
 
+  // Save project mutation
+  const saveProjectMutation = useMutation({
+    mutationFn: async ({ name, notes }: { name: string; notes: string }) => {
+      if (!currentCompany?.id) throw new Error('Empresa não encontrada');
+      
+      const panelsWithMods = glassPanels.map(panel => ({
+        ...panel,
+        holes: panelModifications[panel.id]?.holes || [],
+        cutouts: panelModifications[panel.id]?.cutouts || []
+      }));
+      
+      const { error } = await supabase
+        .from('glass_projects')
+        .insert([{
+          company_id: currentCompany.id,
+          product_template_id: selectedProduct || null,
+          name,
+          vao_width: width,
+          vao_height: height,
+          quantity,
+          lock_height: lockHeight,
+          panels: panelsWithMods as any,
+          notes
+        }]);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Projeto salvo com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['glass-projects'] });
+    },
+    onError: (error: Error) => {
+      toast.error('Erro ao salvar projeto: ' + error.message);
+    }
+  });
+
+  const handleSaveProject = async (name: string, notes: string) => {
+    await saveProjectMutation.mutateAsync({ name, notes });
+  };
+
+  const handleExportPdf = () => {
+    const pdf = generateGlassProjectPdf({
+      productName: selectedProductData?.name || 'Produto',
+      productImage: getStorageUrl(selectedProductData?.image_url || null),
+      categoria: translateCategory(selectedProductData?.category || ''),
+      linha: selectedProductData?.linha || '',
+      vaoWidth: width,
+      vaoHeight: height,
+      quantity,
+      lockHeight,
+      panels: glassPanels,
+      groupedPanels,
+      panelModifications,
+      companyName: currentCompany?.name || 'Vetra Glass'
+    });
+    
+    pdf.save(`projeto-vidro-${selectedProductData?.name || 'produto'}.pdf`);
+    toast.success('PDF exportado com sucesso!');
+  };
+
   const handlePrint = () => {
-    // Create print-friendly version
-    window.print();
+    handleExportPdf();
   };
 
   return (
     <MainLayout>
       <div className="p-4 md:p-6 space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Projeto de Vidro</h1>
-            <p className="text-sm text-muted-foreground">Visualize e configure os vidros do produto</p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Projeto de Vidro</h1>
+              <p className="text-sm text-muted-foreground">Visualize, configure e exporte projetos de vidros</p>
+            </div>
           </div>
         </div>
 
@@ -318,7 +393,7 @@ export default function ProjetoVidro() {
               {/* Produto */}
               <div className="space-y-2 lg:col-span-2">
                 <Label>Produto</Label>
-                <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+                <Select value={selectedProduct} onValueChange={handleProductChange}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione um produto" />
                   </SelectTrigger>
@@ -391,6 +466,8 @@ export default function ProjetoVidro() {
                 totalHeight={height}
                 quantity={quantity}
                 lockHeight={lockHeight}
+                panelModifications={panelModifications}
+                onPanelModificationsChange={setPanelModifications}
               />
             </div>
           </div>
@@ -421,18 +498,30 @@ export default function ProjetoVidro() {
 
         {/* Footer Actions */}
         {selectedProduct && glassPanels.length > 0 && (
-          <div className="flex justify-end gap-3">
+          <div className="flex flex-wrap justify-end gap-3">
             <Button variant="outline" onClick={() => navigate(-1)}>
               <ArrowLeft className="w-4 h-4 mr-2" />
               Voltar
             </Button>
-            <Button variant="outline" onClick={handlePrint}>
-              <Printer className="w-4 h-4 mr-2" />
-              Imprimir
+            <Button variant="outline" onClick={handleExportPdf}>
+              <FileDown className="w-4 h-4 mr-2" />
+              Exportar PDF
+            </Button>
+            <Button onClick={() => setSaveDialogOpen(true)}>
+              <Save className="w-4 h-4 mr-2" />
+              Salvar Projeto
             </Button>
           </div>
         )}
       </div>
+      
+      {/* Save Dialog */}
+      <SaveProjectDialog
+        open={saveDialogOpen}
+        onOpenChange={setSaveDialogOpen}
+        onSave={handleSaveProject}
+        defaultName={selectedProductData?.name ? `Projeto - ${selectedProductData.name}` : ''}
+      />
     </MainLayout>
   );
 }
