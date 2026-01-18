@@ -38,6 +38,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { generateCaixaReportPdf } from '@/utils/generateCaixaReportPdf';
 
 type PeriodFilter = 'today' | 'yesterday' | 'week' | 'month' | 'last_month' | 'custom';
 type MovementTypeFilter = 'all' | 'entrada' | 'saida';
@@ -211,7 +212,37 @@ export function CaixaReportTab() {
   };
 
   const handlePrint = () => {
-    window.print();
+    generateCaixaReportPdf(
+      filteredMovements,
+      summary,
+      getPeriodLabel(),
+      currentCompany ? {
+        name: currentCompany.name,
+        cnpj: currentCompany.cnpj,
+        address: currentCompany.address,
+        phone: currentCompany.phone,
+        email: currentCompany.email,
+        logo_url: currentCompany.logo_url,
+      } : null,
+      'print'
+    );
+  };
+
+  const handleExportPdf = () => {
+    generateCaixaReportPdf(
+      filteredMovements,
+      summary,
+      getPeriodLabel(),
+      currentCompany ? {
+        name: currentCompany.name,
+        cnpj: currentCompany.cnpj,
+        address: currentCompany.address,
+        phone: currentCompany.phone,
+        email: currentCompany.email,
+        logo_url: currentCompany.logo_url,
+      } : null,
+      'download'
+    );
   };
 
   const handleExportCSV = () => {
@@ -322,6 +353,10 @@ export function CaixaReportTab() {
               <Button variant="outline" size="sm" onClick={handlePrint}>
                 <Printer className="h-4 w-4 mr-2" />
                 Imprimir
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleExportPdf}>
+                <FileText className="h-4 w-4 mr-2" />
+                Exportar PDF
               </Button>
               <Button variant="outline" size="sm" onClick={handleExportCSV}>
                 <Download className="h-4 w-4 mr-2" />
