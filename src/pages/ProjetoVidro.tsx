@@ -93,6 +93,8 @@ export default function ProjetoVidro() {
   const [lockHeight, setLockHeight] = useState<number>(1000);
   const [panelModifications, setPanelModifications] = useState<Record<string, { holes: Hole[]; cutouts: Cutout[] }>>({});
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [glassType, setGlassType] = useState('CRISTAL INCOLOR 10MM - TEMPERADO');
+  const [hardwareType, setHardwareType] = useState('Ferragens cromadas');
 
   // Fetch product templates
   const { data: productTemplates } = useQuery({
@@ -446,6 +448,10 @@ export default function ProjetoVidro() {
                 height={height}
                 quantity={quantity}
                 onQuantityChange={setQuantity}
+                glassType={glassType}
+                onGlassTypeChange={setGlassType}
+                hardwareType={hardwareType}
+                onHardwareTypeChange={setHardwareType}
               />
               
               <PiecesTable 
@@ -468,6 +474,8 @@ export default function ProjetoVidro() {
                 lockHeight={lockHeight}
                 panelModifications={panelModifications}
                 onPanelModificationsChange={setPanelModifications}
+                glassType={glassType}
+                hardwareType={hardwareType}
               />
             </div>
           </div>

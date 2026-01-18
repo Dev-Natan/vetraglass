@@ -2,7 +2,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { GlassPanelData } from '@/pages/ProjetoVidro';
 
 interface GroupedPanel {
@@ -35,96 +34,82 @@ export function PiecesTable({
 
   return (
     <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg flex items-center justify-between">
-          <span>Tabela de Peças</span>
-          <Badge variant="secondary">{totalPieces} peças</Badge>
-        </CardTitle>
+      <CardHeader className="pb-3 border-b bg-muted/30">
+        <div className="flex items-center justify-between">
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <span className="text-muted-foreground">{totalWidth}</span>
+              <span className="ml-1 font-semibold">Vão</span>
+            </div>
+            <div>
+              <span className="text-muted-foreground">{totalHeight}</span>
+              <span className="ml-1 font-semibold">Vão</span>
+            </div>
+          </div>
+        </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="p-0">
+        {/* Excel-style table */}
         <Table>
           <TableHeader>
-            <TableRow className="bg-primary/10">
-              <TableHead className="font-bold text-primary">Peça</TableHead>
-              <TableHead className="font-bold text-primary text-center">T.pç.</TableHead>
-              <TableHead className="font-bold text-primary text-center">Largura</TableHead>
-              <TableHead className="font-bold text-primary text-center">-</TableHead>
-              <TableHead className="font-bold text-primary text-center">Altura</TableHead>
-              <TableHead className="font-bold text-primary text-center">-</TableHead>
+            <TableRow className="bg-muted/50 hover:bg-muted/50">
+              <TableHead className="font-bold text-center w-16 border-r">Peça</TableHead>
+              <TableHead className="font-bold text-center w-16 border-r">T. pçs.</TableHead>
+              <TableHead className="font-bold text-center border-r" colSpan={2}>Largura</TableHead>
+              <TableHead className="font-bold text-center" colSpan={2}>Altura</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {groupedPanels.map((group, index) => (
-              <TableRow key={index}>
-                <TableCell className="font-bold text-lg">
+              <TableRow key={index} className="hover:bg-muted/20">
+                <TableCell className="font-bold text-center border-r text-base">
                   {group.letters.join(', ')}
                 </TableCell>
-                <TableCell className="text-center">
+                <TableCell className="text-center border-r font-medium">
                   {group.quantity}
                 </TableCell>
-                <TableCell className="text-center font-medium text-green-600">
+                <TableCell className="text-center font-semibold text-primary">
                   {group.width}
                 </TableCell>
-                <TableCell className="text-center">
-                  {group.widthFormula ? (
-                    <Badge variant="outline" className="text-xs bg-green-50">
-                      Def
-                    </Badge>
-                  ) : '-'}
+                <TableCell className="text-center border-r text-xs text-muted-foreground">
+                  Def
                 </TableCell>
-                <TableCell className="text-center font-medium text-blue-600">
+                <TableCell className="text-center font-semibold text-primary">
                   {group.height}
                 </TableCell>
-                <TableCell className="text-center">
-                  {group.heightFormula ? (
-                    <Badge variant="outline" className="text-xs bg-blue-50">
-                      Def
-                    </Badge>
-                  ) : '-'}
+                <TableCell className="text-center text-xs text-muted-foreground">
+                  Def
                 </TableCell>
               </TableRow>
             ))}
+            
             {/* Total row */}
-            <TableRow className="bg-muted/50 font-bold">
-              <TableCell className="font-bold">Total</TableCell>
-              <TableCell className="text-center">{totalPieces}</TableCell>
-              <TableCell colSpan={4} className="text-center text-muted-foreground">
-                Peças
+            <TableRow className="bg-muted/40 hover:bg-muted/40 border-t-2">
+              <TableCell className="font-bold text-center border-r">Total</TableCell>
+              <TableCell className="text-center border-r font-bold">{totalPieces}</TableCell>
+              <TableCell className="text-center font-medium" colSpan={4}>
+                Pçs.
+              </TableCell>
+            </TableRow>
+            
+            {/* Lock height row */}
+            <TableRow className="hover:bg-muted/20">
+              <TableCell colSpan={4} className="text-right font-medium text-sm border-r">
+                Altura fechadura =
+              </TableCell>
+              <TableCell colSpan={2} className="p-1">
+                <Input
+                  type="number"
+                  value={lockHeight}
+                  onChange={e => onLockHeightChange(parseInt(e.target.value) || 0)}
+                  min={0}
+                  max={totalHeight}
+                  className="h-8 text-center font-semibold"
+                />
               </TableCell>
             </TableRow>
           </TableBody>
         </Table>
-
-        {/* VÃO Summary */}
-        <div className="border rounded-lg p-3 bg-primary/5 space-y-2">
-          <div className="flex justify-between items-center">
-            <span className="text-sm font-medium">Largura do VÃO:</span>
-            <span className="font-bold text-primary">{totalWidth} mm</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-sm font-medium">Altura do VÃO:</span>
-            <span className="font-bold text-primary">{totalHeight} mm</span>
-          </div>
-        </div>
-
-        {/* Lock Height */}
-        <div className="space-y-2">
-          <Label htmlFor="lock-height" className="text-sm font-medium">
-            Altura do Fecho/Fechadura (mm)
-          </Label>
-          <Input
-            id="lock-height"
-            type="number"
-            value={lockHeight}
-            onChange={e => onLockHeightChange(parseInt(e.target.value) || 0)}
-            min={0}
-            max={totalHeight}
-            placeholder="Ex: 1000"
-          />
-          <p className="text-xs text-muted-foreground">
-            Posição da fechadura a partir do chão
-          </p>
-        </div>
       </CardContent>
     </Card>
   );
