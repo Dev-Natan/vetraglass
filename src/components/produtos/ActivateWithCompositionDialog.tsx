@@ -117,6 +117,7 @@ export function ActivateWithCompositionDialog({
   const [isAddingItem, setIsAddingItem] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [autoLoadedGlassCount, setAutoLoadedGlassCount] = useState(0);
 
   // Form states for adding/editing
   const [selectedItemTemplateId, setSelectedItemTemplateId] = useState('');
@@ -161,12 +162,83 @@ export function ActivateWithCompositionDialog({
     enabled: open && !!productTemplateId,
   });
 
-  // Initialize local items from global items
+  // Fetch glass formulas for this product from glass_line_formulas
+  const { data: glassFormulas } = useQuery({
+    queryKey: ['glass-formulas-for-product', productTemplateId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('glass_line_formulas')
+        .select('*')
+        .eq('product_template_id', productTemplateId)
+        .eq('is_active', true)
+        .order('panel_index')
+        .order('formula_name');
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: open && !!productTemplateId,
+  });
+
+  // Fetch a generic glass item template to use for auto-added formulas
+  const { data: genericGlassTemplate } = useQuery({
+    queryKey: ['generic-glass-template'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('item_templates')
+        .select('*')
+        .eq('type', 'glass')
+        .eq('is_active', true)
+        .limit(1)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      return data;
+    },
+    enabled: open,
+  });
+
+  // Initialize local items from global items + auto-add glass formulas
   useEffect(() => {
     if (globalItems) {
-      setLocalItems(globalItems.map(item => ({ ...item })));
+      let items = globalItems.map(item => ({ ...item }));
+      let autoAddedCount = 0;
+      
+      // Check if there are glass formulas to add automatically
+      if (glassFormulas && glassFormulas.length > 0 && genericGlassTemplate) {
+        const existingGlassCount = items.filter(i => i.item_template?.type === 'glass').length;
+        
+        // Only auto-add if no glass items exist yet
+        if (existingGlassCount === 0) {
+          const autoGlassItems: ComponentItem[] = glassFormulas.map((formula, idx) => ({
+            id: `auto-glass-${idx}-${Date.now()}`,
+            item_template_id: genericGlassTemplate.id,
+            quantity_formula: '1',
+            pieces_quantity: 1,
+            cut_angle: 90,
+            width_formula: formula.width_formula,
+            height_formula: formula.height_formula,
+            is_optional: false,
+            notes: formula.formula_name,
+            isNew: true,
+            item_template: {
+              id: genericGlassTemplate.id,
+              name: genericGlassTemplate.name,
+              type: 'glass',
+              unit: genericGlassTemplate.unit,
+              image_url: genericGlassTemplate.image_url,
+            },
+          }));
+          
+          items = [...items, ...autoGlassItems];
+          autoAddedCount = autoGlassItems.length;
+        }
+      }
+      
+      setLocalItems(items);
+      setAutoLoadedGlassCount(autoAddedCount);
     }
-  }, [globalItems]);
+  }, [globalItems, glassFormulas, genericGlassTemplate]);
 
   // Fetch available item templates for adding
   const { data: availableItems } = useQuery({
@@ -539,6 +611,16 @@ export function ActivateWithCompositionDialog({
                         Adicionar {tab.label.slice(0, -1).toLowerCase()}
                       </Button>
                     </div>
+
+                    {/* Auto-loaded glass indicator */}
+                    {tab.value === 'glass' && autoLoadedGlassCount > 0 && (
+                      <div className="mb-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex items-center gap-2 mx-6">
+                        <Sparkles className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
+                        <p className="text-xs text-green-700 dark:text-green-300">
+                          <strong>{autoLoadedGlassCount} vidro(s)</strong> carregado(s) automaticamente das fórmulas configuradas para este produto.
+                        </p>
+                      </div>
+                    )}
 
                     {/* Items list - proper scrollable container */}
                     <div className="flex-1 overflow-y-auto px-6 pb-4">

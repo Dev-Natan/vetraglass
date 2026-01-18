@@ -224,6 +224,26 @@ export default function PlanoCorte() {
     enabled: !!selectedProduct
   });
 
+  // Fetch glass formulas from glass_line_formulas as fallback
+  const { data: glassFormulas } = useQuery({
+    queryKey: ['glass-formulas-cutting', selectedProduct],
+    queryFn: async () => {
+      if (!selectedProduct) return [];
+      
+      const { data, error } = await supabase
+        .from('glass_line_formulas')
+        .select('*')
+        .eq('product_template_id', selectedProduct)
+        .eq('is_active', true)
+        .order('panel_index')
+        .order('formula_name');
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!selectedProduct
+  });
+
   // Calculate profile cuts
   const calculatedCuts = useMemo((): CutItem[] => {
     if (!productItems || productItems.length === 0) return [];
@@ -281,34 +301,67 @@ export default function PlanoCorte() {
       });
   }, [productItems, width, height, quantity]);
 
-  // Calculate glass cuts
+  // Calculate glass cuts - uses product_template_items first, then falls back to glass_line_formulas
   const calculatedGlassCuts = useMemo((): GlassCutItem[] => {
-    if (!productItems || productItems.length === 0) return [];
-
-    return productItems
-      .filter(item => item.item_templates?.type === 'glass')
-      .map(item => {
-        const widthF = (item as any).width_formula || 'Largura';
-        const heightF = (item as any).height_formula || 'Altura';
+    const glassItems: GlassCutItem[] = [];
+    
+    // First, add glass items from product_template_items
+    if (productItems && productItems.length > 0) {
+      const itemGlasses = productItems
+        .filter(item => item.item_templates?.type === 'glass')
+        .map(item => {
+          const widthF = (item as any).width_formula || 'Largura';
+          const heightF = (item as any).height_formula || 'Altura';
+          const calcWidth = evaluateFormula(widthF, width, height);
+          const calcHeight = evaluateFormula(heightF, width, height);
+          const areaM2 = (calcWidth * calcHeight) / 1000000;
+          const customName = (item as any).notes || null;
+          
+          return {
+            id: item.id,
+            glassName: item.item_templates?.name || 'Vidro',
+            customName: customName,
+            imageUrl: item.item_templates?.image_url || null,
+            widthFormula: (item as any).width_formula,
+            heightFormula: (item as any).height_formula,
+            calculatedWidth: calcWidth,
+            calculatedHeight: calcHeight,
+            areaM2: areaM2,
+            quantity: quantity
+          };
+        });
+      
+      glassItems.push(...itemGlasses);
+    }
+    
+    // If no glass items from product_template_items, use glass_line_formulas
+    if (glassItems.length === 0 && glassFormulas && glassFormulas.length > 0) {
+      const formulaGlasses = glassFormulas.map((formula, idx) => {
+        const widthF = formula.width_formula || 'Largura';
+        const heightF = formula.height_formula || 'Altura';
         const calcWidth = evaluateFormula(widthF, width, height);
         const calcHeight = evaluateFormula(heightF, width, height);
         const areaM2 = (calcWidth * calcHeight) / 1000000;
-        const customName = (item as any).notes || null;
         
         return {
-          id: item.id,
-          glassName: item.item_templates?.name || 'Vidro',
-          customName: customName,
-          imageUrl: item.item_templates?.image_url || null,
-          widthFormula: (item as any).width_formula,
-          heightFormula: (item as any).height_formula,
+          id: `formula-${idx}`,
+          glassName: 'Vidro',
+          customName: formula.formula_name,
+          imageUrl: null,
+          widthFormula: formula.width_formula,
+          heightFormula: formula.height_formula,
           calculatedWidth: calcWidth,
           calculatedHeight: calcHeight,
           areaM2: areaM2,
           quantity: quantity
         };
       });
-  }, [productItems, width, height, quantity]);
+      
+      glassItems.push(...formulaGlasses);
+    }
+    
+    return glassItems;
+  }, [productItems, glassFormulas, width, height, quantity]);
 
   const selectedProductData = productTemplates?.find(p => p.id === selectedProduct);
 
