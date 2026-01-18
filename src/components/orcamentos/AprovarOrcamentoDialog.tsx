@@ -34,6 +34,7 @@ import {
   Wallet
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { generateOSDocuments } from '@/utils/generateOSDocuments';
 
 interface Quote {
   id: string;
@@ -206,6 +207,12 @@ export function AprovarOrcamentoDialog({
         .eq('id', quote.id);
 
       if (quoteError) throw quoteError;
+
+      // 4. Generate OS documents (materials, cutting plan, glass projects)
+      const docsResult = await generateOSDocuments(ordemServico.id, items);
+      if (!docsResult.success) {
+        console.warn('Error generating OS documents:', docsResult.error);
+      }
 
       return { ordemServico, saleId };
     },

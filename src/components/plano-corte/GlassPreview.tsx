@@ -5,12 +5,13 @@ interface GlassPreviewProps {
   height: number;
   name?: string;
   className?: string;
+  maxSize?: number;
 }
 
-export function GlassPreview({ width, height, name, className }: GlassPreviewProps) {
-  // Calculate aspect ratio for preview (max 60x80px container)
-  const maxWidth = 60;
-  const maxHeight = 50;
+export function GlassPreview({ width, height, name, className, maxSize = 60 }: GlassPreviewProps) {
+  // Calculate aspect ratio for preview
+  const maxWidth = maxSize;
+  const maxHeight = maxSize * 0.83;
   
   const aspectRatio = width / height;
   
