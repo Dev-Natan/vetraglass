@@ -1,17 +1,19 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Package, Scissors, Layers, FileText, User, Phone, MapPin, Calendar, DollarSign } from 'lucide-react';
+import { ArrowLeft, Package, Scissors, Layers, FileText, User, Phone, MapPin, Calendar, DollarSign, RefreshCw, Loader2 } from 'lucide-react';
 import { OSMaterialsList } from '@/components/ordens-servico/OSMaterialsList';
 import { OSCuttingPlan } from '@/components/ordens-servico/OSCuttingPlan';
 import { OSGlassProject } from '@/components/ordens-servico/OSGlassProject';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { regenerateOSDocuments } from '@/utils/generateOSDocuments';
+import { toast } from 'sonner';
 
 const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   pending: { label: 'Pendente', variant: 'secondary' },
@@ -23,6 +25,7 @@ const statusConfig: Record<string, { label: string; variant: 'default' | 'second
 export default function OrdemServicoDetalhes() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const { data: ordem, isLoading } = useQuery({
     queryKey: ['ordem-servico', id],
@@ -37,6 +40,26 @@ export default function OrdemServicoDetalhes() {
       return data;
     },
     enabled: !!id,
+  });
+
+  const regenerateMutation = useMutation({
+    mutationFn: async () => {
+      if (!ordem) throw new Error('OS não encontrada');
+      return regenerateOSDocuments(ordem.id, ordem.quote_id);
+    },
+    onSuccess: (result) => {
+      if (result.success) {
+        toast.success('Documentos regenerados com sucesso!');
+        queryClient.invalidateQueries({ queryKey: ['os-materials', id] });
+        queryClient.invalidateQueries({ queryKey: ['os-cutting-plan', id] });
+        queryClient.invalidateQueries({ queryKey: ['os-glass-projects', id] });
+      } else {
+        toast.error('Erro ao regenerar documentos: ' + result.error);
+      }
+    },
+    onError: (error: Error) => {
+      toast.error('Erro: ' + error.message);
+    },
   });
 
   const formatCurrency = (value: number) => 
@@ -84,6 +107,19 @@ export default function OrdemServicoDetalhes() {
               <p className="text-muted-foreground">{ordem.customer_name}</p>
             </div>
           </div>
+          <Button 
+            variant="outline" 
+            onClick={() => regenerateMutation.mutate()}
+            disabled={regenerateMutation.isPending}
+            className="gap-2"
+          >
+            {regenerateMutation.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <RefreshCw className="w-4 h-4" />
+            )}
+            Recalcular
+          </Button>
         </div>
 
         {/* Summary Card */}

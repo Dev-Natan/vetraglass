@@ -180,12 +180,14 @@ export async function generateOSDocuments(
       for (const comp of composition) {
         if (comp.item_template.type !== 'profile') continue;
         
-        const formula = comp.width_formula || comp.height_formula || '';
+        // The formula is in quantity_formula (e.g., "A - 20", "L - 31", "L / 2 - 91")
+        // width_formula and height_formula are usually null
+        const formula = comp.quantity_formula || comp.width_formula || comp.height_formula || '';
         const calculatedLength = evaluateFormula(formula, width, height);
         
         if (calculatedLength <= 0) continue;
 
-        const piecesQty = parseInt(comp.quantity_formula) || comp.pieces_quantity || 1;
+        const piecesQty = comp.pieces_quantity || 1;
         const totalPieces = piecesQty * quantity;
 
         profileCuts.push({
