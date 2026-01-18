@@ -9,16 +9,9 @@ import { ShoppingCart, Lock, Plus, Unlock, TrendingUp, TrendingDown } from 'luci
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { format, startOfDay, endOfDay, subDays, startOfWeek, startOfMonth } from 'date-fns';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Parser } from 'expr-eval';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
 import { AbrirCaixaDialog } from '@/components/caixa/AbrirCaixaDialog';
 import { FecharCaixaDialog } from '@/components/caixa/FecharCaixaDialog';
@@ -31,8 +24,6 @@ import { MovimentacaoCaixaDialog } from '@/components/caixa/MovimentacaoCaixaDia
 import { CaixaAlertasHoje } from '@/components/caixa/CaixaAlertasHoje';
 import { CaixaMovimentacoesTable } from '@/components/caixa/CaixaMovimentacoesTable';
 import { generateSalePdf } from '@/utils/generateSalePdf';
-
-type PeriodFilter = 'today' | 'yesterday' | 'week' | 'month' | 'all';
 
 function calculateFormulaQuantity(formula: string, width: number, height: number, piecesQty: number): number {
   try {
@@ -76,7 +67,7 @@ export default function CaixaVendas() {
   const [cancelarVendaOpen, setCancelarVendaOpen] = useState(false);
   const [detalhesVendaOpen, setDetalhesVendaOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
-  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('today');
+  // Removed periodFilter - showing only current cash register data
   const [pendingOpenNewSale, setPendingOpenNewSale] = useState(false);
   
   // Dialog movimentação do caixa do dia
@@ -200,32 +191,8 @@ export default function CaixaVendas() {
     enabled: !!currentCompany?.id,
   });
 
-  const getDateRange = (period: PeriodFilter) => {
-    const now = new Date();
-    switch (period) {
-      case 'today': return { start: startOfDay(now), end: endOfDay(now) };
-      case 'yesterday': const yesterday = subDays(now, 1); return { start: startOfDay(yesterday), end: endOfDay(yesterday) };
-      case 'week': return { start: startOfWeek(now, { locale: ptBR }), end: endOfDay(now) };
-      case 'month': return { start: startOfMonth(now), end: endOfDay(now) };
-      case 'all': return { start: null, end: null };
-      default: return { start: startOfDay(now), end: endOfDay(now) };
-    }
-  };
-
-  const { data: filteredSales = [], isLoading: loadingSales } = useQuery({
-    queryKey: ['sales-filtered', currentCompany?.id, periodFilter],
-    queryFn: async () => {
-      if (!currentCompany?.id) return [];
-      const { start, end } = getDateRange(periodFilter);
-      let query = supabase.from('sales').select('*').eq('company_id', currentCompany.id).order('created_at', { ascending: false });
-      if (start) query = query.gte('created_at', start.toISOString());
-      if (end) query = query.lte('created_at', end.toISOString());
-      const { data, error } = await query;
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!currentCompany?.id,
-  });
+  // Removed getDateRange and filteredSales - CaixaVendas now shows only current cash register data
+  // Historical sales reports are available in Financeiro > Relatórios
 
   const { data: availableItems = [] } = useQuery({
     queryKey: ['available-items', currentCompany?.id],
@@ -593,31 +560,6 @@ export default function CaixaVendas() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-lg font-semibold">Histórico de Vendas</CardTitle>
-                <div className="flex items-center gap-2">
-                  <Select value={periodFilter} onValueChange={(v) => setPeriodFilter(v as PeriodFilter)}>
-                    <SelectTrigger className="w-[140px]"><SelectValue placeholder="Período" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="today">Hoje</SelectItem>
-                      <SelectItem value="yesterday">Ontem</SelectItem>
-                      <SelectItem value="week">Esta Semana</SelectItem>
-                      <SelectItem value="month">Este Mês</SelectItem>
-                      <SelectItem value="all">Todas</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Badge variant="secondary">{filteredSales.filter(s => s.payment_status !== 'cancelled').length} vendas</Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {loadingSales ? (
-                  <div className="h-20 flex items-center justify-center"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" /></div>
-                ) : (
-                  <VendasTable sales={filteredSales} onViewDetails={handleViewDetails} onCancelSale={handleCancelSale} onPrintReceipt={handlePrintReceipt} />
-                )}
-              </CardContent>
-            </Card>
           </>
         ) : (
           <Card>
