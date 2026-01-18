@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,12 +16,19 @@ import {
   ArrowDownCircle,
   ArrowUpCircle,
   History,
-  Wallet
+  Wallet,
+  Lock,
+  Unlock,
+  DollarSign,
+  CreditCard,
+  Smartphone
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { MovimentoCaixaEmpresaDialog } from '@/components/caixa/MovimentoCaixaEmpresaDialog';
 import { CaixaAdiantamentosCard } from '@/components/caixa/CaixaAdiantamentosCard';
+import { AbrirCaixaDialog } from '@/components/caixa/AbrirCaixaDialog';
+import { FecharCaixaDialog } from '@/components/caixa/FecharCaixaDialog';
 import {
   Table,
   TableBody,
@@ -32,9 +39,11 @@ import {
 } from '@/components/ui/table';
 
 export function CaixaEmpresaTab() {
-  const { currentCompany } = useAuth();
+  const { currentCompany, user } = useAuth();
   const queryClient = useQueryClient();
   const [dialogType, setDialogType] = useState<'entrada' | 'saida' | 'config' | null>(null);
+  const [abrirCaixaOpen, setAbrirCaixaOpen] = useState(false);
+  const [fecharCaixaOpen, setFecharCaixaOpen] = useState(false);
 
   // Fetch company cash
   const { data: companyCash, isLoading: loadingCash } = useQuery({
@@ -50,6 +59,55 @@ export function CaixaEmpresaTab() {
       return data;
     },
     enabled: !!currentCompany?.id,
+  });
+
+  // Fetch open cash register
+  const { data: openCashRegister, isLoading: loadingCashRegister } = useQuery({
+    queryKey: ['cash-register-open', currentCompany?.id],
+    queryFn: async () => {
+      if (!currentCompany?.id) return null;
+      const { data, error } = await supabase
+        .from('cash_registers')
+        .select('*')
+        .eq('company_id', currentCompany.id)
+        .eq('status', 'open')
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!currentCompany?.id,
+  });
+
+  // Fetch today sales (for cash register)
+  const { data: todaySales = [] } = useQuery({
+    queryKey: ['sales-today', openCashRegister?.id],
+    queryFn: async () => {
+      if (!openCashRegister?.id) return [];
+      const { data, error } = await supabase
+        .from('sales')
+        .select('*')
+        .eq('cash_register_id', openCashRegister.id)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!openCashRegister?.id,
+  });
+
+  // Fetch cash movements (for daily cash)
+  const { data: dailyCashMovements = [] } = useQuery({
+    queryKey: ['cash-movements', openCashRegister?.id],
+    queryFn: async () => {
+      if (!openCashRegister?.id) return [];
+      const { data, error } = await supabase
+        .from('cash_movements')
+        .select('*')
+        .eq('cash_register_id', openCashRegister.id)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!openCashRegister?.id,
   });
 
   // Fetch company cash movements
@@ -68,6 +126,23 @@ export function CaixaEmpresaTab() {
     },
     enabled: !!currentCompany?.id,
   });
+
+  // Cash summary for closing dialog
+  const cashSummary = useMemo(() => {
+    const openingAmount = openCashRegister?.opening_amount || 0;
+    const activeSales = todaySales.filter((s) => s.payment_status !== 'cancelled');
+    const totalDinheiro = activeSales.filter((s) => s.payment_method === 'dinheiro').reduce((sum, s) => sum + (s.total_amount || 0), 0);
+    const totalCartao = activeSales.filter((s) => s.payment_method === 'cartao').reduce((sum, s) => sum + (s.total_amount || 0), 0);
+    const totalPix = activeSales.filter((s) => s.payment_method === 'pix').reduce((sum, s) => sum + (s.total_amount || 0), 0);
+    const totalVendas = totalDinheiro + totalCartao + totalPix;
+    
+    const totalEntradas = dailyCashMovements.filter(m => m.type === 'entrada').reduce((sum, m) => sum + (m.amount || 0), 0);
+    const totalSaidas = dailyCashMovements.filter(m => m.type === 'saida').reduce((sum, m) => sum + (m.amount || 0), 0);
+    
+    const expectedAmount = openingAmount + totalDinheiro + totalEntradas - totalSaidas;
+
+    return { openingAmount, totalDinheiro, totalCartao, totalPix, totalVendas, expectedAmount, totalEntradas, totalSaidas };
+  }, [openCashRegister, todaySales, dailyCashMovements]);
 
   // Configure company cash
   const configMutation = useMutation({
@@ -112,6 +187,70 @@ export function CaixaEmpresaTab() {
     onError: (error: Error) => toast.error(`Erro: ${error.message}`),
   });
 
+  // Open cash register
+  const openCashMutation = useMutation({
+    mutationFn: async (openingAmount: number) => {
+      if (!currentCompany?.id || !user?.id) throw new Error('Dados inválidos');
+      const { data, error } = await supabase.rpc('open_daily_cash', {
+        _company_id: currentCompany.id,
+        _opening_amount: openingAmount,
+        _user_id: user.id,
+      });
+      if (error) throw error;
+      const result = data as { success: boolean; error?: string; cash_register_id?: string };
+      if (!result.success) {
+        throw new Error(result.error || 'Erro ao abrir caixa');
+      }
+      return result;
+    },
+    onSuccess: () => {
+      toast.success('Caixa aberto com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['cash-register-open'] });
+      queryClient.invalidateQueries({ queryKey: ['company-cash'] });
+      setAbrirCaixaOpen(false);
+    },
+    onError: (error: Error) => toast.error(`Erro ao abrir caixa: ${error.message}`),
+  });
+
+  // Close cash register
+  const closeCashMutation = useMutation({
+    mutationFn: async ({ actualAmount, notes }: { actualAmount: number; notes: string }) => {
+      if (!openCashRegister?.id || !user?.id || !currentCompany?.id) throw new Error('Dados inválidos');
+      const { data, error } = await supabase.rpc('close_daily_cash', {
+        _cash_register_id: openCashRegister.id,
+        _actual_amount: actualAmount,
+        _notes: notes || null,
+        _user_id: user.id,
+      });
+      if (error) throw error;
+      const result = data as { 
+        success: boolean; 
+        error?: string; 
+        net_excess?: number;
+        compensation?: { total_compensated: number };
+      };
+      if (!result.success) {
+        throw new Error(result.error || 'Erro ao fechar caixa');
+      }
+      return result;
+    },
+    onSuccess: (result) => {
+      const compensation = result?.compensation?.total_compensated || 0;
+      if (compensation > 0) {
+        toast.success(`Caixa fechado! R$ ${compensation.toFixed(2)} compensados de adiantamentos anteriores.`, { duration: 5000 });
+      } else {
+        toast.success('Caixa fechado com sucesso!');
+      }
+      queryClient.invalidateQueries({ queryKey: ['cash-register-open'] });
+      queryClient.invalidateQueries({ queryKey: ['sales-today'] });
+      queryClient.invalidateQueries({ queryKey: ['company-cash'] });
+      queryClient.invalidateQueries({ queryKey: ['company-cash-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-advances'] });
+      setFecharCaixaOpen(false);
+    },
+    onError: (error: Error) => toast.error(`Erro ao fechar caixa: ${error.message}`),
+  });
+
   const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
@@ -131,7 +270,7 @@ export function CaixaEmpresaTab() {
     return labels[category] || category;
   };
 
-  if (loadingCash) {
+  if (loadingCash || loadingCashRegister) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-32 w-full" />
@@ -178,12 +317,89 @@ export function CaixaEmpresaTab() {
 
   return (
     <div className="space-y-6">
-      {/* Cards de resumo */}
+      {/* Card do Caixa do Dia */}
+      <Card className={openCashRegister ? 'border-green-500/50 bg-green-50/30 dark:bg-green-950/10' : ''}>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+            {openCashRegister ? (
+              <>
+                <Unlock className="h-5 w-5 text-green-600" />
+                Caixa do Dia Aberto
+              </>
+            ) : (
+              <>
+                <Lock className="h-5 w-5 text-muted-foreground" />
+                Caixa do Dia Fechado
+              </>
+            )}
+          </CardTitle>
+          {openCashRegister && (
+            <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-400">
+              Aberto desde {format(new Date(openCashRegister.opened_at), "HH:mm", { locale: ptBR })}
+            </Badge>
+          )}
+        </CardHeader>
+        <CardContent>
+          {openCashRegister ? (
+            <div className="space-y-4">
+              {/* Resumo do caixa aberto */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Abertura</p>
+                  <p className="text-lg font-semibold">{formatCurrency(cashSummary.openingAmount)}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <DollarSign className="h-3 w-3" /> Dinheiro
+                  </p>
+                  <p className="text-lg font-semibold text-green-600">{formatCurrency(cashSummary.totalDinheiro)}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <CreditCard className="h-3 w-3" /> Cartão
+                  </p>
+                  <p className="text-lg font-semibold">{formatCurrency(cashSummary.totalCartao)}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Smartphone className="h-3 w-3" /> PIX
+                  </p>
+                  <p className="text-lg font-semibold">{formatCurrency(cashSummary.totalPix)}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t">
+                <div>
+                  <p className="text-sm text-muted-foreground">Saldo Esperado (Dinheiro)</p>
+                  <p className="text-xl font-bold text-primary">{formatCurrency(cashSummary.expectedAmount)}</p>
+                </div>
+                <Button variant="destructive" onClick={() => setFecharCaixaOpen(true)}>
+                  <Lock className="mr-2 h-4 w-4" />
+                  Fechar Caixa
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Nenhum caixa aberto no momento</p>
+                <p className="text-xs text-muted-foreground">Abra o caixa para registrar vendas e movimentações</p>
+              </div>
+              <Button onClick={() => setAbrirCaixaOpen(true)}>
+                <Unlock className="mr-2 h-4 w-4" />
+                Abrir Caixa
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Cards de resumo da empresa */}
       <div className="grid gap-4 md:grid-cols-3">
         {/* Saldo Atual */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Saldo Atual</CardTitle>
+            <CardTitle className="text-sm font-medium">Saldo da Empresa</CardTitle>
             <Wallet className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -312,7 +528,7 @@ export function CaixaEmpresaTab() {
         </CardContent>
       </Card>
 
-      {/* Dialog */}
+      {/* Dialogs */}
       <MovimentoCaixaEmpresaDialog
         open={dialogType !== null}
         onOpenChange={(open) => !open && setDialogType(null)}
@@ -327,6 +543,24 @@ export function CaixaEmpresaTab() {
           }
         }}
         isLoading={configMutation.isPending || movementMutation.isPending}
+      />
+
+      <AbrirCaixaDialog
+        open={abrirCaixaOpen}
+        onOpenChange={setAbrirCaixaOpen}
+        onConfirm={openCashMutation.mutateAsync}
+        companyCash={companyCash}
+        isLoading={openCashMutation.isPending}
+      />
+
+      <FecharCaixaDialog
+        open={fecharCaixaOpen}
+        onOpenChange={setFecharCaixaOpen}
+        onConfirm={(actualAmount, notes) => closeCashMutation.mutateAsync({ actualAmount, notes })}
+        summary={cashSummary}
+        companyCash={companyCash}
+        cashRegisterId={openCashRegister?.id}
+        isLoading={closeCashMutation.isPending}
       />
     </div>
   );
