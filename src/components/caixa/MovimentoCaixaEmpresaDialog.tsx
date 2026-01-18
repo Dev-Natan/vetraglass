@@ -30,6 +30,7 @@ interface MovimentoCaixaEmpresaDialogProps {
   type: MovementType | 'config';
   currentBalance?: number;
   fixedFund?: number;
+  isEditMode?: boolean; // true when editing existing config
   onConfirm: (data: {
     type?: MovementType;
     category?: string;
@@ -58,6 +59,7 @@ export function MovimentoCaixaEmpresaDialog({
   type,
   currentBalance = 0,
   fixedFund = 500,
+  isEditMode = false,
   onConfirm,
   isLoading = false,
 }: MovimentoCaixaEmpresaDialogProps) {
@@ -118,30 +120,35 @@ export function MovimentoCaixaEmpresaDialog({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Settings className="h-5 w-5 text-primary" />
-              Configurar Caixa da Empresa
+              {isEditMode ? 'Editar Fundo Fixo' : 'Configurar Caixa da Empresa'}
             </DialogTitle>
             <DialogDescription>
-              Defina o saldo inicial e o fundo fixo para o caixa do dia.
+              {isEditMode 
+                ? 'Altere o valor do fundo fixo para abertura do caixa do dia.'
+                : 'Defina o saldo inicial e o fundo fixo para o caixa do dia.'
+              }
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="initial-balance">Saldo Inicial (R$)</Label>
-              <Input
-                id="initial-balance"
-                type="text"
-                inputMode="decimal"
-                placeholder="0,00"
-                value={initialBalance}
-                onChange={(e) => setInitialBalance(e.target.value)}
-                disabled={isLoading}
-                className="text-lg"
-              />
-              <p className="text-xs text-muted-foreground">
-                Quanto a empresa tem disponível em caixa físico.
-              </p>
-            </div>
+            {!isEditMode && (
+              <div className="space-y-2">
+                <Label htmlFor="initial-balance">Saldo Inicial (R$)</Label>
+                <Input
+                  id="initial-balance"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0,00"
+                  value={initialBalance}
+                  onChange={(e) => setInitialBalance(e.target.value)}
+                  disabled={isLoading}
+                  className="text-lg"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Quanto a empresa tem disponível em caixa físico.
+                </p>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="fixed-fund">Fundo Fixo do Caixa do Dia (R$)</Label>
@@ -172,7 +179,7 @@ export function MovimentoCaixaEmpresaDialog({
                   Salvando...
                 </>
               ) : (
-                'Salvar Configuração'
+                'Salvar'
               )}
             </Button>
           </DialogFooter>

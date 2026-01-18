@@ -144,20 +144,36 @@ export function CaixaEmpresaTab() {
     return { openingAmount, totalDinheiro, totalCartao, totalPix, totalVendas, expectedAmount, totalEntradas, totalSaidas };
   }, [openCashRegister, todaySales, dailyCashMovements]);
 
-  // Configure company cash
+  // Configure company cash (create or update)
   const configMutation = useMutation({
     mutationFn: async ({ initialBalance, fixedFund }: { initialBalance: number; fixedFund: number }) => {
       if (!currentCompany?.id) throw new Error('Empresa não encontrada');
-      const { data, error } = await supabase.rpc('initialize_company_cash', {
-        _company_id: currentCompany.id,
-        _initial_balance: initialBalance,
-        _fixed_fund: fixedFund,
-      });
-      if (error) throw error;
-      return data;
+      
+      // Check if company_cash already exists
+      if (companyCash) {
+        // Update existing record
+        const { error } = await supabase
+          .from('company_cash')
+          .update({ 
+            fixed_fund: fixedFund,
+            updated_at: new Date().toISOString()
+          })
+          .eq('company_id', currentCompany.id);
+        if (error) throw error;
+        return { updated: true };
+      } else {
+        // Create new record using RPC
+        const { data, error } = await supabase.rpc('initialize_company_cash', {
+          _company_id: currentCompany.id,
+          _initial_balance: initialBalance,
+          _fixed_fund: fixedFund,
+        });
+        if (error) throw error;
+        return data;
+      }
     },
     onSuccess: () => {
-      toast.success('Caixa da empresa configurado!');
+      toast.success('Configuração salva!');
       queryClient.invalidateQueries({ queryKey: ['company-cash'] });
       setDialogType(null);
     },
@@ -419,14 +435,22 @@ export function CaixaEmpresaTab() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Fundo Fixo</CardTitle>
-            <Building2 className="h-5 w-5 text-muted-foreground" />
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8"
+              onClick={() => setDialogType('config')}
+              title="Configurar fundo fixo"
+            >
+              <Settings className="h-4 w-4 text-muted-foreground" />
+            </Button>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {formatCurrency(companyCash.fixed_fund)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Valor reservado para operações diárias
+              Valor padrão para abertura do caixa do dia
             </p>
           </CardContent>
         </Card>
@@ -535,9 +559,10 @@ export function CaixaEmpresaTab() {
         type={dialogType || 'config'}
         currentBalance={companyCash.current_balance}
         fixedFund={companyCash.fixed_fund}
+        isEditMode={dialogType === 'config'}
         onConfirm={async (data) => {
-          if (data.initialBalance !== undefined) {
-            await configMutation.mutateAsync({ initialBalance: data.initialBalance, fixedFund: data.fixedFund || 500 });
+          if (data.fixedFund !== undefined && dialogType === 'config') {
+            await configMutation.mutateAsync({ initialBalance: data.initialBalance || 0, fixedFund: data.fixedFund });
           } else if (data.type && data.category && data.amount && data.description) {
             await movementMutation.mutateAsync({ type: data.type, category: data.category, amount: data.amount, description: data.description });
           }
