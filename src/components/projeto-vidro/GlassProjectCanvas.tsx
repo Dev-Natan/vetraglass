@@ -208,8 +208,8 @@ export function GlassProjectCanvas({
                           cx={cx}
                           cy={cy}
                           r={Math.max(r, 4)}
-                          fill="white"
-                          stroke="#ef4444"
+                          fill="hsl(var(--background))"
+                          stroke="hsl(var(--primary))"
                           strokeWidth={1.5}
                         />
                         {/* Reference lines to show position */}
@@ -218,7 +218,7 @@ export function GlassProjectCanvas({
                           y1={cy}
                           x2={cx - Math.max(r, 4)}
                           y2={cy}
-                          stroke="#ef4444"
+                          stroke="hsl(var(--primary))"
                           strokeWidth={0.5}
                           strokeDasharray="2,2"
                           opacity={0.7}
@@ -228,7 +228,7 @@ export function GlassProjectCanvas({
                           y1={panel.y + panel.scaledHeight}
                           x2={cx}
                           y2={cy + Math.max(r, 4)}
-                          stroke="#ef4444"
+                          stroke="hsl(var(--primary))"
                           strokeWidth={0.5}
                           strokeDasharray="2,2"
                           opacity={0.7}
