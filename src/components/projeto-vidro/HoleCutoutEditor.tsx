@@ -42,7 +42,8 @@ function PanelPreview({
   selectedHoleId,
   selectedCutoutId,
   onSelectHole,
-  onSelectCutout
+  onSelectCutout,
+  onUpdateHole
 }: {
   panelWidth: number;
   panelHeight: number;
@@ -52,6 +53,7 @@ function PanelPreview({
   selectedCutoutId: string | null;
   onSelectHole: (id: string | null) => void;
   onSelectCutout: (id: string | null) => void;
+  onUpdateHole: (id: string, updates: Partial<Hole>) => void;
 }) {
   const previewWidth = 200;
   const previewHeight = 150;
@@ -207,6 +209,13 @@ function PanelPreview({
               style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
             >
               <circle
+                cx={toSvgX(hole.x)}
+                cy={toSvgY(hole.y)}
+                r={Math.max(radius, 5)}
+                fill={isSelected ? 'hsl(var(--primary) / 0.4)' : 'hsl(var(--chart-1) / 0.3)'}
+                stroke={isSelected ? 'hsl(var(--primary))' : 'hsl(var(--chart-1))'}
+                strokeWidth={isSelected ? 2 : 1}
+              />
               {isSelected && (
                 <>
                   {/* Reference lines for selected hole */}
