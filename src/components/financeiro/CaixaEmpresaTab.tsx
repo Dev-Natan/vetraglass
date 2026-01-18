@@ -317,9 +317,10 @@ export function CaixaEmpresaTab() {
             type={dialogType || 'config'}
             currentBalance={0}
             fixedFund={500}
+            isEditMode={false}
             onConfirm={async (data) => {
-              if (data.initialBalance !== undefined) {
-                await configMutation.mutateAsync({ initialBalance: data.initialBalance, fixedFund: data.fixedFund || 500 });
+              if (data.fixedFund !== undefined) {
+                await configMutation.mutateAsync({ initialBalance: data.initialBalance || 0, fixedFund: data.fixedFund });
               }
             }}
             isLoading={configMutation.isPending}
