@@ -330,30 +330,26 @@ export default function CaixaVendas() {
     onError: (error: Error) => toast.error(`Erro: ${error.message}`),
   });
 
-  // Mutation: Abrir caixa (com transferência automática)
+  // Mutation: Abrir caixa (usando função SQL com todas as regras)
   const openCashMutation = useMutation({
     mutationFn: async (openingAmount: number) => {
       if (!currentCompany?.id || !user?.id) throw new Error('Dados inválidos');
 
-      // Se há caixa da empresa, fazer transferência automática
-      if (companyCash) {
-        await supabase.rpc('register_company_cash_movement', {
-          _company_id: currentCompany.id,
-          _type: 'saida',
-          _category: 'abertura_caixa',
-          _amount: openingAmount,
-          _description: `Transferência para caixa do dia`,
-        });
-      }
-
-      const { data, error } = await supabase.from('cash_registers').insert({
-        company_id: currentCompany.id,
-        opened_by: user.id,
-        opening_amount: openingAmount,
-        status: 'open',
-      }).select().single();
+      // Usar função SQL que implementa todas as regras de abertura
+      const { data, error } = await supabase.rpc('open_daily_cash', {
+        _company_id: currentCompany.id,
+        _opening_amount: openingAmount,
+        _user_id: user.id,
+      });
+      
       if (error) throw error;
-      return data;
+      
+      const result = data as { success: boolean; error?: string; cash_register_id?: string };
+      if (!result.success) {
+        throw new Error(result.error || 'Erro ao abrir caixa');
+      }
+      
+      return result;
     },
     onSuccess: () => {
       toast.success('Caixa aberto com sucesso!');
@@ -364,44 +360,45 @@ export default function CaixaVendas() {
     onError: (error: Error) => toast.error(`Erro ao abrir caixa: ${error.message}`),
   });
 
-  // Mutation: Fechar caixa (com recolhimento automático)
+  // Mutation: Fechar caixa (usando função SQL com compensação automática)
   const closeCashMutation = useMutation({
     mutationFn: async ({ actualAmount, notes }: { actualAmount: number; notes: string }) => {
       if (!openCashRegister?.id || !user?.id || !currentCompany?.id) throw new Error('Dados inválidos');
       
-      const difference = actualAmount - cashSummary.expectedAmount;
-      const fixedFund = companyCash?.fixed_fund || openCashRegister.opening_amount;
-      const excessToCollect = Math.max(0, actualAmount - fixedFund);
-
-      // Se há caixa da empresa e excedente, fazer recolhimento automático
-      if (companyCash && excessToCollect > 0) {
-        await supabase.rpc('register_company_cash_movement', {
-          _company_id: currentCompany.id,
-          _type: 'entrada',
-          _category: 'fechamento_caixa',
-          _amount: excessToCollect,
-          _description: `Recolhimento do caixa do dia`,
-          _cash_register_id: openCashRegister.id,
-        });
-      }
-
-      const { data, error } = await supabase.from('cash_registers').update({
-        status: 'closed',
-        closed_at: new Date().toISOString(),
-        closed_by: user.id,
-        closing_amount: cashSummary.expectedAmount,
-        actual_amount: actualAmount,
-        difference,
-        notes,
-      }).eq('id', openCashRegister.id).select().single();
+      // Usar função SQL que implementa todas as regras de fechamento
+      const { data, error } = await supabase.rpc('close_daily_cash', {
+        _cash_register_id: openCashRegister.id,
+        _actual_amount: actualAmount,
+        _notes: notes || null,
+        _user_id: user.id,
+      });
+      
       if (error) throw error;
-      return data;
+      
+      const result = data as { 
+        success: boolean; 
+        error?: string; 
+        net_excess?: number;
+        compensation?: { total_compensated: number };
+      };
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Erro ao fechar caixa');
+      }
+      
+      return result;
     },
-    onSuccess: () => {
-      toast.success('Caixa fechado com sucesso!');
+    onSuccess: (result) => {
+      const compensation = result?.compensation?.total_compensated || 0;
+      if (compensation > 0) {
+        toast.success(`Caixa fechado! R$ ${compensation.toFixed(2)} compensados de adiantamentos anteriores.`, { duration: 5000 });
+      } else {
+        toast.success('Caixa fechado com sucesso!');
+      }
       queryClient.invalidateQueries({ queryKey: ['cash-register-open'] });
       queryClient.invalidateQueries({ queryKey: ['sales-today'] });
       queryClient.invalidateQueries({ queryKey: ['company-cash'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-advances'] });
       setFecharCaixaOpen(false);
     },
     onError: (error: Error) => toast.error(`Erro ao fechar caixa: ${error.message}`),
