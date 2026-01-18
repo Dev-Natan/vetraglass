@@ -16,7 +16,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.focusnfe]
-verify_jwt = true
+verify_jwt = false
 
 [functions.import-municipios-ibge]
 verify_jwt = true
