@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { Parser } from 'expr-eval';
 import { useAuth } from '@/contexts/AuthContext';
+import { GlassPreview } from '@/components/plano-corte/GlassPreview';
 
 // Tradução de categorias
 const categoryLabels: Record<string, string> = {
@@ -394,10 +395,13 @@ export default function PlanoCorte() {
             th.glass { background: #9333ea; }
             th.profile { background: #1e3a5f; }
             td { padding: 12px; border-bottom: 1px solid #eee; vertical-align: middle; }
-            .item-cell { display: flex; align-items: center; gap: 10px; }
+            .item-cell { display: flex; align-items: center; gap: 12px; }
+            .glass-preview-container { width: 65px; height: 55px; background: linear-gradient(135deg, #f3e8ff 0%, #ede9fe 100%); border: 1px solid #c4b5fd; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+            .glass-preview { background: linear-gradient(135deg, #bae6fd 0%, #e0f2fe 50%, #fff 100%); border: 2px solid rgba(56, 189, 248, 0.6); border-radius: 3px; position: relative; box-shadow: inset 0 0 10px rgba(255,255,255,0.5); }
+            .glass-preview::before { content: ''; position: absolute; top: 0; left: 0; right: 50%; bottom: 50%; background: linear-gradient(135deg, rgba(255,255,255,0.6) 0%, transparent 100%); border-radius: 2px 0 0 0; }
             .item-img { width: 60px; height: 40px; background: #f0f0f0; border: 1px solid #ddd; }
             .item-img img { width: 100%; height: 100%; object-fit: contain; }
-            .formula-tag { font-size: 9px; padding: 2px 6px; border-radius: 3px; margin-right: 4px; }
+            .formula-tag { font-size: 9px; padding: 3px 8px; border-radius: 10px; margin-right: 4px; font-weight: 500; }
             .formula-width { background: #dcfce7; color: #166534; }
             .formula-height { background: #dbeafe; color: #1e40af; }
             .angle-box { display: inline-flex; gap: 5px; }
@@ -406,9 +410,10 @@ export default function PlanoCorte() {
             .position-dot { width: 10px; height: 10px; border-radius: 50%; }
             .position-altura { background: #3b82f6; }
             .position-largura { background: #f59e0b; }
-            .value-green { color: #16a34a; font-weight: bold; }
-            .value-blue { color: #2563eb; font-weight: bold; }
-            .value-purple { color: #9333ea; font-weight: bold; }
+            .value-green { color: #16a34a; font-weight: bold; font-size: 16px; }
+            .value-blue { color: #2563eb; font-weight: bold; font-size: 16px; }
+            .value-purple { color: #9333ea; font-weight: bold; font-size: 16px; }
+            .glass-type { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
             @media print { body { padding: 10px; } }
           </style>
         </head>
@@ -452,17 +457,27 @@ export default function PlanoCorte() {
                 </tr>
               </thead>
               <tbody>
-                ${calculatedGlassCuts.map(glass => `
+                ${calculatedGlassCuts.map(glass => {
+                  // Calculate proportional size for print preview
+                  const maxW = 55, maxH = 45;
+                  const ar = glass.calculatedWidth / glass.calculatedHeight;
+                  let pw, ph;
+                  if (ar > maxW / maxH) { pw = maxW; ph = maxW / ar; }
+                  else { ph = maxH; pw = maxH * ar; }
+                  pw = Math.max(18, pw);
+                  ph = Math.max(18, ph);
+                  
+                  return `
                   <tr>
                     <td>
                       <div class="item-cell">
-                        <div class="item-img">
-                          ${glass.imageUrl ? `<img src="${getStorageUrl(glass.imageUrl)}" alt="${glass.glassName}" />` : '🪟'}
+                        <div class="glass-preview-container">
+                          <div class="glass-preview" style="width: ${pw}px; height: ${ph}px;"></div>
                         </div>
                         <div>
                           <strong>${glass.customName || glass.glassName}</strong>
-                          ${glass.customName ? `<div style="font-size: 11px; color: #666;">${glass.glassName}</div>` : ''}
-                          <div style="margin-top: 4px;">
+                          ${glass.customName ? `<div class="glass-type">${glass.glassName}</div>` : ''}
+                          <div style="margin-top: 6px;">
                             ${glass.widthFormula ? `<span class="formula-tag formula-width">L: ${glass.widthFormula}</span>` : ''}
                             ${glass.heightFormula ? `<span class="formula-tag formula-height">A: ${glass.heightFormula}</span>` : ''}
                           </div>
@@ -472,9 +487,9 @@ export default function PlanoCorte() {
                     <td class="value-green">${glass.calculatedWidth}</td>
                     <td class="value-blue">${glass.calculatedHeight}</td>
                     <td class="value-purple">${glass.areaM2.toFixed(3)}</td>
-                    <td>${glass.quantity}</td>
+                    <td style="font-weight: 500;">${glass.quantity}</td>
                   </tr>
-                `).join('')}
+                `}).join('')}
               </tbody>
             </table>
           ` : ''}
@@ -722,31 +737,25 @@ export default function PlanoCorte() {
                         <TableRow key={glass.id} className="hover:bg-muted/50">
                           <TableCell>
                             <div className="flex items-center gap-3">
-                              <div className="w-16 h-12 bg-purple-50 dark:bg-purple-900/20 rounded border border-purple-200 dark:border-purple-800 flex items-center justify-center overflow-hidden">
-                                {glass.imageUrl ? (
-                                  <img 
-                                    src={getStorageUrl(glass.imageUrl)} 
-                                    alt={glass.glassName}
-                                    className="w-full h-full object-contain"
-                                  />
-                                ) : (
-                                  <span className="text-purple-400 text-lg">🪟</span>
-                                )}
-                              </div>
+                              <GlassPreview 
+                                width={glass.calculatedWidth} 
+                                height={glass.calculatedHeight}
+                                name={glass.customName || glass.glassName}
+                              />
                               <div>
-                                <span className="font-medium">{glass.customName || glass.glassName}</span>
+                                <span className="font-semibold text-foreground">{glass.customName || glass.glassName}</span>
                                 {glass.customName && (
-                                  <div className="text-xs text-muted-foreground">{glass.glassName}</div>
+                                  <div className="text-xs text-muted-foreground uppercase tracking-wide">{glass.glassName}</div>
                                 )}
                                 {(glass.widthFormula || glass.heightFormula) && (
-                                  <div className="flex gap-2 mt-1">
+                                  <div className="flex flex-wrap gap-1.5 mt-1.5">
                                     {glass.widthFormula && (
-                                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                                      <span className="inline-flex items-center text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 font-medium">
                                         L: {glass.widthFormula}
                                       </span>
                                     )}
                                     {glass.heightFormula && (
-                                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                                      <span className="inline-flex items-center text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 font-medium">
                                         A: {glass.heightFormula}
                                       </span>
                                     )}
@@ -756,15 +765,15 @@ export default function PlanoCorte() {
                             </div>
                           </TableCell>
                           <TableCell className="text-center">
-                            <span className="font-bold text-lg text-green-600">{glass.calculatedWidth}</span>
+                            <span className="font-bold text-lg text-emerald-600 dark:text-emerald-400">{glass.calculatedWidth}</span>
                           </TableCell>
                           <TableCell className="text-center">
-                            <span className="font-bold text-lg text-blue-600">{glass.calculatedHeight}</span>
+                            <span className="font-bold text-lg text-blue-600 dark:text-blue-400">{glass.calculatedHeight}</span>
                           </TableCell>
                           <TableCell className="text-center">
-                            <span className="font-bold text-lg text-purple-600">{glass.areaM2.toFixed(3)}</span>
+                            <span className="font-bold text-lg text-purple-600 dark:text-purple-400">{glass.areaM2.toFixed(3)}</span>
                           </TableCell>
-                          <TableCell className="text-center">
+                          <TableCell className="text-center font-medium">
                             {glass.quantity}
                           </TableCell>
                         </TableRow>
