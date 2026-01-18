@@ -59,6 +59,7 @@ import { TaxConfigDialog } from '@/components/financeiro/TaxConfigDialog';
 import { ExpensesTab } from '@/components/financeiro/ExpensesTab';
 import { CommissionsTab } from '@/components/financeiro/CommissionsTab';
 import { ContasReceberTab } from '@/components/financeiro/ContasReceberTab';
+import { CaixaEmpresaTab } from '@/components/financeiro/CaixaEmpresaTab';
 
 type PeriodFilter = 'today' | 'week' | 'month' | 'last_month' | 'custom' | 'all';
 type PaymentFilter = 'all' | 'dinheiro' | 'cartao' | 'pix';
@@ -123,7 +124,7 @@ export default function Financeiro() {
     from: undefined,
     to: undefined,
   });
-  const [activeTab, setActiveTab] = useState('vendas');
+  const [activeTab, setActiveTab] = useState('caixa-empresa');
   const [taxConfigOpen, setTaxConfigOpen] = useState(false);
 
   // Dialogs
@@ -472,7 +473,11 @@ export default function Financeiro() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-7 lg:w-auto lg:inline-grid">
+          <TabsList className="grid w-full grid-cols-8 lg:w-auto lg:inline-grid">
+            <TabsTrigger value="caixa-empresa" className="gap-2">
+              <DollarSign className="w-4 h-4 hidden sm:inline" />
+              Caixa Empresa
+            </TabsTrigger>
             <TabsTrigger value="vendas" className="gap-2">
               <FileText className="w-4 h-4 hidden sm:inline" />
               Vendas
@@ -502,6 +507,11 @@ export default function Financeiro() {
               Categorias
             </TabsTrigger>
           </TabsList>
+
+          {/* Tab: Caixa Empresa */}
+          <TabsContent value="caixa-empresa" className="mt-6">
+            <CaixaEmpresaTab />
+          </TabsContent>
 
           {/* Tab: Comissões */}
           <TabsContent value="comissoes" className="mt-6">
