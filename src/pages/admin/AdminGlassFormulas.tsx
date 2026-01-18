@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AdminLayout } from '@/components/layout/AdminLayout';
-import { GlassWater, Plus, Search, Trash2, Pencil, Save, X, Copy, ChevronDown, ChevronRight } from 'lucide-react';
+import { GlassWater, Plus, Search, Trash2, Pencil, Save, Copy, ChevronDown, ChevronRight, Package } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -34,6 +34,7 @@ import { toast } from 'sonner';
 interface GlassFormula {
   id: string;
   linha: string;
+  product_template_id: string | null;
   formula_name: string;
   description: string | null;
   width_formula: string;
@@ -42,6 +43,14 @@ interface GlassFormula {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+}
+
+interface ProductTemplate {
+  id: string;
+  name: string;
+  linha: string | null;
+  category: string;
+  is_active: boolean;
 }
 
 interface FormData {
@@ -58,9 +67,10 @@ export default function AdminGlassFormulas() {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedLinhas, setExpandedLinhas] = useState<Set<string>>(new Set());
+  const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingFormula, setEditingFormula] = useState<GlassFormula | null>(null);
-  const [selectedLinha, setSelectedLinha] = useState<string>('');
+  const [selectedProduct, setSelectedProduct] = useState<ProductTemplate | null>(null);
   const [formData, setFormData] = useState<FormData>({
     formula_name: '',
     description: '',
@@ -70,14 +80,13 @@ export default function AdminGlassFormulas() {
     is_active: true,
   });
 
-  // Fetch all glass formulas grouped by linha
-  const { data: formulas, isLoading } = useQuery({
+  // Fetch all glass formulas
+  const { data: formulas, isLoading: loadingFormulas } = useQuery({
     queryKey: ['admin-glass-formulas'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('glass_line_formulas')
         .select('*')
-        .order('linha')
         .order('panel_index')
         .order('formula_name');
       
@@ -86,34 +95,40 @@ export default function AdminGlassFormulas() {
     },
   });
 
-  // Fetch all unique linhas from product_templates
-  const { data: availableLinhas } = useQuery({
-    queryKey: ['available-linhas'],
+  // Fetch all product templates grouped by linha
+  const { data: products, isLoading: loadingProducts } = useQuery({
+    queryKey: ['admin-products-for-formulas'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('product_templates')
-        .select('linha')
-        .not('linha', 'is', null);
+        .select('id, name, linha, category, is_active')
+        .not('linha', 'is', null)
+        .order('linha')
+        .order('name');
       
       if (error) throw error;
-      
-      const uniqueLinhas = [...new Set(data?.map(p => p.linha).filter(Boolean))] as string[];
-      return uniqueLinhas.sort();
+      return data as ProductTemplate[];
     },
   });
 
-  // Group formulas by linha
-  const formulasByLinha = formulas?.reduce((acc, formula) => {
-    if (!acc[formula.linha]) {
-      acc[formula.linha] = [];
+  // Group products by linha
+  const productsByLinha = products?.reduce((acc, product) => {
+    const linha = product.linha || 'Sem Linha';
+    if (!acc[linha]) {
+      acc[linha] = [];
     }
-    acc[formula.linha].push(formula);
+    acc[linha].push(product);
     return acc;
-  }, {} as Record<string, GlassFormula[]>) || {};
+  }, {} as Record<string, ProductTemplate[]>) || {};
+
+  // Get formulas for a specific product
+  const getFormulasForProduct = (productId: string) => {
+    return formulas?.filter(f => f.product_template_id === productId) || [];
+  };
 
   // Save formula mutation
   const saveMutation = useMutation({
-    mutationFn: async ({ formula, linha }: { formula: FormData; linha: string }) => {
+    mutationFn: async ({ formula, product }: { formula: FormData; product: ProductTemplate }) => {
       if (editingFormula) {
         const { error } = await supabase
           .from('glass_line_formulas')
@@ -132,7 +147,8 @@ export default function AdminGlassFormulas() {
         const { error } = await supabase
           .from('glass_line_formulas')
           .insert({
-            linha,
+            linha: product.linha || '',
+            product_template_id: product.id,
             formula_name: formula.formula_name,
             description: formula.description || null,
             width_formula: formula.width_formula,
@@ -180,6 +196,7 @@ export default function AdminGlassFormulas() {
         .from('glass_line_formulas')
         .insert({
           linha: formula.linha,
+          product_template_id: formula.product_template_id,
           formula_name: `${formula.formula_name} (cópia)`,
           description: formula.description,
           width_formula: formula.width_formula,
@@ -199,8 +216,8 @@ export default function AdminGlassFormulas() {
     },
   });
 
-  const handleOpenDialog = (linha: string, formula?: GlassFormula) => {
-    setSelectedLinha(linha);
+  const handleOpenDialog = (product: ProductTemplate, formula?: GlassFormula) => {
+    setSelectedProduct(product);
     if (formula) {
       setEditingFormula(formula);
       setFormData({
@@ -228,7 +245,7 @@ export default function AdminGlassFormulas() {
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
     setEditingFormula(null);
-    setSelectedLinha('');
+    setSelectedProduct(null);
   };
 
   const handleSave = () => {
@@ -240,7 +257,8 @@ export default function AdminGlassFormulas() {
       toast.error('Fórmulas de largura e altura são obrigatórias');
       return;
     }
-    saveMutation.mutate({ formula: formData, linha: selectedLinha });
+    if (!selectedProduct) return;
+    saveMutation.mutate({ formula: formData, product: selectedProduct });
   };
 
   const toggleLinha = (linha: string) => {
@@ -255,15 +273,25 @@ export default function AdminGlassFormulas() {
     });
   };
 
+  const toggleProduct = (productId: string) => {
+    setExpandedProducts(prev => {
+      const next = new Set(prev);
+      if (next.has(productId)) {
+        next.delete(productId);
+      } else {
+        next.add(productId);
+      }
+      return next;
+    });
+  };
+
   // Filter linhas
-  const filteredLinhas = Object.keys(formulasByLinha).filter(
-    linha => linha.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredLinhas = Object.keys(productsByLinha).filter(
+    linha => linha.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    productsByLinha[linha].some(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  // Linhas without formulas yet
-  const linhasWithoutFormulas = availableLinhas?.filter(
-    linha => !formulasByLinha[linha]
-  ) || [];
+  const isLoading = loadingFormulas || loadingProducts;
 
   if (!isSaasAdmin) {
     return (
@@ -290,7 +318,7 @@ export default function AdminGlassFormulas() {
               Fórmulas de Vidro
             </h1>
             <p className="text-muted-foreground mt-1">
-              Gerencie as fórmulas de cálculo de vidro por linha de produto
+              Gerencie as fórmulas de cálculo de vidro por produto
             </p>
           </div>
         </div>
@@ -299,7 +327,7 @@ export default function AdminGlassFormulas() {
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar linha..."
+            placeholder="Buscar linha ou produto..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             className="pl-9"
@@ -322,7 +350,6 @@ export default function AdminGlassFormulas() {
           <div className="text-center py-8 text-muted-foreground">Carregando...</div>
         ) : (
           <div className="space-y-4">
-            {/* Linhas with formulas */}
             {filteredLinhas.map(linha => (
               <Collapsible
                 key={linha}
@@ -332,143 +359,162 @@ export default function AdminGlassFormulas() {
                 <Card>
                   <CollapsibleTrigger asChild>
                     <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          {expandedLinhas.has(linha) ? (
-                            <ChevronDown className="w-5 h-5" />
-                          ) : (
-                            <ChevronRight className="w-5 h-5" />
-                          )}
-                          <CardTitle className="text-lg">{linha}</CardTitle>
-                          <Badge variant="secondary">
-                            {formulasByLinha[linha].length} fórmula(s)
-                          </Badge>
-                        </div>
-                        <Button
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenDialog(linha);
-                          }}
-                        >
-                          <Plus className="w-4 h-4 mr-1" />
-                          Nova Fórmula
-                        </Button>
+                      <div className="flex items-center gap-3">
+                        {expandedLinhas.has(linha) ? (
+                          <ChevronDown className="w-5 h-5" />
+                        ) : (
+                          <ChevronRight className="w-5 h-5" />
+                        )}
+                        <CardTitle className="text-lg">{linha}</CardTitle>
+                        <Badge variant="secondary">
+                          {productsByLinha[linha].length} produto(s)
+                        </Badge>
                       </div>
                     </CardHeader>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
-                    <CardContent className="pt-0">
-                      <div className="space-y-3">
-                        {formulasByLinha[linha].map(formula => (
-                          <div
-                            key={formula.id}
-                            className={`p-4 border rounded-lg ${formula.is_active ? 'bg-background' : 'bg-muted/50 opacity-60'}`}
+                    <CardContent className="pt-0 space-y-3">
+                      {productsByLinha[linha].map(product => {
+                        const productFormulas = getFormulasForProduct(product.id);
+                        const isExpanded = expandedProducts.has(product.id);
+                        
+                        return (
+                          <Collapsible
+                            key={product.id}
+                            open={isExpanded}
+                            onOpenChange={() => toggleProduct(product.id)}
                           >
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <h4 className="font-medium">{formula.formula_name}</h4>
-                                  {!formula.is_active && (
-                                    <Badge variant="outline" className="text-xs">Inativo</Badge>
-                                  )}
-                                  {formula.panel_index > 0 && (
-                                    <Badge variant="secondary" className="text-xs">
-                                      Painel {formula.panel_index}
-                                    </Badge>
+                            <div className={`border rounded-lg ${!product.is_active ? 'opacity-60' : ''}`}>
+                              <CollapsibleTrigger asChild>
+                                <div className="p-3 cursor-pointer hover:bg-muted/30 transition-colors flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                    {isExpanded ? (
+                                      <ChevronDown className="w-4 h-4" />
+                                    ) : (
+                                      <ChevronRight className="w-4 h-4" />
+                                    )}
+                                    <Package className="w-4 h-4 text-muted-foreground" />
+                                    <span className="font-medium">{product.name}</span>
+                                    {productFormulas.length > 0 && (
+                                      <Badge variant="outline" className="text-xs">
+                                        {productFormulas.length} fórmula(s)
+                                      </Badge>
+                                    )}
+                                    {!product.is_active && (
+                                      <Badge variant="secondary" className="text-xs">Inativo</Badge>
+                                    )}
+                                  </div>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenDialog(product);
+                                    }}
+                                  >
+                                    <Plus className="w-3 h-3 mr-1" />
+                                    Fórmula
+                                  </Button>
+                                </div>
+                              </CollapsibleTrigger>
+                              <CollapsibleContent>
+                                <div className="px-3 pb-3 space-y-2">
+                                  {productFormulas.length === 0 ? (
+                                    <p className="text-sm text-muted-foreground py-2 pl-8">
+                                      Nenhuma fórmula configurada
+                                    </p>
+                                  ) : (
+                                    productFormulas.map(formula => (
+                                      <div
+                                        key={formula.id}
+                                        className={`ml-8 p-3 border rounded-lg ${formula.is_active ? 'bg-background' : 'bg-muted/50 opacity-60'}`}
+                                      >
+                                        <div className="flex items-start justify-between gap-4">
+                                          <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-1">
+                                              <h4 className="font-medium text-sm">{formula.formula_name}</h4>
+                                              {!formula.is_active && (
+                                                <Badge variant="outline" className="text-xs">Inativo</Badge>
+                                              )}
+                                              {formula.panel_index > 0 && (
+                                                <Badge variant="secondary" className="text-xs">
+                                                  Painel {formula.panel_index}
+                                                </Badge>
+                                              )}
+                                            </div>
+                                            {formula.description && (
+                                              <p className="text-xs text-muted-foreground mb-2">
+                                                {formula.description}
+                                              </p>
+                                            )}
+                                            <div className="grid grid-cols-2 gap-3 text-xs">
+                                              <div>
+                                                <span className="text-muted-foreground">Largura: </span>
+                                                <code className="bg-muted px-1.5 py-0.5 rounded text-primary">
+                                                  {formula.width_formula}
+                                                </code>
+                                              </div>
+                                              <div>
+                                                <span className="text-muted-foreground">Altura: </span>
+                                                <code className="bg-muted px-1.5 py-0.5 rounded text-primary">
+                                                  {formula.height_formula}
+                                                </code>
+                                              </div>
+                                            </div>
+                                          </div>
+                                          <div className="flex items-center gap-1">
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              className="h-7 w-7"
+                                              onClick={() => handleOpenDialog(product, formula)}
+                                              title="Editar"
+                                            >
+                                              <Pencil className="w-3 h-3" />
+                                            </Button>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              className="h-7 w-7"
+                                              onClick={() => duplicateMutation.mutate(formula)}
+                                              title="Duplicar"
+                                            >
+                                              <Copy className="w-3 h-3" />
+                                            </Button>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              className="h-7 w-7"
+                                              onClick={() => {
+                                                if (confirm('Tem certeza que deseja excluir esta fórmula?')) {
+                                                  deleteMutation.mutate(formula.id);
+                                                }
+                                              }}
+                                              title="Excluir"
+                                            >
+                                              <Trash2 className="w-3 h-3 text-destructive" />
+                                            </Button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))
                                   )}
                                 </div>
-                                {formula.description && (
-                                  <p className="text-sm text-muted-foreground mb-2">
-                                    {formula.description}
-                                  </p>
-                                )}
-                                <div className="grid grid-cols-2 gap-4 text-sm">
-                                  <div>
-                                    <span className="text-muted-foreground">Largura: </span>
-                                    <code className="bg-muted px-1.5 py-0.5 rounded text-primary">
-                                      {formula.width_formula}
-                                    </code>
-                                  </div>
-                                  <div>
-                                    <span className="text-muted-foreground">Altura: </span>
-                                    <code className="bg-muted px-1.5 py-0.5 rounded text-primary">
-                                      {formula.height_formula}
-                                    </code>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleOpenDialog(linha, formula)}
-                                  title="Editar"
-                                >
-                                  <Pencil className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => duplicateMutation.mutate(formula)}
-                                  title="Duplicar"
-                                >
-                                  <Copy className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => {
-                                    if (confirm('Tem certeza que deseja excluir esta fórmula?')) {
-                                      deleteMutation.mutate(formula.id);
-                                    }
-                                  }}
-                                  title="Excluir"
-                                >
-                                  <Trash2 className="w-4 h-4 text-destructive" />
-                                </Button>
-                              </div>
+                              </CollapsibleContent>
                             </div>
-                          </div>
-                        ))}
-                      </div>
+                          </Collapsible>
+                        );
+                      })}
                     </CardContent>
                   </CollapsibleContent>
                 </Card>
               </Collapsible>
             ))}
 
-            {/* Linhas without formulas */}
-            {linhasWithoutFormulas.length > 0 && (
-              <Card className="border-dashed">
-                <CardHeader>
-                  <CardTitle className="text-lg text-muted-foreground">
-                    Linhas sem fórmulas configuradas
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-2">
-                    {linhasWithoutFormulas.map(linha => (
-                      <Button
-                        key={linha}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleOpenDialog(linha)}
-                        className="gap-1"
-                      >
-                        <Plus className="w-3 h-3" />
-                        {linha}
-                      </Button>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {filteredLinhas.length === 0 && linhasWithoutFormulas.length === 0 && (
+            {filteredLinhas.length === 0 && (
               <Card>
                 <CardContent className="py-8 text-center text-muted-foreground">
-                  Nenhuma linha encontrada.
+                  Nenhum produto encontrado.
                 </CardContent>
               </Card>
             )}
@@ -481,8 +527,13 @@ export default function AdminGlassFormulas() {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
-              {editingFormula ? 'Editar Fórmula' : 'Nova Fórmula'} - {selectedLinha}
+              {editingFormula ? 'Editar Fórmula' : 'Nova Fórmula'}
             </DialogTitle>
+            {selectedProduct && (
+              <p className="text-sm text-muted-foreground">
+                Produto: {selectedProduct.name}
+              </p>
+            )}
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -490,7 +541,7 @@ export default function AdminGlassFormulas() {
               <Input
                 value={formData.formula_name}
                 onChange={e => setFormData({ ...formData, formula_name: e.target.value })}
-                placeholder="Ex: Vidro Fixo, Vidro Móvel"
+                placeholder="Ex: Vidro Fixo, Vidro Móvel, Vidro A, Vidro B"
               />
             </div>
             <div>
