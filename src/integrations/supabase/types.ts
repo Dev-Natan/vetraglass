@@ -14,6 +14,125 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounts_receivable: {
+        Row: {
+          client_id: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          customer_name: string
+          description: string
+          due_date: string
+          id: string
+          installment_number: number
+          notes: string | null
+          ordem_servico_id: string | null
+          paid_amount: number | null
+          paid_date: string | null
+          payment_method: string | null
+          quote_id: string | null
+          sale_id: string | null
+          status: string
+          total_amount: number
+          total_installments: number
+          updated_at: string
+        }
+        Insert: {
+          client_id?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          customer_name: string
+          description: string
+          due_date: string
+          id?: string
+          installment_number?: number
+          notes?: string | null
+          ordem_servico_id?: string | null
+          paid_amount?: number | null
+          paid_date?: string | null
+          payment_method?: string | null
+          quote_id?: string | null
+          sale_id?: string | null
+          status?: string
+          total_amount: number
+          total_installments?: number
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          customer_name?: string
+          description?: string
+          due_date?: string
+          id?: string
+          installment_number?: number
+          notes?: string | null
+          ordem_servico_id?: string | null
+          paid_amount?: number | null
+          paid_date?: string | null
+          payment_method?: string | null
+          quote_id?: string | null
+          sale_id?: string | null
+          status?: string
+          total_amount?: number
+          total_installments?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounts_receivable_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_receivable_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_receivable_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_receivable_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_receivable_ordem_servico_id_fkey"
+            columns: ["ordem_servico_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_receivable_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_receivable_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       announcement_dismissals: {
         Row: {
           announcement_id: string
@@ -138,6 +257,97 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_movements: {
+        Row: {
+          amount: number
+          cash_register_id: string
+          category: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          description: string
+          expense_id: string | null
+          id: string
+          payment_method: string | null
+          receivable_id: string | null
+          sale_id: string | null
+          type: string
+        }
+        Insert: {
+          amount: number
+          cash_register_id: string
+          category: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          description: string
+          expense_id?: string | null
+          id?: string
+          payment_method?: string | null
+          receivable_id?: string | null
+          sale_id?: string | null
+          type: string
+        }
+        Update: {
+          amount?: number
+          cash_register_id?: string
+          category?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          expense_id?: string | null
+          id?: string
+          payment_method?: string | null
+          receivable_id?: string | null
+          sale_id?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_movements_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_movements_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_movements_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_movements_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_movements_receivable_id_fkey"
+            columns: ["receivable_id"]
+            isOneToOne: false
+            referencedRelation: "accounts_receivable"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_movements_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
             referencedColumns: ["id"]
           },
         ]
@@ -2604,14 +2814,17 @@ export type Database = {
           discount_amount: number | null
           discount_percent: number | null
           id: string
+          installments_count: number | null
           notes: string | null
           ordem_servico_id: string | null
           paid_amount: number | null
           parent_sale_id: string | null
           payment_method: string
           payment_status: string
+          payment_type: string | null
           pending_amount: number | null
           quote_id: string | null
+          remaining_amount: number | null
           sale_number: number
           sale_type: string | null
           sold_by: string
@@ -2628,14 +2841,17 @@ export type Database = {
           discount_amount?: number | null
           discount_percent?: number | null
           id?: string
+          installments_count?: number | null
           notes?: string | null
           ordem_servico_id?: string | null
           paid_amount?: number | null
           parent_sale_id?: string | null
           payment_method: string
           payment_status?: string
+          payment_type?: string | null
           pending_amount?: number | null
           quote_id?: string | null
+          remaining_amount?: number | null
           sale_number?: number
           sale_type?: string | null
           sold_by: string
@@ -2652,14 +2868,17 @@ export type Database = {
           discount_amount?: number | null
           discount_percent?: number | null
           id?: string
+          installments_count?: number | null
           notes?: string | null
           ordem_servico_id?: string | null
           paid_amount?: number | null
           parent_sale_id?: string | null
           payment_method?: string
           payment_status?: string
+          payment_type?: string | null
           pending_amount?: number | null
           quote_id?: string | null
+          remaining_amount?: number | null
           sale_number?: number
           sale_type?: string | null
           sold_by?: string
@@ -3487,6 +3706,7 @@ export type Database = {
         Returns: undefined
       }
       refresh_daily_summary: { Args: never; Returns: undefined }
+      update_overdue_receivables: { Args: never; Returns: undefined }
       user_belongs_to_company: {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
