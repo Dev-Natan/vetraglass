@@ -6,14 +6,18 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Package, Scissors, Layers, FileText, User, Phone, MapPin, Calendar, DollarSign, RefreshCw, Loader2 } from 'lucide-react';
+import { ArrowLeft, Package, Scissors, Layers, FileText, User, Phone, MapPin, Calendar, DollarSign, RefreshCw, Loader2, Download, Printer } from 'lucide-react';
 import { OSMaterialsList } from '@/components/ordens-servico/OSMaterialsList';
 import { OSCuttingPlan } from '@/components/ordens-servico/OSCuttingPlan';
 import { OSGlassProject } from '@/components/ordens-servico/OSGlassProject';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { regenerateOSDocuments } from '@/utils/generateOSDocuments';
+import { generateCuttingPlanPdf } from '@/utils/generateCuttingPlanPdf';
+import { generateMaterialsListPdf } from '@/utils/generateMaterialsListPdf';
+import { generateGlassProductionPdf } from '@/utils/generateGlassProductionPdf';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   pending: { label: 'Pendente', variant: 'secondary' },
@@ -26,6 +30,7 @@ export default function OrdemServicoDetalhes() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { currentCompany } = useAuth();
 
   const { data: ordem, isLoading } = useQuery({
     queryKey: ['ordem-servico', id],
@@ -38,6 +43,54 @@ export default function OrdemServicoDetalhes() {
         .single();
       if (error) throw error;
       return data;
+    },
+    enabled: !!id,
+  });
+
+  // Fetch materials for PDF
+  const { data: materials } = useQuery({
+    queryKey: ['os-materials', id],
+    queryFn: async () => {
+      if (!id) return [];
+      const { data, error } = await supabase
+        .from('os_materials')
+        .select('*')
+        .eq('ordem_servico_id', id)
+        .order('item_name');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!id,
+  });
+
+  // Fetch cutting plans for PDF
+  const { data: cuttingPlans } = useQuery({
+    queryKey: ['os-cutting-plan', id],
+    queryFn: async () => {
+      if (!id) return [];
+      const { data, error } = await supabase
+        .from('os_cutting_plan')
+        .select('*')
+        .eq('ordem_servico_id', id)
+        .order('created_at');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!id,
+  });
+
+  // Fetch glass projects for PDF
+  const { data: glassProjects } = useQuery({
+    queryKey: ['os-glass-projects', id],
+    queryFn: async () => {
+      if (!id) return [];
+      const { data, error } = await supabase
+        .from('os_glass_projects')
+        .select('*')
+        .eq('ordem_servico_id', id)
+        .order('created_at');
+      if (error) throw error;
+      return data || [];
     },
     enabled: !!id,
   });
@@ -61,6 +114,49 @@ export default function OrdemServicoDetalhes() {
       toast.error('Erro: ' + error.message);
     },
   });
+
+  const getOsInfo = () => ({
+    os_number: ordem?.os_number || 0,
+    customer_name: ordem?.customer_name || '',
+    customer_address: ordem?.customer_address,
+    estimated_end: ordem?.estimated_end,
+  });
+
+  const getCompanyInfo = () => currentCompany ? {
+    name: currentCompany.name,
+    cnpj: currentCompany.cnpj,
+    phone: currentCompany.phone,
+  } : null;
+
+  const handleDownloadMaterialsPdf = () => {
+    if (!materials || materials.length === 0) {
+      toast.error('Nenhum material disponível para gerar PDF');
+      return;
+    }
+    toast.info('Gerando PDF...');
+    generateMaterialsListPdf(materials, getOsInfo(), getCompanyInfo());
+    toast.success('PDF gerado com sucesso!');
+  };
+
+  const handleDownloadCuttingPlanPdf = () => {
+    if (!cuttingPlans || cuttingPlans.length === 0) {
+      toast.error('Nenhum plano de corte disponível para gerar PDF');
+      return;
+    }
+    toast.info('Gerando PDF...');
+    generateCuttingPlanPdf(cuttingPlans as any, getOsInfo(), getCompanyInfo());
+    toast.success('PDF gerado com sucesso!');
+  };
+
+  const handleDownloadGlassPdf = () => {
+    if (!glassProjects || glassProjects.length === 0) {
+      toast.error('Nenhum projeto de vidro disponível para gerar PDF');
+      return;
+    }
+    toast.info('Gerando PDF...');
+    generateGlassProductionPdf(glassProjects as any, getOsInfo(), getCompanyInfo());
+    toast.success('PDF gerado com sucesso!');
+  };
 
   const formatCurrency = (value: number) => 
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -190,15 +286,33 @@ export default function OrdemServicoDetalhes() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="materials" className="mt-4">
+          <TabsContent value="materials" className="mt-4 space-y-4">
+            <div className="flex justify-end">
+              <Button variant="outline" size="sm" onClick={handleDownloadMaterialsPdf} className="gap-2">
+                <Download className="w-4 h-4" />
+                Baixar PDF
+              </Button>
+            </div>
             <OSMaterialsList ordemServicoId={ordem.id} />
           </TabsContent>
 
-          <TabsContent value="cutting" className="mt-4">
+          <TabsContent value="cutting" className="mt-4 space-y-4">
+            <div className="flex justify-end">
+              <Button variant="outline" size="sm" onClick={handleDownloadCuttingPlanPdf} className="gap-2">
+                <Download className="w-4 h-4" />
+                Baixar PDF
+              </Button>
+            </div>
             <OSCuttingPlan ordemServicoId={ordem.id} />
           </TabsContent>
 
-          <TabsContent value="glass" className="mt-4">
+          <TabsContent value="glass" className="mt-4 space-y-4">
+            <div className="flex justify-end">
+              <Button variant="outline" size="sm" onClick={handleDownloadGlassPdf} className="gap-2">
+                <Download className="w-4 h-4" />
+                Baixar PDF
+              </Button>
+            </div>
             <OSGlassProject ordemServicoId={ordem.id} />
           </TabsContent>
 
