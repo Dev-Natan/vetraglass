@@ -22,6 +22,7 @@ import Financeiro from "./pages/Financeiro";
 import Funcionarios from "./pages/Funcionarios";
 import CaixaVendas from "./pages/CaixaVendas";
 import PlanoCorte from "./pages/PlanoCorte";
+import ProjetoVidro from "./pages/ProjetoVidro";
 import Configuracoes from "./pages/Configuracoes";
 import ConfiguracoesFiscais from "./pages/ConfiguracoesFiscais";
 import ConfiguracoesUsuarios from "./pages/ConfiguracoesUsuarios";
@@ -174,6 +175,11 @@ function AppRoutes() {
       <Route path="/plano-corte" element={
         <ProtectedRoute>
           <PlanoCorte />
+        </ProtectedRoute>
+      } />
+      <Route path="/projeto-vidro" element={
+        <ProtectedRoute>
+          <ProjetoVidro />
         </ProtectedRoute>
       } />
       <Route path="/configuracoes" element={
