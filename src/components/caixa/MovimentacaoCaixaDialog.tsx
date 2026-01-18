@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -22,13 +22,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { 
   ArrowUpCircle, 
   ArrowDownCircle, 
   Loader2,
   DollarSign,
   Smartphone,
-  Banknote
+  Banknote,
+  AlertTriangle,
+  ArrowRightLeft
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -39,6 +42,7 @@ interface MovimentacaoCaixaDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   cashRegisterId: string;
+  currentDailyBalance?: number;
 }
 
 const entradaCategories = [
@@ -52,6 +56,7 @@ const saidaCategories = [
   { value: 'sangria', label: 'Sangria (Envio ao Banco)' },
   { value: 'pagamento_fornecedor', label: 'Pagamento de Fornecedor' },
   { value: 'pagamento_despesa', label: 'Pagamento de Despesa' },
+  { value: 'compra_material', label: 'Compra de Material' },
   { value: 'retirada_socio', label: 'Retirada do Sócio' },
   { value: 'vale_funcionario', label: 'Vale Funcionário' },
   { value: 'ajuste_negativo', label: 'Ajuste Negativo' },
@@ -68,6 +73,7 @@ export function MovimentacaoCaixaDialog({
   open,
   onOpenChange,
   cashRegisterId,
+  currentDailyBalance = 0,
 }: MovimentacaoCaixaDialogProps) {
   const { currentCompany, user } = useAuth();
   const queryClient = useQueryClient();
@@ -80,6 +86,27 @@ export function MovimentacaoCaixaDialog({
 
   const categories = type === 'entrada' ? entradaCategories : saidaCategories;
 
+  // Buscar saldo do caixa da empresa
+  const { data: companyCash } = useQuery({
+    queryKey: ['company-cash', currentCompany?.id],
+    queryFn: async () => {
+      if (!currentCompany?.id) return null;
+      const { data, error } = await supabase
+        .from('company_cash')
+        .select('*')
+        .eq('company_id', currentCompany.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!currentCompany?.id && open,
+  });
+
+  const amountValue = parseFloat(amount.replace(',', '.')) || 0;
+  const needsReinforcement = type === 'saida' && amountValue > currentDailyBalance;
+  const reinforcementAmount = needsReinforcement ? amountValue - currentDailyBalance : 0;
+  const hasEnoughCompanyBalance = !needsReinforcement || (companyCash?.current_balance || 0) >= reinforcementAmount;
+
   const resetForm = () => {
     setType('entrada');
     setCategory('');
@@ -88,14 +115,14 @@ export function MovimentacaoCaixaDialog({
     setPaymentMethod('dinheiro');
   };
 
+  // Mutation com suporte a reforço automático
   const mutation = useMutation({
     mutationFn: async () => {
       if (!currentCompany?.id || !user?.id) {
         throw new Error('Dados inválidos');
       }
 
-      const amountValue = parseFloat(amount.replace(',', '.'));
-      if (isNaN(amountValue) || amountValue <= 0) {
+      if (amountValue <= 0) {
         throw new Error('Valor inválido');
       }
 
@@ -107,6 +134,37 @@ export function MovimentacaoCaixaDialog({
         throw new Error('Informe uma descrição');
       }
 
+      // Se é saída e precisa de reforço, usar a função com reforço automático
+      if (type === 'saida') {
+        const { data, error } = await supabase.rpc('register_cash_exit_with_reinforcement', {
+          _cash_register_id: cashRegisterId,
+          _amount: amountValue,
+          _category: category,
+          _description: description.trim(),
+          _payment_method: paymentMethod,
+        });
+
+        if (error) throw error;
+        
+        const result = data as {
+          success: boolean;
+          error?: string;
+          movement_id?: string;
+          reinforcement?: {
+            reinforcement_needed: boolean;
+            reinforcement_amount?: number;
+          };
+          message?: string;
+        };
+        
+        if (!result.success) {
+          throw new Error(result.error || 'Erro ao registrar saída');
+        }
+        
+        return result;
+      }
+
+      // Entrada normal
       const { data, error } = await supabase
         .from('cash_movements')
         .insert({
@@ -123,12 +181,24 @@ export function MovimentacaoCaixaDialog({
         .single();
 
       if (error) throw error;
-      return data;
+      return { success: true, data };
     },
-    onSuccess: () => {
-      toast.success(`${type === 'entrada' ? 'Entrada' : 'Saída'} registrada com sucesso!`);
+    onSuccess: (result) => {
+      const hasReinforcement = result && 'reinforcement' in result && result.reinforcement?.reinforcement_needed;
+      
+      if (hasReinforcement && result.reinforcement) {
+        toast.success(
+          `Saída registrada com reforço automático de R$ ${result.reinforcement.reinforcement_amount?.toFixed(2)}`,
+          { duration: 5000 }
+        );
+      } else {
+        toast.success(`${type === 'entrada' ? 'Entrada' : 'Saída'} registrada com sucesso!`);
+      }
+      
       queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
       queryClient.invalidateQueries({ queryKey: ['cash-register-open'] });
+      queryClient.invalidateQueries({ queryKey: ['company-cash'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-advances'] });
       resetForm();
       onOpenChange(false);
     },
@@ -141,9 +211,8 @@ export function MovimentacaoCaixaDialog({
     mutation.mutate();
   };
 
-  const formatCurrency = (value: string) => {
-    const num = parseFloat(value.replace(',', '.')) || 0;
-    return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const formatCurrency = (value: number) => {
+    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
   return (
@@ -162,6 +231,12 @@ export function MovimentacaoCaixaDialog({
         </DialogHeader>
 
         <div className="space-y-5 py-4">
+          {/* Saldo atual do caixa do dia */}
+          <div className="bg-muted/50 rounded-lg p-3 flex justify-between items-center">
+            <span className="text-sm text-muted-foreground">Saldo atual do caixa</span>
+            <span className="font-semibold">{formatCurrency(currentDailyBalance)}</span>
+          </div>
+
           {/* Type Selection */}
           <RadioGroup
             value={type}
@@ -231,7 +306,58 @@ export function MovimentacaoCaixaDialog({
             </div>
           </div>
 
-          {/* Payment Method (only for dinheiro movements that affect physical cash) */}
+          {/* Alerta de Reforço Automático */}
+          {needsReinforcement && (
+            <Alert variant={hasEnoughCompanyBalance ? "default" : "destructive"}>
+              <ArrowRightLeft className="h-4 w-4" />
+              <AlertTitle>
+                {hasEnoughCompanyBalance ? 'Reforço Automático' : 'Saldo Insuficiente'}
+              </AlertTitle>
+              <AlertDescription>
+                {hasEnoughCompanyBalance ? (
+                  <div className="space-y-2 text-sm">
+                    <p>O saldo do caixa é insuficiente. O sistema transferirá automaticamente:</p>
+                    <div className="bg-background/50 rounded p-2 space-y-1">
+                      <div className="flex justify-between">
+                        <span>Saldo atual do dia:</span>
+                        <span>{formatCurrency(currentDailyBalance)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Valor da saída:</span>
+                        <span className="text-red-600">{formatCurrency(amountValue)}</span>
+                      </div>
+                      <div className="flex justify-between font-medium border-t pt-1">
+                        <span>Reforço necessário:</span>
+                        <span className="text-amber-600">{formatCurrency(reinforcementAmount)}</span>
+                      </div>
+                    </div>
+                    <div className="flex justify-between text-xs pt-1">
+                      <span>Saldo empresa atual:</span>
+                      <span>{formatCurrency(companyCash?.current_balance || 0)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span>Saldo empresa após:</span>
+                      <span>{formatCurrency((companyCash?.current_balance || 0) - reinforcementAmount)}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-1 text-sm">
+                    <p>Saldo insuficiente no caixa da empresa.</p>
+                    <div className="flex justify-between">
+                      <span>Disponível:</span>
+                      <span>{formatCurrency(companyCash?.current_balance || 0)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Necessário:</span>
+                      <span>{formatCurrency(reinforcementAmount)}</span>
+                    </div>
+                  </div>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Payment Method */}
           <div className="space-y-2">
             <Label>Forma</Label>
             <RadioGroup
@@ -270,7 +396,7 @@ export function MovimentacaoCaixaDialog({
           </div>
 
           {/* Preview */}
-          {amount && parseFloat(amount.replace(',', '.')) > 0 && (
+          {amountValue > 0 && (
             <div className={`rounded-lg p-4 ${
               type === 'entrada' ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800'
             } border`}>
@@ -279,7 +405,7 @@ export function MovimentacaoCaixaDialog({
                   {type === 'entrada' ? 'Entrada no caixa' : 'Saída do caixa'}
                 </span>
                 <span className={`text-lg font-bold ${type === 'entrada' ? 'text-green-600' : 'text-red-600'}`}>
-                  {type === 'entrada' ? '+' : '-'}{formatCurrency(amount)}
+                  {type === 'entrada' ? '+' : '-'}{formatCurrency(amountValue)}
                 </span>
               </div>
             </div>
@@ -292,7 +418,13 @@ export function MovimentacaoCaixaDialog({
           </Button>
           <Button 
             onClick={handleSubmit} 
-            disabled={mutation.isPending || !category || !amount || !description.trim()}
+            disabled={
+              mutation.isPending || 
+              !category || 
+              !amount || 
+              !description.trim() ||
+              (needsReinforcement && !hasEnoughCompanyBalance)
+            }
             className={type === 'entrada' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}
           >
             {mutation.isPending ? (
@@ -300,6 +432,8 @@ export function MovimentacaoCaixaDialog({
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Registrando...
               </>
+            ) : needsReinforcement ? (
+              'Confirmar com Reforço'
             ) : (
               `Registrar ${type === 'entrada' ? 'Entrada' : 'Saída'}`
             )}

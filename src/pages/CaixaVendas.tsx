@@ -32,6 +32,7 @@ import { MovimentoCaixaEmpresaDialog } from '@/components/caixa/MovimentoCaixaEm
 import { MovimentacaoCaixaDialog } from '@/components/caixa/MovimentacaoCaixaDialog';
 import { CaixaAlertasHoje } from '@/components/caixa/CaixaAlertasHoje';
 import { CaixaMovimentacoesTable } from '@/components/caixa/CaixaMovimentacoesTable';
+import { CaixaAdiantamentosCard } from '@/components/caixa/CaixaAdiantamentosCard';
 import { generateSalePdf } from '@/utils/generateSalePdf';
 
 type PeriodFilter = 'today' | 'yesterday' | 'week' | 'month' | 'all';
@@ -603,13 +604,16 @@ export default function CaixaVendas() {
         </div>
 
         {/* Card Caixa da Empresa */}
-        <CaixaEmpresaCard
-          companyCash={companyCash}
-          isLoading={loadingCompanyCash}
-          onDeposit={() => setEmpresaDialogType('entrada')}
-          onWithdraw={() => setEmpresaDialogType('saida')}
-          onConfigure={() => setEmpresaDialogType('config')}
-        />
+        <div className="grid gap-4 md:grid-cols-2">
+          <CaixaEmpresaCard
+            companyCash={companyCash}
+            isLoading={loadingCompanyCash}
+            onDeposit={() => setEmpresaDialogType('entrada')}
+            onWithdraw={() => setEmpresaDialogType('saida')}
+            onConfigure={() => setEmpresaDialogType('config')}
+          />
+          <CaixaAdiantamentosCard />
+        </div>
 
         {loadingCashRegister ? (
           <div className="h-40 flex items-center justify-center">
@@ -696,7 +700,7 @@ export default function CaixaVendas() {
 
       {/* Dialogs */}
       <AbrirCaixaDialog open={abrirCaixaOpen} onOpenChange={setAbrirCaixaOpen} onConfirm={(amount) => openCashMutation.mutateAsync(amount)} companyCash={companyCash} isLoading={openCashMutation.isPending} />
-      <FecharCaixaDialog open={fecharCaixaOpen} onOpenChange={setFecharCaixaOpen} onConfirm={(actualAmount, notes) => closeCashMutation.mutateAsync({ actualAmount, notes })} summary={cashSummary} companyCash={companyCash} isLoading={closeCashMutation.isPending} />
+      <FecharCaixaDialog open={fecharCaixaOpen} onOpenChange={setFecharCaixaOpen} onConfirm={(actualAmount, notes) => closeCashMutation.mutateAsync({ actualAmount, notes })} summary={cashSummary} companyCash={companyCash} cashRegisterId={openCashRegister?.id} isLoading={closeCashMutation.isPending} />
       <NovaVendaDialog open={novaVendaOpen} onOpenChange={setNovaVendaOpen} onConfirm={(data) => newSaleMutation.mutateAsync(data)} availableItems={availableItems} approvedQuotes={approvedQuotes} isLoading={newSaleMutation.isPending} />
       <CancelarVendaDialog open={cancelarVendaOpen} onOpenChange={setCancelarVendaOpen} sale={selectedSale} onConfirm={(saleId, reason) => cancelSaleMutation.mutateAsync({ saleId, reason })} isLoading={cancelSaleMutation.isPending} />
       <DetalhesVendaDialog open={detalhesVendaOpen} onOpenChange={setDetalhesVendaOpen} sale={selectedSale} onPrint={handlePrintReceipt} />
@@ -724,6 +728,7 @@ export default function CaixaVendas() {
           open={movimentacaoCaixaOpen}
           onOpenChange={setMovimentacaoCaixaOpen}
           cashRegisterId={openCashRegister.id}
+          currentDailyBalance={cashSummary.expectedAmount}
         />
       )}
     </MainLayout>

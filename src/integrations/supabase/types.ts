@@ -352,6 +352,87 @@ export type Database = {
           },
         ]
       }
+      cash_register_advances: {
+        Row: {
+          amount: number
+          cash_register_id: string | null
+          company_id: string
+          company_movement_id: string | null
+          compensated_amount: number | null
+          compensated_at: string | null
+          created_at: string | null
+          created_by: string | null
+          daily_movement_id: string | null
+          id: string
+          reason: string
+          status: string | null
+        }
+        Insert: {
+          amount: number
+          cash_register_id?: string | null
+          company_id: string
+          company_movement_id?: string | null
+          compensated_amount?: number | null
+          compensated_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          daily_movement_id?: string | null
+          id?: string
+          reason: string
+          status?: string | null
+        }
+        Update: {
+          amount?: number
+          cash_register_id?: string | null
+          company_id?: string
+          company_movement_id?: string | null
+          compensated_amount?: number | null
+          compensated_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          daily_movement_id?: string | null
+          id?: string
+          reason?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_register_advances_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_register_advances_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_register_advances_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_register_advances_company_movement_id_fkey"
+            columns: ["company_movement_id"]
+            isOneToOne: false
+            referencedRelation: "company_cash_movements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_register_advances_daily_movement_id_fkey"
+            columns: ["daily_movement_id"]
+            isOneToOne: false
+            referencedRelation: "cash_movements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cash_registers: {
         Row: {
           actual_amount: number | null
@@ -3726,6 +3807,14 @@ export type Database = {
       }
       cleanup_login_attempts: { Args: never; Returns: undefined }
       cleanup_old_logs: { Args: never; Returns: undefined }
+      compensate_advances_on_closing: {
+        Args: {
+          _cash_register_id: string
+          _company_id: string
+          _excess_amount: number
+        }
+        Returns: Json
+      }
       create_company_and_assign_admin: {
         Args: {
           _address?: string
@@ -3782,6 +3871,10 @@ export type Database = {
           total_sales: number
           unique_clients: number
         }[]
+      }
+      get_pending_advances_summary: {
+        Args: { _company_id: string }
+        Returns: Json
       }
       get_user_company_ids: { Args: { _user_id: string }; Returns: string[] }
       get_user_role: {
@@ -3847,6 +3940,16 @@ export type Database = {
         Returns: undefined
       }
       refresh_daily_summary: { Args: never; Returns: undefined }
+      register_cash_exit_with_reinforcement: {
+        Args: {
+          _amount: number
+          _cash_register_id: string
+          _category: string
+          _description: string
+          _payment_method?: string
+        }
+        Returns: Json
+      }
       register_company_cash_movement: {
         Args: {
           _amount: number
@@ -3879,6 +3982,16 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      request_cash_reinforcement: {
+        Args: {
+          _cash_register_id: string
+          _company_id: string
+          _current_daily_balance: number
+          _reason: string
+          _required_amount: number
+        }
+        Returns: Json
       }
       update_overdue_receivables: { Args: never; Returns: undefined }
       user_belongs_to_company: {

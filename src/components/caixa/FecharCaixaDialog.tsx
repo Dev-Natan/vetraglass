@@ -1,4 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Dialog,
   DialogContent,
@@ -12,7 +15,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, Lock, TrendingUp, TrendingDown, Minus, ArrowRight, Wallet } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { 
+  Loader2, Lock, TrendingUp, TrendingDown, Minus, ArrowRight, 
+  Wallet, ArrowRightLeft, AlertTriangle, CheckCircle2 
+} from 'lucide-react';
 
 interface CashSummary {
   openingAmount: number;
@@ -20,7 +27,6 @@ interface CashSummary {
   totalCartao: number;
   totalPix: number;
   expectedAmount: number;
-  // Movimentações do caixa do dia
   totalEntradas?: number;
   totalSaidas?: number;
 }
@@ -30,12 +36,27 @@ interface CompanyCash {
   fixed_fund: number;
 }
 
+interface Advance {
+  id: string;
+  amount: number;
+  compensated_amount: number;
+  pending_amount: number;
+  reason: string;
+}
+
+interface AdvancesSummary {
+  total_pending: number;
+  count: number;
+  advances: Advance[];
+}
+
 interface FecharCaixaDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: (actualAmount: number, notes: string) => Promise<unknown>;
+  onConfirm: (actualAmount: number, notes: string, compensationResult?: unknown) => Promise<unknown>;
   summary: CashSummary;
   companyCash?: CompanyCash | null;
+  cashRegisterId?: string;
   isLoading?: boolean;
 }
 
@@ -45,10 +66,42 @@ export function FecharCaixaDialog({
   onConfirm,
   summary,
   companyCash,
+  cashRegisterId,
   isLoading = false,
 }: FecharCaixaDialogProps) {
+  const { currentCompany } = useAuth();
   const [actualAmount, setActualAmount] = useState('');
   const [notes, setNotes] = useState('');
+
+  // Buscar adiantamentos pendentes
+  const { data: advancesSummary } = useQuery({
+    queryKey: ['pending-advances', currentCompany?.id],
+    queryFn: async () => {
+      if (!currentCompany?.id) return null;
+      const { data, error } = await supabase.rpc('get_pending_advances_summary', {
+        _company_id: currentCompany.id,
+      });
+      if (error) throw error;
+      return data as unknown as AdvancesSummary;
+    },
+    enabled: !!currentCompany?.id && open,
+  });
+
+  // Buscar reforços recebidos no caixa atual
+  const { data: todayAdvances = [] } = useQuery({
+    queryKey: ['today-advances', cashRegisterId],
+    queryFn: async () => {
+      if (!cashRegisterId) return [];
+      const { data, error } = await supabase
+        .from('cash_register_advances')
+        .select('*')
+        .eq('cash_register_id', cashRegisterId)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!cashRegisterId && open,
+  });
 
   const actualValue = parseFloat(actualAmount.replace(',', '.')) || 0;
   const fixedFund = companyCash?.fixed_fund || summary.openingAmount;
@@ -59,14 +112,49 @@ export function FecharCaixaDialog({
   // Diferença entre contado e esperado
   const difference = actualValue - expectedCash;
   
-  // Excedente a recolher (vai para o caixa da empresa)
-  const excessToCollect = Math.max(0, actualValue - fixedFund);
+  // Excedente bruto (antes de compensar adiantamentos)
+  const grossExcess = Math.max(0, actualValue - fixedFund);
+  
+  // Total de adiantamentos pendentes
+  const pendingAdvances = advancesSummary?.total_pending || 0;
+  
+  // Calcular compensação e excedente líquido
+  const compensation = useMemo(() => {
+    if (grossExcess <= 0 || pendingAdvances <= 0) {
+      return { amount: 0, netExcess: grossExcess };
+    }
+    const compensationAmount = Math.min(grossExcess, pendingAdvances);
+    return {
+      amount: compensationAmount,
+      netExcess: grossExcess - compensationAmount,
+    };
+  }, [grossExcess, pendingAdvances]);
   
   // Novo saldo da empresa após fechamento
-  const newCompanyBalance = companyCash ? companyCash.current_balance + excessToCollect : 0;
+  const newCompanyBalance = companyCash 
+    ? companyCash.current_balance + compensation.netExcess 
+    : 0;
+
+  // Total de reforços recebidos hoje
+  const todayReinforcementsTotal = todayAdvances.reduce((sum, adv) => sum + Number(adv.amount), 0);
 
   const handleConfirm = async () => {
-    await onConfirm(actualValue, notes);
+    // Se há excedente e adiantamentos pendentes, compensar antes
+    let compensationResult = null;
+    if (grossExcess > 0 && pendingAdvances > 0 && currentCompany?.id && cashRegisterId) {
+      const { data, error } = await supabase.rpc('compensate_advances_on_closing', {
+        _company_id: currentCompany.id,
+        _cash_register_id: cashRegisterId,
+        _excess_amount: grossExcess,
+      });
+      if (error) {
+        console.error('Erro ao compensar adiantamentos:', error);
+      } else {
+        compensationResult = data;
+      }
+    }
+
+    await onConfirm(actualValue, notes, compensationResult);
     setActualAmount('');
     setNotes('');
   };
@@ -83,6 +171,9 @@ export function FecharCaixaDialog({
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
+  // Verificar se fechamento é com saldo abaixo do fundo fixo
+  const closingBelowFund = actualValue < fixedFund && actualValue > 0;
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
@@ -97,6 +188,32 @@ export function FecharCaixaDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {/* Reforços recebidos hoje */}
+          {todayAdvances.length > 0 && (
+            <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-3 space-y-2">
+              <h4 className="font-medium text-sm flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                <ArrowRightLeft className="h-4 w-4" />
+                Reforços Recebidos Hoje
+                <Badge variant="secondary" className="ml-auto text-xs">
+                  {todayAdvances.length}
+                </Badge>
+              </h4>
+              <div className="space-y-1 text-sm">
+                {todayAdvances.map((adv) => (
+                  <div key={adv.id} className="flex justify-between">
+                    <span className="text-muted-foreground truncate max-w-[200px]">{adv.reason}</span>
+                    <span className="font-medium">{formatCurrency(Number(adv.amount))}</span>
+                  </div>
+                ))}
+                <Separator className="my-1" />
+                <div className="flex justify-between font-medium">
+                  <span>Total reforços:</span>
+                  <span className="text-amber-600">{formatCurrency(todayReinforcementsTotal)}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Breakdown Detalhado */}
           <div className="rounded-lg border bg-muted/50 p-4 space-y-3">
             <h4 className="font-medium text-sm flex items-center gap-2">
@@ -145,7 +262,7 @@ export function FecharCaixaDialog({
               <span className="text-right text-primary">{formatCurrency(expectedCash)}</span>
             </div>
 
-            {/* Info Cartão/PIX (não afetam caixa físico) */}
+            {/* Info Cartão/PIX */}
             <div className="mt-2 pt-2 border-t border-dashed">
               <p className="text-xs text-muted-foreground mb-1">Vendas que não entram no caixa físico:</p>
               <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
@@ -198,12 +315,30 @@ export function FecharCaixaDialog({
             </div>
           )}
 
-          {/* Resumo do Recolhimento */}
-          {actualAmount && companyCash && actualValue > 0 && (
+          {/* Alerta de fechamento abaixo do fundo */}
+          {closingBelowFund && (
+            <div className="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-3 space-y-2">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                    Fechamento abaixo do fundo fixo
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    O caixa será fechado com R$ {(fixedFund - actualValue).toFixed(2)} abaixo do fundo fixo. 
+                    Este valor foi utilizado em operações durante o dia e será compensado nas próximas vendas.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Resumo do Recolhimento com Compensação */}
+          {actualAmount && companyCash && grossExcess > 0 && (
             <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-3">
               <h4 className="font-medium text-sm flex items-center gap-2">
                 <Wallet className="h-4 w-4 text-primary" />
-                Recolhimento para Caixa da Empresa
+                Resumo do Fechamento
               </h4>
               
               <div className="space-y-2 text-sm">
@@ -217,9 +352,30 @@ export function FecharCaixaDialog({
                 </div>
                 <Separator />
                 <div className="flex justify-between font-medium">
-                  <span>Excedente a recolher:</span>
-                  <span className="text-green-600">{formatCurrency(excessToCollect)}</span>
+                  <span>Excedente bruto:</span>
+                  <span>{formatCurrency(grossExcess)}</span>
                 </div>
+
+                {/* Compensação de adiantamentos */}
+                {compensation.amount > 0 && (
+                  <>
+                    <div className="flex justify-between text-amber-600">
+                      <span className="flex items-center gap-1">
+                        <ArrowRightLeft className="h-3 w-3" />
+                        Compensação de adiantamentos:
+                      </span>
+                      <span>-{formatCurrency(compensation.amount)}</span>
+                    </div>
+                    <Separator />
+                    <div className="flex justify-between font-medium text-green-600">
+                      <span className="flex items-center gap-1">
+                        <CheckCircle2 className="h-4 w-4" />
+                        Excedente líquido:
+                      </span>
+                      <span>{formatCurrency(compensation.netExcess)}</span>
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t">
@@ -227,12 +383,21 @@ export function FecharCaixaDialog({
                 <ArrowRight className="h-3 w-3" />
                 <span className="text-primary font-medium">{formatCurrency(newCompanyBalance)}</span>
               </div>
+
+              {/* Info sobre adiantamentos restantes */}
+              {pendingAdvances > compensation.amount && (
+                <p className="text-xs text-muted-foreground">
+                  Adiantamentos restantes: {formatCurrency(pendingAdvances - compensation.amount)}
+                </p>
+              )}
             </div>
           )}
 
           {/* Observações */}
           <div className="space-y-2">
-            <Label htmlFor="notes">Observações {difference !== 0 && actualAmount ? '(obrigatório para diferenças)' : '(opcional)'}</Label>
+            <Label htmlFor="notes">
+              Observações {(difference !== 0 || closingBelowFund) && actualAmount ? '(obrigatório)' : '(opcional)'}
+            </Label>
             <Textarea
               id="notes"
               placeholder="Anotações sobre o fechamento..."
@@ -250,7 +415,11 @@ export function FecharCaixaDialog({
           </Button>
           <Button 
             onClick={handleConfirm} 
-            disabled={isLoading || !actualAmount || (difference !== 0 && !notes)}
+            disabled={
+              isLoading || 
+              !actualAmount || 
+              ((difference !== 0 || closingBelowFund) && !notes)
+            }
             variant={difference < 0 ? 'destructive' : 'default'}
           >
             {isLoading ? (
