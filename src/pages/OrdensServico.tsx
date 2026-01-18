@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { 
   ClipboardList, Search, Filter, Clock, CheckCircle, AlertCircle, 
@@ -68,6 +69,7 @@ const priorityConfig: Record<OSPriority, { label: string; color: string }> = {
 };
 
 export default function OrdensServico() {
+  const navigate = useNavigate();
   const { currentCompany } = useAuth();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
@@ -305,7 +307,8 @@ export default function OrdensServico() {
               return (
                 <div
                   key={os.id}
-                  className={`section-card p-4 hover:shadow-md transition-shadow ${overdue ? 'border-destructive/50 bg-destructive/5' : ''}`}
+                  className={`section-card p-4 hover:shadow-md transition-shadow cursor-pointer ${overdue ? 'border-destructive/50 bg-destructive/5' : ''}`}
+                  onClick={() => navigate(`/ordens-servico/${os.id}`)}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-4 flex-1 min-w-0">
@@ -374,7 +377,7 @@ export default function OrdensServico() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                       {os.status === 'pending' && (
                         <Button
                           size="sm"
@@ -403,7 +406,7 @@ export default function OrdensServico() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => navigate(`/ordens-servico/${os.id}`)}>
                             <Eye className="w-4 h-4 mr-2" />
                             Ver detalhes
                           </DropdownMenuItem>
