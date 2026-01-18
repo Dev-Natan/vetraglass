@@ -146,13 +146,13 @@ export default function ProjetoVidro() {
 
   // Reset dependent filters
   const handleLinhaChange = (value: string) => {
-    setSelectedLinha(value);
+    setSelectedLinha(value === '__all__' ? '' : value);
     setSelectedCategory('');
     setSelectedProduct('');
   };
 
   const handleCategoryChange = (value: string) => {
-    setSelectedCategory(value);
+    setSelectedCategory(value === '__all__' ? '' : value);
     setSelectedProduct('');
   };
 
@@ -286,12 +286,12 @@ export default function ProjetoVidro() {
               {/* Linha */}
               <div className="space-y-2">
                 <Label>Linha</Label>
-                <Select value={selectedLinha} onValueChange={handleLinhaChange}>
+                <Select value={selectedLinha || '__all__'} onValueChange={handleLinhaChange}>
                   <SelectTrigger>
                     <SelectValue placeholder="Todas as linhas" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todas as linhas</SelectItem>
+                    <SelectItem value="__all__">Todas as linhas</SelectItem>
                     {availableLinhas.map(linha => (
                       <SelectItem key={linha} value={linha}>{linha}</SelectItem>
                     ))}
@@ -302,12 +302,12 @@ export default function ProjetoVidro() {
               {/* Categoria */}
               <div className="space-y-2">
                 <Label>Categoria</Label>
-                <Select value={selectedCategory} onValueChange={handleCategoryChange}>
+                <Select value={selectedCategory || '__all__'} onValueChange={handleCategoryChange}>
                   <SelectTrigger>
                     <SelectValue placeholder="Todas as categorias" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todas as categorias</SelectItem>
+                    <SelectItem value="__all__">Todas as categorias</SelectItem>
                     {availableCategories.map(cat => (
                       <SelectItem key={cat} value={cat}>{translateCategory(cat)}</SelectItem>
                     ))}
