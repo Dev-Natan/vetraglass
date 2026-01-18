@@ -1058,6 +1058,73 @@ export type Database = {
           },
         ]
       }
+      glass_projects: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          lock_height: number | null
+          name: string
+          notes: string | null
+          panels: Json
+          product_template_id: string | null
+          quantity: number
+          updated_at: string
+          vao_height: number
+          vao_width: number
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          lock_height?: number | null
+          name: string
+          notes?: string | null
+          panels?: Json
+          product_template_id?: string | null
+          quantity?: number
+          updated_at?: string
+          vao_height: number
+          vao_width: number
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          lock_height?: number | null
+          name?: string
+          notes?: string | null
+          panels?: Json
+          product_template_id?: string | null
+          quantity?: number
+          updated_at?: string
+          vao_height?: number
+          vao_width?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "glass_projects_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "glass_projects_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "glass_projects_product_template_id_fkey"
+            columns: ["product_template_id"]
+            isOneToOne: false
+            referencedRelation: "product_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       item_templates: {
         Row: {
           aliquota_cbs: number | null
