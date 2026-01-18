@@ -1068,6 +1068,7 @@ export type Database = {
           is_active: boolean
           linha: string
           panel_index: number | null
+          product_template_id: string | null
           updated_at: string
           width_formula: string
         }
@@ -1080,6 +1081,7 @@ export type Database = {
           is_active?: boolean
           linha: string
           panel_index?: number | null
+          product_template_id?: string | null
           updated_at?: string
           width_formula?: string
         }
@@ -1092,10 +1094,19 @@ export type Database = {
           is_active?: boolean
           linha?: string
           panel_index?: number | null
+          product_template_id?: string | null
           updated_at?: string
           width_formula?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "glass_line_formulas_product_template_id_fkey"
+            columns: ["product_template_id"]
+            isOneToOne: false
+            referencedRelation: "product_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       glass_projects: {
         Row: {
