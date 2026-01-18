@@ -14,6 +14,7 @@ import {
   X,
   ShoppingCart,
   Scissors,
+  Square,
   Settings,
   Tag,
   Receipt,
@@ -51,6 +52,7 @@ const menuItems: MenuItem[] = [
   { icon: Calendar, label: 'Agenda', path: '/agenda', module: 'agenda' },
   { icon: Ruler, label: 'Medições', path: '/medicoes', module: 'medicoes' },
   { icon: Scissors, label: 'Plano de Corte', path: '/plano-corte', module: 'plano-corte' },
+  { icon: Square, label: 'Projeto de Vidro', path: '/projeto-vidro', module: 'plano-corte' },
   
   // Produtos & Estoque
   { icon: Package, label: 'Produtos', path: '/produtos', module: 'produtos' },

@@ -1,0 +1,438 @@
+import { useState, useMemo } from 'react';
+import { MainLayout } from '@/components/layout/MainLayout';
+import { ArrowLeft, Printer, Save } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
+import { Parser } from 'expr-eval';
+import { useAuth } from '@/contexts/AuthContext';
+import { GlassProjectCanvas } from '@/components/projeto-vidro/GlassProjectCanvas';
+import { PiecesTable } from '@/components/projeto-vidro/PiecesTable';
+import { ProductInfoHeader } from '@/components/projeto-vidro/ProductInfoHeader';
+
+// Tradução de categorias
+const categoryLabels: Record<string, string> = {
+  window: 'Janela',
+  door: 'Porta',
+  facade: 'Fachada',
+  shower: 'Box de Banheiro',
+  mirror: 'Espelho',
+  partition: 'Divisória',
+  guarda_corpo: 'Guarda Corpo',
+  other: 'Outros',
+};
+
+const translateCategory = (category: string) => categoryLabels[category] || category;
+
+export interface GlassPanelData {
+  id: string;
+  letter: string;
+  name: string;
+  width: number;
+  height: number;
+  widthFormula: string | null;
+  heightFormula: string | null;
+  quantity: number;
+  row: number;
+  col: number;
+}
+
+// Evaluate a formula like "Altura - 20", "Largura / 2", etc.
+function evaluateFormula(formula: string, width: number, height: number): number {
+  try {
+    if (!formula || formula.trim() === '') return 0;
+    
+    const parser = new Parser();
+    
+    // Normalize variable names to safe single-letter variables
+    let normalized = formula
+      .replace(/Largura/gi, 'W')
+      .replace(/Altura/gi, 'H')
+      .replace(/\bL\b/gi, 'W')
+      .replace(/\bA\b/gi, 'H');
+    
+    const expr = parser.parse(normalized);
+    const result = expr.evaluate({ W: width, H: height });
+    
+    if (isNaN(result) || !isFinite(result)) return 0;
+    
+    return Math.round(result);
+  } catch (error) {
+    console.warn('Error evaluating formula:', formula, error);
+    return 0;
+  }
+}
+
+// Get storage URL helper
+const getStorageUrl = (path: string | null) => {
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  if (path.startsWith('/')) return path;
+  return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/item-templates/${path}`;
+};
+
+export default function ProjetoVidro() {
+  const navigate = useNavigate();
+  const { currentCompany, isSaasAdmin } = useAuth();
+  const [selectedLinha, setSelectedLinha] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedProduct, setSelectedProduct] = useState<string>('');
+  const [width, setWidth] = useState<number>(1200);
+  const [height, setHeight] = useState<number>(2000);
+  const [quantity, setQuantity] = useState<number>(1);
+  const [lockHeight, setLockHeight] = useState<number>(1000);
+
+  // Fetch product templates
+  const { data: productTemplates } = useQuery({
+    queryKey: ['product-templates-for-glass-project'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('product_templates')
+        .select(`
+          id,
+          name,
+          category,
+          linha,
+          image_url,
+          description,
+          min_width,
+          max_width,
+          min_height,
+          max_height
+        `)
+        .eq('is_active', true);
+      
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  // Get unique linhas
+  const availableLinhas = useMemo(() => {
+    if (!productTemplates) return [];
+    const linhas = new Set<string>();
+    productTemplates.forEach(p => {
+      if (p.linha) linhas.add(p.linha);
+    });
+    return Array.from(linhas).sort();
+  }, [productTemplates]);
+
+  // Get unique categories filtered by linha
+  const availableCategories = useMemo(() => {
+    if (!productTemplates) return [];
+    const categories = new Set<string>();
+    productTemplates
+      .filter(p => !selectedLinha || p.linha === selectedLinha)
+      .forEach(p => {
+        if (p.category) categories.add(p.category);
+      });
+    return Array.from(categories).sort();
+  }, [productTemplates, selectedLinha]);
+
+  // Get products filtered by linha and category
+  const filteredProducts = useMemo(() => {
+    if (!productTemplates) return [];
+    return productTemplates.filter(p => {
+      if (selectedLinha && p.linha !== selectedLinha) return false;
+      if (selectedCategory && p.category !== selectedCategory) return false;
+      return true;
+    });
+  }, [productTemplates, selectedLinha, selectedCategory]);
+
+  // Reset dependent filters
+  const handleLinhaChange = (value: string) => {
+    setSelectedLinha(value);
+    setSelectedCategory('');
+    setSelectedProduct('');
+  };
+
+  const handleCategoryChange = (value: string) => {
+    setSelectedCategory(value);
+    setSelectedProduct('');
+  };
+
+  // Fetch product template items (only glass items)
+  const { data: productItems } = useQuery({
+    queryKey: ['product-template-items-glass', selectedProduct, currentCompany?.id, isSaasAdmin],
+    queryFn: async () => {
+      if (!selectedProduct) return [];
+      
+      let query = supabase
+        .from('product_template_items')
+        .select(`
+          id,
+          quantity_formula,
+          pieces_quantity,
+          is_optional,
+          notes,
+          width_formula,
+          height_formula,
+          item_templates (
+            id,
+            name,
+            type,
+            image_url,
+            description
+          )
+        `)
+        .eq('product_template_id', selectedProduct);
+      
+      if (isSaasAdmin) {
+        query = query.is('company_id', null);
+      } else if (currentCompany?.id) {
+        query = query.eq('company_id', currentCompany.id);
+      }
+      
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!selectedProduct
+  });
+
+  // Calculate glass panels
+  const glassPanels = useMemo((): GlassPanelData[] => {
+    if (!productItems || productItems.length === 0) return [];
+
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    let letterIndex = 0;
+    let colIndex = 0;
+
+    return productItems
+      .filter(item => item.item_templates?.type === 'glass')
+      .flatMap(item => {
+        const piecesQty = (item as any).pieces_quantity || 1;
+        const widthF = (item as any).width_formula || 'Largura';
+        const heightF = (item as any).height_formula || 'Altura';
+        const calcWidth = evaluateFormula(widthF, width, height);
+        const calcHeight = evaluateFormula(heightF, width, height);
+        const customName = (item as any).notes || item.item_templates?.name || 'Vidro';
+        
+        const panels: GlassPanelData[] = [];
+        
+        for (let i = 0; i < piecesQty; i++) {
+          panels.push({
+            id: `${item.id}-${i}`,
+            letter: letters[letterIndex % 26],
+            name: customName,
+            width: calcWidth,
+            height: calcHeight,
+            widthFormula: (item as any).width_formula,
+            heightFormula: (item as any).height_formula,
+            quantity: 1,
+            row: 0,
+            col: colIndex++
+          });
+          letterIndex++;
+        }
+        
+        return panels;
+      });
+  }, [productItems, width, height]);
+
+  // Group panels by unique dimensions for the table
+  const groupedPanels = useMemo(() => {
+    const groups: Record<string, { letters: string[]; width: number; height: number; quantity: number; widthFormula: string | null; heightFormula: string | null }> = {};
+    
+    glassPanels.forEach(panel => {
+      const key = `${panel.width}-${panel.height}`;
+      if (!groups[key]) {
+        groups[key] = {
+          letters: [],
+          width: panel.width,
+          height: panel.height,
+          quantity: 0,
+          widthFormula: panel.widthFormula,
+          heightFormula: panel.heightFormula
+        };
+      }
+      groups[key].letters.push(panel.letter);
+      groups[key].quantity++;
+    });
+    
+    return Object.values(groups);
+  }, [glassPanels]);
+
+  const selectedProductData = productTemplates?.find(p => p.id === selectedProduct);
+
+  const handlePrint = () => {
+    // Create print-friendly version
+    window.print();
+  };
+
+  return (
+    <MainLayout>
+      <div className="p-4 md:p-6 space-y-6">
+        {/* Header */}
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Projeto de Vidro</h1>
+            <p className="text-sm text-muted-foreground">Visualize e configure os vidros do produto</p>
+          </div>
+        </div>
+
+        {/* Filters and Inputs */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+              {/* Linha */}
+              <div className="space-y-2">
+                <Label>Linha</Label>
+                <Select value={selectedLinha} onValueChange={handleLinhaChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todas as linhas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Todas as linhas</SelectItem>
+                    {availableLinhas.map(linha => (
+                      <SelectItem key={linha} value={linha}>{linha}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Categoria */}
+              <div className="space-y-2">
+                <Label>Categoria</Label>
+                <Select value={selectedCategory} onValueChange={handleCategoryChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todas as categorias" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Todas as categorias</SelectItem>
+                    {availableCategories.map(cat => (
+                      <SelectItem key={cat} value={cat}>{translateCategory(cat)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Produto */}
+              <div className="space-y-2 lg:col-span-2">
+                <Label>Produto</Label>
+                <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um produto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredProducts.map(product => (
+                      <SelectItem key={product.id} value={product.id}>
+                        {product.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Largura */}
+              <div className="space-y-2">
+                <Label>Largura do Vão (mm)</Label>
+                <Input
+                  type="number"
+                  value={width}
+                  onChange={e => setWidth(parseInt(e.target.value) || 0)}
+                  min={0}
+                />
+              </div>
+
+              {/* Altura */}
+              <div className="space-y-2">
+                <Label>Altura do Vão (mm)</Label>
+                <Input
+                  type="number"
+                  value={height}
+                  onChange={e => setHeight(parseInt(e.target.value) || 0)}
+                  min={0}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Main Content - Only show when product is selected */}
+        {selectedProduct && glassPanels.length > 0 && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left side - Product Info + Pieces Table */}
+            <div className="space-y-4">
+              <ProductInfoHeader 
+                productName={selectedProductData?.name || ''}
+                productImage={getStorageUrl(selectedProductData?.image_url || null)}
+                category={selectedProductData?.category || ''}
+                linha={selectedProductData?.linha || ''}
+                width={width}
+                height={height}
+                quantity={quantity}
+                onQuantityChange={setQuantity}
+              />
+              
+              <PiecesTable 
+                panels={glassPanels}
+                groupedPanels={groupedPanels}
+                totalWidth={width}
+                totalHeight={height}
+                lockHeight={lockHeight}
+                onLockHeightChange={setLockHeight}
+              />
+            </div>
+
+            {/* Right side - Canvas */}
+            <div className="lg:col-span-2">
+              <GlassProjectCanvas 
+                panels={glassPanels}
+                totalWidth={width}
+                totalHeight={height}
+                quantity={quantity}
+                lockHeight={lockHeight}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {selectedProduct && glassPanels.length === 0 && (
+          <Card>
+            <CardContent className="py-16 text-center">
+              <p className="text-muted-foreground">
+                Nenhum vidro encontrado para este produto.
+                <br />
+                Verifique se o produto possui vidros configurados na composição.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {!selectedProduct && (
+          <Card>
+            <CardContent className="py-16 text-center">
+              <p className="text-muted-foreground">
+                Selecione um produto para visualizar o projeto de vidros.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Footer Actions */}
+        {selectedProduct && glassPanels.length > 0 && (
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => navigate(-1)}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Voltar
+            </Button>
+            <Button variant="outline" onClick={handlePrint}>
+              <Printer className="w-4 h-4 mr-2" />
+              Imprimir
+            </Button>
+          </div>
+        )}
+      </div>
+    </MainLayout>
+  );
+}
