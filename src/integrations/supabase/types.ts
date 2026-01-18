@@ -1058,6 +1058,45 @@ export type Database = {
           },
         ]
       }
+      glass_line_formulas: {
+        Row: {
+          created_at: string
+          description: string | null
+          formula_name: string
+          height_formula: string
+          id: string
+          is_active: boolean
+          linha: string
+          panel_index: number | null
+          updated_at: string
+          width_formula: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          formula_name: string
+          height_formula?: string
+          id?: string
+          is_active?: boolean
+          linha: string
+          panel_index?: number | null
+          updated_at?: string
+          width_formula?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          formula_name?: string
+          height_formula?: string
+          id?: string
+          is_active?: boolean
+          linha?: string
+          panel_index?: number | null
+          updated_at?: string
+          width_formula?: string
+        }
+        Relationships: []
+      }
       glass_projects: {
         Row: {
           company_id: string
