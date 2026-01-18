@@ -574,6 +574,121 @@ export type Database = {
         }
         Relationships: []
       }
+      company_cash: {
+        Row: {
+          company_id: string
+          created_at: string
+          current_balance: number
+          fixed_fund: number
+          id: string
+          last_movement_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          current_balance?: number
+          fixed_fund?: number
+          id?: string
+          last_movement_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          current_balance?: number
+          fixed_fund?: number
+          id?: string
+          last_movement_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_cash_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_cash_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_cash_movements: {
+        Row: {
+          amount: number
+          balance_after: number
+          balance_before: number
+          cash_register_id: string | null
+          category: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          description: string
+          id: string
+          reference_id: string | null
+          reference_type: string | null
+          type: string
+        }
+        Insert: {
+          amount: number
+          balance_after: number
+          balance_before: number
+          cash_register_id?: string | null
+          category: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          description: string
+          id?: string
+          reference_id?: string | null
+          reference_type?: string | null
+          type: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          balance_before?: number
+          cash_register_id?: string | null
+          category?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          id?: string
+          reference_id?: string | null
+          reference_type?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_cash_movements_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_cash_movements_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_cash_movements_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_item_prices: {
         Row: {
           company_id: string
@@ -3597,6 +3712,10 @@ export type Database = {
         Args: { _employee_id: string; _sale_id: string }
         Returns: number
       }
+      can_open_daily_cash: {
+        Args: { _company_id: string; _opening_amount: number }
+        Returns: Json
+      }
       check_login_rate_limit: {
         Args: {
           _email: string
@@ -3669,6 +3788,28 @@ export type Database = {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      initialize_company_cash: {
+        Args: {
+          _company_id: string
+          _fixed_fund?: number
+          _initial_balance?: number
+        }
+        Returns: {
+          company_id: string
+          created_at: string
+          current_balance: number
+          fixed_fund: number
+          id: string
+          last_movement_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "company_cash"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       initialize_company_item_prices: {
         Args: { _company_id: string }
         Returns: undefined
@@ -3706,6 +3847,39 @@ export type Database = {
         Returns: undefined
       }
       refresh_daily_summary: { Args: never; Returns: undefined }
+      register_company_cash_movement: {
+        Args: {
+          _amount: number
+          _cash_register_id?: string
+          _category: string
+          _company_id: string
+          _description: string
+          _reference_id?: string
+          _reference_type?: string
+          _type: string
+        }
+        Returns: {
+          amount: number
+          balance_after: number
+          balance_before: number
+          cash_register_id: string | null
+          category: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          description: string
+          id: string
+          reference_id: string | null
+          reference_type: string | null
+          type: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "company_cash_movements"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       update_overdue_receivables: { Args: never; Returns: undefined }
       user_belongs_to_company: {
         Args: { _company_id: string; _user_id: string }
