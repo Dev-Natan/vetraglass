@@ -5,7 +5,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, Lock, Plus, Unlock } from 'lucide-react';
+import { ShoppingCart, Lock, Plus, Unlock, TrendingUp, TrendingDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -29,6 +29,9 @@ import { CancelarVendaDialog } from '@/components/caixa/CancelarVendaDialog';
 import { DetalhesVendaDialog } from '@/components/caixa/DetalhesVendaDialog';
 import { CaixaEmpresaCard } from '@/components/caixa/CaixaEmpresaCard';
 import { MovimentoCaixaEmpresaDialog } from '@/components/caixa/MovimentoCaixaEmpresaDialog';
+import { MovimentacaoCaixaDialog } from '@/components/caixa/MovimentacaoCaixaDialog';
+import { CaixaAlertasHoje } from '@/components/caixa/CaixaAlertasHoje';
+import { CaixaMovimentacoesTable } from '@/components/caixa/CaixaMovimentacoesTable';
 import { generateSalePdf } from '@/utils/generateSalePdf';
 
 type PeriodFilter = 'today' | 'yesterday' | 'week' | 'month' | 'all';
@@ -80,6 +83,9 @@ export default function CaixaVendas() {
   
   // Dialogs do caixa da empresa
   const [empresaDialogType, setEmpresaDialogType] = useState<'entrada' | 'saida' | 'config' | null>(null);
+  
+  // Dialog movimentação do caixa do dia
+  const [movimentacaoCaixaOpen, setMovimentacaoCaixaOpen] = useState(false);
 
   // Buscar caixa da empresa
   const { data: companyCash, isLoading: loadingCompanyCash } = useQuery({
@@ -159,6 +165,44 @@ export default function CaixaVendas() {
       return data || [];
     },
     enabled: !!openCashRegister?.id,
+  });
+
+  // Buscar despesas com vencimento hoje
+  const { data: expensesDueToday = [] } = useQuery({
+    queryKey: ['expenses-due-today', currentCompany?.id],
+    queryFn: async () => {
+      if (!currentCompany?.id) return [];
+      const today = format(new Date(), 'yyyy-MM-dd');
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('company_id', currentCompany.id)
+        .eq('due_date', today)
+        .eq('status', 'pending')
+        .order('amount', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!currentCompany?.id,
+  });
+
+  // Buscar parcelas a receber hoje
+  const { data: receivablesDueToday = [] } = useQuery({
+    queryKey: ['receivables-due-today', currentCompany?.id],
+    queryFn: async () => {
+      if (!currentCompany?.id) return [];
+      const today = format(new Date(), 'yyyy-MM-dd');
+      const { data, error } = await supabase
+        .from('accounts_receivable')
+        .select('*')
+        .eq('company_id', currentCompany.id)
+        .eq('due_date', today)
+        .eq('status', 'pending')
+        .order('total_amount', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!currentCompany?.id,
   });
 
   const getDateRange = (period: PeriodFilter) => {
@@ -451,6 +495,69 @@ export default function CaixaVendas() {
   };
   const handleViewDetails = (sale: Sale) => { setSelectedSale(sale); setDetalhesVendaOpen(true); };
 
+  // Handler: Pagar despesa via caixa do dia
+  const handlePayExpense = async (expense: { id: string; description: string; amount: number }) => {
+    if (!openCashRegister?.id || !currentCompany?.id || !user?.id) {
+      toast.error('Caixa não está aberto');
+      return;
+    }
+    try {
+      // Criar movimento de saída no caixa
+      await supabase.from('cash_movements').insert({
+        company_id: currentCompany.id,
+        cash_register_id: openCashRegister.id,
+        type: 'saida',
+        category: 'despesa',
+        amount: expense.amount,
+        description: `Pgto despesa: ${expense.description}`,
+        expense_id: expense.id,
+        payment_method: 'dinheiro',
+        created_by: user.id,
+      });
+      // Atualizar status da despesa
+      await supabase.from('expenses').update({ status: 'paid', paid_date: new Date().toISOString() }).eq('id', expense.id);
+      toast.success('Despesa paga com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['expenses-due-today'] });
+    } catch (error: any) {
+      toast.error(`Erro: ${error.message}`);
+    }
+  };
+
+  // Handler: Receber parcela via caixa do dia
+  const handleReceivePayment = async (receivable: { id: string; customer_name: string; total_amount: number; installment_number: number; total_installments: number }) => {
+    if (!openCashRegister?.id || !currentCompany?.id || !user?.id) {
+      toast.error('Caixa não está aberto');
+      return;
+    }
+    try {
+      // Criar movimento de entrada no caixa
+      await supabase.from('cash_movements').insert({
+        company_id: currentCompany.id,
+        cash_register_id: openCashRegister.id,
+        type: 'entrada',
+        category: 'recebimento',
+        amount: receivable.total_amount,
+        description: `Parcela ${receivable.installment_number}/${receivable.total_installments} - ${receivable.customer_name}`,
+        receivable_id: receivable.id,
+        payment_method: 'dinheiro',
+        created_by: user.id,
+      });
+      // Atualizar status da parcela
+      await supabase.from('accounts_receivable').update({ 
+        status: 'paid', 
+        paid_date: new Date().toISOString(),
+        paid_amount: receivable.total_amount,
+        payment_method: 'dinheiro'
+      }).eq('id', receivable.id);
+      toast.success('Parcela recebida com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['receivables-due-today'] });
+    } catch (error: any) {
+      toast.error(`Erro: ${error.message}`);
+    }
+  };
+
   const isCashOpen = !!openCashRegister;
 
   return (
@@ -469,9 +576,14 @@ export default function CaixaVendas() {
               </p>
             )}
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {isCashOpen ? (
               <>
+                <Button variant="outline" size="sm" onClick={() => setMovimentacaoCaixaOpen(true)}>
+                  <TrendingUp className="mr-1 h-4 w-4 text-green-600" />
+                  <TrendingDown className="mr-2 h-4 w-4 text-red-600" />
+                  Movimentação
+                </Button>
                 <Button variant="outline" onClick={() => setFecharCaixaOpen(true)}>
                   <Lock className="mr-2 h-4 w-4" />
                   Fechar Caixa
@@ -516,6 +628,18 @@ export default function CaixaVendas() {
               companyCashBalance={companyCash?.current_balance}
               fixedFund={companyCash?.fixed_fund}
             />
+
+            {/* Alertas do Dia (despesas e parcelas vencendo) */}
+            <CaixaAlertasHoje
+              expensesDueToday={expensesDueToday}
+              receivablesDueToday={receivablesDueToday}
+              onPayExpense={handlePayExpense}
+              onReceivePayment={handleReceivePayment}
+              disabled={!isCashOpen}
+            />
+
+            {/* Movimentações do Caixa do Dia */}
+            <CaixaMovimentacoesTable movements={cashMovements} />
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -593,6 +717,15 @@ export default function CaixaVendas() {
         }}
         isLoading={configCompanyCashMutation.isPending || companyCashMovementMutation.isPending}
       />
+
+      {/* Dialog Movimentação Caixa do Dia */}
+      {openCashRegister && (
+        <MovimentacaoCaixaDialog
+          open={movimentacaoCaixaOpen}
+          onOpenChange={setMovimentacaoCaixaOpen}
+          cashRegisterId={openCashRegister.id}
+        />
+      )}
     </MainLayout>
   );
 }
