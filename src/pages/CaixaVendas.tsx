@@ -5,7 +5,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, Lock, Plus, Unlock, TrendingUp, TrendingDown } from 'lucide-react';
+import { ShoppingCart, Lock, Plus, Unlock, TrendingUp, TrendingDown, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -24,6 +24,7 @@ import { MovimentacaoCaixaDialog } from '@/components/caixa/MovimentacaoCaixaDia
 import { CaixaAlertasHoje } from '@/components/caixa/CaixaAlertasHoje';
 import { CaixaMovimentacoesTable } from '@/components/caixa/CaixaMovimentacoesTable';
 import { generateSalePdf } from '@/utils/generateSalePdf';
+import { generateDailyCashPdf } from '@/utils/generateDailyCashPdf';
 
 function calculateFormulaQuantity(formula: string, width: number, height: number, piecesQty: number): number {
   try {
@@ -477,6 +478,33 @@ export default function CaixaVendas() {
 
   const isCashOpen = !!openCashRegister;
 
+  const handleExportDailyPdf = () => {
+    if (!openCashRegister) return;
+    
+    generateDailyCashPdf(
+      openCashRegister,
+      cashMovements,
+      todaySales,
+      {
+        openingAmount: cashSummary.openingAmount,
+        totalDinheiro: cashSummary.totalDinheiro,
+        totalCartao: cashSummary.totalCartao,
+        totalPix: cashSummary.totalPix,
+        totalVendas: cashSummary.totalVendas,
+        totalEntradas: cashSummary.totalEntradas,
+        totalSaidas: cashSummary.totalSaidas,
+        saldoDinheiro: cashSummary.openingAmount + cashSummary.totalDinheiro + cashSummary.totalEntradas - cashSummary.totalSaidas,
+      },
+      currentCompany ? {
+        name: currentCompany.name,
+        cnpj: currentCompany.cnpj,
+        address: currentCompany.address,
+        phone: currentCompany.phone,
+      } : null,
+      'download'
+    );
+  };
+
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -496,6 +524,10 @@ export default function CaixaVendas() {
           <div className="flex flex-wrap gap-2">
             {isCashOpen ? (
               <>
+                <Button variant="outline" size="sm" onClick={handleExportDailyPdf}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Relatório PDF
+                </Button>
                 <Button variant="outline" size="sm" onClick={() => setMovimentacaoCaixaOpen(true)}>
                   <TrendingUp className="mr-1 h-4 w-4 text-green-600" />
                   <TrendingDown className="mr-2 h-4 w-4 text-red-600" />
