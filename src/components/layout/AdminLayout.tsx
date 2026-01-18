@@ -17,6 +17,7 @@ import {
   Shield,
   Headphones,
   Megaphone,
+  GlassWater,
 } from "lucide-react";
 import {
   Tooltip,
@@ -55,6 +56,11 @@ const adminMenuItems = [
     title: "Avisos",
     path: "/admin/announcements",
     icon: Megaphone,
+  },
+  {
+    title: "Fórmulas de Vidro",
+    path: "/admin/glass-formulas",
+    icon: GlassWater,
   },
   {
     title: "Suporte",

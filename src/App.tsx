@@ -40,6 +40,7 @@ import AdminCompanies from "./pages/admin/AdminCompanies";
 import ImportProducts from "./pages/admin/ImportProducts";
 import AdminSupport from "./pages/admin/AdminSupport";
 import AdminAnnouncements from "./pages/admin/AdminAnnouncements";
+import AdminGlassFormulas from "./pages/admin/AdminGlassFormulas";
 import AceitarConvite from "./pages/AceitarConvite";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
@@ -270,6 +271,11 @@ function AppRoutes() {
       <Route path="/admin/announcements" element={
         <ProtectedRoute>
           <AdminAnnouncements />
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/glass-formulas" element={
+        <ProtectedRoute>
+          <AdminGlassFormulas />
         </ProtectedRoute>
       } />
       <Route path="*" element={<NotFound />} />
