@@ -16,6 +16,7 @@ interface PanelData {
   height: number;
   areaM2: number;
   quantity: number;
+  isMovable?: boolean;
   holes?: Array<{ x: number; y: number; diameter: number }>;
   cutouts?: Array<{ x: number; y: number; width: number; height: number }>;
 }

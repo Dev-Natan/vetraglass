@@ -1066,6 +1066,7 @@ export type Database = {
           height_formula: string
           id: string
           is_active: boolean
+          is_movable: boolean | null
           linha: string
           panel_index: number | null
           product_template_id: string | null
@@ -1079,6 +1080,7 @@ export type Database = {
           height_formula?: string
           id?: string
           is_active?: boolean
+          is_movable?: boolean | null
           linha: string
           panel_index?: number | null
           product_template_id?: string | null
@@ -1092,6 +1094,7 @@ export type Database = {
           height_formula?: string
           id?: string
           is_active?: boolean
+          is_movable?: boolean | null
           linha?: string
           panel_index?: number | null
           product_template_id?: string | null

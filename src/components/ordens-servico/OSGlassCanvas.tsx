@@ -7,6 +7,7 @@ interface PanelData {
   height: number;
   areaM2: number;
   quantity: number;
+  isMovable?: boolean;
   holes?: Array<{ x: number; y: number; diameter: number }>;
   cutouts?: Array<{ x: number; y: number; width: number; height: number }>;
 }
@@ -139,6 +140,7 @@ export function OSGlassCanvas({
         {layout.panels.map((panel, index) => {
           const holes = (panel as any).holes || [];
           const cutouts = (panel as any).cutouts || [];
+          const isMovable = (panel as any).isMovable ?? true; // Default to movable for folhas
           
           return (
             <g key={panel.index}>
@@ -166,8 +168,8 @@ export function OSGlassCanvas({
                 />
               )}
               
-              {/* Draw holes */}
-              {holes.map((hole: any, hIdx: number) => {
+              {/* Draw holes - only on movable panels */}
+              {isMovable && holes.map((hole: any, hIdx: number) => {
                 const cx = panel.x + hole.x * layout.scale;
                 const cy = panel.y + hole.y * layout.scale;
                 const r = Math.max((hole.diameter / 2) * layout.scale, 4);
@@ -184,8 +186,8 @@ export function OSGlassCanvas({
                 );
               })}
               
-              {/* Draw cutouts */}
-              {cutouts.map((cutout: any, cIdx: number) => {
+              {/* Draw cutouts - only on movable panels */}
+              {isMovable && cutouts.map((cutout: any, cIdx: number) => {
                 const rectX = panel.x + cutout.x * layout.scale;
                 const rectY = panel.y + panel.scaledHeight - (cutout.y * layout.scale) - (cutout.height * layout.scale);
                 const w = cutout.width * layout.scale;
@@ -203,6 +205,18 @@ export function OSGlassCanvas({
                   />
                 );
               })}
+              
+              {/* Lock hole indicator - only on movable panels (small circle on the right side) */}
+              {isMovable && lockHeight > 0 && (
+                <circle
+                  cx={panel.x + panel.scaledWidth - 12}
+                  cy={panel.y + panel.scaledHeight - (lockHeight * layout.scale)}
+                  r={4}
+                  fill="none"
+                  stroke="#1f2937"
+                  strokeWidth={1}
+                />
+              )}
               
               {/* Letter label */}
               <text
@@ -245,20 +259,7 @@ export function OSGlassCanvas({
           );
         })}
         
-        {/* Lock height indicator with circle (like reference image) */}
-        {lockHeight > 0 && layout.panels.length > 0 && (
-          <g>
-            {/* Circle for lock position on the rightmost panel */}
-            <circle
-              cx={layout.padding.left + layout.totalScaledWidth - 15}
-              cy={layout.lockHeightY}
-              r={4}
-              fill="none"
-              stroke="#1f2937"
-              strokeWidth={1}
-            />
-          </g>
-        )}
+        {/* Note: Lock indicator is now drawn per movable panel above */}
         
         {/* Right side VÃO dimension (vertical) */}
         {layout.panels.length > 0 && (
