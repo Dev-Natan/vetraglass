@@ -272,6 +272,7 @@ export type Database = {
           description: string
           expense_id: string | null
           id: string
+          origem: string | null
           payment_method: string | null
           receivable_id: string | null
           sale_id: string | null
@@ -287,6 +288,7 @@ export type Database = {
           description: string
           expense_id?: string | null
           id?: string
+          origem?: string | null
           payment_method?: string | null
           receivable_id?: string | null
           sale_id?: string | null
@@ -302,6 +304,7 @@ export type Database = {
           description?: string
           expense_id?: string | null
           id?: string
+          origem?: string | null
           payment_method?: string | null
           receivable_id?: string | null
           sale_id?: string | null
@@ -439,9 +442,12 @@ export type Database = {
           closed_at: string | null
           closed_by: string | null
           closing_amount: number | null
+          closing_justification: string | null
           company_id: string
           created_at: string
           difference: number | null
+          excess_collected: number | null
+          fixed_fund_at_close: number | null
           id: string
           notes: string | null
           opened_at: string
@@ -455,9 +461,12 @@ export type Database = {
           closed_at?: string | null
           closed_by?: string | null
           closing_amount?: number | null
+          closing_justification?: string | null
           company_id: string
           created_at?: string
           difference?: number | null
+          excess_collected?: number | null
+          fixed_fund_at_close?: number | null
           id?: string
           notes?: string | null
           opened_at?: string
@@ -471,9 +480,12 @@ export type Database = {
           closed_at?: string | null
           closed_by?: string | null
           closing_amount?: number | null
+          closing_justification?: string | null
           company_id?: string
           created_at?: string
           difference?: number | null
+          excess_collected?: number | null
+          fixed_fund_at_close?: number | null
           id?: string
           notes?: string | null
           opened_at?: string
@@ -3372,6 +3384,100 @@ export type Database = {
           },
         ]
       }
+      stock_movements: {
+        Row: {
+          cash_movement_id: string | null
+          category: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          expense_id: string | null
+          id: string
+          item_template_id: string | null
+          quantity: number
+          sale_id: string | null
+          type: string
+          unit_cost: number | null
+          valor_financeiro: number
+        }
+        Insert: {
+          cash_movement_id?: string | null
+          category: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          expense_id?: string | null
+          id?: string
+          item_template_id?: string | null
+          quantity?: number
+          sale_id?: string | null
+          type: string
+          unit_cost?: number | null
+          valor_financeiro?: number
+        }
+        Update: {
+          cash_movement_id?: string | null
+          category?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          expense_id?: string | null
+          id?: string
+          item_template_id?: string | null
+          quantity?: number
+          sale_id?: string | null
+          type?: string
+          unit_cost?: number | null
+          valor_financeiro?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_cash_movement_id_fkey"
+            columns: ["cash_movement_id"]
+            isOneToOne: false
+            referencedRelation: "cash_movements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_item_template_id_fkey"
+            columns: ["item_template_id"]
+            isOneToOne: false
+            referencedRelation: "item_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_attachments: {
         Row: {
           created_at: string
@@ -3807,6 +3913,15 @@ export type Database = {
       }
       cleanup_login_attempts: { Args: never; Returns: undefined }
       cleanup_old_logs: { Args: never; Returns: undefined }
+      close_daily_cash: {
+        Args: {
+          _actual_amount: number
+          _cash_register_id: string
+          _notes?: string
+          _user_id?: string
+        }
+        Returns: Json
+      }
       compensate_advances_on_closing: {
         Args: {
           _cash_register_id: string
@@ -3930,6 +4045,10 @@ export type Database = {
         Returns: undefined
       }
       normalize_text: { Args: { input_text: string }; Returns: string }
+      open_daily_cash: {
+        Args: { _company_id: string; _opening_amount: number; _user_id: string }
+        Returns: Json
+      }
       record_login_attempt: {
         Args: {
           _email: string
@@ -3982,6 +4101,17 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      register_material_purchase: {
+        Args: {
+          _amount: number
+          _cash_register_id: string
+          _description: string
+          _item_template_id?: string
+          _quantity?: number
+          _user_id?: string
+        }
+        Returns: Json
       }
       request_cash_reinforcement: {
         Args: {

@@ -53,7 +53,7 @@ interface AdvancesSummary {
 interface FecharCaixaDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: (actualAmount: number, notes: string, compensationResult?: unknown) => Promise<unknown>;
+  onConfirm: (actualAmount: number, notes: string) => Promise<unknown>;
   summary: CashSummary;
   companyCash?: CompanyCash | null;
   cashRegisterId?: string;
@@ -139,22 +139,9 @@ export function FecharCaixaDialog({
   const todayReinforcementsTotal = todayAdvances.reduce((sum, adv) => sum + Number(adv.amount), 0);
 
   const handleConfirm = async () => {
-    // Se há excedente e adiantamentos pendentes, compensar antes
-    let compensationResult = null;
-    if (grossExcess > 0 && pendingAdvances > 0 && currentCompany?.id && cashRegisterId) {
-      const { data, error } = await supabase.rpc('compensate_advances_on_closing', {
-        _company_id: currentCompany.id,
-        _cash_register_id: cashRegisterId,
-        _excess_amount: grossExcess,
-      });
-      if (error) {
-        console.error('Erro ao compensar adiantamentos:', error);
-      } else {
-        compensationResult = data;
-      }
-    }
-
-    await onConfirm(actualValue, notes, compensationResult);
+    // A compensação agora é feita automaticamente pela função close_daily_cash
+    // Passamos os valores e a função SQL cuida de tudo
+    await onConfirm(actualValue, notes);
     setActualAmount('');
     setNotes('');
   };
