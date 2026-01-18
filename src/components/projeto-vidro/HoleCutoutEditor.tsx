@@ -72,9 +72,9 @@ function PanelPreview({
   const offsetX = (previewWidth - scaledWidth) / 2;
   const offsetY = (previewHeight - scaledHeight) / 2;
 
-  // Convert panel coordinates to SVG coordinates (origin at bottom-left of panel)
+  // Convert panel coordinates to SVG coordinates (origin at TOP-left of panel)
   const toSvgX = (x: number) => offsetX + x * scale;
-  const toSvgY = (y: number) => offsetY + scaledHeight - y * scale; // Flip Y axis
+  const toSvgY = (y: number) => offsetY + y * scale; // Y from TOP (no flip)
 
   const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
@@ -85,9 +85,9 @@ function PanelPreview({
     const svgX = clientX - rect.left;
     const svgY = clientY - rect.top;
 
-    // Convert SVG -> panel (mm)
+    // Convert SVG -> panel (mm), Y from TOP
     const xMmRaw = (svgX - offsetX) / (scale || 1);
-    const yMmRaw = (scaledHeight - (svgY - offsetY)) / (scale || 1);
+    const yMmRaw = (svgY - offsetY) / (scale || 1);
 
     const snap = (v: number) => Math.round(v / snapStep) * snapStep;
 
@@ -130,16 +130,16 @@ function PanelPreview({
           strokeWidth={1}
         />
         
-        {/* Origin indicator (0,0) at bottom-left */}
+        {/* Origin indicator (0,0) at TOP-left */}
         <circle
           cx={offsetX}
-          cy={offsetY + scaledHeight}
+          cy={offsetY}
           r={3}
           fill="hsl(var(--primary))"
         />
         <text
           x={offsetX + 5}
-          y={offsetY + scaledHeight - 5}
+          y={offsetY + 12}
           fontSize={8}
           fill="hsl(var(--primary))"
         >
@@ -177,7 +177,7 @@ function PanelPreview({
             <g key={cutout.id} onClick={() => onSelectCutout(cutout.id)} style={{ cursor: 'pointer' }}>
               <rect
                 x={toSvgX(cutout.x)}
-                y={toSvgY(cutout.y + cutout.height)}
+                y={toSvgY(cutout.y)}
                 width={cutout.width * scale}
                 height={cutout.height * scale}
                 fill={isSelected ? 'hsl(var(--primary) / 0.3)' : 'hsl(var(--destructive) / 0.2)'}
@@ -218,7 +218,7 @@ function PanelPreview({
               />
               {isSelected && (
                 <>
-                  {/* Reference lines for selected hole */}
+                  {/* Horizontal reference line from left edge */}
                   <line
                     x1={offsetX}
                     y1={toSvgY(hole.y)}
@@ -228,9 +228,10 @@ function PanelPreview({
                     strokeWidth={1}
                     strokeDasharray="3,3"
                   />
+                  {/* Vertical reference line from top edge */}
                   <line
                     x1={toSvgX(hole.x)}
-                    y1={offsetY + scaledHeight}
+                    y1={offsetY}
                     x2={toSvgX(hole.x)}
                     y2={toSvgY(hole.y)}
                     stroke="hsl(var(--primary))"
@@ -296,7 +297,7 @@ function HoleRow({
         </div>
         <div className="grid grid-cols-3 gap-2 mb-2">
           <div>
-            <Label className="text-xs text-muted-foreground">X (mm)</Label>
+            <Label className="text-xs text-muted-foreground">X da esquerda</Label>
             <Input
               type="number"
               value={editValues.x}
@@ -305,7 +306,7 @@ function HoleRow({
             />
           </div>
           <div>
-            <Label className="text-xs text-muted-foreground">Y (mm)</Label>
+            <Label className="text-xs text-muted-foreground">Y do topo</Label>
             <Input
               type="number"
               value={editValues.y}
@@ -636,22 +637,22 @@ export function HoleCutoutEditor({
                   </Label>
                   <div className="grid grid-cols-3 gap-2">
                     <div>
-                      <Label className="text-xs text-muted-foreground">X (mm)</Label>
+                      <Label className="text-xs text-muted-foreground">X da esquerda</Label>
                       <Input
                         type="number"
                         value={newHole.x || ''}
                         onChange={e => setNewHole({ ...newHole, x: parseInt(e.target.value) || 0 })}
-                        placeholder="X"
+                        placeholder="mm"
                         className="h-8"
                       />
                     </div>
                     <div>
-                      <Label className="text-xs text-muted-foreground">Y (mm)</Label>
+                      <Label className="text-xs text-muted-foreground">Y do topo</Label>
                       <Input
                         type="number"
                         value={newHole.y || ''}
                         onChange={e => setNewHole({ ...newHole, y: parseInt(e.target.value) || 0 })}
-                        placeholder="Y"
+                        placeholder="mm"
                         className="h-8"
                       />
                     </div>
