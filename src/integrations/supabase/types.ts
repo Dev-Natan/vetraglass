@@ -1437,6 +1437,7 @@ export type Database = {
           is_active: boolean | null
           name: string
           notes: string | null
+          permission_profile_id: string | null
           phone: string | null
           role: string | null
           specialty: string | null
@@ -1455,6 +1456,7 @@ export type Database = {
           is_active?: boolean | null
           name: string
           notes?: string | null
+          permission_profile_id?: string | null
           phone?: string | null
           role?: string | null
           specialty?: string | null
@@ -1473,6 +1475,7 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           notes?: string | null
+          permission_profile_id?: string | null
           phone?: string | null
           role?: string | null
           specialty?: string | null
@@ -1492,6 +1495,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employees_permission_profile_id_fkey"
+            columns: ["permission_profile_id"]
+            isOneToOne: false
+            referencedRelation: "permission_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2562,6 +2572,81 @@ export type Database = {
             columns: ["ordem_servico_id"]
             isOneToOne: false
             referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      permission_profiles: {
+        Row: {
+          can_approve_discounts: boolean | null
+          can_approve_refunds: boolean | null
+          can_cancel_sales: boolean | null
+          can_manage_stock: boolean | null
+          can_operate_cash: boolean | null
+          can_view_reports: boolean | null
+          company_id: string
+          created_at: string | null
+          description: string | null
+          hide_costs: boolean | null
+          hide_prices: boolean | null
+          id: string
+          is_system: boolean | null
+          name: string
+          permissions: Json
+          profile_type: Database["public"]["Enums"]["permission_profile_type"]
+          updated_at: string | null
+        }
+        Insert: {
+          can_approve_discounts?: boolean | null
+          can_approve_refunds?: boolean | null
+          can_cancel_sales?: boolean | null
+          can_manage_stock?: boolean | null
+          can_operate_cash?: boolean | null
+          can_view_reports?: boolean | null
+          company_id: string
+          created_at?: string | null
+          description?: string | null
+          hide_costs?: boolean | null
+          hide_prices?: boolean | null
+          id?: string
+          is_system?: boolean | null
+          name: string
+          permissions?: Json
+          profile_type?: Database["public"]["Enums"]["permission_profile_type"]
+          updated_at?: string | null
+        }
+        Update: {
+          can_approve_discounts?: boolean | null
+          can_approve_refunds?: boolean | null
+          can_cancel_sales?: boolean | null
+          can_manage_stock?: boolean | null
+          can_operate_cash?: boolean | null
+          can_view_reports?: boolean | null
+          company_id?: string
+          created_at?: string | null
+          description?: string | null
+          hide_costs?: boolean | null
+          hide_prices?: boolean | null
+          id?: string
+          is_system?: boolean | null
+          name?: string
+          permissions?: Json
+          profile_type?: Database["public"]["Enums"]["permission_profile_type"]
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permission_profiles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "permission_profiles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -4075,6 +4160,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_default_permission_profiles: {
+        Args: { _company_id: string }
+        Returns: undefined
+      }
       create_default_permissions: {
         Args: { _company_id: string }
         Returns: undefined
@@ -4116,6 +4205,22 @@ export type Database = {
           opened_by: string
           opening_amount: number
           status: string
+        }[]
+      }
+      get_user_permission_profile: {
+        Args: { _company_id: string; _user_id: string }
+        Returns: {
+          can_approve_discounts: boolean
+          can_cancel_sales: boolean
+          can_manage_stock: boolean
+          can_operate_cash: boolean
+          can_view_reports: boolean
+          hide_costs: boolean
+          hide_prices: boolean
+          permissions: Json
+          profile_id: string
+          profile_name: string
+          profile_type: Database["public"]["Enums"]["permission_profile_type"]
         }[]
       }
       get_user_role: {
@@ -4262,6 +4367,14 @@ export type Database = {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
       }
+      user_can_operate_cash: {
+        Args: { _company_id: string; _user_id: string }
+        Returns: boolean
+      }
+      user_can_see_prices: {
+        Args: { _company_id: string; _user_id: string }
+        Returns: boolean
+      }
       user_has_elevated_role_in_company: {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
@@ -4283,6 +4396,16 @@ export type Database = {
     Enums: {
       app_role: "admin" | "manager" | "employee"
       item_type: "glass" | "profile" | "accessory" | "service"
+      permission_profile_type:
+        | "admin"
+        | "gerente"
+        | "vendedor"
+        | "caixa"
+        | "almoxarifado"
+        | "producao"
+        | "instalador"
+        | "financeiro"
+        | "custom"
       product_category:
         | "window"
         | "door"
@@ -4421,6 +4544,17 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "manager", "employee"],
       item_type: ["glass", "profile", "accessory", "service"],
+      permission_profile_type: [
+        "admin",
+        "gerente",
+        "vendedor",
+        "caixa",
+        "almoxarifado",
+        "producao",
+        "instalador",
+        "financeiro",
+        "custom",
+      ],
       product_category: [
         "window",
         "door",
