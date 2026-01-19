@@ -27,6 +27,23 @@ export default function Produtos() {
   const [createLinhaDialogOpen, setCreateLinhaDialogOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
 
+  // Fetch company linhas (linhas criadas pela empresa)
+  const { data: companyLinhas = [] } = useQuery({
+    queryKey: ['company-linhas', currentCompany?.id],
+    queryFn: async () => {
+      if (!currentCompany?.id) return [];
+      const { data, error } = await supabase
+        .from('company_linhas')
+        .select('*')
+        .eq('company_id', currentCompany.id)
+        .eq('is_active', true);
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!currentCompany?.id,
+  });
+
   // Fetch company activated products
   const { data: companyProducts = [] } = useQuery({
     queryKey: ['company-products', currentCompany?.id],
@@ -44,7 +61,7 @@ export default function Produtos() {
     enabled: !!currentCompany?.id,
   });
 
-  // Fetch ALL unique linhas with product count
+  // Fetch ALL unique linhas with product count (from templates - for download)
   const { data: allLinhas, isLoading } = useQuery({
     queryKey: ['all-product-linhas'],
     queryFn: async () => {
@@ -81,50 +98,58 @@ export default function Produtos() {
     },
   });
 
-  // Calculate activated count per linha (including custom products)
-  const linhasWithActivatedCount = useMemo(() => {
-    if (!allLinhas) return [];
+  // Build combined linhas list (company_linhas + linhas with products)
+  const filteredLinhas = useMemo(() => {
+    const linhasMap = new Map<string, { linha: string; productCount: number; isFromCompanyLinhas: boolean }>();
     
-    const activatedIds = new Set(companyProducts.filter(cp => cp.product_template_id).map(cp => cp.product_template_id));
-    
-    // Get custom product linhas
-    const customLinhas = new Map<string, number>();
-    companyProducts.filter(cp => (cp as any).is_custom).forEach(cp => {
-      const linha = (cp as any).linha || 'Personalizado';
-      customLinhas.set(linha, (customLinhas.get(linha) || 0) + 1);
-    });
-    
-    const result = allLinhas.map(linhaItem => {
-      const productsInLinha = allProducts.filter(p => (p.linha || 'Sem Linha') === linhaItem.linha);
-      const activatedCount = productsInLinha.filter(p => activatedIds.has(p.id)).length;
-      const customCount = customLinhas.get(linhaItem.linha) || 0;
-      return {
-        ...linhaItem,
-        activatedCount: activatedCount + customCount,
-        hasActivatedProducts: activatedCount > 0 || customCount > 0
-      };
+    // 1. Add all company_linhas first (user-created lines)
+    companyLinhas.forEach((cl) => {
+      linhasMap.set(cl.name, {
+        linha: cl.name,
+        productCount: 0,
+        isFromCompanyLinhas: true,
+      });
     });
 
-    // Add custom-only linhas that don't exist in templates
-    customLinhas.forEach((count, linha) => {
-      if (!result.find(r => r.linha === linha)) {
-        result.push({
-          linha,
-          count,
-          activatedCount: count,
-          hasActivatedProducts: true
+    // 2. Count products per linha (from company_products)
+    const activatedTemplateIds = new Set(
+      companyProducts.filter(cp => cp.product_template_id).map(cp => cp.product_template_id)
+    );
+    
+    // Count activated template products per linha
+    allProducts.forEach((p) => {
+      if (activatedTemplateIds.has(p.id)) {
+        const linhaName = p.linha || 'Sem Linha';
+        const existing = linhasMap.get(linhaName);
+        if (existing) {
+          existing.productCount += 1;
+        } else {
+          linhasMap.set(linhaName, {
+            linha: linhaName,
+            productCount: 1,
+            isFromCompanyLinhas: false,
+          });
+        }
+      }
+    });
+
+    // Count custom products per linha
+    companyProducts.filter(cp => cp.is_custom).forEach((cp) => {
+      const linhaName = cp.linha || 'Personalizado';
+      const existing = linhasMap.get(linhaName);
+      if (existing) {
+        existing.productCount += 1;
+      } else {
+        linhasMap.set(linhaName, {
+          linha: linhaName,
+          productCount: 1,
+          isFromCompanyLinhas: false,
         });
       }
     });
 
-    return result;
-  }, [allLinhas, allProducts, companyProducts]);
-
-  // Filter and sort linhas - only show lines with activated products
-  const filteredLinhas = useMemo(() => {
-    if (!linhasWithActivatedCount) return [];
-    
-    let result = linhasWithActivatedCount.filter(item => item.hasActivatedProducts);
+    // 3. Convert to array and filter
+    let result = Array.from(linhasMap.values());
     
     // Filter by search
     if (searchTerm) {
@@ -137,14 +162,21 @@ export default function Produtos() {
     result.sort((a, b) => a.linha.localeCompare(b.linha));
     
     return result;
-  }, [linhasWithActivatedCount, searchTerm]);
+  }, [companyLinhas, companyProducts, allProducts, searchTerm]);
 
-  // Deactivate all products from a linha
+  // Deactivate/remove a linha
   const deactivateLinhaMutation = useMutation({
     mutationFn: async (linha: string) => {
       if (!currentCompany?.id) throw new Error('Empresa não selecionada');
       
-      // Get product template IDs for this linha
+      // 1. Deactivate company_linha if exists
+      await supabase
+        .from('company_linhas')
+        .update({ is_active: false })
+        .eq('company_id', currentCompany.id)
+        .eq('name', linha);
+
+      // 2. Get product template IDs for this linha
       const templateIds = allProducts
         .filter(p => p.linha === linha)
         .map(p => p.id);
@@ -159,7 +191,7 @@ export default function Produtos() {
         if (error) throw error;
       }
 
-      // Also deactivate custom products with this linha
+      // 3. Also deactivate custom products with this linha
       const { error: customError } = await supabase
         .from('company_products')
         .update({ is_active: false })
@@ -170,6 +202,7 @@ export default function Produtos() {
       if (customError) throw customError;
     },
     onSuccess: (_, linha) => {
+      queryClient.invalidateQueries({ queryKey: ['company-linhas'] });
       queryClient.invalidateQueries({ queryKey: ['company-products'] });
       toast.success(`Linha "${linha}" removida`);
     },
