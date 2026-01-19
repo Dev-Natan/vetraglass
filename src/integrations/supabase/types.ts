@@ -261,6 +261,41 @@ export type Database = {
           },
         ]
       }
+      cash_counts: {
+        Row: {
+          cash_register_id: string
+          created_at: string | null
+          id: string
+          payment_method: string
+          user_id: string
+          valor_informado: number
+        }
+        Insert: {
+          cash_register_id: string
+          created_at?: string | null
+          id?: string
+          payment_method: string
+          user_id: string
+          valor_informado?: number
+        }
+        Update: {
+          cash_register_id?: string
+          created_at?: string | null
+          id?: string
+          payment_method?: string
+          user_id?: string
+          valor_informado?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_counts_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cash_movements: {
         Row: {
           amount: number
@@ -504,6 +539,67 @@ export type Database = {
           },
           {
             foreignKeyName: "cash_registers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_shortages: {
+        Row: {
+          amount: number
+          cash_register_id: string | null
+          company_id: string
+          compensated_amount: number | null
+          compensated_at: string | null
+          created_at: string | null
+          id: string
+          reason: string | null
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          cash_register_id?: string | null
+          company_id: string
+          compensated_amount?: number | null
+          compensated_at?: string | null
+          created_at?: string | null
+          id?: string
+          reason?: string | null
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          cash_register_id?: string | null
+          company_id?: string
+          compensated_amount?: number | null
+          compensated_at?: string | null
+          created_at?: string | null
+          id?: string
+          reason?: string | null
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_shortages_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_shortages_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_shortages_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies_safe"
@@ -3926,6 +4022,10 @@ export type Database = {
         }
         Returns: Json
       }
+      close_daily_cash_multiuser: {
+        Args: { _cash_register_id: string; _notes?: string }
+        Returns: Json
+      }
       compensate_advances_on_closing: {
         Args: {
           _cash_register_id: string
@@ -4089,6 +4189,10 @@ export type Database = {
         Returns: undefined
       }
       refresh_daily_summary: { Args: never; Returns: undefined }
+      register_cash_count: {
+        Args: { _cash_register_id: string; _counts: Json }
+        Returns: Json
+      }
       register_cash_exit_with_reinforcement: {
         Args: {
           _amount: number
