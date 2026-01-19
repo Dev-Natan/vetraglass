@@ -90,21 +90,34 @@ export default function CaixaVendas() {
     enabled: !!currentCompany?.id,
   });
 
-  // Buscar caixa aberto
+  // Buscar caixa aberto DO USUÁRIO ATUAL (sistema multiusuário)
   const { data: openCashRegister, isLoading: loadingCashRegister } = useQuery({
-    queryKey: ['cash-register-open', currentCompany?.id],
+    queryKey: ['cash-register-open', currentCompany?.id, user?.id],
     queryFn: async () => {
-      if (!currentCompany?.id) return null;
-      const { data, error } = await supabase
-        .from('cash_registers')
-        .select('*')
-        .eq('company_id', currentCompany.id)
-        .eq('status', 'open')
-        .maybeSingle();
+      if (!currentCompany?.id || !user?.id) return null;
+      
+      // Usar função RPC que busca apenas o caixa do usuário logado
+      const { data, error } = await supabase.rpc('get_user_open_cash_register', {
+        _company_id: currentCompany.id,
+      });
+      
       if (error) throw error;
-      return data;
+      
+      // A função retorna uma tabela, pegar o primeiro registro
+      if (data && data.length > 0) {
+        // Buscar dados completos do caixa
+        const { data: fullRegister, error: fullError } = await supabase
+          .from('cash_registers')
+          .select('*')
+          .eq('id', data[0].id)
+          .single();
+        if (fullError) throw fullError;
+        return fullRegister;
+      }
+      
+      return null;
     },
-    enabled: !!currentCompany?.id,
+    enabled: !!currentCompany?.id && !!user?.id,
   });
 
   useEffect(() => {
@@ -250,13 +263,13 @@ export default function CaixaVendas() {
     return { openingAmount, totalDinheiro, totalCartao, totalPix, totalVendas, expectedAmount, totalEntradas, totalSaidas };
   }, [openCashRegister, todaySales, cashMovements]);
 
-  // Mutation: Abrir caixa (usando função SQL com todas as regras)
+  // Mutation: Abrir caixa MULTIUSUÁRIO (cada usuário tem seu próprio caixa)
   const openCashMutation = useMutation({
     mutationFn: async (openingAmount: number) => {
       if (!currentCompany?.id || !user?.id) throw new Error('Dados inválidos');
 
-      // Usar função SQL que implementa todas as regras de abertura
-      const { data, error } = await supabase.rpc('open_daily_cash', {
+      // Usar função SQL MULTIUSUÁRIO que implementa todas as regras
+      const { data, error } = await supabase.rpc('open_daily_cash_multiuser' as any, {
         _company_id: currentCompany.id,
         _opening_amount: openingAmount,
         _user_id: user.id,
@@ -272,7 +285,7 @@ export default function CaixaVendas() {
       return result;
     },
     onSuccess: () => {
-      toast.success('Caixa aberto com sucesso!');
+      toast.success('Seu caixa foi aberto com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['cash-register-open'] });
       queryClient.invalidateQueries({ queryKey: ['company-cash'] });
       setAbrirCaixaOpen(false);
@@ -280,17 +293,28 @@ export default function CaixaVendas() {
     onError: (error: Error) => toast.error(`Erro ao abrir caixa: ${error.message}`),
   });
 
-  // Mutation: Fechar caixa (usando função SQL com compensação automática)
+  // Mutation: Fechar caixa MULTIUSUÁRIO com contagem obrigatória
   const closeCashMutation = useMutation({
-    mutationFn: async ({ actualAmount, notes }: { actualAmount: number; notes: string }) => {
+    mutationFn: async ({ counts, notes }: { counts: Array<{ payment_method: string; amount: number }>; notes: string }) => {
       if (!openCashRegister?.id || !user?.id || !currentCompany?.id) throw new Error('Dados inválidos');
       
-      // Usar função SQL que implementa todas as regras de fechamento
-      const { data, error } = await supabase.rpc('close_daily_cash', {
+      // Primeiro, registrar a contagem de caixa (obrigatória)
+      const { data: countResult, error: countError } = await supabase.rpc('register_cash_count' as any, {
         _cash_register_id: openCashRegister.id,
-        _actual_amount: actualAmount,
+        _counts: counts,
+      });
+      
+      if (countError) throw countError;
+      
+      const countData = countResult as { success: boolean; error?: string };
+      if (!countData.success) {
+        throw new Error(countData.error || 'Erro ao registrar contagem');
+      }
+      
+      // Agora fechar o caixa usando a função multiusuário
+      const { data, error } = await supabase.rpc('close_daily_cash_multiuser' as any, {
+        _cash_register_id: openCashRegister.id,
         _notes: notes || null,
-        _user_id: user.id,
       });
       
       if (error) throw error;
@@ -299,6 +323,8 @@ export default function CaixaVendas() {
         success: boolean; 
         error?: string; 
         net_excess?: number;
+        difference?: number;
+        shortage_id?: string;
         compensation?: { total_compensated: number };
       };
       
@@ -310,7 +336,11 @@ export default function CaixaVendas() {
     },
     onSuccess: (result) => {
       const compensation = result?.compensation?.total_compensated || 0;
-      if (compensation > 0) {
+      const difference = result?.difference || 0;
+      
+      if (result?.shortage_id) {
+        toast.warning(`Caixa fechado com falta de R$ ${Math.abs(difference).toFixed(2)}. Será compensado nos próximos fechamentos.`, { duration: 6000 });
+      } else if (compensation > 0) {
         toast.success(`Caixa fechado! R$ ${compensation.toFixed(2)} compensados de adiantamentos anteriores.`, { duration: 5000 });
       } else {
         toast.success('Caixa fechado com sucesso!');
@@ -319,6 +349,7 @@ export default function CaixaVendas() {
       queryClient.invalidateQueries({ queryKey: ['sales-today'] });
       queryClient.invalidateQueries({ queryKey: ['company-cash'] });
       queryClient.invalidateQueries({ queryKey: ['pending-advances'] });
+      queryClient.invalidateQueries({ queryKey: ['cash-shortages'] });
       setFecharCaixaOpen(false);
     },
     onError: (error: Error) => toast.error(`Erro ao fechar caixa: ${error.message}`),
@@ -612,7 +643,7 @@ export default function CaixaVendas() {
 
       {/* Dialogs */}
       <AbrirCaixaDialog open={abrirCaixaOpen} onOpenChange={setAbrirCaixaOpen} onConfirm={(amount) => openCashMutation.mutateAsync(amount)} companyCash={companyCash} isLoading={openCashMutation.isPending} />
-      <FecharCaixaDialog open={fecharCaixaOpen} onOpenChange={setFecharCaixaOpen} onConfirm={(actualAmount, notes) => closeCashMutation.mutateAsync({ actualAmount, notes })} summary={cashSummary} companyCash={companyCash} cashRegisterId={openCashRegister?.id} isLoading={closeCashMutation.isPending} />
+      <FecharCaixaDialog open={fecharCaixaOpen} onOpenChange={setFecharCaixaOpen} onConfirm={(counts, notes) => closeCashMutation.mutateAsync({ counts, notes })} summary={cashSummary} companyCash={companyCash} cashRegisterId={openCashRegister?.id} isLoading={closeCashMutation.isPending} />
       <NovaVendaDialog open={novaVendaOpen} onOpenChange={setNovaVendaOpen} onConfirm={(data) => newSaleMutation.mutateAsync(data)} availableItems={availableItems} approvedQuotes={approvedQuotes} isLoading={newSaleMutation.isPending} />
       <CancelarVendaDialog open={cancelarVendaOpen} onOpenChange={setCancelarVendaOpen} sale={selectedSale} onConfirm={(saleId, reason) => cancelSaleMutation.mutateAsync({ saleId, reason })} isLoading={cancelSaleMutation.isPending} />
       <DetalhesVendaDialog open={detalhesVendaOpen} onOpenChange={setDetalhesVendaOpen} sale={selectedSale} onPrint={handlePrintReceipt} />
