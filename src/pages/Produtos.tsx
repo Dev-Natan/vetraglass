@@ -290,7 +290,7 @@ export default function Produtos() {
           </button>
           
           <button 
-            onClick={() => setTipologiasSheetOpen(true)}
+            onClick={() => setAddLinhaSheetOpen(true)}
             className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors relative"
           >
             <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center relative">
