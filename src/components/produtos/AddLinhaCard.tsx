@@ -1,4 +1,4 @@
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Plus } from 'lucide-react';
 
 interface AddLinhaCardProps {
@@ -9,14 +9,14 @@ export function AddLinhaCard({ onClick }: AddLinhaCardProps) {
   return (
     <Card 
       onClick={onClick}
-      className="cursor-pointer hover:shadow-lg transition-all duration-200 border-dashed border-2 border-primary/30 hover:border-primary/60 bg-primary/5 hover:bg-primary/10"
+      className="relative bg-card border-2 border-dashed border-sky-400 rounded-lg overflow-hidden hover:border-sky-500 hover:shadow-md transition-all cursor-pointer group"
     >
-      <CardContent className="p-6 flex flex-col items-center justify-center gap-3 min-h-[200px]">
-        <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-          <Plus className="w-6 h-6 text-primary" />
+      <div className="p-4 pt-10 pb-4 flex flex-col items-center justify-center min-h-[140px]">
+        <span className="text-sky-500 font-semibold text-sm mb-3">Adicionar</span>
+        <div className="w-10 h-10 rounded-full bg-sky-500 group-hover:bg-sky-600 flex items-center justify-center transition-colors">
+          <Plus className="w-6 h-6 text-white" />
         </div>
-        <span className="font-medium text-primary">Adicionar</span>
-      </CardContent>
+      </div>
     </Card>
   );
 }
