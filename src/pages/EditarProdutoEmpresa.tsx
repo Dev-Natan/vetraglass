@@ -1,0 +1,917 @@
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { MainLayout } from '@/components/layout/MainLayout';
+import { ArrowLeft, Upload, MoreHorizontal, Plus, ChevronRight, Home, Package, CheckCircle2, Circle, CircleDot, RotateCcw, AlertTriangle } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { FormulaEditor } from '@/components/produtos/FormulaEditor';
+import { GlassFormulaEditor } from '@/components/produtos/GlassFormulaEditor';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
+
+type CompanyProduct = {
+  id: string;
+  company_id: string;
+  product_template_id: string | null;
+  commercial_name: string;
+  description: string | null;
+  base_price: number | null;
+  price_per_sqm: number | null;
+  is_active: boolean;
+  is_custom: boolean | null;
+  linha: string | null;
+  image_url: string | null;
+  product_template?: {
+    id: string;
+    name: string;
+    image_url: string | null;
+    linha: string | null;
+  } | null;
+};
+
+type CompanyProductItem = {
+  id: string;
+  company_product_id: string;
+  item_template_id: string | null;
+  company_item_id: string | null;
+  quantity_formula: string;
+  width_formula: string | null;
+  height_formula: string | null;
+  is_optional: boolean | null;
+  notes: string | null;
+  sort_order: number | null;
+  cut_angle: number | null;
+  pieces_quantity: number | null;
+  item_template?: {
+    id: string;
+    name: string;
+    type: string;
+    unit: string;
+    image_url: string | null;
+    linha: string | null;
+  } | null;
+  company_item?: {
+    id: string;
+    name: string;
+    type: string;
+    unit: string;
+    image_url: string | null;
+  } | null;
+};
+
+type ItemTemplate = {
+  id: string;
+  name: string;
+  type: string;
+  unit: string;
+  image_url: string | null;
+  linha: string | null;
+};
+
+// Helper para detectar se a fórmula usa Altura ou Largura
+const getFormulaType = (formula: string): 'Altura' | 'Largura' | null => {
+  const lower = formula.toLowerCase();
+  if (lower.includes('altura')) return 'Altura';
+  if (lower.includes('largura')) return 'Largura';
+  return null;
+};
+
+const itemTypeTabs = [
+  { value: 'glass', label: 'VIDROS', dbType: 'glass' },
+  { value: 'profile', label: 'PERFIS DE ALUMÍNIO', dbType: 'profile' },
+  { value: 'rubber', label: 'BORRACHAS E OUTROS', dbType: 'accessory' },
+  { value: 'accessory', label: 'ACESSÓRIOS E FERRAGENS', dbType: 'accessory' },
+];
+
+export default function EditarProdutoEmpresa() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { currentCompany, user } = useAuth();
+  const { isAdmin } = usePermissions();
+  
+  const [activeTab, setActiveTab] = useState('glass');
+  const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
+  const [isEditItemDialogOpen, setIsEditItemDialogOpen] = useState(false);
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<CompanyProductItem | null>(null);
+  const [selectedItemToAdd, setSelectedItemToAdd] = useState('');
+  const [quantityFormula, setQuantityFormula] = useState('1');
+  const [piecesQuantity, setPiecesQuantity] = useState(1);
+  const [cutAngle, setCutAngle] = useState(90);
+  const [widthFormula, setWidthFormula] = useState('');
+  const [heightFormula, setHeightFormula] = useState('');
+  const [glassName, setGlassName] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+
+  const [formData, setFormData] = useState({
+    commercial_name: '',
+    description: '',
+  });
+
+  // Fetch company product
+  const { data: product, isLoading: productLoading } = useQuery({
+    queryKey: ['company-product', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('company_products')
+        .select(`
+          *,
+          product_template:product_templates(id, name, image_url, linha)
+        `)
+        .eq('id', id)
+        .maybeSingle();
+      if (error) throw error;
+      return data as CompanyProduct | null;
+    },
+    enabled: !!id,
+  });
+
+  // Fetch product items
+  const { data: productItems, isLoading: itemsLoading } = useQuery({
+    queryKey: ['company-product-items', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('company_product_items')
+        .select(`
+          *,
+          item_template:item_templates(id, name, type, unit, image_url, linha),
+          company_item:company_items(id, name, type, unit, image_url)
+        `)
+        .eq('company_product_id', id)
+        .order('sort_order', { ascending: true });
+      if (error) throw error;
+      return data as CompanyProductItem[];
+    },
+    enabled: !!id,
+  });
+
+  // Fetch available item templates for adding
+  const { data: availableItems } = useQuery({
+    queryKey: ['item-templates-by-type', activeTab, product?.linha],
+    queryFn: async () => {
+      const currentTab = itemTypeTabs.find(t => t.value === activeTab);
+      const dbType = currentTab?.dbType || 'accessory';
+      
+      const { data, error } = await supabase
+        .from('item_templates')
+        .select('*')
+        .eq('type', dbType as "accessory" | "glass" | "profile" | "service")
+        .eq('is_active', true)
+        .order('linha')
+        .order('name');
+      if (error) throw error;
+      
+      // Sort items: product linha first, then others
+      const items = data as ItemTemplate[];
+      const productLinha = product?.linha || product?.product_template?.linha;
+      
+      if (productLinha) {
+        return items.sort((a, b) => {
+          const aMatchesLinha = a.linha === productLinha;
+          const bMatchesLinha = b.linha === productLinha;
+          
+          if (aMatchesLinha && !bMatchesLinha) return -1;
+          if (!aMatchesLinha && bMatchesLinha) return 1;
+          
+          if (a.linha !== b.linha) {
+            return (a.linha || 'ZZZ').localeCompare(b.linha || 'ZZZ');
+          }
+          return a.name.localeCompare(b.name);
+        });
+      }
+      
+      return items;
+    },
+  });
+
+  // Update form when product loads
+  useEffect(() => {
+    if (product) {
+      setFormData({
+        commercial_name: product.commercial_name || '',
+        description: product.description || '',
+      });
+    }
+  }, [product]);
+
+  // Handle image upload
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !id || !currentCompany?.id) return;
+
+    if (!['image/png', 'image/jpeg', 'image/jpg'].includes(file.type)) {
+      toast.error('Apenas arquivos PNG, JPEG ou JPG são permitidos');
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${currentCompany.id}/${id}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('company-product-images')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { error: updateError } = await supabase
+        .from('company_products')
+        .update({ image_url: fileName })
+        .eq('id', id);
+
+      if (updateError) throw updateError;
+
+      queryClient.invalidateQueries({ queryKey: ['company-product', id] });
+      toast.success('Imagem atualizada!');
+    } catch (error: any) {
+      toast.error('Erro ao enviar imagem: ' + error.message);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // Save product mutation
+  const saveProductMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from('company_products')
+        .update({
+          commercial_name: formData.commercial_name,
+          description: formData.description,
+        })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-product', id] });
+      toast.success('Produto salvo!');
+    },
+    onError: (error) => {
+      toast.error('Erro ao salvar: ' + error.message);
+    },
+  });
+
+  // Add item mutation
+  const addItemMutation = useMutation({
+    mutationFn: async () => {
+      const insertData = {
+        company_product_id: id,
+        item_template_id: selectedItemToAdd,
+        quantity_formula: quantityFormula,
+        pieces_quantity: piecesQuantity,
+        is_optional: false,
+        cut_angle: cutAngle,
+        width_formula: activeTab === 'glass' ? (widthFormula || null) : null,
+        height_formula: activeTab === 'glass' ? (heightFormula || null) : null,
+        notes: activeTab === 'glass' ? (glassName || null) : null,
+        sort_order: (productItems?.length || 0) + 1,
+      };
+
+      const { error } = await supabase
+        .from('company_product_items')
+        .insert(insertData);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-product-items', id] });
+      toast.success('Item adicionado!');
+      setIsAddItemDialogOpen(false);
+      resetItemForm();
+    },
+    onError: (error) => {
+      toast.error('Erro ao adicionar: ' + error.message);
+    },
+  });
+
+  // Remove item mutation
+  const removeItemMutation = useMutation({
+    mutationFn: async (itemId: string) => {
+      const { error } = await supabase
+        .from('company_product_items')
+        .delete()
+        .eq('id', itemId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-product-items', id] });
+      toast.success('Item removido!');
+    },
+    onError: (error) => {
+      toast.error('Erro ao remover: ' + error.message);
+    },
+  });
+
+  // Update item mutation
+  const updateItemMutation = useMutation({
+    mutationFn: async () => {
+      if (!editingItem) throw new Error('Nenhum item selecionado');
+      
+      const itemType = editingItem.item_template?.type || editingItem.company_item?.type;
+      const updateData: Record<string, any> = {};
+      
+      if (itemType === 'glass') {
+        updateData.width_formula = widthFormula || null;
+        updateData.height_formula = heightFormula || null;
+        updateData.notes = glassName || null;
+      } else {
+        updateData.quantity_formula = quantityFormula;
+        updateData.pieces_quantity = piecesQuantity;
+        updateData.cut_angle = cutAngle;
+      }
+      
+      const { error } = await supabase
+        .from('company_product_items')
+        .update(updateData)
+        .eq('id', editingItem.id);
+        
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-product-items', id] });
+      toast.success('Item atualizado!');
+      setIsEditItemDialogOpen(false);
+      setEditingItem(null);
+    },
+    onError: (error) => {
+      toast.error('Erro ao atualizar: ' + error.message);
+    },
+  });
+
+  // Reset product mutation (admin only)
+  const resetProductMutation = useMutation({
+    mutationFn: async () => {
+      if (!id || !user?.id) throw new Error('Dados inválidos');
+      
+      const { data, error } = await supabase.rpc('reset_company_product_to_template', {
+        p_company_product_id: id,
+        p_user_id: user.id,
+      });
+      
+      if (error) throw error;
+      
+      const result = data as { success: boolean; error?: string; items_deleted?: number; items_created?: number };
+      if (!result.success) {
+        throw new Error(result.error || 'Erro desconhecido ao resetar produto');
+      }
+      
+      return result;
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['company-product', id] });
+      queryClient.invalidateQueries({ queryKey: ['company-product-items', id] });
+      toast.success(`Produto resetado! ${result.items_created} itens restaurados do template.`);
+      setIsResetDialogOpen(false);
+    },
+    onError: (error) => {
+      toast.error('Erro ao resetar: ' + error.message);
+    },
+  });
+
+  const resetItemForm = () => {
+    setSelectedItemToAdd('');
+    setQuantityFormula('1');
+    setPiecesQuantity(1);
+    setCutAngle(90);
+    setWidthFormula('');
+    setHeightFormula('');
+    setGlassName('');
+  };
+
+  const handleEditItem = (item: CompanyProductItem) => {
+    setEditingItem(item);
+    const itemType = item.item_template?.type || item.company_item?.type;
+    
+    if (itemType === 'glass') {
+      setWidthFormula(item.width_formula || '');
+      setHeightFormula(item.height_formula || '');
+      setGlassName(item.notes || '');
+    } else {
+      setQuantityFormula(item.quantity_formula || '1');
+      setPiecesQuantity(item.pieces_quantity || 1);
+      setCutAngle(item.cut_angle || 90);
+    }
+    
+    setIsEditItemDialogOpen(true);
+  };
+
+  const getItemsByType = (tabValue: string) => {
+    const currentTab = itemTypeTabs.find(t => t.value === tabValue);
+    const dbType = currentTab?.dbType;
+    return productItems?.filter((item) => {
+      const type = item.item_template?.type || item.company_item?.type;
+      return type === dbType;
+    }) || [];
+  };
+
+  const getStorageUrl = (path: string | null, bucket: string = 'item-templates') => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    if (path.startsWith('/')) return path;
+    return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
+  };
+
+  const getProductImageUrl = () => {
+    if (product?.image_url) {
+      return getStorageUrl(product.image_url, 'company-product-images');
+    }
+    if (product?.product_template?.image_url) {
+      return getStorageUrl(product.product_template.image_url, 'product-templates');
+    }
+    return null;
+  };
+
+  const canReset = isAdmin && product?.product_template_id;
+
+  if (productLoading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-muted-foreground">Carregando...</div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  if (!product) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-muted-foreground">Produto não encontrado</div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  return (
+    <MainLayout>
+      <div className="space-y-6 animate-fade-in pb-8">
+        {/* Breadcrumb Navigation */}
+        <nav className="flex items-center gap-2 text-sm text-muted-foreground">
+          <button 
+            onClick={() => navigate('/')}
+            className="flex items-center gap-1 hover:text-foreground transition-colors"
+          >
+            <Home className="w-4 h-4" />
+            <span className="hidden sm:inline">Início</span>
+          </button>
+          <ChevronRight className="w-4 h-4" />
+          <button 
+            onClick={() => navigate('/produtos')}
+            className="hover:text-foreground transition-colors"
+          >
+            Produtos
+          </button>
+          {(product?.linha || product?.product_template?.linha) && (
+            <>
+              <ChevronRight className="w-4 h-4" />
+              <button 
+                onClick={() => navigate(`/produtos/linha/${product.linha || product.product_template?.linha}`)}
+                className="hover:text-foreground transition-colors"
+              >
+                {product.linha || product.product_template?.linha}
+              </button>
+            </>
+          )}
+          <ChevronRight className="w-4 h-4" />
+          <span className="text-foreground font-medium truncate max-w-[150px]">
+            {product?.commercial_name}
+          </span>
+        </nav>
+
+        {/* Header */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            <div>
+              <h1 className="font-display font-bold text-xl text-foreground">
+                Editar Composição do Produto
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Configure os componentes e fórmulas do produto
+              </p>
+            </div>
+          </div>
+          
+          {/* Actions */}
+          <div className="flex items-center gap-2">
+            {canReset && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="gap-2 text-orange-600 border-orange-300 hover:bg-orange-50 dark:text-orange-400 dark:border-orange-700 dark:hover:bg-orange-950"
+                onClick={() => setIsResetDialogOpen(true)}
+              >
+                <RotateCcw className="w-4 h-4" />
+                Resetar Produto
+              </Button>
+            )}
+            <Button onClick={() => saveProductMutation.mutate()} disabled={saveProductMutation.isPending}>
+              {saveProductMutation.isPending ? 'Salvando...' : 'Salvar Alterações'}
+            </Button>
+          </div>
+        </div>
+
+        {/* Product Info Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Product Image */}
+          <div className="flex flex-col items-center gap-3">
+            <label className="w-full aspect-square max-w-[250px] bg-muted rounded-lg flex items-center justify-center border-2 border-dashed border-muted-foreground/30 relative group cursor-pointer hover:border-primary/50 transition-colors">
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/jpg"
+                className="hidden"
+                onChange={handleImageUpload}
+                disabled={isUploading}
+              />
+              {getProductImageUrl() ? (
+                <img 
+                  src={getProductImageUrl()!} 
+                  alt={product.commercial_name}
+                  className="w-full h-full object-contain rounded-lg"
+                />
+              ) : (
+                <div className="text-6xl text-muted-foreground/30">🪟</div>
+              )}
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                <Button variant="secondary" size="sm" className="gap-2 pointer-events-none" disabled={isUploading}>
+                  <Upload className="w-4 h-4" />
+                  {isUploading ? 'Enviando...' : 'Alterar foto'}
+                </Button>
+              </div>
+            </label>
+            <p className="text-xs text-muted-foreground text-center">
+              Imagem personalizada da empresa<br />
+              {product.product_template_id && '(sobrescreve imagem do template)'}
+            </p>
+          </div>
+
+          {/* Product Form */}
+          <div className="lg:col-span-2 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Nome comercial:</Label>
+                <Input
+                  value={formData.commercial_name}
+                  onChange={(e) => setFormData({ ...formData, commercial_name: e.target.value })}
+                  placeholder="Nome comercial do produto"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Descrição: (opcional)</Label>
+              <Textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Descrição do produto"
+                rows={3}
+              />
+            </div>
+
+            {product.product_template_id && (
+              <div className="bg-muted/50 rounded-lg p-3 text-sm">
+                <p className="text-muted-foreground">
+                  <strong>Template base:</strong> {product.product_template?.name}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Items Tabs */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold text-lg">Composição do Produto</h2>
+            <p className="text-sm text-muted-foreground">
+              {productItems?.length || 0} itens configurados
+            </p>
+          </div>
+          
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <div className="bg-muted/50 rounded-xl p-1.5">
+              <TabsList className="w-full h-auto bg-transparent gap-1">
+                {itemTypeTabs.map((tab) => {
+                  const itemCount = getItemsByType(tab.value).length;
+                  const isActive = activeTab === tab.value;
+                  const hasItems = itemCount > 0;
+                  
+                  return (
+                    <TabsTrigger
+                      key={tab.value}
+                      value={tab.value}
+                      className={`flex-1 py-3 text-xs sm:text-sm font-medium rounded-lg transition-all data-[state=active]:shadow-sm ${
+                        hasItems && !isActive
+                          ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground'
+                          : 'data-[state=active]:bg-primary data-[state=active]:text-primary-foreground'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {hasItems ? (
+                          <CheckCircle2 className={`w-4 h-4 ${isActive ? '' : 'text-green-600 dark:text-green-400'}`} />
+                        ) : isActive ? (
+                          <CircleDot className="w-4 h-4" />
+                        ) : (
+                          <Circle className="w-4 h-4" />
+                        )}
+                        <span className="hidden sm:inline">{tab.label}</span>
+                        <span className="sm:hidden">{tab.label.split(' ')[0]}</span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                          isActive 
+                            ? 'bg-primary-foreground/20' 
+                            : hasItems 
+                              ? 'bg-green-600/20 text-green-700 dark:bg-green-400/20 dark:text-green-300'
+                              : 'bg-muted'
+                        }`}>
+                          {itemCount}
+                        </span>
+                      </div>
+                    </TabsTrigger>
+                  );
+                })}
+              </TabsList>
+            </div>
+
+            {itemTypeTabs.map((tab) => (
+              <TabsContent key={tab.value} value={tab.value} className="mt-4">
+                <div className="flex justify-between items-center gap-2 mb-4">
+                  <p className="text-sm text-muted-foreground">
+                    {getItemsByType(tab.value).length === 0 
+                      ? `Adicione ${tab.label.toLowerCase()} à composição`
+                      : `${getItemsByType(tab.value).length} ${tab.label.toLowerCase()} configurados`
+                    }
+                  </p>
+                  <Button 
+                    size="sm" 
+                    className="gap-2"
+                    onClick={() => setIsAddItemDialogOpen(true)}
+                  >
+                    <Plus className="w-4 h-4" />
+                    Adicionar item
+                  </Button>
+                </div>
+
+                {/* Items grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                  {getItemsByType(tab.value).map((item) => {
+                    const itemData = item.item_template || item.company_item;
+                    return (
+                      <div
+                        key={item.id}
+                        onClick={() => handleEditItem(item)}
+                        className="bg-card border rounded-lg p-4 relative group hover:shadow-md hover:border-primary/50 transition-all cursor-pointer"
+                      >
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="absolute top-2 right-2 w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="bg-background border shadow-lg z-50">
+                            <DropdownMenuItem
+                              className="cursor-pointer"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditItem(item);
+                              }}
+                            >
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive cursor-pointer"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeItemMutation.mutate(item.id);
+                              }}
+                            >
+                              Remover
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        <div className="aspect-square rounded-lg mb-3 flex items-center justify-center overflow-hidden">
+                          {itemData?.image_url ? (
+                            <img
+                              src={getStorageUrl(itemData.image_url)}
+                              alt={itemData.name}
+                              className="w-full h-full object-contain"
+                            />
+                          ) : (
+                            <div className="text-3xl text-muted-foreground/30 bg-muted w-full h-full flex items-center justify-center">📦</div>
+                          )}
+                        </div>
+
+                        {tab.value === 'glass' && item.notes && (
+                          <h4 className="font-bold text-sm text-foreground truncate text-center mb-1">
+                            {item.notes}
+                          </h4>
+                        )}
+                        
+                        <h4 className="font-medium text-xs text-muted-foreground truncate text-center">
+                          {itemData?.name}
+                        </h4>
+                        
+                        {tab.value !== 'glass' && item.quantity_formula && (
+                          <p className="text-[10px] text-muted-foreground truncate text-center mt-1">
+                            Fórmula: {item.quantity_formula}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </TabsContent>
+            ))}
+          </Tabs>
+        </div>
+      </div>
+
+      {/* Add Item Dialog */}
+      <Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Adicionar Item</DialogTitle>
+            <DialogDescription>
+              Selecione um item e configure sua fórmula
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Item:</Label>
+              <Select value={selectedItemToAdd} onValueChange={setSelectedItemToAdd}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um item" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[300px]">
+                  {availableItems?.map((item) => (
+                    <SelectItem key={item.id} value={item.id}>
+                      <div className="flex items-center gap-2">
+                        <span>{item.name}</span>
+                        {item.linha && (
+                          <span className="text-xs text-muted-foreground">({item.linha})</span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {activeTab === 'glass' ? (
+              <GlassFormulaEditor
+                widthFormula={widthFormula}
+                heightFormula={heightFormula}
+                onWidthFormulaChange={setWidthFormula}
+                onHeightFormulaChange={setHeightFormula}
+              />
+            ) : (
+              <FormulaEditor
+                value={quantityFormula}
+                onChange={setQuantityFormula}
+                showPiecesQuantity={true}
+                piecesQuantity={piecesQuantity}
+                onPiecesChange={setPiecesQuantity}
+              />
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddItemDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={() => addItemMutation.mutate()} 
+              disabled={!selectedItemToAdd || addItemMutation.isPending}
+            >
+              {addItemMutation.isPending ? 'Adicionando...' : 'Adicionar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Item Dialog */}
+      <Dialog open={isEditItemDialogOpen} onOpenChange={setIsEditItemDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Item</DialogTitle>
+            <DialogDescription>
+              {editingItem?.item_template?.name || editingItem?.company_item?.name}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {(editingItem?.item_template?.type === 'glass' || editingItem?.company_item?.type === 'glass') ? (
+              <GlassFormulaEditor
+                widthFormula={widthFormula}
+                heightFormula={heightFormula}
+                onWidthFormulaChange={setWidthFormula}
+                onHeightFormulaChange={setHeightFormula}
+              />
+            ) : (
+              <FormulaEditor
+                value={quantityFormula}
+                onChange={setQuantityFormula}
+                showPiecesQuantity={true}
+                piecesQuantity={piecesQuantity}
+                onPiecesChange={setPiecesQuantity}
+              />
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditItemDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={() => updateItemMutation.mutate()} 
+              disabled={updateItemMutation.isPending}
+            >
+              {updateItemMutation.isPending ? 'Salvando...' : 'Salvar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Product Dialog */}
+      <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-orange-600">
+              <AlertTriangle className="w-5 h-5" />
+              Resetar Produto para Template
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                Esta ação irá <strong>restaurar a composição, fórmulas e imagem</strong> exatamente 
+                como definido no template original.
+              </p>
+              <p className="text-orange-600 dark:text-orange-400 font-medium">
+                Todas as alterações personalizadas serão perdidas!
+              </p>
+              <p className="text-sm">
+                O preço e status do produto não serão alterados.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              className="bg-orange-600 hover:bg-orange-700"
+              onClick={() => resetProductMutation.mutate()}
+              disabled={resetProductMutation.isPending}
+            >
+              {resetProductMutation.isPending ? 'Resetando...' : 'Confirmar Reset'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </MainLayout>
+  );
+}

@@ -14,6 +14,7 @@ import Clientes from "./pages/Clientes";
 import Produtos from "./pages/Produtos";
 import ProdutosLinha from "./pages/ProdutosLinha";
 import EditarProduto from "./pages/EditarProduto";
+import EditarProdutoEmpresa from "./pages/EditarProdutoEmpresa";
 import Estoque from "./pages/Estoque";
 import PrecosEmpresa from "./pages/PrecosEmpresa";
 import Orcamentos from "./pages/Orcamentos";
@@ -135,6 +136,11 @@ function AppRoutes() {
       <Route path="/produtos/editar/:id" element={
         <ProtectedRoute>
           <EditarProduto />
+        </ProtectedRoute>
+      } />
+      <Route path="/produtos/empresa/editar/:id" element={
+        <ProtectedRoute>
+          <EditarProdutoEmpresa />
         </ProtectedRoute>
       } />
       <Route path="/estoque" element={

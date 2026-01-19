@@ -1185,11 +1185,13 @@ export type Database = {
           company_item_id: string | null
           company_product_id: string
           created_at: string | null
+          cut_angle: number | null
           height_formula: string | null
           id: string
           is_optional: boolean | null
           item_template_id: string | null
           notes: string | null
+          pieces_quantity: number | null
           quantity_formula: string
           sort_order: number | null
           updated_at: string | null
@@ -1199,11 +1201,13 @@ export type Database = {
           company_item_id?: string | null
           company_product_id: string
           created_at?: string | null
+          cut_angle?: number | null
           height_formula?: string | null
           id?: string
           is_optional?: boolean | null
           item_template_id?: string | null
           notes?: string | null
+          pieces_quantity?: number | null
           quantity_formula?: string
           sort_order?: number | null
           updated_at?: string | null
@@ -1213,11 +1217,13 @@ export type Database = {
           company_item_id?: string | null
           company_product_id?: string
           created_at?: string | null
+          cut_angle?: number | null
           height_formula?: string | null
           id?: string
           is_optional?: boolean | null
           item_template_id?: string | null
           notes?: string | null
+          pieces_quantity?: number | null
           quantity_formula?: string
           sort_order?: number | null
           updated_at?: string | null
@@ -4627,6 +4633,10 @@ export type Database = {
           _reason: string
           _required_amount: number
         }
+        Returns: Json
+      }
+      reset_company_product_to_template: {
+        Args: { p_company_product_id: string; p_user_id: string }
         Returns: Json
       }
       update_overdue_receivables: { Args: never; Returns: undefined }
