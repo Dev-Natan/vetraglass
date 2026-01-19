@@ -930,6 +930,85 @@ export type Database = {
           },
         ]
       }
+      company_items: {
+        Row: {
+          company_id: string
+          cost: number | null
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          is_custom: boolean
+          item_template_id: string | null
+          linha: string | null
+          name: string
+          sale_price: number | null
+          specifications: Json | null
+          type: string
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          cost?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_custom?: boolean
+          item_template_id?: string | null
+          linha?: string | null
+          name: string
+          sale_price?: number | null
+          specifications?: Json | null
+          type?: string
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          cost?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_custom?: boolean
+          item_template_id?: string | null
+          linha?: string | null
+          name?: string
+          sale_price?: number | null
+          specifications?: Json | null
+          type?: string
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_items_item_template_id_fkey"
+            columns: ["item_template_id"]
+            isOneToOne: false
+            referencedRelation: "item_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_notification_settings: {
         Row: {
           company_id: string
@@ -1058,12 +1137,13 @@ export type Database = {
       }
       company_product_items: {
         Row: {
+          company_item_id: string | null
           company_product_id: string
           created_at: string | null
           height_formula: string | null
           id: string
           is_optional: boolean | null
-          item_template_id: string
+          item_template_id: string | null
           notes: string | null
           quantity_formula: string
           sort_order: number | null
@@ -1071,12 +1151,13 @@ export type Database = {
           width_formula: string | null
         }
         Insert: {
+          company_item_id?: string | null
           company_product_id: string
           created_at?: string | null
           height_formula?: string | null
           id?: string
           is_optional?: boolean | null
-          item_template_id: string
+          item_template_id?: string | null
           notes?: string | null
           quantity_formula?: string
           sort_order?: number | null
@@ -1084,12 +1165,13 @@ export type Database = {
           width_formula?: string | null
         }
         Update: {
+          company_item_id?: string | null
           company_product_id?: string
           created_at?: string | null
           height_formula?: string | null
           id?: string
           is_optional?: boolean | null
-          item_template_id?: string
+          item_template_id?: string | null
           notes?: string | null
           quantity_formula?: string
           sort_order?: number | null
@@ -1097,6 +1179,13 @@ export type Database = {
           width_formula?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "company_product_items_company_item_id_fkey"
+            columns: ["company_item_id"]
+            isOneToOne: false
+            referencedRelation: "company_items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "company_product_items_company_product_id_fkey"
             columns: ["company_product_id"]
@@ -1262,10 +1351,11 @@ export type Database = {
         Row: {
           allow_fractional: boolean
           company_id: string
+          company_item_id: string | null
           created_at: string
           id: string
           is_active: boolean
-          item_template_id: string
+          item_template_id: string | null
           location: string | null
           min_quantity: number | null
           quantity: number
@@ -1274,10 +1364,11 @@ export type Database = {
         Insert: {
           allow_fractional?: boolean
           company_id: string
+          company_item_id?: string | null
           created_at?: string
           id?: string
           is_active?: boolean
-          item_template_id: string
+          item_template_id?: string | null
           location?: string | null
           min_quantity?: number | null
           quantity?: number
@@ -1286,10 +1377,11 @@ export type Database = {
         Update: {
           allow_fractional?: boolean
           company_id?: string
+          company_item_id?: string | null
           created_at?: string
           id?: string
           is_active?: boolean
-          item_template_id?: string
+          item_template_id?: string | null
           location?: string | null
           min_quantity?: number | null
           quantity?: number
@@ -1308,6 +1400,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_stock_company_item_id_fkey"
+            columns: ["company_item_id"]
+            isOneToOne: false
+            referencedRelation: "company_items"
             referencedColumns: ["id"]
           },
           {
@@ -4248,6 +4347,28 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      create_company_item_from_template: {
+        Args: {
+          _company_id: string
+          _cost?: number
+          _item_template_id: string
+          _sale_price?: number
+        }
+        Returns: string
+      }
+      create_custom_company_item: {
+        Args: {
+          _company_id: string
+          _cost?: number
+          _description?: string
+          _linha?: string
+          _name: string
+          _sale_price?: number
+          _type?: string
+          _unit?: string
+        }
+        Returns: string
       }
       create_custom_product: {
         Args: {
