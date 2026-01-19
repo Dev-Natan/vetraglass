@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { ArrowLeft, Search, Trash2, Download, Percent, Plus, Filter, Check, ShoppingCart, Sparkles } from 'lucide-react';
+import { ArrowLeft, Search, Trash2, Download, Percent, Plus, Filter, Check, ShoppingCart, Sparkles, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -203,63 +203,52 @@ export default function ProdutosLinha() {
           </div>
         </div>
 
-        {/* Search and filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
+        {/* Search and Toggle */}
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+          <div className="flex gap-2 flex-1 w-full sm:w-auto">
             <Input
               placeholder="Nome"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              className="flex-1"
             />
+            <Button variant="default" size="sm" className="bg-sky-500 hover:bg-sky-600 shrink-0">
+              Buscar
+            </Button>
           </div>
           
-          {/* Category filter */}
-          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <Filter className="w-4 h-4 mr-2" />
-              <SelectValue placeholder="Categoria" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas Categorias</SelectItem>
-              {availableCategories.map(cat => (
-                <SelectItem key={cat} value={cat}>
-                  {categoryLabels[cat] || cat}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          
-          <Button variant="default" size="sm" className="gap-2">
-            <Search className="w-4 h-4" />
-            Buscar
-          </Button>
-        </div>
-
-        {/* Toggle tabs */}
-        <div className="flex gap-2">
-          <Button
-            variant={showActive ? 'default' : 'outline'}
-            onClick={() => setShowActive(true)}
-            className="flex-1 sm:flex-none"
-          >
-            Habilitados
-          </Button>
-          <Button
-            variant={!showActive ? 'secondary' : 'outline'}
-            onClick={() => setShowActive(false)}
-            className="flex-1 sm:flex-none"
-          >
-            Desabilitados
-          </Button>
+          {/* Toggle tabs */}
+          <div className="flex rounded-lg overflow-hidden border">
+            <button
+              onClick={() => setShowActive(true)}
+              className={`px-6 py-2 text-sm font-medium transition-colors ${
+                showActive 
+                  ? 'bg-sky-500 text-white' 
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+              }`}
+            >
+              Habilitados
+            </button>
+            <button
+              onClick={() => setShowActive(false)}
+              className={`px-6 py-2 text-sm font-medium transition-colors ${
+                !showActive 
+                  ? 'bg-gray-400 text-white' 
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+              }`}
+            >
+              Desabilitados
+            </button>
+          </div>
         </div>
 
         {/* Products list */}
         <div className="section-card p-0 overflow-hidden">
           {/* Table header */}
-          <div className="grid grid-cols-12 gap-4 p-4 bg-muted/50 border-b text-sm font-medium text-muted-foreground">
-            <div className="col-span-6 sm:col-span-5">Produto</div>
-            <div className="col-span-2 hidden sm:block">Horas</div>
-            <div className="col-span-6 sm:col-span-5 text-right">Ações</div>
+          <div className="grid grid-cols-12 gap-4 p-4 bg-muted/30 border-b text-sm font-medium text-muted-foreground">
+            <div className="col-span-5">Produto</div>
+            <div className="col-span-1 text-center hidden sm:block">Horas</div>
+            <div className="col-span-7 sm:col-span-6"></div>
           </div>
 
           {isLoading ? (
@@ -273,76 +262,74 @@ export default function ProdutosLinha() {
                 return (
                 <div
                   key={product.id}
-                  className={`grid grid-cols-12 gap-4 p-4 items-center transition-colors ${
-                    isActivated 
-                      ? 'hover:bg-muted/30' 
-                      : 'opacity-60 hover:opacity-80 bg-muted/20'
-                  }`}
+                  className="grid grid-cols-12 gap-4 p-4 items-center hover:bg-muted/20 transition-colors"
                 >
                   {/* Product info */}
-                  <div className="col-span-6 sm:col-span-5 flex items-center gap-3">
-                    <div className={`w-16 h-16 rounded-lg flex items-center justify-center text-2xl shrink-0 p-1 ${
-                      isActivated ? 'bg-muted' : 'bg-muted/50 grayscale'
-                    }`}>
+                  <div className="col-span-5 flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center shrink-0 p-1">
                       {product.image_url ? (
                         <img 
                           src={product.image_url} 
                           alt={product.name}
-                          className={`w-full h-full object-contain ${!isActivated ? 'grayscale' : ''}`}
+                          className="w-full h-full object-contain"
                         />
                       ) : (
-                        getCategoryIcon(product.category)
+                        <span className="text-xl">{getCategoryIcon(product.category)}</span>
                       )}
                     </div>
-                    <div className="min-w-0">
-                      <span className={`font-medium uppercase text-sm truncate block ${
-                        isActivated ? 'text-foreground' : 'text-muted-foreground'
-                      }`}>
-                        {product.name}
-                      </span>
-                      <Badge variant="secondary" className="text-xs mt-1">
-                        {categoryLabels[product.category] || product.category}
-                      </Badge>
-                    </div>
+                    <span className="font-medium text-sky-600 uppercase text-sm">
+                      {product.name}
+                    </span>
                   </div>
 
                   {/* Hours */}
-                  <div className="col-span-2 hidden sm:block text-muted-foreground text-sm">
-                    04:00
+                  <div className="col-span-1 text-center hidden sm:block text-muted-foreground text-sm">
+                    5
                   </div>
 
                   {/* Actions */}
-                  <div className="col-span-6 sm:col-span-5 flex items-center justify-end gap-2 flex-wrap">
-                    {/* Activate/Deactivate */}
-                    {isProductActivated(product.id) ? (
+                  <div className="col-span-7 sm:col-span-6 flex items-center justify-end gap-2">
+                    {/* Desabilitar */}
+                    {isActivated ? (
                       <Button
-                        variant="outline"
                         size="sm"
-                        className="text-red-600 border-red-300 hover:bg-red-50"
+                        className="bg-amber-400 hover:bg-amber-500 text-amber-900 font-medium"
                         onClick={() => deactivateProductMutation.mutate(product.id)}
                         disabled={deactivateProductMutation.isPending}
                       >
-                        Desativar
+                        Desabilitar
                       </Button>
                     ) : (
                       <Button
-                        variant="default"
                         size="sm"
-                        className="bg-green-600 hover:bg-green-700"
+                        className="bg-green-500 hover:bg-green-600 text-white font-medium"
                         onClick={() => {
                           setSelectedProductForActivation({ id: product.id, name: product.name });
                           setActivateDialogOpen(true);
                         }}
                       >
-                        Ativar
+                        Habilitar
                       </Button>
                     )}
+                    
+                    {/* Fazer cópia */}
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
+                      className="text-muted-foreground hover:text-foreground"
+                      onClick={() => toast.info('Funcionalidade em desenvolvimento')}
+                    >
+                      Fazer cópia
+                      <Copy className="w-4 h-4 ml-1" />
+                    </Button>
+                    
+                    {/* Editar produto */}
+                    <Button
+                      size="sm"
+                      className="bg-orange-500 hover:bg-orange-600 text-white font-medium"
                       onClick={() => navigate(`/produtos/editar/${product.id}`)}
                     >
-                      Editar
+                      Editar produto
                     </Button>
                   </div>
                 </div>
@@ -363,29 +350,47 @@ export default function ProdutosLinha() {
         {/* Bottom action bar */}
         <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t p-4">
           <div className="container mx-auto flex justify-center gap-8 sm:gap-12">
-            <button className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
-              <Trash2 className="w-5 h-5" />
-              <span className="text-xs">Lixeira</span>
-            </button>
             <button 
-              onClick={() => setTipologiasSheetOpen(true)}
+              onClick={() => toast.info('Funcionalidade em desenvolvimento')}
               className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
             >
-              <Download className="w-5 h-5" />
+              <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <span className="text-xs">Lixeira</span>
+            </button>
+            
+            <button 
+              onClick={() => setTipologiasSheetOpen(true)}
+              className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors relative"
+            >
+              <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center relative">
+                <Download className="w-5 h-5" />
+                <Badge className="absolute -top-1 -right-1 h-5 min-w-5 px-1 text-[10px] bg-sky-500 hover:bg-sky-500">
+                  344
+                </Badge>
+              </div>
               <span className="text-xs">Baixar tipologias</span>
             </button>
-            <button className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
-              <Percent className="w-5 h-5" />
+            
+            <button 
+              onClick={() => toast.info('Funcionalidade em desenvolvimento')}
+              className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                <Percent className="w-5 h-5" />
+              </div>
               <span className="text-xs">Margem de lucro</span>
             </button>
+            
             <button 
               onClick={() => setCreateCustomDialogOpen(true)}
-              className="flex flex-col items-center gap-1 text-primary hover:text-primary/80 transition-colors"
+              className="flex flex-col items-center gap-1 text-emerald-600 hover:text-emerald-700 transition-colors"
             >
-              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-primary-foreground" />
+              <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center">
+                <Plus className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xs">Produto Personalizado</span>
+              <span className="text-xs">Cadastrar produto</span>
             </button>
           </div>
         </div>
