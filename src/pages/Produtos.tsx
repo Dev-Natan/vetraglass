@@ -9,8 +9,9 @@ import { ProductsGridSkeleton } from '@/components/produtos/ProductsGridSkeleton
 import { EmptyProductsState } from '@/components/produtos/EmptyProductsState';
 import { TipologiasSheet } from '@/components/produtos/TipologiasSheet';
 import { AddLinhaSheet } from '@/components/produtos/AddLinhaSheet';
+import { CreateCustomProductDialog } from '@/components/produtos/CreateCustomProductDialog';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -29,6 +30,7 @@ export default function Produtos() {
   const [tipologiasSheetOpen, setTipologiasSheetOpen] = useState(false);
   const [selectedLinhaForDownload, setSelectedLinhaForDownload] = useState<string | null>(null);
   const [addLinhaSheetOpen, setAddLinhaSheetOpen] = useState(false);
+  const [createCustomDialogOpen, setCreateCustomDialogOpen] = useState(false);
 
   // Load favorites from localStorage on mount
   useEffect(() => {
@@ -206,13 +208,24 @@ export default function Produtos() {
                 totalCount={linhasWithActivatedCount?.length || 0}
               />
             </div>
-            <Button 
-              onClick={() => setAddLinhaSheetOpen(true)}
-              className="gap-2 shrink-0"
-            >
-              <Plus className="w-4 h-4" />
-              Baixar Linha
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline"
+                onClick={() => setCreateCustomDialogOpen(true)}
+                className="gap-2 shrink-0"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span className="hidden sm:inline">Produto Personalizado</span>
+                <span className="sm:hidden">Personalizado</span>
+              </Button>
+              <Button 
+                onClick={() => setAddLinhaSheetOpen(true)}
+                className="gap-2 shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+                Baixar Linha
+              </Button>
+            </div>
           </div>
 
           {/* Content */}
@@ -269,6 +282,12 @@ export default function Produtos() {
         onOpenChange={setAddLinhaSheetOpen}
         onSelectLinha={handleSelectLinhaFromSheet}
         activatedLinhas={activatedLinhas}
+      />
+
+      {/* Create Custom Product Dialog */}
+      <CreateCustomProductDialog
+        open={createCustomDialogOpen}
+        onOpenChange={setCreateCustomDialogOpen}
       />
     </MainLayout>
   );
