@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { ArrowLeft, Search, Trash2, Download, Percent, Plus, Filter, Check, ShoppingCart } from 'lucide-react';
+import { ArrowLeft, Search, Trash2, Download, Percent, Plus, Filter, Check, ShoppingCart, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { ActivateProductDialog } from '@/components/produtos/ActivateProductDialog';
 import { TipologiasSheet } from '@/components/produtos/TipologiasSheet';
+import { CreateCustomProductDialog } from '@/components/produtos/CreateCustomProductDialog';
 
 type ProductTemplate = {
   id: string;
@@ -34,6 +35,7 @@ export default function ProdutosLinha() {
   const [activateDialogOpen, setActivateDialogOpen] = useState(false);
   const [selectedProductForActivation, setSelectedProductForActivation] = useState<{ id: string; name: string } | null>(null);
   const [tipologiasSheetOpen, setTipologiasSheetOpen] = useState(false);
+  const [createCustomDialogOpen, setCreateCustomDialogOpen] = useState(false);
 
   // Category labels
   const categoryLabels: Record<string, string> = {
@@ -377,13 +379,13 @@ export default function ProdutosLinha() {
               <span className="text-xs">Margem de lucro</span>
             </button>
             <button 
-              onClick={() => toast.info('Funcionalidade em desenvolvimento')}
+              onClick={() => setCreateCustomDialogOpen(true)}
               className="flex flex-col items-center gap-1 text-primary hover:text-primary/80 transition-colors"
             >
               <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
-                <Plus className="w-5 h-5 text-primary-foreground" />
+                <Sparkles className="w-5 h-5 text-primary-foreground" />
               </div>
-              <span className="text-xs">Cadastrar produto</span>
+              <span className="text-xs">Produto Personalizado</span>
             </button>
           </div>
         </div>
@@ -407,6 +409,12 @@ export default function ProdutosLinha() {
             }}
           />
         )}
+
+        {/* Create Custom Product Dialog */}
+        <CreateCustomProductDialog
+          open={createCustomDialogOpen}
+          onOpenChange={setCreateCustomDialogOpen}
+        />
       </div>
     </MainLayout>
   );

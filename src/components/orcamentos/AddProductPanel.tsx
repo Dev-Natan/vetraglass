@@ -7,12 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Package, Check, ArrowLeft, Ruler, DollarSign } from 'lucide-react';
+import { Search, Package, Check, ArrowLeft, Ruler, DollarSign, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AddProductPanelProps {
   onAdd: (product: {
-    product_template_id: string;
+    product_template_id: string | null;
     company_product_id?: string;
     name: string;
     base_price: number;
@@ -27,6 +27,7 @@ interface AddProductPanelProps {
     has_glass?: boolean;
     glass_color?: string;
     glass_thickness?: string;
+    is_custom?: boolean;
   }) => void;
   onCancel: () => void;
 }
@@ -118,14 +119,38 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     return [...new Set(cats)];
   }, [productTemplates, selectedLinha]);
 
-  // Get products based on filters - only show products activated by the company
+  // Get products based on filters - include both template-based and custom products
   const filteredProducts = useMemo(() => {
-    // Get IDs of products activated by the company
+    // Get IDs of products activated by the company (template-based)
     const activatedTemplateIds = new Set(
-      companyProducts?.map(cp => cp.product_template_id) || []
+      companyProducts?.filter(cp => cp.product_template_id).map(cp => cp.product_template_id) || []
     );
     
-    let products = (productTemplates || []).filter(p => activatedTemplateIds.has(p.id));
+    // Template-based products
+    let templateProducts = (productTemplates || [])
+      .filter(p => activatedTemplateIds.has(p.id))
+      .map(p => ({
+        ...p,
+        is_custom: false,
+        company_product: companyProducts?.find(cp => cp.product_template_id === p.id)
+      }));
+    
+    // Custom products (is_custom = true)
+    const customProducts = (companyProducts || [])
+      .filter(cp => (cp as any).is_custom === true)
+      .map(cp => ({
+        id: cp.id,
+        name: cp.commercial_name,
+        description: cp.description,
+        category: (cp as any).category || 'other',
+        linha: (cp as any).linha || 'Personalizado',
+        image_url: (cp as any).image_url || null,
+        is_active: cp.is_active,
+        is_custom: true,
+        company_product: cp
+      }));
+    
+    let products = [...templateProducts, ...customProducts];
     
     if (selectedLinha) {
       products = products.filter(p => p.linha === selectedLinha);
@@ -144,8 +169,10 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     return products;
   }, [productTemplates, companyProducts, selectedLinha, selectedCategory, searchQuery]);
 
-  const selectedProduct = productTemplates?.find(p => p.id === selectedProductId);
-  const companyProduct = companyProducts?.find(cp => cp.product_template_id === selectedProductId);
+  const selectedProduct = filteredProducts?.find(p => p.id === selectedProductId);
+  const companyProduct = selectedProduct?.is_custom 
+    ? selectedProduct.company_product 
+    : companyProducts?.find(cp => cp.product_template_id === selectedProductId);
   
   // Use price_per_sqm as the primary pricing method
   const pricePerSqm = Number((companyProduct as any)?.price_per_sqm) || Number(companyProduct?.base_price) || 0;
@@ -181,7 +208,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     if (!selectedProduct) return;
 
     onAdd({
-      product_template_id: selectedProductId,
+      product_template_id: selectedProduct.is_custom ? null : selectedProductId,
       company_product_id: companyProduct?.id,
       name: companyProduct?.commercial_name || selectedProduct.name,
       base_price: basePrice,
@@ -196,6 +223,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
       has_glass: hasGlass,
       glass_color: hasGlass ? glassColor : undefined,
       glass_thickness: hasGlass ? glassThickness : undefined,
+      is_custom: selectedProduct.is_custom,
     });
   };
 
@@ -300,7 +328,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
               {filteredProducts.map((product) => {
                 const isSelected = selectedProductId === product.id;
                 const imageUrl = getProductImage(product.image_url);
-                const hasCompanyProduct = companyProducts?.some(cp => cp.product_template_id === product.id);
+                const isCustomProduct = product.is_custom;
 
                 return (
                   <button
@@ -317,6 +345,13 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                     {isSelected && (
                       <div className="absolute top-1.5 left-1.5 z-10 w-6 h-6 rounded-full bg-primary flex items-center justify-center shadow-md">
                         <Check className="w-3.5 h-3.5 text-primary-foreground" />
+                      </div>
+                    )}
+
+                    {/* Custom product badge */}
+                    {isCustomProduct && (
+                      <div className="absolute top-1.5 right-1.5 z-10 w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center shadow-md" title="Produto Personalizado">
+                        <Sparkles className="w-3.5 h-3.5 text-white" />
                       </div>
                     )}
 
@@ -340,8 +375,8 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                       </span>
                     </div>
 
-                    {/* Active indicator */}
-                    {hasCompanyProduct && !isSelected && (
+                    {/* Active indicator - only for non-custom products that don't have selection */}
+                    {!isCustomProduct && !isSelected && (
                       <div className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-green-500 ring-2 ring-white" />
                     )}
                   </button>
