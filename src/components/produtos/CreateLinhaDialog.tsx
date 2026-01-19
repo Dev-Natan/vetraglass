@@ -32,24 +32,26 @@ export function CreateLinhaDialog({ open, onOpenChange }: CreateLinhaDialogProps
       if (!currentCompany?.id) throw new Error('Empresa não selecionada');
       if (!linhaName.trim()) throw new Error('Nome da linha é obrigatório');
 
-      // Create a placeholder custom product to establish the line
+      // Apenas criar a linha, sem criar produtos automaticamente
       const { error } = await supabase
-        .from('company_products')
+        .from('company_linhas')
         .insert({
           company_id: currentCompany.id,
-          commercial_name: `Produto ${linhaName}`,
-          linha: linhaName.trim().toUpperCase(),
+          name: linhaName.trim().toUpperCase(),
           description: description.trim() || null,
-          is_custom: true,
-          is_active: true,
-          category: 'Personalizado',
         });
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23505') {
+          throw new Error('Já existe uma linha com este nome');
+        }
+        throw error;
+      }
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-linhas'] });
       queryClient.invalidateQueries({ queryKey: ['company-products'] });
-      toast.success(`Linha "${linhaName}" criada com sucesso!`);
+      toast.success(`Linha "${linhaName.toUpperCase()}" criada com sucesso!`);
       resetForm();
       onOpenChange(false);
     },
