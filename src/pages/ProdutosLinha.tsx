@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { ActivateProductDialog } from '@/components/produtos/ActivateProductDialog';
 import { TipologiasSheet } from '@/components/produtos/TipologiasSheet';
 import { CreateCustomProductDialog } from '@/components/produtos/CreateCustomProductDialog';
+import { EditCustomProductDialog } from '@/components/produtos/EditCustomProductDialog';
 
 type ProductTemplate = {
   id: string;
@@ -60,6 +61,8 @@ export default function ProdutosLinha() {
   const [selectedProductForActivation, setSelectedProductForActivation] = useState<{ id: string; name: string } | null>(null);
   const [tipologiasSheetOpen, setTipologiasSheetOpen] = useState(false);
   const [createCustomDialogOpen, setCreateCustomDialogOpen] = useState(false);
+  const [editCustomDialogOpen, setEditCustomDialogOpen] = useState(false);
+  const [selectedProductForEdit, setSelectedProductForEdit] = useState<DisplayProduct | null>(null);
 
   // Category labels
   const categoryLabels: Record<string, string> = {
@@ -452,7 +455,8 @@ export default function ProdutosLinha() {
                       className="bg-orange-500 hover:bg-orange-600 text-white font-medium"
                       onClick={() => {
                         if (product.is_custom) {
-                          toast.info('Edição de produto personalizado em desenvolvimento');
+                          setSelectedProductForEdit(product);
+                          setEditCustomDialogOpen(true);
                         } else {
                           navigate(`/produtos/editar/${product.id}`);
                         }
@@ -549,6 +553,13 @@ export default function ProdutosLinha() {
           open={createCustomDialogOpen}
           onOpenChange={setCreateCustomDialogOpen}
           defaultLinha={currentLinha}
+        />
+
+        {/* Edit Custom Product Dialog */}
+        <EditCustomProductDialog
+          open={editCustomDialogOpen}
+          onOpenChange={setEditCustomDialogOpen}
+          product={selectedProductForEdit}
         />
       </div>
     </MainLayout>
