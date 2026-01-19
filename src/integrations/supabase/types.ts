@@ -1056,47 +1056,128 @@ export type Database = {
           },
         ]
       }
+      company_product_items: {
+        Row: {
+          company_product_id: string
+          created_at: string | null
+          height_formula: string | null
+          id: string
+          is_optional: boolean | null
+          item_template_id: string
+          notes: string | null
+          quantity_formula: string
+          sort_order: number | null
+          updated_at: string | null
+          width_formula: string | null
+        }
+        Insert: {
+          company_product_id: string
+          created_at?: string | null
+          height_formula?: string | null
+          id?: string
+          is_optional?: boolean | null
+          item_template_id: string
+          notes?: string | null
+          quantity_formula?: string
+          sort_order?: number | null
+          updated_at?: string | null
+          width_formula?: string | null
+        }
+        Update: {
+          company_product_id?: string
+          created_at?: string | null
+          height_formula?: string | null
+          id?: string
+          is_optional?: boolean | null
+          item_template_id?: string
+          notes?: string | null
+          quantity_formula?: string
+          sort_order?: number | null
+          updated_at?: string | null
+          width_formula?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_product_items_company_product_id_fkey"
+            columns: ["company_product_id"]
+            isOneToOne: false
+            referencedRelation: "company_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_product_items_item_template_id_fkey"
+            columns: ["item_template_id"]
+            isOneToOne: false
+            referencedRelation: "item_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_products: {
         Row: {
           base_price: number | null
+          category: string | null
           commercial_name: string
           company_id: string
           cost_per_sqm: number | null
           created_at: string
           description: string | null
           id: string
+          image_url: string | null
           is_active: boolean
+          is_custom: boolean | null
+          linha: string | null
           margin_percent: number | null
+          max_height: number | null
+          max_width: number | null
+          min_height: number | null
+          min_width: number | null
           price_per_sqm: number | null
-          product_template_id: string
+          product_template_id: string | null
           updated_at: string
         }
         Insert: {
           base_price?: number | null
+          category?: string | null
           commercial_name: string
           company_id: string
           cost_per_sqm?: number | null
           created_at?: string
           description?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean
+          is_custom?: boolean | null
+          linha?: string | null
           margin_percent?: number | null
+          max_height?: number | null
+          max_width?: number | null
+          min_height?: number | null
+          min_width?: number | null
           price_per_sqm?: number | null
-          product_template_id: string
+          product_template_id?: string | null
           updated_at?: string
         }
         Update: {
           base_price?: number | null
+          category?: string | null
           commercial_name?: string
           company_id?: string
           cost_per_sqm?: number | null
           created_at?: string
           description?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean
+          is_custom?: boolean | null
+          linha?: string | null
           margin_percent?: number | null
+          max_height?: number | null
+          max_width?: number | null
+          min_height?: number | null
+          min_width?: number | null
           price_per_sqm?: number | null
-          product_template_id?: string
+          product_template_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -4057,16 +4138,24 @@ export type Database = {
         }
         Returns: {
           base_price: number | null
+          category: string | null
           commercial_name: string
           company_id: string
           cost_per_sqm: number | null
           created_at: string
           description: string | null
           id: string
+          image_url: string | null
           is_active: boolean
+          is_custom: boolean | null
+          linha: string | null
           margin_percent: number | null
+          max_height: number | null
+          max_width: number | null
+          min_height: number | null
+          min_width: number | null
           price_per_sqm: number | null
-          product_template_id: string
+          product_template_id: string | null
           updated_at: string
         }
         SetofOptions: {
@@ -4159,6 +4248,18 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      create_custom_product: {
+        Args: {
+          _base_price?: number
+          _category?: string
+          _company_id: string
+          _description?: string
+          _image_url?: string
+          _linha?: string
+          _name: string
+        }
+        Returns: string
       }
       create_default_permission_profiles: {
         Args: { _company_id: string }
