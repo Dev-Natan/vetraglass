@@ -70,6 +70,8 @@ export function usePermissions() {
   });
 
   // Fallback to legacy role_permissions table
+  // NOTE: enabled must NOT depend on `profile` to avoid hooks order issues
+  const shouldFetchLegacy = !!currentCompany?.id && currentRole !== 'admin';
   const { data: permissions = [], isLoading } = useQuery({
     queryKey: ['role-permissions', currentCompany?.id, currentRole],
     queryFn: async () => {
@@ -89,7 +91,7 @@ export function usePermissions() {
 
       return data as Permission[];
     },
-    enabled: !!currentCompany?.id && currentRole !== 'admin' && !profile,
+    enabled: shouldFetchLegacy,
   });
 
   const isAdmin = currentRole === 'admin' || profile?.profile_type === 'admin';
