@@ -3903,6 +3903,10 @@ export type Database = {
         Args: { _company_id: string; _opening_amount: number }
         Returns: Json
       }
+      can_user_open_cash: {
+        Args: { _company_id: string; _user_id: string }
+        Returns: Json
+      }
       check_login_rate_limit: {
         Args: {
           _email: string
@@ -3975,6 +3979,17 @@ export type Database = {
         Args: { _company_id: string }
         Returns: undefined
       }
+      get_all_open_cash_registers: {
+        Args: { _company_id: string }
+        Returns: {
+          current_balance: number
+          id: string
+          opened_at: string
+          opened_by: string
+          opened_by_name: string
+          opening_amount: number
+        }[]
+      }
       get_company_daily_summary: {
         Args: { _company_id: string; _end_date?: string; _start_date?: string }
         Returns: {
@@ -3992,6 +4007,17 @@ export type Database = {
         Returns: Json
       }
       get_user_company_ids: { Args: { _user_id: string }; Returns: string[] }
+      get_user_open_cash_register: {
+        Args: { _company_id: string }
+        Returns: {
+          company_id: string
+          id: string
+          opened_at: string
+          opened_by: string
+          opening_amount: number
+          status: string
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -4046,6 +4072,10 @@ export type Database = {
       }
       normalize_text: { Args: { input_text: string }; Returns: string }
       open_daily_cash: {
+        Args: { _company_id: string; _opening_amount: number; _user_id: string }
+        Returns: Json
+      }
+      open_daily_cash_multiuser: {
         Args: { _company_id: string; _opening_amount: number; _user_id: string }
         Returns: Json
       }
