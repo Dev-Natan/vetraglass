@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { AlertTriangle, Sparkles, Package } from 'lucide-react';
+import { AlertTriangle, Sparkles, Package, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -17,7 +17,7 @@ interface CreateCustomProductDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const categories = [
+const defaultCategories = [
   { value: 'window', label: 'Janela' },
   { value: 'door', label: 'Porta' },
   { value: 'shower', label: 'Box de Banheiro' },
@@ -34,20 +34,86 @@ export function CreateCustomProductDialog({ open, onOpenChange }: CreateCustomPr
   
   const [name, setName] = useState('');
   const [category, setCategory] = useState('other');
-  const [linha, setLinha] = useState('Personalizado');
+  const [customCategory, setCustomCategory] = useState('');
+  const [showCustomCategory, setShowCustomCategory] = useState(false);
+  const [linha, setLinha] = useState('');
+  const [customLinha, setCustomLinha] = useState('');
+  const [showCustomLinha, setShowCustomLinha] = useState(false);
   const [basePrice, setBasePrice] = useState<number>(0);
   const [description, setDescription] = useState('');
+
+  // Fetch existing linhas from company products
+  const { data: existingLinhas = [] } = useQuery({
+    queryKey: ['existing-linhas', currentCompany?.id],
+    queryFn: async () => {
+      if (!currentCompany?.id) return [];
+      
+      // Get linhas from company products
+      const { data: companyLinhas } = await supabase
+        .from('company_products')
+        .select('linha')
+        .eq('company_id', currentCompany.id)
+        .not('linha', 'is', null);
+      
+      // Get linhas from product templates
+      const { data: templateLinhas } = await supabase
+        .from('product_templates')
+        .select('linha')
+        .eq('is_active', true)
+        .not('linha', 'is', null);
+      
+      const allLinhas = new Set<string>();
+      companyLinhas?.forEach(p => p.linha && allLinhas.add(p.linha));
+      templateLinhas?.forEach(p => p.linha && allLinhas.add(p.linha));
+      
+      return Array.from(allLinhas).sort();
+    },
+    enabled: !!currentCompany?.id && open,
+  });
+
+  // Fetch existing categories from company products
+  const { data: existingCategories = [] } = useQuery({
+    queryKey: ['existing-categories', currentCompany?.id],
+    queryFn: async () => {
+      if (!currentCompany?.id) return [];
+      
+      const { data } = await supabase
+        .from('company_products')
+        .select('category')
+        .eq('company_id', currentCompany.id)
+        .not('category', 'is', null);
+      
+      const customCats = new Set<string>();
+      data?.forEach(p => {
+        if (p.category && !defaultCategories.find(c => c.value === p.category)) {
+          customCats.add(p.category);
+        }
+      });
+      
+      return Array.from(customCats).sort();
+    },
+    enabled: !!currentCompany?.id && open,
+  });
+
+  // Combined categories (default + custom)
+  const allCategories = [
+    ...defaultCategories,
+    ...existingCategories.map(c => ({ value: c, label: c })),
+  ];
 
   const createMutation = useMutation({
     mutationFn: async () => {
       if (!currentCompany?.id) throw new Error('Empresa não selecionada');
       
+      const finalCategory = showCustomCategory ? customCategory.trim() : category;
+      const finalLinha = showCustomLinha ? customLinha.trim() : (linha || 'Personalizado');
+      
       const { data, error } = await supabase.rpc('create_custom_product', {
         _company_id: currentCompany.id,
         _name: name.trim(),
-        _category: category,
+        _category: finalCategory,
         _base_price: basePrice,
-        _linha: linha.trim() || 'Personalizado',
+        _linha: finalLinha,
         _description: description.trim() || null,
         _image_url: null,
       });
@@ -70,12 +136,18 @@ export function CreateCustomProductDialog({ open, onOpenChange }: CreateCustomPr
   const resetForm = () => {
     setName('');
     setCategory('other');
-    setLinha('Personalizado');
+    setCustomCategory('');
+    setShowCustomCategory(false);
+    setLinha('');
+    setCustomLinha('');
+    setShowCustomLinha(false);
     setBasePrice(0);
     setDescription('');
   };
 
-  const canCreate = name.trim().length > 0;
+  const finalCategory = showCustomCategory ? customCategory.trim() : category;
+  const finalLinha = showCustomLinha ? customLinha.trim() : (linha || 'Personalizado');
+  const canCreate = name.trim().length > 0 && finalCategory.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -118,27 +190,101 @@ export function CreateCustomProductDialog({ open, onOpenChange }: CreateCustomPr
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Categoria</Label>
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat.value} value={cat.value}>
-                      {cat.label}
+              {showCustomCategory ? (
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Nome da categoria"
+                    value={customCategory}
+                    onChange={(e) => setCustomCategory(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => {
+                      setShowCustomCategory(false);
+                      setCustomCategory('');
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              ) : (
+                <Select value={category} onValueChange={(val) => {
+                  if (val === '__new__') {
+                    setShowCustomCategory(true);
+                  } else {
+                    setCategory(val);
+                  }
+                }}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allCategories.map((cat) => (
+                      <SelectItem key={cat.value} value={cat.value}>
+                        {cat.label}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="__new__" className="text-primary">
+                      <span className="flex items-center gap-2">
+                        <Plus className="w-4 h-4" />
+                        Nova categoria
+                      </span>
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="linha">Linha</Label>
-              <Input
-                id="linha"
-                placeholder="Ex: Personalizado"
-                value={linha}
-                onChange={(e) => setLinha(e.target.value)}
-              />
+              <Label>Linha</Label>
+              {showCustomLinha ? (
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Nome da linha"
+                    value={customLinha}
+                    onChange={(e) => setCustomLinha(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => {
+                      setShowCustomLinha(false);
+                      setCustomLinha('');
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              ) : (
+                <Select value={linha} onValueChange={(val) => {
+                  if (val === '__new__') {
+                    setShowCustomLinha(true);
+                  } else {
+                    setLinha(val);
+                  }
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione ou crie..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {existingLinhas.map((l) => (
+                      <SelectItem key={l} value={l}>
+                        {l}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="__new__" className="text-primary">
+                      <span className="flex items-center gap-2">
+                        <Plus className="w-4 h-4" />
+                        Nova linha
+                      </span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
 
@@ -180,9 +326,12 @@ export function CreateCustomProductDialog({ open, onOpenChange }: CreateCustomPr
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-medium text-sm truncate">{name}</p>
-              <div className="flex items-center gap-2 mt-1">
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <Badge variant="secondary" className="text-xs">
-                  {categories.find(c => c.value === category)?.label || category}
+                  {showCustomCategory ? customCategory || 'Categoria' : (allCategories.find(c => c.value === category)?.label || category)}
+                </Badge>
+                <Badge variant="outline" className="text-xs">
+                  {finalLinha || 'Personalizado'}
                 </Badge>
                 <Badge variant="outline" className="text-xs">
                   <Sparkles className="w-3 h-3 mr-1" />
