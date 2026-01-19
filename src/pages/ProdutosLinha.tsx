@@ -414,6 +414,7 @@ export default function ProdutosLinha() {
         <CreateCustomProductDialog
           open={createCustomDialogOpen}
           onOpenChange={setCreateCustomDialogOpen}
+          defaultLinha={currentLinha}
         />
       </div>
     </MainLayout>

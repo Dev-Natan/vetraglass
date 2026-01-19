@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 interface CreateCustomProductDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  defaultLinha?: string;
 }
 
 const defaultCategories = [
@@ -28,7 +29,7 @@ const defaultCategories = [
   { value: 'other', label: 'Outros' },
 ];
 
-export function CreateCustomProductDialog({ open, onOpenChange }: CreateCustomProductDialogProps) {
+export function CreateCustomProductDialog({ open, onOpenChange, defaultLinha }: CreateCustomProductDialogProps) {
   const { currentCompany } = useAuth();
   const queryClient = useQueryClient();
   
@@ -138,12 +139,19 @@ export function CreateCustomProductDialog({ open, onOpenChange }: CreateCustomPr
     setCategory('other');
     setCustomCategory('');
     setShowCustomCategory(false);
-    setLinha('');
+    setLinha(defaultLinha || '');
     setCustomLinha('');
     setShowCustomLinha(false);
     setBasePrice(0);
     setDescription('');
   };
+
+  // Set default linha when dialog opens
+  useEffect(() => {
+    if (open && defaultLinha) {
+      setLinha(defaultLinha);
+    }
+  }, [open, defaultLinha]);
 
   const finalCategory = showCustomCategory ? customCategory.trim() : category;
   const finalLinha = showCustomLinha ? customLinha.trim() : (linha || 'Personalizado');
