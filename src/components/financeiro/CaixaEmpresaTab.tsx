@@ -230,8 +230,12 @@ export function CaixaEmpresaTab() {
 
   // Close cash register
   const closeCashMutation = useMutation({
-    mutationFn: async ({ actualAmount, notes }: { actualAmount: number; notes: string }) => {
+    mutationFn: async ({ counts, notes }: { counts: { payment_method: string; amount: number }[]; notes: string }) => {
       if (!openCashRegister?.id || !user?.id || !currentCompany?.id) throw new Error('Dados inválidos');
+      
+      // Calculate total from counts
+      const actualAmount = counts.reduce((sum, c) => sum + c.amount, 0);
+      
       const { data, error } = await supabase.rpc('close_daily_cash', {
         _cash_register_id: openCashRegister.id,
         _actual_amount: actualAmount,
@@ -590,7 +594,7 @@ export function CaixaEmpresaTab() {
       <FecharCaixaDialog
         open={fecharCaixaOpen}
         onOpenChange={setFecharCaixaOpen}
-        onConfirm={(actualAmount, notes) => closeCashMutation.mutateAsync({ actualAmount, notes })}
+        onConfirm={(counts, notes) => closeCashMutation.mutateAsync({ counts, notes })}
         summary={cashSummary}
         companyCash={companyCash}
         cashRegisterId={openCashRegister?.id}
