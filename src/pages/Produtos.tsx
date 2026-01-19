@@ -7,6 +7,7 @@ import { AddLinhaCard } from '@/components/produtos/AddLinhaCard';
 import { TipologiasSheet } from '@/components/produtos/TipologiasSheet';
 import { AddLinhaSheet } from '@/components/produtos/AddLinhaSheet';
 import { CreateCustomProductDialog } from '@/components/produtos/CreateCustomProductDialog';
+import { CreateLinhaDialog } from '@/components/produtos/CreateLinhaDialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Trash2, Search, Download, Sparkles } from 'lucide-react';
@@ -23,6 +24,7 @@ export default function Produtos() {
   const [selectedLinhaForDownload, setSelectedLinhaForDownload] = useState<string | null>(null);
   const [addLinhaSheetOpen, setAddLinhaSheetOpen] = useState(false);
   const [createCustomDialogOpen, setCreateCustomDialogOpen] = useState(false);
+  const [createLinhaDialogOpen, setCreateLinhaDialogOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
 
   // Fetch company activated products
@@ -236,7 +238,7 @@ export default function Produtos() {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
               {/* Add Card - First Position */}
-              <AddLinhaCard onClick={() => setAddLinhaSheetOpen(true)} />
+              <AddLinhaCard onClick={() => setCreateLinhaDialogOpen(true)} />
 
               {/* Linha Cards */}
               {filteredLinhas.map((item, index) => (
@@ -335,6 +337,12 @@ export default function Produtos() {
       <CreateCustomProductDialog
         open={createCustomDialogOpen}
         onOpenChange={setCreateCustomDialogOpen}
+      />
+
+      {/* Create Linha Dialog */}
+      <CreateLinhaDialog
+        open={createLinhaDialogOpen}
+        onOpenChange={setCreateLinhaDialogOpen}
       />
     </MainLayout>
   );
