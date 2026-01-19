@@ -24,6 +24,30 @@ type ProductTemplate = {
   is_active: boolean;
 };
 
+type CustomProduct = {
+  id: string;
+  commercial_name: string;
+  description: string | null;
+  category: string | null;
+  linha: string | null;
+  image_url: string | null;
+  is_active: boolean;
+  is_custom: boolean;
+  base_price: number | null;
+};
+
+type DisplayProduct = {
+  id: string;
+  name: string;
+  description: string | null;
+  category: string;
+  linha: string | null;
+  image_url: string | null;
+  is_active: boolean;
+  is_custom: boolean;
+  base_price?: number | null;
+};
+
 export default function ProdutosLinha() {
   const { linha: linhaParam } = useParams<{ linha: string }>();
   const navigate = useNavigate();
@@ -84,6 +108,25 @@ export default function ProdutosLinha() {
     enabled: !!currentCompany?.id,
   });
 
+  // Fetch custom products for this linha
+  const { data: customProducts = [] } = useQuery({
+    queryKey: ['custom-products', currentCompany?.id, currentLinha, showActive],
+    queryFn: async () => {
+      if (!currentCompany?.id) return [];
+      const { data, error } = await supabase
+        .from('company_products')
+        .select('id, commercial_name, description, category, linha, image_url, is_active, is_custom, base_price')
+        .eq('company_id', currentCompany.id)
+        .eq('linha', currentLinha)
+        .eq('is_custom', true)
+        .eq('is_active', showActive);
+      
+      if (error) throw error;
+      return (data || []) as CustomProduct[];
+    },
+    enabled: !!currentCompany?.id && !!currentLinha,
+  });
+
   // Check if product is activated for this company
   const isProductActivated = (productTemplateId: string) => {
     return companyProducts.some(
@@ -113,7 +156,7 @@ export default function ProdutosLinha() {
     },
   });
 
-  // Deactivate product for company
+  // Deactivate product for company (template products)
   const deactivateProductMutation = useMutation({
     mutationFn: async (productTemplateId: string) => {
       if (!currentCompany?.id) throw new Error('Empresa não selecionada');
@@ -128,7 +171,31 @@ export default function ProdutosLinha() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company-products'] });
+      queryClient.invalidateQueries({ queryKey: ['custom-products'] });
       toast.success('Produto desativado para venda');
+    },
+    onError: (error) => {
+      toast.error('Erro ao desativar: ' + error.message);
+    },
+  });
+
+  // Deactivate custom product
+  const deactivateCustomProductMutation = useMutation({
+    mutationFn: async (productId: string) => {
+      if (!currentCompany?.id) throw new Error('Empresa não selecionada');
+      
+      const { error } = await supabase
+        .from('company_products')
+        .update({ is_active: false })
+        .eq('company_id', currentCompany.id)
+        .eq('id', productId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-products'] });
+      queryClient.invalidateQueries({ queryKey: ['custom-products'] });
+      toast.success('Produto personalizado desativado');
     },
     onError: (error) => {
       toast.error('Erro ao desativar: ' + error.message);
@@ -154,22 +221,60 @@ export default function ProdutosLinha() {
     },
   });
 
-  // Get unique categories from products
+  // Get unique categories from products (including custom)
   const availableCategories = useMemo(() => {
-    if (!products) return [];
     const categories = new Set<string>();
-    products.forEach(p => {
+    products?.forEach(p => {
+      if (p.category) categories.add(p.category);
+    });
+    customProducts.forEach(p => {
       if (p.category) categories.add(p.category);
     });
     return Array.from(categories).sort();
-  }, [products]);
+  }, [products, customProducts]);
 
-  const filteredProducts = products?.filter((p) => {
-    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
-    const isActivated = companyProducts.some(cp => cp.product_template_id === p.id && cp.is_active);
-    return matchesSearch && matchesCategory && isActivated;
-  });
+  // Combine and filter products
+  const filteredProducts = useMemo((): DisplayProduct[] => {
+    // Filter template products that are activated
+    const templateFiltered = (products || [])
+      .filter((p) => {
+        const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
+        const isActivated = companyProducts.some(cp => cp.product_template_id === p.id && cp.is_active);
+        return matchesSearch && matchesCategory && isActivated;
+      })
+      .map((p): DisplayProduct => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        category: p.category,
+        linha: p.linha,
+        image_url: p.image_url,
+        is_active: p.is_active,
+        is_custom: false,
+      }));
+
+    // Filter custom products
+    const customFiltered = customProducts
+      .filter((p) => {
+        const matchesSearch = p.commercial_name.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
+        return matchesSearch && matchesCategory;
+      })
+      .map((p): DisplayProduct => ({
+        id: p.id,
+        name: p.commercial_name,
+        description: p.description,
+        category: p.category || 'other',
+        linha: p.linha,
+        image_url: p.image_url,
+        is_active: p.is_active,
+        is_custom: true,
+        base_price: p.base_price,
+      }));
+
+    return [...templateFiltered, ...customFiltered];
+  }, [products, customProducts, searchTerm, selectedCategory, companyProducts]);
 
   const getCategoryIcon = (category: string) => {
     // Simple placeholder icons based on category
@@ -258,7 +363,7 @@ export default function ProdutosLinha() {
           ) : filteredProducts && filteredProducts.length > 0 ? (
             <div className="divide-y">
               {filteredProducts.map((product) => {
-                const isActivated = isProductActivated(product.id);
+                const isActivated = product.is_custom || isProductActivated(product.id);
                 return (
                 <div
                   key={product.id}
@@ -277,20 +382,36 @@ export default function ProdutosLinha() {
                         <span className="text-xl">{getCategoryIcon(product.category)}</span>
                       )}
                     </div>
-                    <span className="font-medium text-sky-600 uppercase text-sm">
-                      {product.name}
-                    </span>
+                    <div className="flex flex-col">
+                      <span className="font-medium text-sky-600 uppercase text-sm">
+                        {product.name}
+                      </span>
+                      {product.is_custom && (
+                        <Badge variant="secondary" className="w-fit text-[10px] mt-0.5 bg-purple-100 text-purple-700">
+                          Personalizado
+                        </Badge>
+                      )}
+                    </div>
                   </div>
 
                   {/* Hours */}
                   <div className="col-span-1 text-center hidden sm:block text-muted-foreground text-sm">
-                    5
+                    {product.is_custom ? '-' : '5'}
                   </div>
 
                   {/* Actions */}
                   <div className="col-span-7 sm:col-span-6 flex items-center justify-end gap-2">
                     {/* Desabilitar */}
-                    {isActivated ? (
+                    {product.is_custom ? (
+                      <Button
+                        size="sm"
+                        className="bg-amber-400 hover:bg-amber-500 text-amber-900 font-medium"
+                        onClick={() => deactivateCustomProductMutation.mutate(product.id)}
+                        disabled={deactivateCustomProductMutation.isPending}
+                      >
+                        Desabilitar
+                      </Button>
+                    ) : isActivated ? (
                       <Button
                         size="sm"
                         className="bg-amber-400 hover:bg-amber-500 text-amber-900 font-medium"
@@ -312,22 +433,30 @@ export default function ProdutosLinha() {
                       </Button>
                     )}
                     
-                    {/* Fazer cópia */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-muted-foreground hover:text-foreground"
-                      onClick={() => toast.info('Funcionalidade em desenvolvimento')}
-                    >
-                      Fazer cópia
-                      <Copy className="w-4 h-4 ml-1" />
-                    </Button>
+                    {/* Fazer cópia - only for template products */}
+                    {!product.is_custom && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-muted-foreground hover:text-foreground"
+                        onClick={() => toast.info('Funcionalidade em desenvolvimento')}
+                      >
+                        Fazer cópia
+                        <Copy className="w-4 h-4 ml-1" />
+                      </Button>
+                    )}
                     
                     {/* Editar produto */}
                     <Button
                       size="sm"
                       className="bg-orange-500 hover:bg-orange-600 text-white font-medium"
-                      onClick={() => navigate(`/produtos/editar/${product.id}`)}
+                      onClick={() => {
+                        if (product.is_custom) {
+                          toast.info('Edição de produto personalizado em desenvolvimento');
+                        } else {
+                          navigate(`/produtos/editar/${product.id}`);
+                        }
+                      }}
                     >
                       Editar produto
                     </Button>
