@@ -144,8 +144,29 @@ export function AprovarOrcamentoDialog({
         throw new Error('Dados incompletos');
       }
 
+      // Recalculate values inside mutation to ensure correct values
+      const mutationEntryValue = parseFloat(entryAmount.replace(',', '.')) || 0;
+      const mutationTotalAmount = quote.final_amount || 0;
+      const mutationPendingAmount = mutationTotalAmount - mutationEntryValue;
+      const mutationHasEntry = mutationEntryValue > 0;
+      
+      // Recalculate installments inside mutation
+      const mutationInstallments = (() => {
+        if (mutationPendingAmount <= 0 || installmentsCount < 1) return [];
+        
+        const baseAmount = Math.floor((mutationPendingAmount / installmentsCount) * 100) / 100;
+        const remainder = Math.round((mutationPendingAmount - (baseAmount * installmentsCount)) * 100) / 100;
+        const firstDueDate = addDays(new Date(), firstDueDays);
+        
+        return Array.from({ length: installmentsCount }, (_, i) => ({
+          number: i + 1,
+          dueDate: addMonths(firstDueDate, i),
+          amount: i === 0 ? baseAmount + remainder : baseAmount,
+        }));
+      })();
+
       // If there's an entry and cash is not open, error
-      if (hasEntry && !isCaixaAberto) {
+      if (mutationHasEntry && !isCaixaAberto) {
         throw new Error('Caixa precisa estar aberto para registrar entrada');
       }
 
@@ -162,9 +183,9 @@ export function AprovarOrcamentoDialog({
           status: 'pending',
           priority,
           estimated_end: estimatedEnd?.toISOString().split('T')[0],
-          total_amount: totalAmount,
-          paid_amount: entryValue,
-          pending_amount: pendingAmount,
+          total_amount: mutationTotalAmount,
+          paid_amount: mutationEntryValue,
+          pending_amount: mutationPendingAmount,
           notes,
           current_stage: 'Aguardando início',
           stages: JSON.stringify([
@@ -182,20 +203,20 @@ export function AprovarOrcamentoDialog({
       let saleId: string | null = null;
 
       // 2. If there's an entry, create partial sale
-      if (hasEntry && openCashRegister) {
+      if (mutationHasEntry && openCashRegister) {
         const { data: sale, error: saleError } = await supabase
           .from('sales')
           .insert({
             company_id: currentCompany.id,
             cash_register_id: openCashRegister.id,
             customer_name: quote.customer_name,
-            subtotal: entryValue,
-            total_amount: entryValue,
+            subtotal: mutationEntryValue,
+            total_amount: mutationEntryValue,
             payment_method: paymentMethod,
             payment_status: 'paid',
             sale_type: 'partial',
-            paid_amount: entryValue,
-            pending_amount: pendingAmount,
+            paid_amount: mutationEntryValue,
+            pending_amount: mutationPendingAmount,
             quote_id: quote.id,
             ordem_servico_id: ordemServico.id,
             sold_by: user.id,
@@ -215,8 +236,8 @@ export function AprovarOrcamentoDialog({
             item_name: `Entrada - Orçamento #${quote.quote_number.toString().padStart(4, '0')}`,
             item_unit: 'un',
             quantity: 1,
-            unit_price: entryValue,
-            total_price: entryValue,
+            unit_price: mutationEntryValue,
+            total_price: mutationEntryValue,
             notes: `Entrada parcial referente ao orçamento #${quote.quote_number}`,
           });
 
@@ -228,17 +249,17 @@ export function AprovarOrcamentoDialog({
       }
 
       // 3. Create accounts_receivable for pending installments
-      if (pendingAmount > 0 && installmentsPreview.length > 0) {
-        const installmentsToInsert = installmentsPreview.map((inst) => ({
+      if (mutationPendingAmount > 0 && mutationInstallments.length > 0) {
+        const installmentsToInsert = mutationInstallments.map((inst) => ({
           company_id: currentCompany.id,
           ordem_servico_id: ordemServico.id,
           quote_id: quote.id,
           sale_id: saleId,
           customer_name: quote.customer_name,
-          description: `OS #${ordemServico.os_number} - Parcela ${inst.number}/${installmentsPreview.length}`,
+          description: `OS #${ordemServico.os_number} - Parcela ${inst.number}/${mutationInstallments.length}`,
           total_amount: inst.amount,
           installment_number: inst.number,
-          total_installments: installmentsPreview.length,
+          total_installments: mutationInstallments.length,
           due_date: format(inst.dueDate, 'yyyy-MM-dd'),
           status: 'pending',
           created_by: user.id,
@@ -250,7 +271,7 @@ export function AprovarOrcamentoDialog({
         
         if (receivablesError) {
           console.error('Error creating receivables:', receivablesError);
-          // Don't throw - OS was created, just log the error
+          throw new Error(`Erro ao criar parcelas: ${receivablesError.message}`);
         }
       }
 
