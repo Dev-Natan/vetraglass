@@ -1,0 +1,287 @@
+import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
+import { DollarSign, CreditCard, Smartphone, Receipt, User, FileText } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+
+interface QuoteDeposit {
+  id: string;
+  quote_id: string;
+  ordem_servico_id: string | null;
+  customer_name: string;
+  customer_phone: string | null;
+  amount: number;
+  status: string;
+  quotes?: {
+    quote_number: number;
+  };
+  ordens_servico?: {
+    os_number: number;
+  };
+}
+
+interface ReceberEntradaDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  deposit: QuoteDeposit;
+  cashRegisterId: string;
+  onSuccess: () => void;
+}
+
+export function ReceberEntradaDialog({
+  open,
+  onOpenChange,
+  deposit,
+  cashRegisterId,
+  onSuccess,
+}: ReceberEntradaDialogProps) {
+  const { currentCompany, user } = useAuth();
+  const queryClient = useQueryClient();
+  const [paymentMethod, setPaymentMethod] = useState<'dinheiro' | 'cartao' | 'pix'>('dinheiro');
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
+
+  const receberMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentCompany?.id || !user?.id) {
+        throw new Error('Empresa ou usuário não encontrado');
+      }
+
+      const amount = Number(deposit.amount);
+      const osNumber = deposit.ordens_servico?.os_number;
+      const quoteNumber = deposit.quotes?.quote_number;
+      const description = osNumber 
+        ? `Entrada - OS #${String(osNumber).padStart(4, '0')} - ${deposit.customer_name}`
+        : `Entrada - Orçamento #${String(quoteNumber || 0).padStart(4, '0')} - ${deposit.customer_name}`;
+
+      // 1. Criar movimento de caixa (ENTRADA, não venda)
+      const { data: cashMovement, error: movementError } = await supabase
+        .from('cash_movements')
+        .insert({
+          cash_register_id: cashRegisterId,
+          company_id: currentCompany.id,
+          type: 'entrada',
+          category: 'entrada_orcamento',
+          amount: amount,
+          description: description,
+          payment_method: paymentMethod,
+          created_by: user.id,
+        })
+        .select('id')
+        .single();
+
+      if (movementError) throw movementError;
+
+      // 2. Atualizar quote_deposit para 'received'
+      const { error: depositError } = await supabase
+        .from('quote_deposits')
+        .update({
+          status: 'received',
+          received_at: new Date().toISOString(),
+          cash_register_id: cashRegisterId,
+          cash_movement_id: cashMovement.id,
+          payment_method: paymentMethod,
+        })
+        .eq('id', deposit.id);
+
+      if (depositError) throw depositError;
+
+      // 3. Atualizar accounts_receivable correspondente (se existir)
+      const { error: receivableError } = await supabase
+        .from('accounts_receivable')
+        .update({
+          status: 'paid',
+          paid_date: new Date().toISOString().split('T')[0],
+          paid_amount: amount,
+          payment_method: paymentMethod,
+        })
+        .eq('quote_id', deposit.quote_id)
+        .eq('receivable_type', 'entrada_orcamento')
+        .eq('status', 'pending');
+
+      if (receivableError) {
+        console.warn('Conta a receber não encontrada ou já paga:', receivableError);
+      }
+
+      // 4. Atualizar ordens_servico paid_amount (se existir)
+      if (deposit.ordem_servico_id) {
+        const { data: currentOS, error: osSelectError } = await supabase
+          .from('ordens_servico')
+          .select('paid_amount, pending_amount')
+          .eq('id', deposit.ordem_servico_id)
+          .single();
+
+        if (!osSelectError && currentOS) {
+          const newPaidAmount = (currentOS.paid_amount || 0) + amount;
+          const newPendingAmount = Math.max(0, (currentOS.pending_amount || 0) - amount);
+
+          const { error: osError } = await supabase
+            .from('ordens_servico')
+            .update({
+              paid_amount: newPaidAmount,
+              pending_amount: newPendingAmount,
+            })
+            .eq('id', deposit.ordem_servico_id);
+
+          if (osError) {
+            console.warn('Erro ao atualizar OS:', osError);
+          }
+        }
+      }
+
+      // 5. Atualizar quotes deposit_status
+      const { error: quoteError } = await supabase
+        .from('quotes')
+        .update({
+          deposit_status: 'received',
+        })
+        .eq('id', deposit.quote_id);
+
+      if (quoteError) {
+        console.warn('Erro ao atualizar quote:', quoteError);
+      }
+
+      return cashMovement;
+    },
+    onSuccess: () => {
+      toast.success('Entrada recebida com sucesso!', {
+        description: `${formatCurrency(Number(deposit.amount))} adicionado ao caixa`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['pending-deposits'] });
+      queryClient.invalidateQueries({ queryKey: ['cash-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts-receivable'] });
+      queryClient.invalidateQueries({ queryKey: ['ordens-servico'] });
+      onSuccess();
+    },
+    onError: (error) => {
+      console.error('Erro ao receber entrada:', error);
+      toast.error('Erro ao receber entrada', {
+        description: error instanceof Error ? error.message : 'Tente novamente',
+      });
+    },
+  });
+
+  const handleConfirm = () => {
+    receberMutation.mutate();
+  };
+
+  const osNumber = deposit.ordens_servico?.os_number;
+  const quoteNumber = deposit.quotes?.quote_number;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Receipt className="h-5 w-5" />
+            Receber Entrada de Orçamento
+          </DialogTitle>
+          <DialogDescription>
+            Confirme o recebimento da entrada no caixa
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          {/* Info do Cliente */}
+          <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+            <User className="h-5 w-5 text-muted-foreground" />
+            <div>
+              <p className="font-medium">{deposit.customer_name}</p>
+              {deposit.customer_phone && (
+                <p className="text-sm text-muted-foreground">{deposit.customer_phone}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Info do Orçamento/OS */}
+          <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+            <FileText className="h-5 w-5 text-muted-foreground" />
+            <div>
+              <p className="font-medium">
+                {osNumber 
+                  ? `OS #${String(osNumber).padStart(4, '0')}`
+                  : `Orçamento #${String(quoteNumber || 0).padStart(4, '0')}`
+                }
+              </p>
+              <p className="text-sm text-muted-foreground">Entrada pendente</p>
+            </div>
+          </div>
+
+          {/* Valor */}
+          <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg border border-primary/20">
+            <span className="text-sm font-medium">Valor da Entrada</span>
+            <span className="text-xl font-bold text-primary">
+              {formatCurrency(Number(deposit.amount))}
+            </span>
+          </div>
+
+          {/* Forma de Pagamento */}
+          <div>
+            <Label className="text-sm font-medium">Forma de Pagamento</Label>
+            <RadioGroup
+              value={paymentMethod}
+              onValueChange={(v) => setPaymentMethod(v as typeof paymentMethod)}
+              className="flex gap-4 mt-2"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="dinheiro" id="rec-dinheiro" />
+                <Label htmlFor="rec-dinheiro" className="flex items-center gap-1 cursor-pointer">
+                  <DollarSign className="w-4 h-4" />
+                  Dinheiro
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="cartao" id="rec-cartao" />
+                <Label htmlFor="rec-cartao" className="flex items-center gap-1 cursor-pointer">
+                  <CreditCard className="w-4 h-4" />
+                  Cartão
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="pix" id="rec-pix" />
+                <Label htmlFor="rec-pix" className="flex items-center gap-1 cursor-pointer">
+                  <Smartphone className="w-4 h-4" />
+                  Pix
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={receberMutation.isPending}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleConfirm}
+            disabled={receberMutation.isPending}
+          >
+            {receberMutation.isPending ? 'Processando...' : 'Confirmar Recebimento'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
