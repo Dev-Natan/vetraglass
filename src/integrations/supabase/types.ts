@@ -31,6 +31,7 @@ export type Database = {
           paid_date: string | null
           payment_method: string | null
           quote_id: string | null
+          receivable_type: string | null
           sale_id: string | null
           status: string
           total_amount: number
@@ -53,6 +54,7 @@ export type Database = {
           paid_date?: string | null
           payment_method?: string | null
           quote_id?: string | null
+          receivable_type?: string | null
           sale_id?: string | null
           status?: string
           total_amount: number
@@ -75,6 +77,7 @@ export type Database = {
           paid_date?: string | null
           payment_method?: string | null
           quote_id?: string | null
+          receivable_type?: string | null
           sale_id?: string | null
           status?: string
           total_amount?: number
@@ -3055,6 +3058,103 @@ export type Database = {
         }
         Relationships: []
       }
+      quote_deposits: {
+        Row: {
+          amount: number
+          cash_movement_id: string | null
+          cash_register_id: string | null
+          company_id: string
+          created_at: string | null
+          created_by: string | null
+          customer_name: string
+          customer_phone: string | null
+          id: string
+          ordem_servico_id: string | null
+          payment_method: string | null
+          quote_id: string
+          received_at: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          cash_movement_id?: string | null
+          cash_register_id?: string | null
+          company_id: string
+          created_at?: string | null
+          created_by?: string | null
+          customer_name: string
+          customer_phone?: string | null
+          id?: string
+          ordem_servico_id?: string | null
+          payment_method?: string | null
+          quote_id: string
+          received_at?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          cash_movement_id?: string | null
+          cash_register_id?: string | null
+          company_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          id?: string
+          ordem_servico_id?: string | null
+          payment_method?: string | null
+          quote_id?: string
+          received_at?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_deposits_cash_movement_id_fkey"
+            columns: ["cash_movement_id"]
+            isOneToOne: false
+            referencedRelation: "cash_movements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_deposits_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_deposits_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_deposits_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_deposits_ordem_servico_id_fkey"
+            columns: ["ordem_servico_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_deposits_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quote_items: {
         Row: {
           company_product_id: string | null
@@ -3143,6 +3243,8 @@ export type Database = {
           customer_name: string
           customer_phone: string | null
           customer_profession: string | null
+          deposit_amount: number | null
+          deposit_status: string | null
           discount_amount: number | null
           discount_percent: number | null
           final_amount: number
@@ -3166,6 +3268,8 @@ export type Database = {
           customer_name: string
           customer_phone?: string | null
           customer_profession?: string | null
+          deposit_amount?: number | null
+          deposit_status?: string | null
           discount_amount?: number | null
           discount_percent?: number | null
           final_amount?: number
@@ -3189,6 +3293,8 @@ export type Database = {
           customer_name?: string
           customer_phone?: string | null
           customer_profession?: string | null
+          deposit_amount?: number | null
+          deposit_status?: string | null
           discount_amount?: number | null
           discount_percent?: number | null
           final_amount?: number

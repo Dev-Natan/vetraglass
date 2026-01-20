@@ -24,6 +24,7 @@ import { DetalhesVendaDialog } from '@/components/caixa/DetalhesVendaDialog';
 import { MovimentacaoCaixaDialog } from '@/components/caixa/MovimentacaoCaixaDialog';
 import { CaixaAlertasHoje } from '@/components/caixa/CaixaAlertasHoje';
 import { CaixaMovimentacoesTable } from '@/components/caixa/CaixaMovimentacoesTable';
+import { PendingDepositsAlert } from '@/components/caixa/PendingDepositsAlert';
 import { generateSalePdf } from '@/utils/generateSalePdf';
 import { generateDailyCashPdf } from '@/utils/generateDailyCashPdf';
 
@@ -654,6 +655,11 @@ export default function CaixaVendas() {
               companyCashBalance={companyCash?.current_balance}
               fixedFund={companyCash?.fixed_fund}
             />
+
+            {/* Entradas de Orçamento Pendentes */}
+            {openCashRegister?.id && (
+              <PendingDepositsAlert cashRegisterId={openCashRegister.id} />
+            )}
 
             {/* Alertas do Dia (despesas e parcelas vencendo) */}
             <CaixaAlertasHoje
