@@ -11,16 +11,16 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Plus, Package, ShoppingCart, FileText, Trash2, Minus,
-  DollarSign, CreditCard, Smartphone, Loader2, ArrowLeft, Layers, Box, User
+  DollarSign, CreditCard, Smartphone, Loader2, ArrowLeft, Layers, Box, User, Calculator
 } from 'lucide-react';
 import { AddProductPanel } from '@/components/orcamentos/AddProductPanel';
 import { AddToStockDialog } from './AddToStockDialog';
+import { InstallmentPaymentSheet, PaymentConfig } from './InstallmentPaymentSheet';
 import { toast } from 'sonner';
 
 export interface VendaItem {
@@ -82,7 +82,7 @@ interface NovaVendaDialogProps {
   onConfirm: (data: {
     items: VendaItem[];
     customerName: string;
-    paymentMethod: 'dinheiro' | 'cartao' | 'pix';
+    paymentConfig: PaymentConfig;
     discountPercent: number;
     discountAmount: number;
     subtotal: number;
@@ -117,9 +117,12 @@ export function NovaVendaDialog({
   const [viewMode, setViewMode] = useState<ViewMode>('main');
   const [items, setItems] = useState<VendaItem[]>([]);
   const [customerName, setCustomerName] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'dinheiro' | 'cartao' | 'pix'>('dinheiro');
   const [discountPercent, setDiscountPercent] = useState('');
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
+  
+  // Payment configuration state
+  const [paymentSheetOpen, setPaymentSheetOpen] = useState(false);
+  const [paymentConfig, setPaymentConfig] = useState<PaymentConfig | null>(null);
   
   // Material mode navigation
   const [selectedLinha, setSelectedLinha] = useState<string | null>(null);
@@ -398,11 +401,19 @@ export function NovaVendaDialog({
     setItems(items.filter((item) => item.id !== id));
   };
 
+  const handlePaymentConfirm = (config: PaymentConfig) => {
+    setPaymentConfig(config);
+  };
+
   const handleConfirm = async () => {
+    if (!paymentConfig) {
+      toast.error('Configure o pagamento antes de finalizar');
+      return;
+    }
     await onConfirm({
       items,
       customerName,
-      paymentMethod,
+      paymentConfig,
       discountPercent: parseFloat(discountPercent.replace(',', '.')) || 0,
       discountAmount: discountValue,
       subtotal,
@@ -415,7 +426,6 @@ export function NovaVendaDialog({
   const resetForm = () => {
     setItems([]);
     setCustomerName('');
-    setPaymentMethod('dinheiro');
     setDiscountPercent('');
     setSelectedQuote(null);
     setSelectedLinha(null);
@@ -427,6 +437,8 @@ export function NovaVendaDialog({
     setMode('avulsa');
     setPendingItem(null);
     setShowStockDialog(false);
+    setPaymentConfig(null);
+    setPaymentSheetOpen(false);
   };
 
   const handleClose = () => {
@@ -720,7 +732,7 @@ export function NovaVendaDialog({
               {/* Payment & Totals - Show when items exist */}
               {items.length > 0 && (
                 <>
-                  {/* Payment Method */}
+                  {/* Discount & Payment Config */}
                   <div className="rounded-xl border bg-card p-4 space-y-4">
                     <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                       <DollarSign className="w-4 h-4" />
@@ -740,32 +752,50 @@ export function NovaVendaDialog({
                       </div>
                       <div className="space-y-2">
                         <Label>Forma de Pagamento</Label>
-                        <RadioGroup
-                          value={paymentMethod}
-                          onValueChange={(v) => setPaymentMethod(v as 'dinheiro' | 'cartao' | 'pix')}
-                          className="flex gap-3"
+                        <Button 
+                          type="button"
+                          variant="outline" 
+                          className="w-full justify-start gap-2"
+                          onClick={() => setPaymentSheetOpen(true)}
                         >
-                          <div className="flex items-center space-x-1">
-                            <RadioGroupItem value="dinheiro" id="dinheiro" />
-                            <Label htmlFor="dinheiro" className="flex items-center gap-1 cursor-pointer text-sm">
-                              <DollarSign className="h-3 w-3" /> Dinheiro
-                            </Label>
-                          </div>
-                          <div className="flex items-center space-x-1">
-                            <RadioGroupItem value="cartao" id="cartao" />
-                            <Label htmlFor="cartao" className="flex items-center gap-1 cursor-pointer text-sm">
-                              <CreditCard className="h-3 w-3" /> Cartão
-                            </Label>
-                          </div>
-                          <div className="flex items-center space-x-1">
-                            <RadioGroupItem value="pix" id="pix" />
-                            <Label htmlFor="pix" className="flex items-center gap-1 cursor-pointer text-sm">
-                              <Smartphone className="h-3 w-3" /> PIX
-                            </Label>
-                          </div>
-                        </RadioGroup>
+                          <Calculator className="w-4 h-4" />
+                          {paymentConfig ? (
+                            <span className="flex-1 text-left">
+                              {paymentConfig.type === 'full' ? 'À Vista' : 
+                               paymentConfig.type === 'partial' ? `Entrada + Saldo` :
+                               `${paymentConfig.installmentsCount}x`}
+                              {' - '}
+                              {paymentConfig.method === 'dinheiro' ? 'Dinheiro' :
+                               paymentConfig.method === 'cartao' ? 'Cartão' :
+                               paymentConfig.method === 'pix' ? 'PIX' :
+                               paymentConfig.method === 'boleto' ? 'Boleto' : 'Transferência'}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">Configurar pagamento</span>
+                          )}
+                        </Button>
                       </div>
                     </div>
+
+                    {/* Payment Summary */}
+                    {paymentConfig && paymentConfig.type !== 'full' && (
+                      <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Entrada (hoje)</span>
+                          <span className="font-medium text-green-600">{formatCurrency(paymentConfig.paidAmount)}</span>
+                        </div>
+                        {paymentConfig.installments.length > 0 && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">
+                              A receber ({paymentConfig.installments.length} parcela{paymentConfig.installments.length > 1 ? 's' : ''})
+                            </span>
+                            <span className="font-medium text-orange-600">
+                              {formatCurrency(total - paymentConfig.paidAmount)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Totals */}
@@ -793,7 +823,7 @@ export function NovaVendaDialog({
                     </Button>
                     <Button 
                       onClick={handleConfirm} 
-                      disabled={isLoading || items.length === 0}
+                      disabled={isLoading || items.length === 0 || !paymentConfig}
                       className="bg-green-600 hover:bg-green-700"
                     >
                       {isLoading ? (
@@ -808,6 +838,14 @@ export function NovaVendaDialog({
                   </div>
                 </>
               )}
+
+              {/* Payment Sheet */}
+              <InstallmentPaymentSheet
+                open={paymentSheetOpen}
+                onOpenChange={setPaymentSheetOpen}
+                totalAmount={total}
+                onConfirm={handlePaymentConfirm}
+              />
             </div>
           ) : viewMode === 'add-product' ? (
             <div className="py-4">

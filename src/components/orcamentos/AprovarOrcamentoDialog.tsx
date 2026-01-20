@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { format, addDays } from 'date-fns';
+import { format, addDays, addMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
   Dialog,
@@ -22,6 +22,13 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { 
   CheckCircle, 
   DollarSign, 
@@ -31,7 +38,8 @@ import {
   AlertCircle,
   Loader2,
   ClipboardList,
-  Wallet
+  Wallet,
+  Receipt
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { generateOSDocuments } from '@/utils/generateOSDocuments';
@@ -83,6 +91,10 @@ export function AprovarOrcamentoDialog({
   const [estimatedEnd, setEstimatedEnd] = useState<Date | undefined>(addDays(new Date(), 7));
   const [priority, setPriority] = useState<'low' | 'normal' | 'high' | 'urgent'>('normal');
   const [notes, setNotes] = useState('');
+  
+  // Installment configuration for pending balance
+  const [installmentsCount, setInstallmentsCount] = useState(1);
+  const [firstDueDays, setFirstDueDays] = useState(30);
 
   // Check if cash register is open
   const { data: openCashRegister } = useQuery({
@@ -106,6 +118,21 @@ export function AprovarOrcamentoDialog({
   const totalAmount = quote?.final_amount || 0;
   const pendingAmount = totalAmount - entryValue;
   const hasEntry = entryValue > 0;
+
+  // Generate installments preview for pending amount
+  const installmentsPreview = useMemo(() => {
+    if (pendingAmount <= 0 || installmentsCount < 1) return [];
+    
+    const baseAmount = Math.floor((pendingAmount / installmentsCount) * 100) / 100;
+    const remainder = pendingAmount - (baseAmount * installmentsCount);
+    const firstDueDate = addDays(new Date(), firstDueDays);
+    
+    return Array.from({ length: installmentsCount }, (_, i) => ({
+      number: i + 1,
+      dueDate: addMonths(firstDueDate, i),
+      amount: i === 0 ? baseAmount + remainder : baseAmount,
+    }));
+  }, [pendingAmount, installmentsCount, firstDueDays]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -200,7 +227,34 @@ export function AprovarOrcamentoDialog({
           .eq('id', ordemServico.id);
       }
 
-      // 3. Update quote status to approved
+      // 3. Create accounts_receivable for pending installments
+      if (pendingAmount > 0 && installmentsPreview.length > 0) {
+        const installmentsToInsert = installmentsPreview.map((inst) => ({
+          company_id: currentCompany.id,
+          ordem_servico_id: ordemServico.id,
+          quote_id: quote.id,
+          sale_id: saleId,
+          customer_name: quote.customer_name,
+          description: `OS #${ordemServico.os_number} - Parcela ${inst.number}/${installmentsPreview.length}`,
+          total_amount: inst.amount,
+          installment_number: inst.number,
+          total_installments: installmentsPreview.length,
+          due_date: format(inst.dueDate, 'yyyy-MM-dd'),
+          status: 'pending',
+          created_by: user.id,
+        }));
+
+        const { error: receivablesError } = await supabase
+          .from('accounts_receivable')
+          .insert(installmentsToInsert);
+        
+        if (receivablesError) {
+          console.error('Error creating receivables:', receivablesError);
+          // Don't throw - OS was created, just log the error
+        }
+      }
+
+      // 4. Update quote status to approved
       const { error: quoteError } = await supabase
         .from('quotes')
         .update({ status: 'approved' })
@@ -208,7 +262,7 @@ export function AprovarOrcamentoDialog({
 
       if (quoteError) throw quoteError;
 
-      // 4. Generate OS documents (materials, cutting plan, glass projects)
+      // 5. Generate OS documents (materials, cutting plan, glass projects)
       const docsResult = await generateOSDocuments(ordemServico.id, items);
       if (!docsResult.success) {
         console.warn('Error generating OS documents:', docsResult.error);
@@ -218,15 +272,23 @@ export function AprovarOrcamentoDialog({
     },
     onSuccess: (data) => {
       const osNumber = data.ordemServico.os_number;
+      const parcelasMsg = installmentsPreview.length > 1 
+        ? ` ${installmentsPreview.length} parcelas criadas em Contas a Receber.`
+        : installmentsPreview.length === 1 
+        ? ' Parcela criada em Contas a Receber.'
+        : '';
+      
       toast({
         title: 'Orçamento aprovado!',
         description: hasEntry
-          ? `OS #${osNumber} criada. Entrada de ${formatCurrency(entryValue)} registrada.`
-          : `OS #${osNumber} criada. Valor pendente: ${formatCurrency(pendingAmount)}`,
+          ? `OS #${osNumber} criada. Entrada de ${formatCurrency(entryValue)} registrada.${parcelasMsg}`
+          : `OS #${osNumber} criada. Valor pendente: ${formatCurrency(pendingAmount)}.${parcelasMsg}`,
       });
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
       queryClient.invalidateQueries({ queryKey: ['sales-today'] });
       queryClient.invalidateQueries({ queryKey: ['ordens-servico'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts-receivable'] });
+      queryClient.invalidateQueries({ queryKey: ['receivables-due-today'] });
       resetForm();
       onOpenChange(false);
       onSuccess?.();
@@ -246,6 +308,8 @@ export function AprovarOrcamentoDialog({
     setEstimatedEnd(addDays(new Date(), 7));
     setPriority('normal');
     setNotes('');
+    setInstallmentsCount(1);
+    setFirstDueDays(30);
   };
 
   if (!quote) return null;
@@ -419,6 +483,75 @@ export function AprovarOrcamentoDialog({
 
           <Separator />
 
+          {/* Installments Configuration (when there's pending amount) */}
+          {pendingAmount > 0 && (
+            <>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Receipt className="w-4 h-4 text-primary" />
+                  <Label className="text-base font-medium">Parcelamento do Saldo</Label>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Número de Parcelas</Label>
+                    <Select
+                      value={String(installmentsCount)}
+                      onValueChange={(v) => setInstallmentsCount(parseInt(v))}
+                    >
+                      <SelectTrigger className="mt-2">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[1, 2, 3, 4, 5, 6, 8, 10, 12].map((n) => (
+                          <SelectItem key={n} value={String(n)}>
+                            {n}x de {formatCurrency(pendingAmount / n)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label>Primeiro Vencimento</Label>
+                    <Select
+                      value={String(firstDueDays)}
+                      onValueChange={(v) => setFirstDueDays(parseInt(v))}
+                    >
+                      <SelectTrigger className="mt-2">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="7">7 dias</SelectItem>
+                        <SelectItem value="15">15 dias</SelectItem>
+                        <SelectItem value="30">30 dias</SelectItem>
+                        <SelectItem value="45">45 dias</SelectItem>
+                        <SelectItem value="60">60 dias</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Installments Preview */}
+                {installmentsPreview.length > 0 && (
+                  <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+                    <p className="text-xs text-muted-foreground font-medium">Parcelas a Receber:</p>
+                    {installmentsPreview.map((inst) => (
+                      <div key={inst.number} className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          Parcela {inst.number}/{installmentsPreview.length} - {format(inst.dueDate, 'dd/MM/yyyy', { locale: ptBR })}
+                        </span>
+                        <span className="font-medium">{formatCurrency(inst.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <Separator />
+            </>
+          )}
+
           {/* Final Summary */}
           <div className="bg-primary/5 rounded-lg p-4 space-y-2">
             <div className="flex justify-between text-sm">
@@ -435,6 +568,12 @@ export function AprovarOrcamentoDialog({
                 {formatCurrency(pendingAmount)}
               </Badge>
             </div>
+            {pendingAmount > 0 && installmentsCount > 1 && (
+              <div className="flex justify-between text-xs text-muted-foreground pt-1">
+                <span>Parcelas</span>
+                <span>{installmentsCount}x de {formatCurrency(pendingAmount / installmentsCount)}</span>
+              </div>
+            )}
           </div>
         </div>
 
