@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Parser } from 'expr-eval';
+import { PaymentConfig } from '@/components/caixa/InstallmentPaymentSheet';
 
 import { AbrirCaixaDialog } from '@/components/caixa/AbrirCaixaDialog';
 import { FecharCaixaDialog } from '@/components/caixa/FecharCaixaDialog';
@@ -355,14 +356,59 @@ export default function CaixaVendas() {
     onError: (error: Error) => toast.error(`Erro ao fechar caixa: ${error.message}`),
   });
 
-  // Mutation: Nova venda (mantido igual, resumido)
+  // Mutation: Nova venda com suporte a parcelamento
   const newSaleMutation = useMutation({
-    mutationFn: async (data: { items: VendaItem[]; customerName: string; paymentMethod: 'dinheiro' | 'cartao' | 'pix'; discountPercent: number; discountAmount: number; subtotal: number; total: number; quoteId?: string }) => {
+    mutationFn: async (data: { items: VendaItem[]; customerName: string; paymentConfig: PaymentConfig; discountPercent: number; discountAmount: number; subtotal: number; total: number; quoteId?: string }) => {
       if (!openCashRegister?.id || !currentCompany?.id || !user?.id) throw new Error('Caixa não está aberto');
-      const { data: sale, error: saleError } = await supabase.from('sales').insert({ company_id: currentCompany.id, cash_register_id: openCashRegister.id, customer_name: data.customerName || null, subtotal: data.subtotal, discount_percent: data.discountPercent, discount_amount: data.discountAmount, total_amount: data.total, payment_method: data.paymentMethod, payment_status: 'paid', sold_by: user.id }).select().single();
+      
+      const { paymentConfig } = data;
+      const isPaidInFull = paymentConfig.type === 'full';
+      const paymentStatus = isPaidInFull ? 'paid' : 'partial';
+      
+      // Create sale
+      const { data: sale, error: saleError } = await supabase.from('sales').insert({ 
+        company_id: currentCompany.id, 
+        cash_register_id: openCashRegister.id, 
+        customer_name: data.customerName || null, 
+        subtotal: data.subtotal, 
+        discount_percent: data.discountPercent, 
+        discount_amount: data.discountAmount, 
+        total_amount: data.total, 
+        payment_method: paymentConfig.method, 
+        payment_status: paymentStatus,
+        paid_amount: paymentConfig.paidAmount,
+        pending_amount: data.total - paymentConfig.paidAmount,
+        sold_by: user.id 
+      }).select().single();
+      
       if (saleError) throw saleError;
+      
+      // Create sale items
       const saleItems = data.items.map((item) => ({ sale_id: sale.id, item_template_id: item.itemTemplateId || null, company_product_id: item.companyProductId || null, item_name: item.name, item_unit: item.unit, quantity: item.quantity, unit_price: item.unitPrice, total_price: item.totalPrice, width: item.width || null, height: item.height || null }));
       await supabase.from('sale_items').insert(saleItems);
+      
+      // Create accounts_receivable if there are installments
+      if (paymentConfig.installments.length > 0) {
+        const installmentsToInsert = paymentConfig.installments.map((inst) => ({
+          company_id: currentCompany.id,
+          sale_id: sale.id,
+          customer_name: data.customerName || 'Cliente não identificado',
+          description: `Venda #${String(sale.sale_number).padStart(4, '0')} - Parcela ${inst.number}/${paymentConfig.installments.length}`,
+          total_amount: inst.amount,
+          installment_number: inst.number,
+          total_installments: paymentConfig.installments.length,
+          due_date: format(inst.dueDate, 'yyyy-MM-dd'),
+          status: 'pending',
+          payment_method: paymentConfig.method,
+          created_by: user.id,
+        }));
+        
+        const { error: receivablesError } = await supabase.from('accounts_receivable').insert(installmentsToInsert);
+        if (receivablesError) {
+          console.error('Error creating receivables:', receivablesError);
+          // Don't throw - sale was created, just log the error
+        }
+      }
       
       // Stock deductions (simplified - kept same logic)
       const stockDeductions: Map<string, number> = new Map();
@@ -396,7 +442,15 @@ export default function CaixaVendas() {
       if (sellerEmployee?.commission_enabled) await supabase.rpc('calculate_sale_commission', { _sale_id: sale.id, _employee_id: sellerEmployee.id });
       return sale;
     },
-    onSuccess: (sale) => { toast.success(`Venda #${String(sale.sale_number).padStart(4, '0')} registrada!`); queryClient.invalidateQueries({ queryKey: ['sales-today'] }); queryClient.invalidateQueries({ queryKey: ['company-stock'] }); queryClient.invalidateQueries({ queryKey: ['approved-quotes'] }); setNovaVendaOpen(false); },
+    onSuccess: (sale) => { 
+      toast.success(`Venda #${String(sale.sale_number).padStart(4, '0')} registrada!`); 
+      queryClient.invalidateQueries({ queryKey: ['sales-today'] }); 
+      queryClient.invalidateQueries({ queryKey: ['company-stock'] }); 
+      queryClient.invalidateQueries({ queryKey: ['approved-quotes'] }); 
+      queryClient.invalidateQueries({ queryKey: ['accounts-receivable'] });
+      queryClient.invalidateQueries({ queryKey: ['receivables-due-today'] });
+      setNovaVendaOpen(false); 
+    },
     onError: (error: Error) => toast.error(`Erro ao registrar venda: ${error.message}`),
   });
 
