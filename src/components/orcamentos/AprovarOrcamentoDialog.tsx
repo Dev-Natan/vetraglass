@@ -392,36 +392,46 @@ export function AprovarOrcamentoDialog({
               </div>
 
               {hasEntry && isCaixaAberto && (
-                <div>
-                  <Label>Forma de pagamento</Label>
-                  <RadioGroup
-                    value={paymentMethod}
-                    onValueChange={(v) => setPaymentMethod(v as typeof paymentMethod)}
-                    className="flex gap-4 mt-2"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="dinheiro" id="dinheiro" />
-                      <Label htmlFor="dinheiro" className="flex items-center gap-1 cursor-pointer">
-                        <DollarSign className="w-4 h-4" />
-                        Dinheiro
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="cartao" id="cartao" />
-                      <Label htmlFor="cartao" className="flex items-center gap-1 cursor-pointer">
-                        <CreditCard className="w-4 h-4" />
-                        Cartão
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="pix" id="pix" />
-                      <Label htmlFor="pix" className="flex items-center gap-1 cursor-pointer">
-                        <Smartphone className="w-4 h-4" />
-                        Pix
-                      </Label>
-                    </div>
-                  </RadioGroup>
-                </div>
+                <>
+                  <div>
+                    <Label>Forma de pagamento</Label>
+                    <RadioGroup
+                      value={paymentMethod}
+                      onValueChange={(v) => setPaymentMethod(v as typeof paymentMethod)}
+                      className="flex gap-4 mt-2"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="dinheiro" id="dinheiro" />
+                        <Label htmlFor="dinheiro" className="flex items-center gap-1 cursor-pointer">
+                          <DollarSign className="w-4 h-4" />
+                          Dinheiro
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="cartao" id="cartao" />
+                        <Label htmlFor="cartao" className="flex items-center gap-1 cursor-pointer">
+                          <CreditCard className="w-4 h-4" />
+                          Cartão
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="pix" id="pix" />
+                        <Label htmlFor="pix" className="flex items-center gap-1 cursor-pointer">
+                          <Smartphone className="w-4 h-4" />
+                          Pix
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+                  
+                  <div className="flex items-start gap-2 p-3 bg-primary/10 text-primary rounded-lg text-sm">
+                    <Receipt className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                    <span>
+                      O valor da entrada será registrado como venda no caixa aberto. 
+                      Certifique-se de receber o valor do cliente antes de aprovar.
+                    </span>
+                  </div>
+                </>
               )}
             </div>
           </div>
