@@ -15,7 +15,7 @@ import {
   Square
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Parser } from 'expr-eval';
+import { validateFormula } from '@/utils/safeFormulaEvaluator';
 
 interface GlassFormulaEditorProps {
   widthFormula: string;
@@ -53,28 +53,6 @@ const operators = [
   { label: '(', value: '(', icon: null },
   { label: ')', value: ')', icon: null },
 ];
-
-function validateFormula(formula: string): { isValid: boolean; result: number | null; error: string } {
-  if (!formula || formula.trim() === '') {
-    return { isValid: true, result: null, error: '' };
-  }
-
-  try {
-    const parser = new Parser();
-    const testFormula = formula
-      .replace(/Altura/gi, '1000')
-      .replace(/Largura/gi, '800');
-    
-    const result = parser.parse(testFormula).evaluate();
-    
-    if (typeof result === 'number' && !isNaN(result)) {
-      return { isValid: true, result, error: '' };
-    }
-    return { isValid: false, result: null, error: 'Resultado inválido' };
-  } catch {
-    return { isValid: false, result: null, error: 'Fórmula inválida' };
-  }
-}
 
 interface FormulaInputProps {
   label: string;

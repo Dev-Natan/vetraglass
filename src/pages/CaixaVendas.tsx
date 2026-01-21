@@ -11,8 +11,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Parser } from 'expr-eval';
 import { PaymentConfig } from '@/components/caixa/InstallmentPaymentSheet';
+import { calculateFormulaQuantity } from '@/utils/safeFormulaEvaluator';
 
 import { AbrirCaixaDialog } from '@/components/caixa/AbrirCaixaDialog';
 import { FecharCaixaDialog } from '@/components/caixa/FecharCaixaDialog';
@@ -27,23 +27,6 @@ import { CaixaMovimentacoesTable } from '@/components/caixa/CaixaMovimentacoesTa
 import { PendingDepositsAlert } from '@/components/caixa/PendingDepositsAlert';
 import { generateSalePdf } from '@/utils/generateSalePdf';
 import { generateDailyCashPdf } from '@/utils/generateDailyCashPdf';
-
-function calculateFormulaQuantity(formula: string, width: number, height: number, piecesQty: number): number {
-  try {
-    const L = width / 1000;
-    const A = height / 1000;
-    let processedFormula = formula
-      .replace(/largura/gi, 'L')
-      .replace(/altura/gi, 'A')
-      .replace(/,/g, '.');
-    const parser = new Parser();
-    const result = parser.evaluate(processedFormula, { L, A, l: L, a: A });
-    return (result / 1000) * piecesQty;
-  } catch (error) {
-    console.error('Erro ao calcular fórmula:', formula, error);
-    return 0;
-  }
-}
 
 interface Sale {
   id: string;

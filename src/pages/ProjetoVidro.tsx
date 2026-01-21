@@ -9,7 +9,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
-import { Parser } from 'expr-eval';
 import { useAuth } from '@/contexts/AuthContext';
 import { GlassProjectCanvas } from '@/components/projeto-vidro/GlassProjectCanvas';
 import { PiecesTable } from '@/components/projeto-vidro/PiecesTable';
@@ -17,6 +16,7 @@ import { ProductInfoHeader } from '@/components/projeto-vidro/ProductInfoHeader'
 import { SaveProjectDialog } from '@/components/projeto-vidro/SaveProjectDialog';
 import { Hole, Cutout } from '@/components/projeto-vidro/HoleCutoutEditor';
 import { generateGlassProjectPdf } from '@/utils/generateGlassProjectPdf';
+import { evaluateFormula } from '@/utils/safeFormulaEvaluator';
 import { toast } from 'sonner';
 
 // Tradução de categorias
@@ -44,32 +44,6 @@ export interface GlassPanelData {
   quantity: number;
   row: number;
   col: number;
-}
-
-// Evaluate a formula like "Altura - 20", "Largura / 2", etc.
-function evaluateFormula(formula: string, width: number, height: number): number {
-  try {
-    if (!formula || formula.trim() === '') return 0;
-    
-    const parser = new Parser();
-    
-    // Normalize variable names to safe single-letter variables
-    let normalized = formula
-      .replace(/Largura/gi, 'W')
-      .replace(/Altura/gi, 'H')
-      .replace(/\bL\b/gi, 'W')
-      .replace(/\bA\b/gi, 'H');
-    
-    const expr = parser.parse(normalized);
-    const result = expr.evaluate({ W: width, H: height });
-    
-    if (isNaN(result) || !isFinite(result)) return 0;
-    
-    return Math.round(result);
-  } catch (error) {
-    console.warn('Error evaluating formula:', formula, error);
-    return 0;
-  }
 }
 
 // Get storage URL helper

@@ -10,9 +10,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
-import { Parser } from 'expr-eval';
 import { useAuth } from '@/contexts/AuthContext';
 import { GlassPreview } from '@/components/plano-corte/GlassPreview';
+import { evaluateFormula, getFormulaPosition } from '@/utils/safeFormulaEvaluator';
 
 // Tradução de categorias
 const categoryLabels: Record<string, string> = {
@@ -53,46 +53,6 @@ interface GlassCutItem {
   calculatedHeight: number;
   areaM2: number;
   quantity: number;
-}
-
-// Evaluate a formula like "Altura - 20", "A + 27", "(Largura - 136) / 2", or "L - 20"
-// Evaluate a formula like "Altura - 20", "A + 27", "(Largura - 136) / 2", or "L - 20"
-function evaluateFormula(formula: string, width: number, height: number): number {
-  try {
-    if (!formula || formula.trim() === '') return 0;
-    
-    const parser = new Parser();
-    
-    // Normalize variable names to safe single-letter variables
-    // Order matters: replace full names first, then abbreviations
-    let normalized = formula
-      .replace(/Largura/gi, 'W')
-      .replace(/Altura/gi, 'H');
-    
-    // Replace standalone L and A (word boundaries) - common abbreviations
-    // Use regex to match L/A that are not part of other words
-    normalized = normalized
-      .replace(/\bL\b/gi, 'W')
-      .replace(/\bA\b/gi, 'H');
-    
-    const expr = parser.parse(normalized);
-    const result = expr.evaluate({ W: width, H: height });
-    
-    // Ensure we return a valid number
-    if (isNaN(result) || !isFinite(result)) return 0;
-    
-    return Math.round(result);
-  } catch (error) {
-    console.warn('Error evaluating formula:', formula, error);
-    return 0;
-  }
-}
-
-// Detect if formula uses Altura or Largura
-function getFormulaPosition(formula: string): 'Altura' | 'Largura' {
-  const lower = formula.toLowerCase();
-  if (lower.includes('altura')) return 'Altura';
-  return 'Largura';
 }
 
 // Get storage URL helper
