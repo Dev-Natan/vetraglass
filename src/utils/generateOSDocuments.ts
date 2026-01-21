@@ -1,8 +1,8 @@
 // Generate OS Documents - Materials, Cutting Plan, Glass Projects
 
 import { supabase } from '@/integrations/supabase/client';
-import { Parser } from 'expr-eval';
 import { optimizeProfiles, CutPiece } from './profileOptimization';
+import { evaluateFormula, getFormulaPosition } from './safeFormulaEvaluator';
 
 interface QuoteItem {
   id: string;
@@ -42,39 +42,6 @@ interface GlassFormula {
   panel_index: number | null;
   description: string | null;
   is_movable: boolean | null;
-}
-
-// Evaluate a formula with width/height variables
-function evaluateFormula(formula: string, width: number, height: number): number {
-  try {
-    if (!formula || formula.trim() === '') return 0;
-    
-    const parser = new Parser();
-    
-    let normalized = formula
-      .replace(/Largura/gi, 'W')
-      .replace(/Altura/gi, 'H')
-      .replace(/\bL\b/gi, 'W')
-      .replace(/\bA\b/gi, 'H');
-    
-    const expr = parser.parse(normalized);
-    const result = expr.evaluate({ W: width, H: height });
-    
-    if (isNaN(result) || !isFinite(result)) return 0;
-    
-    return Math.round(result);
-  } catch (error) {
-    console.warn('Error evaluating formula:', formula, error);
-    return 0;
-  }
-}
-
-// Get formula position (Altura or Largura)
-function getFormulaPosition(formula: string | null): 'Altura' | 'Largura' {
-  if (!formula) return 'Largura';
-  const lower = formula.toLowerCase();
-  if (lower.includes('altura') || lower.includes('a')) return 'Altura';
-  return 'Largura';
 }
 
 /**

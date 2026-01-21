@@ -48,12 +48,12 @@ import { toast } from 'sonner';
 import { CancelarVendaDialog } from '@/components/caixa/CancelarVendaDialog';
 import { DetalhesVendaDialog } from '@/components/caixa/DetalhesVendaDialog';
 import { generateSalePdf } from '@/utils/generateSalePdf';
-import { Parser } from 'expr-eval';
 import { ExpensesTab } from '@/components/financeiro/ExpensesTab';
 import { CommissionsTab } from '@/components/financeiro/CommissionsTab';
 import { ContasReceberTab } from '@/components/financeiro/ContasReceberTab';
 import { CaixaEmpresaTab } from '@/components/financeiro/CaixaEmpresaTab';
 import { CaixaReportTab } from '@/components/financeiro/CaixaReportTab';
+import { calculateFormulaQuantity } from '@/utils/safeFormulaEvaluator';
 
 type PeriodFilter = 'today' | 'week' | 'month' | 'last_month' | 'custom' | 'all';
 type PaymentFilter = 'all' | 'dinheiro' | 'cartao' | 'pix';
@@ -87,23 +87,6 @@ const statusConfig = {
   pending: { label: 'Pendente', color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300' },
   cancelled: { label: 'Cancelado', color: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' },
 };
-
-// Formula calculation helper
-function calculateFormulaQuantity(formula: string, width: number, height: number, piecesQty: number): number {
-  try {
-    const parser = new Parser();
-    const widthM = width / 1000;
-    const heightM = height / 1000;
-    const expr = parser.parse(formula.toLowerCase()
-      .replace(/largura/g, 'l')
-      .replace(/altura/g, 'a')
-      .replace(/l/g, String(widthM))
-      .replace(/a/g, String(heightM)));
-    return expr.evaluate({}) * piecesQty;
-  } catch {
-    return piecesQty;
-  }
-}
 
 export default function Financeiro() {
   const { currentCompany } = useAuth();

@@ -15,7 +15,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Parser } from 'expr-eval';
+import { validateFormula } from '@/utils/safeFormulaEvaluator';
 
 interface FormulaEditorProps {
   value: string;
@@ -65,25 +65,15 @@ export function FormulaEditor({
       return;
     }
 
-    try {
-      const parser = new Parser();
-      // Replace variables with sample values for preview
-      const testFormula = value
-        .replace(/Altura/gi, '1000')
-        .replace(/Largura/gi, '800');
-      
-      const result = parser.parse(testFormula).evaluate();
-      
-      if (typeof result === 'number' && !isNaN(result)) {
-        setPreviewResult(result.toFixed(2));
-        setIsValid(true);
-        setErrorMessage('');
-      } else {
-        throw new Error('Resultado inválido');
-      }
-    } catch (error) {
+    const validation = validateFormula(value, 800, 1000);
+    
+    if (validation.isValid && validation.result !== null) {
+      setPreviewResult(validation.result.toFixed(2));
+      setIsValid(true);
+      setErrorMessage('');
+    } else {
       setIsValid(false);
-      setErrorMessage('Fórmula inválida');
+      setErrorMessage(validation.error || 'Fórmula inválida');
       setPreviewResult(null);
     }
   }, [value]);
