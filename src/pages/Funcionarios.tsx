@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { UserCog, Plus, Search, MoreVertical, Pencil, Trash2, UserCheck, UserX, CheckCircle, ShieldOff, FileText, Printer } from 'lucide-react';
+import { UserCog, Plus, Search, MoreVertical, Pencil, Trash2, UserCheck, UserX, CheckCircle, ShieldOff, FileText, Printer, IdCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +14,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { useAuth } from '@/contexts/AuthContext';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { generateCredentialCardPdf, generateCredentialSheetPdf } from '@/utils/generateCredentialCardPdf';
+import { generateEmployeeBadgePdf } from '@/utils/generateEmployeeBadgePdf';
 import { toast } from 'sonner';
 
 const roleLabels: Record<string, string> = {
@@ -73,6 +74,24 @@ export default function Funcionarios() {
       companyToken: currentCompany.login_token || '',
     });
     toast.success('Folha de credenciais gerada!');
+  };
+
+  const handlePrintBadge = (employee: Employee) => {
+    if (!currentCompany) {
+      toast.error('Empresa não encontrada');
+      return;
+    }
+    generateEmployeeBadgePdf({
+      employeeName: employee.name,
+      role: employee.role,
+      specialty: employee.specialty,
+      phone: employee.phone,
+      companyName: currentCompany.name,
+      companyPhone: currentCompany.phone,
+      companyAddress: currentCompany.address,
+      employeeId: employee.id,
+    });
+    toast.success('Crachá gerado com sucesso!');
   };
 
   const filteredEmployees = useMemo(() => {
@@ -202,10 +221,16 @@ export default function Funcionarios() {
                 </DropdownMenuItem>
               </PermissionGuard>
 
+              {/* Badge generation - available for all employees */}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => handlePrintBadge(employee)}>
+                <IdCard className="w-4 h-4 mr-2" />
+                Gerar Crachá
+              </DropdownMenuItem>
+
               {/* Print credentials options - only if has system access */}
               {hasSystemAccess && (
                 <>
-                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => handlePrintCredentialCard(employee)}>
                     <FileText className="w-4 h-4 mr-2" />
                     Cartão de Credenciais
