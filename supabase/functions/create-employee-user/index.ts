@@ -8,12 +8,12 @@ const corsHeaders = {
 };
 
 interface CreateEmployeeUserRequest {
-  email: string;
+  username: string;
+  password: string;
   employeeId: string;
   employeeName: string;
   companyId: string;
   permissionProfileId?: string;
-  redirectUrl: string;
 }
 
 serve(async (req: Request): Promise<Response> => {
@@ -24,17 +24,17 @@ serve(async (req: Request): Promise<Response> => {
 
   try {
     const { 
-      email, 
+      username,
+      password,
       employeeId, 
       employeeName,
       companyId, 
       permissionProfileId,
-      redirectUrl 
     }: CreateEmployeeUserRequest = await req.json();
 
-    if (!email || !employeeId || !companyId) {
+    if (!username || !password || !employeeId || !companyId) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields" }),
+        JSON.stringify({ error: "Campos obrigatórios: username, password, employeeId, companyId" }),
         {
           status: 400,
           headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -42,7 +42,28 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`Creating user for employee ${employeeName} (${email})`);
+    // Validate username format
+    if (!/^[a-zA-Z0-9._-]+$/.test(username)) {
+      return new Response(
+        JSON.stringify({ error: "Username inválido. Use apenas letras, números, ponto, hífen e underscore." }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    if (password.length < 6) {
+      return new Response(
+        JSON.stringify({ error: "Senha deve ter pelo menos 6 caracteres" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    console.log(`Creating user for employee ${employeeName} (username: ${username})`);
 
     // Create admin client with service role key
     const supabaseAdmin = createClient(
@@ -56,56 +77,81 @@ serve(async (req: Request): Promise<Response> => {
       }
     );
 
-    // Check if user already exists
-    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
-    const existingUser = existingUsers?.users?.find(u => u.email === email);
+    // Generate internal email from username and company ID
+    // This allows username-based login while using Supabase Auth
+    const internalEmail = `${username.toLowerCase()}@${companyId}.internal`;
 
-    let userId: string;
+    // Check if user already exists with this email
+    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+    const existingUser = existingUsers?.users?.find(u => u.email === internalEmail);
 
     if (existingUser) {
-      // User already exists - just link to employee
-      userId = existingUser.id;
-      console.log(`User already exists: ${userId}`);
-    } else {
-      // Create new user with a temporary random password
-      const tempPassword = crypto.randomUUID();
-      
-      const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-        email,
-        password: tempPassword,
-        email_confirm: true, // Auto-confirm email
-        user_metadata: {
-          full_name: employeeName,
-        },
-      });
-
-      if (createError) {
-        console.error("Error creating user:", createError);
-        return new Response(
-          JSON.stringify({ error: createError.message }),
-          {
-            status: 400,
-            headers: { "Content-Type": "application/json", ...corsHeaders },
-          }
-        );
-      }
-
-      userId = newUser.user.id;
-      console.log(`User created: ${userId}`);
+      return new Response(
+        JSON.stringify({ error: "Este usuário já existe no sistema" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
     }
 
-    // Update employee with user_id
+    // Check if username is already taken in employees table
+    const { data: existingEmployee } = await supabaseAdmin
+      .from("employees")
+      .select("id")
+      .eq("username", username.toLowerCase())
+      .neq("id", employeeId)
+      .single();
+
+    if (existingEmployee) {
+      return new Response(
+        JSON.stringify({ error: "Este nome de usuário já está em uso" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    // Create new user with the provided password
+    const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+      email: internalEmail,
+      password: password,
+      email_confirm: true, // Auto-confirm (no email verification needed)
+      user_metadata: {
+        full_name: employeeName,
+        username: username.toLowerCase(),
+      },
+    });
+
+    if (createError) {
+      console.error("Error creating user:", createError);
+      return new Response(
+        JSON.stringify({ error: createError.message }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    const userId = newUser.user.id;
+    console.log(`User created: ${userId}`);
+
+    // Update employee with user_id and username
     const { error: updateError } = await supabaseAdmin
       .from("employees")
       .update({ 
         user_id: userId,
-        email: email,
+        username: username.toLowerCase(),
         permission_profile_id: permissionProfileId || null,
       })
       .eq("id", employeeId);
 
     if (updateError) {
       console.error("Error updating employee:", updateError);
+      // Try to clean up the created user
+      await supabaseAdmin.auth.admin.deleteUser(userId);
       return new Response(
         JSON.stringify({ error: updateError.message }),
         {
@@ -131,36 +177,12 @@ serve(async (req: Request): Promise<Response> => {
       console.error("Error linking user to company:", linkError);
     }
 
-    // Send password reset email so user can set their own password
-    const { error: resetError } = await supabaseAdmin.auth.admin.generateLink({
-      type: "recovery",
-      email,
-      options: {
-        redirectTo: redirectUrl,
-      },
-    });
-
-    if (resetError) {
-      console.error("Error generating reset link:", resetError);
-      // Don't fail - user was created, they can use "forgot password" later
-    }
-
-    // Also trigger the standard password reset email
-    const { error: emailError } = await supabaseAdmin.auth.resetPasswordForEmail(email, {
-      redirectTo: redirectUrl,
-    });
-
-    if (emailError) {
-      console.error("Error sending reset email:", emailError);
-    }
-
     return new Response(
       JSON.stringify({ 
         success: true, 
         userId,
-        message: existingUser 
-          ? "Usuário existente vinculado. Email de redefinição de senha enviado."
-          : "Usuário criado. Email de redefinição de senha enviado."
+        username: username.toLowerCase(),
+        message: "Usuário criado com sucesso! O funcionário já pode acessar o sistema."
       }),
       {
         status: 200,

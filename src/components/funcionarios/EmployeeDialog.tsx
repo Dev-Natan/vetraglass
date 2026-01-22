@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2, Shield, UserPlus, Mail } from 'lucide-react';
+import { Loader2, Shield, UserPlus, Eye, EyeOff } from 'lucide-react';
 import { PermissionProfileSelect } from './PermissionProfileSelect';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -26,13 +26,14 @@ interface Employee {
   commission_type: string;
   permission_profile_id?: string | null;
   user_id?: string | null;
+  username?: string | null;
 }
 
 interface EmployeeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   employee: Employee | null;
-  onSave: (data: Omit<Employee, 'id'> & { createSystemAccess?: boolean }) => Promise<void>;
+  onSave: (data: Omit<Employee, 'id'> & { createSystemAccess?: boolean; password?: string }) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -71,7 +72,13 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
     commission_type: 'sales',
     permission_profile_id: null as string | null,
     createSystemAccess: false,
+    username: '',
+    password: '',
+    confirmPassword: '',
   });
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
 
   const isNewEmployee = !employee;
   const hasExistingAccess = !!employee?.user_id;
@@ -92,6 +99,9 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
         commission_type: employee.commission_type || 'sales',
         permission_profile_id: employee.permission_profile_id || null,
         createSystemAccess: false,
+        username: employee.username || '',
+        password: '',
+        confirmPassword: '',
       });
     } else {
       setFormData({
@@ -108,12 +118,51 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
         commission_type: 'sales',
         permission_profile_id: null,
         createSystemAccess: false,
+        username: '',
+        password: '',
+        confirmPassword: '',
       });
     }
+    setPasswordError('');
+    setShowPassword(false);
   }, [employee, open]);
+
+  const validatePassword = () => {
+    if (formData.createSystemAccess) {
+      if (!formData.username.trim()) {
+        setPasswordError('Usuário é obrigatório');
+        return false;
+      }
+      if (formData.username.length < 3) {
+        setPasswordError('Usuário deve ter pelo menos 3 caracteres');
+        return false;
+      }
+      if (!/^[a-zA-Z0-9._-]+$/.test(formData.username)) {
+        setPasswordError('Usuário pode conter apenas letras, números, ponto, hífen e underscore');
+        return false;
+      }
+      if (!formData.password) {
+        setPasswordError('Senha é obrigatória');
+        return false;
+      }
+      if (formData.password.length < 6) {
+        setPasswordError('Senha deve ter pelo menos 6 caracteres');
+        return false;
+      }
+      if (formData.password !== formData.confirmPassword) {
+        setPasswordError('As senhas não conferem');
+        return false;
+      }
+    }
+    setPasswordError('');
+    return true;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validatePassword()) return;
+
     await onSave({
       name: formData.name,
       email: formData.email || null,
@@ -128,6 +177,8 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
       commission_type: formData.commission_type,
       permission_profile_id: formData.permission_profile_id,
       createSystemAccess: formData.createSystemAccess,
+      username: formData.username || null,
+      password: formData.createSystemAccess ? formData.password : undefined,
     });
   };
 
@@ -139,7 +190,20 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
     return numbers.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
   };
 
-  const canCreateAccess = formData.email && formData.permission_profile_id && !hasExistingAccess;
+  // Generate username suggestion from name
+  const suggestUsername = () => {
+    if (formData.name && !formData.username) {
+      const suggested = formData.name
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, '.')
+        .replace(/[^a-z0-9._-]/g, '');
+      setFormData({ ...formData, username: suggested });
+    }
+  };
+
+  const canCreateAccess = formData.username && formData.password && formData.permission_profile_id && !hasExistingAccess;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -149,7 +213,7 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
             {employee ? 'Editar Funcionário' : 'Novo Funcionário'}
           </DialogTitle>
           <DialogDescription>
-            {employee ? 'Atualize os dados do funcionário' : 'Cadastre um novo funcionário e opcionalmente crie acesso ao sistema'}
+            {employee ? 'Atualize os dados do funcionário' : 'Cadastre um novo funcionário e crie acesso ao sistema'}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -159,6 +223,7 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
               id="name"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onBlur={suggestUsername}
               placeholder="Nome completo"
               required
             />
@@ -166,7 +231,7 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email (opcional)</Label>
               <Input
                 id="email"
                 type="email"
@@ -254,7 +319,7 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
             </p>
           </div>
 
-          {/* System Access Section */}
+          {/* System Access Section - Username + Password */}
           {!hasExistingAccess && (
             <div className="space-y-3 p-3 rounded-lg border border-blue-500/20 bg-blue-500/5">
               <div className="flex items-start space-x-3">
@@ -264,45 +329,98 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
                   onCheckedChange={(checked) => 
                     setFormData({ ...formData, createSystemAccess: checked === true })
                   }
-                  disabled={!canCreateAccess}
+                  disabled={!formData.permission_profile_id}
                 />
                 <div className="space-y-1">
                   <label
                     htmlFor="createSystemAccess"
                     className={`text-sm font-medium leading-none cursor-pointer flex items-center gap-2 ${
-                      !canCreateAccess ? 'text-muted-foreground' : ''
+                      !formData.permission_profile_id ? 'text-muted-foreground' : ''
                     }`}
                   >
                     <UserPlus className="w-4 h-4" />
                     Criar acesso ao sistema
                   </label>
                   <p className="text-xs text-muted-foreground">
-                    {!formData.email 
-                      ? 'Preencha o email para habilitar esta opção'
-                      : !formData.permission_profile_id
+                    {!formData.permission_profile_id
                       ? 'Selecione um perfil de acesso para habilitar esta opção'
-                      : 'O funcionário receberá um email para definir sua senha'
+                      : 'Defina o login e senha para o funcionário acessar o sistema'
                     }
                   </p>
                 </div>
               </div>
 
-              {formData.createSystemAccess && formData.email && (
-                <Alert className="border-blue-500/30 bg-blue-500/10">
-                  <Mail className="h-4 w-4" />
-                  <AlertDescription className="text-xs">
-                    Um email será enviado para <strong>{formData.email}</strong> com um link para criar a senha de acesso ao sistema.
-                  </AlertDescription>
-                </Alert>
+              {formData.createSystemAccess && (
+                <div className="space-y-3 pt-2 border-t border-blue-500/20">
+                  <div className="space-y-2">
+                    <Label htmlFor="username">Usuário (login) *</Label>
+                    <Input
+                      id="username"
+                      value={formData.username}
+                      onChange={(e) => setFormData({ ...formData, username: e.target.value.toLowerCase() })}
+                      placeholder="joao.silva"
+                      autoComplete="off"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Letras, números, ponto, hífen e underscore
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Senha *</Label>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? 'text' : 'password'}
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        placeholder="Mínimo 6 caracteres"
+                        autoComplete="new-password"
+                        className="pr-10"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirmar Senha *</Label>
+                    <Input
+                      id="confirmPassword"
+                      type={showPassword ? 'text' : 'password'}
+                      value={formData.confirmPassword}
+                      onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                      placeholder="Repita a senha"
+                      autoComplete="new-password"
+                    />
+                  </div>
+
+                  {passwordError && (
+                    <Alert variant="destructive" className="py-2">
+                      <AlertDescription className="text-xs">{passwordError}</AlertDescription>
+                    </Alert>
+                  )}
+                </div>
               )}
             </div>
           )}
 
           {hasExistingAccess && (
-            <Alert className="border-green-500/30 bg-green-500/10">
-              <Shield className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-xs text-green-700">
-                Este funcionário já possui acesso ao sistema.
+            <Alert className="border-emerald-500/30 bg-emerald-500/10">
+              <Shield className="h-4 w-4 text-emerald-600" />
+              <AlertDescription className="text-xs text-emerald-700 dark:text-emerald-400">
+                Este funcionário já possui acesso ao sistema{employee?.username ? ` (usuário: ${employee.username})` : ''}.
               </AlertDescription>
             </Alert>
           )}
