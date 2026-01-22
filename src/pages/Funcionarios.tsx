@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { UserCog, Plus, Search, MoreVertical, Pencil, Trash2, UserCheck, UserX, Mail, RefreshCw, LinkIcon, Copy, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { UserCog, Plus, Search, MoreVertical, Pencil, Trash2, UserCheck, UserX, Mail, RefreshCw, LinkIcon, Copy, CheckCircle, Clock, XCircle, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +10,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { EmployeeDialog } from '@/components/funcionarios/EmployeeDialog';
 import { InviteEmployeeDialog } from '@/components/funcionarios/InviteEmployeeDialog';
+import { PermissionProfileBadge } from '@/components/funcionarios/PermissionProfileSelect';
 import { useEmployees, Employee } from '@/hooks/useEmployees';
 import { useEmployeeInvites } from '@/hooks/useEmployeeInvites';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -161,6 +162,11 @@ export default function Funcionarios() {
               {employee.phone && <p>{employee.phone}</p>}
               {employee.hourly_rate > 0 && (
                 <p className="text-primary font-medium">{formatCurrency(employee.hourly_rate)}/hora</p>
+              )}
+              {employee.permission_profile_id && (
+                <div className="mt-2">
+                  <PermissionProfileBadge profileId={employee.permission_profile_id} />
+                </div>
               )}
             </div>
 

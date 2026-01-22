@@ -28,6 +28,7 @@ import ProjetoVidro from "./pages/ProjetoVidro";
 import Configuracoes from "./pages/Configuracoes";
 import ConfiguracoesFiscais from "./pages/ConfiguracoesFiscais";
 import ConfiguracoesUsuarios from "./pages/ConfiguracoesUsuarios";
+import ConfiguracoesPerfis from "./pages/ConfiguracoesPerfis";
 import ConfiguracoesNotificacoes from "./pages/ConfiguracoesNotificacoes";
 import ConfiguracoesSeguranca from "./pages/ConfiguracoesSeguranca";
 import ConfiguracoesDados from "./pages/ConfiguracoesDados";
@@ -208,6 +209,11 @@ function AppRoutes() {
       <Route path="/configuracoes/usuarios" element={
         <ProtectedRoute>
           <ConfiguracoesUsuarios />
+        </ProtectedRoute>
+      } />
+      <Route path="/configuracoes/perfis" element={
+        <ProtectedRoute>
+          <ConfiguracoesPerfis />
         </ProtectedRoute>
       } />
       <Route path="/configuracoes/notificacoes" element={

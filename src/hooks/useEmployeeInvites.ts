@@ -42,10 +42,12 @@ export function useEmployeeInvites() {
       employeeId,
       email,
       role,
+      permissionProfileId,
     }: {
       employeeId: string;
       email: string;
       role: 'admin' | 'manager' | 'employee';
+      permissionProfileId?: string;
     }) => {
       if (!currentCompany?.id || !user?.id) {
         throw new Error('Empresa ou usuário não encontrado');
@@ -74,6 +76,14 @@ export function useEmployeeInvites() {
 
       if (error) throw error;
 
+      // Update employee with permission profile if provided
+      if (permissionProfileId) {
+        await supabase
+          .from('employees')
+          .update({ permission_profile_id: permissionProfileId })
+          .eq('id', employeeId);
+      }
+
       // Call edge function to send email
       const { error: emailError } = await supabase.functions.invoke('send-employee-invite', {
         body: {
@@ -85,7 +95,6 @@ export function useEmployeeInvites() {
 
       if (emailError) {
         console.error('Error sending invite email:', emailError);
-        // Don't throw, invite was created successfully
         toast.warning('Convite criado, mas houve um problema ao enviar o email. Copie o link manualmente.');
       }
 
@@ -93,6 +102,7 @@ export function useEmployeeInvites() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employee-invites', currentCompany?.id] });
+      queryClient.invalidateQueries({ queryKey: ['employees', currentCompany?.id] });
       toast.success('Convite enviado com sucesso!');
     },
     onError: (error: Error) => {
