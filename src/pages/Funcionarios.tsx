@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { UserCog, Plus, Search, MoreVertical, Pencil, Trash2, UserCheck, UserX, CheckCircle, ShieldOff } from 'lucide-react';
+import { UserCog, Plus, Search, MoreVertical, Pencil, Trash2, UserCheck, UserX, CheckCircle, ShieldOff, FileText, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -11,7 +11,10 @@ import { EmployeeDialog } from '@/components/funcionarios/EmployeeDialog';
 import { PermissionProfileBadge } from '@/components/funcionarios/PermissionProfileSelect';
 import { useEmployees, Employee } from '@/hooks/useEmployees';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useAuth } from '@/contexts/AuthContext';
 import { PermissionGuard } from '@/components/PermissionGuard';
+import { generateCredentialCardPdf, generateCredentialSheetPdf } from '@/utils/generateCredentialCardPdf';
+import { toast } from 'sonner';
 
 const roleLabels: Record<string, string> = {
   operador: 'Operador',
@@ -36,12 +39,41 @@ const specialtyLabels: Record<string, string> = {
 export default function Funcionarios() {
   const { employees, isLoading, createEmployee, updateEmployee, deleteEmployee, toggleEmployeeStatus } = useEmployees();
   const { canCreate, isAdmin, isManager } = usePermissions();
+  const { currentCompany } = useAuth();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
+
+  const handlePrintCredentialCard = (employee: Employee) => {
+    if (!employee.username || !currentCompany) {
+      toast.error('Funcionário não possui acesso ao sistema configurado');
+      return;
+    }
+    generateCredentialCardPdf({
+      employeeName: employee.name,
+      login: employee.username,
+      companyName: currentCompany.name,
+      companyToken: currentCompany.login_token || '',
+    });
+    toast.success('Cartão de credenciais gerado!');
+  };
+
+  const handlePrintCredentialSheet = (employee: Employee) => {
+    if (!employee.username || !currentCompany) {
+      toast.error('Funcionário não possui acesso ao sistema configurado');
+      return;
+    }
+    generateCredentialSheetPdf({
+      employeeName: employee.name,
+      login: employee.username,
+      companyName: currentCompany.name,
+      companyToken: currentCompany.login_token || '',
+    });
+    toast.success('Folha de credenciais gerada!');
+  };
 
   const filteredEmployees = useMemo(() => {
     if (!searchTerm) return employees;
@@ -169,6 +201,21 @@ export default function Funcionarios() {
                   Editar
                 </DropdownMenuItem>
               </PermissionGuard>
+
+              {/* Print credentials options - only if has system access */}
+              {hasSystemAccess && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => handlePrintCredentialCard(employee)}>
+                    <FileText className="w-4 h-4 mr-2" />
+                    Cartão de Credenciais
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handlePrintCredentialSheet(employee)}>
+                    <Printer className="w-4 h-4 mr-2" />
+                    Folha de Instruções
+                  </DropdownMenuItem>
+                </>
+              )}
 
               <PermissionGuard module="funcionarios" action="edit">
                 <DropdownMenuSeparator />
