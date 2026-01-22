@@ -1782,6 +1782,7 @@ export type Database = {
           specialty: string | null
           updated_at: string
           user_id: string | null
+          username: string | null
         }
         Insert: {
           commission_enabled?: boolean | null
@@ -1801,6 +1802,7 @@ export type Database = {
           specialty?: string | null
           updated_at?: string
           user_id?: string | null
+          username?: string | null
         }
         Update: {
           commission_enabled?: boolean | null
@@ -1820,6 +1822,7 @@ export type Database = {
           specialty?: string | null
           updated_at?: string
           user_id?: string | null
+          username?: string | null
         }
         Relationships: [
           {

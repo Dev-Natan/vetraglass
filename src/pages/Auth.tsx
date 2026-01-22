@@ -8,14 +8,15 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, ShieldAlert } from 'lucide-react';
+import { Loader2, ShieldAlert, User } from 'lucide-react';
 import { z } from 'zod';
 import { useRateLimiting } from '@/hooks/useRateLimiting';
 import { PasswordStrengthIndicator } from '@/components/auth/PasswordStrengthIndicator';
 import { strongPasswordSchema } from '@/utils/passwordValidation';
+import { supabase } from '@/integrations/supabase/client';
 
 const loginSchema = z.object({
-  email: z.string().email('Email inválido'),
+  username: z.string().min(1, 'Usuário é obrigatório'),
   password: z.string().min(1, 'Senha é obrigatória'),
 });
 
@@ -36,11 +37,11 @@ export default function Auth() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { rateLimitStatus, checkRateLimit, recordLoginAttempt, formatRemainingTime } = useRateLimiting();
   
-  // Login form
-  const [loginEmail, setLoginEmail] = useState('');
+  // Login form - now uses username
+  const [loginUsername, setLoginUsername] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   
-  // Signup form
+  // Signup form (for company owners - still uses email)
   const [signupFullName, setSignupFullName] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
@@ -57,7 +58,7 @@ export default function Auth() {
     setErrors({});
     
     const validation = loginSchema.safeParse({
-      email: loginEmail,
+      username: loginUsername,
       password: loginPassword,
     });
     
@@ -73,23 +74,58 @@ export default function Auth() {
     }
 
     // Check rate limit before attempting login
-    const rateLimit = await checkRateLimit(loginEmail);
+    const rateLimit = await checkRateLimit(loginUsername);
     if (rateLimit?.isBlocked) {
       setErrors({
-        email: `Conta bloqueada temporariamente. Tente novamente em ${formatRemainingTime(rateLimit.remainingSeconds)}`
+        username: `Conta bloqueada temporariamente. Tente novamente em ${formatRemainingTime(rateLimit.remainingSeconds)}`
       });
       return;
     }
     
     setIsLoading(true);
-    const { error } = await signIn(loginEmail, loginPassword);
+
+    // Determine if input is email or username
+    const isEmail = loginUsername.includes('@');
+    let emailToUse = loginUsername;
+
+    if (!isEmail) {
+      // It's a username - we need to find the internal email
+      // First check if it's a direct email match (for admin/owner accounts)
+      const { data: employeeData } = await supabase
+        .from('employees')
+        .select('user_id')
+        .eq('username', loginUsername.toLowerCase())
+        .single();
+
+      if (employeeData?.user_id) {
+        // Get the user's email from auth metadata
+        // For username-based login, we need to construct the internal email
+        // We need to find which company this username belongs to
+        const { data: userCompanyData } = await supabase
+          .from('user_companies')
+          .select('company_id')
+          .eq('user_id', employeeData.user_id)
+          .single();
+
+        if (userCompanyData?.company_id) {
+          emailToUse = `${loginUsername.toLowerCase()}@${userCompanyData.company_id}.internal`;
+        }
+      } else {
+        // Try as regular email (for owner accounts)
+        emailToUse = loginUsername;
+      }
+    }
+
+    const { error } = await signIn(emailToUse, loginPassword);
     
     // Record login attempt
-    await recordLoginAttempt(loginEmail, !error);
+    await recordLoginAttempt(loginUsername, !error);
     
     setIsLoading(false);
     
-    if (!error) {
+    if (error) {
+      setErrors({ password: 'Usuário ou senha incorretos' });
+    } else {
       navigate('/');
     }
   };
@@ -152,7 +188,7 @@ export default function Auth() {
             <CardHeader className="pb-4">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Entrar</TabsTrigger>
-                <TabsTrigger value="signup">Criar Conta</TabsTrigger>
+                <TabsTrigger value="signup">Criar Empresa</TabsTrigger>
               </TabsList>
             </CardHeader>
             
@@ -169,17 +205,22 @@ export default function Auth() {
               <TabsContent value="login" className="mt-0">
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="login-email">Email</Label>
-                    <Input
-                      id="login-email"
-                      type="email"
-                      placeholder="seu@email.com"
-                      value={loginEmail}
-                      onChange={(e) => setLoginEmail(e.target.value)}
-                      disabled={isLoading || isBlocked}
-                    />
-                    {errors.email && (
-                      <p className="text-sm text-destructive">{errors.email}</p>
+                    <Label htmlFor="login-username">Usuário</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="login-username"
+                        type="text"
+                        placeholder="seu.usuario ou email"
+                        value={loginUsername}
+                        onChange={(e) => setLoginUsername(e.target.value)}
+                        disabled={isLoading || isBlocked}
+                        className="pl-10"
+                        autoComplete="username"
+                      />
+                    </div>
+                    {errors.username && (
+                      <p className="text-sm text-destructive">{errors.username}</p>
                     )}
                   </div>
                   <div className="space-y-2">
@@ -284,7 +325,7 @@ export default function Auth() {
                         Criando conta...
                       </>
                     ) : (
-                      'Criar Conta'
+                      'Criar Empresa'
                     )}
                   </Button>
                 </form>

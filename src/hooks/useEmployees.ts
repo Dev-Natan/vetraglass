@@ -19,6 +19,7 @@ export interface Employee {
   commission_type: string;
   user_id: string | null;
   permission_profile_id: string | null;
+  username: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -45,10 +46,10 @@ export function useEmployees() {
   });
 
   const createEmployee = useMutation({
-    mutationFn: async (employeeData: Omit<Employee, 'id' | 'company_id' | 'created_at' | 'updated_at'> & { createSystemAccess?: boolean }) => {
+    mutationFn: async (employeeData: Omit<Employee, 'id' | 'company_id' | 'created_at' | 'updated_at'> & { createSystemAccess?: boolean; password?: string }) => {
       if (!currentCompany?.id) throw new Error('Empresa não selecionada');
 
-      const { createSystemAccess, ...dataToInsert } = employeeData;
+      const { createSystemAccess, password, ...dataToInsert } = employeeData;
 
       const { data, error } = await supabase
         .from('employees')
@@ -86,24 +87,26 @@ export function useEmployees() {
         });
       }
 
-      // Create system access if requested
-      if (createSystemAccess && employeeData.email && employeeData.permission_profile_id) {
+      // Create system access if requested (username + password based)
+      if (createSystemAccess && employeeData.username && password && employeeData.permission_profile_id) {
         const { data: accessResult, error: accessError } = await supabase.functions.invoke('create-employee-user', {
           body: {
-            email: employeeData.email,
+            username: employeeData.username,
+            password: password,
             employeeId: data.id,
             employeeName: employeeData.name,
             companyId: currentCompany.id,
             permissionProfileId: employeeData.permission_profile_id,
-            redirectUrl: `${window.location.origin}/redefinir-senha`,
           },
         });
 
         if (accessError) {
           console.error('Error creating system access:', accessError);
-          toast.warning('Funcionário cadastrado, mas houve erro ao criar acesso ao sistema.');
+          toast.warning('Funcionário cadastrado, mas houve erro ao criar acesso ao sistema: ' + (accessError.message || 'Erro desconhecido'));
+        } else if (accessResult?.error) {
+          toast.warning('Funcionário cadastrado, mas: ' + accessResult.error);
         } else if (accessResult?.success) {
-          toast.success('Email de configuração de senha enviado!');
+          toast.success('Acesso ao sistema criado! O funcionário já pode fazer login.');
         }
       }
 
@@ -121,7 +124,7 @@ export function useEmployees() {
   });
 
   const updateEmployee = useMutation({
-    mutationFn: async ({ id, createSystemAccess, ...employeeData }: Partial<Employee> & { id: string; createSystemAccess?: boolean }) => {
+    mutationFn: async ({ id, createSystemAccess, password, ...employeeData }: Partial<Employee> & { id: string; createSystemAccess?: boolean; password?: string }) => {
       const { data, error } = await supabase
         .from('employees')
         .update(employeeData)
@@ -178,24 +181,26 @@ export function useEmployees() {
         }
       }
 
-      // Create system access if requested and employee doesn't have user_id
-      if (createSystemAccess && !data.user_id && employeeData.email && employeeData.permission_profile_id) {
+      // Create system access if requested and employee doesn't have user_id (username + password based)
+      if (createSystemAccess && !data.user_id && employeeData.username && password && employeeData.permission_profile_id) {
         const { data: accessResult, error: accessError } = await supabase.functions.invoke('create-employee-user', {
           body: {
-            email: employeeData.email,
+            username: employeeData.username,
+            password: password,
             employeeId: id,
             employeeName: employeeData.name || data.name,
             companyId: currentCompany?.id,
             permissionProfileId: employeeData.permission_profile_id,
-            redirectUrl: `${window.location.origin}/redefinir-senha`,
           },
         });
 
         if (accessError) {
           console.error('Error creating system access:', accessError);
-          toast.warning('Funcionário atualizado, mas houve erro ao criar acesso ao sistema.');
+          toast.warning('Funcionário atualizado, mas houve erro ao criar acesso ao sistema: ' + (accessError.message || 'Erro desconhecido'));
+        } else if (accessResult?.error) {
+          toast.warning('Funcionário atualizado, mas: ' + accessResult.error);
         } else if (accessResult?.success) {
-          toast.success('Email de configuração de senha enviado!');
+          toast.success('Acesso ao sistema criado! O funcionário já pode fazer login.');
           // Refetch to get updated user_id
           const { data: refreshed } = await supabase
             .from('employees')
