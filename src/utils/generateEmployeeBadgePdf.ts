@@ -32,183 +32,193 @@ const specialtyLabels: Record<string, string> = {
 };
 
 export function generateEmployeeBadgePdf(data: BadgeData) {
-  // Badge size: 85.6mm x 54mm (standard ID card size)
+  // Badge size: 54mm x 85.6mm (vertical ID card)
   const doc = new jsPDF({
-    orientation: 'landscape',
+    orientation: 'portrait',
     unit: 'mm',
-    format: [85.6, 54],
+    format: [54, 85.6],
   });
 
-  const primaryColor: [number, number, number] = [59, 130, 246]; // Blue-500
-  const darkColor: [number, number, number] = [15, 23, 42]; // Slate-900
-  const mutedColor: [number, number, number] = [100, 116, 139]; // Slate-500
-  const lightBg: [number, number, number] = [241, 245, 249]; // Slate-100
+  const width = 54;
+  const height = 85.6;
+
+  const primaryBlue: [number, number, number] = [0, 82, 165]; // Dark blue
+  const lightBlue: [number, number, number] = [0, 174, 239]; // Light blue/cyan
+  const darkText: [number, number, number] = [30, 41, 59];
+  const white: [number, number, number] = [255, 255, 255];
+  const lightGray: [number, number, number] = [220, 220, 220];
 
   // === FRONT OF BADGE ===
-  
-  // White background
-  doc.setFillColor(255, 255, 255);
-  doc.rect(0, 0, 85.6, 54, 'F');
 
-  // Top header bar with company name
-  doc.setFillColor(...primaryColor);
-  doc.rect(0, 0, 85.6, 12, 'F');
+  // Light blue gradient background (simulated with rectangles)
+  doc.setFillColor(240, 249, 255); // Very light blue
+  doc.rect(0, 0, width, height, 'F');
 
-  // Company name
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  const companyName = data.companyName.length > 25 
-    ? data.companyName.substring(0, 25) + '...' 
-    : data.companyName;
-  doc.text(companyName.toUpperCase(), 42.8, 7, { align: 'center' });
+  // Subtle gradient effect
+  doc.setFillColor(224, 242, 254);
+  doc.rect(0, height * 0.3, width, height * 0.4, 'F');
 
-  // Photo placeholder area (left side)
-  doc.setFillColor(...lightBg);
-  doc.roundedRect(5, 16, 22, 26, 2, 2, 'F');
-  doc.setDrawColor(...mutedColor);
+  // Hole punch at top
+  doc.setFillColor(...white);
+  doc.ellipse(width / 2, 5, 4, 2, 'F');
+  doc.setDrawColor(...lightGray);
   doc.setLineWidth(0.3);
-  doc.roundedRect(5, 16, 22, 26, 2, 2, 'S');
-  
-  // Photo icon placeholder
-  doc.setTextColor(...mutedColor);
-  doc.setFontSize(6);
-  doc.text('FOTO', 16, 30, { align: 'center' });
-  doc.text('3x4', 16, 34, { align: 'center' });
+  doc.ellipse(width / 2, 5, 4, 2, 'S');
 
-  // Employee info (right side of photo)
-  const infoX = 32;
-  
-  // Employee name
-  doc.setTextColor(...darkColor);
+  // Company logo area
+  doc.setFillColor(...white);
+  doc.roundedRect(7, 10, 40, 18, 2, 2, 'F');
+  doc.setDrawColor(...lightBlue);
+  doc.setLineWidth(0.5);
+  doc.roundedRect(7, 10, 40, 18, 2, 2, 'S');
+
+  // Company name as "logo"
+  doc.setTextColor(...primaryBlue);
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
+  const companyLines = doc.splitTextToSize(data.companyName.toUpperCase(), 36);
+  doc.text(companyLines, width / 2, 18, { align: 'center' });
+
+  // Photo placeholder area - large and centered
+  const photoX = 10;
+  const photoY = 32;
+  const photoW = 34;
+  const photoH = 28;
+
+  doc.setFillColor(...lightGray);
+  doc.roundedRect(photoX, photoY, photoW, photoH, 2, 2, 'F');
+  doc.setDrawColor(180, 180, 180);
+  doc.setLineWidth(0.5);
+  doc.roundedRect(photoX, photoY, photoW, photoH, 2, 2, 'S');
+
+  // Photo placeholder text
+  doc.setTextColor(120, 120, 120);
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Foto do', width / 2, photoY + 11, { align: 'center' });
+  doc.text('Colaborador', width / 2, photoY + 16, { align: 'center' });
+
+  // Curved bottom section with employee info
+  // Draw wave/curve shape
+  doc.setFillColor(...primaryBlue);
+  
+  // Create curved top using bezier approximation with rectangles
+  const curveStartY = 63;
+  
+  // Draw the curved wave
+  doc.setFillColor(...primaryBlue);
+  // Main dark blue section
+  doc.rect(0, 68, width, height - 68, 'F');
+  
+  // Light blue accent bar
+  doc.setFillColor(...lightBlue);
+  doc.rect(0, curveStartY, width, 7, 'F');
+  
+  // Create wave effect with small overlapping shapes
+  doc.setFillColor(...primaryBlue);
+  // Simple curved top effect
+  for (let i = 0; i < width; i += 1) {
+    const waveY = curveStartY + 3 + Math.sin((i / width) * Math.PI) * 3;
+    doc.rect(i, waveY, 1.5, height - waveY, 'F');
+  }
+
+  // Employee name
+  doc.setTextColor(...white);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  
   const employeeName = data.employeeName.length > 20 
     ? data.employeeName.substring(0, 20) + '...' 
     : data.employeeName;
-  doc.text(employeeName, infoX, 20);
+  doc.text(employeeName, width / 2, 75, { align: 'center' });
 
-  // Role badge
+  // Role
   const roleText = roleLabels[data.role] || data.role;
-  doc.setFillColor(...primaryColor);
-  doc.roundedRect(infoX, 22, doc.getTextWidth(roleText) * 0.35 + 6, 5, 1, 1, 'F');
-  doc.setTextColor(255, 255, 255);
+  const specialtyText = data.specialty ? specialtyLabels[data.specialty] || data.specialty : null;
+  const fullRole = specialtyText ? `${roleText} - ${specialtyText}` : roleText;
+  
   doc.setFontSize(7);
-  doc.setFont('helvetica', 'bold');
-  doc.text(roleText.toUpperCase(), infoX + 3, 25.5);
-
-  // Specialty (if exists)
-  if (data.specialty) {
-    const specialtyText = specialtyLabels[data.specialty] || data.specialty;
-    doc.setTextColor(...mutedColor);
-    doc.setFontSize(6);
-    doc.setFont('helvetica', 'normal');
-    doc.text(specialtyText, infoX, 32);
-  }
-
-  // Employee phone (if exists)
-  if (data.phone) {
-    doc.setTextColor(...darkColor);
-    doc.setFontSize(6);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Tel: ${data.phone}`, infoX, data.specialty ? 37 : 32);
-  }
-
-  // Employee ID (bottom right)
-  doc.setTextColor(...mutedColor);
-  doc.setFontSize(5);
-  doc.text(`ID: ${data.employeeId.substring(0, 8).toUpperCase()}`, infoX, 41);
-
-  // Bottom bar with company contact
-  doc.setFillColor(...lightBg);
-  doc.rect(0, 45, 85.6, 9, 'F');
-
-  doc.setTextColor(...mutedColor);
-  doc.setFontSize(5);
   doc.setFont('helvetica', 'normal');
-
-  let bottomY = 49;
-  if (data.companyPhone) {
-    doc.text(`Tel: ${data.companyPhone}`, 5, bottomY);
-  }
-  if (data.companyAddress) {
-    const address = data.companyAddress.length > 50 
-      ? data.companyAddress.substring(0, 50) + '...' 
-      : data.companyAddress;
-    doc.text(address, 5, bottomY + 3);
-  }
+  const roleDisplay = fullRole.length > 25 ? fullRole.substring(0, 25) + '...' : fullRole;
+  doc.text(roleDisplay, width / 2, 80, { align: 'center' });
 
   // === BACK OF BADGE (Page 2) ===
-  doc.addPage([85.6, 54], 'landscape');
+  doc.addPage([54, 85.6], 'portrait');
 
-  // White background
-  doc.setFillColor(255, 255, 255);
-  doc.rect(0, 0, 85.6, 54, 'F');
+  // Background
+  doc.setFillColor(240, 249, 255);
+  doc.rect(0, 0, width, height, 'F');
 
-  // Top header bar
-  doc.setFillColor(...primaryColor);
-  doc.rect(0, 0, 85.6, 8, 'F');
+  // Hole punch at top
+  doc.setFillColor(...white);
+  doc.ellipse(width / 2, 5, 4, 2, 'F');
+  doc.setDrawColor(...lightGray);
+  doc.setLineWidth(0.3);
+  doc.ellipse(width / 2, 5, 4, 2, 'S');
 
-  doc.setTextColor(255, 255, 255);
+  // Header
+  doc.setFillColor(...primaryBlue);
+  doc.rect(0, 10, width, 10, 'F');
+  
+  doc.setTextColor(...white);
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'bold');
+  doc.text('IDENTIFICAÇÃO FUNCIONAL', width / 2, 16, { align: 'center' });
+
+  // Company info section
+  doc.setFillColor(...white);
+  doc.roundedRect(5, 24, width - 10, 25, 2, 2, 'F');
+
+  doc.setTextColor(...darkText);
   doc.setFontSize(6);
   doc.setFont('helvetica', 'bold');
-  doc.text('IDENTIFICAÇÃO FUNCIONAL', 42.8, 5, { align: 'center' });
-
-  // Terms section
-  doc.setTextColor(...darkColor);
-  doc.setFontSize(6);
-  doc.setFont('helvetica', 'bold');
-  doc.text('TERMOS DE USO', 5, 14);
+  doc.text(data.companyName, width / 2, 30, { align: 'center' });
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(5);
-  doc.setTextColor(...mutedColor);
-  
-  const terms = [
-    '• Este crachá é de uso pessoal e intransferível.',
-    '• Deve ser utilizado de forma visível durante',
-    '  o expediente de trabalho.',
-    '• Em caso de perda ou roubo, comunicar',
-    '  imediatamente ao RH/Administração.',
-    '• O uso indevido está sujeito às penalidades',
-    '  previstas no regulamento interno.',
-  ];
+  if (data.companyPhone) {
+    doc.text(`Tel: ${data.companyPhone}`, width / 2, 36, { align: 'center' });
+  }
+  if (data.companyAddress) {
+    const addressLines = doc.splitTextToSize(data.companyAddress, 40);
+    doc.text(addressLines, width / 2, 41, { align: 'center' });
+  }
 
-  terms.forEach((term, index) => {
-    doc.text(term, 5, 19 + index * 4);
+  // Instructions section
+  doc.setTextColor(...darkText);
+  doc.setFontSize(5);
+  doc.setFont('helvetica', 'bold');
+  doc.text('INSTRUÇÕES:', 5, 55);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(4.5);
+  const instructions = [
+    '• Crachá de uso pessoal e intransferível',
+    '• Usar de forma visível no expediente',
+    '• Comunicar perda ao RH imediatamente',
+  ];
+  instructions.forEach((text, i) => {
+    doc.text(text, 5, 60 + i * 4);
   });
 
-  // Signature area
-  doc.setDrawColor(...mutedColor);
+  // Signature line
+  doc.setDrawColor(...darkText);
   doc.setLineWidth(0.2);
-  doc.line(5, 48, 40, 48);
+  doc.line(8, 78, width - 8, 78);
   doc.setFontSize(4);
-  doc.text('Assinatura do Colaborador', 22.5, 51, { align: 'center' });
+  doc.text('Assinatura', width / 2, 82, { align: 'center' });
 
-  // Validation date area
-  doc.line(50, 48, 80, 48);
-  doc.text('Data de Validade', 65, 51, { align: 'center' });
-
-  // Company logo placeholder
-  doc.setFillColor(...lightBg);
-  doc.roundedRect(60, 12, 20, 12, 1, 1, 'F');
-  doc.setTextColor(...mutedColor);
-  doc.setFontSize(5);
-  doc.text('LOGO', 70, 19, { align: 'center' });
-
-  // QR Code placeholder
-  doc.setFillColor(...lightBg);
-  doc.roundedRect(60, 27, 15, 15, 1, 1, 'F');
-  doc.setTextColor(...mutedColor);
-  doc.setFontSize(4);
-  doc.text('QR CODE', 67.5, 35, { align: 'center' });
+  // Employee ID
+  doc.setTextColor(150, 150, 150);
+  doc.setFontSize(3.5);
+  doc.text(`ID: ${data.employeeId.substring(0, 8).toUpperCase()}`, width / 2, 85, { align: 'center' });
 
   // Save the PDF
   const sanitizedName = data.employeeName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
   doc.save(`cracha-${sanitizedName}.pdf`);
 }
 
-// Generate multiple badges on A4 paper for printing
+// Generate multiple badges on A4 paper for printing (2x4 grid)
 export function generateBadgesSheetPdf(employees: BadgeData[]) {
   const doc = new jsPDF({
     orientation: 'portrait',
@@ -216,20 +226,20 @@ export function generateBadgesSheetPdf(employees: BadgeData[]) {
     format: 'a4',
   });
 
-  const primaryColor: [number, number, number] = [59, 130, 246];
-  const darkColor: [number, number, number] = [15, 23, 42];
-  const mutedColor: [number, number, number] = [100, 116, 139];
-  const lightBg: [number, number, number] = [241, 245, 249];
+  const primaryBlue: [number, number, number] = [0, 82, 165];
+  const lightBlue: [number, number, number] = [0, 174, 239];
+  const white: [number, number, number] = [255, 255, 255];
+  const lightGray: [number, number, number] = [220, 220, 220];
 
-  const badgeWidth = 85.6;
-  const badgeHeight = 54;
+  const badgeWidth = 54;
+  const badgeHeight = 85.6;
   const marginX = 20;
-  const marginY = 15;
-  const gapX = 5;
+  const marginY = 10;
+  const gapX = 8;
   const gapY = 5;
 
-  const badgesPerRow = 2;
-  const badgesPerCol = 4;
+  const badgesPerRow = 3;
+  const badgesPerCol = 3;
   const badgesPerPage = badgesPerRow * badgesPerCol;
 
   employees.forEach((data, index) => {
@@ -244,76 +254,56 @@ export function generateBadgesSheetPdf(employees: BadgeData[]) {
     const x = marginX + col * (badgeWidth + gapX);
     const y = marginY + row * (badgeHeight + gapY);
 
-    // Badge border (cut line)
+    // Cut line border
     doc.setDrawColor(200, 200, 200);
     doc.setLineWidth(0.2);
     doc.setLineDashPattern([2, 2], 0);
     doc.rect(x, y, badgeWidth, badgeHeight);
     doc.setLineDashPattern([], 0);
 
-    // Top header bar with company name
-    doc.setFillColor(...primaryColor);
-    doc.rect(x, y, badgeWidth, 12, 'F');
+    // Background
+    doc.setFillColor(240, 249, 255);
+    doc.rect(x, y, badgeWidth, badgeHeight, 'F');
 
-    // Company name
-    doc.setTextColor(255, 255, 255);
+    // Hole punch
+    doc.setFillColor(...white);
+    doc.ellipse(x + badgeWidth / 2, y + 5, 4, 2, 'F');
+
+    // Company logo area
+    doc.setFillColor(...white);
+    doc.roundedRect(x + 7, y + 10, 40, 18, 2, 2, 'F');
+    doc.setTextColor(...primaryBlue);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    const companyName = data.companyName.length > 15 ? data.companyName.substring(0, 15) + '...' : data.companyName;
+    doc.text(companyName.toUpperCase(), x + badgeWidth / 2, y + 20, { align: 'center' });
+
+    // Photo area
+    doc.setFillColor(...lightGray);
+    doc.roundedRect(x + 10, y + 32, 34, 28, 2, 2, 'F');
+    doc.setTextColor(120, 120, 120);
+    doc.setFontSize(6);
+    doc.text('Foto', x + badgeWidth / 2, y + 47, { align: 'center' });
+
+    // Bottom section
+    doc.setFillColor(...lightBlue);
+    doc.rect(x, y + 63, badgeWidth, 7, 'F');
+    
+    doc.setFillColor(...primaryBlue);
+    doc.rect(x, y + 68, badgeWidth, badgeHeight - 68, 'F');
+
+    // Employee name
+    doc.setTextColor(...white);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    const companyName = data.companyName.length > 25 
-      ? data.companyName.substring(0, 25) + '...' 
-      : data.companyName;
-    doc.text(companyName.toUpperCase(), x + badgeWidth / 2, y + 7, { align: 'center' });
+    const empName = data.employeeName.length > 18 ? data.employeeName.substring(0, 18) + '...' : data.employeeName;
+    doc.text(empName, x + badgeWidth / 2, y + 76, { align: 'center' });
 
-    // Photo placeholder area
-    doc.setFillColor(...lightBg);
-    doc.roundedRect(x + 5, y + 16, 22, 26, 2, 2, 'F');
-    doc.setDrawColor(...mutedColor);
-    doc.setLineWidth(0.3);
-    doc.roundedRect(x + 5, y + 16, 22, 26, 2, 2, 'S');
-    
-    doc.setTextColor(...mutedColor);
-    doc.setFontSize(6);
-    doc.text('FOTO', x + 16, y + 30, { align: 'center' });
-    doc.text('3x4', x + 16, y + 34, { align: 'center' });
-
-    // Employee info
-    const infoX = x + 32;
-    
-    doc.setTextColor(...darkColor);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    const employeeName = data.employeeName.length > 18 
-      ? data.employeeName.substring(0, 18) + '...' 
-      : data.employeeName;
-    doc.text(employeeName, infoX, y + 20);
-
-    // Role badge
+    // Role
     const roleText = roleLabels[data.role] || data.role;
-    doc.setFillColor(...primaryColor);
-    doc.roundedRect(infoX, y + 22, doc.getTextWidth(roleText) * 0.35 + 6, 5, 1, 1, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'bold');
-    doc.text(roleText.toUpperCase(), infoX + 3, y + 25.5);
-
-    // Specialty
-    if (data.specialty) {
-      const specialtyText = specialtyLabels[data.specialty] || data.specialty;
-      doc.setTextColor(...mutedColor);
-      doc.setFontSize(6);
-      doc.setFont('helvetica', 'normal');
-      doc.text(specialtyText, infoX, y + 32);
-    }
-
-    // Bottom bar
-    doc.setFillColor(...lightBg);
-    doc.rect(x, y + 45, badgeWidth, 9, 'F');
-
-    doc.setTextColor(...mutedColor);
-    doc.setFontSize(5);
-    if (data.companyPhone) {
-      doc.text(`Tel: ${data.companyPhone}`, x + 5, y + 49);
-    }
+    doc.setFontSize(6);
+    doc.setFont('helvetica', 'normal');
+    doc.text(roleText, x + badgeWidth / 2, y + 81, { align: 'center' });
   });
 
   doc.save('crachas-funcionarios.pdf');
