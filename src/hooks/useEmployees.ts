@@ -121,7 +121,7 @@ export function useEmployees() {
   });
 
   const updateEmployee = useMutation({
-    mutationFn: async ({ id, ...employeeData }: Partial<Employee> & { id: string }) => {
+    mutationFn: async ({ id, createSystemAccess, ...employeeData }: Partial<Employee> & { id: string; createSystemAccess?: boolean }) => {
       const { data, error } = await supabase
         .from('employees')
         .update(employeeData)
