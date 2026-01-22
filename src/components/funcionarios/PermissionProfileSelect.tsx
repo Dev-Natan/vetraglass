@@ -50,17 +50,19 @@ export function PermissionProfileSelect({
     );
   }
 
+  const NONE_VALUE = "__none__";
+
   return (
     <Select 
-      value={value || ''} 
-      onValueChange={(v) => onChange(v || null)}
+      value={value || NONE_VALUE} 
+      onValueChange={(v) => onChange(v === NONE_VALUE ? null : v)}
       disabled={disabled}
     >
       <SelectTrigger>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="">
+        <SelectItem value={NONE_VALUE}>
           <span className="text-muted-foreground">Nenhum perfil</span>
         </SelectItem>
         {profiles.map((profile) => {
