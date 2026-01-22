@@ -4678,6 +4678,10 @@ export type Database = {
           unique_clients: number
         }[]
       }
+      get_employee_login_email: {
+        Args: { p_username: string }
+        Returns: string
+      }
       get_pending_advances_summary: {
         Args: { _company_id: string }
         Returns: Json

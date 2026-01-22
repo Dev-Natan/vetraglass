@@ -89,31 +89,14 @@ export default function Auth() {
     let emailToUse = loginUsername;
 
     if (!isEmail) {
-      // It's a username - we need to find the internal email
-      // First check if it's a direct email match (for admin/owner accounts)
-      const { data: employeeData } = await supabase
-        .from('employees')
-        .select('user_id')
-        .eq('username', loginUsername.toLowerCase())
-        .single();
+      // It's a username - use secure function to get internal email
+      const { data: internalEmail } = await supabase
+        .rpc('get_employee_login_email', { p_username: loginUsername.toLowerCase() });
 
-      if (employeeData?.user_id) {
-        // Get the user's email from auth metadata
-        // For username-based login, we need to construct the internal email
-        // We need to find which company this username belongs to
-        const { data: userCompanyData } = await supabase
-          .from('user_companies')
-          .select('company_id')
-          .eq('user_id', employeeData.user_id)
-          .single();
-
-        if (userCompanyData?.company_id) {
-          emailToUse = `${loginUsername.toLowerCase()}@${userCompanyData.company_id}.internal`;
-        }
-      } else {
-        // Try as regular email (for owner accounts)
-        emailToUse = loginUsername;
+      if (internalEmail) {
+        emailToUse = internalEmail;
       }
+      // If no internal email found, will try as-is (fallback for other account types)
     }
 
     const { error } = await signIn(emailToUse, loginPassword);
