@@ -6,7 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Shield } from 'lucide-react';
+import { PermissionProfileSelect } from './PermissionProfileSelect';
 
 interface Employee {
   id: string;
@@ -21,6 +22,7 @@ interface Employee {
   commission_enabled: boolean;
   commission_percent: number;
   commission_type: string;
+  permission_profile_id?: string | null;
 }
 
 interface EmployeeDialogProps {
@@ -64,6 +66,7 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
     commission_enabled: false,
     commission_percent: 0,
     commission_type: 'sales',
+    permission_profile_id: null as string | null,
   });
 
   useEffect(() => {
@@ -80,6 +83,7 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
         commission_enabled: employee.commission_enabled ?? false,
         commission_percent: employee.commission_percent ?? 0,
         commission_type: employee.commission_type || 'sales',
+        permission_profile_id: employee.permission_profile_id || null,
       });
     } else {
       setFormData({
@@ -94,6 +98,7 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
         commission_enabled: false,
         commission_percent: 0,
         commission_type: 'sales',
+        permission_profile_id: null,
       });
     }
   }, [employee, open]);
@@ -112,6 +117,7 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
       commission_enabled: formData.commission_enabled,
       commission_percent: formData.commission_percent,
       commission_type: formData.commission_type,
+      permission_profile_id: formData.permission_profile_id,
     });
   };
 
@@ -216,6 +222,21 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
               onChange={(e) => setFormData({ ...formData, hourly_rate: parseFloat(e.target.value) || 0 })}
               placeholder="0,00"
             />
+          </div>
+
+          {/* Permission Profile Section */}
+          <div className="space-y-2 p-3 rounded-lg border border-primary/20 bg-primary/5">
+            <div className="flex items-center gap-2 mb-2">
+              <Shield className="w-4 h-4 text-primary" />
+              <Label className="font-medium text-primary">Perfil de Acesso ao Sistema</Label>
+            </div>
+            <PermissionProfileSelect
+              value={formData.permission_profile_id}
+              onChange={(value) => setFormData({ ...formData, permission_profile_id: value })}
+            />
+            <p className="text-xs text-muted-foreground">
+              Define quais módulos e ações o funcionário pode acessar quando logado no sistema.
+            </p>
           </div>
 
           {/* Commission Section */}

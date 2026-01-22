@@ -18,6 +18,7 @@ export interface Employee {
   commission_percent: number;
   commission_type: string;
   user_id: string | null;
+  permission_profile_id: string | null;
   created_at: string;
   updated_at: string;
 }
