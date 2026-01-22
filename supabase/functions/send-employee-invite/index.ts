@@ -38,78 +38,74 @@ serve(async (req: Request): Promise<Response> => {
     console.log(`Sending invite email to ${email} for company ${companyName}`);
     console.log(`Invite URL: ${inviteUrl}`);
 
-    // For now, we'll just log the invite since RESEND_API_KEY is not configured
-    // When the key is added, uncomment the email sending code below
-    
-    /*
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
     
-    if (resendApiKey) {
-      const { Resend } = await import("npm:resend@2.0.0");
-      const resend = new Resend(resendApiKey);
-      
-      const emailResponse = await resend.emails.send({
-        from: `${companyName} <onboarding@resend.dev>`,
-        to: [email],
-        subject: `Você foi convidado para o sistema ${companyName}`,
-        html: `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <style>
-              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-              .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
-              .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
-              .button { display: inline-block; background: #667eea; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 20px 0; }
-              .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="header">
-                <h1>Você foi convidado!</h1>
-              </div>
-              <div class="content">
-                <p>Olá!</p>
-                <p>Você foi convidado para fazer parte do sistema da empresa <strong>${companyName}</strong>.</p>
-                <p>Clique no botão abaixo para criar sua conta e começar a usar o sistema:</p>
-                <p style="text-align: center;">
-                  <a href="${inviteUrl}" class="button">Aceitar Convite</a>
-                </p>
-                <p><strong>Este convite expira em 7 dias.</strong></p>
-                <p>Se você não esperava receber este convite, pode ignorar este email.</p>
-              </div>
-              <div class="footer">
-                <p>© ${new Date().getFullYear()} ${companyName}. Todos os direitos reservados.</p>
-              </div>
-            </div>
-          </body>
-          </html>
-        `,
-      });
-
-      console.log("Email sent successfully:", emailResponse);
-      
-      return new Response(JSON.stringify({ success: true, emailResponse }), {
-        status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
+    if (!resendApiKey) {
+      console.log("RESEND_API_KEY not configured, returning invite URL for manual sharing");
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: "Convite criado. Email não enviado (API key não configurada).",
+          inviteUrl 
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
     }
-    */
 
-    // Return success with invite URL for manual sharing
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: "Convite criado. Email não enviado (API key não configurada).",
-        inviteUrl 
-      }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
-    );
+    // Dynamic import for Resend
+    const { Resend } = await import("https://esm.sh/resend@2.0.0");
+    const resend = new Resend(resendApiKey);
+    
+    const emailResponse = await resend.emails.send({
+      from: `${companyName} <onboarding@resend.dev>`,
+      to: [email],
+      subject: `Você foi convidado para o sistema ${companyName}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+            .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+            .button { display: inline-block; background: #667eea; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 20px 0; }
+            .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Você foi convidado!</h1>
+            </div>
+            <div class="content">
+              <p>Olá!</p>
+              <p>Você foi convidado para fazer parte do sistema da empresa <strong>${companyName}</strong>.</p>
+              <p>Clique no botão abaixo para criar sua conta e começar a usar o sistema:</p>
+              <p style="text-align: center;">
+                <a href="${inviteUrl}" class="button">Aceitar Convite</a>
+              </p>
+              <p><strong>Este convite expira em 7 dias.</strong></p>
+              <p>Se você não esperava receber este convite, pode ignorar este email.</p>
+            </div>
+            <div class="footer">
+              <p>© ${new Date().getFullYear()} ${companyName}. Todos os direitos reservados.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+    });
+
+    console.log("Email sent successfully:", emailResponse);
+    
+    return new Response(JSON.stringify({ success: true, emailResponse }), {
+      status: 200,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
 
   } catch (error: any) {
     console.error("Error in send-employee-invite function:", error);
