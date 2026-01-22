@@ -244,18 +244,45 @@ export function useEmployees() {
   });
 
   const toggleEmployeeStatus = useMutation({
-    mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
+    mutationFn: async ({ id, is_active, user_id }: { id: string; is_active: boolean; user_id: string | null }) => {
+      // First update the employee status
       const { error } = await supabase
         .from('employees')
         .update({ is_active })
         .eq('id', id);
 
       if (error) throw error;
-      return { is_active };
+
+      // If employee has system access, toggle their auth access too
+      if (user_id) {
+        const { data, error: fnError } = await supabase.functions.invoke('toggle-employee-access', {
+          body: {
+            employeeId: id,
+            userId: user_id,
+            isActive: is_active,
+          },
+        });
+
+        if (fnError) {
+          console.error('Error toggling employee access:', fnError);
+          // Don't throw, the main status update succeeded
+        } else {
+          console.log('Toggle access result:', data);
+        }
+      }
+
+      return { is_active, user_id };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['employees', currentCompany?.id] });
-      toast.success(data.is_active ? 'Funcionário ativado!' : 'Funcionário desativado!');
+      const hasAccess = !!data.user_id;
+      if (data.is_active) {
+        toast.success('Funcionário ativado!');
+      } else {
+        toast.success(hasAccess 
+          ? 'Funcionário desativado e acesso ao sistema revogado!' 
+          : 'Funcionário desativado!');
+      }
     },
     onError: (error: Error) => {
       console.error('Error toggling employee status:', error);

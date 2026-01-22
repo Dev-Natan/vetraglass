@@ -81,7 +81,11 @@ export default function Funcionarios() {
   };
 
   const handleToggleStatus = async (employee: Employee) => {
-    await toggleEmployeeStatus.mutateAsync({ id: employee.id, is_active: !employee.is_active });
+    await toggleEmployeeStatus.mutateAsync({ 
+      id: employee.id, 
+      is_active: !employee.is_active,
+      user_id: employee.user_id 
+    });
   };
 
   const formatCurrency = (value: number) => {
