@@ -245,15 +245,13 @@ export function useEmployees() {
 
   const toggleEmployeeStatus = useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('employees')
         .update({ is_active })
-        .eq('id', id)
-        .select()
-        .single();
+        .eq('id', id);
 
       if (error) throw error;
-      return data;
+      return { is_active };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['employees', currentCompany?.id] });
