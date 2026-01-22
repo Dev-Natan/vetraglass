@@ -115,13 +115,14 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    // Link user to company
+    // Link user to company with permission profile
     const { error: linkError } = await supabaseAdmin
       .from("user_companies")
       .upsert({
         user_id: userId,
         company_id: companyId,
         role: "employee",
+        permission_profile_id: permissionProfileId || null,
       }, {
         onConflict: "user_id,company_id",
       });
