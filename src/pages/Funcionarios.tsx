@@ -1,21 +1,17 @@
 import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { UserCog, Plus, Search, MoreVertical, Pencil, Trash2, UserCheck, UserX, Mail, RefreshCw, LinkIcon, Copy, CheckCircle, Clock, XCircle, Shield } from 'lucide-react';
+import { UserCog, Plus, Search, MoreVertical, Pencil, Trash2, UserCheck, UserX, CheckCircle, ShieldOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { EmployeeDialog } from '@/components/funcionarios/EmployeeDialog';
-import { InviteEmployeeDialog } from '@/components/funcionarios/InviteEmployeeDialog';
 import { PermissionProfileBadge } from '@/components/funcionarios/PermissionProfileSelect';
 import { useEmployees, Employee } from '@/hooks/useEmployees';
-import { useEmployeeInvites } from '@/hooks/useEmployeeInvites';
 import { usePermissions } from '@/hooks/usePermissions';
 import { PermissionGuard } from '@/components/PermissionGuard';
-import { toast } from 'sonner';
 
 const roleLabels: Record<string, string> = {
   operador: 'Operador',
@@ -37,24 +33,15 @@ const specialtyLabels: Record<string, string> = {
   geral: 'Geral',
 };
 
-const systemRoleLabels: Record<string, string> = {
-  admin: 'Administrador',
-  manager: 'Gerente',
-  employee: 'Funcionário',
-};
-
 export default function Funcionarios() {
   const { employees, isLoading, createEmployee, updateEmployee, deleteEmployee, toggleEmployeeStatus } = useEmployees();
-  const { invites, getInviteForEmployee, getAcceptedInviteForEmployee, resendInvite, revokeInvite } = useEmployeeInvites();
-  const { canCreate, canEdit, canDelete, isAdmin, isManager } = usePermissions();
+  const { canCreate, isAdmin, isManager } = usePermissions();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
-  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
-  const [employeeToInvite, setEmployeeToInvite] = useState<Employee | null>(null);
 
   const filteredEmployees = useMemo(() => {
     if (!searchTerm) return employees;
@@ -97,47 +84,12 @@ export default function Funcionarios() {
     await toggleEmployeeStatus.mutateAsync({ id: employee.id, is_active: !employee.is_active });
   };
 
-  const handleOpenInviteDialog = (employee: Employee) => {
-    setEmployeeToInvite(employee);
-    setInviteDialogOpen(true);
-  };
-
-  const handleCopyInviteLink = (token: string) => {
-    const url = `${window.location.origin}/aceitar-convite?token=${token}`;
-    navigator.clipboard.writeText(url);
-    toast.success('Link copiado para a área de transferência!');
-  };
-
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   };
 
-  const getEmployeeSystemStatus = (employee: Employee) => {
-    // Check if employee has a linked user (accepted invite)
-    if ((employee as any).user_id) {
-      const acceptedInvite = getAcceptedInviteForEmployee(employee.id);
-      return {
-        status: 'active',
-        label: 'Ativo no sistema',
-        role: acceptedInvite?.role || 'employee',
-      };
-    }
-
-    // Check for pending invite
-    const pendingInvite = getInviteForEmployee(employee.id);
-    if (pendingInvite) {
-      return {
-        status: 'pending',
-        label: 'Aguardando aceite',
-        invite: pendingInvite,
-      };
-    }
-
-    return { status: 'none' };
-  };
-
   const EmployeeCard = ({ employee }: { employee: Employee }) => {
-    const systemStatus = getEmployeeSystemStatus(employee);
+    const hasSystemAccess = !!employee.user_id;
 
     return (
       <div className={`section-card p-4 ${!employee.is_active ? 'opacity-60' : ''}`}>
@@ -172,48 +124,30 @@ export default function Funcionarios() {
 
             {/* System Access Status */}
             <div className="mt-3 pt-3 border-t">
-              {systemStatus.status === 'active' && (
+              {hasSystemAccess ? (
                 <div className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  <span className="text-xs text-green-600 font-medium">
-                    {systemStatus.label}
+                  <CheckCircle className="w-4 h-4 text-emerald-500" />
+                  <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                    Ativo no sistema
                   </span>
-                  <Badge variant="secondary" className="text-xs">
-                    {systemRoleLabels[systemStatus.role as string] || systemStatus.role}
-                  </Badge>
                 </div>
-              )}
-              {systemStatus.status === 'pending' && (
+              ) : (
                 <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-amber-500" />
-                  <span className="text-xs text-amber-600 font-medium">
-                    {systemStatus.label}
+                  <ShieldOff className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">
+                    Sem acesso ao sistema
                   </span>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-6 w-6"
-                        onClick={() => handleCopyInviteLink(systemStatus.invite!.token)}
-                      >
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Copiar link do convite</TooltipContent>
-                  </Tooltip>
+                  {(isAdmin || isManager) && (
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="h-auto p-0 text-xs text-primary"
+                      onClick={() => handleOpenDialog(employee)}
+                    >
+                      Editar para criar acesso
+                    </Button>
+                  )}
                 </div>
-              )}
-              {systemStatus.status === 'none' && (isAdmin || isManager) && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-7 text-xs gap-1.5"
-                  onClick={() => handleOpenInviteDialog(employee)}
-                >
-                  <Mail className="h-3 w-3" />
-                  Convidar para o Sistema
-                </Button>
               )}
             </div>
           </div>
@@ -231,33 +165,6 @@ export default function Funcionarios() {
                   Editar
                 </DropdownMenuItem>
               </PermissionGuard>
-
-              {(isAdmin || isManager) && systemStatus.status === 'none' && (
-                <DropdownMenuItem onClick={() => handleOpenInviteDialog(employee)}>
-                  <Mail className="w-4 h-4 mr-2" />
-                  Convidar para o Sistema
-                </DropdownMenuItem>
-              )}
-
-              {(isAdmin || isManager) && systemStatus.status === 'pending' && (
-                <>
-                  <DropdownMenuItem onClick={() => resendInvite.mutate(systemStatus.invite!.id)}>
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Reenviar Convite
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleCopyInviteLink(systemStatus.invite!.token)}>
-                    <LinkIcon className="w-4 h-4 mr-2" />
-                    Copiar Link do Convite
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    onClick={() => revokeInvite.mutate(systemStatus.invite!.id)}
-                    className="text-destructive focus:text-destructive"
-                  >
-                    <XCircle className="w-4 h-4 mr-2" />
-                    Revogar Convite
-                  </DropdownMenuItem>
-                </>
-              )}
 
               <PermissionGuard module="funcionarios" action="edit">
                 <DropdownMenuSeparator />
@@ -389,12 +296,6 @@ export default function Funcionarios() {
         employee={selectedEmployee}
         onSave={handleSave}
         isLoading={createEmployee.isPending || updateEmployee.isPending}
-      />
-
-      <InviteEmployeeDialog
-        open={inviteDialogOpen}
-        onOpenChange={setInviteDialogOpen}
-        employee={employeeToInvite}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
