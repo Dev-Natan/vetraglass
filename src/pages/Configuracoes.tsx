@@ -4,7 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
-import { Building2, Users, Bell, Shield, Database, Upload, ImageIcon, Trash2, Receipt, ChevronRight } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Building2, Users, Bell, Shield, Database, Upload, ImageIcon, Trash2, KeyRound, Save, Loader2 } from 'lucide-react';
 import EditarDadosFiscaisDialog from "@/components/configuracoes/EditarDadosFiscaisDialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -38,9 +40,11 @@ const settingsGroups = [
 ];
 
 export default function Configuracoes() {
-  const { currentCompany } = useAuth();
+  const { currentCompany, setCurrentCompany } = useAuth();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [loginToken, setLoginToken] = useState("");
+  const [savingToken, setSavingToken] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
@@ -54,6 +58,10 @@ export default function Configuracoes() {
         .eq("id", currentCompany.id)
         .single();
       if (error) throw error;
+      // Set login token when data loads
+      if (data?.login_token && !loginToken) {
+        setLoginToken(data.login_token);
+      }
       return data;
     },
     enabled: !!currentCompany?.id,
@@ -144,6 +152,40 @@ export default function Configuracoes() {
     }
     
     uploadLogoMutation.mutate(file);
+  };
+
+  const handleSaveLoginToken = async () => {
+    if (!currentCompany?.id) return;
+    
+    const cleanToken = loginToken.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+    if (cleanToken.length < 3) {
+      toast.error("O token deve ter pelo menos 3 caracteres.");
+      return;
+    }
+
+    setSavingToken(true);
+    try {
+      const { error } = await supabase
+        .from('companies')
+        .update({ login_token: cleanToken })
+        .eq('id', currentCompany.id);
+
+      if (error) throw error;
+
+      setLoginToken(cleanToken);
+      queryClient.invalidateQueries({ queryKey: ["company-config"] });
+      
+      // Update currentCompany in context
+      if (currentCompany) {
+        setCurrentCompany({ ...currentCompany, login_token: cleanToken } as any);
+      }
+      
+      toast.success("Token de login atualizado com sucesso!");
+    } catch (error: any) {
+      toast.error(`Erro ao salvar: ${error.message}`);
+    } finally {
+      setSavingToken(false);
+    }
   };
 
   return (
@@ -292,8 +334,55 @@ export default function Configuracoes() {
           </div>
         </div>
 
+        {/* Login Token Configuration */}
+        <div className="glass-card rounded-2xl p-6 animate-slide-up">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+              <KeyRound className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-xl font-display font-semibold text-foreground">Token de Login</h2>
+              <p className="text-sm text-muted-foreground">Identificador único para login dos funcionários</p>
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex-1 space-y-2">
+                <Label htmlFor="loginToken">Token da Empresa</Label>
+                <Input
+                  id="loginToken"
+                  value={loginToken}
+                  onChange={(e) => setLoginToken(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                  placeholder="VETRA"
+                  maxLength={6}
+                  className="font-mono uppercase"
+                />
+              </div>
+              <div className="flex items-end">
+                <Button onClick={handleSaveLoginToken} disabled={savingToken || !loginToken.trim()}>
+                  {savingToken ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4 mr-2" />
+                  )}
+                  Salvar Token
+                </Button>
+              </div>
+            </div>
+            <div className="text-sm text-muted-foreground bg-muted/50 rounded-lg p-3">
+              <p className="font-medium mb-1">Como funciona:</p>
+              <ul className="list-disc list-inside space-y-1 text-xs">
+                <li>Este token será usado para gerar os logins automáticos dos funcionários</li>
+                <li>Exemplo: funcionário "João" terá login <span className="font-mono bg-background px-1 rounded">joao{loginToken || 'TOKEN'}</span></li>
+                <li>Use 3-6 letras maiúsculas que identifiquem sua empresa</li>
+                <li>Alterar o token não afeta logins já criados</li>
+              </ul>
+            </div>
+          </div>
+        </div>
 
-        {/* Other Settings */}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 animate-slide-up">
           {settingsGroups.map((group, index) => (
             <Link

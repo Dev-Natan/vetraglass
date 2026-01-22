@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 interface CreateEmployeeUserRequest {
-  username: string;
+  generatedLogin: string; // Login gerado automaticamente (ex: joaoVETRA)
   password: string;
   employeeId: string;
   employeeName: string;
@@ -24,7 +24,7 @@ serve(async (req: Request): Promise<Response> => {
 
   try {
     const { 
-      username,
+      generatedLogin,
       password,
       employeeId, 
       employeeName,
@@ -32,9 +32,9 @@ serve(async (req: Request): Promise<Response> => {
       permissionProfileId,
     }: CreateEmployeeUserRequest = await req.json();
 
-    if (!username || !password || !employeeId || !companyId) {
+    if (!generatedLogin || !password || !employeeId || !companyId) {
       return new Response(
-        JSON.stringify({ error: "Campos obrigatórios: username, password, employeeId, companyId" }),
+        JSON.stringify({ error: "Campos obrigatórios: generatedLogin, password, employeeId, companyId" }),
         {
           status: 400,
           headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -42,10 +42,10 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    // Validate username format
-    if (!/^[a-zA-Z0-9._-]+$/.test(username)) {
+    // Validate login format (nome + TOKEN, ex: joaoVETRA)
+    if (!/^[a-zA-Z0-9]+$/.test(generatedLogin)) {
       return new Response(
-        JSON.stringify({ error: "Username inválido. Use apenas letras, números, ponto, hífen e underscore." }),
+        JSON.stringify({ error: "Login inválido. Use apenas letras e números." }),
         {
           status: 400,
           headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -63,7 +63,7 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`Creating user for employee ${employeeName} (username: ${username})`);
+    console.log(`Creating user for employee ${employeeName} (login: ${generatedLogin})`);
 
     // Create admin client with service role key
     const supabaseAdmin = createClient(
@@ -77,9 +77,9 @@ serve(async (req: Request): Promise<Response> => {
       }
     );
 
-    // Generate internal email from username and company ID
-    // This allows username-based login while using Supabase Auth
-    const internalEmail = `${username.toLowerCase()}@${companyId}.internal`;
+    // Generate internal email from generated login
+    // Format: joaovetra@internal.vetra (simplificado e único)
+    const internalEmail = `${generatedLogin.toLowerCase()}@internal.vetra`;
 
     // Check if user already exists with this email
     const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
@@ -87,7 +87,7 @@ serve(async (req: Request): Promise<Response> => {
 
     if (existingUser) {
       return new Response(
-        JSON.stringify({ error: "Este usuário já existe no sistema" }),
+        JSON.stringify({ error: "Este login já existe no sistema. Tente outro nome." }),
         {
           status: 400,
           headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -95,17 +95,17 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    // Check if username is already taken in employees table
+    // Check if login is already taken in employees table
     const { data: existingEmployee } = await supabaseAdmin
       .from("employees")
       .select("id")
-      .eq("username", username.toLowerCase())
+      .eq("username", generatedLogin.toLowerCase())
       .neq("id", employeeId)
       .single();
 
     if (existingEmployee) {
       return new Response(
-        JSON.stringify({ error: "Este nome de usuário já está em uso" }),
+        JSON.stringify({ error: "Este login já está em uso. Tente um nome diferente." }),
         {
           status: 400,
           headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -120,7 +120,7 @@ serve(async (req: Request): Promise<Response> => {
       email_confirm: true, // Auto-confirm (no email verification needed)
       user_metadata: {
         full_name: employeeName,
-        username: username.toLowerCase(),
+        login: generatedLogin.toLowerCase(),
       },
     });
 
@@ -138,12 +138,12 @@ serve(async (req: Request): Promise<Response> => {
     const userId = newUser.user.id;
     console.log(`User created: ${userId}`);
 
-    // Update employee with user_id and username
+    // Update employee with user_id and generated login
     const { error: updateError } = await supabaseAdmin
       .from("employees")
       .update({ 
         user_id: userId,
-        username: username.toLowerCase(),
+        username: generatedLogin.toLowerCase(),
         permission_profile_id: permissionProfileId || null,
       })
       .eq("id", employeeId);
@@ -182,7 +182,7 @@ serve(async (req: Request): Promise<Response> => {
       JSON.stringify({ 
         success: true, 
         userId,
-        username: username.toLowerCase(),
+        login: generatedLogin.toLowerCase(),
         message: "Usuário criado com sucesso! O funcionário já pode acessar o sistema."
       }),
       {
