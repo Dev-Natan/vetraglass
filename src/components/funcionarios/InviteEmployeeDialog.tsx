@@ -134,16 +134,16 @@ export function InviteEmployeeDialog({
               {profiles.map((profile) => {
                 const Icon = PROFILE_TYPE_ICONS[profile.profile_type] || Settings;
                 return (
-                  <div
+                  <label
                     key={profile.id}
+                    htmlFor={`profile-${profile.id}`}
                     className={`flex items-center space-x-3 rounded-lg border p-3 cursor-pointer transition-colors ${
                       selectedProfileId === profile.id 
                         ? 'border-primary bg-primary/5' 
                         : 'border-border hover:bg-muted/50'
                     }`}
-                    onClick={() => setSelectedProfileId(profile.id)}
                   >
-                    <RadioGroupItem value={profile.id} id={profile.id} />
+                    <RadioGroupItem value={profile.id} id={`profile-${profile.id}`} />
                     <div className="flex items-center gap-3 flex-1">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
                         selectedProfileId === profile.id 
@@ -153,18 +153,15 @@ export function InviteEmployeeDialog({
                         <Icon className="w-4 h-4" />
                       </div>
                       <div className="flex-1">
-                        <Label 
-                          htmlFor={profile.id} 
-                          className="font-medium cursor-pointer"
-                        >
+                        <span className="font-medium">
                           {profile.name}
-                        </Label>
+                        </span>
                         <p className="text-xs text-muted-foreground">
                           {profile.description || PROFILE_TYPE_DESCRIPTIONS[profile.profile_type]}
                         </p>
                       </div>
                     </div>
-                  </div>
+                  </label>
                 );
               })}
             </RadioGroup>
