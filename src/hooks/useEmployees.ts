@@ -87,11 +87,11 @@ export function useEmployees() {
         });
       }
 
-      // Create system access if requested (username + password based)
+      // Create system access if requested (auto-generated login based)
       if (createSystemAccess && employeeData.username && password && employeeData.permission_profile_id) {
         const { data: accessResult, error: accessError } = await supabase.functions.invoke('create-employee-user', {
           body: {
-            username: employeeData.username,
+            generatedLogin: employeeData.username, // username field now contains the auto-generated login
             password: password,
             employeeId: data.id,
             employeeName: employeeData.name,
@@ -181,11 +181,11 @@ export function useEmployees() {
         }
       }
 
-      // Create system access if requested and employee doesn't have user_id (username + password based)
+      // Create system access if requested and employee doesn't have user_id (auto-generated login based)
       if (createSystemAccess && !data.user_id && employeeData.username && password && employeeData.permission_profile_id) {
         const { data: accessResult, error: accessError } = await supabase.functions.invoke('create-employee-user', {
           body: {
-            username: employeeData.username,
+            generatedLogin: employeeData.username, // username field now contains the auto-generated login
             password: password,
             employeeId: id,
             employeeName: employeeData.name || data.name,

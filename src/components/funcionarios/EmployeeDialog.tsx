@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,9 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Loader2, Shield, UserPlus, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Shield, UserPlus, Eye, EyeOff, Copy, Check } from 'lucide-react';
 import { PermissionProfileSelect } from './PermissionProfileSelect';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Employee {
   id: string;
@@ -58,6 +59,7 @@ const specialties = [
 ];
 
 export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading }: EmployeeDialogProps) {
+  const { currentCompany } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -72,16 +74,30 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
     commission_type: 'sales',
     permission_profile_id: null as string | null,
     createSystemAccess: false,
-    username: '',
     password: '',
     confirmPassword: '',
   });
 
   const [showPassword, setShowPassword] = useState(false);
   const [passwordError, setPasswordError] = useState('');
+  const [copiedLogin, setCopiedLogin] = useState(false);
 
   const isNewEmployee = !employee;
   const hasExistingAccess = !!employee?.user_id;
+  
+  // Get company login token
+  const companyToken = (currentCompany as any)?.login_token || '';
+  
+  // Generate login automatically from first name + company token
+  const generatedLogin = useMemo(() => {
+    if (!formData.name.trim() || !companyToken) return '';
+    const firstName = formData.name.split(' ')[0]
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // remove acentos
+      .replace(/[^a-z]/g, ''); // apenas letras
+    return `${firstName}${companyToken}`;
+  }, [formData.name, companyToken]);
 
   useEffect(() => {
     if (employee) {
@@ -99,7 +115,6 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
         commission_type: employee.commission_type || 'sales',
         permission_profile_id: employee.permission_profile_id || null,
         createSystemAccess: false,
-        username: employee.username || '',
         password: '',
         confirmPassword: '',
       });
@@ -118,27 +133,23 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
         commission_type: 'sales',
         permission_profile_id: null,
         createSystemAccess: false,
-        username: '',
         password: '',
         confirmPassword: '',
       });
     }
     setPasswordError('');
     setShowPassword(false);
+    setCopiedLogin(false);
   }, [employee, open]);
 
   const validatePassword = () => {
     if (formData.createSystemAccess) {
-      if (!formData.username.trim()) {
-        setPasswordError('Usuário é obrigatório');
+      if (!generatedLogin) {
+        setPasswordError('Digite o nome do funcionário para gerar o login');
         return false;
       }
-      if (formData.username.length < 3) {
-        setPasswordError('Usuário deve ter pelo menos 3 caracteres');
-        return false;
-      }
-      if (!/^[a-zA-Z0-9._-]+$/.test(formData.username)) {
-        setPasswordError('Usuário pode conter apenas letras, números, ponto, hífen e underscore');
+      if (!companyToken) {
+        setPasswordError('Configure o token de login da empresa nas configurações');
         return false;
       }
       if (!formData.password) {
@@ -177,7 +188,7 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
       commission_type: formData.commission_type,
       permission_profile_id: formData.permission_profile_id,
       createSystemAccess: formData.createSystemAccess,
-      username: formData.username || null,
+      username: generatedLogin || null, // Login gerado automaticamente
       password: formData.createSystemAccess ? formData.password : undefined,
     });
   };
@@ -190,20 +201,15 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
     return numbers.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
   };
 
-  // Generate username suggestion from name
-  const suggestUsername = () => {
-    if (formData.name && !formData.username) {
-      const suggested = formData.name
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/\s+/g, '.')
-        .replace(/[^a-z0-9._-]/g, '');
-      setFormData({ ...formData, username: suggested });
+  const copyLogin = () => {
+    if (generatedLogin) {
+      navigator.clipboard.writeText(generatedLogin);
+      setCopiedLogin(true);
+      setTimeout(() => setCopiedLogin(false), 2000);
     }
   };
 
-  const canCreateAccess = formData.username && formData.password && formData.permission_profile_id && !hasExistingAccess;
+  const canCreateAccess = generatedLogin && formData.password && formData.permission_profile_id && !hasExistingAccess && companyToken;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -223,7 +229,6 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
               id="name"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              onBlur={suggestUsername}
               placeholder="Nome completo"
               required
             />
@@ -319,7 +324,7 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
             </p>
           </div>
 
-          {/* System Access Section - Username + Password */}
+          {/* System Access Section - Auto Generated Login + Password */}
           {!hasExistingAccess && (
             <div className="space-y-3 p-3 rounded-lg border border-blue-500/20 bg-blue-500/5">
               <div className="flex items-start space-x-3">
@@ -329,22 +334,24 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
                   onCheckedChange={(checked) => 
                     setFormData({ ...formData, createSystemAccess: checked === true })
                   }
-                  disabled={!formData.permission_profile_id}
+                  disabled={!formData.permission_profile_id || !companyToken}
                 />
                 <div className="space-y-1">
                   <label
                     htmlFor="createSystemAccess"
                     className={`text-sm font-medium leading-none cursor-pointer flex items-center gap-2 ${
-                      !formData.permission_profile_id ? 'text-muted-foreground' : ''
+                      !formData.permission_profile_id || !companyToken ? 'text-muted-foreground' : ''
                     }`}
                   >
                     <UserPlus className="w-4 h-4" />
-                    Criar acesso ao sistema
+                    Gerar acesso ao sistema
                   </label>
                   <p className="text-xs text-muted-foreground">
                     {!formData.permission_profile_id
                       ? 'Selecione um perfil de acesso para habilitar esta opção'
-                      : 'Defina o login e senha para o funcionário acessar o sistema'
+                      : !companyToken
+                      ? 'Configure o token da empresa em Configurações'
+                      : 'O login será gerado automaticamente'
                     }
                   </p>
                 </div>
@@ -352,17 +359,31 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
 
               {formData.createSystemAccess && (
                 <div className="space-y-3 pt-2 border-t border-blue-500/20">
+                  {/* Generated Login Display */}
                   <div className="space-y-2">
-                    <Label htmlFor="username">Usuário (login) *</Label>
-                    <Input
-                      id="username"
-                      value={formData.username}
-                      onChange={(e) => setFormData({ ...formData, username: e.target.value.toLowerCase() })}
-                      placeholder="joao.silva"
-                      autoComplete="off"
-                    />
+                    <Label>Login (gerado automaticamente)</Label>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 px-3 py-2 rounded-md border border-input bg-muted/50 text-sm font-mono">
+                        {generatedLogin || 'Digite o nome acima...'}
+                      </div>
+                      {generatedLogin && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={copyLogin}
+                          className="shrink-0"
+                        >
+                          {copiedLogin ? (
+                            <Check className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </Button>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground">
-                      Letras, números, ponto, hífen e underscore
+                      Formato: {formData.name.split(' ')[0]?.toLowerCase() || 'nome'}{companyToken || 'TOKEN'}
                     </p>
                   </div>
 
@@ -415,6 +436,7 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
               )}
             </div>
           )}
+
 
           {hasExistingAccess && (
             <Alert className="border-emerald-500/30 bg-emerald-500/10">

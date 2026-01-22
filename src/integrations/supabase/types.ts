@@ -704,6 +704,7 @@ export type Database = {
           id: string
           inscricao_estadual: string | null
           inscricao_municipal: string | null
+          login_token: string | null
           logo_size: number | null
           logo_url: string | null
           modo_fiscal_ativo: boolean
@@ -730,6 +731,7 @@ export type Database = {
           id?: string
           inscricao_estadual?: string | null
           inscricao_municipal?: string | null
+          login_token?: string | null
           logo_size?: number | null
           logo_url?: string | null
           modo_fiscal_ativo?: boolean
@@ -756,6 +758,7 @@ export type Database = {
           id?: string
           inscricao_estadual?: string | null
           inscricao_municipal?: string | null
+          login_token?: string | null
           logo_size?: number | null
           logo_url?: string | null
           modo_fiscal_ativo?: boolean
@@ -4541,6 +4544,10 @@ export type Database = {
         Args: { _company_id: string; _user_id: string }
         Returns: Json
       }
+      check_employee_username_exists: {
+        Args: { p_username: string }
+        Returns: boolean
+      }
       check_login_rate_limit: {
         Args: {
           _email: string
@@ -4598,6 +4605,7 @@ export type Database = {
           id: string
           inscricao_estadual: string | null
           inscricao_municipal: string | null
+          login_token: string | null
           logo_size: number | null
           logo_url: string | null
           modo_fiscal_ativo: boolean

@@ -18,6 +18,7 @@ interface Company {
   address: string | null;
   phone: string | null;
   email: string | null;
+  login_token: string | null;
 }
 
 interface UserCompany {
@@ -129,7 +130,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             logo_url,
             address,
             phone,
-            email
+            email,
+            login_token
           )
         `)
         .eq('user_id', userId)
