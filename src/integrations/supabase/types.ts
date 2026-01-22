@@ -1724,6 +1724,45 @@ export type Database = {
           },
         ]
       }
+      employee_permission_profiles: {
+        Row: {
+          created_at: string
+          employee_id: string
+          id: string
+          is_primary: boolean
+          permission_profile_id: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          id?: string
+          is_primary?: boolean
+          permission_profile_id: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          id?: string
+          is_primary?: boolean
+          permission_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_permission_profiles_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_permission_profiles_permission_profile_id_fkey"
+            columns: ["permission_profile_id"]
+            isOneToOne: false
+            referencedRelation: "permission_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees: {
         Row: {
           commission_enabled: boolean | null
