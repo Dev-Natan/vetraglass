@@ -45,13 +45,15 @@ export function useEmployees() {
   });
 
   const createEmployee = useMutation({
-    mutationFn: async (employeeData: Omit<Employee, 'id' | 'company_id' | 'created_at' | 'updated_at'>) => {
+    mutationFn: async (employeeData: Omit<Employee, 'id' | 'company_id' | 'created_at' | 'updated_at'> & { createSystemAccess?: boolean }) => {
       if (!currentCompany?.id) throw new Error('Empresa não selecionada');
+
+      const { createSystemAccess, ...dataToInsert } = employeeData;
 
       const { data, error } = await supabase
         .from('employees')
         .insert({
-          ...employeeData,
+          ...dataToInsert,
           company_id: currentCompany.id,
         })
         .select()
@@ -82,6 +84,27 @@ export function useEmployees() {
           employee_id: data.id,
           notes: 'Despesa gerada automaticamente ao cadastrar funcionário',
         });
+      }
+
+      // Create system access if requested
+      if (createSystemAccess && employeeData.email && employeeData.permission_profile_id) {
+        const { data: accessResult, error: accessError } = await supabase.functions.invoke('create-employee-user', {
+          body: {
+            email: employeeData.email,
+            employeeId: data.id,
+            employeeName: employeeData.name,
+            companyId: currentCompany.id,
+            permissionProfileId: employeeData.permission_profile_id,
+            redirectUrl: `${window.location.origin}/redefinir-senha`,
+          },
+        });
+
+        if (accessError) {
+          console.error('Error creating system access:', accessError);
+          toast.warning('Funcionário cadastrado, mas houve erro ao criar acesso ao sistema.');
+        } else if (accessResult?.success) {
+          toast.success('Email de configuração de senha enviado!');
+        }
       }
 
       return data;

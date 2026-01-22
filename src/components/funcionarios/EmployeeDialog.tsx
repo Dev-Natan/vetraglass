@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Loader2, Shield } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Loader2, Shield, UserPlus, Mail } from 'lucide-react';
 import { PermissionProfileSelect } from './PermissionProfileSelect';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface Employee {
   id: string;
@@ -23,13 +25,14 @@ interface Employee {
   commission_percent: number;
   commission_type: string;
   permission_profile_id?: string | null;
+  user_id?: string | null;
 }
 
 interface EmployeeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   employee: Employee | null;
-  onSave: (data: Omit<Employee, 'id'>) => Promise<void>;
+  onSave: (data: Omit<Employee, 'id'> & { createSystemAccess?: boolean }) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -67,7 +70,11 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
     commission_percent: 0,
     commission_type: 'sales',
     permission_profile_id: null as string | null,
+    createSystemAccess: false,
   });
+
+  const isNewEmployee = !employee;
+  const hasExistingAccess = !!employee?.user_id;
 
   useEffect(() => {
     if (employee) {
@@ -84,6 +91,7 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
         commission_percent: employee.commission_percent ?? 0,
         commission_type: employee.commission_type || 'sales',
         permission_profile_id: employee.permission_profile_id || null,
+        createSystemAccess: false,
       });
     } else {
       setFormData({
@@ -99,6 +107,7 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
         commission_percent: 0,
         commission_type: 'sales',
         permission_profile_id: null,
+        createSystemAccess: false,
       });
     }
   }, [employee, open]);
@@ -118,6 +127,7 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
       commission_percent: formData.commission_percent,
       commission_type: formData.commission_type,
       permission_profile_id: formData.permission_profile_id,
+      createSystemAccess: formData.createSystemAccess,
     });
   };
 
@@ -129,13 +139,18 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
     return numbers.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
   };
 
+  const canCreateAccess = formData.email && formData.permission_profile_id && !hasExistingAccess;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {employee ? 'Editar Funcionário' : 'Novo Funcionário'}
           </DialogTitle>
+          <DialogDescription>
+            {employee ? 'Atualize os dados do funcionário' : 'Cadastre um novo funcionário e opcionalmente crie acesso ao sistema'}
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -238,6 +253,59 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
               Define quais módulos e ações o funcionário pode acessar quando logado no sistema.
             </p>
           </div>
+
+          {/* System Access Section */}
+          {!hasExistingAccess && (
+            <div className="space-y-3 p-3 rounded-lg border border-blue-500/20 bg-blue-500/5">
+              <div className="flex items-start space-x-3">
+                <Checkbox
+                  id="createSystemAccess"
+                  checked={formData.createSystemAccess}
+                  onCheckedChange={(checked) => 
+                    setFormData({ ...formData, createSystemAccess: checked === true })
+                  }
+                  disabled={!canCreateAccess}
+                />
+                <div className="space-y-1">
+                  <label
+                    htmlFor="createSystemAccess"
+                    className={`text-sm font-medium leading-none cursor-pointer flex items-center gap-2 ${
+                      !canCreateAccess ? 'text-muted-foreground' : ''
+                    }`}
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    Criar acesso ao sistema
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    {!formData.email 
+                      ? 'Preencha o email para habilitar esta opção'
+                      : !formData.permission_profile_id
+                      ? 'Selecione um perfil de acesso para habilitar esta opção'
+                      : 'O funcionário receberá um email para definir sua senha'
+                    }
+                  </p>
+                </div>
+              </div>
+
+              {formData.createSystemAccess && formData.email && (
+                <Alert className="border-blue-500/30 bg-blue-500/10">
+                  <Mail className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    Um email será enviado para <strong>{formData.email}</strong> com um link para criar a senha de acesso ao sistema.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          )}
+
+          {hasExistingAccess && (
+            <Alert className="border-green-500/30 bg-green-500/10">
+              <Shield className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-xs text-green-700">
+                Este funcionário já possui acesso ao sistema.
+              </AlertDescription>
+            </Alert>
+          )}
 
           {/* Commission Section */}
           <div className="space-y-3 p-3 rounded-lg border border-border bg-muted/30">
