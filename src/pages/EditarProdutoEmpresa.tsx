@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { ArrowLeft, Upload, MoreHorizontal, Plus, ChevronRight, Home, Package, CheckCircle2, Circle, CircleDot, RotateCcw, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Upload, MoreHorizontal, Plus, ChevronRight, Home, Package, CheckCircle2, Circle, CircleDot, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -540,11 +540,11 @@ export default function EditarProdutoEmpresa() {
               <Button 
                 variant="outline" 
                 size="sm"
-                className="gap-2 text-orange-600 border-orange-300 hover:bg-orange-50 dark:text-orange-400 dark:border-orange-700 dark:hover:bg-orange-950"
+                className="gap-2"
                 onClick={() => setIsResetDialogOpen(true)}
               >
                 <RotateCcw className="w-4 h-4" />
-                Resetar Produto
+                Re-sincronizar
               </Button>
             )}
             <Button onClick={() => saveProductMutation.mutate()} disabled={saveProductMutation.isPending}>
@@ -879,35 +879,35 @@ export default function EditarProdutoEmpresa() {
         </DialogContent>
       </Dialog>
 
-      {/* Reset Product Dialog */}
+      {/* Re-sync Product Dialog */}
       <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-orange-600">
-              <AlertTriangle className="w-5 h-5" />
-              Resetar Produto para Template
+            <AlertDialogTitle className="flex items-center gap-2 text-primary">
+              <RotateCcw className="w-5 h-5" />
+              Re-sincronizar Componentes do Template
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <p>
-                Esta ação irá <strong>restaurar a composição, fórmulas e imagem</strong> exatamente 
-                como definido no template original.
+                Esta ação irá <strong>restaurar todos os componentes (perfis, vidros, acessórios)</strong> 
+                a partir do template original, garantindo que a composição fique completa.
               </p>
-              <p className="text-orange-600 dark:text-orange-400 font-medium">
-                Todas as alterações personalizadas serão perdidas!
+              <p className="text-destructive font-medium">
+                Componentes personalizados serão substituídos pelos do template!
               </p>
-              <p className="text-sm">
-                O preço e status do produto não serão alterados.
+              <p className="text-sm text-muted-foreground">
+                Use quando a composição estiver incompleta ou inconsistente.
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction 
-              className="bg-orange-600 hover:bg-orange-700"
+              className="bg-primary hover:bg-primary/90"
               onClick={() => resetProductMutation.mutate()}
               disabled={resetProductMutation.isPending}
             >
-              {resetProductMutation.isPending ? 'Resetando...' : 'Confirmar Reset'}
+              {resetProductMutation.isPending ? 'Sincronizando...' : 'Confirmar Re-sincronização'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
