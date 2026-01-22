@@ -43,11 +43,13 @@ export function useEmployeeInvites() {
       email,
       role,
       permissionProfileId,
+      additionalProfileIds,
     }: {
       employeeId: string;
       email: string;
       role: 'admin' | 'manager' | 'employee';
       permissionProfileId?: string;
+      additionalProfileIds?: string[];
     }) => {
       if (!currentCompany?.id || !user?.id) {
         throw new Error('Empresa ou usuário não encontrado');
@@ -76,12 +78,36 @@ export function useEmployeeInvites() {
 
       if (error) throw error;
 
-      // Update employee with permission profile if provided
+      // Update employee with primary permission profile if provided
       if (permissionProfileId) {
         await supabase
           .from('employees')
           .update({ permission_profile_id: permissionProfileId })
           .eq('id', employeeId);
+
+        // Clear existing profile assignments
+        await supabase
+          .from('employee_permission_profiles')
+          .delete()
+          .eq('employee_id', employeeId);
+
+        // Insert all selected profiles
+        const allProfileIds = [permissionProfileId, ...(additionalProfileIds || [])];
+        const profileInserts = allProfileIds.map((profileId, index) => ({
+          employee_id: employeeId,
+          permission_profile_id: profileId,
+          is_primary: index === 0,
+        }));
+
+        if (profileInserts.length > 0) {
+          const { error: profileError } = await supabase
+            .from('employee_permission_profiles')
+            .insert(profileInserts);
+
+          if (profileError) {
+            console.error('Error inserting employee profiles:', profileError);
+          }
+        }
       }
 
       // Call edge function to send email
@@ -103,6 +129,7 @@ export function useEmployeeInvites() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employee-invites', currentCompany?.id] });
       queryClient.invalidateQueries({ queryKey: ['employees', currentCompany?.id] });
+      queryClient.invalidateQueries({ queryKey: ['employee-permission-profiles'] });
       toast.success('Convite enviado com sucesso!');
     },
     onError: (error: Error) => {
