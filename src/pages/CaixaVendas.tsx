@@ -5,10 +5,11 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, Lock, Plus, Unlock, TrendingUp, TrendingDown, FileText } from 'lucide-react';
+import { ShoppingCart, Lock, Plus, Unlock, TrendingUp, TrendingDown, FileText, Bell } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useCompanyNotifications } from '@/hooks/useCompanyNotifications';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -46,8 +47,10 @@ interface Sale {
 export default function CaixaVendas() {
   const { currentCompany, user } = useAuth();
   const { isAdmin, isManager } = usePermissions();
+  const { requestCashOpen, isRequestingCashOpen } = useCompanyNotifications();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [hasRequestedCashOpen, setHasRequestedCashOpen] = useState(false);
   
   const [abrirCaixaOpen, setAbrirCaixaOpen] = useState(false);
   const [fecharCaixaOpen, setFecharCaixaOpen] = useState(false);
@@ -687,9 +690,23 @@ export default function CaixaVendas() {
                   Abrir Caixa
                 </Button>
               ) : (
-                <Button variant="outline" disabled>
-                  <Lock className="mr-2 h-4 w-4" />
-                  Sem permissão
+                <Button 
+                  variant="outline" 
+                  onClick={async () => {
+                    try {
+                      await requestCashOpen();
+                      setHasRequestedCashOpen(true);
+                      toast.success('Solicitação enviada!', {
+                        description: 'Um administrador ou gerente será notificado.',
+                      });
+                    } catch (error) {
+                      toast.error('Erro ao enviar solicitação');
+                    }
+                  }}
+                  disabled={isRequestingCashOpen || hasRequestedCashOpen}
+                >
+                  <Bell className="mr-2 h-4 w-4" />
+                  {hasRequestedCashOpen ? 'Solicitação Enviada' : 'Solicitar Abertura'}
                 </Button>
               )}
             </CardContent>

@@ -1129,6 +1129,72 @@ export type Database = {
           },
         ]
       }
+      company_notifications: {
+        Row: {
+          action_at: string | null
+          action_by: string | null
+          action_taken: boolean | null
+          company_id: string
+          created_at: string | null
+          from_user_id: string
+          id: string
+          is_read: boolean | null
+          message: string | null
+          metadata: Json | null
+          title: string
+          to_role: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          action_at?: string | null
+          action_by?: string | null
+          action_taken?: boolean | null
+          company_id: string
+          created_at?: string | null
+          from_user_id: string
+          id?: string
+          is_read?: boolean | null
+          message?: string | null
+          metadata?: Json | null
+          title: string
+          to_role: string
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          action_at?: string | null
+          action_by?: string | null
+          action_taken?: boolean | null
+          company_id?: string
+          created_at?: string | null
+          from_user_id?: string
+          id?: string
+          is_read?: boolean | null
+          message?: string | null
+          metadata?: Json | null
+          title?: string
+          to_role?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_notifications_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_notifications_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_payment_settings: {
         Row: {
           company_id: string
