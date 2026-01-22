@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { ShoppingCart, Lock, Plus, Unlock, TrendingUp, TrendingDown, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -44,6 +45,7 @@ interface Sale {
 
 export default function CaixaVendas() {
   const { currentCompany, user } = useAuth();
+  const { isAdmin, isManager } = usePermissions();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   
@@ -674,11 +676,22 @@ export default function CaixaVendas() {
                 <Lock className="h-8 w-8 text-muted-foreground" />
               </div>
               <h3 className="text-lg font-semibold mb-2">Caixa Fechado</h3>
-              <p className="text-muted-foreground mb-4">Abra o caixa para começar a registrar vendas.</p>
-              <Button onClick={() => setAbrirCaixaOpen(true)}>
-                <Unlock className="mr-2 h-4 w-4" />
-                Abrir Caixa
-              </Button>
+              <p className="text-muted-foreground mb-4">
+                {isAdmin || isManager 
+                  ? 'Abra o caixa para começar a registrar vendas.'
+                  : 'Somente Administradores e Gerentes podem abrir o caixa no módulo Financeiro.'}
+              </p>
+              {(isAdmin || isManager) ? (
+                <Button onClick={() => setAbrirCaixaOpen(true)}>
+                  <Unlock className="mr-2 h-4 w-4" />
+                  Abrir Caixa
+                </Button>
+              ) : (
+                <Button variant="outline" disabled>
+                  <Lock className="mr-2 h-4 w-4" />
+                  Sem permissão
+                </Button>
+              )}
             </CardContent>
           </Card>
         )}
