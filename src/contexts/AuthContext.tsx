@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -53,35 +53,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentCompany, setCurrentCompany] = useState<Company | null>(null);
   const [isSaasAdmin, setIsSaasAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [initialCheckDone, setInitialCheckDone] = useState(false);
   const { toast } = useToast();
+  
+  // Use refs for values that need to persist across renders and be accessible in closures
+  const initialCheckDoneRef = useRef(false);
+  const currentUserIdRef = useRef<string | null>(null);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
-    let isMounted = true;
-    let currentFetchId = 0;
-
+    isMountedRef.current = true;
+    
     const handleSession = async (newSession: Session | null, source: string) => {
-      if (!isMounted) return;
+      if (!isMountedRef.current) return;
       
-      const fetchId = ++currentFetchId;
+      const newUserId = newSession?.user?.id ?? null;
       
       // Update session and user immediately
       setSession(newSession);
       setUser(newSession?.user ?? null);
       
       if (newSession?.user) {
+        // Track current user to prevent stale data from overwriting
+        currentUserIdRef.current = newUserId;
         setLoading(true);
         
         try {
-          // Only proceed if this is still the latest fetch request
-          if (fetchId !== currentFetchId || !isMounted) return;
-          
-          await fetchUserData(newSession.user.id);
+          // Pass a check function to ensure we don't apply stale data
+          await fetchUserData(newSession.user.id, () => 
+            isMountedRef.current && currentUserIdRef.current === newUserId
+          );
         } catch (error) {
           console.error(`Error fetching user data (${source}):`, error);
+          if (isMountedRef.current) setLoading(false);
         }
       } else {
         // Clear all user data on logout
+        currentUserIdRef.current = null;
         setProfile(null);
         setCompanies([]);
         setCurrentCompany(null);
@@ -95,7 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       (event, newSession) => {
         // Skip initial session event if we haven't done initial check yet
         // This prevents double-fetching
-        if (event === 'INITIAL_SESSION' && !initialCheckDone) {
+        if (event === 'INITIAL_SESSION' && !initialCheckDoneRef.current) {
           return;
         }
         
@@ -112,13 +119,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // THEN check for existing session (only once)
     supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
-      if (!isMounted) return;
-      setInitialCheckDone(true);
+      if (!isMountedRef.current) return;
+      initialCheckDoneRef.current = true;
       handleSession(existingSession, 'getSession');
     });
 
     return () => {
-      isMounted = false;
+      isMountedRef.current = false;
       subscription.unsubscribe();
     };
   }, []);
