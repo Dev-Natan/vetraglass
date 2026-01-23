@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -27,7 +28,9 @@ import {
   FileText,
   Download,
   FileSignature,
-  ClipboardList
+  ClipboardList,
+  ExternalLink,
+  CalendarDays
 } from 'lucide-react';
 import {
   Select,
@@ -100,6 +103,7 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
   const { toast } = useToast();
   const { currentCompany } = useAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [aprovarDialogOpen, setAprovarDialogOpen] = useState(false);
   const [contractDialogOpen, setContractDialogOpen] = useState(false);
 
@@ -165,13 +169,29 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
       if (!quote?.id) return null;
       const { data, error } = await supabase
         .from('ordens_servico')
-        .select('id')
+        .select('id, os_number')
         .eq('quote_id', quote.id)
         .maybeSingle();
       if (error) throw error;
       return data;
     },
     enabled: !!quote?.id && open && (quote?.status === 'approved' || quote?.status === 'converted')
+  });
+
+  // Check for related appointments
+  const { data: relatedAppointments } = useQuery({
+    queryKey: ['appointments-for-quote', quote?.id],
+    queryFn: async () => {
+      if (!quote?.id) return [];
+      const { data, error } = await supabase
+        .from('service_appointments')
+        .select('id, title, scheduled_date, appointment_type')
+        .eq('quote_id', quote.id)
+        .order('scheduled_date', { ascending: true });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!quote?.id && open
   });
 
   // Update status mutation
@@ -525,6 +545,62 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
             </div>
           )}
 
+          {/* Related Links */}
+          {(existingOS || (relatedAppointments && relatedAppointments.length > 0)) && (
+            <div className="p-4 bg-muted/30 rounded-lg border space-y-3">
+              <h4 className="text-sm font-medium">Entidades Relacionadas</h4>
+              
+              {existingOS && (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm">
+                    <ClipboardList className="w-4 h-4 text-primary" />
+                    <span>OS #{existingOS.os_number?.toString().padStart(4, '0')}</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs gap-1"
+                    onClick={() => {
+                      onOpenChange(false);
+                      navigate(`/ordens-servico/${existingOS.id}`);
+                    }}
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    Ver OS
+                  </Button>
+                </div>
+              )}
+              
+              {relatedAppointments && relatedAppointments.length > 0 && (
+                <div className="space-y-2">
+                  {relatedAppointments.map((appt) => (
+                    <div key={appt.id} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm">
+                        <CalendarDays className="w-4 h-4 text-primary" />
+                        <span className="truncate max-w-[200px]">{appt.title}</span>
+                        <span className="text-muted-foreground text-xs">
+                          ({format(new Date(appt.scheduled_date), 'dd/MM', { locale: ptBR })})
+                        </span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs gap-1"
+                        onClick={() => {
+                          onOpenChange(false);
+                          navigate('/agenda');
+                        }}
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        Ver Agenda
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex flex-wrap justify-end gap-2 border-t pt-4">
             <Button variant="outline" onClick={handleDownloadPdf} className="gap-2">
@@ -535,6 +611,19 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
               <FileSignature className="w-4 h-4" />
               Gerar Contrato
             </Button>
+            {(quote.status === 'approved' || quote.status === 'converted') && existingOS && (
+              <Button 
+                variant="outline"
+                onClick={() => {
+                  onOpenChange(false);
+                  navigate(`/ordens-servico/${existingOS.id}`);
+                }}
+                className="gap-2"
+              >
+                <ClipboardList className="w-4 h-4" />
+                Ver OS
+              </Button>
+            )}
             {(quote.status === 'approved' || quote.status === 'converted') && !existingOS && (
               <Button 
                 onClick={() => createOSMutation.mutate()} 

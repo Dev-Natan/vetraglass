@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Package, Scissors, Layers, FileText, User, Phone, MapPin, Calendar, DollarSign, RefreshCw, Loader2, Download, Printer, Camera } from 'lucide-react';
+import { ArrowLeft, Package, Scissors, Layers, FileText, User, Phone, MapPin, Calendar, DollarSign, RefreshCw, Loader2, Download, Printer, Camera, ExternalLink, CalendarDays } from 'lucide-react';
 import { OSMaterialsList } from '@/components/ordens-servico/OSMaterialsList';
 import { OSCuttingPlan } from '@/components/ordens-servico/OSCuttingPlan';
 import { OSGlassProject } from '@/components/ordens-servico/OSGlassProject';
@@ -44,6 +44,38 @@ export default function OrdemServicoDetalhes() {
         .single();
       if (error) throw error;
       return data;
+    },
+    enabled: !!id,
+  });
+
+  // Fetch related quote
+  const { data: relatedQuote } = useQuery({
+    queryKey: ['quote-for-os', ordem?.quote_id],
+    queryFn: async () => {
+      if (!ordem?.quote_id) return null;
+      const { data, error } = await supabase
+        .from('quotes')
+        .select('id, quote_number, customer_name')
+        .eq('id', ordem.quote_id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!ordem?.quote_id,
+  });
+
+  // Fetch related appointments
+  const { data: relatedAppointments } = useQuery({
+    queryKey: ['appointments-for-os', id],
+    queryFn: async () => {
+      if (!id) return [];
+      const { data, error } = await supabase
+        .from('service_appointments')
+        .select('id, title, scheduled_date, appointment_type')
+        .eq('ordem_servico_id', id)
+        .order('scheduled_date', { ascending: true });
+      if (error) throw error;
+      return data || [];
     },
     enabled: !!id,
   });
@@ -265,6 +297,42 @@ export default function OrdemServicoDetalhes() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Related Links */}
+        {(relatedQuote || (relatedAppointments && relatedAppointments.length > 0)) && (
+          <Card>
+            <CardContent className="pt-6">
+              <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                <ExternalLink className="w-4 h-4" />
+                Entidades Relacionadas
+              </h4>
+              <div className="flex flex-wrap gap-3">
+                {relatedQuote && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => navigate(`/orcamentos?id=${relatedQuote.id}`)}
+                  >
+                    <FileText className="w-4 h-4" />
+                    Orçamento #{relatedQuote.quote_number?.toString().padStart(4, '0')}
+                  </Button>
+                )}
+                {relatedAppointments && relatedAppointments.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => navigate('/agenda')}
+                  >
+                    <CalendarDays className="w-4 h-4" />
+                    {relatedAppointments.length} Agendamento{relatedAppointments.length > 1 ? 's' : ''}
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Tabs */}
         <Tabs defaultValue="materials" className="w-full">

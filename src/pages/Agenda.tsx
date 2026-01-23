@@ -1070,9 +1070,23 @@ export default function Agenda() {
               {/* OS Information */}
               {(selectedAppointment as any).ordem_servico && (
                 <div className="p-3 bg-blue-500/5 border border-blue-500/20 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Package className="h-4 w-4 text-blue-500" />
-                    <span className="font-medium text-sm">Ordem de Serviço Vinculada</span>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Package className="h-4 w-4 text-blue-500" />
+                      <span className="font-medium text-sm">Ordem de Serviço Vinculada</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs gap-1"
+                      onClick={() => {
+                        setSelectedAppointment(null);
+                        navigate(`/ordens-servico/${(selectedAppointment as any).ordem_servico?.id}`);
+                      }}
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      Ver OS
+                    </Button>
                   </div>
                   <div className="space-y-1 text-sm">
                     <div className="flex items-center justify-between">
