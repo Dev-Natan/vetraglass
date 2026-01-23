@@ -26,8 +26,17 @@ import {
   Printer,
   PlayCircle,
   CreditCard,
-  Settings
+  Settings,
+  MoreVertical,
+  RotateCcw
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -150,7 +159,42 @@ export default function Orcamentos() {
     }
   });
 
-  // Filter quotes
+  // Reject mutation
+  const rejectMutation = useMutation({
+    mutationFn: async (quoteId: string) => {
+      const { error } = await supabase
+        .from('quotes')
+        .update({ status: 'rejected' })
+        .eq('id', quoteId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      toast({ title: 'Orçamento rejeitado' });
+    },
+    onError: () => {
+      toast({ title: 'Erro ao rejeitar orçamento', variant: 'destructive' });
+    }
+  });
+
+  // Reopen mutation (back to pending)
+  const reopenMutation = useMutation({
+    mutationFn: async (quoteId: string) => {
+      const { error } = await supabase
+        .from('quotes')
+        .update({ status: 'pending' })
+        .eq('id', quoteId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      toast({ title: 'Orçamento reaberto como pendente' });
+    },
+    onError: () => {
+      toast({ title: 'Erro ao reabrir orçamento', variant: 'destructive' });
+    }
+  });
+
   const filteredQuotes = quotes?.filter(quote => {
     const matchesSearch = quote.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       quote.quote_number.toString().includes(searchTerm);
@@ -442,7 +486,7 @@ export default function Orcamentos() {
 
                   {/* Quick Actions */}
                   <div className="px-4 py-3 bg-muted/30 border-t">
-                    <div className="flex items-center justify-center gap-6 mb-3">
+                    <div className="flex items-center justify-center gap-4 mb-3">
                       <button
                         onClick={() => handleDuplicate(quote)}
                         className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
@@ -450,16 +494,7 @@ export default function Orcamentos() {
                         <div className="w-10 h-10 rounded-lg border bg-background flex items-center justify-center hover:bg-muted transition-colors">
                           <Copy className="w-5 h-5" />
                         </div>
-                        <span className="text-xs">Fazer cópia</span>
-                      </button>
-                      <button
-                        onClick={() => handleView(quote)}
-                        className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        <div className="w-10 h-10 rounded-lg border bg-background flex items-center justify-center hover:bg-muted transition-colors">
-                          <Package className="w-5 h-5" />
-                        </div>
-                        <span className="text-xs">Materiais</span>
+                        <span className="text-xs">Copiar</span>
                       </button>
                       <button
                         onClick={() => handleGenerateContract(quote)}
@@ -479,17 +514,97 @@ export default function Orcamentos() {
                         </div>
                         <span className="text-xs">Imprimir</span>
                       </button>
-                      {quote.status === 'pending' && (
-                        <button
-                          onClick={() => handleApprove(quote)}
-                          className="flex flex-col items-center gap-1 text-green-600 hover:text-green-700 transition-colors"
-                        >
-                          <div className="w-10 h-10 rounded-lg border border-green-200 bg-green-50 flex items-center justify-center hover:bg-green-100 transition-colors">
-                            <CheckCircle className="w-5 h-5" />
-                          </div>
-                          <span className="text-xs font-medium">Aprovar</span>
-                        </button>
-                      )}
+                      
+                      {/* Status Action Dropdown */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            className={`flex flex-col items-center gap-1 transition-colors ${
+                              quote.status === 'pending' 
+                                ? 'text-amber-600 hover:text-amber-700' 
+                                : quote.status === 'approved' || quote.status === 'converted'
+                                  ? 'text-green-600 hover:text-green-700'
+                                  : 'text-muted-foreground hover:text-foreground'
+                            }`}
+                          >
+                            <div className={`w-10 h-10 rounded-lg border flex items-center justify-center transition-colors ${
+                              quote.status === 'pending'
+                                ? 'border-amber-200 bg-amber-50 hover:bg-amber-100'
+                                : quote.status === 'approved' || quote.status === 'converted'
+                                  ? 'border-green-200 bg-green-50 hover:bg-green-100'
+                                  : 'bg-background hover:bg-muted'
+                            }`}>
+                              {quote.status === 'pending' ? (
+                                <Clock className="w-5 h-5" />
+                              ) : quote.status === 'approved' || quote.status === 'converted' ? (
+                                <CheckCircle className="w-5 h-5" />
+                              ) : quote.status === 'rejected' ? (
+                                <XCircle className="w-5 h-5" />
+                              ) : (
+                                <AlertCircle className="w-5 h-5" />
+                              )}
+                            </div>
+                            <span className="text-xs font-medium">Status</span>
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="center" className="w-48">
+                          {quote.status === 'pending' && (
+                            <>
+                              <DropdownMenuItem 
+                                onClick={() => handleApprove(quote)}
+                                className="gap-2 text-green-600 focus:text-green-600"
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                                Aprovar Orçamento
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => rejectMutation.mutate(quote.id)}
+                                className="gap-2 text-destructive focus:text-destructive"
+                              >
+                                <XCircle className="w-4 h-4" />
+                                Rejeitar Orçamento
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {(quote.status === 'rejected' || quote.status === 'expired') && (
+                            <DropdownMenuItem 
+                              onClick={() => reopenMutation.mutate(quote.id)}
+                              className="gap-2"
+                            >
+                              <RotateCcw className="w-4 h-4" />
+                              Reabrir como Pendente
+                            </DropdownMenuItem>
+                          )}
+                          {quote.status === 'approved' && (
+                            <>
+                              <DropdownMenuItem 
+                                onClick={() => handleView(quote)}
+                                className="gap-2"
+                              >
+                                <Eye className="w-4 h-4" />
+                                Ver Detalhes
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                onClick={() => reopenMutation.mutate(quote.id)}
+                                className="gap-2 text-amber-600 focus:text-amber-600"
+                              >
+                                <RotateCcw className="w-4 h-4" />
+                                Voltar p/ Pendente
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {quote.status === 'converted' && (
+                            <DropdownMenuItem 
+                              onClick={() => handleView(quote)}
+                              className="gap-2"
+                            >
+                              <Eye className="w-4 h-4" />
+                              Ver Detalhes
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
 
                     {/* Action Buttons */}
@@ -499,12 +614,14 @@ export default function Orcamentos() {
                         className="flex-1"
                         onClick={() => handleView(quote)}
                       >
-                        Fechar orçamento
+                        <Eye className="w-4 h-4 mr-2" />
+                        Visualizar
                       </Button>
                       <Button 
-                        className="flex-1 bg-green-600 hover:bg-green-700"
+                        className="flex-1"
                         onClick={() => handleEdit(quote)}
                       >
+                        <Edit className="w-4 h-4 mr-2" />
                         Editar
                       </Button>
                     </div>
