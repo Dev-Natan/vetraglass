@@ -2,13 +2,15 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { 
-  ClipboardList, Search, Filter, Clock, CheckCircle, AlertCircle, 
+  ClipboardList, Search, Clock, CheckCircle, AlertCircle, 
   User, Calendar, DollarSign, ChevronRight, Play, XCircle,
-  MoreHorizontal, Eye, AlertTriangle, Trash2
+  MoreHorizontal, Eye, AlertTriangle, Trash2, Package, Wrench
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -73,7 +75,7 @@ export default function OrdensServico() {
   const { currentCompany } = useAuth();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<OSStatus | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<OSStatus | 'all' | 'overdue'>('in_progress');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [osToDelete, setOsToDelete] = useState<string | null>(null);
 
@@ -141,38 +143,19 @@ export default function OrdensServico() {
     }
   });
 
-  // Filter ordens
-  const filteredOrdens = ordens?.filter(os => {
-    const matchesSearch = os.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      os.os_number.toString().includes(searchTerm);
-    const matchesStatus = statusFilter === 'all' || os.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  }) || [];
-
-  // Pagination
-  const {
-    paginatedData,
-    currentPage,
-    totalPages,
-    setPage,
-    pageSize,
-    setPageSize,
-    startIndex,
-    endIndex,
-  } = usePagination(filteredOrdens, { initialPageSize: 20 });
-
   // Stats
+  const today = new Date().toISOString().split('T')[0];
   const pendingCount = ordens?.filter(os => os.status === 'pending').length || 0;
   const inProgressCount = ordens?.filter(os => os.status === 'in_progress').length || 0;
   const completedCount = ordens?.filter(os => os.status === 'completed').length || 0;
+  const cancelledCount = ordens?.filter(os => os.status === 'cancelled').length || 0;
   
-  // Overdue check
-  const today = new Date().toISOString().split('T')[0];
-  const overdueCount = ordens?.filter(os => 
+  const overdueOrdens = ordens?.filter(os => 
     (os.status === 'pending' || os.status === 'in_progress') && 
     os.estimated_end && 
     os.estimated_end < today
-  ).length || 0;
+  ) || [];
+  const overdueCount = overdueOrdens.length;
 
   const isOverdue = (os: OrdemServico) => {
     return (os.status === 'pending' || os.status === 'in_progress') && 
@@ -187,6 +170,28 @@ export default function OrdensServico() {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
+  // Filter ordens
+  const filteredOrdens = ordens?.filter(os => {
+    const matchesSearch = os.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      os.os_number.toString().includes(searchTerm);
+    
+    if (statusFilter === 'overdue') {
+      return matchesSearch && isOverdue(os);
+    }
+    
+    const matchesStatus = statusFilter === 'all' || os.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  }) || [];
+
+  // Pagination
+  const {
+    paginatedData,
+    currentPage,
+    totalPages,
+    setPage,
+    pageSize,
+  } = usePagination(filteredOrdens, { initialPageSize: 20 });
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   };
@@ -194,88 +199,126 @@ export default function OrdensServico() {
   return (
     <MainLayout>
       <div className="space-y-6 animate-fade-in">
+        {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between gap-4">
           <div>
             <h1 className="font-display font-bold text-2xl text-foreground flex items-center gap-2">
               <ClipboardList className="w-7 h-7 text-primary" />
               Ordens de Serviço
             </h1>
-            <p className="text-muted-foreground">Acompanhe suas ordens de serviço</p>
+            <p className="text-muted-foreground">Acompanhe e gerencie suas ordens de serviço</p>
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-          <div className="section-card flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-action-orange/20 flex items-center justify-center">
-              <AlertCircle className="w-6 h-6 text-action-orange" />
-            </div>
-            <div>
-              <p className="text-2xl font-display font-bold text-foreground">{pendingCount}</p>
-              <p className="text-sm text-muted-foreground">Pendentes</p>
-            </div>
-          </div>
-          <div className="section-card flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-action-blue/20 flex items-center justify-center">
-              <Clock className="w-6 h-6 text-action-blue" />
-            </div>
-            <div>
-              <p className="text-2xl font-display font-bold text-foreground">{inProgressCount}</p>
-              <p className="text-sm text-muted-foreground">Em Andamento</p>
-            </div>
-          </div>
-          <div className="section-card flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-action-green/20 flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-action-green" />
-            </div>
-            <div>
-              <p className="text-2xl font-display font-bold text-foreground">{completedCount}</p>
-              <p className="text-sm text-muted-foreground">Concluídas</p>
-            </div>
-          </div>
-          <div className={`section-card flex items-center gap-4 ${overdueCount > 0 ? 'border-destructive/50 bg-destructive/5' : ''}`}>
-            <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${overdueCount > 0 ? 'bg-destructive/20' : 'bg-muted'}`}>
-              <AlertTriangle className={`w-6 h-6 ${overdueCount > 0 ? 'text-destructive' : 'text-muted-foreground'}`} />
-            </div>
-            <div>
-              <p className={`text-2xl font-display font-bold ${overdueCount > 0 ? 'text-destructive' : 'text-foreground'}`}>
-                {overdueCount}
-              </p>
-              <p className="text-sm text-muted-foreground">Atrasadas</p>
-            </div>
-          </div>
+        {/* Stats Cards - Agenda Style */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <Card className="bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-amber-200 dark:border-amber-900">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Pendentes</p>
+                  <p className="text-2xl font-bold">{pendingCount}</p>
+                </div>
+                <AlertCircle className="h-8 w-8 text-amber-500 opacity-80" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-200 dark:border-blue-900">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Em Andamento</p>
+                  <p className="text-2xl font-bold">{inProgressCount}</p>
+                </div>
+                <Wrench className="h-8 w-8 text-blue-500 opacity-80" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-gradient-to-br from-green-500/10 to-green-600/5 border-green-200 dark:border-green-900">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Concluídas</p>
+                  <p className="text-2xl font-bold">{completedCount}</p>
+                </div>
+                <CheckCircle className="h-8 w-8 text-green-500 opacity-80" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-gray-500/10 to-gray-600/5 border-gray-200 dark:border-gray-800">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Canceladas</p>
+                  <p className="text-2xl font-bold">{cancelledCount}</p>
+                </div>
+                <XCircle className="h-8 w-8 text-gray-500 opacity-80" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className={`bg-gradient-to-br ${overdueCount > 0 ? 'from-red-500/10 to-red-600/5 border-red-200 dark:border-red-900' : 'from-gray-500/10 to-gray-600/5 border-gray-200 dark:border-gray-800'}`}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Atrasadas</p>
+                  <p className={`text-2xl font-bold ${overdueCount > 0 ? 'text-red-500' : ''}`}>{overdueCount}</p>
+                </div>
+                <AlertTriangle className={`h-8 w-8 opacity-80 ${overdueCount > 0 ? 'text-red-500' : 'text-gray-500'}`} />
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Search and Filter */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input 
-              placeholder="Buscar por cliente ou número..." 
-              className="pl-10"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="gap-2">
-                <Filter className="w-4 h-4" />
-                {statusFilter === 'all' ? 'Todos' : statusConfig[statusFilter].label}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setStatusFilter('all')}>
-                Todos
-              </DropdownMenuItem>
-              {Object.entries(statusConfig).map(([key, config]) => (
-                <DropdownMenuItem key={key} onClick={() => setStatusFilter(key as OSStatus)}>
-                  <config.icon className="w-4 h-4 mr-2" />
-                  {config.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+        {/* Status Tabs */}
+        <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as OSStatus | 'all' | 'overdue')} className="w-full">
+          <TabsList className="w-full justify-start overflow-x-auto flex-nowrap">
+            <TabsTrigger value="all" className="gap-2">
+              Todas
+              <Badge variant="secondary" className="ml-1">{ordens?.length || 0}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="pending" className="gap-2">
+              <AlertCircle className="w-3.5 h-3.5" />
+              Pendentes
+              <Badge variant="secondary" className="ml-1">{pendingCount}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="in_progress" className="gap-2">
+              <Clock className="w-3.5 h-3.5" />
+              Em Andamento
+              <Badge variant="secondary" className="ml-1">{inProgressCount}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="completed" className="gap-2">
+              <CheckCircle className="w-3.5 h-3.5" />
+              Concluídas
+              <Badge variant="secondary" className="ml-1">{completedCount}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="cancelled" className="gap-2">
+              <XCircle className="w-3.5 h-3.5" />
+              Canceladas
+              <Badge variant="secondary" className="ml-1">{cancelledCount}</Badge>
+            </TabsTrigger>
+            {overdueCount > 0 && (
+              <TabsTrigger value="overdue" className="gap-2 text-red-500">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                Atrasadas
+                <Badge variant="destructive" className="ml-1">{overdueCount}</Badge>
+              </TabsTrigger>
+            )}
+          </TabsList>
+        </Tabs>
+
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input 
+            placeholder="Buscar por cliente ou número..." 
+            className="pl-10"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
 
         {/* List */}
@@ -296,7 +339,7 @@ export default function OrdensServico() {
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {paginatedData.map((os) => {
               const status = statusConfig[os.status];
               const priority = priorityConfig[os.priority || 'normal'];
@@ -305,84 +348,126 @@ export default function OrdensServico() {
               const daysLate = os.estimated_end ? getDaysOverdue(os.estimated_end) : 0;
               
               return (
-                <div
+                <Card
                   key={os.id}
-                  className={`section-card p-4 hover:shadow-md transition-shadow cursor-pointer ${overdue ? 'border-destructive/50 bg-destructive/5' : ''}`}
+                  className={`overflow-hidden hover:shadow-lg transition-all cursor-pointer ${overdue ? 'border-red-500/50 bg-red-500/5' : ''}`}
                   onClick={() => navigate(`/ordens-servico/${os.id}`)}
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-4 flex-1 min-w-0">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${overdue ? 'bg-destructive/20' : 'bg-primary/10'}`}>
-                        {overdue ? (
-                          <AlertTriangle className="w-5 h-5 text-destructive" />
-                        ) : (
-                          <ClipboardList className="w-5 h-5 text-primary" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-mono text-sm text-muted-foreground">
+                  <CardContent className="p-4">
+                    {/* Header */}
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${overdue ? 'bg-red-500/20' : 'bg-primary/10'}`}>
+                          {overdue ? (
+                            <AlertTriangle className="w-5 h-5 text-red-500" />
+                          ) : (
+                            <ClipboardList className="w-5 h-5 text-primary" />
+                          )}
+                        </div>
+                        <div>
+                          <div className="font-bold text-foreground">
                             OS #{os.os_number.toString().padStart(4, '0')}
-                          </span>
-                          <span className="font-medium text-foreground truncate">
-                            {os.customer_name}
-                          </span>
-                          <Badge variant={status.variant} className="gap-1">
+                          </div>
+                          <Badge variant={status.variant} className="gap-1 text-xs">
                             <StatusIcon className="w-3 h-3" />
                             {status.label}
                           </Badge>
-                          {overdue && (
-                            <Badge variant="destructive" className="gap-1">
-                              <AlertTriangle className="w-3 h-3" />
-                              {daysLate} {daysLate === 1 ? 'dia atrasado' : 'dias atrasado'}
-                            </Badge>
-                          )}
-                          <span className={`text-xs font-medium ${priority.color}`}>
-                            {priority.label}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1 flex-wrap">
-                          {os.current_stage && (
-                            <span className="flex items-center gap-1">
-                              <ChevronRight className="w-3 h-3" />
-                              {os.current_stage}
-                            </span>
-                          )}
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            {format(new Date(os.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                          </span>
-                          {os.estimated_end && (
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              Previsão: {format(new Date(os.estimated_end), "dd/MM/yyyy", { locale: ptBR })}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-4 mt-2">
-                          <span className="text-sm">
-                            <span className="text-muted-foreground">Total:</span>{' '}
-                            <span className="font-medium">{formatCurrency(os.total_amount)}</span>
-                          </span>
-                          {os.paid_amount > 0 && (
-                            <span className="text-sm text-green-600">
-                              Pago: {formatCurrency(os.paid_amount)}
-                            </span>
-                          )}
-                          {os.pending_amount > 0 && (
-                            <Badge variant="secondary" className="text-xs">
-                              Pendente: {formatCurrency(os.pending_amount)}
-                            </Badge>
-                          )}
                         </div>
                       </div>
+                      <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => navigate(`/ordens-servico/${os.id}`)}>
+                              <Eye className="w-4 h-4 mr-2" />
+                              Ver detalhes
+                            </DropdownMenuItem>
+                            {os.status !== 'completed' && os.status !== 'cancelled' && (
+                              <DropdownMenuItem 
+                                className="text-destructive"
+                                onClick={() => updateStatusMutation.mutate({ id: os.id, status: 'cancelled' })}
+                              >
+                                <XCircle className="w-4 h-4 mr-2" />
+                                Cancelar
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem 
+                              className="text-destructive"
+                              onClick={() => {
+                                setOsToDelete(os.id);
+                                setDeleteDialogOpen(true);
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+
+                    {/* Customer */}
+                    <div className="space-y-2 mb-3">
+                      <div className="flex items-center gap-2 text-sm">
+                        <User className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <span className="font-medium truncate">{os.customer_name}</span>
+                      </div>
+                      
+                      {overdue && (
+                        <div className="flex items-center gap-2">
+                          <Badge variant="destructive" className="gap-1 text-xs">
+                            <AlertTriangle className="w-3 h-3" />
+                            {daysLate} {daysLate === 1 ? 'dia atrasado' : 'dias atrasado'}
+                          </Badge>
+                        </div>
+                      )}
+                      
+                      {os.current_stage && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <ChevronRight className="w-4 h-4 shrink-0" />
+                          <span>{os.current_stage}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Dates */}
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground mb-3">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        {format(new Date(os.created_at), "dd/MM/yy", { locale: ptBR })}
+                      </span>
+                      {os.estimated_end && (
+                        <span className={`flex items-center gap-1 ${overdue ? 'text-red-500 font-medium' : ''}`}>
+                          <Clock className="w-3 h-3" />
+                          Prev: {format(new Date(os.estimated_end), "dd/MM/yy", { locale: ptBR })}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Financial */}
+                    <div className="pt-3 border-t flex items-center justify-between">
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Total:</span>{' '}
+                        <span className="font-semibold">{formatCurrency(os.total_amount)}</span>
+                      </div>
+                      {os.pending_amount > 0 && (
+                        <Badge variant="secondary" className="text-xs">
+                          Pendente: {formatCurrency(os.pending_amount)}
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="pt-3 flex gap-2" onClick={(e) => e.stopPropagation()}>
                       {os.status === 'pending' && (
                         <Button
                           size="sm"
+                          className="flex-1 gap-1"
                           onClick={() => updateStatusMutation.mutate({ id: os.id, status: 'in_progress' })}
-                          className="gap-1"
                         >
                           <Play className="w-3 h-3" />
                           Iniciar
@@ -392,48 +477,25 @@ export default function OrdensServico() {
                         <Button
                           size="sm"
                           variant="outline"
+                          className="flex-1 gap-1"
                           onClick={() => updateStatusMutation.mutate({ id: os.id, status: 'completed' })}
-                          className="gap-1"
                         >
                           <CheckCircle className="w-3 h-3" />
                           Concluir
                         </Button>
                       )}
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => navigate(`/ordens-servico/${os.id}`)}>
-                            <Eye className="w-4 h-4 mr-2" />
-                            Ver detalhes
-                          </DropdownMenuItem>
-                          {os.status !== 'completed' && os.status !== 'cancelled' && (
-                            <DropdownMenuItem 
-                              className="text-destructive"
-                              onClick={() => updateStatusMutation.mutate({ id: os.id, status: 'cancelled' })}
-                            >
-                              <XCircle className="w-4 h-4 mr-2" />
-                              Cancelar
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem 
-                            className="text-destructive"
-                            onClick={() => {
-                              setOsToDelete(os.id);
-                              setDeleteDialogOpen(true);
-                            }}
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Excluir
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="gap-1"
+                        onClick={() => navigate(`/ordens-servico/${os.id}`)}
+                      >
+                        <Eye className="w-3 h-3" />
+                        Detalhes
+                      </Button>
                     </div>
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               );
             })}
           </div>
