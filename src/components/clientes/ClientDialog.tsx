@@ -4,9 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatCPFOrCNPJ, validateCPFOrCNPJ } from '@/utils/documentValidation';
-import { Loader2 } from 'lucide-react';
+import { Loader2, User, History } from 'lucide-react';
+import { ClientPurchaseHistory } from './ClientPurchaseHistory';
 
 interface Client {
   id?: string;
@@ -124,129 +126,274 @@ export function ClientDialog({ open, onOpenChange, client, onSave, isLoading }: 
           <DialogTitle>{isEditing ? 'Editar Cliente' : 'Novo Cliente'}</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
-              <Label htmlFor="name">Nome *</Label>
-              <Input
-                id="name"
-                value={form.name}
-                onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Nome completo ou razão social"
-                required
-              />
-            </div>
+        {isEditing ? (
+          <Tabs defaultValue="dados" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="dados" className="gap-2">
+                <User className="h-4 w-4" />
+                Dados
+              </TabsTrigger>
+              <TabsTrigger value="historico" className="gap-2">
+                <History className="h-4 w-4" />
+                Histórico
+              </TabsTrigger>
+            </TabsList>
 
-            <div>
-              <Label htmlFor="document">CPF/CNPJ</Label>
-              <Input
-                id="document"
-                value={form.document}
-                onChange={e => handleDocumentChange(e.target.value)}
-                placeholder="000.000.000-00"
-                className={documentError ? 'border-destructive' : ''}
-              />
-              {documentError && (
-                <p className="text-sm text-destructive mt-1">{documentError}</p>
-              )}
-              {form.document_type && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  Tipo: {form.document_type}
-                </p>
-              )}
-            </div>
+            <TabsContent value="dados" className="mt-4">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <Label htmlFor="name">Nome *</Label>
+                    <Input
+                      id="name"
+                      value={form.name}
+                      onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="Nome completo ou razão social"
+                      required
+                    />
+                  </div>
 
-            <div>
-              <Label htmlFor="phone">Telefone</Label>
-              <Input
-                id="phone"
-                value={form.phone}
-                onChange={e => handlePhoneChange(e.target.value)}
-                placeholder="(00) 00000-0000"
-              />
-            </div>
+                  <div>
+                    <Label htmlFor="document">CPF/CNPJ</Label>
+                    <Input
+                      id="document"
+                      value={form.document}
+                      onChange={e => handleDocumentChange(e.target.value)}
+                      placeholder="000.000.000-00"
+                      className={documentError ? 'border-destructive' : ''}
+                    />
+                    {documentError && (
+                      <p className="text-sm text-destructive mt-1">{documentError}</p>
+                    )}
+                    {form.document_type && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Tipo: {form.document_type}
+                      </p>
+                    )}
+                  </div>
 
-            <div className="md:col-span-2">
-              <Label htmlFor="email">E-mail</Label>
-              <Input
-                id="email"
-                type="email"
-                value={form.email}
-                onChange={e => setForm(prev => ({ ...prev, email: e.target.value }))}
-                placeholder="email@exemplo.com"
-              />
-            </div>
+                  <div>
+                    <Label htmlFor="phone">Telefone</Label>
+                    <Input
+                      id="phone"
+                      value={form.phone}
+                      onChange={e => handlePhoneChange(e.target.value)}
+                      placeholder="(00) 00000-0000"
+                    />
+                  </div>
 
-            <div className="md:col-span-2">
-              <Label htmlFor="address">Endereço</Label>
-              <Input
-                id="address"
-                value={form.address}
-                onChange={e => setForm(prev => ({ ...prev, address: e.target.value }))}
-                placeholder="Rua, número, bairro"
-              />
-            </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor="email">E-mail</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={form.email}
+                      onChange={e => setForm(prev => ({ ...prev, email: e.target.value }))}
+                      placeholder="email@exemplo.com"
+                    />
+                  </div>
 
-            <div>
-              <Label htmlFor="city">Cidade</Label>
-              <Input
-                id="city"
-                value={form.city}
-                onChange={e => setForm(prev => ({ ...prev, city: e.target.value }))}
-                placeholder="Cidade"
-              />
-            </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor="address">Endereço</Label>
+                    <Input
+                      id="address"
+                      value={form.address}
+                      onChange={e => setForm(prev => ({ ...prev, address: e.target.value }))}
+                      placeholder="Rua, número, bairro"
+                    />
+                  </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label htmlFor="state">Estado</Label>
-                <Select
-                  value={form.state}
-                  onValueChange={value => setForm(prev => ({ ...prev, state: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="UF" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {BRAZILIAN_STATES.map(state => (
-                      <SelectItem key={state} value={state}>{state}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="zip_code">CEP</Label>
+                  <div>
+                    <Label htmlFor="city">Cidade</Label>
+                    <Input
+                      id="city"
+                      value={form.city}
+                      onChange={e => setForm(prev => ({ ...prev, city: e.target.value }))}
+                      placeholder="Cidade"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label htmlFor="state">Estado</Label>
+                      <Select
+                        value={form.state}
+                        onValueChange={value => setForm(prev => ({ ...prev, state: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="UF" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {BRAZILIAN_STATES.map(state => (
+                            <SelectItem key={state} value={state}>{state}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="zip_code">CEP</Label>
+                      <Input
+                        id="zip_code"
+                        value={form.zip_code}
+                        onChange={e => handleZipChange(e.target.value)}
+                        placeholder="00000-000"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <Label htmlFor="notes">Observações</Label>
+                    <Textarea
+                      id="notes"
+                      value={form.notes}
+                      onChange={e => setForm(prev => ({ ...prev, notes: e.target.value }))}
+                      placeholder="Anotações sobre o cliente..."
+                      rows={3}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit" disabled={isLoading || !form.name.trim()}>
+                    {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    Salvar
+                  </Button>
+                </div>
+              </form>
+            </TabsContent>
+
+            <TabsContent value="historico" className="mt-4">
+              <ClientPurchaseHistory clientId={client.id!} />
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <Label htmlFor="name">Nome *</Label>
                 <Input
-                  id="zip_code"
-                  value={form.zip_code}
-                  onChange={e => handleZipChange(e.target.value)}
-                  placeholder="00000-000"
+                  id="name"
+                  value={form.name}
+                  onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Nome completo ou razão social"
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="document">CPF/CNPJ</Label>
+                <Input
+                  id="document"
+                  value={form.document}
+                  onChange={e => handleDocumentChange(e.target.value)}
+                  placeholder="000.000.000-00"
+                  className={documentError ? 'border-destructive' : ''}
+                />
+                {documentError && (
+                  <p className="text-sm text-destructive mt-1">{documentError}</p>
+                )}
+                {form.document_type && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Tipo: {form.document_type}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="phone">Telefone</Label>
+                <Input
+                  id="phone"
+                  value={form.phone}
+                  onChange={e => handlePhoneChange(e.target.value)}
+                  placeholder="(00) 00000-0000"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <Label htmlFor="email">E-mail</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={form.email}
+                  onChange={e => setForm(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder="email@exemplo.com"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <Label htmlFor="address">Endereço</Label>
+                <Input
+                  id="address"
+                  value={form.address}
+                  onChange={e => setForm(prev => ({ ...prev, address: e.target.value }))}
+                  placeholder="Rua, número, bairro"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="city">Cidade</Label>
+                <Input
+                  id="city"
+                  value={form.city}
+                  onChange={e => setForm(prev => ({ ...prev, city: e.target.value }))}
+                  placeholder="Cidade"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label htmlFor="state">Estado</Label>
+                  <Select
+                    value={form.state}
+                    onValueChange={value => setForm(prev => ({ ...prev, state: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="UF" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {BRAZILIAN_STATES.map(state => (
+                        <SelectItem key={state} value={state}>{state}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="zip_code">CEP</Label>
+                  <Input
+                    id="zip_code"
+                    value={form.zip_code}
+                    onChange={e => handleZipChange(e.target.value)}
+                    placeholder="00000-000"
+                  />
+                </div>
+              </div>
+
+              <div className="md:col-span-2">
+                <Label htmlFor="notes">Observações</Label>
+                <Textarea
+                  id="notes"
+                  value={form.notes}
+                  onChange={e => setForm(prev => ({ ...prev, notes: e.target.value }))}
+                  placeholder="Anotações sobre o cliente..."
+                  rows={3}
                 />
               </div>
             </div>
 
-            <div className="md:col-span-2">
-              <Label htmlFor="notes">Observações</Label>
-              <Textarea
-                id="notes"
-                value={form.notes}
-                onChange={e => setForm(prev => ({ ...prev, notes: e.target.value }))}
-                placeholder="Anotações sobre o cliente..."
-                rows={3}
-              />
+            <div className="flex justify-end gap-2 pt-4">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isLoading || !form.name.trim()}>
+                {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Cadastrar
+              </Button>
             </div>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isLoading || !form.name.trim()}>
-              {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {isEditing ? 'Salvar' : 'Cadastrar'}
-            </Button>
-          </div>
-        </form>
+          </form>
+        )}
       </DialogContent>
     </Dialog>
   );

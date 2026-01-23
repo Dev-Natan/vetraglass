@@ -6,10 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Package, Scissors, Layers, FileText, User, Phone, MapPin, Calendar, DollarSign, RefreshCw, Loader2, Download, Printer } from 'lucide-react';
+import { ArrowLeft, Package, Scissors, Layers, FileText, User, Phone, MapPin, Calendar, DollarSign, RefreshCw, Loader2, Download, Printer, Camera } from 'lucide-react';
 import { OSMaterialsList } from '@/components/ordens-servico/OSMaterialsList';
 import { OSCuttingPlan } from '@/components/ordens-servico/OSCuttingPlan';
 import { OSGlassProject } from '@/components/ordens-servico/OSGlassProject';
+import { OSPhotosGallery } from '@/components/ordens-servico/OSPhotosGallery';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { regenerateOSDocuments } from '@/utils/generateOSDocuments';
@@ -267,7 +268,7 @@ export default function OrdemServicoDetalhes() {
 
         {/* Tabs */}
         <Tabs defaultValue="materials" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="materials" className="flex items-center gap-2">
               <Package className="w-4 h-4" />
               <span className="hidden sm:inline">Materiais</span>
@@ -279,6 +280,10 @@ export default function OrdemServicoDetalhes() {
             <TabsTrigger value="glass" className="flex items-center gap-2">
               <Layers className="w-4 h-4" />
               <span className="hidden sm:inline">Vidros</span>
+            </TabsTrigger>
+            <TabsTrigger value="photos" className="flex items-center gap-2">
+              <Camera className="w-4 h-4" />
+              <span className="hidden sm:inline">Fotos</span>
             </TabsTrigger>
             <TabsTrigger value="details" className="flex items-center gap-2">
               <FileText className="w-4 h-4" />
@@ -314,6 +319,9 @@ export default function OrdemServicoDetalhes() {
               </Button>
             </div>
             <OSGlassProject ordemServicoId={ordem.id} />
+          </TabsContent>
+          <TabsContent value="photos" className="mt-4">
+            <OSPhotosGallery ordemServicoId={ordem.id} />
           </TabsContent>
 
           <TabsContent value="details" className="mt-4">
