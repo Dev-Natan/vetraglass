@@ -107,7 +107,7 @@ export default function Agenda() {
         .select(`
           *, 
           quote:quotes(id, quote_number, customer_name, final_amount, status),
-          ordem_servico:ordens_servico(id, os_number, status, total_amount)
+          ordem_servico:ordens_servico(id, os_number, status, total_amount, quote_id)
         `)
         .eq("company_id", companyId)
         .gte("scheduled_date", format(monthStart, "yyyy-MM-dd"))
@@ -116,7 +116,25 @@ export default function Agenda() {
         .order("scheduled_time_start", { ascending: true });
       
       if (error) throw error;
-      return data as (Appointment & { ordem_servico?: { id: string; os_number: number; status: string; total_amount: number } | null })[];
+      
+      // Fetch quote items for each appointment that has an OS
+      const appointmentsWithItems = await Promise.all(
+        (data || []).map(async (apt) => {
+          if (apt.ordem_servico?.quote_id) {
+            const { data: items } = await supabase
+              .from('quote_items')
+              .select('description, quantity')
+              .eq('quote_id', apt.ordem_servico.quote_id);
+            return { ...apt, quote_items: items || [] };
+          }
+          return { ...apt, quote_items: [] };
+        })
+      );
+      
+      return appointmentsWithItems as (Appointment & { 
+        ordem_servico?: { id: string; os_number: number; status: string; total_amount: number; quote_id: string } | null;
+        quote_items?: { description: string; quantity: number }[];
+      })[];
     },
     enabled: !!companyId,
   });
@@ -1065,14 +1083,23 @@ export default function Agenda() {
                         {(selectedAppointment as any).ordem_servico.status}
                       </Badge>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Valor Total:</span>
-                      <span className="font-medium text-blue-600 flex items-center gap-1">
-                        <DollarSign className="h-3 w-3" />
-                        {formatCurrency((selectedAppointment as any).ordem_servico.total_amount || 0)}
-                      </span>
-                    </div>
                   </div>
+                  
+                  {/* Products/Services */}
+                  {(selectedAppointment as any).quote_items?.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-blue-500/20">
+                      <p className="text-xs text-muted-foreground mb-2">Serviços/Produtos:</p>
+                      <div className="space-y-1">
+                        {(selectedAppointment as any).quote_items.map((item: { description: string; quantity: number }, idx: number) => (
+                          <div key={idx} className="flex items-start gap-2 text-sm">
+                            <span className="text-blue-500">•</span>
+                            <span className="flex-1">{item.description}</span>
+                            <span className="text-muted-foreground text-xs">x{item.quantity}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
