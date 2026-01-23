@@ -123,8 +123,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const fetchUserData = async (userId: string) => {
+  const fetchUserData = async (userId: string, isCurrent?: () => boolean) => {
+    const isSafe = () => !isCurrent || isCurrent();
+    const safe = (fn: () => void) => {
+      if (isSafe()) fn();
+    };
+
     try {
+      if (!isSafe()) return;
+
       // Check if user is SaaS admin
       const { data: saasAdminData } = await supabase
         .from('saas_admins')
@@ -132,7 +139,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('user_id', userId)
         .maybeSingle();
       
-      setIsSaasAdmin(!!saasAdminData);
+      safe(() => setIsSaasAdmin(!!saasAdminData));
+      if (!isSafe()) return;
 
       // Fetch profile
       const { data: profileData } = await supabase
@@ -141,9 +149,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('user_id', userId)
         .maybeSingle();
       
-      if (profileData) {
-        setProfile(profileData);
-      }
+      if (profileData) safe(() => setProfile(profileData));
+      if (!isSafe()) return;
 
       // Fetch user companies with company details
       const { data: userCompaniesData } = await supabase
@@ -167,6 +174,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('user_id', userId)
         .eq('is_active', true);
 
+      if (!isSafe()) return;
+
       if (userCompaniesData && userCompaniesData.length > 0) {
         const formattedCompanies = userCompaniesData.map(uc => ({
           id: uc.id,
@@ -175,17 +184,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           is_active: uc.is_active,
           company: uc.company as unknown as Company
         }));
-        setCompanies(formattedCompanies);
+        safe(() => setCompanies(formattedCompanies));
         
         // Set first company as current if none selected
         const savedCompanyId = localStorage.getItem('currentCompanyId');
         const savedCompany = formattedCompanies.find(c => c.company.id === savedCompanyId);
-        setCurrentCompany(savedCompany?.company ?? formattedCompanies[0].company);
+        safe(() => setCurrentCompany(savedCompany?.company ?? formattedCompanies[0].company));
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
     } finally {
-      setLoading(false);
+      safe(() => setLoading(false));
     }
   };
 
