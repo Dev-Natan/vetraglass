@@ -9,12 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Calendar, ChevronLeft, ChevronRight, Plus, Clock, MapPin, User, Phone, Wrench, Ruler, Eye, Trash2, Printer, FileText, DollarSign } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Plus, Clock, MapPin, User, Phone, Wrench, Ruler, Eye, Trash2, Printer, FileText, DollarSign, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Appointment {
@@ -143,6 +144,68 @@ export default function Agenda() {
     enabled: !!companyId,
   });
 
+  // Function to check for time conflicts
+  const checkTimeConflict = (newStart: string, newEnd: string, date: string, excludeId?: string): Appointment[] => {
+    if (!newStart) return []; // No conflict check if no start time
+    
+    const dayAppointments = appointments.filter(apt => 
+      apt.scheduled_date === date && 
+      apt.scheduled_time_start && 
+      apt.status !== 'cancelled' &&
+      apt.id !== excludeId
+    );
+    
+    const conflicts: Appointment[] = [];
+    const newStartMinutes = timeToMinutes(newStart);
+    const newEndMinutes = newEnd ? timeToMinutes(newEnd) : newStartMinutes + 60; // Default 1h duration
+    
+    for (const apt of dayAppointments) {
+      const aptStartMinutes = timeToMinutes(apt.scheduled_time_start!);
+      const aptEndMinutes = apt.scheduled_time_end 
+        ? timeToMinutes(apt.scheduled_time_end) 
+        : aptStartMinutes + 60;
+      
+      // Check for overlap: new appointment starts before existing ends AND new appointment ends after existing starts
+      if (newStartMinutes < aptEndMinutes && newEndMinutes > aptStartMinutes) {
+        conflicts.push(apt);
+      }
+    }
+    
+    return conflicts;
+  };
+
+  const timeToMinutes = (time: string): number => {
+    const [hours, minutes] = time.split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+
+  const [conflictWarning, setConflictWarning] = useState<Appointment[]>([]);
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Check for conflicts before creating
+    if (formData.scheduled_time_start) {
+      const conflicts = checkTimeConflict(
+        formData.scheduled_time_start, 
+        formData.scheduled_time_end, 
+        formData.scheduled_date
+      );
+      
+      if (conflicts.length > 0) {
+        setConflictWarning(conflicts);
+        return; // Don't submit, show warning
+      }
+    }
+    
+    createMutation.mutate(formData);
+  };
+
+  const confirmCreateWithConflict = () => {
+    setConflictWarning([]);
+    createMutation.mutate(formData);
+  };
+
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       if (!companyId || !user) throw new Error("Não autenticado");
@@ -168,6 +231,7 @@ export default function Agenda() {
       queryClient.invalidateQueries({ queryKey: ["appointments"] });
       toast.success("Agendamento criado com sucesso!");
       setIsDialogOpen(false);
+      setConflictWarning([]);
       resetForm();
     },
     onError: (error) => {
@@ -466,10 +530,50 @@ export default function Agenda() {
               <DialogHeader>
                 <DialogTitle>Novo Agendamento</DialogTitle>
               </DialogHeader>
-              <form onSubmit={(e) => {
-                e.preventDefault();
-                createMutation.mutate(formData);
-              }} className="space-y-4">
+              <form onSubmit={handleFormSubmit} className="space-y-4">
+                {/* Conflict Warning Alert */}
+                {conflictWarning.length > 0 && (
+                  <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 space-y-2">
+                    <div className="flex items-center gap-2 text-destructive font-medium">
+                      <AlertTriangle className="h-4 w-4" />
+                      Conflito de Horário Detectado!
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      O horário selecionado conflita com {conflictWarning.length} agendamento(s):
+                    </p>
+                    <ul className="text-sm space-y-1">
+                      {conflictWarning.map(apt => (
+                        <li key={apt.id} className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: apt.color }} />
+                          <span className="font-medium">{apt.title}</span>
+                          <span className="text-muted-foreground">
+                            ({apt.scheduled_time_start?.slice(0, 5)}
+                            {apt.scheduled_time_end && ` - ${apt.scheduled_time_end.slice(0, 5)}`})
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="flex gap-2 pt-2">
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setConflictWarning([])}
+                      >
+                        Ajustar Horário
+                      </Button>
+                      <Button 
+                        type="button" 
+                        variant="destructive" 
+                        size="sm"
+                        onClick={confirmCreateWithConflict}
+                        disabled={createMutation.isPending}
+                      >
+                        Criar Mesmo Assim
+                      </Button>
+                    </div>
+                  </div>
+                )}
                 <div>
                   <Label>Título *</Label>
                   <Input
@@ -507,7 +611,10 @@ export default function Agenda() {
                     <Input
                       type="date"
                       value={formData.scheduled_date}
-                      onChange={(e) => setFormData(prev => ({ ...prev, scheduled_date: e.target.value }))}
+                      onChange={(e) => {
+                        setFormData(prev => ({ ...prev, scheduled_date: e.target.value }));
+                        setConflictWarning([]); // Clear warning when date changes
+                      }}
                       required
                     />
                   </div>
@@ -519,7 +626,10 @@ export default function Agenda() {
                     <Input
                       type="time"
                       value={formData.scheduled_time_start}
-                      onChange={(e) => setFormData(prev => ({ ...prev, scheduled_time_start: e.target.value }))}
+                      onChange={(e) => {
+                        setFormData(prev => ({ ...prev, scheduled_time_start: e.target.value }));
+                        setConflictWarning([]); // Clear warning when time changes
+                      }}
                     />
                   </div>
                   <div>
@@ -527,7 +637,10 @@ export default function Agenda() {
                     <Input
                       type="time"
                       value={formData.scheduled_time_end}
-                      onChange={(e) => setFormData(prev => ({ ...prev, scheduled_time_end: e.target.value }))}
+                      onChange={(e) => {
+                        setFormData(prev => ({ ...prev, scheduled_time_end: e.target.value }));
+                        setConflictWarning([]); // Clear warning when time changes
+                      }}
                     />
                   </div>
                 </div>
