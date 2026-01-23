@@ -1871,10 +1871,13 @@ export type Database = {
           due_date: string | null
           employee_id: string | null
           id: string
+          is_auto_generated: boolean | null
           notes: string | null
           paid_date: string | null
+          parent_expense_id: string | null
           payment_method: string | null
           recurrence: string | null
+          recurrence_day: number | null
           status: string
           updated_at: string | null
         }
@@ -1888,10 +1891,13 @@ export type Database = {
           due_date?: string | null
           employee_id?: string | null
           id?: string
+          is_auto_generated?: boolean | null
           notes?: string | null
           paid_date?: string | null
+          parent_expense_id?: string | null
           payment_method?: string | null
           recurrence?: string | null
+          recurrence_day?: number | null
           status?: string
           updated_at?: string | null
         }
@@ -1905,10 +1911,13 @@ export type Database = {
           due_date?: string | null
           employee_id?: string | null
           id?: string
+          is_auto_generated?: boolean | null
           notes?: string | null
           paid_date?: string | null
+          parent_expense_id?: string | null
           payment_method?: string | null
           recurrence?: string | null
+          recurrence_day?: number | null
           status?: string
           updated_at?: string | null
         }
@@ -1932,6 +1941,13 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_parent_expense_id_fkey"
+            columns: ["parent_expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
             referencedColumns: ["id"]
           },
         ]
@@ -4673,6 +4689,10 @@ export type Database = {
       create_default_permissions: {
         Args: { _company_id: string }
         Returns: undefined
+      }
+      generate_next_recurring_expense: {
+        Args: { expense_id: string }
+        Returns: string
       }
       get_all_open_cash_registers: {
         Args: { _company_id: string }

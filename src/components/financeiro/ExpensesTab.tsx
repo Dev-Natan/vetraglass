@@ -17,7 +17,14 @@ import {
   Droplets,
   Wifi,
   Users,
-  MoreHorizontal
+  MoreHorizontal,
+  Building,
+  Landmark,
+  Receipt,
+  Wrench,
+  Package,
+  RefreshCw,
+  ArrowRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -70,14 +77,23 @@ interface Expense {
   employee_id: string | null;
   notes: string | null;
   created_at: string;
+  parent_expense_id: string | null;
+  recurrence_day: number | null;
+  is_auto_generated: boolean;
 }
 
 const categoryConfig: Record<string, { label: string; icon: React.ElementType; color: string }> = {
   funcionarios: { label: 'Funcionários', icon: Users, color: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' },
   aluguel: { label: 'Aluguel', icon: Home, color: 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300' },
+  condominio: { label: 'Condomínio', icon: Building, color: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300' },
+  emprestimo: { label: 'Empréstimo', icon: Landmark, color: 'bg-rose-100 text-rose-700 dark:bg-rose-900 dark:text-rose-300' },
+  financiamento: { label: 'Financiamento', icon: Receipt, color: 'bg-pink-100 text-pink-700 dark:bg-pink-900 dark:text-pink-300' },
   energia: { label: 'Energia', icon: Zap, color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300' },
   agua: { label: 'Água', icon: Droplets, color: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900 dark:text-cyan-300' },
   internet: { label: 'Internet', icon: Wifi, color: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' },
+  impostos: { label: 'Impostos', icon: Receipt, color: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' },
+  manutencao: { label: 'Manutenção', icon: Wrench, color: 'bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-300' },
+  materiais: { label: 'Materiais', icon: Package, color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300' },
   outros: { label: 'Outros', icon: MoreHorizontal, color: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' },
 };
 
@@ -250,17 +266,39 @@ export function ExpensesTab() {
     },
   });
 
-  // Mark as paid mutation
+  // Mark as paid mutation - also generates next recurring expense
   const markAsPaidMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
+    mutationFn: async (expense: Expense) => {
+      // First, mark as paid
+      const { error: updateError } = await supabase
         .from('expenses')
         .update({ status: 'paid', paid_date: new Date().toISOString().split('T')[0] })
-        .eq('id', id);
-      if (error) throw error;
+        .eq('id', expense.id);
+      if (updateError) throw updateError;
+      
+      // If it's a recurring expense, generate the next one
+      if (expense.recurrence && expense.recurrence !== 'none') {
+        const { data: nextExpenseId, error: rpcError } = await supabase
+          .rpc('generate_next_recurring_expense', { expense_id: expense.id });
+        
+        if (rpcError) {
+          console.error('Error generating next expense:', rpcError);
+          // Don't throw - the main payment was successful
+        }
+        
+        return { nextExpenseId };
+      }
+      
+      return { nextExpenseId: null };
     },
-    onSuccess: () => {
-      toast.success('Despesa marcada como paga!');
+    onSuccess: (data) => {
+      if (data?.nextExpenseId) {
+        toast.success('Despesa paga! Próxima parcela gerada automaticamente.', {
+          icon: <RefreshCw className="w-4 h-4 text-green-500" />,
+        });
+      } else {
+        toast.success('Despesa marcada como paga!');
+      }
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
     },
   });
@@ -357,17 +395,24 @@ export function ExpensesTab() {
       <Card>
         <CardContent className="pt-6">
           <h3 className="font-medium mb-4">Despesas por Categoria (Mês Atual)</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-            {Object.entries(categoryConfig).map(([key, config]) => {
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+            {Object.entries(categoryConfig)
+              .filter(([key]) => (summary.byCategory[key] || 0) > 0 || ['funcionarios', 'aluguel', 'emprestimo', 'energia'].includes(key))
+              .map(([key, config]) => {
               const Icon = config.icon;
+              const amount = summary.byCategory[key] || 0;
               return (
-                <div key={key} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                  <div className={`p-2 rounded-lg ${config.color}`}>
-                    <Icon className="w-4 h-4" />
+                <div 
+                  key={key} 
+                  className={`flex items-center gap-2 p-3 rounded-lg border transition-colors cursor-pointer hover:bg-muted/50 ${categoryFilter === key ? 'border-primary bg-muted/50' : 'border-transparent bg-muted/30'}`}
+                  onClick={() => setCategoryFilter(categoryFilter === key ? 'all' : key)}
+                >
+                  <div className={`p-1.5 rounded-md ${config.color}`}>
+                    <Icon className="w-3.5 h-3.5" />
                   </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">{config.label}</p>
-                    <p className="font-semibold">{formatCurrency(summary.byCategory[key] || 0)}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-muted-foreground truncate">{config.label}</p>
+                    <p className="font-semibold text-sm">{formatCurrency(amount)}</p>
                   </div>
                 </div>
               );
@@ -468,8 +513,22 @@ export function ExpensesTab() {
                     <TableCell>
                       <Badge className={status.color}>{status.label}</Badge>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {recurrenceOptions.find(r => r.value === expense.recurrence)?.label || '-'}
+                    <TableCell>
+                      {expense.recurrence !== 'none' ? (
+                        <div className="flex items-center gap-1.5">
+                          <RefreshCw className="w-3.5 h-3.5 text-muted-foreground" />
+                          <span className="text-sm">
+                            {recurrenceOptions.find(r => r.value === expense.recurrence)?.label}
+                          </span>
+                          {expense.is_auto_generated && (
+                            <Badge variant="outline" className="text-xs py-0 px-1.5">
+                              Auto
+                            </Badge>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">-</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
@@ -480,9 +539,12 @@ export function ExpensesTab() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           {expense.status === 'pending' && (
-                            <DropdownMenuItem onClick={() => markAsPaidMutation.mutate(expense.id)}>
+                            <DropdownMenuItem 
+                              onClick={() => markAsPaidMutation.mutate(expense)}
+                              disabled={markAsPaidMutation.isPending}
+                            >
                               <CheckCircle className="w-4 h-4 mr-2" />
-                              Marcar como Pago
+                              {expense.recurrence !== 'none' ? 'Pagar e Gerar Próxima' : 'Marcar como Pago'}
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuItem onClick={() => handleOpenDialog(expense)}>
