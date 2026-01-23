@@ -18,6 +18,7 @@ import { TodayTasksWidget } from '@/components/dashboard/TodayTasksWidget';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { useTaskReminders } from '@/hooks/useTaskReminders';
 
 // Ações rápidas principais
 const quickActions = [
@@ -44,6 +45,9 @@ const quickActions = [
 
 export default function Index() {
   const { currentCompany } = useAuth();
+  
+  // Ativa lembretes de tarefas próximas (15 min antes)
+  useTaskReminders();
 
   return (
     <MainLayout>
