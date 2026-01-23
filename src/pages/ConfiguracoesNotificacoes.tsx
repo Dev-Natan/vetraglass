@@ -5,7 +5,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Bell, Mail, BellRing, FileText, DollarSign, Package, Calendar, AlertCircle } from "lucide-react";
+import { ArrowLeft, Bell, Mail, BellRing, FileText, DollarSign, Package, Calendar, AlertCircle, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,6 +23,8 @@ interface NotificationSettings {
   notify_pending_quotes: boolean;
   notify_low_stock: boolean;
   notify_expense_alerts: boolean;
+  notify_quote_expiring: boolean;
+  notify_overdue_receivables: boolean;
   daily_digest: boolean;
   weekly_report: boolean;
 }
@@ -38,6 +40,8 @@ const defaultSettings: Omit<NotificationSettings, 'id' | 'company_id'> = {
   notify_pending_quotes: true,
   notify_low_stock: true,
   notify_expense_alerts: true,
+  notify_quote_expiring: true,
+  notify_overdue_receivables: true,
   daily_digest: false,
   weekly_report: true,
 };
@@ -114,6 +118,8 @@ export default function ConfiguracoesNotificacoes() {
     { field: 'notify_pending_quotes', label: 'Orçamentos pendentes', description: 'Alertar sobre orçamentos aguardando resposta', icon: FileText },
     { field: 'notify_low_stock', label: 'Estoque baixo', description: 'Alertar quando itens atingirem estoque mínimo', icon: Package },
     { field: 'notify_expense_alerts', label: 'Despesas vencendo', description: 'Alertar sobre despesas próximas do vencimento', icon: DollarSign },
+    { field: 'notify_quote_expiring', label: 'Orçamentos expirando', description: 'Lembrete 3 dias antes do vencimento do orçamento', icon: Clock },
+    { field: 'notify_overdue_receivables', label: 'Cobranças atrasadas', description: 'Lembrete para cobranças com mais de 15 dias de atraso', icon: AlertCircle },
   ] as const;
 
   const digestSettings = [

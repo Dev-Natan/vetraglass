@@ -71,6 +71,10 @@ export default {
           blue: 'hsl(var(--action-blue))',
           purple: 'hsl(var(--action-purple))',
           orange: 'hsl(var(--action-orange))',
+        },
+        warning: {
+          DEFAULT: 'hsl(var(--warning))',
+          foreground: 'hsl(var(--warning-foreground))'
         }
       },
       borderRadius: {

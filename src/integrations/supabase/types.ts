@@ -1081,7 +1081,9 @@ export type Database = {
           notify_expense_alerts: boolean | null
           notify_low_stock: boolean | null
           notify_overdue_orders: boolean | null
+          notify_overdue_receivables: boolean | null
           notify_pending_quotes: boolean | null
+          notify_quote_expiring: boolean | null
           updated_at: string | null
           weekly_report: boolean | null
         }
@@ -1099,7 +1101,9 @@ export type Database = {
           notify_expense_alerts?: boolean | null
           notify_low_stock?: boolean | null
           notify_overdue_orders?: boolean | null
+          notify_overdue_receivables?: boolean | null
           notify_pending_quotes?: boolean | null
+          notify_quote_expiring?: boolean | null
           updated_at?: string | null
           weekly_report?: boolean | null
         }
@@ -1117,7 +1121,9 @@ export type Database = {
           notify_expense_alerts?: boolean | null
           notify_low_stock?: boolean | null
           notify_overdue_orders?: boolean | null
+          notify_overdue_receivables?: boolean | null
           notify_pending_quotes?: boolean | null
+          notify_quote_expiring?: boolean | null
           updated_at?: string | null
           weekly_report?: boolean | null
         }
@@ -4352,6 +4358,48 @@ export type Database = {
           },
           {
             foreignKeyName: "support_tickets_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      system_reminders: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          id: string
+          reference_id: string
+          reference_table: string
+          reminder_type: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          id?: string
+          reference_id: string
+          reference_table: string
+          reminder_type: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          id?: string
+          reference_id?: string
+          reference_table?: string
+          reminder_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_reminders_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_reminders_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies_safe"
