@@ -45,6 +45,10 @@
     /* Warning tokens */
     --warning: 38 92% 50%;
     --warning-foreground: 38 92% 20%;
+    
+    /* Success tokens */
+    --success: 145 65% 42%;
+    --success-foreground: 145 65% 95%;
 
     /* Custom tokens */
     --glass-bg: 0 0% 100% / 0.85;
@@ -90,6 +94,10 @@
     /* Warning tokens dark */
     --warning: 38 92% 50%;
     --warning-foreground: 38 92% 90%;
+    
+    /* Success tokens dark */
+    --success: 145 65% 50%;
+    --success-foreground: 145 65% 95%;
 
     --border: 215 25% 22%;
     --input: 215 25% 22%;
