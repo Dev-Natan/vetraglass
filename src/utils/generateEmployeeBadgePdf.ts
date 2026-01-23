@@ -30,6 +30,8 @@ interface BadgeData {
   employeeId: string;
   photoUrl?: string | null;
   photoBase64?: string | null;
+  companyLogoUrl?: string | null;
+  companyLogoBase64?: string | null;
 }
 
 const roleLabels: Record<string, string> = {
@@ -87,18 +89,40 @@ export function generateEmployeeBadgePdf(data: BadgeData) {
   doc.ellipse(width / 2, 5, 4, 2, 'S');
 
   // Company logo area
+  const logoAreaX = 7;
+  const logoAreaY = 10;
+  const logoAreaW = 40;
+  const logoAreaH = 18;
+
   doc.setFillColor(...white);
-  doc.roundedRect(7, 10, 40, 18, 2, 2, 'F');
+  doc.roundedRect(logoAreaX, logoAreaY, logoAreaW, logoAreaH, 2, 2, 'F');
   doc.setDrawColor(...lightBlue);
   doc.setLineWidth(0.5);
-  doc.roundedRect(7, 10, 40, 18, 2, 2, 'S');
+  doc.roundedRect(logoAreaX, logoAreaY, logoAreaW, logoAreaH, 2, 2, 'S');
 
-  // Company name as "logo"
-  doc.setTextColor(...primaryBlue);
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  const companyLines = doc.splitTextToSize(data.companyName.toUpperCase(), 36);
-  doc.text(companyLines, width / 2, 18, { align: 'center' });
+  // Try to add company logo image
+  if (data.companyLogoBase64) {
+    try {
+      // Calculate logo dimensions to fit within the area while maintaining aspect ratio
+      const logoMaxW = logoAreaW - 4;
+      const logoMaxH = logoAreaH - 4;
+      doc.addImage(data.companyLogoBase64, 'PNG', logoAreaX + 2, logoAreaY + 2, logoMaxW, logoMaxH);
+    } catch (error) {
+      console.error('Error adding company logo to badge:', error);
+      // Fallback to text
+      drawCompanyNameAsLogo();
+    }
+  } else {
+    drawCompanyNameAsLogo();
+  }
+
+  function drawCompanyNameAsLogo() {
+    doc.setTextColor(...primaryBlue);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    const companyLines = doc.splitTextToSize(data.companyName.toUpperCase(), 36);
+    doc.text(companyLines, width / 2, 18, { align: 'center' });
+  }
 
   // Photo area - large and centered
   const photoX = 10;
@@ -312,11 +336,26 @@ export function generateBadgesSheetPdf(employees: BadgeData[]) {
     // Company logo area
     doc.setFillColor(...white);
     doc.roundedRect(x + 7, y + 10, 40, 18, 2, 2, 'F');
-    doc.setTextColor(...primaryBlue);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    const companyName = data.companyName.length > 15 ? data.companyName.substring(0, 15) + '...' : data.companyName;
-    doc.text(companyName.toUpperCase(), x + badgeWidth / 2, y + 20, { align: 'center' });
+    
+    // Try to add company logo image
+    if (data.companyLogoBase64) {
+      try {
+        doc.addImage(data.companyLogoBase64, 'PNG', x + 9, y + 12, 36, 14);
+      } catch (error) {
+        // Fallback to text
+        doc.setTextColor(...primaryBlue);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        const companyName = data.companyName.length > 15 ? data.companyName.substring(0, 15) + '...' : data.companyName;
+        doc.text(companyName.toUpperCase(), x + badgeWidth / 2, y + 20, { align: 'center' });
+      }
+    } else {
+      doc.setTextColor(...primaryBlue);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      const companyName = data.companyName.length > 15 ? data.companyName.substring(0, 15) + '...' : data.companyName;
+      doc.text(companyName.toUpperCase(), x + badgeWidth / 2, y + 20, { align: 'center' });
+    }
 
     // Photo area
     if (data.photoBase64) {
