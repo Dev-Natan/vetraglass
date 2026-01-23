@@ -1,37 +1,8 @@
 import { useState } from "react";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { 
   useProductCategories, 
@@ -53,44 +24,18 @@ import {
   useProductLinhaMutations,
   type ProductLinha 
 } from "@/hooks/useProductLinhas";
-import { SortableTableBody } from "@/components/common/SortableTable";
-
-const colorOptions = [
-  { value: "gray", label: "Cinza", class: "bg-gray-500" },
-  { value: "blue", label: "Azul", class: "bg-blue-500" },
-  { value: "green", label: "Verde", class: "bg-green-500" },
-  { value: "cyan", label: "Ciano", class: "bg-cyan-500" },
-  { value: "purple", label: "Roxo", class: "bg-purple-500" },
-  { value: "orange", label: "Laranja", class: "bg-orange-500" },
-  { value: "indigo", label: "Índigo", class: "bg-indigo-500" },
-  { value: "rose", label: "Rosa", class: "bg-rose-500" },
-  { value: "amber", label: "Âmbar", class: "bg-amber-500" },
-  { value: "violet", label: "Violeta", class: "bg-violet-500" },
-  { value: "emerald", label: "Esmeralda", class: "bg-emerald-500" },
-  { value: "red", label: "Vermelho", class: "bg-red-500" },
-];
-
-const unitOptions = [
-  { value: "un", label: "Unidade (un)" },
-  { value: "m", label: "Metro (m)" },
-  { value: "m²", label: "Metro² (m²)" },
-  { value: "kg", label: "Quilograma (kg)" },
-  { value: "L", label: "Litro (L)" },
-];
-
-function generateSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-}
-
-function getColorClass(color: string): string {
-  const found = colorOptions.find(c => c.value === color);
-  return found?.class ?? "bg-gray-500";
-}
+import { LinhasTab } from "@/components/admin/categories/LinhasTab";
+import { CategoriesTab } from "@/components/admin/categories/CategoriesTab";
+import { ItemTypesTab } from "@/components/admin/categories/ItemTypesTab";
+import { GlassTypesTab } from "@/components/admin/categories/GlassTypesTab";
+import {
+  LinhaDialog,
+  CategoryDialog,
+  ItemTypeDialog,
+  GlassTypeDialog,
+  getColorClass,
+  generateSlug,
+} from "@/components/admin/categories/CategoryDialogs";
 
 export default function AdminCategories() {
   const { isSaasAdmin } = useAuth();
@@ -115,6 +60,7 @@ export default function AdminCategories() {
   const { createMutation: createItemType, updateMutation: updateItemType, deleteMutation: deleteItemType } = useItemTypeMutations();
   const [itemTypeDialogOpen, setItemTypeDialogOpen] = useState(false);
   const [editingItemType, setEditingItemType] = useState<ItemType | null>(null);
+  const [itemTypeForm, setItemTypeForm] = useState({ name: "", color: "gray", unit_default: "un", sort_order: 0 });
   
   // Glass types state
   const { data: glassTypes, isLoading: loadingGlassTypes } = useAllGlassTypes();
@@ -122,7 +68,6 @@ export default function AdminCategories() {
   const [glassTypeDialogOpen, setGlassTypeDialogOpen] = useState(false);
   const [editingGlassType, setEditingGlassType] = useState<GlassType | null>(null);
   const [glassTypeForm, setGlassTypeForm] = useState({ name: "", description: "", sort_order: 0 });
-  const [itemTypeForm, setItemTypeForm] = useState({ name: "", color: "gray", unit_default: "un", sort_order: 0 });
 
   if (!isSaasAdmin) {
     return (
@@ -184,8 +129,9 @@ export default function AdminCategories() {
         toast.success("Linha criada");
       }
       setLinhaDialogOpen(false);
-    } catch (error: any) {
-      toast.error(error.message || "Erro ao salvar linha");
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Erro ao salvar linha";
+      toast.error(message);
     }
   };
 
@@ -193,8 +139,9 @@ export default function AdminCategories() {
     try {
       await updateLinha.mutateAsync({ id: linha.id, is_active: !linha.is_active });
       toast.success(linha.is_active ? "Linha desativada" : "Linha ativada");
-    } catch (error: any) {
-      toast.error(error.message || "Erro ao atualizar linha");
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Erro ao atualizar linha";
+      toast.error(message);
     }
   };
 
@@ -203,8 +150,9 @@ export default function AdminCategories() {
     try {
       await deleteLinha.mutateAsync(linha.id);
       toast.success("Linha excluída");
-    } catch (error: any) {
-      toast.error(error.message || "Erro ao excluir linha");
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Erro ao excluir linha";
+      toast.error(message);
     }
   };
 
@@ -216,8 +164,9 @@ export default function AdminCategories() {
         )
       );
       toast.success("Ordem atualizada");
-    } catch (error: any) {
-      toast.error(error.message || "Erro ao reordenar");
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Erro ao reordenar";
+      toast.error(message);
     }
   };
 
@@ -261,8 +210,9 @@ export default function AdminCategories() {
         toast.success("Categoria criada");
       }
       setCategoryDialogOpen(false);
-    } catch (error: any) {
-      toast.error(error.message || "Erro ao salvar categoria");
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Erro ao salvar categoria";
+      toast.error(message);
     }
   };
 
@@ -270,8 +220,9 @@ export default function AdminCategories() {
     try {
       await updateCategory.mutateAsync({ id: category.id, is_active: !category.is_active });
       toast.success(category.is_active ? "Categoria desativada" : "Categoria ativada");
-    } catch (error: any) {
-      toast.error(error.message || "Erro ao atualizar categoria");
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Erro ao atualizar categoria";
+      toast.error(message);
     }
   };
 
@@ -280,8 +231,9 @@ export default function AdminCategories() {
     try {
       await deleteCategory.mutateAsync(category.id);
       toast.success("Categoria excluída");
-    } catch (error: any) {
-      toast.error(error.message || "Erro ao excluir categoria");
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Erro ao excluir categoria";
+      toast.error(message);
     }
   };
 
@@ -293,8 +245,9 @@ export default function AdminCategories() {
         )
       );
       toast.success("Ordem atualizada");
-    } catch (error: any) {
-      toast.error(error.message || "Erro ao reordenar");
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Erro ao reordenar";
+      toast.error(message);
     }
   };
 
@@ -345,8 +298,9 @@ export default function AdminCategories() {
         toast.success("Tipo de item criado");
       }
       setItemTypeDialogOpen(false);
-    } catch (error: any) {
-      toast.error(error.message || "Erro ao salvar tipo de item");
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Erro ao salvar tipo de item";
+      toast.error(message);
     }
   };
 
@@ -354,8 +308,9 @@ export default function AdminCategories() {
     try {
       await updateItemType.mutateAsync({ id: itemType.id, is_active: !itemType.is_active });
       toast.success(itemType.is_active ? "Tipo desativado" : "Tipo ativado");
-    } catch (error: any) {
-      toast.error(error.message || "Erro ao atualizar tipo");
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Erro ao atualizar tipo";
+      toast.error(message);
     }
   };
 
@@ -364,8 +319,9 @@ export default function AdminCategories() {
     try {
       await deleteItemType.mutateAsync(itemType.id);
       toast.success("Tipo excluído");
-    } catch (error: any) {
-      toast.error(error.message || "Erro ao excluir tipo");
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Erro ao excluir tipo";
+      toast.error(message);
     }
   };
 
@@ -377,8 +333,9 @@ export default function AdminCategories() {
         )
       );
       toast.success("Ordem atualizada");
-    } catch (error: any) {
-      toast.error(error.message || "Erro ao reordenar");
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Erro ao reordenar";
+      toast.error(message);
     }
   };
 
@@ -420,8 +377,9 @@ export default function AdminCategories() {
         toast.success("Tipo de vidro criado");
       }
       setGlassTypeDialogOpen(false);
-    } catch (error: any) {
-      toast.error(error.message || "Erro ao salvar tipo de vidro");
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Erro ao salvar tipo de vidro";
+      toast.error(message);
     }
   };
 
@@ -429,8 +387,9 @@ export default function AdminCategories() {
     try {
       await updateGlassType.mutateAsync({ id: glassType.id, is_active: !glassType.is_active });
       toast.success(glassType.is_active ? "Tipo desativado" : "Tipo ativado");
-    } catch (error: any) {
-      toast.error(error.message || "Erro ao atualizar tipo");
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Erro ao atualizar tipo";
+      toast.error(message);
     }
   };
 
@@ -439,8 +398,9 @@ export default function AdminCategories() {
     try {
       await deleteGlassType.mutateAsync(glassType.id);
       toast.success("Tipo de vidro excluído");
-    } catch (error: any) {
-      toast.error(error.message || "Erro ao excluir tipo de vidro");
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Erro ao excluir tipo de vidro";
+      toast.error(message);
     }
   };
 
@@ -452,170 +412,11 @@ export default function AdminCategories() {
         )
       );
       toast.success("Ordem atualizada");
-    } catch (error: any) {
-      toast.error(error.message || "Erro ao reordenar");
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Erro ao reordenar";
+      toast.error(message);
     }
   };
-
-  // Render functions for sortable table cells
-  const renderLinhaCells = (linha: ProductLinha) => (
-    <>
-      <TableCell className="font-medium">{linha.name}</TableCell>
-      <TableCell className="text-muted-foreground font-mono text-sm">
-        {linha.slug}
-      </TableCell>
-      <TableCell>
-        <div className="flex items-center gap-2">
-          <div className={`w-4 h-4 rounded ${getColorClass(linha.color)}`} />
-          <span className="text-sm capitalize">{linha.color}</span>
-        </div>
-      </TableCell>
-      <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">
-        {linha.description || "-"}
-      </TableCell>
-      <TableCell>
-        <Switch
-          checked={linha.is_active}
-          onCheckedChange={() => handleToggleLinhaActive(linha)}
-        />
-      </TableCell>
-      <TableCell className="text-right">
-        <div className="flex items-center justify-end gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => handleOpenLinhaDialog(linha)}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => handleDeleteLinha(linha)}
-          >
-            <Trash2 className="h-4 w-4 text-destructive" />
-          </Button>
-        </div>
-      </TableCell>
-    </>
-  );
-
-  const renderCategoryCells = (category: ProductCategory) => (
-    <>
-      <TableCell className="font-medium">{category.name}</TableCell>
-      <TableCell className="text-muted-foreground font-mono text-sm">
-        {category.slug}
-      </TableCell>
-      <TableCell>
-        <div className="flex items-center gap-2">
-          <div className={`w-4 h-4 rounded ${getColorClass(category.color)}`} />
-          <span className="text-sm capitalize">{category.color}</span>
-        </div>
-      </TableCell>
-      <TableCell>
-        <Switch
-          checked={category.is_active}
-          onCheckedChange={() => handleToggleCategoryActive(category)}
-        />
-      </TableCell>
-      <TableCell className="text-right">
-        <div className="flex items-center justify-end gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => handleOpenCategoryDialog(category)}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => handleDeleteCategory(category)}
-          >
-            <Trash2 className="h-4 w-4 text-destructive" />
-          </Button>
-        </div>
-      </TableCell>
-    </>
-  );
-
-  const renderItemTypeCells = (itemType: ItemType) => (
-    <>
-      <TableCell className="font-medium">{itemType.name}</TableCell>
-      <TableCell className="text-muted-foreground font-mono text-sm">
-        {itemType.slug}
-      </TableCell>
-      <TableCell>
-        <div className="flex items-center gap-2">
-          <div className={`w-4 h-4 rounded ${getColorClass(itemType.color)}`} />
-          <span className="text-sm capitalize">{itemType.color}</span>
-        </div>
-      </TableCell>
-      <TableCell>
-        <Badge variant="outline">{itemType.unit_default}</Badge>
-      </TableCell>
-      <TableCell>
-        <Switch
-          checked={itemType.is_active}
-          onCheckedChange={() => handleToggleItemTypeActive(itemType)}
-        />
-      </TableCell>
-      <TableCell className="text-right">
-        <div className="flex items-center justify-end gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => handleOpenItemTypeDialog(itemType)}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => handleDeleteItemType(itemType)}
-          >
-            <Trash2 className="h-4 w-4 text-destructive" />
-          </Button>
-        </div>
-      </TableCell>
-    </>
-  );
-
-  const renderGlassTypeCells = (glassType: GlassType) => (
-    <>
-      <TableCell className="font-medium">{glassType.name}</TableCell>
-      <TableCell className="text-muted-foreground font-mono text-sm">
-        {glassType.slug}
-      </TableCell>
-      <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">
-        {glassType.description || "-"}
-      </TableCell>
-      <TableCell>
-        <Switch
-          checked={glassType.is_active}
-          onCheckedChange={() => handleToggleGlassTypeActive(glassType)}
-        />
-      </TableCell>
-      <TableCell className="text-right">
-        <div className="flex items-center justify-end gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => handleOpenGlassTypeDialog(glassType)}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => handleDeleteGlassType(glassType)}
-          >
-            <Trash2 className="h-4 w-4 text-destructive" />
-          </Button>
-        </div>
-      </TableCell>
-    </>
-  );
 
   return (
     <AdminLayout>
@@ -634,474 +435,93 @@ export default function AdminCategories() {
           </TabsList>
 
           <TabsContent value="linhas">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Linhas de Produtos</CardTitle>
-                  <CardDescription>Suprema, Gold, Vidro Temperado, etc. Arraste para reordenar.</CardDescription>
-                </div>
-                <Button onClick={() => handleOpenLinhaDialog()}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nova Linha
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {loadingLinhas ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-20">Ordem</TableHead>
-                        <TableHead>Nome</TableHead>
-                        <TableHead>Slug</TableHead>
-                        <TableHead>Cor</TableHead>
-                        <TableHead>Descrição</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {linhas && linhas.length > 0 && (
-                        <SortableTableBody
-                          items={linhas}
-                          renderCells={renderLinhaCells}
-                          getIsInactive={(linha) => !linha.is_active}
-                          onReorder={handleReorderLinhas}
-                        />
-                      )}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
+            <LinhasTab
+              linhas={linhas}
+              isLoading={loadingLinhas}
+              getColorClass={getColorClass}
+              onOpenDialog={handleOpenLinhaDialog}
+              onToggleActive={handleToggleLinhaActive}
+              onDelete={handleDeleteLinha}
+              onReorder={handleReorderLinhas}
+            />
           </TabsContent>
 
           <TabsContent value="categories">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Categorias de Produtos</CardTitle>
-                  <CardDescription>Janela, Porta, Box, Espelho, etc. Arraste para reordenar.</CardDescription>
-                </div>
-                <Button onClick={() => handleOpenCategoryDialog()}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nova Categoria
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {loadingCategories ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-20">Ordem</TableHead>
-                        <TableHead>Nome</TableHead>
-                        <TableHead>Slug</TableHead>
-                        <TableHead>Cor</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {categories && categories.length > 0 && (
-                        <SortableTableBody
-                          items={categories}
-                          renderCells={renderCategoryCells}
-                          getIsInactive={(cat) => !cat.is_active}
-                          onReorder={handleReorderCategories}
-                        />
-                      )}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
+            <CategoriesTab
+              categories={categories}
+              isLoading={loadingCategories}
+              getColorClass={getColorClass}
+              onOpenDialog={handleOpenCategoryDialog}
+              onToggleActive={handleToggleCategoryActive}
+              onDelete={handleDeleteCategory}
+              onReorder={handleReorderCategories}
+            />
           </TabsContent>
 
           <TabsContent value="item-types">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Tipos de Itens</CardTitle>
-                  <CardDescription>Vidro, Perfil, Acessório, Serviço, etc. Arraste para reordenar.</CardDescription>
-                </div>
-                <Button onClick={() => handleOpenItemTypeDialog()}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Novo Tipo
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {loadingItemTypes ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-20">Ordem</TableHead>
-                        <TableHead>Nome</TableHead>
-                        <TableHead>Slug</TableHead>
-                        <TableHead>Cor</TableHead>
-                        <TableHead>Unidade</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {itemTypes && itemTypes.length > 0 && (
-                        <SortableTableBody
-                          items={itemTypes}
-                          renderCells={renderItemTypeCells}
-                          getIsInactive={(type) => !type.is_active}
-                          onReorder={handleReorderItemTypes}
-                        />
-                      )}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
+            <ItemTypesTab
+              itemTypes={itemTypes}
+              isLoading={loadingItemTypes}
+              getColorClass={getColorClass}
+              onOpenDialog={handleOpenItemTypeDialog}
+              onToggleActive={handleToggleItemTypeActive}
+              onDelete={handleDeleteItemType}
+              onReorder={handleReorderItemTypes}
+            />
           </TabsContent>
 
           <TabsContent value="glass-types">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Tipos de Vidro</CardTitle>
-                  <CardDescription>Vidro Comum, Temperado, Laminado, etc. Arraste para reordenar.</CardDescription>
-                </div>
-                <Button onClick={() => handleOpenGlassTypeDialog()}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Novo Tipo de Vidro
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {loadingGlassTypes ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-20">Ordem</TableHead>
-                        <TableHead>Nome</TableHead>
-                        <TableHead>Slug</TableHead>
-                        <TableHead>Descrição</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {glassTypes && glassTypes.length > 0 && (
-                        <SortableTableBody
-                          items={glassTypes}
-                          renderCells={renderGlassTypeCells}
-                          getIsInactive={(type) => !type.is_active}
-                          onReorder={handleReorderGlassTypes}
-                        />
-                      )}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
+            <GlassTypesTab
+              glassTypes={glassTypes}
+              isLoading={loadingGlassTypes}
+              onOpenDialog={handleOpenGlassTypeDialog}
+              onToggleActive={handleToggleGlassTypeActive}
+              onDelete={handleDeleteGlassType}
+              onReorder={handleReorderGlassTypes}
+            />
           </TabsContent>
         </Tabs>
 
-        {/* Linha Dialog */}
-        <Dialog open={linhaDialogOpen} onOpenChange={setLinhaDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editingLinha ? "Editar Linha" : "Nova Linha"}</DialogTitle>
-              <DialogDescription>
-                {editingLinha ? "Atualize os dados da linha" : "Adicione uma nova linha de produtos"}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="linha-name">Nome</Label>
-                <Input
-                  id="linha-name"
-                  value={linhaForm.name}
-                  onChange={(e) => setLinhaForm({ ...linhaForm, name: e.target.value })}
-                  placeholder="Ex: Linha Suprema"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="linha-description">Descrição (opcional)</Label>
-                <Input
-                  id="linha-description"
-                  value={linhaForm.description}
-                  onChange={(e) => setLinhaForm({ ...linhaForm, description: e.target.value })}
-                  placeholder="Ex: Linha premium com acabamento superior"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Cor</Label>
-                <Select
-                  value={linhaForm.color}
-                  onValueChange={(value) => setLinhaForm({ ...linhaForm, color: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {colorOptions.map((color) => (
-                      <SelectItem key={color.value} value={color.value}>
-                        <div className="flex items-center gap-2">
-                          <div className={`w-4 h-4 rounded ${color.class}`} />
-                          {color.label}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="linha-order">Ordem de exibição</Label>
-                <Input
-                  id="linha-order"
-                  type="number"
-                  min={1}
-                  value={linhaForm.sort_order}
-                  onChange={(e) => setLinhaForm({ ...linhaForm, sort_order: parseInt(e.target.value) || 1 })}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setLinhaDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button 
-                onClick={handleSaveLinha}
-                disabled={createLinha.isPending || updateLinha.isPending}
-              >
-                {(createLinha.isPending || updateLinha.isPending) && (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                )}
-                Salvar
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {/* Dialogs */}
+        <LinhaDialog
+          open={linhaDialogOpen}
+          onOpenChange={setLinhaDialogOpen}
+          isEditing={!!editingLinha}
+          form={linhaForm}
+          setForm={setLinhaForm}
+          onSave={handleSaveLinha}
+          isPending={createLinha.isPending || updateLinha.isPending}
+        />
 
-        {/* Category Dialog */}
-        <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editingCategory ? "Editar Categoria" : "Nova Categoria"}</DialogTitle>
-              <DialogDescription>
-                {editingCategory ? "Atualize os dados da categoria" : "Adicione uma nova categoria de produtos"}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="category-name">Nome</Label>
-                <Input
-                  id="category-name"
-                  value={categoryForm.name}
-                  onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
-                  placeholder="Ex: Janela"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Cor</Label>
-                <Select
-                  value={categoryForm.color}
-                  onValueChange={(value) => setCategoryForm({ ...categoryForm, color: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {colorOptions.map((color) => (
-                      <SelectItem key={color.value} value={color.value}>
-                        <div className="flex items-center gap-2">
-                          <div className={`w-4 h-4 rounded ${color.class}`} />
-                          {color.label}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="category-order">Ordem de exibição</Label>
-                <Input
-                  id="category-order"
-                  type="number"
-                  min={1}
-                  value={categoryForm.sort_order}
-                  onChange={(e) => setCategoryForm({ ...categoryForm, sort_order: parseInt(e.target.value) || 1 })}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setCategoryDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button 
-                onClick={handleSaveCategory}
-                disabled={createCategory.isPending || updateCategory.isPending}
-              >
-                {(createCategory.isPending || updateCategory.isPending) && (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                )}
-                Salvar
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <CategoryDialog
+          open={categoryDialogOpen}
+          onOpenChange={setCategoryDialogOpen}
+          isEditing={!!editingCategory}
+          form={categoryForm}
+          setForm={setCategoryForm}
+          onSave={handleSaveCategory}
+          isPending={createCategory.isPending || updateCategory.isPending}
+        />
 
-        {/* Item Type Dialog */}
-        <Dialog open={itemTypeDialogOpen} onOpenChange={setItemTypeDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editingItemType ? "Editar Tipo de Item" : "Novo Tipo de Item"}</DialogTitle>
-              <DialogDescription>
-                {editingItemType ? "Atualize os dados do tipo" : "Adicione um novo tipo de item"}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="itemtype-name">Nome</Label>
-                <Input
-                  id="itemtype-name"
-                  value={itemTypeForm.name}
-                  onChange={(e) => setItemTypeForm({ ...itemTypeForm, name: e.target.value })}
-                  placeholder="Ex: Vidro"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Cor</Label>
-                <Select
-                  value={itemTypeForm.color}
-                  onValueChange={(value) => setItemTypeForm({ ...itemTypeForm, color: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {colorOptions.map((color) => (
-                      <SelectItem key={color.value} value={color.value}>
-                        <div className="flex items-center gap-2">
-                          <div className={`w-4 h-4 rounded ${color.class}`} />
-                          {color.label}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Unidade Padrão</Label>
-                <Select
-                  value={itemTypeForm.unit_default}
-                  onValueChange={(value) => setItemTypeForm({ ...itemTypeForm, unit_default: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {unitOptions.map((unit) => (
-                      <SelectItem key={unit.value} value={unit.value}>
-                        {unit.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="itemtype-order">Ordem de exibição</Label>
-                <Input
-                  id="itemtype-order"
-                  type="number"
-                  min={1}
-                  value={itemTypeForm.sort_order}
-                  onChange={(e) => setItemTypeForm({ ...itemTypeForm, sort_order: parseInt(e.target.value) || 1 })}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setItemTypeDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button 
-                onClick={handleSaveItemType}
-                disabled={createItemType.isPending || updateItemType.isPending}
-              >
-                {(createItemType.isPending || updateItemType.isPending) && (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                )}
-                Salvar
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <ItemTypeDialog
+          open={itemTypeDialogOpen}
+          onOpenChange={setItemTypeDialogOpen}
+          isEditing={!!editingItemType}
+          form={itemTypeForm}
+          setForm={setItemTypeForm}
+          onSave={handleSaveItemType}
+          isPending={createItemType.isPending || updateItemType.isPending}
+        />
 
-        {/* Glass Type Dialog */}
-        <Dialog open={glassTypeDialogOpen} onOpenChange={setGlassTypeDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editingGlassType ? "Editar Tipo de Vidro" : "Novo Tipo de Vidro"}</DialogTitle>
-              <DialogDescription>
-                {editingGlassType ? "Atualize os dados do tipo de vidro" : "Adicione um novo tipo de vidro"}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="glasstype-name">Nome</Label>
-                <Input
-                  id="glasstype-name"
-                  value={glassTypeForm.name}
-                  onChange={(e) => setGlassTypeForm({ ...glassTypeForm, name: e.target.value })}
-                  placeholder="Ex: Vidro Temperado"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="glasstype-description">Descrição (opcional)</Label>
-                <Input
-                  id="glasstype-description"
-                  value={glassTypeForm.description}
-                  onChange={(e) => setGlassTypeForm({ ...glassTypeForm, description: e.target.value })}
-                  placeholder="Ex: Vidro tratado termicamente para maior resistência"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="glasstype-order">Ordem de exibição</Label>
-                <Input
-                  id="glasstype-order"
-                  type="number"
-                  min={1}
-                  value={glassTypeForm.sort_order}
-                  onChange={(e) => setGlassTypeForm({ ...glassTypeForm, sort_order: parseInt(e.target.value) || 1 })}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setGlassTypeDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button 
-                onClick={handleSaveGlassType}
-                disabled={createGlassType.isPending || updateGlassType.isPending}
-              >
-                {(createGlassType.isPending || updateGlassType.isPending) && (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                )}
-                Salvar
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <GlassTypeDialog
+          open={glassTypeDialogOpen}
+          onOpenChange={setGlassTypeDialogOpen}
+          isEditing={!!editingGlassType}
+          form={glassTypeForm}
+          setForm={setGlassTypeForm}
+          onSave={handleSaveGlassType}
+          isPending={createGlassType.isPending || updateGlassType.isPending}
+        />
       </div>
     </AdminLayout>
   );
