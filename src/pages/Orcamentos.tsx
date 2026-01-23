@@ -122,6 +122,7 @@ export default function Orcamentos() {
     }
   }, [searchParams, setSearchParams]);
 
+
   // Fetch quotes with optimized query (only needed fields)
   const { data: quotes, isLoading } = useQuery({
     queryKey: queryKeys.quotes.all(currentCompany?.id || ''),
@@ -223,6 +224,19 @@ export default function Orcamentos() {
     setSelectedQuote(quote);
     setIsViewDialogOpen(true);
   };
+
+  // Auto-open quote if ?id=<quoteId> in URL
+  useEffect(() => {
+    const quoteId = searchParams.get('id');
+    if (quoteId && quotes && quotes.length > 0) {
+      const foundQuote = quotes.find(q => q.id === quoteId);
+      if (foundQuote) {
+        handleView(foundQuote);
+        searchParams.delete('id');
+        setSearchParams(searchParams, { replace: true });
+      }
+    }
+  }, [searchParams, setSearchParams, quotes]);
 
   const handleEdit = (quote: Quote) => {
     setSelectedQuote(quote);
