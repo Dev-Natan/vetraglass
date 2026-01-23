@@ -48,6 +48,11 @@ import {
   useGlassTypeMutations,
   type GlassType 
 } from "@/hooks/useGlassTypes";
+import { 
+  useProductLinhas, 
+  useProductLinhaMutations,
+  type ProductLinha 
+} from "@/hooks/useProductLinhas";
 import { SortableTableBody } from "@/components/common/SortableTable";
 
 const colorOptions = [
@@ -89,7 +94,14 @@ function getColorClass(color: string): string {
 
 export default function AdminCategories() {
   const { isSaasAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState("categories");
+  const [activeTab, setActiveTab] = useState("linhas");
+  
+  // Linhas state
+  const { data: linhas, isLoading: loadingLinhas } = useProductLinhas(true);
+  const { createMutation: createLinha, updateMutation: updateLinha, deleteMutation: deleteLinha } = useProductLinhaMutations();
+  const [linhaDialogOpen, setLinhaDialogOpen] = useState(false);
+  const [editingLinha, setEditingLinha] = useState<ProductLinha | null>(null);
+  const [linhaForm, setLinhaForm] = useState({ name: "", description: "", color: "gray", sort_order: 0 });
   
   // Categories state
   const { data: categories, isLoading: loadingCategories } = useProductCategories(true);
@@ -124,6 +136,90 @@ export default function AdminCategories() {
       </div>
     );
   }
+
+  // Linha handlers
+  const handleOpenLinhaDialog = (linha?: ProductLinha) => {
+    if (linha) {
+      setEditingLinha(linha);
+      setLinhaForm({ 
+        name: linha.name, 
+        description: linha.description || "", 
+        color: linha.color, 
+        sort_order: linha.sort_order 
+      });
+    } else {
+      setEditingLinha(null);
+      const nextOrder = (linhas?.length ?? 0) + 1;
+      setLinhaForm({ name: "", description: "", color: "gray", sort_order: nextOrder });
+    }
+    setLinhaDialogOpen(true);
+  };
+
+  const handleSaveLinha = async () => {
+    if (!linhaForm.name.trim()) {
+      toast.error("Nome é obrigatório");
+      return;
+    }
+    
+    try {
+      if (editingLinha) {
+        await updateLinha.mutateAsync({
+          id: editingLinha.id,
+          name: linhaForm.name,
+          description: linhaForm.description || null,
+          color: linhaForm.color,
+          sort_order: linhaForm.sort_order,
+        });
+        toast.success("Linha atualizada");
+      } else {
+        await createLinha.mutateAsync({
+          slug: generateSlug(linhaForm.name),
+          name: linhaForm.name,
+          description: linhaForm.description || null,
+          image_url: null,
+          color: linhaForm.color,
+          sort_order: linhaForm.sort_order,
+          is_active: true,
+        });
+        toast.success("Linha criada");
+      }
+      setLinhaDialogOpen(false);
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao salvar linha");
+    }
+  };
+
+  const handleToggleLinhaActive = async (linha: ProductLinha) => {
+    try {
+      await updateLinha.mutateAsync({ id: linha.id, is_active: !linha.is_active });
+      toast.success(linha.is_active ? "Linha desativada" : "Linha ativada");
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao atualizar linha");
+    }
+  };
+
+  const handleDeleteLinha = async (linha: ProductLinha) => {
+    if (!confirm(`Deseja excluir a linha "${linha.name}"?`)) return;
+    try {
+      await deleteLinha.mutateAsync(linha.id);
+      toast.success("Linha excluída");
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao excluir linha");
+    }
+  };
+
+  const handleReorderLinhas = async (reorderedLinhas: ProductLinha[]) => {
+    try {
+      await Promise.all(
+        reorderedLinhas.map((linha) =>
+          updateLinha.mutateAsync({ id: linha.id, sort_order: linha.sort_order })
+        )
+      );
+      toast.success("Ordem atualizada");
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao reordenar");
+    }
+  };
 
   // Category handlers
   const handleOpenCategoryDialog = (category?: ProductCategory) => {
@@ -362,6 +458,48 @@ export default function AdminCategories() {
   };
 
   // Render functions for sortable table cells
+  const renderLinhaCells = (linha: ProductLinha) => (
+    <>
+      <TableCell className="font-medium">{linha.name}</TableCell>
+      <TableCell className="text-muted-foreground font-mono text-sm">
+        {linha.slug}
+      </TableCell>
+      <TableCell>
+        <div className="flex items-center gap-2">
+          <div className={`w-4 h-4 rounded ${getColorClass(linha.color)}`} />
+          <span className="text-sm capitalize">{linha.color}</span>
+        </div>
+      </TableCell>
+      <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">
+        {linha.description || "-"}
+      </TableCell>
+      <TableCell>
+        <Switch
+          checked={linha.is_active}
+          onCheckedChange={() => handleToggleLinhaActive(linha)}
+        />
+      </TableCell>
+      <TableCell className="text-right">
+        <div className="flex items-center justify-end gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => handleOpenLinhaDialog(linha)}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => handleDeleteLinha(linha)}
+          >
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
+        </div>
+      </TableCell>
+    </>
+  );
+
   const renderCategoryCells = (category: ProductCategory) => (
     <>
       <TableCell className="font-medium">{category.name}</TableCell>
@@ -483,16 +621,63 @@ export default function AdminCategories() {
     <AdminLayout>
       <div className="p-6">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-foreground">Categorias e Tipos</h1>
-          <p className="text-muted-foreground">Gerencie categorias de produtos e tipos de itens. Arraste para reordenar.</p>
+          <h1 className="text-2xl font-bold text-foreground">Linhas, Categorias e Tipos</h1>
+          <p className="text-muted-foreground">Gerencie linhas de produtos, categorias e tipos de itens. Arraste para reordenar.</p>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-6">
-            <TabsTrigger value="categories">Categorias de Produtos</TabsTrigger>
+            <TabsTrigger value="linhas">Linhas de Produtos</TabsTrigger>
+            <TabsTrigger value="categories">Categorias</TabsTrigger>
             <TabsTrigger value="item-types">Tipos de Itens</TabsTrigger>
             <TabsTrigger value="glass-types">Tipos de Vidro</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="linhas">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Linhas de Produtos</CardTitle>
+                  <CardDescription>Suprema, Gold, Vidro Temperado, etc. Arraste para reordenar.</CardDescription>
+                </div>
+                <Button onClick={() => handleOpenLinhaDialog()}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nova Linha
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {loadingLinhas ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-20">Ordem</TableHead>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Slug</TableHead>
+                        <TableHead>Cor</TableHead>
+                        <TableHead>Descrição</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {linhas && linhas.length > 0 && (
+                        <SortableTableBody
+                          items={linhas}
+                          renderCells={renderLinhaCells}
+                          getIsInactive={(linha) => !linha.is_active}
+                          onReorder={handleReorderLinhas}
+                        />
+                      )}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="categories">
             <Card>
@@ -630,6 +815,83 @@ export default function AdminCategories() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Linha Dialog */}
+        <Dialog open={linhaDialogOpen} onOpenChange={setLinhaDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{editingLinha ? "Editar Linha" : "Nova Linha"}</DialogTitle>
+              <DialogDescription>
+                {editingLinha ? "Atualize os dados da linha" : "Adicione uma nova linha de produtos"}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="linha-name">Nome</Label>
+                <Input
+                  id="linha-name"
+                  value={linhaForm.name}
+                  onChange={(e) => setLinhaForm({ ...linhaForm, name: e.target.value })}
+                  placeholder="Ex: Linha Suprema"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="linha-description">Descrição (opcional)</Label>
+                <Input
+                  id="linha-description"
+                  value={linhaForm.description}
+                  onChange={(e) => setLinhaForm({ ...linhaForm, description: e.target.value })}
+                  placeholder="Ex: Linha premium com acabamento superior"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Cor</Label>
+                <Select
+                  value={linhaForm.color}
+                  onValueChange={(value) => setLinhaForm({ ...linhaForm, color: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {colorOptions.map((color) => (
+                      <SelectItem key={color.value} value={color.value}>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-4 h-4 rounded ${color.class}`} />
+                          {color.label}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="linha-order">Ordem de exibição</Label>
+                <Input
+                  id="linha-order"
+                  type="number"
+                  min={1}
+                  value={linhaForm.sort_order}
+                  onChange={(e) => setLinhaForm({ ...linhaForm, sort_order: parseInt(e.target.value) || 1 })}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setLinhaDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleSaveLinha}
+                disabled={createLinha.isPending || updateLinha.isPending}
+              >
+                {(createLinha.isPending || updateLinha.isPending) && (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                )}
+                Salvar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Category Dialog */}
         <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
