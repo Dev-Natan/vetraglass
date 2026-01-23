@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -15,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Calendar, ChevronLeft, ChevronRight, Plus, Clock, MapPin, User, Phone, Wrench, Ruler, Eye, Trash2, Printer, FileText, DollarSign, AlertTriangle } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Plus, Clock, MapPin, User, Phone, Wrench, Ruler, Eye, Trash2, Printer, FileText, DollarSign, AlertTriangle, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Appointment {
@@ -67,6 +68,7 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
 };
 
 export default function Agenda() {
+  const navigate = useNavigate();
   const { currentCompany, user } = useAuth();
   const companyId = currentCompany?.id;
   const queryClient = useQueryClient();
@@ -1105,9 +1107,23 @@ export default function Agenda() {
 
               {selectedAppointment.quote && (
                 <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <FileText className="h-4 w-4 text-primary" />
-                    <span className="font-medium text-sm">Orçamento Vinculado</span>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-primary" />
+                      <span className="font-medium text-sm">Orçamento Vinculado</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs gap-1"
+                      onClick={() => {
+                        setSelectedAppointment(null);
+                        navigate(`/orcamentos?id=${selectedAppointment.quote?.id}`);
+                      }}
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      Ver Orçamento
+                    </Button>
                   </div>
                   <div className="space-y-1 text-sm">
                     <div className="flex items-center justify-between">
