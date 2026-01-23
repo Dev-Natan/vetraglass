@@ -18,6 +18,7 @@ import {
   Headphones,
   Megaphone,
   GlassWater,
+  Tags,
 } from "lucide-react";
 import {
   Tooltip,
@@ -41,6 +42,11 @@ const adminMenuItems = [
     title: "Product Templates",
     path: "/admin/product-templates",
     icon: Package,
+  },
+  {
+    title: "Categorias",
+    path: "/admin/categories",
+    icon: Tags,
   },
   {
     title: "Importar Produtos",
