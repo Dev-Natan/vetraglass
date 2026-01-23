@@ -289,6 +289,30 @@ export function AprovarOrcamentoDialog({
         console.warn('Error generating OS documents:', docsResult.error);
       }
 
+      // 6. Create delivery appointment in the agenda
+      if (estimatedEnd) {
+        const { error: appointmentError } = await supabase
+          .from('service_appointments')
+          .insert({
+            company_id: currentCompany.id,
+            title: `Entrega OS #${ordemServico.os_number}`,
+            appointment_type: 'delivery',
+            status: 'pending',
+            scheduled_date: format(estimatedEnd, 'yyyy-MM-dd'),
+            all_day: true,
+            customer_name: quote.customer_name,
+            customer_phone: quote.customer_phone,
+            customer_address: quote.customer_address,
+            ordem_servico_id: ordemServico.id,
+            quote_id: quote.id,
+            notes: `Entrega programada referente ao orçamento #${quote.quote_number.toString().padStart(4, '0')}`,
+          });
+
+        if (appointmentError) {
+          console.warn('Error creating delivery appointment:', appointmentError);
+        }
+      }
+
       return { ordemServico, saleId };
     },
     onSuccess: (data) => {
@@ -310,6 +334,8 @@ export function AprovarOrcamentoDialog({
       queryClient.invalidateQueries({ queryKey: ['ordens-servico'] });
       queryClient.invalidateQueries({ queryKey: ['accounts-receivable'] });
       queryClient.invalidateQueries({ queryKey: ['receivables-due-today'] });
+      queryClient.invalidateQueries({ queryKey: ['service-appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['today-appointments'] });
       resetForm();
       onOpenChange(false);
       onSuccess?.();
