@@ -1118,13 +1118,6 @@ export default function Agenda() {
                       <span className="text-muted-foreground">Cliente:</span>
                       <span>{selectedAppointment.quote.customer_name}</span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Valor:</span>
-                      <span className="font-medium text-primary flex items-center gap-1">
-                        <DollarSign className="h-3 w-3" />
-                        {formatCurrency(selectedAppointment.quote.final_amount)}
-                      </span>
-                    </div>
                   </div>
                 </div>
               )}
