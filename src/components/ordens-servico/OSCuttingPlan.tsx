@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Scissors, Maximize2, Layers, Square } from 'lucide-react';
-import { OSGlassCutCard } from './OSGlassCutCard';
+import { OSGlassUnifiedView } from './OSGlassUnifiedView';
 
 interface OSCuttingPlanProps {
   ordemServicoId: string;
@@ -27,6 +27,8 @@ interface GlassCutData {
   calculatedHeight: number;
   areaM2: number;
   quantity: number;
+  isMovable?: boolean;
+  panelIndex?: number;
 }
 
 interface CuttingPlan {
@@ -179,26 +181,22 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
               </div>
             )}
 
-            {/* Glass Cuts - Enhanced Display */}
+            {/* Glass Cuts - Unified Diagram View */}
             {plan.glass_cuts_data && plan.glass_cuts_data.length > 0 && (
               <div>
                 <h4 className="font-medium mb-3 flex items-center gap-2">
                   <Square className="w-4 h-4" />
-                  Cortes de Vidro
+                  Plano de Corte de Vidros
                   <Badge variant="outline" className="ml-2">
                     {plan.glass_cuts_data.length} tipo{plan.glass_cuts_data.length > 1 ? 's' : ''}
                   </Badge>
                 </h4>
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                  {plan.glass_cuts_data.map((glass: GlassCutData, idx: number) => (
-                    <OSGlassCutCard 
-                      key={idx}
-                      glass={glass}
-                      index={idx}
-                      totalQuantity={plan.quantity}
-                    />
-                  ))}
-                </div>
+                <OSGlassUnifiedView
+                  glassCuts={plan.glass_cuts_data}
+                  vaoWidth={plan.vao_width}
+                  vaoHeight={plan.vao_height}
+                  productQuantity={plan.quantity}
+                />
               </div>
             )}
           </CardContent>
