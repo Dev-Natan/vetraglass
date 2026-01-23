@@ -12,9 +12,9 @@ import { SalesChart } from '@/components/dashboard/SalesChart';
 import { RecentActivity } from '@/components/dashboard/RecentActivity';
 import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
 import { FinancialAlerts } from '@/components/dashboard/FinancialAlerts';
-import { TodayAppointmentsAlert } from '@/components/dashboard/TodayAppointmentsAlert';
 import { SalesGoalCard } from '@/components/dashboard/SalesGoalCard';
 import { SystemReminders } from '@/components/dashboard/SystemReminders';
+import { TodayTasksWidget } from '@/components/dashboard/TodayTasksWidget';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -102,10 +102,10 @@ export default function Index() {
           <section className="space-y-4 animate-fade-in">
             <DashboardKPIs />
             
-            {/* Alertas lado a lado */}
+            {/* Tarefas e Meta lado a lado */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <TodayTasksWidget />
               <SalesGoalCard />
-              <TodayAppointmentsAlert />
             </div>
 
             {/* Lembretes do Sistema */}
