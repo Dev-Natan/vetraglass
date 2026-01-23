@@ -47,17 +47,22 @@ interface Appointment {
   } | null;
 }
 
+import { Truck, Package, CheckCircle2 } from "lucide-react";
+
 const appointmentTypeConfig: Record<string, { label: string; icon: React.ElementType; color: string }> = {
   medicao: { label: "Medição", icon: Ruler, color: "#10b981" },
   instalacao: { label: "Instalação", icon: Wrench, color: "#3b82f6" },
   manutencao: { label: "Manutenção", icon: Wrench, color: "#f59e0b" },
   visita: { label: "Visita", icon: Eye, color: "#8b5cf6" },
+  delivery: { label: "Entrega", icon: Truck, color: "#ec4899" },
+  outros: { label: "Outros", icon: Package, color: "#6b7280" },
 };
 
-const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  scheduled: { label: "Agendado", variant: "secondary" },
-  in_progress: { label: "Em andamento", variant: "default" },
-  completed: { label: "Concluído", variant: "outline" },
+const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon?: React.ElementType }> = {
+  pending: { label: "Pendente", variant: "secondary", icon: Clock },
+  scheduled: { label: "Agendado", variant: "secondary", icon: Calendar },
+  in_progress: { label: "Em andamento", variant: "default", icon: Wrench },
+  completed: { label: "Concluído", variant: "outline", icon: CheckCircle2 },
   cancelled: { label: "Cancelado", variant: "destructive" },
 };
 
@@ -99,7 +104,11 @@ export default function Agenda() {
       if (!companyId) return [];
       const { data, error } = await supabase
         .from("service_appointments")
-        .select("*, quote:quotes(id, quote_number, customer_name, final_amount, status)")
+        .select(`
+          *, 
+          quote:quotes(id, quote_number, customer_name, final_amount, status),
+          ordem_servico:ordens_servico(id, os_number, status, total_amount)
+        `)
         .eq("company_id", companyId)
         .gte("scheduled_date", format(monthStart, "yyyy-MM-dd"))
         .lte("scheduled_date", format(monthEnd, "yyyy-MM-dd"))
@@ -107,10 +116,31 @@ export default function Agenda() {
         .order("scheduled_time_start", { ascending: true });
       
       if (error) throw error;
-      return data as Appointment[];
+      return data as (Appointment & { ordem_servico?: { id: string; os_number: number; status: string; total_amount: number } | null })[];
     },
     enabled: !!companyId,
   });
+
+  // Calculate month statistics
+  const monthStats = {
+    total: appointments.length,
+    pending: appointments.filter(a => a.status === 'pending' || a.status === 'scheduled').length,
+    completed: appointments.filter(a => a.status === 'completed').length,
+    cancelled: appointments.filter(a => a.status === 'cancelled').length,
+    inProgress: appointments.filter(a => a.status === 'in_progress').length,
+    byType: Object.entries(appointmentTypeConfig).map(([key, config]) => ({
+      key,
+      label: config.label,
+      count: appointments.filter(a => a.appointment_type === key).length,
+      color: config.color,
+    })).filter(t => t.count > 0),
+  };
+
+  // Today's appointments
+  const todayAppointments = appointments.filter(a => isSameDay(parseISO(a.scheduled_date), new Date()));
+  const upcomingAppointments = appointments
+    .filter(a => parseISO(a.scheduled_date) >= new Date() && a.status !== 'completed' && a.status !== 'cancelled')
+    .slice(0, 5);
 
   const { data: clients = [] } = useQuery({
     queryKey: ["clients-simple", companyId],
@@ -419,6 +449,55 @@ export default function Agenda() {
         <h1 className="text-2xl font-bold">Agenda de Serviços</h1>
         <p className="text-muted-foreground">Gerencie agendamentos de medições, instalações e visitas</p>
       </div>
+
+      {/* Month Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-200 dark:border-blue-900">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Total do Mês</p>
+                <p className="text-2xl font-bold">{monthStats.total}</p>
+              </div>
+              <Calendar className="h-8 w-8 text-blue-500 opacity-80" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-amber-200 dark:border-amber-900">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Pendentes</p>
+                <p className="text-2xl font-bold">{monthStats.pending}</p>
+              </div>
+              <Clock className="h-8 w-8 text-amber-500 opacity-80" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-green-500/10 to-green-600/5 border-green-200 dark:border-green-900">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Concluídos</p>
+                <p className="text-2xl font-bold">{monthStats.completed}</p>
+              </div>
+              <CheckCircle2 className="h-8 w-8 text-green-500 opacity-80" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-200 dark:border-purple-900">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Hoje</p>
+                <p className="text-2xl font-bold">{todayAppointments.length}</p>
+              </div>
+              <Wrench className="h-8 w-8 text-purple-500 opacity-80" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Calendar */}
         <Card className="lg:col-span-2">
@@ -758,6 +837,7 @@ export default function Agenda() {
                   getAppointmentsForDay(selectedDate).map(apt => {
                     const typeConfig = appointmentTypeConfig[apt.appointment_type];
                     const status = statusConfig[apt.status];
+                    const hasOS = !!(apt as any).ordem_servico;
                     return (
                       <div
                         key={apt.id}
@@ -772,7 +852,12 @@ export default function Agenda() {
                               )}
                               <span className="font-medium truncate">{apt.title}</span>
                             </div>
-                            {apt.scheduled_time_start && (
+                            {apt.all_day ? (
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                                <Clock className="h-3 w-3" />
+                                Dia inteiro
+                              </div>
+                            ) : apt.scheduled_time_start && (
                               <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
                                 <Clock className="h-3 w-3" />
                                 {apt.scheduled_time_start.slice(0, 5)}
@@ -785,15 +870,94 @@ export default function Agenda() {
                                 {apt.customer_name}
                               </div>
                             )}
+                            {apt.customer_address && (
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground truncate">
+                                <MapPin className="h-3 w-3 flex-shrink-0" />
+                                <span className="truncate">{apt.customer_address}</span>
+                              </div>
+                            )}
+                            {hasOS && (
+                              <div className="flex items-center gap-1 text-xs text-blue-600 mt-1">
+                                <Package className="h-3 w-3" />
+                                OS #{(apt as any).ordem_servico.os_number}
+                              </div>
+                            )}
                           </div>
-                          <Badge variant={status?.variant || "secondary"}>
-                            {status?.label || apt.status}
-                          </Badge>
+                          <div className="flex flex-col items-end gap-1">
+                            <Badge variant={status?.variant || "secondary"} className="text-xs">
+                              {status?.label || apt.status}
+                            </Badge>
+                            {apt.quote && (
+                              <span className="text-xs text-muted-foreground">
+                                Orç #{apt.quote.quote_number}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );
                   })
                 )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Type Distribution */}
+          {monthStats.byType.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Distribuição por Tipo</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {monthStats.byType.map(type => (
+                  <div key={type.key} className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: type.color }} />
+                      <span>{type.label}</span>
+                    </div>
+                    <span className="font-medium">{type.count}</span>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Upcoming Appointments */}
+          {upcomingAppointments.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Próximos
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {upcomingAppointments.map(apt => {
+                  const typeConfig = appointmentTypeConfig[apt.appointment_type];
+                  return (
+                    <div
+                      key={apt.id}
+                      onClick={() => setSelectedAppointment(apt)}
+                      className="p-2 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors text-sm"
+                    >
+                      <div className="flex items-center gap-2">
+                        {typeConfig && (
+                          <typeConfig.icon className="h-3 w-3 flex-shrink-0" style={{ color: typeConfig.color }} />
+                        )}
+                        <span className="font-medium truncate flex-1">{apt.title}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                        <span>{format(parseISO(apt.scheduled_date), "dd/MM")}</span>
+                        {apt.scheduled_time_start && (
+                          <span>às {apt.scheduled_time_start.slice(0, 5)}</span>
+                        )}
+                        {apt.customer_name && (
+                          <span className="truncate">• {apt.customer_name}</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </CardContent>
             </Card>
           )}
@@ -883,6 +1047,35 @@ export default function Agenda() {
                 )}
               </div>
 
+              {/* OS Information */}
+              {(selectedAppointment as any).ordem_servico && (
+                <div className="p-3 bg-blue-500/5 border border-blue-500/20 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Package className="h-4 w-4 text-blue-500" />
+                    <span className="font-medium text-sm">Ordem de Serviço Vinculada</span>
+                  </div>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Número:</span>
+                      <span className="font-medium">OS #{(selectedAppointment as any).ordem_servico.os_number}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Status OS:</span>
+                      <Badge variant="outline" className="text-xs">
+                        {(selectedAppointment as any).ordem_servico.status}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Valor Total:</span>
+                      <span className="font-medium text-blue-600 flex items-center gap-1">
+                        <DollarSign className="h-3 w-3" />
+                        {formatCurrency((selectedAppointment as any).ordem_servico.total_amount || 0)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {selectedAppointment.quote && (
                 <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
@@ -911,7 +1104,14 @@ export default function Agenda() {
 
               {selectedAppointment.notes && (
                 <div className="p-3 bg-muted rounded-lg">
-                  <p className="text-sm">{selectedAppointment.notes}</p>
+                  <p className="text-sm font-medium mb-1">Observações:</p>
+                  <p className="text-sm text-muted-foreground">{selectedAppointment.notes}</p>
+                </div>
+              )}
+
+              {selectedAppointment.all_day && (
+                <div className="text-xs text-muted-foreground italic">
+                  ⏰ Dia inteiro
                 </div>
               )}
 
