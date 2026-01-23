@@ -6,11 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Package, Scissors, Layers, FileText, User, Phone, MapPin, Calendar, DollarSign, RefreshCw, Loader2, Download, Printer, Camera, ExternalLink, CalendarDays } from 'lucide-react';
+import { ArrowLeft, Package, Scissors, Layers, FileText, User, Phone, MapPin, Calendar, DollarSign, RefreshCw, Loader2, Download, Camera, ExternalLink, CalendarDays, Wallet } from 'lucide-react';
 import { OSMaterialsList } from '@/components/ordens-servico/OSMaterialsList';
 import { OSCuttingPlan } from '@/components/ordens-servico/OSCuttingPlan';
 import { OSGlassProject } from '@/components/ordens-servico/OSGlassProject';
 import { OSPhotosGallery } from '@/components/ordens-servico/OSPhotosGallery';
+import { OSSalesFlowTimeline } from '@/components/ordens-servico/OSSalesFlowTimeline';
+import { OSFinancialDashboard } from '@/components/ordens-servico/OSFinancialDashboard';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { regenerateOSDocuments } from '@/utils/generateOSDocuments';
@@ -48,20 +50,54 @@ export default function OrdemServicoDetalhes() {
     enabled: !!id,
   });
 
-  // Fetch related quote
+  // Fetch related quote with more details
   const { data: relatedQuote } = useQuery({
     queryKey: ['quote-for-os', ordem?.quote_id],
     queryFn: async () => {
       if (!ordem?.quote_id) return null;
       const { data, error } = await supabase
         .from('quotes')
-        .select('id, quote_number, customer_name')
+        .select('id, quote_number, customer_name, created_at, deposit_status, deposit_amount, status')
         .eq('id', ordem.quote_id)
         .maybeSingle();
       if (error) throw error;
       return data;
     },
     enabled: !!ordem?.quote_id,
+  });
+
+  // Fetch deposit info
+  const { data: depositInfo } = useQuery({
+    queryKey: ['quote-deposit-for-os', ordem?.quote_id],
+    queryFn: async () => {
+      if (!ordem?.quote_id) return null;
+      const { data, error } = await supabase
+        .from('quote_deposits')
+        .select('*')
+        .eq('quote_id', ordem.quote_id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!ordem?.quote_id,
+  });
+
+  // Check for overdue payments
+  const { data: overduePayments } = useQuery({
+    queryKey: ['os-overdue-payments', id],
+    queryFn: async () => {
+      if (!id) return [];
+      const today = new Date().toISOString().split('T')[0];
+      const { data, error } = await supabase
+        .from('accounts_receivable')
+        .select('id')
+        .eq('ordem_servico_id', id)
+        .eq('status', 'pending')
+        .lt('due_date', today);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!id,
   });
 
   // Fetch related appointments
@@ -251,6 +287,24 @@ export default function OrdemServicoDetalhes() {
           </Button>
         </div>
 
+        {/* Sales Flow Timeline */}
+        <Card>
+          <CardContent className="pt-4 pb-2">
+            <OSSalesFlowTimeline
+              quoteCreatedAt={relatedQuote?.created_at}
+              quoteApprovedAt={ordem.created_at}
+              entryValue={depositInfo?.amount || relatedQuote?.deposit_amount || 0}
+              entryPaid={depositInfo?.status === 'paid' || depositInfo?.status === 'billed'}
+              osStatus={ordem.status}
+              osCompletedAt={ordem.status === 'completed' ? ordem.updated_at : undefined}
+              totalAmount={ordem.total_amount}
+              paidAmount={ordem.paid_amount || 0}
+              pendingAmount={ordem.pending_amount || 0}
+              hasOverduePayments={(overduePayments?.length || 0) > 0}
+            />
+          </CardContent>
+        </Card>
+
         {/* Summary Card */}
         <Card>
           <CardContent className="pt-6">
@@ -335,15 +389,19 @@ export default function OrdemServicoDetalhes() {
         )}
 
         {/* Tabs */}
-        <Tabs defaultValue="materials" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+        <Tabs defaultValue="financial" className="w-full">
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="financial" className="flex items-center gap-2">
+              <Wallet className="w-4 h-4" />
+              <span className="hidden sm:inline">Financeiro</span>
+            </TabsTrigger>
             <TabsTrigger value="materials" className="flex items-center gap-2">
               <Package className="w-4 h-4" />
               <span className="hidden sm:inline">Materiais</span>
             </TabsTrigger>
             <TabsTrigger value="cutting" className="flex items-center gap-2">
               <Scissors className="w-4 h-4" />
-              <span className="hidden sm:inline">Plano de Corte</span>
+              <span className="hidden sm:inline">Corte</span>
             </TabsTrigger>
             <TabsTrigger value="glass" className="flex items-center gap-2">
               <Layers className="w-4 h-4" />
@@ -358,6 +416,16 @@ export default function OrdemServicoDetalhes() {
               <span className="hidden sm:inline">Detalhes</span>
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="financial" className="mt-4">
+            <OSFinancialDashboard
+              ordemServicoId={ordem.id}
+              quoteId={ordem.quote_id}
+              totalAmount={ordem.total_amount}
+              paidAmount={ordem.paid_amount || 0}
+              pendingAmount={ordem.pending_amount || 0}
+            />
+          </TabsContent>
 
           <TabsContent value="materials" className="mt-4 space-y-4">
             <div className="flex justify-end">
@@ -388,6 +456,7 @@ export default function OrdemServicoDetalhes() {
             </div>
             <OSGlassProject ordemServicoId={ordem.id} />
           </TabsContent>
+          
           <TabsContent value="photos" className="mt-4">
             <OSPhotosGallery ordemServicoId={ordem.id} />
           </TabsContent>

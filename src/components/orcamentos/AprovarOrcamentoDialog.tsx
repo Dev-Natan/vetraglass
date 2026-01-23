@@ -383,11 +383,43 @@ export function AprovarOrcamentoDialog({
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          {/* Visual Flow Preview */}
+          <div className="flex items-center justify-between gap-2 px-2">
+            {[
+              { label: 'Aprovação', active: true },
+              { label: 'Entrada', active: hasEntry },
+              { label: 'OS Criada', active: true },
+              { label: 'Produção', active: false },
+              { label: 'Faturamento', active: false },
+            ].map((step, idx, arr) => (
+              <div key={step.label} className="flex items-center gap-1 flex-1">
+                <div className={cn(
+                  "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0",
+                  step.active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                )}>
+                  {idx + 1}
+                </div>
+                <span className={cn(
+                  "text-[10px] hidden sm:block",
+                  step.active ? "text-foreground font-medium" : "text-muted-foreground"
+                )}>
+                  {step.label}
+                </span>
+                {idx < arr.length - 1 && (
+                  <div className={cn(
+                    "flex-1 h-0.5 mx-1",
+                    step.active ? "bg-primary" : "bg-muted"
+                  )} />
+                )}
+              </div>
+            ))}
+          </div>
+
           {/* Summary */}
-          <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Valor do orçamento</span>
-              <span className="font-bold text-lg">{formatCurrency(totalAmount)}</span>
+          <div className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg p-4 space-y-2 border border-primary/20">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Valor do orçamento</span>
+              <span className="font-bold text-xl text-primary">{formatCurrency(totalAmount)}</span>
             </div>
           </div>
 
@@ -619,27 +651,50 @@ export function AprovarOrcamentoDialog({
           )}
 
           {/* Final Summary */}
-          <div className="bg-primary/5 rounded-lg p-4 space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Valor total</span>
-              <span>{formatCurrency(totalAmount)}</span>
+          <div className="rounded-lg border-2 border-primary/30 overflow-hidden">
+            <div className="bg-primary/10 px-4 py-2 border-b border-primary/20">
+              <span className="text-sm font-medium">Resumo da Aprovação</span>
             </div>
-            <div className="flex justify-between text-sm text-green-600">
-              <span>Entrada</span>
-              <span>{hasEntry ? formatCurrency(entryValue) : '-'}</span>
-            </div>
-            <div className="flex justify-between font-bold">
-              <span>Valor pendente</span>
-              <Badge variant={pendingAmount > 0 ? 'secondary' : 'default'}>
-                {formatCurrency(pendingAmount)}
-              </Badge>
-            </div>
-            {pendingAmount > 0 && installmentsCount > 1 && (
-              <div className="flex justify-between text-xs text-muted-foreground pt-1">
-                <span>Parcelas</span>
-                <span>{installmentsCount}x de {formatCurrency(pendingAmount / installmentsCount)}</span>
+            <div className="p-4 space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Valor total do serviço</span>
+                <span className="font-bold">{formatCurrency(totalAmount)}</span>
               </div>
-            )}
+              
+              <div className={cn(
+                "flex justify-between items-center p-2 rounded-lg",
+                hasEntry ? "bg-emerald-50 dark:bg-emerald-950/30" : "bg-muted/30"
+              )}>
+                <span className={cn("text-sm", hasEntry ? "text-emerald-700 dark:text-emerald-300" : "text-muted-foreground")}>
+                  Entrada a receber agora
+                </span>
+                <span className={cn("font-bold", hasEntry ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground")}>
+                  {hasEntry ? formatCurrency(entryValue) : 'Sem entrada'}
+                </span>
+              </div>
+              
+              <Separator />
+              
+              <div className="flex justify-between items-center">
+                <span className="font-medium">Saldo a receber</span>
+                <Badge 
+                  variant={pendingAmount > 0 ? 'secondary' : 'default'} 
+                  className={cn(
+                    "text-base px-3 py-1",
+                    pendingAmount === 0 && "bg-emerald-500"
+                  )}
+                >
+                  {formatCurrency(pendingAmount)}
+                </Badge>
+              </div>
+              
+              {pendingAmount > 0 && installmentsCount > 1 && (
+                <div className="flex justify-between text-xs text-muted-foreground bg-muted/30 rounded p-2">
+                  <span>Parcelamento</span>
+                  <span className="font-medium">{installmentsCount}x de {formatCurrency(pendingAmount / installmentsCount)}</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
