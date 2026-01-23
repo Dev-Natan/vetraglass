@@ -19,6 +19,7 @@ import {
   Megaphone,
   GlassWater,
   Tags,
+  Activity,
 } from "lucide-react";
 import {
   Tooltip,
@@ -26,6 +27,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useSupportTickets } from "@/hooks/useSupportTickets";
+import { useAdminStats } from "@/hooks/useAdminStats";
 
 const adminMenuItems = [
   {
@@ -72,6 +74,12 @@ const adminMenuItems = [
     title: "Suporte",
     path: "/admin/support",
     icon: Headphones,
+    showBadge: true,
+  },
+  {
+    title: "Logs de Auditoria",
+    path: "/admin/audit-logs",
+    icon: Activity,
   },
   {
     title: "Configurações",
@@ -88,6 +96,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const { signOut, profile } = useAuth();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
+  const { data: stats } = useAdminStats();
+  const openTicketsCount = stats?.openTicketsCount || 0;
 
   const isActive = (path: string) => {
     if (path === "/admin") {
@@ -96,20 +106,38 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     return location.pathname.startsWith(path);
   };
 
-  const NavItem = ({ item }: { item: typeof adminMenuItems[0] }) => {
+  const NavItem = ({ item }: { item: (typeof adminMenuItems)[0] }) => {
+    const hasBadge = item.showBadge && openTicketsCount > 0;
+    
     const content = (
       <Link
         to={item.path}
         className={cn(
-          "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+          "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative",
           isActive(item.path)
             ? "bg-primary text-primary-foreground shadow-sm"
             : "text-muted-foreground hover:bg-muted hover:text-foreground",
           collapsed && "justify-center px-2"
         )}
       >
-        <item.icon className={cn("shrink-0", collapsed ? "w-5 h-5" : "w-4 h-4")} />
-        {!collapsed && <span>{item.title}</span>}
+        <div className="relative">
+          <item.icon className={cn("shrink-0", collapsed ? "w-5 h-5" : "w-4 h-4")} />
+          {hasBadge && collapsed && (
+            <span className="absolute -top-1.5 -right-1.5 w-4 h-4 text-[10px] font-bold bg-rose-500 text-white rounded-full flex items-center justify-center animate-pulse">
+              {openTicketsCount > 9 ? "9+" : openTicketsCount}
+            </span>
+          )}
+        </div>
+        {!collapsed && (
+          <span className="flex-1 flex items-center justify-between">
+            {item.title}
+            {hasBadge && (
+              <Badge variant="destructive" className="ml-2 px-1.5 py-0.5 text-[10px] animate-pulse">
+                {openTicketsCount}
+              </Badge>
+            )}
+          </span>
+        )}
       </Link>
     );
 
@@ -117,8 +145,13 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       return (
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>{content}</TooltipTrigger>
-          <TooltipContent side="right" className="font-medium">
+          <TooltipContent side="right" className="font-medium flex items-center gap-2">
             {item.title}
+            {hasBadge && (
+              <Badge variant="destructive" className="px-1.5 py-0.5 text-[10px]">
+                {openTicketsCount}
+              </Badge>
+            )}
           </TooltipContent>
         </Tooltip>
       );
