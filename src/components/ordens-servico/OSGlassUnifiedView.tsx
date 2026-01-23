@@ -23,55 +23,84 @@ interface OSGlassUnifiedViewProps {
 export function OSGlassUnifiedView({ glassCuts, vaoWidth, vaoHeight, productQuantity }: OSGlassUnifiedViewProps) {
   if (!glassCuts || glassCuts.length === 0) return null;
 
-  // Calculate total width and max height for positioning
-  const totalGlassWidth = glassCuts.reduce((sum, g) => sum + g.calculatedWidth * g.quantity, 0);
-  const maxGlassHeight = Math.max(...glassCuts.map(g => g.calculatedHeight));
-  
   // Calculate total area
   const totalArea = glassCuts.reduce((sum, g) => sum + (g.areaM2 * g.quantity * productQuantity), 0);
   const totalPanels = glassCuts.reduce((sum, g) => sum + (g.quantity * productQuantity), 0);
 
-  // Calculate scale to fit in container (max 600px width, 400px height)
-  const maxContainerWidth = 600;
-  const maxContainerHeight = 350;
-  const scaleX = maxContainerWidth / vaoWidth;
-  const scaleY = maxContainerHeight / vaoHeight;
-  const scale = Math.min(scaleX, scaleY, 0.4); // Max scale of 0.4 to keep it readable
-
-  const containerWidth = vaoWidth * scale;
-  const containerHeight = vaoHeight * scale;
-
-  // Generate panel labels (A, B, C, D...)
-  const generatePanelLabels = () => {
-    const labels: { label: string; width: number; height: number; isMovable: boolean }[] = [];
-    glassCuts.forEach((glass, idx) => {
+  // Generate all panels with their positions
+  const generatePanels = () => {
+    const panels: { 
+      label: string; 
+      width: number; 
+      height: number; 
+      isMovable: boolean;
+      glassName: string;
+    }[] = [];
+    
+    glassCuts.forEach((glass) => {
       for (let i = 0; i < glass.quantity; i++) {
-        labels.push({
-          label: String.fromCharCode(65 + labels.length), // A, B, C, D...
+        panels.push({
+          label: String.fromCharCode(65 + panels.length),
           width: glass.calculatedWidth,
           height: glass.calculatedHeight,
           isMovable: glass.isMovable ?? false,
+          glassName: glass.glassName,
         });
       }
     });
-    return labels;
+    return panels;
   };
 
-  const panelLabels = generatePanelLabels();
+  const panels = generatePanels();
   
-  // Calculate panel positions (side by side)
-  const calculatePanelPositions = () => {
-    const positions: { label: string; x: number; y: number; width: number; height: number; isMovable: boolean }[] = [];
-    let currentX = 0;
+  // Calculate total width of all panels
+  const totalPanelWidth = panels.reduce((sum, p) => sum + p.width, 0);
+  const maxPanelHeight = Math.max(...panels.map(p => p.height));
+
+  // SVG dimensions with margins for dimension lines
+  const marginLeft = 60;
+  const marginRight = 80;
+  const marginTop = 40;
+  const marginBottom = 70;
+  
+  // Calculate scale to fit nicely
+  const maxDrawingWidth = 650;
+  const maxDrawingHeight = 350;
+  const scaleX = maxDrawingWidth / vaoWidth;
+  const scaleY = maxDrawingHeight / vaoHeight;
+  const scale = Math.min(scaleX, scaleY, 0.35);
+
+  const drawingWidth = vaoWidth * scale;
+  const drawingHeight = vaoHeight * scale;
+  const svgWidth = drawingWidth + marginLeft + marginRight;
+  const svgHeight = drawingHeight + marginTop + marginBottom;
+
+  // Calculate panel positions
+  const getPanelPositions = () => {
+    const positions: { 
+      label: string; 
+      x: number; 
+      y: number; 
+      width: number; 
+      height: number; 
+      isMovable: boolean;
+      glassName: string;
+    }[] = [];
     
-    panelLabels.forEach((panel, idx) => {
+    let currentX = 0;
+    panels.forEach((panel) => {
+      const scaledWidth = panel.width * scale;
+      const scaledHeight = panel.height * scale;
+      const yOffset = (drawingHeight - scaledHeight) / 2;
+      
       positions.push({
         label: panel.label,
-        x: currentX,
-        y: (vaoHeight - panel.height) / 2, // Center vertically
-        width: panel.width,
-        height: panel.height,
+        x: marginLeft + (currentX * scale),
+        y: marginTop + yOffset,
+        width: scaledWidth,
+        height: scaledHeight,
         isMovable: panel.isMovable,
+        glassName: panel.glassName,
       });
       currentX += panel.width;
     });
@@ -79,149 +108,298 @@ export function OSGlassUnifiedView({ glassCuts, vaoWidth, vaoHeight, productQuan
     return positions;
   };
 
-  const panelPositions = calculatePanelPositions();
+  const panelPositions = getPanelPositions();
 
   // Get unique glass types for legend
-  const uniqueGlassTypes = glassCuts.map((glass, idx) => ({
-    label: String.fromCharCode(65 + idx),
-    name: glass.glassName,
-    width: glass.calculatedWidth,
-    height: glass.calculatedHeight,
-    quantity: glass.quantity,
-    areaM2: glass.areaM2,
-    widthFormula: glass.widthFormula,
-    heightFormula: glass.heightFormula,
-    isMovable: glass.isMovable ?? false,
-  }));
+  const uniqueGlassTypes = glassCuts.map((glass, idx) => {
+    // Find first panel letter for this glass type
+    let letterIndex = 0;
+    for (let i = 0; i < idx; i++) {
+      letterIndex += glassCuts[i].quantity;
+    }
+    const letters = Array.from({ length: glass.quantity }, (_, i) => 
+      String.fromCharCode(65 + letterIndex + i)
+    );
+    
+    return {
+      letters,
+      name: glass.glassName,
+      width: glass.calculatedWidth,
+      height: glass.calculatedHeight,
+      quantity: glass.quantity,
+      areaM2: glass.areaM2,
+      widthFormula: glass.widthFormula,
+      heightFormula: glass.heightFormula,
+      isMovable: glass.isMovable ?? false,
+    };
+  });
 
   return (
     <div className="space-y-4">
-      {/* Unified Glass Diagram */}
-      <div className="relative bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 rounded-xl p-6 border-2 border-slate-200 dark:border-slate-700 overflow-x-auto">
-        {/* Main diagram container */}
-        <div className="flex justify-center">
-          <div className="relative" style={{ width: containerWidth + 100, height: containerHeight + 100 }}>
-            {/* VAO outer frame with dimension lines */}
-            <svg 
-              width={containerWidth + 100} 
-              height={containerHeight + 100} 
-              className="absolute inset-0"
-            >
-              {/* VAO rectangle */}
+      {/* SVG Technical Drawing */}
+      <div className="bg-white dark:bg-slate-900 rounded-xl border-2 border-border overflow-x-auto">
+        <svg 
+          width={svgWidth} 
+          height={svgHeight} 
+          className="mx-auto"
+          style={{ minWidth: svgWidth }}
+        >
+          {/* Background */}
+          <rect x={0} y={0} width={svgWidth} height={svgHeight} fill="currentColor" className="fill-background" />
+          
+          {/* VAO outer frame */}
+          <rect
+            x={marginLeft}
+            y={marginTop}
+            width={drawingWidth}
+            height={drawingHeight}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            className="stroke-border"
+          />
+
+          {/* Glass panels */}
+          {panelPositions.map((panel, idx) => (
+            <g key={idx}>
+              {/* Panel rectangle */}
               <rect
-                x={50}
-                y={25}
-                width={containerWidth}
-                height={containerHeight}
-                fill="none"
-                stroke="currentColor"
+                x={panel.x}
+                y={panel.y}
+                width={panel.width}
+                height={panel.height}
+                className={panel.isMovable 
+                  ? "fill-sky-100 dark:fill-sky-900/40 stroke-sky-500" 
+                  : "fill-amber-50 dark:fill-amber-900/30 stroke-amber-500"
+                }
                 strokeWidth={2}
-                className="text-slate-400 dark:text-slate-500"
               />
               
-              {/* Bottom dimension line - VAO Width */}
-              <line x1={50} y1={containerHeight + 40} x2={50 + containerWidth} y2={containerHeight + 40} 
-                stroke="currentColor" strokeWidth={1} className="text-blue-600" />
-              <line x1={50} y1={containerHeight + 35} x2={50} y2={containerHeight + 45} 
-                stroke="currentColor" strokeWidth={1} className="text-blue-600" />
-              <line x1={50 + containerWidth} y1={containerHeight + 35} x2={50 + containerWidth} y2={containerHeight + 45} 
-                stroke="currentColor" strokeWidth={1} className="text-blue-600" />
-              <text 
-                x={50 + containerWidth / 2} 
-                y={containerHeight + 55} 
-                textAnchor="middle" 
-                className="fill-blue-600 text-xs font-medium"
-              >
-                {vaoWidth} VÃO
-              </text>
-
-              {/* Right dimension line - VAO Height */}
-              <line x1={containerWidth + 65} y1={25} x2={containerWidth + 65} y2={25 + containerHeight} 
-                stroke="currentColor" strokeWidth={1} className="text-blue-600" />
-              <line x1={containerWidth + 60} y1={25} x2={containerWidth + 70} y2={25} 
-                stroke="currentColor" strokeWidth={1} className="text-blue-600" />
-              <line x1={containerWidth + 60} y1={25 + containerHeight} x2={containerWidth + 70} y2={25 + containerHeight} 
-                stroke="currentColor" strokeWidth={1} className="text-blue-600" />
-              <text 
-                x={containerWidth + 80} 
-                y={25 + containerHeight / 2} 
-                textAnchor="middle" 
-                className="fill-blue-600 text-xs font-medium"
-                transform={`rotate(90, ${containerWidth + 80}, ${25 + containerHeight / 2})`}
-              >
-                {vaoHeight} VÃO
-              </text>
-            </svg>
-
-            {/* Glass panels */}
-            {panelPositions.map((panel, idx) => {
-              const panelX = 50 + (panel.x * scale);
-              const panelY = 25 + (panel.y * scale);
-              const panelWidth = panel.width * scale;
-              const panelHeight = panel.height * scale;
+              {/* Reflection effect line */}
+              <line
+                x1={panel.x + 4}
+                y1={panel.y + 4}
+                x2={panel.x + Math.min(panel.width * 0.4, 40)}
+                y2={panel.y + 4}
+                stroke="white"
+                strokeWidth={2}
+                opacity={0.6}
+              />
               
-              return (
-                <div
-                  key={idx}
-                  className={`absolute border-2 ${
-                    panel.isMovable 
-                      ? 'bg-gradient-to-br from-sky-200/80 via-sky-100/60 to-cyan-50/50 dark:from-sky-400/30 dark:via-sky-300/20 dark:to-cyan-200/10 border-sky-500' 
-                      : 'bg-gradient-to-br from-amber-100/80 via-amber-50/60 to-yellow-50/50 dark:from-amber-400/30 dark:via-amber-300/20 dark:to-yellow-200/10 border-amber-500'
-                  }`}
-                  style={{
-                    left: panelX,
-                    top: panelY,
-                    width: panelWidth,
-                    height: panelHeight,
-                  }}
+              {/* Panel label - centered */}
+              <text
+                x={panel.x + panel.width / 2}
+                y={panel.y + panel.height / 2}
+                textAnchor="middle"
+                dominantBaseline="central"
+                className={`text-2xl font-bold ${
+                  panel.isMovable 
+                    ? "fill-sky-700 dark:fill-sky-300" 
+                    : "fill-amber-700 dark:fill-amber-300"
+                }`}
+              >
+                {panel.label}
+              </text>
+
+              {/* Width dimension - top of panel */}
+              <g>
+                {/* Dimension line */}
+                <line
+                  x1={panel.x}
+                  y1={panel.y - 12}
+                  x2={panel.x + panel.width}
+                  y2={panel.y - 12}
+                  stroke="currentColor"
+                  strokeWidth={1}
+                  className="stroke-foreground"
+                />
+                {/* Left tick */}
+                <line
+                  x1={panel.x}
+                  y1={panel.y - 8}
+                  x2={panel.x}
+                  y2={panel.y - 16}
+                  stroke="currentColor"
+                  strokeWidth={1}
+                  className="stroke-foreground"
+                />
+                {/* Right tick */}
+                <line
+                  x1={panel.x + panel.width}
+                  y1={panel.y - 8}
+                  x2={panel.x + panel.width}
+                  y2={panel.y - 16}
+                  stroke="currentColor"
+                  strokeWidth={1}
+                  className="stroke-foreground"
+                />
+                {/* Dimension text */}
+                <text
+                  x={panel.x + panel.width / 2}
+                  y={panel.y - 20}
+                  textAnchor="middle"
+                  className="fill-foreground text-[11px] font-mono font-medium"
                 >
-                  {/* Reflection effect */}
-                  <div 
-                    className="absolute inset-0 bg-gradient-to-br from-white/50 via-transparent to-transparent"
-                    style={{ clipPath: 'polygon(0 0, 60% 0, 0 60%)' }}
+                  {panels[idx].width}
+                </text>
+              </g>
+
+              {/* Height dimension - left of first panel or internal */}
+              {idx === 0 && (
+                <g>
+                  {/* Dimension line */}
+                  <line
+                    x1={panel.x - 12}
+                    y1={panel.y}
+                    x2={panel.x - 12}
+                    y2={panel.y + panel.height}
+                    stroke="currentColor"
+                    strokeWidth={1}
+                    className="stroke-foreground"
                   />
-                  
-                  {/* Panel label */}
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className={`text-2xl font-bold ${
-                      panel.isMovable ? 'text-sky-700 dark:text-sky-300' : 'text-amber-700 dark:text-amber-300'
-                    }`}>
-                      {panel.label}
-                    </span>
-                  </div>
-                  
-                  {/* Width dimension - top */}
-                  {panelWidth > 60 && (
-                    <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-mono font-medium text-slate-600 dark:text-slate-400">
-                      {panel.width}
-                    </div>
-                  )}
-                  
-                  {/* Height dimension - left */}
-                  <div 
-                    className="absolute -left-6 top-1/2 -translate-y-1/2 text-[10px] font-mono font-medium text-slate-600 dark:text-slate-400"
-                    style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg) translateX(50%)' }}
+                  {/* Top tick */}
+                  <line
+                    x1={panel.x - 8}
+                    y1={panel.y}
+                    x2={panel.x - 16}
+                    y2={panel.y}
+                    stroke="currentColor"
+                    strokeWidth={1}
+                    className="stroke-foreground"
+                  />
+                  {/* Bottom tick */}
+                  <line
+                    x1={panel.x - 8}
+                    y1={panel.y + panel.height}
+                    x2={panel.x - 16}
+                    y2={panel.y + panel.height}
+                    stroke="currentColor"
+                    strokeWidth={1}
+                    className="stroke-foreground"
+                  />
+                  {/* Dimension text */}
+                  <text
+                    x={panel.x - 20}
+                    y={panel.y + panel.height / 2}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    transform={`rotate(-90, ${panel.x - 20}, ${panel.y + panel.height / 2})`}
+                    className="fill-foreground text-[11px] font-mono font-medium"
                   >
-                    {panel.height}
-                  </div>
-                </div>
-              );
-            })}
-            
-            {/* Lock indicator (small square in the middle bottom area) */}
-            {panelPositions.some(p => p.isMovable) && (
-              <div
-                className="absolute bg-slate-200 dark:bg-slate-600 border-2 border-slate-400 dark:border-slate-500"
-                style={{
-                  left: 50 + (containerWidth / 2) - 8,
-                  top: 25 + containerHeight - 30,
-                  width: 16,
-                  height: 16,
-                }}
-              />
-            )}
-          </div>
-        </div>
+                    {panels[idx].height}
+                  </text>
+                </g>
+              )}
+
+              {/* Height on right side for each panel */}
+              <text
+                x={panel.x + panel.width - 4}
+                y={panel.y + panel.height / 2}
+                textAnchor="end"
+                dominantBaseline="central"
+                className={`text-[10px] font-mono ${
+                  panel.isMovable 
+                    ? "fill-sky-600 dark:fill-sky-400" 
+                    : "fill-amber-600 dark:fill-amber-400"
+                }`}
+              >
+                {panels[idx].height}
+              </text>
+            </g>
+          ))}
+
+          {/* Lock indicator */}
+          {panelPositions.some(p => p.isMovable) && panelPositions.length > 1 && (
+            <rect
+              x={marginLeft + drawingWidth / 2 - 8}
+              y={marginTop + drawingHeight - 25}
+              width={16}
+              height={16}
+              className="fill-muted stroke-muted-foreground"
+              strokeWidth={1.5}
+            />
+          )}
+
+          {/* VAO Width dimension - bottom */}
+          <g>
+            <line
+              x1={marginLeft}
+              y1={marginTop + drawingHeight + 20}
+              x2={marginLeft + drawingWidth}
+              y2={marginTop + drawingHeight + 20}
+              stroke="currentColor"
+              strokeWidth={1}
+              className="stroke-primary"
+            />
+            <line
+              x1={marginLeft}
+              y1={marginTop + drawingHeight + 15}
+              x2={marginLeft}
+              y2={marginTop + drawingHeight + 25}
+              stroke="currentColor"
+              strokeWidth={1}
+              className="stroke-primary"
+            />
+            <line
+              x1={marginLeft + drawingWidth}
+              y1={marginTop + drawingHeight + 15}
+              x2={marginLeft + drawingWidth}
+              y2={marginTop + drawingHeight + 25}
+              stroke="currentColor"
+              strokeWidth={1}
+              className="stroke-primary"
+            />
+            <text
+              x={marginLeft + drawingWidth / 2}
+              y={marginTop + drawingHeight + 38}
+              textAnchor="middle"
+              className="fill-primary text-xs font-medium"
+            >
+              {vaoWidth} VÃO
+            </text>
+          </g>
+
+          {/* VAO Height dimension - right */}
+          <g>
+            <line
+              x1={marginLeft + drawingWidth + 20}
+              y1={marginTop}
+              x2={marginLeft + drawingWidth + 20}
+              y2={marginTop + drawingHeight}
+              stroke="currentColor"
+              strokeWidth={1}
+              className="stroke-primary"
+            />
+            <line
+              x1={marginLeft + drawingWidth + 15}
+              y1={marginTop}
+              x2={marginLeft + drawingWidth + 25}
+              y2={marginTop}
+              stroke="currentColor"
+              strokeWidth={1}
+              className="stroke-primary"
+            />
+            <line
+              x1={marginLeft + drawingWidth + 15}
+              y1={marginTop + drawingHeight}
+              x2={marginLeft + drawingWidth + 25}
+              y2={marginTop + drawingHeight}
+              stroke="currentColor"
+              strokeWidth={1}
+              className="stroke-primary"
+            />
+            <text
+              x={marginLeft + drawingWidth + 40}
+              y={marginTop + drawingHeight / 2}
+              textAnchor="middle"
+              dominantBaseline="central"
+              transform={`rotate(90, ${marginLeft + drawingWidth + 40}, ${marginTop + drawingHeight / 2})`}
+              className="fill-primary text-xs font-medium"
+            >
+              {vaoHeight} VÃO
+            </text>
+          </g>
+        </svg>
       </div>
 
       {/* Legend / Details Table */}
@@ -237,13 +415,18 @@ export function OSGlassUnifiedView({ glassCuts, vaoWidth, vaoHeight, productQuan
               key={idx} 
               className="flex items-center gap-4 bg-card rounded-lg p-3 border"
             >
-              {/* Letter badge */}
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                glass.isMovable 
-                  ? 'bg-sky-500 text-white' 
-                  : 'bg-amber-500 text-white'
-              }`}>
-                {glass.label}
+              {/* Letter badges */}
+              <div className="flex gap-1">
+                {glass.letters.map((letter) => (
+                  <div 
+                    key={letter}
+                    className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-primary-foreground ${
+                      glass.isMovable ? 'bg-sky-500' : 'bg-amber-500'
+                    }`}
+                  >
+                    {letter}
+                  </div>
+                ))}
               </div>
               
               {/* Glass name */}
