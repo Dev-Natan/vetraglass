@@ -82,13 +82,21 @@ export default function Funcionarios() {
       return;
     }
     
+    toast.loading('Preparando crachá...', { id: 'badge-loading' });
+    
     // Convert photo URL to base64 if available
     let photoBase64: string | null = null;
     if (employee.photo_url) {
-      toast.loading('Preparando crachá...', { id: 'badge-loading' });
       photoBase64 = await imageUrlToBase64(employee.photo_url);
-      toast.dismiss('badge-loading');
     }
+    
+    // Convert company logo to base64 if available
+    let companyLogoBase64: string | null = null;
+    if (currentCompany.logo_url) {
+      companyLogoBase64 = await imageUrlToBase64(currentCompany.logo_url);
+    }
+    
+    toast.dismiss('badge-loading');
     
     generateEmployeeBadgePdf({
       employeeName: employee.name,
@@ -101,6 +109,8 @@ export default function Funcionarios() {
       employeeId: employee.id,
       photoUrl: employee.photo_url,
       photoBase64,
+      companyLogoUrl: currentCompany.logo_url,
+      companyLogoBase64,
     });
     toast.success('Crachá gerado com sucesso!');
   };
