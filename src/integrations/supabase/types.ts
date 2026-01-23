@@ -1422,6 +1422,48 @@ export type Database = {
           },
         ]
       }
+      company_sales_goals: {
+        Row: {
+          company_id: string
+          created_at: string
+          goal_amount: number
+          id: string
+          month: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          goal_amount?: number
+          id?: string
+          month: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          goal_amount?: number
+          id?: string
+          month?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_sales_goals_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_sales_goals_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_security_settings: {
         Row: {
           company_id: string

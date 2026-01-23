@@ -51,6 +51,7 @@ import { CommissionsTab } from '@/components/financeiro/CommissionsTab';
 import { ContasReceberTab } from '@/components/financeiro/ContasReceberTab';
 import { CaixaEmpresaTab } from '@/components/financeiro/CaixaEmpresaTab';
 import { CaixaReportTab } from '@/components/financeiro/CaixaReportTab';
+import { CashFlowProjection } from '@/components/financeiro/CashFlowProjection';
 import { calculateFormulaQuantity } from '@/utils/safeFormulaEvaluator';
 import { MonthSelector, getMonthDateRange } from '@/components/common/MonthSelector';
 
@@ -348,7 +349,14 @@ export default function Financeiro() {
 
           {/* Tab: Caixa Empresa */}
           <TabsContent value="caixa-empresa" className="mt-6">
-            <CaixaEmpresaTab selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <CaixaEmpresaTab selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
+              </div>
+              <div>
+                <CashFlowProjection />
+              </div>
+            </div>
           </TabsContent>
 
           {/* Tab: Relatórios de Caixa */}
