@@ -125,14 +125,18 @@ export function AprovarOrcamentoDialog({
     
     const baseAmount = Math.floor((pendingAmount / installmentsCount) * 100) / 100;
     const remainder = pendingAmount - (baseAmount * installmentsCount);
-    const firstDueDate = addDays(new Date(), firstDueDays);
+    
+    // If firstDueDays is 0, use the estimated delivery date
+    const firstDueDate = firstDueDays === 0 && estimatedEnd 
+      ? estimatedEnd 
+      : addDays(new Date(), firstDueDays);
     
     return Array.from({ length: installmentsCount }, (_, i) => ({
       number: i + 1,
       dueDate: addMonths(firstDueDate, i),
       amount: i === 0 ? baseAmount + remainder : baseAmount,
     }));
-  }, [pendingAmount, installmentsCount, firstDueDays]);
+  }, [pendingAmount, installmentsCount, firstDueDays, estimatedEnd]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -156,7 +160,11 @@ export function AprovarOrcamentoDialog({
         
         const baseAmount = Math.floor((mutationPendingAmount / installmentsCount) * 100) / 100;
         const remainder = Math.round((mutationPendingAmount - (baseAmount * installmentsCount)) * 100) / 100;
-        const firstDueDate = addDays(new Date(), firstDueDays);
+        
+        // If firstDueDays is 0, use the estimated delivery date
+        const firstDueDate = firstDueDays === 0 && estimatedEnd 
+          ? estimatedEnd 
+          : addDays(new Date(), firstDueDays);
         
         return Array.from({ length: installmentsCount }, (_, i) => ({
           number: i + 1,
@@ -579,6 +587,7 @@ export function AprovarOrcamentoDialog({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="0">Na entrega</SelectItem>
                         <SelectItem value="7">7 dias</SelectItem>
                         <SelectItem value="15">15 dias</SelectItem>
                         <SelectItem value="30">30 dias</SelectItem>
