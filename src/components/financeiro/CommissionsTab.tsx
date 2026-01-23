@@ -45,10 +45,11 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
+import { MonthSelector } from '@/components/common/MonthSelector';
 
 interface Commission {
   id: string;
@@ -83,14 +84,24 @@ interface Employee {
   commission_type: string;
 }
 
-type PeriodFilter = 'month' | 'last_month' | 'all';
 type StatusFilter = 'all' | 'pending' | 'paid' | 'cancelled';
 
-export function CommissionsTab() {
+interface CommissionsTabProps {
+  selectedMonth?: Date;
+  onMonthChange?: (date: Date) => void;
+}
+
+export function CommissionsTab({ selectedMonth: externalMonth, onMonthChange }: CommissionsTabProps) {
   const { currentCompany } = useAuth();
   const queryClient = useQueryClient();
 
-  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('month');
+  // Use internal state if no external control
+  const [internalMonth, setInternalMonth] = useState(new Date());
+  const selectedMonth = externalMonth ?? internalMonth;
+  const handleMonthChange = onMonthChange ?? setInternalMonth;
+  
+  const dateRange = { start: startOfMonth(selectedMonth), end: endOfMonth(selectedMonth) };
+
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [employeeFilter, setEmployeeFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -119,11 +130,11 @@ export function CommissionsTab() {
 
   // Fetch commissions
   const { data: commissions = [], isLoading } = useQuery({
-    queryKey: ['commissions', currentCompany?.id, periodFilter],
+    queryKey: ['commissions', currentCompany?.id, selectedMonth.getMonth(), selectedMonth.getFullYear()],
     queryFn: async () => {
       if (!currentCompany?.id) return [];
 
-      let query = supabase
+      const { data, error } = await supabase
         .from('employee_commissions')
         .select(`
           *,
@@ -131,22 +142,10 @@ export function CommissionsTab() {
           sale:sales(id, sale_number, customer_name, created_at)
         `)
         .eq('company_id', currentCompany.id)
+        .gte('created_at', dateRange.start.toISOString())
+        .lte('created_at', dateRange.end.toISOString())
         .order('created_at', { ascending: false });
 
-      // Apply period filter
-      const now = new Date();
-      if (periodFilter === 'month') {
-        const start = startOfMonth(now);
-        const end = endOfMonth(now);
-        query = query.gte('created_at', start.toISOString()).lte('created_at', end.toISOString());
-      } else if (periodFilter === 'last_month') {
-        const lastMonth = subMonths(now, 1);
-        const start = startOfMonth(lastMonth);
-        const end = endOfMonth(lastMonth);
-        query = query.gte('created_at', start.toISOString()).lte('created_at', end.toISOString());
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
       return (data || []) as Commission[];
     },
@@ -401,17 +400,10 @@ export function CommissionsTab() {
             className="pl-10"
           />
         </div>
-        <Select value={periodFilter} onValueChange={(v) => setPeriodFilter(v as PeriodFilter)}>
-          <SelectTrigger className="w-[180px]">
-            <Calendar className="w-4 h-4 mr-2" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="month">Este mês</SelectItem>
-            <SelectItem value="last_month">Mês passado</SelectItem>
-            <SelectItem value="all">Todos</SelectItem>
-          </SelectContent>
-        </Select>
+        <MonthSelector 
+          selectedDate={selectedMonth} 
+          onMonthChange={handleMonthChange}
+        />
         <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
           <SelectTrigger className="w-[150px]">
             <Filter className="w-4 h-4 mr-2" />
