@@ -43,6 +43,11 @@ import {
   useItemTypeMutations,
   type ItemType 
 } from "@/hooks/useItemTypes";
+import { 
+  useAllGlassTypes, 
+  useGlassTypeMutations,
+  type GlassType 
+} from "@/hooks/useGlassTypes";
 
 const colorOptions = [
   { value: "gray", label: "Cinza", class: "bg-gray-500" },
@@ -97,6 +102,13 @@ export default function AdminCategories() {
   const { createMutation: createItemType, updateMutation: updateItemType, deleteMutation: deleteItemType } = useItemTypeMutations();
   const [itemTypeDialogOpen, setItemTypeDialogOpen] = useState(false);
   const [editingItemType, setEditingItemType] = useState<ItemType | null>(null);
+  
+  // Glass types state
+  const { data: glassTypes, isLoading: loadingGlassTypes } = useAllGlassTypes();
+  const { createMutation: createGlassType, updateMutation: updateGlassType, deleteMutation: deleteGlassType } = useGlassTypeMutations();
+  const [glassTypeDialogOpen, setGlassTypeDialogOpen] = useState(false);
+  const [editingGlassType, setEditingGlassType] = useState<GlassType | null>(null);
+  const [glassTypeForm, setGlassTypeForm] = useState({ name: "", description: "", sort_order: 0 });
   const [itemTypeForm, setItemTypeForm] = useState({ name: "", color: "gray", unit_default: "un", sort_order: 0 });
 
   if (!isSaasAdmin) {
@@ -247,6 +259,68 @@ export default function AdminCategories() {
     }
   };
 
+  // Glass type handlers
+  const handleOpenGlassTypeDialog = (glassType?: GlassType) => {
+    if (glassType) {
+      setEditingGlassType(glassType);
+      setGlassTypeForm({ name: glassType.name, description: glassType.description || "", sort_order: glassType.sort_order });
+    } else {
+      setEditingGlassType(null);
+      const nextOrder = (glassTypes?.length ?? 0) + 1;
+      setGlassTypeForm({ name: "", description: "", sort_order: nextOrder });
+    }
+    setGlassTypeDialogOpen(true);
+  };
+
+  const handleSaveGlassType = async () => {
+    if (!glassTypeForm.name.trim()) {
+      toast.error("Nome é obrigatório");
+      return;
+    }
+    
+    try {
+      if (editingGlassType) {
+        await updateGlassType.mutateAsync({
+          id: editingGlassType.id,
+          name: glassTypeForm.name,
+          description: glassTypeForm.description || null,
+          sort_order: glassTypeForm.sort_order,
+        });
+        toast.success("Tipo de vidro atualizado");
+      } else {
+        await createGlassType.mutateAsync({
+          slug: generateSlug(glassTypeForm.name),
+          name: glassTypeForm.name,
+          description: glassTypeForm.description || undefined,
+          sort_order: glassTypeForm.sort_order,
+        });
+        toast.success("Tipo de vidro criado");
+      }
+      setGlassTypeDialogOpen(false);
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao salvar tipo de vidro");
+    }
+  };
+
+  const handleToggleGlassTypeActive = async (glassType: GlassType) => {
+    try {
+      await updateGlassType.mutateAsync({ id: glassType.id, is_active: !glassType.is_active });
+      toast.success(glassType.is_active ? "Tipo desativado" : "Tipo ativado");
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao atualizar tipo");
+    }
+  };
+
+  const handleDeleteGlassType = async (glassType: GlassType) => {
+    if (!confirm(`Deseja excluir o tipo "${glassType.name}"?`)) return;
+    try {
+      await deleteGlassType.mutateAsync(glassType.id);
+      toast.success("Tipo de vidro excluído");
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao excluir tipo de vidro");
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="p-6">
@@ -259,6 +333,7 @@ export default function AdminCategories() {
           <TabsList className="mb-6">
             <TabsTrigger value="categories">Categorias de Produtos</TabsTrigger>
             <TabsTrigger value="item-types">Tipos de Itens</TabsTrigger>
+            <TabsTrigger value="glass-types">Tipos de Vidro</TabsTrigger>
           </TabsList>
 
           <TabsContent value="categories">
@@ -426,6 +501,84 @@ export default function AdminCategories() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          <TabsContent value="glass-types">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Tipos de Vidro</CardTitle>
+                  <CardDescription>Vidro Comum, Temperado, Laminado, etc.</CardDescription>
+                </div>
+                <Button onClick={() => handleOpenGlassTypeDialog()}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Tipo de Vidro
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {loadingGlassTypes ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12">Ordem</TableHead>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Slug</TableHead>
+                        <TableHead>Descrição</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {glassTypes?.map((glassType) => (
+                        <TableRow key={glassType.id} className={!glassType.is_active ? "opacity-50" : ""}>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <GripVertical className="h-4 w-4 text-muted-foreground" />
+                              {glassType.sort_order}
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-medium">{glassType.name}</TableCell>
+                          <TableCell className="text-muted-foreground font-mono text-sm">
+                            {glassType.slug}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">
+                            {glassType.description || "-"}
+                          </TableCell>
+                          <TableCell>
+                            <Switch
+                              checked={glassType.is_active}
+                              onCheckedChange={() => handleToggleGlassTypeActive(glassType)}
+                            />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleOpenGlassTypeDialog(glassType)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteGlassType(glassType)}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
 
         {/* Category Dialog */}
@@ -574,6 +727,62 @@ export default function AdminCategories() {
                 disabled={createItemType.isPending || updateItemType.isPending}
               >
                 {(createItemType.isPending || updateItemType.isPending) && (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                )}
+                Salvar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Glass Type Dialog */}
+        <Dialog open={glassTypeDialogOpen} onOpenChange={setGlassTypeDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{editingGlassType ? "Editar Tipo de Vidro" : "Novo Tipo de Vidro"}</DialogTitle>
+              <DialogDescription>
+                {editingGlassType ? "Atualize os dados do tipo de vidro" : "Adicione um novo tipo de vidro"}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="glasstype-name">Nome</Label>
+                <Input
+                  id="glasstype-name"
+                  value={glassTypeForm.name}
+                  onChange={(e) => setGlassTypeForm({ ...glassTypeForm, name: e.target.value })}
+                  placeholder="Ex: Vidro Temperado"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="glasstype-description">Descrição (opcional)</Label>
+                <Input
+                  id="glasstype-description"
+                  value={glassTypeForm.description}
+                  onChange={(e) => setGlassTypeForm({ ...glassTypeForm, description: e.target.value })}
+                  placeholder="Ex: Vidro tratado termicamente para maior resistência"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="glasstype-order">Ordem de exibição</Label>
+                <Input
+                  id="glasstype-order"
+                  type="number"
+                  min={1}
+                  value={glassTypeForm.sort_order}
+                  onChange={(e) => setGlassTypeForm({ ...glassTypeForm, sort_order: parseInt(e.target.value) || 1 })}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setGlassTypeDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleSaveGlassType}
+                disabled={createGlassType.isPending || updateGlassType.isPending}
+              >
+                {(createGlassType.isPending || updateGlassType.isPending) && (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 )}
                 Salvar
