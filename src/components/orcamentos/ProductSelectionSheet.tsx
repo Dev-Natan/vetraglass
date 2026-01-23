@@ -14,6 +14,8 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ArrowLeft, Search, Package, Check, ChevronRight, Home, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useProductCategoryLabels } from '@/hooks/useProductCategories';
+import { useProductLinhas } from '@/hooks/useProductLinhas';
 
 interface ProductSelectionSheetProps {
   open: boolean;
@@ -31,17 +33,6 @@ interface ProductSelectionSheetProps {
 
 type SelectionStep = 'linha' | 'category' | 'product';
 
-const categoryLabels: Record<string, string> = {
-  window: 'Janela',
-  door: 'Porta',
-  partition: 'Divisória',
-  mirror: 'Espelho',
-  shower: 'Box',
-  facade: 'Fachada',
-  guarda_corpo: 'Guarda Corpo',
-  other: 'Outros',
-};
-
 const categoryIcons: Record<string, string> = {
   window: '🪟',
   door: '🚪',
@@ -55,6 +46,7 @@ const categoryIcons: Record<string, string> = {
 
 export function ProductSelectionSheet({ open, onOpenChange, onSelectProduct }: ProductSelectionSheetProps) {
   const { currentCompany } = useAuth();
+  const { labels: categoryLabels } = useProductCategoryLabels();
   const [step, setStep] = useState<SelectionStep>('linha');
   const [selectedLinha, setSelectedLinha] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);

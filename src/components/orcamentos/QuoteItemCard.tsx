@@ -2,6 +2,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Trash2, Package, Edit2 } from 'lucide-react';
+import { useProductCategoryLabels } from '@/hooks/useProductCategories';
 
 interface QuoteItem {
   id?: string;
@@ -36,18 +37,9 @@ interface QuoteItemCardProps {
   formatCurrency: (value: number) => string;
 }
 
-const categoryLabels: Record<string, string> = {
-  window: 'Janela',
-  door: 'Porta',
-  partition: 'Divisória',
-  mirror: 'Espelho',
-  shower: 'Box',
-  facade: 'Fachada',
-  guarda_corpo: 'Guarda Corpo',
-  other: 'Outros',
-};
-
 export function QuoteItemCard({ item, index, onUpdate, onRemove, formatCurrency }: QuoteItemCardProps) {
+  const { labels: categoryLabels } = useProductCategoryLabels();
+  
   const getProductImage = (imageUrl: string | null | undefined) => {
     if (!imageUrl) return null;
     if (imageUrl.startsWith('http')) return imageUrl;

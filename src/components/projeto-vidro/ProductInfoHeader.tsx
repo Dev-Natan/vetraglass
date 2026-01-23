@@ -4,31 +4,8 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Layers, Package } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
-// Tradução de categorias
-const categoryLabels: Record<string, string> = {
-  window: 'Janela',
-  door: 'Porta',
-  facade: 'Fachada',
-  shower: 'Box de Banheiro',
-  mirror: 'Espelho',
-  partition: 'Divisória',
-  guarda_corpo: 'Guarda Corpo',
-  other: 'Outros',
-};
-
-const translateCategory = (category: string) => categoryLabels[category] || category;
-
-// Glass types options
-const glassTypes = [
-  'CRISTAL INCOLOR 10MM - TEMPERADO',
-  'CRISTAL INCOLOR 08MM - TEMPERADO',
-  'CRISTAL FUMÊ 10MM - TEMPERADO',
-  'CRISTAL FUMÊ 08MM - TEMPERADO',
-  'CRISTAL VERDE 10MM - TEMPERADO',
-  'CRISTAL BRONZE 10MM - TEMPERADO',
-  'CRISTAL INCOLOR 06MM - TEMPERADO',
-];
+import { useProductCategoryLabels } from '@/hooks/useProductCategories';
+import { useGlassTypes } from '@/hooks/useGlassTypes';
 
 // Hardware types options
 const hardwareTypes = [
@@ -71,6 +48,12 @@ export function ProductInfoHeader({
   hardwareType,
   onHardwareTypeChange
 }: ProductInfoHeaderProps) {
+  // Use dynamic categories from database
+  const { labels: categoryLabels } = useProductCategoryLabels();
+  const { data: glassTypes } = useGlassTypes();
+  
+  const translateCategory = (cat: string) => categoryLabels[cat] || cat;
+
   return (
     <Card>
       <CardContent className="pt-4 space-y-4">
@@ -116,8 +99,8 @@ export function ProductInfoHeader({
               <SelectValue placeholder="Selecione o tipo de vidro" />
             </SelectTrigger>
             <SelectContent>
-              {glassTypes.map(type => (
-                <SelectItem key={type} value={type}>{type}</SelectItem>
+              {glassTypes?.map(type => (
+                <SelectItem key={type.id} value={type.name}>{type.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
