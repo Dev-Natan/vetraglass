@@ -3,10 +3,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Boxes, TrendingDown, TrendingUp, Package, Plus, MapPin, DollarSign, Power, Scissors } from 'lucide-react';
+import { Boxes, TrendingDown, TrendingUp, Package, Plus, MapPin, DollarSign, Power, Scissors, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AddStockDialog } from '@/components/estoque/AddStockDialog';
 import { EditItemPriceDialog } from '@/components/estoque/EditItemPriceDialog';
+import { RegistrarMovimentoDialog } from '@/components/estoque/RegistrarMovimentoDialog';
+import { HistoricoMovimentosTab } from '@/components/estoque/HistoricoMovimentosTab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
@@ -16,6 +18,9 @@ export default function Estoque() {
   const queryClient = useQueryClient();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [priceDialogOpen, setPriceDialogOpen] = useState(false);
+  const [entradaDialogOpen, setEntradaDialogOpen] = useState(false);
+  const [saidaDialogOpen, setSaidaDialogOpen] = useState(false);
+  const [mainTab, setMainTab] = useState('estoque');
   const [selectedItem, setSelectedItem] = useState<{
     id: string;
     name: string;
@@ -253,11 +258,11 @@ export default function Estoque() {
             <p className="text-muted-foreground">Controle de entradas e saídas</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" className="gap-2">
+            <Button variant="outline" className="gap-2" onClick={() => setSaidaDialogOpen(true)}>
               <TrendingDown className="w-4 h-4" />
               Registrar Saída
             </Button>
-            <Button variant="outline" className="gap-2">
+            <Button variant="outline" className="gap-2" onClick={() => setEntradaDialogOpen(true)}>
               <TrendingUp className="w-4 h-4" />
               Registrar Entrada
             </Button>
@@ -267,6 +272,21 @@ export default function Estoque() {
             </Button>
           </div>
         </div>
+
+        {/* Main Tabs */}
+        <Tabs value={mainTab} onValueChange={setMainTab}>
+          <TabsList>
+            <TabsTrigger value="estoque" className="gap-2">
+              <Boxes className="w-4 h-4" />
+              Estoque Atual
+            </TabsTrigger>
+            <TabsTrigger value="historico" className="gap-2">
+              <History className="w-4 h-4" />
+              Histórico
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="estoque" className="mt-4">
 
         {!currentCompany && (
           <div className="rounded-lg border border-border bg-muted p-4 text-sm text-muted-foreground">
@@ -400,6 +420,12 @@ export default function Estoque() {
             </Tabs>
           </div>
         </div>
+          </TabsContent>
+          
+          <TabsContent value="historico" className="mt-4">
+            <HistoricoMovimentosTab itemTemplates={itemTemplates || []} />
+          </TabsContent>
+        </Tabs>
       </div>
 
       <AddStockDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} />
@@ -410,6 +436,18 @@ export default function Estoque() {
         itemName={selectedItem?.name ?? ''}
         itemImageUrl={selectedItem?.imageUrl}
         itemUnit={selectedItem?.unit}
+      />
+      <RegistrarMovimentoDialog
+        open={entradaDialogOpen}
+        onOpenChange={setEntradaDialogOpen}
+        tipo="entrada"
+        stockItems={stockItems}
+      />
+      <RegistrarMovimentoDialog
+        open={saidaDialogOpen}
+        onOpenChange={setSaidaDialogOpen}
+        tipo="saida"
+        stockItems={stockItems}
       />
     </MainLayout>
   );

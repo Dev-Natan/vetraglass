@@ -27,6 +27,10 @@ import {
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { RevenueChart } from '@/components/relatorios/RevenueChart';
+import { PaymentMethodsChart } from '@/components/relatorios/PaymentMethodsChart';
+import { SalesEvolutionChart } from '@/components/relatorios/SalesEvolutionChart';
+import { TopProductsChart } from '@/components/relatorios/TopProductsChart';
 
 type PeriodFilter = 'current_month' | 'last_month' | 'last_3_months' | 'last_6_months' | 'current_year' | 'last_year';
 
@@ -415,9 +419,19 @@ export default function Relatorios() {
             </TabsTrigger>
           </TabsList>
 
-          {/* Tab: Geral */}
+          {/* Tab: Geral - Com Gráficos */}
           <TabsContent value="geral" className="space-y-4">
+            {/* Gráficos Visuais */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <RevenueChart sales={sales || []} isLoading={isLoading} />
+              <PaymentMethodsChart paymentMethods={stats.paymentMethods} isLoading={isLoading} />
+            </div>
+            
+            <SalesEvolutionChart sales={sales || []} dateRange={dateRange} isLoading={isLoading} />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <TopProductsChart sales={sales || []} isLoading={isLoading} />
+              
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Resumo do Período</CardTitle>
@@ -430,66 +444,24 @@ export default function Relatorios() {
                     <div className="space-y-4">
                       <Skeleton className="h-10 w-full" />
                       <Skeleton className="h-10 w-full" />
-                      <Skeleton className="h-10 w-full" />
                     </div>
                   ) : (
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       <div className="flex justify-between items-center py-2 border-b">
-                        <span className="text-muted-foreground">Total de Vendas</span>
-                        <span className="font-medium">{stats.totalSalesCount}</span>
+                        <span className="text-muted-foreground">Faturamento</span>
+                        <span className="font-medium">{formatCurrency(stats.totalRevenue)}</span>
                       </div>
                       <div className="flex justify-between items-center py-2 border-b">
-                        <span className="text-muted-foreground">Faturamento Total</span>
-                        <span className="font-medium">{formatCurrency(stats.totalRevenue)}</span>
+                        <span className="text-muted-foreground">Vendas</span>
+                        <span className="font-medium">{stats.totalSalesCount}</span>
                       </div>
                       <div className="flex justify-between items-center py-2 border-b">
                         <span className="text-muted-foreground">Ticket Médio</span>
                         <span className="font-medium">{formatCurrency(stats.avgTicket)}</span>
                       </div>
-                      <div className="flex justify-between items-center py-2 border-b">
-                        <span className="text-muted-foreground">Novos Clientes</span>
-                        <span className="font-medium">{stats.newClients}</span>
-                      </div>
                       <div className="flex justify-between items-center py-2">
-                        <span className="text-muted-foreground">Taxa de Conversão</span>
+                        <span className="text-muted-foreground">Conversão</span>
                         <span className="font-medium">{stats.conversionRate.toFixed(1)}%</span>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Desempenho</CardTitle>
-                  <CardDescription>Comparativo com período anterior</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {isLoading ? (
-                    <div className="space-y-4">
-                      <Skeleton className="h-10 w-full" />
-                      <Skeleton className="h-10 w-full" />
-                      <Skeleton className="h-10 w-full" />
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center py-2 border-b">
-                        <span className="text-muted-foreground">Faturamento</span>
-                        <Badge variant={stats.revenueGrowth >= 0 ? 'default' : 'destructive'}>
-                          {formatPercent(stats.revenueGrowth)}
-                        </Badge>
-                      </div>
-                      <div className="flex justify-between items-center py-2 border-b">
-                        <span className="text-muted-foreground">Número de Vendas</span>
-                        <Badge variant={stats.salesCountGrowth >= 0 ? 'default' : 'destructive'}>
-                          {formatPercent(stats.salesCountGrowth)}
-                        </Badge>
-                      </div>
-                      <div className="flex justify-between items-center py-2">
-                        <span className="text-muted-foreground">Ticket Médio</span>
-                        <Badge variant={stats.ticketGrowth >= 0 ? 'default' : 'destructive'}>
-                          {formatPercent(stats.ticketGrowth)}
-                        </Badge>
                       </div>
                     </div>
                   )}
