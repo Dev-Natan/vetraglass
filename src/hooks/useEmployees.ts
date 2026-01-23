@@ -20,6 +20,7 @@ export interface Employee {
   user_id: string | null;
   permission_profile_id: string | null;
   username: string | null;
+  photo_url: string | null;
   created_at: string;
   updated_at: string;
 }

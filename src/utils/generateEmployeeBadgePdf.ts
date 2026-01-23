@@ -1,5 +1,24 @@
 import jsPDF from 'jspdf';
 
+// Helper function to convert image URL to base64
+export async function imageUrlToBase64(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        resolve(reader.result as string);
+      };
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error('Error converting image to base64:', error);
+    return null;
+  }
+}
 interface BadgeData {
   employeeName: string;
   role: string;
@@ -9,6 +28,8 @@ interface BadgeData {
   companyPhone?: string | null;
   companyAddress?: string | null;
   employeeId: string;
+  photoUrl?: string | null;
+  photoBase64?: string | null;
 }
 
 const roleLabels: Record<string, string> = {
@@ -79,24 +100,43 @@ export function generateEmployeeBadgePdf(data: BadgeData) {
   const companyLines = doc.splitTextToSize(data.companyName.toUpperCase(), 36);
   doc.text(companyLines, width / 2, 18, { align: 'center' });
 
-  // Photo placeholder area - large and centered
+  // Photo area - large and centered
   const photoX = 10;
   const photoY = 32;
   const photoW = 34;
   const photoH = 28;
 
-  doc.setFillColor(...lightGray);
-  doc.roundedRect(photoX, photoY, photoW, photoH, 2, 2, 'F');
-  doc.setDrawColor(180, 180, 180);
-  doc.setLineWidth(0.5);
-  doc.roundedRect(photoX, photoY, photoW, photoH, 2, 2, 'S');
+  // Try to add the actual photo
+  if (data.photoBase64) {
+    try {
+      doc.addImage(data.photoBase64, 'JPEG', photoX, photoY, photoW, photoH);
+      // Add border around photo
+      doc.setDrawColor(180, 180, 180);
+      doc.setLineWidth(0.5);
+      doc.roundedRect(photoX, photoY, photoW, photoH, 2, 2, 'S');
+    } catch (error) {
+      console.error('Error adding photo to badge:', error);
+      // Fallback to placeholder
+      drawPhotoPlaceholder();
+    }
+  } else {
+    drawPhotoPlaceholder();
+  }
 
-  // Photo placeholder text
-  doc.setTextColor(120, 120, 120);
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Foto do', width / 2, photoY + 11, { align: 'center' });
-  doc.text('Colaborador', width / 2, photoY + 16, { align: 'center' });
+  function drawPhotoPlaceholder() {
+    doc.setFillColor(...lightGray);
+    doc.roundedRect(photoX, photoY, photoW, photoH, 2, 2, 'F');
+    doc.setDrawColor(180, 180, 180);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(photoX, photoY, photoW, photoH, 2, 2, 'S');
+
+    // Photo placeholder text
+    doc.setTextColor(120, 120, 120);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Foto do', width / 2, photoY + 11, { align: 'center' });
+    doc.text('Colaborador', width / 2, photoY + 16, { align: 'center' });
+  }
 
   // Curved bottom section with employee info
   // Draw wave/curve shape
@@ -279,11 +319,27 @@ export function generateBadgesSheetPdf(employees: BadgeData[]) {
     doc.text(companyName.toUpperCase(), x + badgeWidth / 2, y + 20, { align: 'center' });
 
     // Photo area
-    doc.setFillColor(...lightGray);
-    doc.roundedRect(x + 10, y + 32, 34, 28, 2, 2, 'F');
-    doc.setTextColor(120, 120, 120);
-    doc.setFontSize(6);
-    doc.text('Foto', x + badgeWidth / 2, y + 47, { align: 'center' });
+    if (data.photoBase64) {
+      try {
+        doc.addImage(data.photoBase64, 'JPEG', x + 10, y + 32, 34, 28);
+        doc.setDrawColor(180, 180, 180);
+        doc.setLineWidth(0.3);
+        doc.roundedRect(x + 10, y + 32, 34, 28, 2, 2, 'S');
+      } catch (error) {
+        // Fallback to placeholder
+        doc.setFillColor(...lightGray);
+        doc.roundedRect(x + 10, y + 32, 34, 28, 2, 2, 'F');
+        doc.setTextColor(120, 120, 120);
+        doc.setFontSize(6);
+        doc.text('Foto', x + badgeWidth / 2, y + 47, { align: 'center' });
+      }
+    } else {
+      doc.setFillColor(...lightGray);
+      doc.roundedRect(x + 10, y + 32, 34, 28, 2, 2, 'F');
+      doc.setTextColor(120, 120, 120);
+      doc.setFontSize(6);
+      doc.text('Foto', x + badgeWidth / 2, y + 47, { align: 'center' });
+    }
 
     // Bottom section
     doc.setFillColor(...lightBlue);
