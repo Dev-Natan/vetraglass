@@ -102,7 +102,7 @@ export default function Orcamentos() {
   const [searchParams, setSearchParams] = useSearchParams();
   
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<QuoteStatus | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<QuoteStatus | 'all'>('pending');
   const [isNewDialogOpen, setIsNewDialogOpen] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
