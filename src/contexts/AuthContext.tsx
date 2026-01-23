@@ -53,44 +53,74 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentCompany, setCurrentCompany] = useState<Company | null>(null);
   const [isSaasAdmin, setIsSaasAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [initialCheckDone, setInitialCheckDone] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
+    let isMounted = true;
+    let currentFetchId = 0;
+
+    const handleSession = async (newSession: Session | null, source: string) => {
+      if (!isMounted) return;
+      
+      const fetchId = ++currentFetchId;
+      
+      // Update session and user immediately
+      setSession(newSession);
+      setUser(newSession?.user ?? null);
+      
+      if (newSession?.user) {
+        setLoading(true);
+        
+        try {
+          // Only proceed if this is still the latest fetch request
+          if (fetchId !== currentFetchId || !isMounted) return;
+          
+          await fetchUserData(newSession.user.id);
+        } catch (error) {
+          console.error(`Error fetching user data (${source}):`, error);
+        }
+      } else {
+        // Clear all user data on logout
+        setProfile(null);
+        setCompanies([]);
+        setCurrentCompany(null);
+        setIsSaasAdmin(false);
+        setLoading(false);
+      }
+    };
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        // Defer data fetching with setTimeout
-        if (session?.user) {
-          // Set loading to true when fetching new user data
-          setLoading(true);
-          setTimeout(() => {
-            fetchUserData(session.user.id);
-          }, 0);
-        } else {
-          setProfile(null);
-          setCompanies([]);
-          setCurrentCompany(null);
-          setIsSaasAdmin(false);
-          setLoading(false);
+      (event, newSession) => {
+        // Skip initial session event if we haven't done initial check yet
+        // This prevents double-fetching
+        if (event === 'INITIAL_SESSION' && !initialCheckDone) {
+          return;
         }
+        
+        // Handle token refresh silently without clearing state
+        if (event === 'TOKEN_REFRESHED') {
+          setSession(newSession);
+          setUser(newSession?.user ?? null);
+          return;
+        }
+        
+        handleSession(newSession, `onAuthStateChange:${event}`);
       }
     );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchUserData(session.user.id);
-      } else {
-        setLoading(false);
-      }
+    // THEN check for existing session (only once)
+    supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
+      if (!isMounted) return;
+      setInitialCheckDone(true);
+      handleSession(existingSession, 'getSession');
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const fetchUserData = async (userId: string) => {
