@@ -12,6 +12,7 @@ import { SalesChart } from '@/components/dashboard/SalesChart';
 import { RecentActivity } from '@/components/dashboard/RecentActivity';
 import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
 import { FinancialAlerts } from '@/components/dashboard/FinancialAlerts';
+import { OverdueReceivablesAlert } from '@/components/financeiro/OverdueReceivablesAlert';
 import { SalesGoalCard } from '@/components/dashboard/SalesGoalCard';
 import { SystemReminders } from '@/components/dashboard/SystemReminders';
 import { TodayTasksWidget } from '@/components/dashboard/TodayTasksWidget';
@@ -116,6 +117,7 @@ export default function Index() {
             <SystemReminders />
             
             {/* Alertas Financeiros */}
+            <OverdueReceivablesAlert />
             <FinancialAlerts />
           </section>
         )}
