@@ -165,75 +165,78 @@ export function DashboardKPIs() {
   const growth = salesData ? calculateGrowth(salesData.current, salesData.last) : 0;
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
       {/* Vendas do Mês */}
-      <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            Vendas do Mês
-          </CardTitle>
-          <DollarSign className="h-4 w-4 text-primary" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-foreground">
+      <Card className="bg-gradient-to-br from-primary/5 to-transparent border-primary/10">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Vendas do Mês
+            </span>
+            <DollarSign className="h-4 w-4 text-primary" />
+          </div>
+          <div className="text-xl font-bold text-foreground">
             {formatCurrency(salesData?.current || 0)}
           </div>
-          <div className="flex items-center gap-2 mt-1">
+          <div className="flex items-center gap-1.5 mt-2">
             {growth >= 0 ? (
-              <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 gap-1">
-                <TrendingUp className="h-3 w-3" />
-                +{growth.toFixed(1)}%
-              </Badge>
+              <>
+                <TrendingUp className="h-3 w-3 text-success" />
+                <span className="text-xs text-success font-medium">
+                  +{growth.toFixed(0)}%
+                </span>
+              </>
             ) : (
-              <Badge variant="outline" className="text-red-600 border-red-200 bg-red-50 gap-1">
-                <TrendingDown className="h-3 w-3" />
-                {growth.toFixed(1)}%
-              </Badge>
+              <>
+                <TrendingDown className="h-3 w-3 text-destructive" />
+                <span className="text-xs text-destructive font-medium">
+                  {growth.toFixed(0)}%
+                </span>
+              </>
             )}
-            <span className="text-xs text-muted-foreground">vs mês anterior</span>
+            <span className="text-xs text-muted-foreground">vs anterior</span>
           </div>
         </CardContent>
       </Card>
 
       {/* Vendas de Hoje */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            Hoje
-          </CardTitle>
-          <Clock className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-foreground">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Hoje
+            </span>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </div>
+          <div className="text-xl font-bold text-foreground">
             {formatCurrency(salesData?.todayValue || 0)}
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            {salesData?.todayCount || 0} vendas realizadas
+          <p className="text-xs text-muted-foreground mt-2">
+            {salesData?.todayCount || 0} vendas
           </p>
         </CardContent>
       </Card>
 
       {/* Orçamentos Pendentes */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            Orçamentos Pendentes
-          </CardTitle>
-          <FileText className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-foreground">
+      <Card className={quotesData?.expiringSoon && quotesData.expiringSoon > 0 ? 'border-warning/30' : ''}>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Orçamentos
+            </span>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </div>
+          <div className="text-xl font-bold text-foreground">
             {quotesData?.pending || 0}
           </div>
-          <div className="flex items-center gap-2 mt-1">
+          <div className="mt-2">
             {quotesData?.expiringSoon && quotesData.expiringSoon > 0 ? (
-              <Badge variant="destructive" className="gap-1">
-                <AlertTriangle className="h-3 w-3" />
-                {quotesData.expiringSoon} vencendo
-              </Badge>
+              <span className="text-xs text-warning font-medium">
+                {quotesData.expiringSoon} vencendo em breve
+              </span>
             ) : (
               <span className="text-xs text-muted-foreground">
-                {formatCurrency(quotesData?.pendingValue || 0)} em aberto
+                pendentes
               </span>
             )}
           </div>
@@ -241,48 +244,39 @@ export function DashboardKPIs() {
       </Card>
 
       {/* OS em Andamento */}
-      <Card className={osData?.overdue && osData.overdue > 0 ? 'border-destructive/50 bg-destructive/5' : ''}>
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            OS em Andamento
-          </CardTitle>
-          <ClipboardList className={`h-4 w-4 ${osData?.overdue && osData.overdue > 0 ? 'text-destructive' : 'text-muted-foreground'}`} />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-foreground">
-            {osData?.inProgress || 0}
+      <Card className={osData?.overdue && osData.overdue > 0 ? 'border-destructive/30' : ''}>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              OS Ativas
+            </span>
+            <ClipboardList className={`h-4 w-4 ${osData?.overdue && osData.overdue > 0 ? 'text-destructive' : 'text-muted-foreground'}`} />
           </div>
-          <div className="flex items-center gap-2 mt-1">
+          <div className="text-xl font-bold text-foreground">
+            {(osData?.inProgress || 0) + (osData?.pending || 0)}
+          </div>
+          <div className="mt-2">
             {osData?.overdue && osData.overdue > 0 ? (
-              <Badge variant="destructive" className="gap-1">
-                <AlertTriangle className="h-3 w-3" />
+              <span className="text-xs text-destructive font-medium">
                 {osData.overdue} atrasadas
-              </Badge>
+              </span>
             ) : (
               <span className="text-xs text-muted-foreground">
-                {osData?.pending || 0} pendentes
+                {osData?.inProgress || 0} em produção
               </span>
             )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Alertas de Estoque - mostrar apenas se houver alertas */}
+      {/* Alertas de Estoque - inline condicional */}
       {stockAlerts?.lowStock && stockAlerts.lowStock > 0 && (
-        <Card className="col-span-full sm:col-span-2 lg:col-span-1 border-orange-300 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/30">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-orange-700 dark:text-orange-400">
-              Estoque Baixo
-            </CardTitle>
-            <Package className="h-4 w-4 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-700 dark:text-orange-400">
-              {stockAlerts.lowStock} itens
-            </div>
-            <p className="text-xs text-orange-600 dark:text-orange-500 mt-1">
-              Precisam de reposição
-            </p>
+        <Card className="col-span-2 lg:col-span-4 border-warning/30 bg-warning/5">
+          <CardContent className="p-3 flex items-center gap-3">
+            <Package className="h-5 w-5 text-warning" />
+            <span className="text-sm font-medium text-warning-foreground">
+              {stockAlerts.lowStock} itens com estoque baixo precisam de reposição
+            </span>
           </CardContent>
         </Card>
       )}

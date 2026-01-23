@@ -3,104 +3,42 @@ import {
   Plus, 
   ShoppingCart, 
   ClipboardList, 
-  Users,
   FileText,
-  TrendingUp,
-  Package,
-  Boxes,
-  DollarSign,
-  Zap,
-  Sparkles
+  ArrowRight
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { DashboardKPIs } from '@/components/dashboard/DashboardKPIs';
 import { SalesChart } from '@/components/dashboard/SalesChart';
 import { RecentActivity } from '@/components/dashboard/RecentActivity';
 import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
-import { QuickFlowCard } from '@/components/dashboard/QuickFlowCard';
 import { FinancialAlerts } from '@/components/dashboard/FinancialAlerts';
 import { TodayAppointmentsAlert } from '@/components/dashboard/TodayAppointmentsAlert';
 import { SalesGoalCard } from '@/components/dashboard/SalesGoalCard';
 import { SystemReminders } from '@/components/dashboard/SystemReminders';
 import { useAuth } from '@/contexts/AuthContext';
-import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 
-// Ações secundárias (exceto Nova Venda que é hero)
-const secondaryActions = [
+// Ações rápidas principais
+const quickActions = [
   { 
-    icon: Plus, 
+    icon: ShoppingCart, 
+    label: 'Nova Venda', 
+    path: '/caixa-vendas?novo=true',
+    description: 'Registrar venda no caixa',
+    primary: true
+  },
+  { 
+    icon: FileText, 
     label: 'Novo Orçamento', 
     path: '/orcamentos?novo=true',
-    colorClass: 'action-card-green'
+    description: 'Criar proposta comercial'
   },
   { 
     icon: ClipboardList, 
     label: 'Nova OS', 
-    path: '/ordens-servico',
-    colorClass: 'action-card-purple'
-  },
-  { 
-    icon: Users, 
-    label: 'Novo Cliente', 
-    path: '/clientes?novo=true',
-    colorClass: 'action-card-orange'
-  },
-];
-
-const salesMenuItems = [
-  { 
-    icon: FileText, 
-    label: 'Orçamentos', 
-    description: 'Crie e gerencie orçamentos',
-    path: '/orcamentos'
-  },
-  { 
-    icon: ShoppingCart, 
-    label: 'Vendas', 
-    description: 'Finalize vendas e emita notas',
-    path: '/caixa-vendas'
-  },
-  { 
-    icon: Users, 
-    label: 'Clientes', 
-    description: 'Gerencie sua carteira de clientes',
-    path: '/clientes'
-  },
-];
-
-const operationsMenuItems = [
-  { 
-    icon: ClipboardList, 
-    label: 'Ordens de Serviço', 
-    description: 'Acompanhe as OS em andamento',
-    path: '/ordens-servico'
-  },
-  { 
-    icon: Package, 
-    label: 'Produtos', 
-    description: 'Cadastre e edite produtos',
-    path: '/produtos'
-  },
-  { 
-    icon: Boxes, 
-    label: 'Estoque', 
-    description: 'Controle entradas e saídas',
-    path: '/estoque'
-  },
-];
-
-const financeMenuItems = [
-  { 
-    icon: DollarSign, 
-    label: 'Financeiro', 
-    description: 'Contas a pagar e receber',
-    path: '/financeiro'
-  },
-  { 
-    icon: TrendingUp, 
-    label: 'Relatórios', 
-    description: 'Análises e estatísticas',
-    path: '/relatorios'
+    path: '/ordens-servico?novo=true',
+    description: 'Abrir ordem de serviço'
   },
 ];
 
@@ -109,80 +47,76 @@ export default function Index() {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
-        {/* Onboarding Checklist - Shows for new users */}
+      <div className="space-y-6 max-w-7xl mx-auto">
+        {/* Onboarding - só aparece para novos usuários */}
         {currentCompany && <OnboardingChecklist />}
 
-        {/* KPIs Section */}
-        {currentCompany && (
-          <section className="animate-fade-in space-y-4">
-            <DashboardKPIs />
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <SalesGoalCard />
-              <TodayAppointmentsAlert />
-            </div>
-            <SystemReminders />
-            <FinancialAlerts />
-          </section>
-        )}
-
-        {/* Quick Actions */}
-        <section className="section-card bg-amber-50/50 border-amber-200/50 animate-fade-in">
-          <div className="flex items-center gap-2 mb-5">
-            <Zap className="w-5 h-5 text-primary" />
-            <h2 className="font-display font-semibold text-lg text-foreground">Ações Rápidas</h2>
-          </div>
-          
-          {/* Hero Card - Nova Venda */}
-          <Link
-            to="/caixa-vendas?novo=true"
-            className="action-card-hero group mb-4"
-          >
-            <div className="flex items-center justify-between w-full">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <ShoppingCart className="w-7 h-7" />
-                </div>
-                <div className="text-left">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-lg">Nova Venda</span>
-                    <Badge className="bg-white/20 text-white border-white/30 hover:bg-white/30">
-                      <Sparkles className="w-3 h-3 mr-1" />
-                      Mais usado
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-white/80 mt-0.5">
-                    Registrar venda rapidamente no balcão
-                  </p>
-                </div>
-              </div>
-              <div className="hidden sm:block">
-                <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-colors">
-                  <Plus className="w-5 h-5" />
-                </div>
-              </div>
-            </div>
-          </Link>
-
-          {/* Secondary Actions Grid */}
-          <div className="grid grid-cols-3 gap-3">
-            {secondaryActions.map((action) => (
+        {/* Ações Rápidas - Seção Principal */}
+        <section className="animate-fade-in">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {quickActions.map((action) => (
               <Link
                 key={action.label}
                 to={action.path}
-                className={action.colorClass}
+                className="group"
               >
-                <action.icon className="w-5 h-5" />
-                <span className="font-medium text-xs sm:text-sm text-center">{action.label}</span>
+                <Card className={`h-full transition-all duration-200 hover:shadow-md ${
+                  action.primary 
+                    ? 'bg-primary text-primary-foreground hover:bg-primary/90' 
+                    : 'hover:border-primary/50'
+                }`}>
+                  <CardContent className="p-5 flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 ${
+                      action.primary 
+                        ? 'bg-primary-foreground/20' 
+                        : 'bg-primary/10'
+                    }`}>
+                      <action.icon className={`w-6 h-6 ${
+                        action.primary ? 'text-primary-foreground' : 'text-primary'
+                      }`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className={`font-semibold ${
+                        action.primary ? 'text-primary-foreground' : 'text-foreground'
+                      }`}>
+                        {action.label}
+                      </h3>
+                      <p className={`text-sm truncate ${
+                        action.primary ? 'text-primary-foreground/80' : 'text-muted-foreground'
+                      }`}>
+                        {action.description}
+                      </p>
+                    </div>
+                    <Plus className={`w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity ${
+                      action.primary ? 'text-primary-foreground' : 'text-primary'
+                    }`} />
+                  </CardContent>
+                </Card>
               </Link>
             ))}
           </div>
         </section>
 
-        {/* Quick Flow Card - Educational */}
-        {currentCompany && <QuickFlowCard />}
+        {/* KPIs e Alertas */}
+        {currentCompany && (
+          <section className="space-y-4 animate-fade-in">
+            <DashboardKPIs />
+            
+            {/* Alertas lado a lado */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <SalesGoalCard />
+              <TodayAppointmentsAlert />
+            </div>
 
-        {/* Charts and Activity Row */}
+            {/* Lembretes do Sistema */}
+            <SystemReminders />
+            
+            {/* Alertas Financeiros */}
+            <FinancialAlerts />
+          </section>
+        )}
+
+        {/* Gráficos e Atividades */}
         {currentCompany && (
           <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-slide-up">
             <SalesChart />
@@ -190,67 +124,44 @@ export default function Index() {
           </section>
         )}
 
-        {/* Sales & Service Section */}
+        {/* Links Rápidos */}
         <section className="animate-slide-up">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="w-5 h-5 text-muted-foreground" />
-            <h2 className="font-display font-semibold text-lg text-foreground">Vendas & Atendimento</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {salesMenuItems.map((item) => (
-              <Link key={item.label} to={item.path} className="menu-card">
-                <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-                  <item.icon className="w-5 h-5 text-muted-foreground" />
+          <Card className="bg-muted/30">
+            <CardContent className="p-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="text-sm text-muted-foreground font-medium">
+                  Acesso rápido:
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link to="/clientes" className="gap-1">
+                      Clientes <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  </Button>
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link to="/produtos" className="gap-1">
+                      Produtos <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  </Button>
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link to="/estoque" className="gap-1">
+                      Estoque <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  </Button>
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link to="/financeiro" className="gap-1">
+                      Financeiro <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  </Button>
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link to="/relatorios" className="gap-1">
+                      Relatórios <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  </Button>
                 </div>
-                <div>
-                  <h3 className="font-medium text-foreground">{item.label}</h3>
-                  <p className="text-sm text-muted-foreground">{item.description}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-
-        {/* Operations Section */}
-        <section className="animate-slide-up [animation-delay:100ms]">
-          <div className="flex items-center gap-2 mb-4">
-            <Boxes className="w-5 h-5 text-muted-foreground" />
-            <h2 className="font-display font-semibold text-lg text-foreground">Operações</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {operationsMenuItems.map((item) => (
-              <Link key={item.label} to={item.path} className="menu-card">
-                <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-                  <item.icon className="w-5 h-5 text-muted-foreground" />
-                </div>
-                <div>
-                  <h3 className="font-medium text-foreground">{item.label}</h3>
-                  <p className="text-sm text-muted-foreground">{item.description}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-
-        {/* Finance Section */}
-        <section className="animate-slide-up [animation-delay:200ms]">
-          <div className="flex items-center gap-2 mb-4">
-            <DollarSign className="w-5 h-5 text-muted-foreground" />
-            <h2 className="font-display font-semibold text-lg text-foreground">Financeiro</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {financeMenuItems.map((item) => (
-              <Link key={item.label} to={item.path} className="menu-card">
-                <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-                  <item.icon className="w-5 h-5 text-muted-foreground" />
-                </div>
-                <div>
-                  <h3 className="font-medium text-foreground">{item.label}</h3>
-                  <p className="text-sm text-muted-foreground">{item.description}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
+              </div>
+            </CardContent>
+          </Card>
         </section>
       </div>
     </MainLayout>
