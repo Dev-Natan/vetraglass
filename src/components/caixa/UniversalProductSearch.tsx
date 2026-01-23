@@ -10,6 +10,8 @@ import {
   DoorOpen, LayoutGrid, Square, Shield
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useProductCategoryLabels } from '@/hooks/useProductCategories';
+import { useItemTypeLabels } from '@/hooks/useItemTypes';
 
 interface ItemTemplate {
   id: string;
@@ -41,19 +43,8 @@ interface UniversalProductSearchProps {
   onSelectProduct: (product: CompanyProduct) => void;
 }
 
-// Category mappings for products
-const productCategoryLabels: Record<string, string> = {
-  window: 'Janelas',
-  door: 'Portas',
-  partition: 'Divisórias',
-  mirror: 'Espelhos',
-  shower: 'Box',
-  facade: 'Fachadas',
-  guarda_corpo: 'Guarda Corpo',
-  other: 'Outros',
-};
-
-const productCategoryIcons: Record<string, React.ReactNode> = {
+// Default icons for categories and types
+const defaultCategoryIcons: Record<string, React.ReactNode> = {
   window: <LayoutGrid className="w-4 h-4" />,
   door: <DoorOpen className="w-4 h-4" />,
   partition: <Square className="w-4 h-4" />,
@@ -64,15 +55,7 @@ const productCategoryIcons: Record<string, React.ReactNode> = {
   other: <Package className="w-4 h-4" />,
 };
 
-// Material type mappings
-const materialTypeLabels: Record<string, string> = {
-  profile: 'Perfis',
-  glass: 'Vidros',
-  accessory: 'Acessórios',
-  service: 'Serviços',
-};
-
-const materialTypeIcons: Record<string, React.ReactNode> = {
+const defaultTypeIcons: Record<string, React.ReactNode> = {
   profile: <SquareStack className="w-4 h-4" />,
   glass: <Sparkles className="w-4 h-4" />,
   accessory: <Wrench className="w-4 h-4" />,
@@ -90,6 +73,14 @@ export function UniversalProductSearch({
   const [step, setStep] = useState<ViewStep>('linhas');
   const [selectedLinha, setSelectedLinha] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  // Dynamic categories and types from hooks
+  const { labels: productCategoryLabels } = useProductCategoryLabels();
+  const { labels: materialTypeLabels } = useItemTypeLabels();
+  
+  // Use default icons, could be extended to use icons from the database
+  const productCategoryIcons = defaultCategoryIcons;
+  const materialTypeIcons = defaultTypeIcons;
 
   // Fetch product templates for images and categories
   const { data: productTemplates } = useQuery({

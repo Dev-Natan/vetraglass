@@ -42,6 +42,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useItemTypeLabels } from '@/hooks/useItemTypes';
 
 interface ItemTemplate {
   id: string;
@@ -57,20 +58,6 @@ interface ItemTemplate {
   created_at: string;
 }
 
-const typeLabels: Record<string, string> = {
-  glass: 'Vidro',
-  profile: 'Perfil',
-  accessory: 'Acessório',
-  service: 'Serviço',
-};
-
-const typeColors: Record<string, string> = {
-  glass: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
-  profile: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
-  accessory: 'bg-green-500/10 text-green-600 border-green-500/20',
-  service: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
-};
-
 const unitLabels: Record<string, string> = {
   'm²': 'Metro Quadrado',
   'm': 'Metro Linear',
@@ -82,6 +69,9 @@ const unitLabels: Record<string, string> = {
 export default function ItemTemplates() {
   const { isSaasAdmin } = useAuth();
   const queryClient = useQueryClient();
+  
+  // Dynamic item types from hook
+  const { labels: typeLabels, colors: typeColors, itemTypes } = useItemTypeLabels();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');

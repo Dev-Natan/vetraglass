@@ -70,6 +70,8 @@ import {
 import { FormulaEditor } from "@/components/produtos/FormulaEditor";
 import { GlassFormulaEditor } from "@/components/produtos/GlassFormulaEditor";
 import { cn } from "@/lib/utils";
+import { useProductCategoryLabels } from "@/hooks/useProductCategories";
+import { useItemTypeLabels } from "@/hooks/useItemTypes";
 
 type ProductTemplate = {
   id: string;
@@ -116,41 +118,32 @@ type ItemTemplate = {
   image_url: string | null;
 };
 
-// Item type tabs for the dialog
-const itemTypeTabs = [
-  { value: 'glass', label: 'VIDROS', dbType: 'glass' },
-  { value: 'profile', label: 'PERFIS', dbType: 'profile' },
-  { value: 'accessory', label: 'ACESSÓRIOS', dbType: 'accessory' },
-];
-
-type ProductCategory = "window" | "door" | "shower" | "mirror" | "partition" | "facade" | "guarda_corpo" | "other";
-
-const categoriesList: ProductCategory[] = ["window", "door", "shower", "mirror", "partition", "facade", "guarda_corpo", "other"];
-
-const categoryLabels: Record<string, string> = {
-  window: "Janela",
-  door: "Porta",
-  shower: "Box",
-  mirror: "Espelho",
-  partition: "Divisória",
-  facade: "Fachada",
-  guarda_corpo: "Guarda Corpo",
-  other: "Outro",
-};
-
-const categoryColors: Record<string, string> = {
-  window: "bg-blue-500/10 text-blue-600 border-blue-500/20",
-  door: "bg-orange-500/10 text-orange-600 border-orange-500/20",
-  shower: "bg-cyan-500/10 text-cyan-600 border-cyan-500/20",
-  mirror: "bg-purple-500/10 text-purple-600 border-purple-500/20",
-  partition: "bg-green-500/10 text-green-600 border-green-500/20",
-  facade: "bg-amber-500/10 text-amber-600 border-amber-500/20",
-  guarda_corpo: "bg-teal-500/10 text-teal-600 border-teal-500/20",
-  other: "bg-gray-500/10 text-gray-600 border-gray-500/20",
+// Item type tabs for the dialog - derived from itemTypes hook
+const getItemTypeTabs = (itemTypes: { slug: string; name: string }[] | undefined) => {
+  const defaultTabs = [
+    { value: 'glass', label: 'VIDROS', dbType: 'glass' },
+    { value: 'profile', label: 'PERFIS', dbType: 'profile' },
+    { value: 'accessory', label: 'ACESSÓRIOS', dbType: 'accessory' },
+  ];
+  
+  if (!itemTypes?.length) return defaultTabs;
+  
+  return itemTypes.map(type => ({
+    value: type.slug,
+    label: type.name.toUpperCase(),
+    dbType: type.slug,
+  }));
 };
 
 export default function ProductTemplates() {
   const { linha: linhaParam } = useParams<{ linha?: string }>();
+  
+  // Dynamic categories and item types from hooks
+  const { labels: categoryLabels, colors: categoryColors, categories: productCategories } = useProductCategoryLabels();
+  const { labels: typeLabels, colors: typeColors, itemTypes } = useItemTypeLabels();
+  
+  const categoriesList = productCategories?.map(c => c.slug) || [];
+  const itemTypeTabs = getItemTypeTabs(itemTypes);
   const navigate = useNavigate();
   const { isSaasAdmin } = useAuth();
   const queryClient = useQueryClient();
@@ -205,7 +198,7 @@ export default function ProductTemplates() {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    category: "window" as ProductCategory,
+    category: "window",
     linha: currentLinha || "",
     min_width: "",
     max_width: "",
@@ -407,7 +400,7 @@ export default function ProductTemplates() {
   // Create/Update mutation
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData & { id?: string }) => {
-      const payload = {
+      const payload: Record<string, unknown> = {
         name: data.name,
         description: data.description || null,
         category: data.category,
@@ -426,7 +419,7 @@ export default function ProductTemplates() {
           .eq("id", data.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("product_templates").insert(payload);
+        const { error } = await supabase.from("product_templates").insert(payload as never);
         if (error) throw error;
       }
     },
@@ -757,7 +750,7 @@ export default function ProductTemplates() {
     setFormData({
       name: "",
       description: "",
-      category: "window" as ProductCategory,
+      category: categoriesList[0] || "window",
       linha: currentLinha || "",
       min_width: "",
       max_width: "",
@@ -772,7 +765,7 @@ export default function ProductTemplates() {
     setFormData({
       name: template.name,
       description: template.description || "",
-      category: template.category as ProductCategory,
+      category: template.category,
       linha: template.linha || "",
       min_width: template.min_width?.toString() || "",
       max_width: template.max_width?.toString() || "",
@@ -890,7 +883,7 @@ export default function ProductTemplates() {
                     <Label htmlFor="category">Categoria *</Label>
                     <Select
                       value={formData.category}
-                      onValueChange={(value) => setFormData({ ...formData, category: value as ProductCategory })}
+                      onValueChange={(value) => setFormData({ ...formData, category: value })}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -898,7 +891,7 @@ export default function ProductTemplates() {
                       <SelectContent>
                         {categoriesList.map((cat) => (
                           <SelectItem key={cat} value={cat}>
-                            {categoryLabels[cat]}
+                            {categoryLabels[cat] || cat}
                           </SelectItem>
                         ))}
                       </SelectContent>
