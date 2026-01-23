@@ -14,6 +14,7 @@ import { ActivateProductDialog } from '@/components/produtos/ActivateProductDial
 import { TipologiasSheet } from '@/components/produtos/TipologiasSheet';
 import { CreateCustomProductDialog } from '@/components/produtos/CreateCustomProductDialog';
 import { EditCustomProductDialog } from '@/components/produtos/EditCustomProductDialog';
+import { useProductCategoryLabels } from '@/hooks/useProductCategories';
 
 type ProductTemplate = {
   id: string;
@@ -54,6 +55,7 @@ export default function ProdutosLinha() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { currentCompany } = useAuth();
+  const { labels: categoryLabels, categories: productCategories } = useProductCategoryLabels();
   const [searchTerm, setSearchTerm] = useState('');
   const [showActive, setShowActive] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -63,18 +65,6 @@ export default function ProdutosLinha() {
   const [createCustomDialogOpen, setCreateCustomDialogOpen] = useState(false);
   const [editCustomDialogOpen, setEditCustomDialogOpen] = useState(false);
   const [selectedProductForEdit, setSelectedProductForEdit] = useState<DisplayProduct | null>(null);
-
-  // Category labels
-  const categoryLabels: Record<string, string> = {
-    window: 'Janela',
-    door: 'Porta',
-    facade: 'Fachada',
-    shower: 'Box de Banheiro',
-    mirror: 'Espelho',
-    partition: 'Divisória',
-    guarda_corpo: 'Guarda Corpo',
-    other: 'Outros',
-  };
 
   const currentLinha = linhaParam ? decodeURIComponent(linhaParam) : '';
 

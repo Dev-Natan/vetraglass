@@ -72,6 +72,7 @@ import { GlassFormulaEditor } from "@/components/produtos/GlassFormulaEditor";
 import { cn } from "@/lib/utils";
 import { useProductCategoryLabels } from "@/hooks/useProductCategories";
 import { useItemTypeLabels } from "@/hooks/useItemTypes";
+import { useProductLinhas } from "@/hooks/useProductLinhas";
 
 type ProductTemplate = {
   id: string;
@@ -138,12 +139,14 @@ const getItemTypeTabs = (itemTypes: { slug: string; name: string }[] | undefined
 export default function ProductTemplates() {
   const { linha: linhaParam } = useParams<{ linha?: string }>();
   
-  // Dynamic categories and item types from hooks
+  // Dynamic categories, item types and linhas from hooks
   const { labels: categoryLabels, colors: categoryColors, categories: productCategories } = useProductCategoryLabels();
   const { labels: typeLabels, colors: typeColors, itemTypes } = useItemTypeLabels();
+  const { data: productLinhas } = useProductLinhas();
   
   const categoriesList = productCategories?.map(c => c.slug) || [];
   const itemTypeTabs = getItemTypeTabs(itemTypes);
+  const availableLines = productLinhas?.map(l => l.name) || [];
   const navigate = useNavigate();
   const { isSaasAdmin } = useAuth();
   const queryClient = useQueryClient();
@@ -240,19 +243,7 @@ export default function ProductTemplates() {
     },
   });
 
-  // Fetch available lines
-  const { data: availableLines } = useQuery({
-    queryKey: ["available-lines"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("product_templates")
-        .select("linha")
-        .not("linha", "is", null);
-      if (error) throw error;
-      const lines = [...new Set(data.map((d) => d.linha).filter(Boolean))];
-      return lines as string[];
-    },
-  });
+  // availableLines is now provided by useProductLinhas hook above
 
   // Fetch item templates for composition
   const { data: itemTemplates } = useQuery({

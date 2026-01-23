@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
+import { useProductCategories } from '@/hooks/useProductCategories';
 
 interface EditCustomProductDialogProps {
   open: boolean;
@@ -24,19 +25,10 @@ interface EditCustomProductDialogProps {
   } | null;
 }
 
-const categoryOptions = [
-  { value: 'window', label: 'Janela' },
-  { value: 'door', label: 'Porta' },
-  { value: 'facade', label: 'Fachada' },
-  { value: 'shower', label: 'Box de Banheiro' },
-  { value: 'mirror', label: 'Espelho' },
-  { value: 'partition', label: 'Divisória' },
-  { value: 'guarda_corpo', label: 'Guarda Corpo' },
-  { value: 'other', label: 'Outros' },
-];
-
 export function EditCustomProductDialog({ open, onOpenChange, product }: EditCustomProductDialogProps) {
   const queryClient = useQueryClient();
+  const { data: productCategories } = useProductCategories();
+  
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('other');
@@ -115,9 +107,9 @@ export function EditCustomProductDialog({ open, onOpenChange, product }: EditCus
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {categoryOptions.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
+                {productCategories?.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.slug}>
+                    {cat.name}
                   </SelectItem>
                 ))}
               </SelectContent>

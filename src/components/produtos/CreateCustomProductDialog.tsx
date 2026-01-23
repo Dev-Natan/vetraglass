@@ -11,6 +11,8 @@ import { AlertTriangle, Sparkles, Package, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { useProductCategories } from '@/hooks/useProductCategories';
+import { useProductLinhas } from '@/hooks/useProductLinhas';
 
 interface CreateCustomProductDialogProps {
   open: boolean;
@@ -18,20 +20,13 @@ interface CreateCustomProductDialogProps {
   defaultLinha?: string;
 }
 
-const defaultCategories = [
-  { value: 'window', label: 'Janela' },
-  { value: 'door', label: 'Porta' },
-  { value: 'shower', label: 'Box de Banheiro' },
-  { value: 'mirror', label: 'Espelho' },
-  { value: 'partition', label: 'Divisória' },
-  { value: 'facade', label: 'Fachada' },
-  { value: 'guarda_corpo', label: 'Guarda Corpo' },
-  { value: 'other', label: 'Outros' },
-];
-
 export function CreateCustomProductDialog({ open, onOpenChange, defaultLinha }: CreateCustomProductDialogProps) {
   const { currentCompany } = useAuth();
   const queryClient = useQueryClient();
+  
+  // Use dynamic categories and linhas from database
+  const { data: productCategories } = useProductCategories();
+  const { data: productLinhas } = useProductLinhas();
   
   const [name, setName] = useState('');
   const [category, setCategory] = useState('other');
@@ -85,8 +80,9 @@ export function CreateCustomProductDialog({ open, onOpenChange, defaultLinha }: 
         .not('category', 'is', null);
       
       const customCats = new Set<string>();
+      const defaultCatSlugs = new Set(productCategories?.map(c => c.slug) || []);
       data?.forEach(p => {
-        if (p.category && !defaultCategories.find(c => c.value === p.category)) {
+        if (p.category && !defaultCatSlugs.has(p.category)) {
           customCats.add(p.category);
         }
       });
@@ -96,9 +92,9 @@ export function CreateCustomProductDialog({ open, onOpenChange, defaultLinha }: 
     enabled: !!currentCompany?.id && open,
   });
 
-  // Combined categories (default + custom)
+  // Combined categories (from database + custom)
   const allCategories = [
-    ...defaultCategories,
+    ...(productCategories?.map(c => ({ value: c.slug, label: c.name })) || []),
     ...existingCategories.map(c => ({ value: c, label: c })),
   ];
 

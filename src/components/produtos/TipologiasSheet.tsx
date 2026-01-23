@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ActivateWithCompositionDialog } from './ActivateWithCompositionDialog';
+import { useProductCategoryLabels } from '@/hooks/useProductCategories';
 
 interface TipologiasSheetProps {
   open: boolean;
@@ -46,20 +47,10 @@ interface ProductTemplate {
   is_active: boolean;
 }
 
-const categoryLabels: Record<string, string> = {
-  window: 'Janela',
-  door: 'Porta',
-  facade: 'Fachada',
-  shower: 'Box de Banheiro',
-  mirror: 'Espelho',
-  partition: 'Divisória',
-  guarda_corpo: 'Guarda Corpo',
-  other: 'Outros',
-};
-
 export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetProps) {
   const { currentCompany } = useAuth();
   const queryClient = useQueryClient();
+  const { labels: categoryLabels } = useProductCategoryLabels();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedForDownload, setSelectedForDownload] = useState<Set<string>>(new Set());
   const [activateDialogOpen, setActivateDialogOpen] = useState(false);

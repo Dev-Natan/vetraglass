@@ -9,6 +9,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Package, Check, ArrowLeft, Ruler, DollarSign, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useProductCategoryLabels } from '@/hooks/useProductCategories';
+import { useProductLinhas } from '@/hooks/useProductLinhas';
 
 interface AddProductPanelProps {
   onAdd: (product: {
@@ -45,19 +47,10 @@ const glassThicknesses = [
   { value: '10mm', label: '10mm' },
 ];
 
-const categoryLabels: Record<string, string> = {
-  window: 'Janela',
-  door: 'Porta',
-  partition: 'Divisória',
-  mirror: 'Espelho',
-  shower: 'Box',
-  facade: 'Fachada',
-  guarda_corpo: 'Guarda Corpo',
-  other: 'Outros',
-};
-
 export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   const { currentCompany } = useAuth();
+  const { labels: categoryLabels, categories: productCategories } = useProductCategoryLabels();
+  const { data: productLinhas } = useProductLinhas();
   const [selectedLinha, setSelectedLinha] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedProductId, setSelectedProductId] = useState<string>('');
