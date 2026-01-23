@@ -40,9 +40,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { format, startOfMonth, endOfMonth, startOfWeek, subMonths, startOfDay, endOfDay } from 'date-fns';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { CancelarVendaDialog } from '@/components/caixa/CancelarVendaDialog';
@@ -54,8 +52,8 @@ import { ContasReceberTab } from '@/components/financeiro/ContasReceberTab';
 import { CaixaEmpresaTab } from '@/components/financeiro/CaixaEmpresaTab';
 import { CaixaReportTab } from '@/components/financeiro/CaixaReportTab';
 import { calculateFormulaQuantity } from '@/utils/safeFormulaEvaluator';
+import { MonthSelector, getMonthDateRange } from '@/components/common/MonthSelector';
 
-type PeriodFilter = 'today' | 'week' | 'month' | 'last_month' | 'custom' | 'all';
 type PaymentFilter = 'all' | 'dinheiro' | 'cartao' | 'pix';
 type StatusFilter = 'all' | 'paid' | 'pending' | 'cancelled';
 
@@ -92,15 +90,14 @@ export default function Financeiro() {
   const { currentCompany } = useAuth();
   const queryClient = useQueryClient();
 
+  // Month selection state - shared across all tabs
+  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
+  const dateRange = getMonthDateRange(selectedMonth);
+
   // Filters
-  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('month');
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [customDateRange, setCustomDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
-    from: undefined,
-    to: undefined,
-  });
   const [activeTab, setActiveTab] = useState('caixa-empresa');
 
   // Dialogs
@@ -108,52 +105,20 @@ export default function Financeiro() {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
 
-  // Get date range based on period filter
-  const getDateRange = (period: PeriodFilter) => {
-    const now = new Date();
-    switch (period) {
-      case 'today':
-        return { start: startOfDay(now), end: endOfDay(now) };
-      case 'week':
-        return { start: startOfWeek(now, { locale: ptBR }), end: endOfDay(now) };
-      case 'month':
-        return { start: startOfMonth(now), end: endOfMonth(now) };
-      case 'last_month':
-        const lastMonth = subMonths(now, 1);
-        return { start: startOfMonth(lastMonth), end: endOfMonth(lastMonth) };
-      case 'custom':
-        return { 
-          start: customDateRange.from ? startOfDay(customDateRange.from) : null, 
-          end: customDateRange.to ? endOfDay(customDateRange.to) : null 
-        };
-      case 'all':
-      default:
-        return { start: null, end: null };
-    }
-  };
-
-  // Fetch all sales with filters
+  // Fetch all sales with month filter
   const { data: sales = [], isLoading } = useQuery({
-    queryKey: ['sales-financeiro', currentCompany?.id, periodFilter, customDateRange],
+    queryKey: ['sales-financeiro', currentCompany?.id, selectedMonth.getMonth(), selectedMonth.getFullYear()],
     queryFn: async () => {
       if (!currentCompany?.id) return [];
 
-      const { start, end } = getDateRange(periodFilter);
-
-      let query = supabase
+      const { data, error } = await supabase
         .from('sales')
         .select('*')
         .eq('company_id', currentCompany.id)
+        .gte('created_at', dateRange.start.toISOString())
+        .lte('created_at', dateRange.end.toISOString())
         .order('created_at', { ascending: false });
 
-      if (start) {
-        query = query.gte('created_at', start.toISOString());
-      }
-      if (end) {
-        query = query.lte('created_at', end.toISOString());
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
@@ -383,22 +348,22 @@ export default function Financeiro() {
 
           {/* Tab: Caixa Empresa */}
           <TabsContent value="caixa-empresa" className="mt-6">
-            <CaixaEmpresaTab />
+            <CaixaEmpresaTab selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
           </TabsContent>
 
           {/* Tab: Relatórios de Caixa */}
           <TabsContent value="relatorios" className="mt-6">
-            <CaixaReportTab />
+            <CaixaReportTab selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
           </TabsContent>
 
           {/* Tab: Comissões */}
           <TabsContent value="comissoes" className="mt-6">
-            <CommissionsTab />
+            <CommissionsTab selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
           </TabsContent>
 
           {/* Tab: Despesas */}
           <TabsContent value="despesas" className="mt-6">
-            <ExpensesTab />
+            <ExpensesTab selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
           </TabsContent>
 
           {/* Tab: Vendas */}
@@ -461,13 +426,19 @@ export default function Financeiro() {
             {/* Filters */}
             <Card>
               <CardHeader className="pb-4">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Filter className="w-5 h-5" />
-                  Filtros
-                </CardTitle>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Filter className="w-5 h-5" />
+                    Vendas do Mês
+                  </CardTitle>
+                  <MonthSelector 
+                    selectedDate={selectedMonth} 
+                    onMonthChange={setSelectedMonth}
+                  />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-wrap gap-4">
+                <div className="flex flex-wrap gap-3">
                   <div className="flex-1 min-w-[200px]">
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -479,51 +450,6 @@ export default function Financeiro() {
                       />
                     </div>
                   </div>
-
-                  <Select value={periodFilter} onValueChange={(v) => setPeriodFilter(v as PeriodFilter)}>
-                    <SelectTrigger className="w-[160px]">
-                      <Calendar className="w-4 h-4 mr-2" />
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="today">Hoje</SelectItem>
-                      <SelectItem value="week">Esta semana</SelectItem>
-                      <SelectItem value="month">Este mês</SelectItem>
-                      <SelectItem value="last_month">Mês passado</SelectItem>
-                      <SelectItem value="all">Todo período</SelectItem>
-                      <SelectItem value="custom">Personalizado</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  {periodFilter === 'custom' && (
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="gap-2">
-                          <Calendar className="w-4 h-4" />
-                          {customDateRange.from ? (
-                            customDateRange.to ? (
-                              <>
-                                {format(customDateRange.from, 'dd/MM')} - {format(customDateRange.to, 'dd/MM')}
-                              </>
-                            ) : (
-                              format(customDateRange.from, 'dd/MM/yyyy')
-                            )
-                          ) : (
-                            'Selecionar período'
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <CalendarComponent
-                          mode="range"
-                          selected={customDateRange as { from: Date | undefined; to?: Date | undefined }}
-                          onSelect={(range) => setCustomDateRange({ from: range?.from, to: range?.to })}
-                          locale={ptBR}
-                          numberOfMonths={2}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  )}
 
                   <Select value={paymentFilter} onValueChange={(v) => setPaymentFilter(v as PaymentFilter)}>
                     <SelectTrigger className="w-[140px]">

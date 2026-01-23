@@ -19,9 +19,10 @@ import {
   ArrowDownRight,
   Wallet
 } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, startOfWeek, subMonths, startOfDay, endOfDay, subDays } from 'date-fns';
+import { format, startOfMonth, endOfMonth, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { MonthSelector } from '@/components/common/MonthSelector';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import {
   Select,
@@ -40,65 +41,39 @@ import {
 } from '@/components/ui/table';
 import { generateCaixaReportPdf } from '@/utils/generateCaixaReportPdf';
 
-type PeriodFilter = 'today' | 'yesterday' | 'week' | 'month' | 'last_month' | 'custom';
 type MovementTypeFilter = 'all' | 'entrada' | 'saida';
 
-export function CaixaReportTab() {
-  const { currentCompany } = useAuth();
-  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('month');
-  const [typeFilter, setTypeFilter] = useState<MovementTypeFilter>('all');
-  const [customDateRange, setCustomDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
-    from: undefined,
-    to: undefined,
-  });
+interface CaixaReportTabProps {
+  selectedMonth?: Date;
+  onMonthChange?: (date: Date) => void;
+}
 
-  const getDateRange = (period: PeriodFilter) => {
-    const now = new Date();
-    switch (period) {
-      case 'today':
-        return { start: startOfDay(now), end: endOfDay(now) };
-      case 'yesterday':
-        const yesterday = subDays(now, 1);
-        return { start: startOfDay(yesterday), end: endOfDay(yesterday) };
-      case 'week':
-        return { start: startOfWeek(now, { locale: ptBR }), end: endOfDay(now) };
-      case 'month':
-        return { start: startOfMonth(now), end: endOfMonth(now) };
-      case 'last_month':
-        const lastMonth = subMonths(now, 1);
-        return { start: startOfMonth(lastMonth), end: endOfMonth(lastMonth) };
-      case 'custom':
-        return { 
-          start: customDateRange.from ? startOfDay(customDateRange.from) : null, 
-          end: customDateRange.to ? endOfDay(customDateRange.to) : null 
-        };
-      default:
-        return { start: startOfMonth(now), end: endOfMonth(now) };
-    }
-  };
+export function CaixaReportTab({ selectedMonth: externalMonth, onMonthChange }: CaixaReportTabProps) {
+  const { currentCompany } = useAuth();
+  
+  // Use internal state if no external control
+  const [internalMonth, setInternalMonth] = useState(new Date());
+  const selectedMonth = externalMonth ?? internalMonth;
+  const handleMonthChange = onMonthChange ?? setInternalMonth;
+  
+  const dateRange = { start: startOfMonth(selectedMonth), end: endOfMonth(selectedMonth) };
+  
+  const [typeFilter, setTypeFilter] = useState<MovementTypeFilter>('all');
 
   // Fetch company cash movements
   const { data: movements = [], isLoading: loadingMovements } = useQuery({
-    queryKey: ['company-cash-movements-report', currentCompany?.id, periodFilter, customDateRange],
+    queryKey: ['company-cash-movements-report', currentCompany?.id, selectedMonth.getMonth(), selectedMonth.getFullYear()],
     queryFn: async () => {
       if (!currentCompany?.id) return [];
       
-      const { start, end } = getDateRange(periodFilter);
-      
-      let query = supabase
+      const { data, error } = await supabase
         .from('company_cash_movements')
         .select('*')
         .eq('company_id', currentCompany.id)
+        .gte('created_at', dateRange.start.toISOString())
+        .lte('created_at', dateRange.end.toISOString())
         .order('created_at', { ascending: false });
 
-      if (start) {
-        query = query.gte('created_at', start.toISOString());
-      }
-      if (end) {
-        query = query.lte('created_at', end.toISOString());
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
@@ -107,26 +82,18 @@ export function CaixaReportTab() {
 
   // Fetch daily cash registers for the period
   const { data: cashRegisters = [], isLoading: loadingRegisters } = useQuery({
-    queryKey: ['cash-registers-report', currentCompany?.id, periodFilter, customDateRange],
+    queryKey: ['cash-registers-report', currentCompany?.id, selectedMonth.getMonth(), selectedMonth.getFullYear()],
     queryFn: async () => {
       if (!currentCompany?.id) return [];
       
-      const { start, end } = getDateRange(periodFilter);
-      
-      let query = supabase
+      const { data, error } = await supabase
         .from('cash_registers')
         .select('*')
         .eq('company_id', currentCompany.id)
+        .gte('opened_at', dateRange.start.toISOString())
+        .lte('opened_at', dateRange.end.toISOString())
         .order('opened_at', { ascending: false });
 
-      if (start) {
-        query = query.gte('opened_at', start.toISOString());
-      }
-      if (end) {
-        query = query.lte('opened_at', end.toISOString());
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
@@ -197,18 +164,7 @@ export function CaixaReportTab() {
   };
 
   const getPeriodLabel = () => {
-    const { start, end } = getDateRange(periodFilter);
-    if (periodFilter === 'custom' && start && end) {
-      return `${format(start, 'dd/MM/yyyy')} - ${format(end, 'dd/MM/yyyy')}`;
-    }
-    const labels: Record<string, string> = {
-      today: 'Hoje',
-      yesterday: 'Ontem',
-      week: 'Esta Semana',
-      month: 'Este Mês',
-      last_month: 'Mês Passado',
-    };
-    return labels[periodFilter] || '';
+    return format(selectedMonth, "MMMM 'de' yyyy", { locale: ptBR });
   };
 
   const handlePrint = () => {
@@ -271,68 +227,19 @@ export function CaixaReportTab() {
       {/* Filters */}
       <Card>
         <CardHeader className="pb-4">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filtros do Relatório
-          </CardTitle>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Filter className="h-5 w-5" />
+              Relatório de Caixa
+            </CardTitle>
+            <MonthSelector 
+              selectedDate={selectedMonth} 
+              onMonthChange={handleMonthChange}
+            />
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-4">
-            {/* Period Filter */}
-            <div className="space-y-1">
-              <label className="text-sm font-medium text-muted-foreground">Período</label>
-              <Select value={periodFilter} onValueChange={(v) => setPeriodFilter(v as PeriodFilter)}>
-                <SelectTrigger className="w-[160px]">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="today">Hoje</SelectItem>
-                  <SelectItem value="yesterday">Ontem</SelectItem>
-                  <SelectItem value="week">Esta Semana</SelectItem>
-                  <SelectItem value="month">Este Mês</SelectItem>
-                  <SelectItem value="last_month">Mês Passado</SelectItem>
-                  <SelectItem value="custom">Personalizado</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Custom Date Range */}
-            {periodFilter === 'custom' && (
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-muted-foreground">Intervalo</label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-[260px] justify-start">
-                      <Calendar className="h-4 w-4 mr-2" />
-                      {customDateRange.from ? (
-                        customDateRange.to ? (
-                          <>
-                            {format(customDateRange.from, 'dd/MM/yyyy')} - {format(customDateRange.to, 'dd/MM/yyyy')}
-                          </>
-                        ) : (
-                          format(customDateRange.from, 'dd/MM/yyyy')
-                        )
-                      ) : (
-                        'Selecionar datas'
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <CalendarComponent
-                      initialFocus
-                      mode="range"
-                      defaultMonth={customDateRange.from}
-                      selected={{ from: customDateRange.from, to: customDateRange.to }}
-                      onSelect={(range) => setCustomDateRange({ from: range?.from, to: range?.to })}
-                      numberOfMonths={2}
-                      locale={ptBR}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            )}
-
+          <div className="flex flex-wrap items-end gap-4">
             {/* Type Filter */}
             <div className="space-y-1">
               <label className="text-sm font-medium text-muted-foreground">Tipo</label>

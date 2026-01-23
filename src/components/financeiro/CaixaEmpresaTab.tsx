@@ -23,12 +23,13 @@ import {
   CreditCard,
   Smartphone
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { MovimentoCaixaEmpresaDialog } from '@/components/caixa/MovimentoCaixaEmpresaDialog';
 import { CaixaAdiantamentosCard } from '@/components/caixa/CaixaAdiantamentosCard';
 import { AbrirCaixaDialog } from '@/components/caixa/AbrirCaixaDialog';
 import { FecharCaixaDialog } from '@/components/caixa/FecharCaixaDialog';
+import { MonthSelector } from '@/components/common/MonthSelector';
 import {
   Table,
   TableBody,
@@ -38,9 +39,22 @@ import {
   TableRow,
 } from '@/components/ui/table';
 
-export function CaixaEmpresaTab() {
+interface CaixaEmpresaTabProps {
+  selectedMonth?: Date;
+  onMonthChange?: (date: Date) => void;
+}
+
+export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }: CaixaEmpresaTabProps) {
   const { currentCompany, user } = useAuth();
   const queryClient = useQueryClient();
+  
+  // Use internal state if no external control
+  const [internalMonth, setInternalMonth] = useState(new Date());
+  const selectedMonth = externalMonth ?? internalMonth;
+  const handleMonthChange = onMonthChange ?? setInternalMonth;
+  
+  const dateRange = { start: startOfMonth(selectedMonth), end: endOfMonth(selectedMonth) };
+  
   const [dialogType, setDialogType] = useState<'entrada' | 'saida' | 'config' | null>(null);
   const [abrirCaixaOpen, setAbrirCaixaOpen] = useState(false);
   const [fecharCaixaOpen, setFecharCaixaOpen] = useState(false);

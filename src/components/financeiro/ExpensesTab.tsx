@@ -59,9 +59,10 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { format, startOfMonth, endOfMonth, parseISO, isAfter, isBefore } from 'date-fns';
+import { format, startOfMonth, endOfMonth, parseISO, isAfter, isBefore, isWithinInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { MonthSelector } from '@/components/common/MonthSelector';
 
 interface Expense {
   id: string;
@@ -111,9 +112,21 @@ const recurrenceOptions = [
   { value: 'yearly', label: 'Anual' },
 ];
 
-export function ExpensesTab() {
+interface ExpensesTabProps {
+  selectedMonth?: Date;
+  onMonthChange?: (date: Date) => void;
+}
+
+export function ExpensesTab({ selectedMonth: externalMonth, onMonthChange }: ExpensesTabProps) {
   const { currentCompany } = useAuth();
   const queryClient = useQueryClient();
+  
+  // Use internal state if no external control
+  const [internalMonth, setInternalMonth] = useState(new Date());
+  const selectedMonth = externalMonth ?? internalMonth;
+  const handleMonthChange = onMonthChange ?? setInternalMonth;
+  
+  const dateRange = { start: startOfMonth(selectedMonth), end: endOfMonth(selectedMonth) };
   
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
