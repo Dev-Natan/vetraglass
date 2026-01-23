@@ -3,8 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Scissors, Maximize2 } from 'lucide-react';
-import { GlassPreview } from '@/components/plano-corte/GlassPreview';
+import { Scissors, Maximize2, Layers, Square } from 'lucide-react';
+import { OSGlassCutCard } from './OSGlassCutCard';
 
 interface OSCuttingPlanProps {
   ordemServicoId: string;
@@ -74,8 +74,50 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
     );
   }
 
+  // Calculate totals for summary
+  const totalGlassArea = plans.reduce((sum, plan) => {
+    const planArea = (plan.glass_cuts_data || []).reduce((acc, glass) => 
+      acc + (glass.areaM2 * glass.quantity * plan.quantity), 0);
+    return sum + planArea;
+  }, 0);
+
+  const totalGlassPanels = plans.reduce((sum, plan) => {
+    const panelCount = (plan.glass_cuts_data || []).reduce((acc, glass) => 
+      acc + (glass.quantity * plan.quantity), 0);
+    return sum + panelCount;
+  }, 0);
+
   return (
     <div className="space-y-6">
+      {/* Summary Card for Glass */}
+      {totalGlassPanels > 0 && (
+        <Card className="bg-gradient-to-r from-sky-50 to-cyan-50 dark:from-sky-950/30 dark:to-cyan-950/30 border-sky-200 dark:border-sky-800">
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-sky-500/20 flex items-center justify-center">
+                  <Layers className="w-5 h-5 text-sky-600 dark:text-sky-400" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Resumo de Vidros</h3>
+                  <p className="text-sm text-muted-foreground">Total de painéis e área</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-sky-600 dark:text-sky-400">{totalGlassPanels}</div>
+                  <div className="text-xs text-muted-foreground">Painéis</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-sky-600 dark:text-sky-400">{totalGlassArea.toFixed(2)}</div>
+                  <div className="text-xs text-muted-foreground">m² total</div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {plans.map((plan) => (
         <Card key={plan.id}>
           <CardHeader className="pb-2">
@@ -90,96 +132,71 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
             {/* Profile Cuts */}
             {plan.cuts_data && plan.cuts_data.length > 0 && (
               <div>
-                <h4 className="font-medium mb-2 flex items-center gap-2">
+                <h4 className="font-medium mb-3 flex items-center gap-2">
                   <Scissors className="w-4 h-4" />
                   Cortes de Perfil
                 </h4>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Perfil</TableHead>
-                      <TableHead>Fórmula</TableHead>
-                      <TableHead>Posição</TableHead>
-                      <TableHead className="text-right">Medida</TableHead>
-                      <TableHead className="text-right">Qtd</TableHead>
-                      <TableHead className="text-right">Ângulo</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {plan.cuts_data.map((cut: CutData, idx: number) => (
-                      <TableRow key={idx}>
-                        <TableCell className="font-medium">{cut.profileName}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="font-mono text-xs">
-                            {cut.formula}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={cut.position === 'Altura' ? 'default' : 'secondary'}>
-                            {cut.position}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-mono font-bold text-primary">
-                          {cut.calculatedLength}mm
-                        </TableCell>
-                        <TableCell className="text-right">{cut.quantity}</TableCell>
-                        <TableCell className="text-right">{cut.cutAngle}°</TableCell>
+                <div className="rounded-lg border overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50">
+                        <TableHead>Perfil</TableHead>
+                        <TableHead>Fórmula</TableHead>
+                        <TableHead>Posição</TableHead>
+                        <TableHead className="text-right">Medida</TableHead>
+                        <TableHead className="text-right">Qtd</TableHead>
+                        <TableHead className="text-right">Ângulo</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {plan.cuts_data.map((cut: CutData, idx: number) => (
+                        <TableRow key={idx}>
+                          <TableCell className="font-medium">{cut.profileName}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="font-mono text-xs">
+                              {cut.formula}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={cut.position === 'Altura' ? 'default' : 'secondary'}>
+                              {cut.position}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-mono font-bold text-primary">
+                            {cut.calculatedLength}mm
+                          </TableCell>
+                          <TableCell className="text-right">{cut.quantity}</TableCell>
+                          <TableCell className="text-right">{cut.cutAngle}°</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             )}
 
-            {/* Glass Cuts */}
+            {/* Glass Cuts - Enhanced Display */}
             {plan.glass_cuts_data && plan.glass_cuts_data.length > 0 && (
               <div>
-                <h4 className="font-medium mb-2 flex items-center gap-2">
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="3" y="3" width="18" height="18" rx="2" />
-                    <line x1="3" y1="9" x2="21" y2="9" />
-                    <line x1="9" y1="21" x2="9" y2="9" />
-                  </svg>
+                <h4 className="font-medium mb-3 flex items-center gap-2">
+                  <Square className="w-4 h-4" />
                   Cortes de Vidro
+                  <Badge variant="outline" className="ml-2">
+                    {plan.glass_cuts_data.length} tipo{plan.glass_cuts_data.length > 1 ? 's' : ''}
+                  </Badge>
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                   {plan.glass_cuts_data.map((glass: GlassCutData, idx: number) => (
-                    <div key={idx} className="border rounded-lg p-4">
-                      <div className="flex items-start gap-3">
-                        <GlassPreview 
-                          width={glass.calculatedWidth} 
-                          height={glass.calculatedHeight} 
-                          maxSize={80}
-                        />
-                        <div className="flex-1">
-                          <div className="font-medium">{glass.glassName}</div>
-                          <div className="text-sm text-muted-foreground mt-1">
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="font-mono text-xs">
-                                L: {glass.widthFormula}
-                              </Badge>
-                              <Badge variant="outline" className="font-mono text-xs">
-                                A: {glass.heightFormula}
-                              </Badge>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 mt-2">
-                            <span className="font-mono font-bold text-primary">
-                              {glass.calculatedWidth} x {glass.calculatedHeight}mm
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                            <span>{glass.quantity}x</span>
-                            <span>•</span>
-                            <span>{glass.areaM2.toFixed(2)} m²</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    <OSGlassCutCard 
+                      key={idx}
+                      glass={glass}
+                      index={idx}
+                      totalQuantity={plan.quantity}
+                    />
                   ))}
                 </div>
               </div>
