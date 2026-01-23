@@ -14,7 +14,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { useAuth } from '@/contexts/AuthContext';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { generateCredentialCardPdf, generateCredentialSheetPdf } from '@/utils/generateCredentialCardPdf';
-import { generateEmployeeBadgePdf } from '@/utils/generateEmployeeBadgePdf';
+import { generateEmployeeBadgePdf, imageUrlToBase64 } from '@/utils/generateEmployeeBadgePdf';
 import { toast } from 'sonner';
 
 const roleLabels: Record<string, string> = {
@@ -76,11 +76,20 @@ export default function Funcionarios() {
     toast.success('Folha de credenciais gerada!');
   };
 
-  const handlePrintBadge = (employee: Employee) => {
+  const handlePrintBadge = async (employee: Employee) => {
     if (!currentCompany) {
       toast.error('Empresa não encontrada');
       return;
     }
+    
+    // Convert photo URL to base64 if available
+    let photoBase64: string | null = null;
+    if (employee.photo_url) {
+      toast.loading('Preparando crachá...', { id: 'badge-loading' });
+      photoBase64 = await imageUrlToBase64(employee.photo_url);
+      toast.dismiss('badge-loading');
+    }
+    
     generateEmployeeBadgePdf({
       employeeName: employee.name,
       role: employee.role,
@@ -90,6 +99,8 @@ export default function Funcionarios() {
       companyPhone: currentCompany.phone,
       companyAddress: currentCompany.address,
       employeeId: employee.id,
+      photoUrl: employee.photo_url,
+      photoBase64,
     });
     toast.success('Crachá gerado com sucesso!');
   };

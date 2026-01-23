@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, Shield, UserPlus, Eye, EyeOff, Copy, Check } from 'lucide-react';
 import { PermissionProfileSelect } from './PermissionProfileSelect';
+import { EmployeePhotoUpload } from './EmployeePhotoUpload';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -28,6 +29,7 @@ interface Employee {
   permission_profile_id?: string | null;
   user_id?: string | null;
   username?: string | null;
+  photo_url?: string | null;
 }
 
 interface EmployeeDialogProps {
@@ -73,6 +75,7 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
     commission_percent: 0,
     commission_type: 'sales',
     permission_profile_id: null as string | null,
+    photo_url: null as string | null,
     createSystemAccess: false,
     password: '',
     confirmPassword: '',
@@ -114,6 +117,7 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
         commission_percent: employee.commission_percent ?? 0,
         commission_type: employee.commission_type || 'sales',
         permission_profile_id: employee.permission_profile_id || null,
+        photo_url: employee.photo_url || null,
         createSystemAccess: false,
         password: '',
         confirmPassword: '',
@@ -132,6 +136,7 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
         commission_percent: 0,
         commission_type: 'sales',
         permission_profile_id: null,
+        photo_url: null,
         createSystemAccess: false,
         password: '',
         confirmPassword: '',
@@ -187,6 +192,7 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
       commission_percent: formData.commission_percent,
       commission_type: formData.commission_type,
       permission_profile_id: formData.permission_profile_id,
+      photo_url: formData.photo_url,
       createSystemAccess: formData.createSystemAccess,
       username: generatedLogin || null, // Login gerado automaticamente
       password: formData.createSystemAccess ? formData.password : undefined,
@@ -223,6 +229,16 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Photo Upload Section */}
+          <EmployeePhotoUpload
+            photoUrl={formData.photo_url}
+            employeeName={formData.name}
+            employeeId={employee?.id}
+            companyId={currentCompany?.id}
+            onPhotoChange={(url) => setFormData({ ...formData, photo_url: url })}
+            disabled={isLoading}
+          />
+
           <div className="space-y-2">
             <Label htmlFor="name">Nome *</Label>
             <Input
