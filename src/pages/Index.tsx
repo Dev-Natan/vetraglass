@@ -19,6 +19,8 @@ import { RecentActivity } from '@/components/dashboard/RecentActivity';
 import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
 import { QuickFlowCard } from '@/components/dashboard/QuickFlowCard';
 import { FinancialAlerts } from '@/components/dashboard/FinancialAlerts';
+import { TodayAppointmentsAlert } from '@/components/dashboard/TodayAppointmentsAlert';
+import { SalesGoalCard } from '@/components/dashboard/SalesGoalCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
 
@@ -114,6 +116,10 @@ export default function Index() {
         {currentCompany && (
           <section className="animate-fade-in space-y-4">
             <DashboardKPIs />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <SalesGoalCard />
+              <TodayAppointmentsAlert />
+            </div>
             <FinancialAlerts />
           </section>
         )}
