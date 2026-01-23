@@ -710,7 +710,9 @@ export type Database = {
           modo_fiscal_ativo: boolean
           name: string
           phone: string | null
+          primary_color: string | null
           regime_tributario: string | null
+          secondary_color: string | null
           updated_at: string
         }
         Insert: {
@@ -737,7 +739,9 @@ export type Database = {
           modo_fiscal_ativo?: boolean
           name: string
           phone?: string | null
+          primary_color?: string | null
           regime_tributario?: string | null
+          secondary_color?: string | null
           updated_at?: string
         }
         Update: {
@@ -764,7 +768,9 @@ export type Database = {
           modo_fiscal_ativo?: boolean
           name?: string
           phone?: string | null
+          primary_color?: string | null
           regime_tributario?: string | null
+          secondary_color?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1781,6 +1787,7 @@ export type Database = {
           notes: string | null
           permission_profile_id: string | null
           phone: string | null
+          photo_url: string | null
           role: string | null
           specialty: string | null
           updated_at: string
@@ -1801,6 +1808,7 @@ export type Database = {
           notes?: string | null
           permission_profile_id?: string | null
           phone?: string | null
+          photo_url?: string | null
           role?: string | null
           specialty?: string | null
           updated_at?: string
@@ -1821,6 +1829,7 @@ export type Database = {
           notes?: string | null
           permission_profile_id?: string | null
           phone?: string | null
+          photo_url?: string | null
           role?: string | null
           specialty?: string | null
           updated_at?: string
@@ -4611,7 +4620,9 @@ export type Database = {
           modo_fiscal_ativo: boolean
           name: string
           phone: string | null
+          primary_color: string | null
           regime_tributario: string | null
+          secondary_color: string | null
           updated_at: string
         }
         SetofOptions: {

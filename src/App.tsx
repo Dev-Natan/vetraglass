@@ -35,6 +35,7 @@ import ConfiguracoesDados from "./pages/ConfiguracoesDados";
 import NotasFiscais from "./pages/NotasFiscais";
 import Agenda from "./pages/Agenda";
 import Medicoes from "./pages/Medicoes";
+import Relatorios from "./pages/Relatorios";
 import ItemTemplates from "./pages/admin/ItemTemplates";
 import ProductTemplates from "./pages/admin/ProductTemplates";
 import AdminLinhas from "./pages/admin/AdminLinhas";
@@ -244,6 +245,11 @@ function AppRoutes() {
       <Route path="/medicoes" element={
         <ProtectedRoute>
           <Medicoes />
+        </ProtectedRoute>
+      } />
+      <Route path="/relatorios" element={
+        <ProtectedRoute>
+          <Relatorios />
         </ProtectedRoute>
       } />
       <Route path="/admin" element={
