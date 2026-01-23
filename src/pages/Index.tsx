@@ -18,6 +18,7 @@ import { SalesChart } from '@/components/dashboard/SalesChart';
 import { RecentActivity } from '@/components/dashboard/RecentActivity';
 import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
 import { QuickFlowCard } from '@/components/dashboard/QuickFlowCard';
+import { FinancialAlerts } from '@/components/dashboard/FinancialAlerts';
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
 
@@ -111,8 +112,9 @@ export default function Index() {
 
         {/* KPIs Section */}
         {currentCompany && (
-          <section className="animate-fade-in">
+          <section className="animate-fade-in space-y-4">
             <DashboardKPIs />
+            <FinancialAlerts />
           </section>
         )}
 
