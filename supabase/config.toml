@@ -26,3 +26,7 @@ verify_jwt = false
 
 [functions.create-employee-user]
 verify_jwt = false
+
+[functions.generate-system-reminders]
+verify_jwt = false
+schedule = "0 8 * * *"

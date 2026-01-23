@@ -21,6 +21,7 @@ import { QuickFlowCard } from '@/components/dashboard/QuickFlowCard';
 import { FinancialAlerts } from '@/components/dashboard/FinancialAlerts';
 import { TodayAppointmentsAlert } from '@/components/dashboard/TodayAppointmentsAlert';
 import { SalesGoalCard } from '@/components/dashboard/SalesGoalCard';
+import { SystemReminders } from '@/components/dashboard/SystemReminders';
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
 
@@ -120,6 +121,7 @@ export default function Index() {
               <SalesGoalCard />
               <TodayAppointmentsAlert />
             </div>
+            <SystemReminders />
             <FinancialAlerts />
           </section>
         )}
