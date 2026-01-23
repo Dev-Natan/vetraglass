@@ -31,7 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Pencil, Trash2, GripVertical, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { 
   useProductCategories, 
@@ -48,6 +48,7 @@ import {
   useGlassTypeMutations,
   type GlassType 
 } from "@/hooks/useGlassTypes";
+import { SortableTableBody } from "@/components/common/SortableTable";
 
 const colorOptions = [
   { value: "gray", label: "Cinza", class: "bg-gray-500" },
@@ -188,6 +189,19 @@ export default function AdminCategories() {
     }
   };
 
+  const handleReorderCategories = async (reorderedCategories: ProductCategory[]) => {
+    try {
+      await Promise.all(
+        reorderedCategories.map((cat) =>
+          updateCategory.mutateAsync({ id: cat.id, sort_order: cat.sort_order })
+        )
+      );
+      toast.success("Ordem atualizada");
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao reordenar");
+    }
+  };
+
   // Item type handlers
   const handleOpenItemTypeDialog = (itemType?: ItemType) => {
     if (itemType) {
@@ -259,6 +273,19 @@ export default function AdminCategories() {
     }
   };
 
+  const handleReorderItemTypes = async (reorderedItemTypes: ItemType[]) => {
+    try {
+      await Promise.all(
+        reorderedItemTypes.map((type) =>
+          updateItemType.mutateAsync({ id: type.id, sort_order: type.sort_order })
+        )
+      );
+      toast.success("Ordem atualizada");
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao reordenar");
+    }
+  };
+
   // Glass type handlers
   const handleOpenGlassTypeDialog = (glassType?: GlassType) => {
     if (glassType) {
@@ -321,12 +348,143 @@ export default function AdminCategories() {
     }
   };
 
+  const handleReorderGlassTypes = async (reorderedGlassTypes: GlassType[]) => {
+    try {
+      await Promise.all(
+        reorderedGlassTypes.map((type) =>
+          updateGlassType.mutateAsync({ id: type.id, sort_order: type.sort_order })
+        )
+      );
+      toast.success("Ordem atualizada");
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao reordenar");
+    }
+  };
+
+  // Render functions for sortable table cells
+  const renderCategoryCells = (category: ProductCategory) => (
+    <>
+      <TableCell className="font-medium">{category.name}</TableCell>
+      <TableCell className="text-muted-foreground font-mono text-sm">
+        {category.slug}
+      </TableCell>
+      <TableCell>
+        <div className="flex items-center gap-2">
+          <div className={`w-4 h-4 rounded ${getColorClass(category.color)}`} />
+          <span className="text-sm capitalize">{category.color}</span>
+        </div>
+      </TableCell>
+      <TableCell>
+        <Switch
+          checked={category.is_active}
+          onCheckedChange={() => handleToggleCategoryActive(category)}
+        />
+      </TableCell>
+      <TableCell className="text-right">
+        <div className="flex items-center justify-end gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => handleOpenCategoryDialog(category)}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => handleDeleteCategory(category)}
+          >
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
+        </div>
+      </TableCell>
+    </>
+  );
+
+  const renderItemTypeCells = (itemType: ItemType) => (
+    <>
+      <TableCell className="font-medium">{itemType.name}</TableCell>
+      <TableCell className="text-muted-foreground font-mono text-sm">
+        {itemType.slug}
+      </TableCell>
+      <TableCell>
+        <div className="flex items-center gap-2">
+          <div className={`w-4 h-4 rounded ${getColorClass(itemType.color)}`} />
+          <span className="text-sm capitalize">{itemType.color}</span>
+        </div>
+      </TableCell>
+      <TableCell>
+        <Badge variant="outline">{itemType.unit_default}</Badge>
+      </TableCell>
+      <TableCell>
+        <Switch
+          checked={itemType.is_active}
+          onCheckedChange={() => handleToggleItemTypeActive(itemType)}
+        />
+      </TableCell>
+      <TableCell className="text-right">
+        <div className="flex items-center justify-end gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => handleOpenItemTypeDialog(itemType)}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => handleDeleteItemType(itemType)}
+          >
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
+        </div>
+      </TableCell>
+    </>
+  );
+
+  const renderGlassTypeCells = (glassType: GlassType) => (
+    <>
+      <TableCell className="font-medium">{glassType.name}</TableCell>
+      <TableCell className="text-muted-foreground font-mono text-sm">
+        {glassType.slug}
+      </TableCell>
+      <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">
+        {glassType.description || "-"}
+      </TableCell>
+      <TableCell>
+        <Switch
+          checked={glassType.is_active}
+          onCheckedChange={() => handleToggleGlassTypeActive(glassType)}
+        />
+      </TableCell>
+      <TableCell className="text-right">
+        <div className="flex items-center justify-end gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => handleOpenGlassTypeDialog(glassType)}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => handleDeleteGlassType(glassType)}
+          >
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
+        </div>
+      </TableCell>
+    </>
+  );
+
   return (
     <AdminLayout>
       <div className="p-6">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-foreground">Categorias e Tipos</h1>
-          <p className="text-muted-foreground">Gerencie categorias de produtos e tipos de itens</p>
+          <p className="text-muted-foreground">Gerencie categorias de produtos e tipos de itens. Arraste para reordenar.</p>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -341,7 +499,7 @@ export default function AdminCategories() {
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle>Categorias de Produtos</CardTitle>
-                  <CardDescription>Janela, Porta, Box, Espelho, etc.</CardDescription>
+                  <CardDescription>Janela, Porta, Box, Espelho, etc. Arraste para reordenar.</CardDescription>
                 </div>
                 <Button onClick={() => handleOpenCategoryDialog()}>
                   <Plus className="h-4 w-4 mr-2" />
@@ -357,7 +515,7 @@ export default function AdminCategories() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-12">Ordem</TableHead>
+                        <TableHead className="w-20">Ordem</TableHead>
                         <TableHead>Nome</TableHead>
                         <TableHead>Slug</TableHead>
                         <TableHead>Cor</TableHead>
@@ -366,50 +524,14 @@ export default function AdminCategories() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {categories?.map((category) => (
-                        <TableRow key={category.id} className={!category.is_active ? "opacity-50" : ""}>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <GripVertical className="h-4 w-4 text-muted-foreground" />
-                              {category.sort_order}
-                            </div>
-                          </TableCell>
-                          <TableCell className="font-medium">{category.name}</TableCell>
-                          <TableCell className="text-muted-foreground font-mono text-sm">
-                            {category.slug}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <div className={`w-4 h-4 rounded ${getColorClass(category.color)}`} />
-                              <span className="text-sm capitalize">{category.color}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Switch
-                              checked={category.is_active}
-                              onCheckedChange={() => handleToggleCategoryActive(category)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleOpenCategoryDialog(category)}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDeleteCategory(category)}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {categories && categories.length > 0 && (
+                        <SortableTableBody
+                          items={categories}
+                          renderCells={renderCategoryCells}
+                          getIsInactive={(cat) => !cat.is_active}
+                          onReorder={handleReorderCategories}
+                        />
+                      )}
                     </TableBody>
                   </Table>
                 )}
@@ -422,7 +544,7 @@ export default function AdminCategories() {
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle>Tipos de Itens</CardTitle>
-                  <CardDescription>Vidro, Perfil, Acessório, Serviço, etc.</CardDescription>
+                  <CardDescription>Vidro, Perfil, Acessório, Serviço, etc. Arraste para reordenar.</CardDescription>
                 </div>
                 <Button onClick={() => handleOpenItemTypeDialog()}>
                   <Plus className="h-4 w-4 mr-2" />
@@ -438,7 +560,7 @@ export default function AdminCategories() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-12">Ordem</TableHead>
+                        <TableHead className="w-20">Ordem</TableHead>
                         <TableHead>Nome</TableHead>
                         <TableHead>Slug</TableHead>
                         <TableHead>Cor</TableHead>
@@ -448,53 +570,14 @@ export default function AdminCategories() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {itemTypes?.map((itemType) => (
-                        <TableRow key={itemType.id} className={!itemType.is_active ? "opacity-50" : ""}>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <GripVertical className="h-4 w-4 text-muted-foreground" />
-                              {itemType.sort_order}
-                            </div>
-                          </TableCell>
-                          <TableCell className="font-medium">{itemType.name}</TableCell>
-                          <TableCell className="text-muted-foreground font-mono text-sm">
-                            {itemType.slug}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <div className={`w-4 h-4 rounded ${getColorClass(itemType.color)}`} />
-                              <span className="text-sm capitalize">{itemType.color}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{itemType.unit_default}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Switch
-                              checked={itemType.is_active}
-                              onCheckedChange={() => handleToggleItemTypeActive(itemType)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleOpenItemTypeDialog(itemType)}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDeleteItemType(itemType)}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {itemTypes && itemTypes.length > 0 && (
+                        <SortableTableBody
+                          items={itemTypes}
+                          renderCells={renderItemTypeCells}
+                          getIsInactive={(type) => !type.is_active}
+                          onReorder={handleReorderItemTypes}
+                        />
+                      )}
                     </TableBody>
                   </Table>
                 )}
@@ -507,7 +590,7 @@ export default function AdminCategories() {
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle>Tipos de Vidro</CardTitle>
-                  <CardDescription>Vidro Comum, Temperado, Laminado, etc.</CardDescription>
+                  <CardDescription>Vidro Comum, Temperado, Laminado, etc. Arraste para reordenar.</CardDescription>
                 </div>
                 <Button onClick={() => handleOpenGlassTypeDialog()}>
                   <Plus className="h-4 w-4 mr-2" />
@@ -523,7 +606,7 @@ export default function AdminCategories() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-12">Ordem</TableHead>
+                        <TableHead className="w-20">Ordem</TableHead>
                         <TableHead>Nome</TableHead>
                         <TableHead>Slug</TableHead>
                         <TableHead>Descrição</TableHead>
@@ -532,47 +615,14 @@ export default function AdminCategories() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {glassTypes?.map((glassType) => (
-                        <TableRow key={glassType.id} className={!glassType.is_active ? "opacity-50" : ""}>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <GripVertical className="h-4 w-4 text-muted-foreground" />
-                              {glassType.sort_order}
-                            </div>
-                          </TableCell>
-                          <TableCell className="font-medium">{glassType.name}</TableCell>
-                          <TableCell className="text-muted-foreground font-mono text-sm">
-                            {glassType.slug}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">
-                            {glassType.description || "-"}
-                          </TableCell>
-                          <TableCell>
-                            <Switch
-                              checked={glassType.is_active}
-                              onCheckedChange={() => handleToggleGlassTypeActive(glassType)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleOpenGlassTypeDialog(glassType)}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDeleteGlassType(glassType)}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {glassTypes && glassTypes.length > 0 && (
+                        <SortableTableBody
+                          items={glassTypes}
+                          renderCells={renderGlassTypeCells}
+                          getIsInactive={(type) => !type.is_active}
+                          onReorder={handleReorderGlassTypes}
+                        />
+                      )}
                     </TableBody>
                   </Table>
                 )}
