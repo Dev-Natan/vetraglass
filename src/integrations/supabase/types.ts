@@ -2859,41 +2859,53 @@ export type Database = {
       }
       os_cutting_plan: {
         Row: {
+          completed_at: string | null
+          completed_by: string | null
           created_at: string
           cuts_data: Json
           glass_cuts_data: Json | null
           id: string
+          item_status: Json | null
           ordem_servico_id: string
           product_name: string
           product_template_id: string | null
           quantity: number
           quote_item_id: string | null
+          status: string
           vao_height: number
           vao_width: number
         }
         Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
           created_at?: string
           cuts_data?: Json
           glass_cuts_data?: Json | null
           id?: string
+          item_status?: Json | null
           ordem_servico_id: string
           product_name: string
           product_template_id?: string | null
           quantity?: number
           quote_item_id?: string | null
+          status?: string
           vao_height: number
           vao_width: number
         }
         Update: {
+          completed_at?: string | null
+          completed_by?: string | null
           created_at?: string
           cuts_data?: Json
           glass_cuts_data?: Json | null
           id?: string
+          item_status?: Json | null
           ordem_servico_id?: string
           product_name?: string
           product_template_id?: string | null
           quantity?: number
           quote_item_id?: string | null
+          status?: string
           vao_height?: number
           vao_width?: number
         }
