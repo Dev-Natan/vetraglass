@@ -1,59 +1,27 @@
 import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { ArrowLeft, Printer } from 'lucide-react';
+import { ArrowLeft, Printer, Download, Tags, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { GlassPreview } from '@/components/plano-corte/GlassPreview';
 import { evaluateFormula, getFormulaPosition } from '@/utils/safeFormulaEvaluator';
-
-// Tradução de categorias
-const categoryLabels: Record<string, string> = {
-  window: 'Janela',
-  door: 'Porta',
-  facade: 'Fachada',
-  shower: 'Box de Banheiro',
-  mirror: 'Espelho',
-  partition: 'Divisória',
-  guarda_corpo: 'Guarda Corpo',
-  other: 'Outros',
-};
-
-const translateCategory = (category: string) => categoryLabels[category] || category;
-
-interface CutItem {
-  id: string;
-  profileName: string;
-  imageUrl: string | null;
-  widthFormula: string | null;
-  heightFormula: string | null;
-  quantityFormula: string;
-  calculatedLength: number;
-  quantity: number;
-  piecesPerProduct: number;
-  cutAngle: number;
-  position: 'Altura' | 'Largura';
-}
-
-interface GlassCutItem {
-  id: string;
-  glassName: string;
-  customName: string | null;
-  imageUrl: string | null;
-  widthFormula: string | null;
-  heightFormula: string | null;
-  calculatedWidth: number;
-  calculatedHeight: number;
-  areaM2: number;
-  quantity: number;
-}
+import { CuttingPlanFilters } from '@/components/plano-corte/CuttingPlanFilters';
+import { ProfileCutsTable, type ProfileCutItem } from '@/components/plano-corte/ProfileCutsTable';
+import { GlassCutsTable, type GlassCutItem } from '@/components/plano-corte/GlassCutsTable';
+import { BarOptimizationView } from '@/components/plano-corte/BarOptimizationView';
+import { generateCuttingLabels, expandCutsToLabels } from '@/utils/generateCuttingLabels';
+import { exportCuttingPlanToCSV, type CuttingPlanExport } from '@/utils/exportCuttingToExcel';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // Get storage URL helper
 const getStorageUrl = (path: string | null) => {
@@ -72,7 +40,8 @@ export default function PlanoCorte() {
   const [width, setWidth] = useState<number>(1000);
   const [height, setHeight] = useState<number>(1000);
   const [quantity, setQuantity] = useState<number>(1);
-  const [activeTab, setActiveTab] = useState<'pendente' | 'fabricado'>('pendente');
+  const [activeTab, setActiveTab] = useState<'cortes' | 'otimizacao'>('cortes');
+  const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
 
   // Fetch product templates
   const { data: productTemplates } = useQuery({
@@ -135,16 +104,16 @@ export default function PlanoCorte() {
     setSelectedLinha(value);
     setSelectedCategory('');
     setSelectedProduct('');
+    setCompletedItems(new Set());
   };
 
   const handleCategoryChange = (value: string) => {
     setSelectedCategory(value);
     setSelectedProduct('');
+    setCompletedItems(new Set());
   };
 
   // Fetch product template items
-  // For SaaS admins: show global items (company_id IS NULL)
-  // For company users: show only their company items (items they configured when activating)
   const { data: productItems } = useQuery({
     queryKey: ['product-template-items-cutting', selectedProduct, currentCompany?.id, isSaasAdmin],
     queryFn: async () => {
@@ -171,10 +140,8 @@ export default function PlanoCorte() {
         .eq('product_template_id', selectedProduct);
       
       if (isSaasAdmin) {
-        // SaaS admins see global items only
         query = query.is('company_id', null);
       } else if (currentCompany?.id) {
-        // Company users see only their own items (configured during activation)
         query = query.eq('company_id', currentCompany.id);
       }
       
@@ -206,7 +173,7 @@ export default function PlanoCorte() {
   });
 
   // Calculate profile cuts
-  const calculatedCuts = useMemo((): CutItem[] => {
+  const calculatedCuts = useMemo((): ProfileCutItem[] => {
     if (!productItems || productItems.length === 0) return [];
 
     return productItems
@@ -217,25 +184,20 @@ export default function PlanoCorte() {
         const heightF = (item as any).height_formula || null;
         const quantityF = item.quantity_formula || '1';
         
-        // Calculate the cut length from width or height formula
         let calculatedLength = 0;
         let position: 'Altura' | 'Largura' = 'Largura';
         let displayWidthFormula: string | null = widthF;
         let displayHeightFormula: string | null = heightF;
         
         if (heightF) {
-          // If height_formula exists, use it for the cut length
           calculatedLength = evaluateFormula(heightF, width, height);
           position = 'Altura';
         } else if (widthF) {
-          // If width_formula exists, use it for the cut length
           calculatedLength = evaluateFormula(widthF, width, height);
           position = 'Largura';
         } else {
-          // Fallback: use quantity_formula as the cut formula (legacy behavior)
           calculatedLength = evaluateFormula(quantityF, width, height);
           position = getFormulaPosition(quantityF);
-          // Show the quantity_formula as the display formula
           if (position === 'Altura') {
             displayHeightFormula = quantityF;
           } else {
@@ -243,7 +205,6 @@ export default function PlanoCorte() {
           }
         }
         
-        // Calculate quantity from pieces_quantity * product quantity
         const totalPieces = piecesPerProduct * quantity;
         
         return {
@@ -257,16 +218,16 @@ export default function PlanoCorte() {
           quantity: totalPieces,
           piecesPerProduct,
           cutAngle: item.cut_angle,
-          position
+          position,
+          isCompleted: completedItems.has(item.id),
         };
       });
-  }, [productItems, width, height, quantity]);
+  }, [productItems, width, height, quantity, completedItems]);
 
-  // Calculate glass cuts - uses product_template_items first, then falls back to glass_line_formulas
+  // Calculate glass cuts
   const calculatedGlassCuts = useMemo((): GlassCutItem[] => {
     const glassItems: GlassCutItem[] = [];
     
-    // First, add glass items from product_template_items
     if (productItems && productItems.length > 0) {
       const itemGlasses = productItems
         .filter(item => item.item_templates?.type === 'glass')
@@ -288,14 +249,14 @@ export default function PlanoCorte() {
             calculatedWidth: calcWidth,
             calculatedHeight: calcHeight,
             areaM2: areaM2,
-            quantity: quantity
+            quantity: quantity,
+            isCompleted: completedItems.has(item.id),
           };
         });
       
       glassItems.push(...itemGlasses);
     }
     
-    // If no glass items from product_template_items, use glass_line_formulas
     if (glassItems.length === 0 && glassFormulas && glassFormulas.length > 0) {
       const formulaGlasses = glassFormulas.map((formula, idx) => {
         const widthF = formula.width_formula || 'Largura';
@@ -314,7 +275,8 @@ export default function PlanoCorte() {
           calculatedWidth: calcWidth,
           calculatedHeight: calcHeight,
           areaM2: areaM2,
-          quantity: quantity
+          quantity: quantity,
+          isCompleted: completedItems.has(`formula-${idx}`),
         };
       });
       
@@ -322,10 +284,100 @@ export default function PlanoCorte() {
     }
     
     return glassItems;
-  }, [productItems, glassFormulas, width, height, quantity]);
+  }, [productItems, glassFormulas, width, height, quantity, completedItems]);
+
+  // Prepare data for bar optimization
+  const barOptimizationData = useMemo(() => {
+    return calculatedCuts.map(cut => ({
+      itemTemplateId: cut.id,
+      itemName: cut.profileName,
+      cutLength: cut.calculatedLength,
+      quantity: cut.quantity,
+      barLengthMm: 6000, // Default 6m bars
+    }));
+  }, [calculatedCuts]);
 
   const selectedProductData = productTemplates?.find(p => p.id === selectedProduct);
 
+  // Toggle item completion
+  const handleToggleComplete = (id: string, completed: boolean) => {
+    setCompletedItems(prev => {
+      const next = new Set(prev);
+      if (completed) {
+        next.add(id);
+      } else {
+        next.delete(id);
+      }
+      return next;
+    });
+  };
+
+  // Calculate completion progress
+  const totalItems = calculatedCuts.length + calculatedGlassCuts.length;
+  const completedCount = completedItems.size;
+  const progressPercent = totalItems > 0 ? Math.round((completedCount / totalItems) * 100) : 0;
+
+  // Generate labels
+  const handleGenerateLabels = () => {
+    if (!selectedProductData) return;
+    
+    const labels = expandCutsToLabels(
+      `PC-${Date.now().toString().slice(-6)}`,
+      selectedProductData.name,
+      calculatedCuts.map(c => ({
+        id: c.id,
+        profileName: c.profileName,
+        calculatedLength: c.calculatedLength,
+        quantity: c.quantity,
+        position: c.position,
+        cutAngle: c.cutAngle,
+      })),
+      calculatedGlassCuts.map(g => ({
+        id: g.id,
+        glassName: g.glassName,
+        customName: g.customName,
+        calculatedWidth: g.calculatedWidth,
+        calculatedHeight: g.calculatedHeight,
+        quantity: g.quantity,
+      }))
+    );
+    
+    generateCuttingLabels(labels);
+  };
+
+  // Export CSV
+  const handleExportCSV = () => {
+    if (!selectedProductData) return;
+    
+    const exportData: CuttingPlanExport = {
+      productName: selectedProductData.name,
+      vaoWidth: width,
+      vaoHeight: height,
+      productQuantity: quantity,
+      profiles: calculatedCuts.map(c => ({
+        profileName: c.profileName,
+        length: c.calculatedLength,
+        quantity: c.quantity,
+        angle: c.cutAngle,
+        position: c.position,
+        formula: c.heightFormula || c.widthFormula || undefined,
+      })),
+      glasses: calculatedGlassCuts.map(g => ({
+        glassName: g.customName || g.glassName,
+        width: g.calculatedWidth,
+        height: g.calculatedHeight,
+        area: g.areaM2,
+        quantity: g.quantity,
+        widthFormula: g.widthFormula || undefined,
+        heightFormula: g.heightFormula || undefined,
+      })),
+      generatedAt: new Date().toLocaleString('pt-BR'),
+    };
+    
+    exportCuttingPlanToCSV(exportData);
+  };
+
+  // Print handler
   const handlePrint = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
@@ -355,25 +407,9 @@ export default function PlanoCorte() {
             th.glass { background: #9333ea; }
             th.profile { background: #1e3a5f; }
             td { padding: 12px; border-bottom: 1px solid #eee; vertical-align: middle; }
-            .item-cell { display: flex; align-items: center; gap: 12px; }
-            .glass-preview-container { width: 65px; height: 55px; background: linear-gradient(135deg, #f3e8ff 0%, #ede9fe 100%); border: 1px solid #c4b5fd; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
-            .glass-preview { background: linear-gradient(135deg, #bae6fd 0%, #e0f2fe 50%, #fff 100%); border: 2px solid rgba(56, 189, 248, 0.6); border-radius: 3px; position: relative; box-shadow: inset 0 0 10px rgba(255,255,255,0.5); }
-            .glass-preview::before { content: ''; position: absolute; top: 0; left: 0; right: 50%; bottom: 50%; background: linear-gradient(135deg, rgba(255,255,255,0.6) 0%, transparent 100%); border-radius: 2px 0 0 0; }
-            .item-img { width: 60px; height: 40px; background: #f0f0f0; border: 1px solid #ddd; }
-            .item-img img { width: 100%; height: 100%; object-fit: contain; }
-            .formula-tag { font-size: 9px; padding: 3px 8px; border-radius: 10px; margin-right: 4px; font-weight: 500; }
-            .formula-width { background: #dcfce7; color: #166534; }
-            .formula-height { background: #dbeafe; color: #1e40af; }
-            .angle-box { display: inline-flex; gap: 5px; }
-            .angle { background: #1e3a5f; color: white; padding: 5px 12px; font-size: 12px; }
-            .position { display: flex; align-items: center; gap: 8px; }
-            .position-dot { width: 10px; height: 10px; border-radius: 50%; }
-            .position-altura { background: #3b82f6; }
-            .position-largura { background: #f59e0b; }
             .value-green { color: #16a34a; font-weight: bold; font-size: 16px; }
             .value-blue { color: #2563eb; font-weight: bold; font-size: 16px; }
             .value-purple { color: #9333ea; font-weight: bold; font-size: 16px; }
-            .glass-type { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
             @media print { body { padding: 10px; } }
           </style>
         </head>
@@ -417,39 +453,15 @@ export default function PlanoCorte() {
                 </tr>
               </thead>
               <tbody>
-                ${calculatedGlassCuts.map(glass => {
-                  // Calculate proportional size for print preview
-                  const maxW = 55, maxH = 45;
-                  const ar = glass.calculatedWidth / glass.calculatedHeight;
-                  let pw, ph;
-                  if (ar > maxW / maxH) { pw = maxW; ph = maxW / ar; }
-                  else { ph = maxH; pw = maxH * ar; }
-                  pw = Math.max(18, pw);
-                  ph = Math.max(18, ph);
-                  
-                  return `
+                ${calculatedGlassCuts.map(glass => `
                   <tr>
-                    <td>
-                      <div class="item-cell">
-                        <div class="glass-preview-container">
-                          <div class="glass-preview" style="width: ${pw}px; height: ${ph}px;"></div>
-                        </div>
-                        <div>
-                          <strong>${glass.customName || glass.glassName}</strong>
-                          ${glass.customName ? `<div class="glass-type">${glass.glassName}</div>` : ''}
-                          <div style="margin-top: 6px;">
-                            ${glass.widthFormula ? `<span class="formula-tag formula-width">L: ${glass.widthFormula}</span>` : ''}
-                            ${glass.heightFormula ? `<span class="formula-tag formula-height">A: ${glass.heightFormula}</span>` : ''}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
+                    <td><strong>${glass.customName || glass.glassName}</strong></td>
                     <td class="value-green">${glass.calculatedWidth}</td>
                     <td class="value-blue">${glass.calculatedHeight}</td>
                     <td class="value-purple">${glass.areaM2.toFixed(3)}</td>
-                    <td style="font-weight: 500;">${glass.quantity}</td>
+                    <td>${glass.quantity}</td>
                   </tr>
-                `}).join('')}
+                `).join('')}
               </tbody>
             </table>
           ` : ''}
@@ -465,41 +477,18 @@ export default function PlanoCorte() {
                   <th class="profile">PERFIL</th>
                   <th class="profile">MEDIDA (mm)</th>
                   <th class="profile">QUANTIDADE</th>
-                  <th class="profile">ÂNGULO DE CORTE</th>
+                  <th class="profile">ÂNGULO</th>
                   <th class="profile">POSIÇÃO</th>
                 </tr>
               </thead>
               <tbody>
                 ${calculatedCuts.map(cut => `
                   <tr>
-                    <td>
-                      <div class="item-cell">
-                        <div class="item-img">
-                          ${cut.imageUrl ? `<img src="${getStorageUrl(cut.imageUrl)}" alt="${cut.profileName}" />` : ''}
-                        </div>
-                        <div>
-                          <strong>${cut.profileName}</strong>
-                          <div style="margin-top: 4px;">
-                            ${cut.widthFormula ? `<span class="formula-tag formula-width">L: ${cut.widthFormula}</span>` : ''}
-                            ${cut.heightFormula ? `<span class="formula-tag formula-height">A: ${cut.heightFormula}</span>` : ''}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td><strong style="font-size: 18px;">${cut.calculatedLength}</strong></td>
-                    <td>${cut.piecesPerProduct} × ${quantity} = <strong>${cut.quantity}</strong></td>
-                    <td>
-                      <div class="angle-box">
-                        <span class="angle">${cut.cutAngle}°</span>
-                        <span class="angle">${cut.cutAngle}°</span>
-                      </div>
-                    </td>
-                    <td>
-                      <div class="position">
-                        <span class="position-dot position-${cut.position.toLowerCase()}"></span>
-                        ${cut.position}
-                      </div>
-                    </td>
+                    <td><strong>${cut.profileName}</strong></td>
+                    <td style="font-size: 18px; font-weight: bold;">${cut.calculatedLength}</td>
+                    <td>${cut.quantity}</td>
+                    <td>${cut.cutAngle}° / ${cut.cutAngle}°</td>
+                    <td>${cut.position}</td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -514,7 +503,6 @@ export default function PlanoCorte() {
     `);
     printWindow.document.close();
     
-    // Use setTimeout to avoid blocking the main thread
     printWindow.onload = () => {
       setTimeout(() => {
         printWindow.focus();
@@ -522,7 +510,6 @@ export default function PlanoCorte() {
       }, 100);
     };
     
-    // Fallback if onload doesn't fire (some browsers)
     setTimeout(() => {
       printWindow.focus();
       printWindow.print();
@@ -537,10 +524,43 @@ export default function PlanoCorte() {
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <Button variant="outline" className="gap-2" onClick={handlePrint} disabled={!selectedProduct || calculatedCuts.length === 0}>
-            <Printer className="w-4 h-4" />
-            Imprimir
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* Progress indicator */}
+            {totalItems > 0 && (
+              <div className="hidden sm:flex items-center gap-2 mr-4">
+                <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-primary transition-all duration-300"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+                <span className="text-sm text-muted-foreground">{progressPercent}%</span>
+              </div>
+            )}
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2" disabled={!selectedProduct || calculatedCuts.length === 0}>
+                  <Download className="w-4 h-4" />
+                  Exportar
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-popover border shadow-md">
+                <DropdownMenuItem onClick={handlePrint}>
+                  <Printer className="w-4 h-4 mr-2" />
+                  Imprimir PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportCSV}>
+                  <Download className="w-4 h-4 mr-2" />
+                  Exportar CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleGenerateLabels}>
+                  <Tags className="w-4 h-4 mr-2" />
+                  Gerar Etiquetas
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
 
         {/* Product Selection & Info */}
@@ -550,7 +570,7 @@ export default function PlanoCorte() {
             <div className="w-full max-w-[250px] aspect-square bg-muted rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
               {selectedProductData?.image_url ? (
                 <img 
-                  src={getStorageUrl(selectedProductData.image_url)} 
+                  src={getStorageUrl(selectedProductData.image_url) || ''} 
                   alt={selectedProductData.name}
                   className="w-full h-full object-contain rounded-lg"
                 />
@@ -563,63 +583,17 @@ export default function PlanoCorte() {
           {/* Product Selection & Dimensions */}
           <div className="lg:col-span-2 space-y-4">
             {/* Filters */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>Linha</Label>
-                <Select value={selectedLinha} onValueChange={handleLinhaChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a linha" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableLinhas.map(linha => (
-                      <SelectItem key={linha} value={linha}>
-                        {linha}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Categoria</Label>
-                <Select 
-                  value={selectedCategory} 
-                  onValueChange={handleCategoryChange}
-                  disabled={!selectedLinha}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableCategories.map(category => (
-                      <SelectItem key={category} value={category}>
-                        {translateCategory(category)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Produto</Label>
-                <Select 
-                  value={selectedProduct} 
-                  onValueChange={setSelectedProduct}
-                  disabled={!selectedCategory}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredProducts.map(product => (
-                      <SelectItem key={product.id} value={product.id}>
-                        {product.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            <CuttingPlanFilters
+              availableLinhas={availableLinhas}
+              availableCategories={availableCategories}
+              filteredProducts={filteredProducts}
+              selectedLinha={selectedLinha}
+              selectedCategory={selectedCategory}
+              selectedProduct={selectedProduct}
+              onLinhaChange={handleLinhaChange}
+              onCategoryChange={handleCategoryChange}
+              onProductChange={setSelectedProduct}
+            />
 
             {/* Product Name */}
             {selectedProductData && (
@@ -663,186 +637,40 @@ export default function PlanoCorte() {
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'pendente' | 'fabricado')}>
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'cortes' | 'otimizacao')}>
           <TabsList className="w-auto">
-            <TabsTrigger value="pendente" className="px-8">
-              Pendente
+            <TabsTrigger value="cortes" className="px-6 gap-2">
+              <Printer className="w-4 h-4" />
+              Plano de Corte
             </TabsTrigger>
-            <TabsTrigger value="fabricado" className="px-8">
-              Fabricado
+            <TabsTrigger value="otimizacao" className="px-6 gap-2">
+              <BarChart3 className="w-4 h-4" />
+              Otimização de Barras
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="pendente" className="mt-4">
-            {/* Glass Cut Table */}
-            {calculatedGlassCuts.length > 0 && (
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                  <span className="w-3 h-3 rounded bg-purple-500"></span>
-                  Vidros
-                </h3>
-                <div className="border rounded-lg overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-purple-600 hover:bg-purple-600">
-                        <TableHead className="text-white font-bold">VIDRO</TableHead>
-                        <TableHead className="text-white font-bold text-center">LARGURA (mm)</TableHead>
-                        <TableHead className="text-white font-bold text-center">ALTURA (mm)</TableHead>
-                        <TableHead className="text-white font-bold text-center">ÁREA (m²)</TableHead>
-                        <TableHead className="text-white font-bold text-center">QUANTIDADE</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {calculatedGlassCuts.map((glass) => (
-                        <TableRow key={glass.id} className="hover:bg-muted/50">
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <GlassPreview 
-                                width={glass.calculatedWidth} 
-                                height={glass.calculatedHeight}
-                                name={glass.customName || glass.glassName}
-                              />
-                              <div>
-                                <span className="font-semibold text-foreground">{glass.customName || glass.glassName}</span>
-                                {glass.customName && (
-                                  <div className="text-xs text-muted-foreground uppercase tracking-wide">{glass.glassName}</div>
-                                )}
-                                {(glass.widthFormula || glass.heightFormula) && (
-                                  <div className="flex flex-wrap gap-1.5 mt-1.5">
-                                    {glass.widthFormula && (
-                                      <span className="inline-flex items-center text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 font-medium">
-                                        L: {glass.widthFormula}
-                                      </span>
-                                    )}
-                                    {glass.heightFormula && (
-                                      <span className="inline-flex items-center text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 font-medium">
-                                        A: {glass.heightFormula}
-                                      </span>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <span className="font-bold text-lg text-emerald-600 dark:text-emerald-400">{glass.calculatedWidth}</span>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <span className="font-bold text-lg text-blue-600 dark:text-blue-400">{glass.calculatedHeight}</span>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <span className="font-bold text-lg text-purple-600 dark:text-purple-400">{glass.areaM2.toFixed(3)}</span>
-                          </TableCell>
-                          <TableCell className="text-center font-medium">
-                            {glass.quantity}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-            )}
-
-            {/* Profile Cut Table */}
-            {calculatedCuts.length > 0 && (
-              <div>
-                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                  <span className="w-3 h-3 rounded bg-primary"></span>
-                  Perfis de Alumínio
-                </h3>
-                <div className="border rounded-lg overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-primary hover:bg-primary">
-                        <TableHead className="text-primary-foreground font-bold">PERFIL</TableHead>
-                        <TableHead className="text-primary-foreground font-bold text-center">MEDIDA (mm)</TableHead>
-                        <TableHead className="text-primary-foreground font-bold text-center">QUANTIDADE</TableHead>
-                        <TableHead className="text-primary-foreground font-bold text-center">ÂNGULO DE CORTE</TableHead>
-                        <TableHead className="text-primary-foreground font-bold text-center">POSIÇÃO</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {calculatedCuts.map((cut) => (
-                        <TableRow key={cut.id} className="hover:bg-muted/50">
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <div className="w-16 h-12 bg-white rounded border flex items-center justify-center overflow-hidden">
-                                {cut.imageUrl ? (
-                                  <img 
-                                    src={getStorageUrl(cut.imageUrl)} 
-                                    alt={cut.profileName}
-                                    className="w-full h-full object-contain"
-                                  />
-                                ) : (
-                                  <span className="text-muted-foreground text-xs">📦</span>
-                                )}
-                              </div>
-                              <div>
-                                <span className="font-medium">{cut.profileName}</span>
-                                {(cut.widthFormula || cut.heightFormula) && (
-                                  <div className="flex gap-2 mt-1">
-                                    {cut.widthFormula && (
-                                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
-                                        L: {cut.widthFormula}
-                                      </span>
-                                    )}
-                                    {cut.heightFormula && (
-                                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                                        A: {cut.heightFormula}
-                                      </span>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-center font-bold text-lg">
-                            {cut.calculatedLength}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {cut.quantity}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <div className="inline-flex gap-1">
-                              <span className="bg-foreground text-background px-3 py-1 text-sm font-medium">
-                                {cut.cutAngle}°
-                              </span>
-                              <span className="bg-foreground text-background px-3 py-1 text-sm font-medium">
-                                {cut.cutAngle}°
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <div className="inline-flex items-center gap-2">
-                              <span className={`w-3 h-3 rounded-full ${
-                                cut.position === 'Altura' ? 'bg-blue-500' : 'bg-amber-500'
-                              }`} />
-                              <span>{cut.position}</span>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-            )}
-
-            {calculatedCuts.length === 0 && calculatedGlassCuts.length === 0 && (
-              <div className="text-center py-12 text-muted-foreground border rounded-lg">
-                {selectedProduct 
-                  ? 'Nenhum item cadastrado para este produto.'
-                  : 'Selecione uma linha, categoria e produto para ver o plano de corte.'
-                }
-              </div>
-            )}
+          <TabsContent value="cortes" className="mt-4 space-y-6">
+            <GlassCutsTable 
+              glassCuts={calculatedGlassCuts}
+              showCheckboxes
+              onToggleComplete={handleToggleComplete}
+            />
+            <ProfileCutsTable 
+              cuts={calculatedCuts}
+              showCheckboxes
+              onToggleComplete={handleToggleComplete}
+              getStorageUrl={getStorageUrl}
+            />
           </TabsContent>
 
-          <TabsContent value="fabricado" className="mt-4">
-            <div className="text-center py-12 text-muted-foreground border rounded-lg">
-              Nenhum item fabricado ainda.
-            </div>
+          <TabsContent value="otimizacao" className="mt-4">
+            {barOptimizationData.length > 0 ? (
+              <BarOptimizationView cuts={barOptimizationData} />
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                Selecione um produto para ver a otimização de barras
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>
