@@ -100,6 +100,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, newSession) => {
+        console.log('Auth event:', event, 'Session:', !!newSession);
+        
         // Skip initial session event if we haven't done initial check yet
         // This prevents double-fetching
         if (event === 'INITIAL_SESSION' && !initialCheckDoneRef.current) {
@@ -113,14 +115,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
         
+        // Handle signed out - clear state immediately and don't try to refetch
+        if (event === 'SIGNED_OUT') {
+          currentUserIdRef.current = null;
+          setUser(null);
+          setSession(null);
+          setProfile(null);
+          setCompanies([]);
+          setCurrentCompany(null);
+          setIsSaasAdmin(false);
+          setLoading(false);
+          return;
+        }
+        
         handleSession(newSession, `onAuthStateChange:${event}`);
       }
     );
 
     // THEN check for existing session (only once)
-    supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
+    supabase.auth.getSession().then(({ data: { session: existingSession }, error }) => {
       if (!isMountedRef.current) return;
       initialCheckDoneRef.current = true;
+      
+      // If there's an error getting session (invalid/expired token), clear state
+      if (error) {
+        console.warn('Error getting session, clearing auth state:', error.message);
+        setLoading(false);
+        return;
+      }
+      
       handleSession(existingSession, 'getSession');
     });
 
