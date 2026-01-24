@@ -1,8 +1,9 @@
-// Generate OS Documents - Materials, Cutting Plan, Glass Projects
+// Generate OS Documents - Materials, Cutting Plan, Glass Projects, Purchase Orders
 
 import { supabase } from '@/integrations/supabase/client';
 import { optimizeProfiles, CutPiece } from './profileOptimization';
 import { evaluateFormula, getFormulaPosition } from './safeFormulaEvaluator';
+import { createPurchaseOrderFromOS } from './createPurchaseOrder';
 
 interface QuoteItem {
   id: string;
@@ -109,10 +110,12 @@ async function getProductTemplate(productTemplateId: string) {
  */
 export async function generateOSDocuments(
   ordemServicoId: string,
-  quoteItems: QuoteItem[]
+  quoteItems: QuoteItem[],
+  companyId?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const allCuts: CutPiece[] = [];
+    const allGlassProjects: Array<{ id: string; product_name: string; glass_type?: string; glass_color?: string; quantity: number; panels_data: any[]; total_area_m2: number }> = [];
     
     // Process each quote item
     for (const item of quoteItems) {
@@ -238,7 +241,7 @@ export async function generateOSDocuments(
 
         const totalArea = glassCuts.reduce((sum, g) => sum + g.areaM2, 0);
 
-        await supabase.from('os_glass_projects').insert({
+        const { data: glassProject } = await supabase.from('os_glass_projects').insert({
           ordem_servico_id: ordemServicoId,
           quote_item_id: item.id,
           product_name: item.description,
@@ -250,7 +253,20 @@ export async function generateOSDocuments(
           total_area_m2: totalArea,
           glass_type: item.glass_thickness,
           glass_color: item.glass_color,
-        });
+          procurement_status: 'pending_purchase',
+        }).select().single();
+
+        if (glassProject) {
+          allGlassProjects.push({
+            id: glassProject.id,
+            product_name: item.description,
+            glass_type: item.glass_thickness || undefined,
+            glass_color: item.glass_color || undefined,
+            quantity,
+            panels_data: panels,
+            total_area_m2: totalArea,
+          });
+        }
       }
     }
 
@@ -275,6 +291,11 @@ export async function generateOSDocuments(
       }));
 
       await supabase.from('os_materials').insert(materialsToInsert);
+    }
+
+    // Create purchase order for glass (on-demand materials)
+    if (allGlassProjects.length > 0 && companyId) {
+      await createPurchaseOrderFromOS(ordemServicoId, companyId, allGlassProjects);
     }
 
     return { success: true };
