@@ -13,6 +13,7 @@ import { OSGlassProject } from '@/components/ordens-servico/OSGlassProject';
 import { OSPhotosGallery } from '@/components/ordens-servico/OSPhotosGallery';
 import { OSSalesFlowTimeline } from '@/components/ordens-servico/OSSalesFlowTimeline';
 import { OSFinancialDashboard } from '@/components/ordens-servico/OSFinancialDashboard';
+import { OSProductionProgress } from '@/components/ordens-servico/OSProductionProgress';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { regenerateOSDocuments } from '@/utils/generateOSDocuments';
@@ -304,6 +305,9 @@ export default function OrdemServicoDetalhes() {
             />
           </CardContent>
         </Card>
+
+        {/* Production Progress Card */}
+        <OSProductionProgress ordemServicoId={ordem.id} />
 
         {/* Summary Card */}
         <Card>
