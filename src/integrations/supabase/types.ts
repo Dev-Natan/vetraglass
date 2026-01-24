@@ -948,6 +948,9 @@ export type Database = {
           cost: number | null
           created_at: string
           description: string | null
+          glass_color: string | null
+          glass_thickness: string | null
+          glass_type_detail: string | null
           id: string
           image_url: string | null
           is_active: boolean
@@ -966,6 +969,9 @@ export type Database = {
           cost?: number | null
           created_at?: string
           description?: string | null
+          glass_color?: string | null
+          glass_thickness?: string | null
+          glass_type_detail?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean
@@ -984,6 +990,9 @@ export type Database = {
           cost?: number | null
           created_at?: string
           description?: string | null
+          glass_color?: string | null
+          glass_thickness?: string | null
+          glass_type_detail?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean
@@ -2945,14 +2954,20 @@ export type Database = {
           glass_color: string | null
           glass_type: string | null
           id: string
+          material_origin: string | null
           ordem_servico_id: string
           panels_data: Json
           procurement_status: string | null
           product_name: string
           product_template_id: string | null
+          purchase_actual_cost: number | null
           purchase_order_item_id: string | null
+          purchase_quantity_needed: number | null
           quantity: number
           quote_item_id: string | null
+          stock_item_id: string | null
+          stock_quantity_used: number | null
+          stock_unit_cost: number | null
           total_area_m2: number | null
           vao_height: number
           vao_width: number
@@ -2962,14 +2977,20 @@ export type Database = {
           glass_color?: string | null
           glass_type?: string | null
           id?: string
+          material_origin?: string | null
           ordem_servico_id: string
           panels_data?: Json
           procurement_status?: string | null
           product_name: string
           product_template_id?: string | null
+          purchase_actual_cost?: number | null
           purchase_order_item_id?: string | null
+          purchase_quantity_needed?: number | null
           quantity?: number
           quote_item_id?: string | null
+          stock_item_id?: string | null
+          stock_quantity_used?: number | null
+          stock_unit_cost?: number | null
           total_area_m2?: number | null
           vao_height: number
           vao_width: number
@@ -2979,14 +3000,20 @@ export type Database = {
           glass_color?: string | null
           glass_type?: string | null
           id?: string
+          material_origin?: string | null
           ordem_servico_id?: string
           panels_data?: Json
           procurement_status?: string | null
           product_name?: string
           product_template_id?: string | null
+          purchase_actual_cost?: number | null
           purchase_order_item_id?: string | null
+          purchase_quantity_needed?: number | null
           quantity?: number
           quote_item_id?: string | null
+          stock_item_id?: string | null
+          stock_quantity_used?: number | null
+          stock_unit_cost?: number | null
           total_area_m2?: number | null
           vao_height?: number
           vao_width?: number
@@ -3018,6 +3045,13 @@ export type Database = {
             columns: ["quote_item_id"]
             isOneToOne: false
             referencedRelation: "quote_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_glass_projects_stock_item_id_fkey"
+            columns: ["stock_item_id"]
+            isOneToOne: false
+            referencedRelation: "company_items"
             referencedColumns: ["id"]
           },
         ]
@@ -4568,6 +4602,96 @@ export type Database = {
           },
         ]
       }
+      stock_reservations: {
+        Row: {
+          cancelled_at: string | null
+          company_id: string
+          company_item_id: string
+          consumed_at: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          ordem_servico_id: string
+          os_glass_project_id: string | null
+          quantity_reserved: number
+          reserved_at: string | null
+          status: string | null
+          unit: string
+          unit_cost: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          cancelled_at?: string | null
+          company_id: string
+          company_item_id: string
+          consumed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          ordem_servico_id: string
+          os_glass_project_id?: string | null
+          quantity_reserved: number
+          reserved_at?: string | null
+          status?: string | null
+          unit?: string
+          unit_cost?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          cancelled_at?: string | null
+          company_id?: string
+          company_item_id?: string
+          consumed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          ordem_servico_id?: string
+          os_glass_project_id?: string | null
+          quantity_reserved?: number
+          reserved_at?: string | null
+          status?: string | null
+          unit?: string
+          unit_cost?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_reservations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_reservations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_reservations_company_item_id_fkey"
+            columns: ["company_item_id"]
+            isOneToOne: false
+            referencedRelation: "company_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_reservations_ordem_servico_id_fkey"
+            columns: ["ordem_servico_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_reservations_os_glass_project_id_fkey"
+            columns: ["os_glass_project_id"]
+            isOneToOne: false
+            referencedRelation: "os_glass_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_attachments: {
         Row: {
           created_at: string
@@ -5182,6 +5306,10 @@ export type Database = {
           opened_by_name: string
           opening_amount: number
         }[]
+      }
+      get_available_stock: {
+        Args: { _company_item_id: string }
+        Returns: number
       }
       get_company_daily_summary: {
         Args: { _company_id: string; _end_date?: string; _start_date?: string }

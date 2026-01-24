@@ -43,6 +43,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { generateOSDocuments } from '@/utils/generateOSDocuments';
+import { MaterialsAvailabilityPreview } from './MaterialsAvailabilityPreview';
 
 interface Quote {
   id: string;
@@ -65,6 +66,9 @@ interface QuoteItem {
   total_price: number;
   company_product_id?: string | null;
   product_template_id?: string | null;
+  glass_thickness?: string | null;
+  glass_color?: string | null;
+  has_glass?: boolean | null;
 }
 
 interface AprovarOrcamentoDialogProps {
@@ -425,6 +429,16 @@ export function AprovarOrcamentoDialog({
 
           <Separator />
 
+          {/* Materials Availability Preview */}
+          {items.length > 0 && (
+            <MaterialsAvailabilityPreview 
+              quoteItems={items}
+              companyId={currentCompany?.id}
+            />
+          )}
+
+          <Separator />
+
           {/* Entry Payment */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
@@ -505,6 +519,7 @@ export function AprovarOrcamentoDialog({
           <Separator />
 
           {/* Service Order Details */}
+          {/* Entry Payment */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <ClipboardList className="w-4 h-4 text-primary" />

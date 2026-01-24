@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { optimizeProfiles, CutPiece } from './profileOptimization';
 import { evaluateFormula, getFormulaPosition } from './safeFormulaEvaluator';
 import { createPurchaseOrderFromOS } from './createPurchaseOrder';
+import { checkGlassStockAvailability, createStockReservation } from './checkGlassStock';
 
 interface QuoteItem {
   id: string;
@@ -115,7 +116,22 @@ export async function generateOSDocuments(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const allCuts: CutPiece[] = [];
-    const allGlassProjects: Array<{ id: string; product_name: string; glass_type?: string; glass_color?: string; quantity: number; panels_data: any[]; total_area_m2: number }> = [];
+    const glassProjectsToProcess: Array<{
+      id: string;
+      product_name: string;
+      glass_type?: string;
+      glass_color?: string;
+      quantity: number;
+      panels_data: any[];
+      total_area_m2: number;
+      stockCheck?: {
+        origin: 'stock' | 'purchase' | 'mixed';
+        stockItemId: string | null;
+        useFromStock: number;
+        needToPurchase: number;
+        unitCost: number;
+      };
+    }> = [];
     
     // Process each quote item
     for (const item of quoteItems) {
@@ -227,7 +243,7 @@ export async function generateOSDocuments(
         glass_cuts_data: glassCuts,
       });
 
-      // Insert glass project
+      // Insert glass project with hybrid stock check
       if (glassCuts.length > 0) {
         const panels = glassCuts.map((glass, index) => ({
           index: index + 1,
@@ -241,6 +257,30 @@ export async function generateOSDocuments(
 
         const totalArea = glassCuts.reduce((sum, g) => sum + g.areaM2, 0);
 
+        // Check stock availability if company is provided
+        let stockCheck = null;
+        let materialOrigin: 'stock' | 'purchase' | 'mixed' | 'pending' = 'pending';
+        let procurementStatus = 'pending_purchase';
+        
+        if (companyId) {
+          stockCheck = await checkGlassStockAvailability(
+            companyId,
+            item.glass_thickness || null,
+            item.glass_color || null,
+            totalArea
+          );
+
+          materialOrigin = stockCheck.origin;
+          
+          if (stockCheck.origin === 'stock') {
+            procurementStatus = 'in_stock';
+          } else if (stockCheck.origin === 'mixed') {
+            procurementStatus = 'partial_stock';
+          } else {
+            procurementStatus = 'pending_purchase';
+          }
+        }
+
         const { data: glassProject } = await supabase.from('os_glass_projects').insert({
           ordem_servico_id: ordemServicoId,
           quote_item_id: item.id,
@@ -253,11 +293,28 @@ export async function generateOSDocuments(
           total_area_m2: totalArea,
           glass_type: item.glass_thickness,
           glass_color: item.glass_color,
-          procurement_status: 'pending_purchase',
+          procurement_status: procurementStatus,
+          material_origin: materialOrigin,
+          stock_item_id: stockCheck?.stockItemId || null,
+          stock_quantity_used: stockCheck?.useFromStock || 0,
+          stock_unit_cost: stockCheck?.unitCost || 0,
+          purchase_quantity_needed: stockCheck?.needToPurchase || totalArea,
         }).select().single();
 
         if (glassProject) {
-          allGlassProjects.push({
+          // Create stock reservation if using stock
+          if (stockCheck && stockCheck.useFromStock > 0 && stockCheck.stockItemId && companyId) {
+            await createStockReservation(
+              companyId,
+              stockCheck.stockItemId,
+              ordemServicoId,
+              glassProject.id,
+              stockCheck.useFromStock,
+              stockCheck.unitCost
+            );
+          }
+
+          glassProjectsToProcess.push({
             id: glassProject.id,
             product_name: item.description,
             glass_type: item.glass_thickness || undefined,
@@ -265,6 +322,13 @@ export async function generateOSDocuments(
             quantity,
             panels_data: panels,
             total_area_m2: totalArea,
+            stockCheck: stockCheck ? {
+              origin: stockCheck.origin,
+              stockItemId: stockCheck.stockItemId,
+              useFromStock: stockCheck.useFromStock,
+              needToPurchase: stockCheck.needToPurchase,
+              unitCost: stockCheck.unitCost,
+            } : undefined,
           });
         }
       }
@@ -293,9 +357,19 @@ export async function generateOSDocuments(
       await supabase.from('os_materials').insert(materialsToInsert);
     }
 
-    // Create purchase order for glass (on-demand materials)
-    if (allGlassProjects.length > 0 && companyId) {
-      await createPurchaseOrderFromOS(ordemServicoId, companyId, allGlassProjects);
+    // Create purchase order only for glass that needs to be purchased (not in stock)
+    const glassesToPurchase = glassProjectsToProcess.filter(project => {
+      // Only include if needs any purchase
+      if (!project.stockCheck) return true; // No stock check = needs purchase
+      return project.stockCheck.needToPurchase > 0;
+    }).map(project => ({
+      ...project,
+      // Adjust area to only what needs to be purchased
+      total_area_m2: project.stockCheck?.needToPurchase || project.total_area_m2,
+    }));
+
+    if (glassesToPurchase.length > 0 && companyId) {
+      await createPurchaseOrderFromOS(ordemServicoId, companyId, glassesToPurchase);
     }
 
     return { success: true };
