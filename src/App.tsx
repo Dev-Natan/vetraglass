@@ -49,6 +49,7 @@ import AdminCategories from "./pages/admin/AdminCategories";
 import AdminAuditLogs from "./pages/admin/AdminAuditLogs";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AceitarConvite from "./pages/AceitarConvite";
+import PedidosCompra from "./pages/PedidosCompra";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
@@ -238,6 +239,11 @@ function AppRoutes() {
       <Route path="/notas-fiscais" element={
         <ProtectedRoute>
           <NotasFiscais />
+        </ProtectedRoute>
+      } />
+      <Route path="/pedidos-compra" element={
+        <ProtectedRoute>
+          <PedidosCompra />
         </ProtectedRoute>
       } />
       <Route path="/agenda" element={

@@ -2163,6 +2163,7 @@ export type Database = {
           codigo_servico: string | null
           created_at: string
           default_price: number | null
+          default_supplier: string | null
           description: string | null
           id: string
           image_url: string | null
@@ -2171,6 +2172,7 @@ export type Database = {
           name: string
           ncm: string | null
           origem: string | null
+          procurement_type: string | null
           specifications: Json | null
           type: Database["public"]["Enums"]["item_type"]
           unit: string
@@ -2188,6 +2190,7 @@ export type Database = {
           codigo_servico?: string | null
           created_at?: string
           default_price?: number | null
+          default_supplier?: string | null
           description?: string | null
           id?: string
           image_url?: string | null
@@ -2196,6 +2199,7 @@ export type Database = {
           name: string
           ncm?: string | null
           origem?: string | null
+          procurement_type?: string | null
           specifications?: Json | null
           type: Database["public"]["Enums"]["item_type"]
           unit?: string
@@ -2213,6 +2217,7 @@ export type Database = {
           codigo_servico?: string | null
           created_at?: string
           default_price?: number | null
+          default_supplier?: string | null
           description?: string | null
           id?: string
           image_url?: string | null
@@ -2221,6 +2226,7 @@ export type Database = {
           name?: string
           ncm?: string | null
           origem?: string | null
+          procurement_type?: string | null
           specifications?: Json | null
           type?: Database["public"]["Enums"]["item_type"]
           unit?: string
@@ -2941,8 +2947,10 @@ export type Database = {
           id: string
           ordem_servico_id: string
           panels_data: Json
+          procurement_status: string | null
           product_name: string
           product_template_id: string | null
+          purchase_order_item_id: string | null
           quantity: number
           quote_item_id: string | null
           total_area_m2: number | null
@@ -2956,8 +2964,10 @@ export type Database = {
           id?: string
           ordem_servico_id: string
           panels_data?: Json
+          procurement_status?: string | null
           product_name: string
           product_template_id?: string | null
+          purchase_order_item_id?: string | null
           quantity?: number
           quote_item_id?: string | null
           total_area_m2?: number | null
@@ -2971,8 +2981,10 @@ export type Database = {
           id?: string
           ordem_servico_id?: string
           panels_data?: Json
+          procurement_status?: string | null
           product_name?: string
           product_template_id?: string | null
+          purchase_order_item_id?: string | null
           quantity?: number
           quote_item_id?: string | null
           total_area_m2?: number | null
@@ -2992,6 +3004,13 @@ export type Database = {
             columns: ["product_template_id"]
             isOneToOne: false
             referencedRelation: "product_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_glass_projects_purchase_order_item_id_fkey"
+            columns: ["purchase_order_item_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_order_items"
             referencedColumns: ["id"]
           },
           {
@@ -3016,6 +3035,8 @@ export type Database = {
           notes: string | null
           ordem_servico_id: string
           pieces_count: number
+          procurement_status: string | null
+          purchase_order_item_id: string | null
           total_length_mm: number | null
           unit: string | null
           waste_mm: number | null
@@ -3033,6 +3054,8 @@ export type Database = {
           notes?: string | null
           ordem_servico_id: string
           pieces_count?: number
+          procurement_status?: string | null
+          purchase_order_item_id?: string | null
           total_length_mm?: number | null
           unit?: string | null
           waste_mm?: number | null
@@ -3050,6 +3073,8 @@ export type Database = {
           notes?: string | null
           ordem_servico_id?: string
           pieces_count?: number
+          procurement_status?: string | null
+          purchase_order_item_id?: string | null
           total_length_mm?: number | null
           unit?: string | null
           waste_mm?: number | null
@@ -3068,6 +3093,13 @@ export type Database = {
             columns: ["ordem_servico_id"]
             isOneToOne: false
             referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_materials_purchase_order_item_id_fkey"
+            columns: ["purchase_order_item_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_order_items"
             referencedColumns: ["id"]
           },
         ]
@@ -3446,6 +3478,157 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      purchase_order_items: {
+        Row: {
+          actual_cost: number | null
+          created_at: string
+          description: string
+          estimated_cost: number
+          height_mm: number | null
+          id: string
+          item_template_id: string | null
+          notes: string | null
+          os_glass_project_id: string | null
+          os_material_id: string | null
+          purchase_order_id: string
+          quantity: number
+          received_at: string | null
+          received_quantity: number | null
+          status: string
+          unit: string
+          updated_at: string
+          width_mm: number | null
+        }
+        Insert: {
+          actual_cost?: number | null
+          created_at?: string
+          description: string
+          estimated_cost?: number
+          height_mm?: number | null
+          id?: string
+          item_template_id?: string | null
+          notes?: string | null
+          os_glass_project_id?: string | null
+          os_material_id?: string | null
+          purchase_order_id: string
+          quantity?: number
+          received_at?: string | null
+          received_quantity?: number | null
+          status?: string
+          unit?: string
+          updated_at?: string
+          width_mm?: number | null
+        }
+        Update: {
+          actual_cost?: number | null
+          created_at?: string
+          description?: string
+          estimated_cost?: number
+          height_mm?: number | null
+          id?: string
+          item_template_id?: string | null
+          notes?: string | null
+          os_glass_project_id?: string | null
+          os_material_id?: string | null
+          purchase_order_id?: string
+          quantity?: number
+          received_at?: string | null
+          received_quantity?: number | null
+          status?: string
+          unit?: string
+          updated_at?: string
+          width_mm?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_order_items_item_template_id_fkey"
+            columns: ["item_template_id"]
+            isOneToOne: false
+            referencedRelation: "item_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_order_items_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_orders: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          expected_delivery: string | null
+          id: string
+          notes: string | null
+          ordem_servico_id: string | null
+          order_number: number
+          received_at: string | null
+          status: string
+          supplier_name: string | null
+          total_actual: number | null
+          total_estimated: number
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          expected_delivery?: string | null
+          id?: string
+          notes?: string | null
+          ordem_servico_id?: string | null
+          order_number?: number
+          received_at?: string | null
+          status?: string
+          supplier_name?: string | null
+          total_actual?: number | null
+          total_estimated?: number
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          expected_delivery?: string | null
+          id?: string
+          notes?: string | null
+          ordem_servico_id?: string | null
+          order_number?: number
+          received_at?: string | null
+          status?: string
+          supplier_name?: string | null
+          total_actual?: number | null
+          total_estimated?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_orders_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_ordem_servico_id_fkey"
+            columns: ["ordem_servico_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       quote_deposits: {
         Row: {
