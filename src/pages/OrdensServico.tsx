@@ -36,6 +36,7 @@ import { toast } from 'sonner';
 import { usePagination } from '@/hooks/usePagination';
 import { PaginationControls } from '@/components/common/PaginationControls';
 import { CACHE_TIMES } from '@/lib/queryConfig';
+import { OSProductionBadge } from '@/components/ordens-servico/OSProductionBadge';
 
 type OSStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
 type OSPriority = 'low' | 'normal' | 'high' | 'urgent';
@@ -431,6 +432,11 @@ export default function OrdensServico() {
                           <ChevronRight className="w-4 h-4 shrink-0" />
                           <span>{os.current_stage}</span>
                         </div>
+                      )}
+                      
+                      {/* Production Progress Badge */}
+                      {(os.status === 'pending' || os.status === 'in_progress') && (
+                        <OSProductionBadge ordemServicoId={os.id} />
                       )}
                     </div>
 
