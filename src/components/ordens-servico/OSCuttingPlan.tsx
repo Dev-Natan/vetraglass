@@ -73,8 +73,13 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
 
       const newItemStatus = { ...(plan.item_status || {}), [itemKey]: completed };
       
-      // Calculate new status based on completion
-      const totalItems = Object.keys(newItemStatus).length;
+      // Calculate total items from actual cuts_data and glass_cuts_data
+      const cutsData = (plan.cuts_data as any[]) || [];
+      const glassData = (plan.glass_cuts_data as any[]) || [];
+      const profileCount = cutsData.reduce((sum: number, cut: any) => sum + (cut.quantity || 1), 0);
+      const glassCount = glassData.reduce((sum: number, glass: any) => sum + (glass.quantity || 1), 0);
+      const totalItems = (profileCount + glassCount) * (plan.quantity || 1);
+      
       const completedItems = Object.values(newItemStatus).filter(v => v === true).length;
       
       let newStatus = 'pending';
