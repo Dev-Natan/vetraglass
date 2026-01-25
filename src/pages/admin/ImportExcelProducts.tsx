@@ -9,7 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { ExcelDropzone } from "@/components/admin/excel-import/ExcelDropzone";
 import { ExcelImportPreview } from "@/components/admin/excel-import/ExcelImportPreview";
 import { parseMultipleExcelFiles, ParsedProduct, extractUniqueItemTemplates } from "@/utils/parseExcelCuttingSheet";
-import { AlertCircle, CheckCircle, FileSpreadsheet, Loader2, Upload } from "lucide-react";
+import { bufferToBlob } from "@/utils/excelImageExtractor";
+import { AlertCircle, CheckCircle, FileSpreadsheet, Loader2, Upload, Image } from "lucide-react";
 
 export default function ImportExcelProducts() {
   const { toast } = useToast();
@@ -125,6 +126,23 @@ export default function ImportExcelProducts() {
     return null;
   };
 
+  // Helper to upload image buffer to storage
+  const uploadImageBuffer = async (buffer: ArrayBuffer, extension: string, folder: string, name: string): Promise<string | null> => {
+    try {
+      const mimeTypes: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif' };
+      const mimeType = mimeTypes[extension] || 'image/png';
+      const blob = bufferToBlob(buffer, mimeType);
+      const fileName = `${name}_${Date.now()}.${extension}`;
+      const filePath = `${folder}/${fileName}`;
+      
+      const { error } = await supabase.storage.from('product-images').upload(filePath, blob, { contentType: mimeType, upsert: true });
+      if (error) { console.error('Upload error:', error); return null; }
+      
+      const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(filePath);
+      return urlData.publicUrl;
+    } catch (e) { console.error('Upload failed:', e); return null; }
+  };
+
   const importMutation = useMutation({
     mutationFn: async (products: ParsedProduct[]) => {
       setImportStep('importing');
@@ -196,8 +214,21 @@ export default function ImportExcelProducts() {
       
       // 3. Create product templates
       const createdProducts: string[] = [];
+      let imagesUploaded = 0;
       
       for (const product of products) {
+        // Upload product image if available
+        let productImageUrl: string | null = null;
+        if (product.productImageBuffer) {
+          productImageUrl = await uploadImageBuffer(
+            product.productImageBuffer,
+            product.productImageExtension || 'png',
+            'products',
+            product.name.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30)
+          );
+          if (productImageUrl) imagesUploaded++;
+        }
+        
         // Create product template - cast category to valid enum value
         const validCategory = ['window', 'door', 'partition', 'mirror', 'shower', 'facade', 'other', 'guarda_corpo'].includes(product.category) 
           ? product.category as 'window' | 'door' | 'partition' | 'mirror' | 'shower' | 'facade' | 'other' | 'guarda_corpo'
@@ -210,6 +241,7 @@ export default function ImportExcelProducts() {
             category: validCategory,
             linha: product.linha,
             description: product.description,
+            image_url: productImageUrl,
           })
           .select('id')
           .single();
@@ -287,6 +319,7 @@ export default function ImportExcelProducts() {
         itemsCreated: newItems.length,
         productsCreated: createdProducts.length,
         productNames: createdProducts,
+        imagesUploaded,
       };
     },
     onSuccess: (result) => {
@@ -296,7 +329,7 @@ export default function ImportExcelProducts() {
       
       toast({
         title: "Importação concluída!",
-        description: `${result.itemsCreated} itens e ${result.productsCreated} produtos criados com sucesso.`,
+        description: `${result.itemsCreated} itens, ${result.productsCreated} produtos e ${result.imagesUploaded} imagens importados.`,
       });
     },
     onError: (error: Error) => {
