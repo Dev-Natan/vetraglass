@@ -1,5 +1,8 @@
 import * as XLSX from 'xlsx';
+import { extractImagesFromExcel, ExcelImageResult } from './excelImageExtractor';
 
+export { extractImagesFromExcel };
+export type { ExcelImageResult };
 export interface ParsedCuttingItem {
   code: string;
   name: string;
@@ -11,6 +14,11 @@ export interface ParsedCuttingItem {
   cutAngle: number | null;
   piecesQuantity: number;
   rawData: Record<string, any>;
+  // Image data
+  imageUrl?: string | null;
+  imageBuffer?: ArrayBuffer | null;
+  imageExtension?: string;
+  rowIndex?: number;
 }
 
 export interface ParsedProduct {
@@ -20,6 +28,10 @@ export interface ParsedProduct {
   description: string;
   items: ParsedCuttingItem[];
   fileName: string;
+  // Image data
+  productImageUrl?: string | null;
+  productImageBuffer?: ArrayBuffer | null;
+  productImageExtension?: string;
 }
 
 export interface ExcelParseResult {
@@ -183,7 +195,7 @@ export function parseExcelCuttingSheet(workbook: XLSX.WorkBook, fileName: string
     
     // Check if this is a valid cutting row (profile/material)
     if (isValidCuttingRow(row)) {
-      const item = parseCuttingRow(row);
+      const item = parseCuttingRow(row, i);
       if (item) {
         items.push(item);
       }
@@ -192,7 +204,7 @@ export function parseExcelCuttingSheet(workbook: XLSX.WorkBook, fileName: string
     
     // Check if this is an accessory row
     if (isAccessoryRow(row)) {
-      const item = parseAccessoryRow(row);
+      const item = parseAccessoryRow(row, i);
       if (item) {
         items.push(item);
       }
@@ -217,7 +229,7 @@ export function parseExcelCuttingSheet(workbook: XLSX.WorkBook, fileName: string
 }
 
 // Parse a cutting row in the format: "PC 027 / TUBÃO - MOLDURA" | ... | L | 4050 | 2 | ... | 45/45
-function parseCuttingRow(row: any[]): ParsedCuttingItem | null {
+function parseCuttingRow(row: any[], rowIndex: number): ParsedCuttingItem | null {
   const firstCell = String(row[0] || '').trim();
   if (!firstCell) return null;
   
@@ -319,6 +331,7 @@ function parseCuttingRow(row: any[]): ParsedCuttingItem | null {
     heightFormula,
     cutAngle,
     piecesQuantity: quantity,
+    rowIndex,
     rawData: row.reduce((acc, cell, idx) => {
       if (cell !== undefined) acc[String(idx)] = cell;
       return acc;
@@ -327,7 +340,7 @@ function parseCuttingRow(row: any[]): ParsedCuttingItem | null {
 }
 
 // Parse accessory row in the format: "FECHADURA BICO-DE-PAPAGAIO" | ... | 1 | ...
-function parseAccessoryRow(row: any[]): ParsedCuttingItem | null {
+function parseAccessoryRow(row: any[], rowIndex: number): ParsedCuttingItem | null {
   const name = String(row[0] || '').trim();
   if (!name) return null;
   
@@ -351,6 +364,7 @@ function parseAccessoryRow(row: any[]): ParsedCuttingItem | null {
     heightFormula: null,
     cutAngle: null,
     piecesQuantity: quantity,
+    rowIndex,
     rawData: row.reduce((acc, cell, idx) => {
       if (cell !== undefined) acc[String(idx)] = cell;
       return acc;
@@ -435,7 +449,7 @@ function parseWithHeaders(data: any[][], fileName: string): ParsedProduct | null
   };
 }
 
-export async function parseMultipleExcelFiles(files: FileList | File[]): Promise<ExcelParseResult> {
+export async function parseMultipleExcelFiles(files: FileList | File[], extractImages = true): Promise<ExcelParseResult> {
   const result: ExcelParseResult = {
     success: true,
     products: [],
@@ -451,6 +465,42 @@ export async function parseMultipleExcelFiles(files: FileList | File[]): Promise
       const product = parseExcelCuttingSheet(workbook, file.name);
       
       if (product) {
+        // Try to extract images
+        if (extractImages) {
+          try {
+            const imageResult = await extractImagesFromExcel(arrayBuffer);
+            
+            // Attach product image
+            if (imageResult.productImage) {
+              product.productImageBuffer = imageResult.productImage.buffer;
+              product.productImageExtension = imageResult.productImage.extension;
+            }
+            
+            // Attach item images based on row index
+            for (const item of product.items) {
+              if (item.rowIndex !== undefined) {
+                // Look for an image close to this row (within 2 rows)
+                for (let offset = 0; offset <= 2; offset++) {
+                  const img = imageResult.itemImages.get(item.rowIndex + offset) || 
+                              imageResult.itemImages.get(item.rowIndex - offset);
+                  if (img) {
+                    item.imageBuffer = img.buffer;
+                    item.imageExtension = img.extension;
+                    break;
+                  }
+                }
+              }
+            }
+            
+            if (imageResult.allImages.length > 0) {
+              result.warnings.push(`${file.name}: ${imageResult.allImages.length} imagem(ns) encontrada(s)`);
+            }
+          } catch (imgError) {
+            console.warn('Error extracting images:', imgError);
+            // Don't fail the whole import if image extraction fails
+          }
+        }
+        
         result.products.push(product);
       } else {
         result.warnings.push(`Arquivo ${file.name}: Não foi possível extrair dados de corte`);
