@@ -42,6 +42,7 @@ import AdminLinhas from "./pages/admin/AdminLinhas";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminCompanies from "./pages/admin/AdminCompanies";
 import ImportProducts from "./pages/admin/ImportProducts";
+import ImportExcelProducts from "./pages/admin/ImportExcelProducts";
 import AdminSupport from "./pages/admin/AdminSupport";
 import AdminAnnouncements from "./pages/admin/AdminAnnouncements";
 import AdminGlassFormulas from "./pages/admin/AdminGlassFormulas";
@@ -294,6 +295,11 @@ function AppRoutes() {
       <Route path="/admin/import-products" element={
         <ProtectedRoute>
           <ImportProducts />
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/import-excel" element={
+        <ProtectedRoute>
+          <ImportExcelProducts />
         </ProtectedRoute>
       } />
       <Route path="/admin/support" element={
