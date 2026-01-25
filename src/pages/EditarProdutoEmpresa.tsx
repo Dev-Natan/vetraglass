@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ArrowLeft, Upload, MoreHorizontal, Plus, ChevronRight, Home, Package, CheckCircle2, Circle, CircleDot, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { processFileWithWhiteBackground } from '@/utils/imageBackgroundProcessor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -245,12 +246,13 @@ export default function EditarProdutoEmpresa() {
 
     setIsUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${currentCompany.id}/${id}.${fileExt}`;
+      // Process image to have white background
+      const processedFile = await processFileWithWhiteBackground(file);
+      const fileName = `${currentCompany.id}/${id}.png`;
 
       const { error: uploadError } = await supabase.storage
         .from('company-product-images')
-        .upload(fileName, file, { upsert: true });
+        .upload(fileName, processedFile, { upsert: true });
 
       if (uploadError) throw uploadError;
 

@@ -11,6 +11,7 @@ import { ExcelImportPreview } from "@/components/admin/excel-import/ExcelImportP
 import { ImageAssociationPanel, ImageAssignment } from "@/components/admin/excel-import/ImageAssociationPanel";
 import { parseMultipleExcelFiles, ParsedProduct, extractUniqueItemTemplates, ExtractedImage } from "@/utils/parseExcelCuttingSheet";
 import { bufferToBlob } from "@/utils/excelImageExtractor";
+import { bufferToBlobWithWhiteBackground } from "@/utils/imageBackgroundProcessor";
 import { useProductCategories, useProductCategoryMutations } from "@/hooks/useProductCategories";
 import { AlertCircle, CheckCircle, FileSpreadsheet, Loader2, Upload, Image } from "lucide-react";
 
@@ -137,16 +138,17 @@ export default function ImportExcelProducts() {
     return null;
   };
 
-  // Helper to upload image buffer to storage
+  // Helper to upload image buffer to storage with white background processing
   const uploadImageBuffer = async (buffer: ArrayBuffer, extension: string, folder: string, name: string): Promise<string | null> => {
     try {
       const mimeTypes: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif' };
       const mimeType = mimeTypes[extension] || 'image/png';
-      const blob = bufferToBlob(buffer, mimeType);
-      const fileName = `${name}_${Date.now()}.${extension}`;
+      // Process to have white background
+      const blob = await bufferToBlobWithWhiteBackground(buffer, mimeType);
+      const fileName = `${name}_${Date.now()}.png`;
       const filePath = `${folder}/${fileName}`;
       
-      const { error } = await supabase.storage.from('product-images').upload(filePath, blob, { contentType: mimeType, upsert: true });
+      const { error } = await supabase.storage.from('product-images').upload(filePath, blob, { contentType: 'image/png', upsert: true });
       if (error) { console.error('Upload error:', error); return null; }
       
       const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(filePath);

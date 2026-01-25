@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Json } from '@/integrations/supabase/types';
+import { processFileWithWhiteBackground } from '@/utils/imageBackgroundProcessor';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -170,13 +171,14 @@ export default function ItemTemplates() {
       let imageUrl = data.image_url || null;
 
       if (imageFile) {
-        const fileExt = imageFile.name.split('.').pop();
-        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        // Process image to have white background
+        const processedFile = await processFileWithWhiteBackground(imageFile);
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.png`;
         const filePath = `items/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
           .from('item-templates')
-          .upload(filePath, imageFile);
+          .upload(filePath, processedFile);
 
         if (uploadError) throw uploadError;
 

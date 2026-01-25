@@ -112,3 +112,35 @@ export async function bufferToBlobWithWhiteBackground(
 ): Promise<Blob> {
   return processImageBackground(buffer, mimeType);
 }
+
+/**
+ * Processes a File to ensure it has a white background
+ * Returns a new File with white background
+ */
+export async function processFileWithWhiteBackground(file: File): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = async (e) => {
+      try {
+        const buffer = e.target?.result as ArrayBuffer;
+        const processedBlob = await processImageBackground(buffer, file.type);
+        
+        // Create new File from processed Blob with PNG extension
+        const newFileName = file.name.replace(/\.[^.]+$/, '.png');
+        const processedFile = new File([processedBlob], newFileName, { type: 'image/png' });
+        resolve(processedFile);
+      } catch (err) {
+        console.error('Error processing file:', err);
+        resolve(file); // Return original on error
+      }
+    };
+    
+    reader.onerror = () => {
+      console.error('Error reading file');
+      resolve(file); // Return original on error
+    };
+    
+    reader.readAsArrayBuffer(file);
+  });
+}
