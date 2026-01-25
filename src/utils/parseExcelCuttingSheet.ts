@@ -224,6 +224,13 @@ function parseCuttingRow(row: any[]): ParsedCuttingItem | null {
   let dimensionValue: number | null = null;
   let quantity: number = 1;
   let cutAngle: number | null = null;
+
+  const isLikelyCount = (value: unknown, max: number) => {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n <= 0 || n > max) return false;
+    // quantities must be integer-like; avoid decimals like 10.73333333
+    return Math.abs(n - Math.round(n)) < 1e-6;
+  };
   
   for (let j = 1; j < row.length; j++) {
     const cellValue = String(row[j] || '').trim().toUpperCase();
@@ -238,13 +245,14 @@ function parseCuttingRow(row: any[]): ParsedCuttingItem | null {
           dimensionValue = nextValue;
         }
       }
-      // Cell after dimension might be quantity
-      if (j + 2 < row.length) {
-        const qtyValue = Number(row[j + 2]);
-        if (!isNaN(qtyValue) && qtyValue > 0 && qtyValue < 1000) {
-          quantity = qtyValue;
-        }
-      }
+       // After dimension, scan next cells for a small integer quantity.
+       // Some spreadsheets put totals/metros (decimal) right after the dimension.
+       for (let k = j + 2; k < Math.min(row.length, j + 7); k++) {
+         if (isLikelyCount(row[k], 999)) {
+           quantity = Math.round(Number(row[k]));
+           break;
+         }
+       }
     }
     
     // Check for angle pattern (e.g., "45/45" or "90/90")
@@ -293,8 +301,8 @@ function parseAccessoryRow(row: any[]): ParsedCuttingItem | null {
   let quantity = 1;
   for (let j = 1; j < row.length; j++) {
     const cellValue = Number(row[j]);
-    if (!isNaN(cellValue) && cellValue > 0 && cellValue < 100) {
-      quantity = cellValue;
+    if (Number.isFinite(cellValue) && cellValue > 0 && cellValue < 100 && Math.abs(cellValue - Math.round(cellValue)) < 1e-6) {
+      quantity = Math.round(cellValue);
       break;
     }
   }

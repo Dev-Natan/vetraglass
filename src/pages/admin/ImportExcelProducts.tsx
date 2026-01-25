@@ -248,6 +248,18 @@ export default function ImportExcelProducts() {
             });
             throw new Error(`Item template não encontrado para: ${fullName}`);
           }
+
+          const safePiecesQuantity = (() => {
+            const n = Number(item.piecesQuantity);
+            if (!Number.isFinite(n) || n <= 0) return 1;
+            // DB expects integer
+            return Math.max(1, Math.round(n));
+          })();
+
+          const safeCutAngle = (() => {
+            const n = Number(item.cutAngle);
+            return Number.isFinite(n) ? n : null;
+          })();
           
           return {
             product_template_id: productData.id,
@@ -255,8 +267,8 @@ export default function ImportExcelProducts() {
             quantity_formula: item.quantityFormula || '1',
             width_formula: item.widthFormula,
             height_formula: item.heightFormula,
-            cut_angle: item.cutAngle,
-            pieces_quantity: item.piecesQuantity || 1,
+            cut_angle: safeCutAngle,
+            pieces_quantity: safePiecesQuantity,
           };
         });
         
