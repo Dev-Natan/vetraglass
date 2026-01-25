@@ -239,8 +239,40 @@ export default function ImportExcelProducts() {
       
       console.log(`Reutilizando ${reuseCount.count} itens existentes, criando ${newItems.length} novos`);
       
+      // Also collect all items with images for later uploading (from all products)
+      const itemsWithImages: { itemName: string; buffer: ArrayBuffer; extension: string }[] = [];
+      for (const product of products) {
+        for (const item of product.items) {
+          if (item.imageBuffer) {
+            const fullName = item.code ? `${item.code} - ${item.name}` : item.name;
+            itemsWithImages.push({
+              itemName: fullName,
+              buffer: item.imageBuffer,
+              extension: item.imageExtension || 'png',
+            });
+          }
+        }
+      }
+      console.log(`Itens com imagens encontrados: ${itemsWithImages.length}`);
+      let imagesUploaded = 0;
+      
       for (const item of newItems) {
         const fullName = item.code ? `${item.code} - ${item.name}` : item.name;
+        
+        // Check if this item has an associated image
+        const normalizedFullName = normalizeText(fullName);
+        const matchingImage = itemsWithImages.find(img => normalizeText(img.itemName) === normalizedFullName);
+        
+        let itemImageUrl: string | null = null;
+        if (matchingImage) {
+          itemImageUrl = await uploadImageBuffer(
+            matchingImage.buffer,
+            matchingImage.extension,
+            'items',
+            fullName.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30)
+          );
+          if (itemImageUrl) imagesUploaded++;
+        }
         
         const { data, error } = await supabase
           .from('item_templates')
@@ -250,6 +282,7 @@ export default function ImportExcelProducts() {
             unit: item.unit,
             linha: 'Portões',
             bar_length_mm: item.type === 'profile' ? 6000 : null,
+            image_url: itemImageUrl,
           })
           .select('id')
           .single();
@@ -265,9 +298,42 @@ export default function ImportExcelProducts() {
         }
       }
       
+      // Also try to update existing item templates that don't have images but we found images for them
+      for (const imgData of itemsWithImages) {
+        const normalizedName = normalizeText(imgData.itemName);
+        const existingId = itemTemplateMap.get(normalizedName);
+        
+        if (existingId) {
+          // Check if this template already has an image
+          const { data: existingTemplate } = await supabase
+            .from('item_templates')
+            .select('image_url')
+            .eq('id', existingId)
+            .single();
+          
+          if (!existingTemplate?.image_url) {
+            // Upload and update the image
+            const itemImageUrl = await uploadImageBuffer(
+              imgData.buffer,
+              imgData.extension,
+              'items',
+              imgData.itemName.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30)
+            );
+            
+            if (itemImageUrl) {
+              await supabase
+                .from('item_templates')
+                .update({ image_url: itemImageUrl })
+                .eq('id', existingId);
+              imagesUploaded++;
+              console.log(`Imagem atualizada para item existente: ${imgData.itemName}`);
+            }
+          }
+        }
+      }
+      
       // 4. Create product templates
       const createdProducts: string[] = [];
-      let imagesUploaded = 0;
       
       for (const product of products) {
         // Upload product image if available
