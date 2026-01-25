@@ -139,7 +139,11 @@ export default function ImportExcelProducts() {
         itemTemplateMap.set(normalizedName, template.id);
       }
       
-      // 2. Find or create item templates
+      // 2. Also pre-map all items from products for lookup later
+      // This ensures we can find items by their exact parsed name/code combination
+      const allProductItems = products.flatMap(p => p.items);
+      
+      // 3. Find or create item templates
       const newItems: typeof uniqueItems = [];
       const reuseCount = { count: 0 };
       
@@ -149,9 +153,12 @@ export default function ImportExcelProducts() {
         const normalizedKey = normalizeText(fullName);
         
         if (existingId) {
-          // Reuse existing template
+          // Reuse existing template - map ALL variations of this item
           itemTemplateMap.set(normalizedKey, existingId);
           itemTemplateMap.set(normalizeText(item.name), existingId);
+          if (item.code) {
+            itemTemplateMap.set(normalizeText(item.code), existingId);
+          }
           reuseCount.count++;
         } else {
           // Mark for creation
@@ -178,9 +185,13 @@ export default function ImportExcelProducts() {
         
         if (error) throw new Error(`Erro ao criar item ${fullName}: ${error.message}`);
         
+        // Map ALL variations for this new item
         const normalizedKey = normalizeText(fullName);
         itemTemplateMap.set(normalizedKey, data.id);
         itemTemplateMap.set(normalizeText(item.name), data.id);
+        if (item.code) {
+          itemTemplateMap.set(normalizeText(item.code), data.id);
+        }
       }
       
       // 3. Create product templates
@@ -209,13 +220,32 @@ export default function ImportExcelProducts() {
         const itemsToCreate = product.items.map((item, index) => {
           const fullName = item.code ? `${item.code} - ${item.name}` : item.name;
           
-          // Try to find by full name first, then by item name alone
+          // Try multiple variations to find the item
           let itemTemplateId = itemTemplateMap.get(normalizeText(fullName));
           if (!itemTemplateId) {
             itemTemplateId = itemTemplateMap.get(normalizeText(item.name));
           }
+          if (!itemTemplateId && item.code) {
+            itemTemplateId = itemTemplateMap.get(normalizeText(item.code));
+          }
+          
+          // Try finding by partial match in the map
+          if (!itemTemplateId) {
+            const normalizedFullName = normalizeText(fullName);
+            for (const [key, id] of itemTemplateMap.entries()) {
+              if (key.includes(normalizedFullName) || normalizedFullName.includes(key)) {
+                if (key.length > 5 || normalizedFullName.length > 5) {
+                  itemTemplateId = id;
+                  break;
+                }
+              }
+            }
+          }
           
           if (!itemTemplateId) {
+            console.error(`Item não encontrado: ${fullName}`, { 
+              mapKeys: Array.from(itemTemplateMap.keys()).slice(0, 20) 
+            });
             throw new Error(`Item template não encontrado para: ${fullName}`);
           }
           
