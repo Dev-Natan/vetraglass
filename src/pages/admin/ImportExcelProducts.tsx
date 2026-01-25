@@ -1,0 +1,336 @@
+import { useState } from "react";
+import { AdminLayout } from "@/components/layout/AdminLayout";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useToast } from "@/hooks/use-toast";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { ExcelDropzone } from "@/components/admin/excel-import/ExcelDropzone";
+import { ExcelImportPreview } from "@/components/admin/excel-import/ExcelImportPreview";
+import { parseMultipleExcelFiles, ParsedProduct, extractUniqueItemTemplates } from "@/utils/parseExcelCuttingSheet";
+import { AlertCircle, CheckCircle, FileSpreadsheet, Loader2, Upload } from "lucide-react";
+
+export default function ImportExcelProducts() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [files, setFiles] = useState<File[]>([]);
+  const [parsedProducts, setParsedProducts] = useState<ParsedProduct[]>([]);
+  const [parseErrors, setParseErrors] = useState<string[]>([]);
+  const [parseWarnings, setParseWarnings] = useState<string[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [importStep, setImportStep] = useState<'upload' | 'preview' | 'importing' | 'complete'>('upload');
+
+  // Fetch existing item templates
+  const { data: existingTemplates = [] } = useQuery({
+    queryKey: ['item-templates-simple'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('item_templates')
+        .select('id, name')
+        .order('name');
+      
+      if (error) throw error;
+      return (data || []).map(t => ({ id: t.id, name: t.name }));
+    }
+  });
+
+  const handleFilesSelected = async (newFiles: File[]) => {
+    const allFiles = [...files, ...newFiles];
+    setFiles(allFiles);
+    
+    setIsProcessing(true);
+    try {
+      const result = await parseMultipleExcelFiles(allFiles);
+      setParsedProducts(result.products);
+      setParseErrors(result.errors);
+      setParseWarnings(result.warnings);
+      
+      if (result.products.length > 0) {
+        setImportStep('preview');
+      }
+    } catch (error) {
+      toast({
+        title: "Erro ao processar arquivos",
+        description: error instanceof Error ? error.message : "Erro desconhecido",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleRemoveFile = (index: number) => {
+    const newFiles = files.filter((_, i) => i !== index);
+    setFiles(newFiles);
+    
+    if (newFiles.length === 0) {
+      setParsedProducts([]);
+      setParseErrors([]);
+      setParseWarnings([]);
+      setImportStep('upload');
+    } else {
+      // Re-parse remaining files
+      handleFilesSelected([]);
+    }
+  };
+
+  const importMutation = useMutation({
+    mutationFn: async (products: ParsedProduct[]) => {
+      setImportStep('importing');
+      
+      // 1. Extract unique items that need to be created
+      const uniqueItems = extractUniqueItemTemplates(products);
+      const itemTemplateMap = new Map<string, string>();
+      
+      // Map existing templates
+      for (const template of existingTemplates) {
+        itemTemplateMap.set(template.name.toLowerCase(), template.id);
+      }
+      
+      // 2. Create new item templates
+      const newItems = uniqueItems.filter(item => {
+        const key = item.name.toLowerCase();
+        return !itemTemplateMap.has(key);
+      });
+      
+      for (const item of newItems) {
+        const { data, error } = await supabase
+          .from('item_templates')
+          .insert({
+            name: item.code ? `${item.code} - ${item.name}` : item.name,
+            type: item.type,
+            unit: item.unit,
+            linha: 'Portões',
+            bar_length_mm: item.type === 'profile' ? 6000 : null,
+          })
+          .select('id')
+          .single();
+        
+        if (error) throw new Error(`Erro ao criar item ${item.name}: ${error.message}`);
+        
+        itemTemplateMap.set(item.name.toLowerCase(), data.id);
+      }
+      
+      // 3. Create product templates
+      const createdProducts: string[] = [];
+      
+      for (const product of products) {
+        // Create product template - cast category to valid enum value
+        const validCategory = ['window', 'door', 'partition', 'mirror', 'shower', 'facade', 'other', 'guarda_corpo'].includes(product.category) 
+          ? product.category as 'window' | 'door' | 'partition' | 'mirror' | 'shower' | 'facade' | 'other' | 'guarda_corpo'
+          : 'door' as const;
+          
+        const { data: productData, error: productError } = await supabase
+          .from('product_templates')
+          .insert({
+            name: product.name,
+            category: validCategory,
+            linha: product.linha,
+            description: product.description,
+          })
+          .select('id')
+          .single();
+        
+        if (productError) throw new Error(`Erro ao criar produto ${product.name}: ${productError.message}`);
+        
+        // 4. Create product template items
+        const itemsToCreate = product.items.map((item, index) => {
+          const key = item.name.toLowerCase();
+          const itemTemplateId = itemTemplateMap.get(key);
+          
+          if (!itemTemplateId) {
+            throw new Error(`Item template não encontrado para: ${item.name}`);
+          }
+          
+          return {
+            product_template_id: productData.id,
+            item_template_id: itemTemplateId,
+            quantity_formula: item.quantityFormula || '1',
+            width_formula: item.widthFormula,
+            height_formula: item.heightFormula,
+            cut_angle: item.cutAngle,
+            pieces_quantity: item.piecesQuantity || 1,
+            sort_order: index + 1,
+          };
+        });
+        
+        if (itemsToCreate.length > 0) {
+          const { error: itemsError } = await supabase
+            .from('product_template_items')
+            .insert(itemsToCreate);
+          
+          if (itemsError) throw new Error(`Erro ao criar itens do produto ${product.name}: ${itemsError.message}`);
+        }
+        
+        createdProducts.push(product.name);
+      }
+      
+      return {
+        itemsCreated: newItems.length,
+        productsCreated: createdProducts.length,
+        productNames: createdProducts,
+      };
+    },
+    onSuccess: (result) => {
+      setImportStep('complete');
+      queryClient.invalidateQueries({ queryKey: ['item-templates'] });
+      queryClient.invalidateQueries({ queryKey: ['product-templates'] });
+      
+      toast({
+        title: "Importação concluída!",
+        description: `${result.itemsCreated} itens e ${result.productsCreated} produtos criados com sucesso.`,
+      });
+    },
+    onError: (error: Error) => {
+      setImportStep('preview');
+      toast({
+        title: "Erro na importação",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+
+  const handleImport = () => {
+    if (parsedProducts.length === 0) return;
+    importMutation.mutate(parsedProducts);
+  };
+
+  const handleReset = () => {
+    setFiles([]);
+    setParsedProducts([]);
+    setParseErrors([]);
+    setParseWarnings([]);
+    setImportStep('upload');
+  };
+
+  return (
+    <AdminLayout>
+      <div className="p-6 max-w-6xl mx-auto">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center">
+            <FileSpreadsheet className="h-5 w-5 text-green-600" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">Importar Produtos via Excel</h1>
+            <p className="text-muted-foreground">
+              Importe planilhas de corte de material para criar produtos e componentes automaticamente
+            </p>
+          </div>
+        </div>
+
+        {parseErrors.length > 0 && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Erros encontrados</AlertTitle>
+            <AlertDescription>
+              <ul className="list-disc pl-4 mt-2">
+                {parseErrors.map((error, i) => (
+                  <li key={i}>{error}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {parseWarnings.length > 0 && (
+          <Alert className="mb-4 border-yellow-500 bg-yellow-50">
+            <AlertCircle className="h-4 w-4 text-yellow-600" />
+            <AlertTitle className="text-yellow-800">Avisos</AlertTitle>
+            <AlertDescription className="text-yellow-700">
+              <ul className="list-disc pl-4 mt-2">
+                {parseWarnings.map((warning, i) => (
+                  <li key={i}>{warning}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {importStep === 'complete' && (
+          <Alert className="mb-4 border-green-500 bg-green-50">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <AlertTitle className="text-green-800">Importação concluída!</AlertTitle>
+            <AlertDescription className="text-green-700">
+              Todos os produtos e itens foram importados com sucesso.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              {importStep === 'upload' && 'Selecione os arquivos Excel'}
+              {importStep === 'preview' && 'Revise os dados a importar'}
+              {importStep === 'importing' && 'Importando...'}
+              {importStep === 'complete' && 'Importação finalizada'}
+            </CardTitle>
+            <CardDescription>
+              {importStep === 'upload' && 'Faça upload das planilhas de corte de material no formato Excel'}
+              {importStep === 'preview' && 'Verifique os produtos e itens que serão criados'}
+              {importStep === 'importing' && 'Aguarde enquanto os dados são salvos no banco de dados'}
+              {importStep === 'complete' && 'Os produtos estão prontos para uso'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {(importStep === 'upload' || importStep === 'preview') && (
+              <ExcelDropzone
+                onFilesSelected={handleFilesSelected}
+                isLoading={isProcessing}
+                selectedFiles={files}
+                onRemoveFile={handleRemoveFile}
+              />
+            )}
+
+            {importStep === 'preview' && parsedProducts.length > 0 && (
+              <div className="mt-6">
+                <ExcelImportPreview
+                  products={parsedProducts}
+                  onProductsChange={setParsedProducts}
+                  existingItemTemplates={existingTemplates}
+                />
+                
+                <div className="flex justify-end gap-3 mt-6">
+                  <Button variant="outline" onClick={handleReset}>
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleImport} disabled={importMutation.isPending}>
+                    {importMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    <Upload className="mr-2 h-4 w-4" />
+                    Importar {parsedProducts.length} Produto(s)
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {importStep === 'importing' && (
+              <div className="flex flex-col items-center justify-center py-12">
+                <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+                <p className="text-lg font-medium">Importando dados...</p>
+                <p className="text-muted-foreground">Isso pode levar alguns segundos</p>
+              </div>
+            )}
+
+            {importStep === 'complete' && (
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
+                  <CheckCircle className="h-8 w-8 text-green-600" />
+                </div>
+                <p className="text-lg font-medium mb-4">Importação concluída com sucesso!</p>
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={handleReset}>
+                    Importar mais arquivos
+                  </Button>
+                  <Button onClick={() => window.location.href = '/admin/product-templates'}>
+                    Ver Produtos
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </AdminLayout>
+  );
+}

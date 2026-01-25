@@ -14,6 +14,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Upload,
+  FileSpreadsheet,
   Shield,
   Headphones,
   Megaphone,
@@ -51,9 +52,14 @@ const adminMenuItems = [
     icon: Tags,
   },
   {
-    title: "Importar Produtos",
+    title: "Importar JSON",
     path: "/admin/import-products",
     icon: Upload,
+  },
+  {
+    title: "Importar Excel",
+    path: "/admin/import-excel",
+    icon: FileSpreadsheet,
   },
   {
     title: "Empresas",
