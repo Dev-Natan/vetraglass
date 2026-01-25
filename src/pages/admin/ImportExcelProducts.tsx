@@ -248,14 +248,18 @@ export default function ImportExcelProducts() {
       const productImageMap = new Map<number, { buffer: ArrayBuffer; extension: string }>();
       const itemImageMap = new Map<string, { buffer: ArrayBuffer; extension: string }>();
       
-      for (const [imageIndex, assignment] of imageAssignments.entries()) {
-        const image = extractedImages[imageIndex];
+      // IMPORTANT: imageAssignments keys are NOT the imageIndex (they are hashed).
+      // Always use assignment.imageIndex to fetch the correct image.
+      for (const assignment of imageAssignments.values()) {
+        const image = extractedImages[assignment.imageIndex];
         if (!image) continue;
-        
+
         if (assignment.targetType === 'product' && assignment.productIndex !== undefined) {
           productImageMap.set(assignment.productIndex, { buffer: image.buffer, extension: image.extension });
         } else if (assignment.targetType === 'item' && assignment.itemName) {
-          itemImageMap.set(assignment.itemName, { buffer: image.buffer, extension: image.extension });
+          // Normalize item key to match how items are searched later (normalizeText(fullName))
+          const itemKey = normalizeText(assignment.itemName);
+          itemImageMap.set(itemKey, { buffer: image.buffer, extension: image.extension });
         }
       }
       
