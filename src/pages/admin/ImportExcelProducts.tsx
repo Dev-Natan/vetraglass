@@ -10,6 +10,7 @@ import { ExcelDropzone } from "@/components/admin/excel-import/ExcelDropzone";
 import { ExcelImportPreview } from "@/components/admin/excel-import/ExcelImportPreview";
 import { parseMultipleExcelFiles, ParsedProduct, extractUniqueItemTemplates } from "@/utils/parseExcelCuttingSheet";
 import { bufferToBlob } from "@/utils/excelImageExtractor";
+import { useProductCategories, useProductCategoryMutations } from "@/hooks/useProductCategories";
 import { AlertCircle, CheckCircle, FileSpreadsheet, Loader2, Upload, Image } from "lucide-react";
 
 export default function ImportExcelProducts() {
@@ -21,6 +22,11 @@ export default function ImportExcelProducts() {
   const [parseWarnings, setParseWarnings] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [importStep, setImportStep] = useState<'upload' | 'preview' | 'importing' | 'complete'>('upload');
+  const [pendingNewCategories, setPendingNewCategories] = useState<Set<string>>(new Set());
+
+  // Fetch existing categories
+  const { data: existingCategories = [] } = useProductCategories(true);
+  const { createMutation: createCategoryMutation } = useProductCategoryMutations();
 
   // Fetch existing item templates
   const { data: existingTemplates = [] } = useQuery({
@@ -147,6 +153,53 @@ export default function ImportExcelProducts() {
     mutationFn: async (products: ParsedProduct[]) => {
       setImportStep('importing');
       
+      // 0. Create any new categories that were requested
+      const categorySlugMap = new Map<string, string>();
+      const categoriesCreated: string[] = [];
+      
+      for (const product of products) {
+        if (product.category.startsWith('new:')) {
+          const newCategoryName = product.category.replace('new:', '');
+          
+          // Check if we already created this category
+          if (categorySlugMap.has(newCategoryName.toLowerCase())) continue;
+          
+          // Create a slug from the name
+          const slug = newCategoryName
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/g, '_')
+            .replace(/^_|_$/g, '');
+          
+          // Check if category with this slug already exists
+          const existingCat = existingCategories.find(c => c.slug === slug);
+          if (existingCat) {
+            categorySlugMap.set(newCategoryName.toLowerCase(), existingCat.slug);
+            continue;
+          }
+          
+          // Create the new category
+          const { data: newCat, error: catError } = await supabase
+            .from('product_categories')
+            .insert({
+              slug,
+              name: newCategoryName,
+              color: '#6366f1', // Default indigo color
+              is_active: true,
+              sort_order: existingCategories.length + 1,
+            })
+            .select('id, slug')
+            .single();
+          
+          if (catError) throw new Error(`Erro ao criar categoria ${newCategoryName}: ${catError.message}`);
+          
+          categorySlugMap.set(newCategoryName.toLowerCase(), newCat.slug);
+          categoriesCreated.push(newCategoryName);
+          console.log(`Categoria criada: ${newCategoryName} (${newCat.slug})`);
+        }
+      }
+      
       // 1. Extract unique items that need to be created
       const uniqueItems = extractUniqueItemTemplates(products);
       const itemTemplateMap = new Map<string, string>();
@@ -212,7 +265,7 @@ export default function ImportExcelProducts() {
         }
       }
       
-      // 3. Create product templates
+      // 4. Create product templates
       const createdProducts: string[] = [];
       let imagesUploaded = 0;
       
@@ -229,10 +282,21 @@ export default function ImportExcelProducts() {
           if (productImageUrl) imagesUploaded++;
         }
         
-        // Create product template - cast category to valid enum value
-        const validCategory = ['window', 'door', 'partition', 'mirror', 'shower', 'facade', 'other', 'guarda_corpo'].includes(product.category) 
-          ? product.category as 'window' | 'door' | 'partition' | 'mirror' | 'shower' | 'facade' | 'other' | 'guarda_corpo'
-          : 'door' as const;
+        // Resolve category - handle new categories
+        let finalCategory: string;
+        if (product.category.startsWith('new:')) {
+          const newCategoryName = product.category.replace('new:', '');
+          finalCategory = categorySlugMap.get(newCategoryName.toLowerCase()) || 'other';
+        } else {
+          finalCategory = product.category;
+        }
+        
+        // Validate category is a valid slug
+        const validCategory = ['window', 'door', 'partition', 'mirror', 'shower', 'facade', 'other', 'guarda_corpo'].includes(finalCategory) 
+          ? finalCategory as 'window' | 'door' | 'partition' | 'mirror' | 'shower' | 'facade' | 'other' | 'guarda_corpo'
+          : existingCategories.some(c => c.slug === finalCategory)
+            ? finalCategory as any
+            : 'other' as const;
           
         const { data: productData, error: productError } = await supabase
           .from('product_templates')
@@ -320,16 +384,23 @@ export default function ImportExcelProducts() {
         productsCreated: createdProducts.length,
         productNames: createdProducts,
         imagesUploaded,
+        categoriesCreated: categoriesCreated.length,
       };
     },
     onSuccess: (result) => {
       setImportStep('complete');
       queryClient.invalidateQueries({ queryKey: ['item-templates'] });
       queryClient.invalidateQueries({ queryKey: ['product-templates'] });
+      queryClient.invalidateQueries({ queryKey: ['product-categories'] });
+      
+      let description = `${result.itemsCreated} itens, ${result.productsCreated} produtos e ${result.imagesUploaded} imagens importados.`;
+      if (result.categoriesCreated > 0) {
+        description += ` ${result.categoriesCreated} categoria(s) criada(s).`;
+      }
       
       toast({
         title: "Importação concluída!",
-        description: `${result.itemsCreated} itens, ${result.productsCreated} produtos e ${result.imagesUploaded} imagens importados.`,
+        description,
       });
     },
     onError: (error: Error) => {
@@ -353,6 +424,11 @@ export default function ImportExcelProducts() {
     setParseErrors([]);
     setParseWarnings([]);
     setImportStep('upload');
+    setPendingNewCategories(new Set());
+  };
+
+  const handleNewCategoryRequest = (categoryName: string) => {
+    setPendingNewCategories(prev => new Set(prev).add(categoryName));
   };
 
   return (
@@ -439,6 +515,7 @@ export default function ImportExcelProducts() {
                   products={parsedProducts}
                   onProductsChange={setParsedProducts}
                   existingItemTemplates={existingTemplates}
+                  onNewCategoryRequest={handleNewCategoryRequest}
                 />
                 
                 <div className="flex justify-end gap-3 mt-6">
