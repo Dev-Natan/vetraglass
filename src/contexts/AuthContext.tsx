@@ -102,12 +102,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       (event, newSession) => {
         console.log('Auth event:', event, 'Session:', !!newSession);
         
-        // Skip initial session event if we haven't done initial check yet
-        // This prevents double-fetching
-        if (event === 'INITIAL_SESSION' && !initialCheckDoneRef.current) {
-          return;
-        }
-        
         // Handle token refresh silently without clearing state
         if (event === 'TOKEN_REFRESHED') {
           setSession(newSession);
@@ -128,6 +122,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
         
+        // For INITIAL_SESSION, only handle if we haven't done initial check yet
+        if (event === 'INITIAL_SESSION') {
+          if (!initialCheckDoneRef.current) {
+            initialCheckDoneRef.current = true;
+            handleSession(newSession, `onAuthStateChange:${event}`);
+          }
+          return;
+        }
+        
+        // Handle SIGNED_IN only if it's a different user or we don't have a session
+        if (event === 'SIGNED_IN') {
+          const currentUserId = currentUserIdRef.current;
+          const newUserId = newSession?.user?.id;
+          
+          // If same user is already loaded, just update session without refetching
+          if (currentUserId && currentUserId === newUserId && profile) {
+            setSession(newSession);
+            setUser(newSession?.user ?? null);
+            return;
+          }
+        }
+        
         handleSession(newSession, `onAuthStateChange:${event}`);
       }
     );
@@ -135,16 +151,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // THEN check for existing session (only once)
     supabase.auth.getSession().then(({ data: { session: existingSession }, error }) => {
       if (!isMountedRef.current) return;
-      initialCheckDoneRef.current = true;
       
       // If there's an error getting session (invalid/expired token), clear state
       if (error) {
         console.warn('Error getting session, clearing auth state:', error.message);
+        initialCheckDoneRef.current = true;
         setLoading(false);
         return;
       }
       
-      handleSession(existingSession, 'getSession');
+      // Only process if listener hasn't already handled it
+      if (!initialCheckDoneRef.current) {
+        initialCheckDoneRef.current = true;
+        handleSession(existingSession, 'getSession');
+      }
     });
 
     return () => {
