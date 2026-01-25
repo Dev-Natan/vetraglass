@@ -8,7 +8,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ExcelDropzone } from "@/components/admin/excel-import/ExcelDropzone";
 import { ExcelImportPreview } from "@/components/admin/excel-import/ExcelImportPreview";
-import { parseMultipleExcelFiles, ParsedProduct, extractUniqueItemTemplates } from "@/utils/parseExcelCuttingSheet";
+import { ImageAssociationPanel, ImageAssignment } from "@/components/admin/excel-import/ImageAssociationPanel";
+import { parseMultipleExcelFiles, ParsedProduct, extractUniqueItemTemplates, ExtractedImage } from "@/utils/parseExcelCuttingSheet";
 import { bufferToBlob } from "@/utils/excelImageExtractor";
 import { useProductCategories, useProductCategoryMutations } from "@/hooks/useProductCategories";
 import { AlertCircle, CheckCircle, FileSpreadsheet, Loader2, Upload, Image } from "lucide-react";
@@ -23,6 +24,8 @@ export default function ImportExcelProducts() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [importStep, setImportStep] = useState<'upload' | 'preview' | 'importing' | 'complete'>('upload');
   const [pendingNewCategories, setPendingNewCategories] = useState<Set<string>>(new Set());
+  const [extractedImages, setExtractedImages] = useState<ExtractedImage[]>([]);
+  const [imageAssignments, setImageAssignments] = useState<Map<number, ImageAssignment>>(new Map());
 
   // Fetch existing categories
   const { data: existingCategories = [] } = useProductCategories(true);
@@ -52,6 +55,8 @@ export default function ImportExcelProducts() {
       setParsedProducts(result.products);
       setParseErrors(result.errors);
       setParseWarnings(result.warnings);
+      setExtractedImages(result.extractedImages);
+      setImageAssignments(new Map()); // Reset assignments on new files
       
       if (result.products.length > 0) {
         setImportStep('preview');
@@ -239,29 +244,30 @@ export default function ImportExcelProducts() {
       
       console.log(`Reutilizando ${reuseCount.count} itens existentes, criando ${newItems.length} novos`);
       
-      // Also collect all items with images for later uploading (from all products)
-      const itemsWithImages: { itemName: string; buffer: ArrayBuffer; extension: string }[] = [];
-      for (const product of products) {
-        for (const item of product.items) {
-          if (item.imageBuffer) {
-            const fullName = item.code ? `${item.code} - ${item.name}` : item.name;
-            itemsWithImages.push({
-              itemName: fullName,
-              buffer: item.imageBuffer,
-              extension: item.imageExtension || 'png',
-            });
-          }
+      // Build image assignment maps from user selections
+      const productImageMap = new Map<number, { buffer: ArrayBuffer; extension: string }>();
+      const itemImageMap = new Map<string, { buffer: ArrayBuffer; extension: string }>();
+      
+      for (const [imageIndex, assignment] of imageAssignments.entries()) {
+        const image = extractedImages[imageIndex];
+        if (!image) continue;
+        
+        if (assignment.targetType === 'product' && assignment.productIndex !== undefined) {
+          productImageMap.set(assignment.productIndex, { buffer: image.buffer, extension: image.extension });
+        } else if (assignment.targetType === 'item' && assignment.itemName) {
+          itemImageMap.set(assignment.itemName, { buffer: image.buffer, extension: image.extension });
         }
       }
-      console.log(`Itens com imagens encontrados: ${itemsWithImages.length}`);
+      
+      console.log(`Imagens associadas: ${productImageMap.size} produtos, ${itemImageMap.size} itens`);
       let imagesUploaded = 0;
       
       for (const item of newItems) {
         const fullName = item.code ? `${item.code} - ${item.name}` : item.name;
         
-        // Check if this item has an associated image
+        // Check if this item has an associated image from manual selection
         const normalizedFullName = normalizeText(fullName);
-        const matchingImage = itemsWithImages.find(img => normalizeText(img.itemName) === normalizedFullName);
+        const matchingImage = itemImageMap.get(normalizedFullName);
         
         let itemImageUrl: string | null = null;
         if (matchingImage) {
@@ -298,13 +304,11 @@ export default function ImportExcelProducts() {
         }
       }
       
-      // Also try to update existing item templates that don't have images but we found images for them
-      for (const imgData of itemsWithImages) {
-        const normalizedName = normalizeText(imgData.itemName);
-        const existingId = itemTemplateMap.get(normalizedName);
+      // Update existing item templates with manually assigned images
+      for (const [itemName, imgData] of itemImageMap.entries()) {
+        const existingId = itemTemplateMap.get(itemName);
         
         if (existingId) {
-          // Check if this template already has an image
           const { data: existingTemplate } = await supabase
             .from('item_templates')
             .select('image_url')
@@ -312,12 +316,11 @@ export default function ImportExcelProducts() {
             .single();
           
           if (!existingTemplate?.image_url) {
-            // Upload and update the image
             const itemImageUrl = await uploadImageBuffer(
               imgData.buffer,
               imgData.extension,
               'items',
-              imgData.itemName.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30)
+              itemName.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30)
             );
             
             if (itemImageUrl) {
@@ -326,7 +329,7 @@ export default function ImportExcelProducts() {
                 .update({ image_url: itemImageUrl })
                 .eq('id', existingId);
               imagesUploaded++;
-              console.log(`Imagem atualizada para item existente: ${imgData.itemName}`);
+              console.log(`Imagem atualizada para item existente: ${itemName}`);
             }
           }
         }
@@ -335,10 +338,22 @@ export default function ImportExcelProducts() {
       // 4. Create product templates
       const createdProducts: string[] = [];
       
-      for (const product of products) {
-        // Upload product image if available
+      for (let productIndex = 0; productIndex < products.length; productIndex++) {
+        const product = products[productIndex];
+        
+        // Upload product image from manual assignment, fallback to auto-detected
         let productImageUrl: string | null = null;
-        if (product.productImageBuffer) {
+        const manualProductImage = productImageMap.get(productIndex);
+        
+        if (manualProductImage) {
+          productImageUrl = await uploadImageBuffer(
+            manualProductImage.buffer,
+            manualProductImage.extension,
+            'products',
+            product.name.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30)
+          );
+          if (productImageUrl) imagesUploaded++;
+        } else if (product.productImageBuffer) {
           productImageUrl = await uploadImageBuffer(
             product.productImageBuffer,
             product.productImageExtension || 'png',
@@ -491,6 +506,8 @@ export default function ImportExcelProducts() {
     setParseWarnings([]);
     setImportStep('upload');
     setPendingNewCategories(new Set());
+    setExtractedImages([]);
+    setImageAssignments(new Map());
   };
 
   const handleNewCategoryRequest = (categoryName: string) => {
@@ -576,13 +593,23 @@ export default function ImportExcelProducts() {
             )}
 
             {importStep === 'preview' && parsedProducts.length > 0 && (
-              <div className="mt-6">
+              <div className="mt-6 space-y-6">
                 <ExcelImportPreview
                   products={parsedProducts}
                   onProductsChange={setParsedProducts}
                   existingItemTemplates={existingTemplates}
                   onNewCategoryRequest={handleNewCategoryRequest}
                 />
+                
+                {/* Image Association Panel */}
+                {extractedImages.length > 0 && (
+                  <ImageAssociationPanel
+                    products={parsedProducts}
+                    extractedImages={extractedImages}
+                    imageAssignments={imageAssignments}
+                    onAssignmentsChange={setImageAssignments}
+                  />
+                )}
                 
                 <div className="flex justify-end gap-3 mt-6">
                   <Button variant="outline" onClick={handleReset}>

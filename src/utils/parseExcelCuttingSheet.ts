@@ -1,8 +1,8 @@
 import * as XLSX from 'xlsx';
-import { extractImagesFromExcel, ExcelImageResult } from './excelImageExtractor';
+import { extractImagesFromExcel, ExcelImageResult, ExtractedImage } from './excelImageExtractor';
 
 export { extractImagesFromExcel };
-export type { ExcelImageResult };
+export type { ExcelImageResult, ExtractedImage };
 export interface ParsedCuttingItem {
   code: string;
   name: string;
@@ -39,6 +39,7 @@ export interface ExcelParseResult {
   products: ParsedProduct[];
   errors: string[];
   warnings: string[];
+  extractedImages: ExtractedImage[];
 }
 
 // Common column name patterns
@@ -455,6 +456,7 @@ export async function parseMultipleExcelFiles(files: FileList | File[], extractI
     products: [],
     errors: [],
     warnings: [],
+    extractedImages: [],
   };
   
   for (const file of Array.from(files)) {
@@ -470,30 +472,26 @@ export async function parseMultipleExcelFiles(files: FileList | File[], extractI
           try {
             const imageResult = await extractImagesFromExcel(arrayBuffer);
             
-            // Attach product image
+            // Store ALL extracted images for manual association
+            // Add file source info to each image
+            for (const img of imageResult.allImages) {
+              result.extractedImages.push({
+                ...img,
+                filename: `${file.name}_${img.filename}`,
+              });
+            }
+            
+            // Auto-attach product image (first image in header area)
             if (imageResult.productImage) {
               product.productImageBuffer = imageResult.productImage.buffer;
               product.productImageExtension = imageResult.productImage.extension;
             }
             
-            // Attach item images based on row index
-            for (const item of product.items) {
-              if (item.rowIndex !== undefined) {
-                // Look for an image close to this row (within 2 rows)
-                for (let offset = 0; offset <= 2; offset++) {
-                  const img = imageResult.itemImages.get(item.rowIndex + offset) || 
-                              imageResult.itemImages.get(item.rowIndex - offset);
-                  if (img) {
-                    item.imageBuffer = img.buffer;
-                    item.imageExtension = img.extension;
-                    break;
-                  }
-                }
-              }
-            }
+            // Don't auto-attach item images anymore - let user manually associate
+            // This prevents incorrect associations
             
             if (imageResult.allImages.length > 0) {
-              result.warnings.push(`${file.name}: ${imageResult.allImages.length} imagem(ns) encontrada(s)`);
+              result.warnings.push(`${file.name}: ${imageResult.allImages.length} imagem(ns) encontrada(s) - associe manualmente`);
             }
           } catch (imgError) {
             console.warn('Error extracting images:', imgError);
