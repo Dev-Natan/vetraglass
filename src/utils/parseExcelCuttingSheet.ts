@@ -83,9 +83,16 @@ function isAccessoryRow(row: any[]): boolean {
   if (!row || row.length < 2) return false;
   
   const firstCell = String(row[0] || '').toLowerCase();
+  
+  // Skip rows that are clearly not accessories
+  if (firstCell.includes('#ref') || firstCell.includes('total') || firstCell.includes('perfis usados')) {
+    return false;
+  }
+  
   const accessoryPatterns = [
     'fechadura', 'roldana', 'guia', 'dobradiça', 'dobradica',
-    'trinco', 'puxador', 'fecho', 'maçaneta', 'macaneta'
+    'trinco', 'puxador', 'fecho', 'maçaneta', 'macaneta',
+    'cadeirinha', 'carrinho', 'batente', 'trava'
   ];
   
   return accessoryPatterns.some(p => firstCell.includes(p));
@@ -214,10 +221,37 @@ function parseCuttingRow(row: any[]): ParsedCuttingItem | null {
   const firstCell = String(row[0] || '').trim();
   if (!firstCell) return null;
   
-  // Extract code and name from first cell (e.g., "PC 027 / TUBÃO - MOLDURA PORTÃO")
-  const parts = firstCell.split(/[\/\-]/).map(p => p.trim());
-  const code = parts[0] || '';
-  const name = parts.slice(1).join(' - ').trim() || firstCell;
+  // Extract code and name from first cell
+  // Examples:
+  //   "PC 027 / TUBÃO - MOLDURA PORTÃO" -> code: "PC 027", name: "TUBÃO - MOLDURA PORTÃO"
+  //   "25-517 / BL-02 MARCO LATERAL" -> code: "25-517", name: "BL-02 MARCO LATERAL"
+  //   "LB-050 / E051A - LAMBRI FIXO" -> code: "LB-050", name: "E051A - LAMBRI FIXO"
+  //   "TUBO RETANGULAR 2/1 REFORÇO" -> code: "", name: "TUBO RETANGULAR 2/1 REFORÇO"
+  //   "TRD - 5/8" -> code: "TRD", name: "5/8"
+  
+  let code = '';
+  let name = firstCell;
+  
+  // First try to split by " / " (space-slash-space) which is the main separator
+  if (firstCell.includes(' / ')) {
+    const slashParts = firstCell.split(' / ');
+    code = slashParts[0].trim();
+    name = slashParts.slice(1).join(' / ').trim();
+  } 
+  // If no " / ", try splitting by " - " for patterns like "TRD - 5/8"
+  else if (firstCell.includes(' - ')) {
+    const dashParts = firstCell.split(' - ');
+    // Only use first part as code if it looks like a code (short, alphanumeric)
+    if (dashParts[0].length <= 15 && /^[A-Z0-9\-]+$/i.test(dashParts[0].trim())) {
+      code = dashParts[0].trim();
+      name = dashParts.slice(1).join(' - ').trim();
+    }
+  }
+  // For patterns like "25-517" without space separators, use as-is
+  else if (/^[A-Z0-9\-]+$/i.test(firstCell) && firstCell.length <= 20) {
+    code = firstCell;
+    name = firstCell;
+  }
   
   // Find L or A indicator and get dimension value
   let dimensionType: 'L' | 'A' | null = null;
