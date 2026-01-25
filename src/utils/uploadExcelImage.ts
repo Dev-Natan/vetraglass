@@ -1,10 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
-import { ExtractedImage, bufferToBlob } from "./excelImageExtractor";
+import { ExtractedImage } from "./excelImageExtractor";
+import { bufferToBlobWithWhiteBackground } from "./imageBackgroundProcessor";
 
 const BUCKET_NAME = 'product-images';
 
 /**
  * Uploads an extracted Excel image to Supabase storage
+ * Images are processed to have a white background
  */
 export async function uploadExcelImage(
   image: ExtractedImage,
@@ -12,17 +14,20 @@ export async function uploadExcelImage(
   customName?: string
 ): Promise<string | null> {
   try {
-    const blob = bufferToBlob(image.buffer, image.mimeType);
+    // Process image to ensure white background
+    const blob = await bufferToBlobWithWhiteBackground(image.buffer, image.mimeType);
+    
+    // Always use PNG extension since we convert to PNG for quality
     const fileName = customName 
-      ? `${customName}.${image.extension}`
-      : `${Date.now()}_${image.filename}`;
+      ? `${customName}.png`
+      : `${Date.now()}_${image.filename.replace(/\.[^.]+$/, '.png')}`;
     
     const filePath = `${folder}/${fileName}`;
     
     const { data, error } = await supabase.storage
       .from(BUCKET_NAME)
       .upload(filePath, blob, {
-        contentType: image.mimeType,
+        contentType: 'image/png',
         cacheControl: '3600',
         upsert: true,
       });
