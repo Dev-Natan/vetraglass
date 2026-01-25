@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Camera, Trash2, Loader2, User } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { processFileWithWhiteBackground } from '@/utils/imageBackgroundProcessor';
 
 interface EmployeePhotoUploadProps {
   photoUrl: string | null;
@@ -53,9 +54,9 @@ export function EmployeePhotoUpload({
     setUploading(true);
 
     try {
-      // Generate unique filename
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${companyId || 'temp'}/${employeeId || Date.now()}-${Date.now()}.${fileExt}`;
+      // Process image to have white background
+      const processedFile = await processFileWithWhiteBackground(file);
+      const fileName = `${companyId || 'temp'}/${employeeId || Date.now()}-${Date.now()}.png`;
 
       // Delete old photo if exists
       if (photoUrl) {
@@ -68,7 +69,7 @@ export function EmployeePhotoUpload({
       // Upload new photo
       const { error: uploadError } = await supabase.storage
         .from('employee-photos')
-        .upload(fileName, file, {
+        .upload(fileName, processedFile, {
           cacheControl: '3600',
           upsert: true,
         });

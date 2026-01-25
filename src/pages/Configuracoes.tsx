@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { processFileWithWhiteBackground } from '@/utils/imageBackgroundProcessor';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -76,8 +77,9 @@ export default function Configuracoes() {
       
       setUploadingLogo(true);
       
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${currentCompany.id}/logo.${fileExt}`;
+      // Process image to have white background
+      const processedFile = await processFileWithWhiteBackground(file);
+      const fileName = `${currentCompany.id}/logo.png`;
       
       if (company?.logo_url) {
         const oldPath = company.logo_url.split('/').slice(-2).join('/');
@@ -86,7 +88,7 @@ export default function Configuracoes() {
       
       const { error: uploadError } = await supabase.storage
         .from('company-logos')
-        .upload(fileName, file, { upsert: true });
+        .upload(fileName, processedFile, { upsert: true });
       
       if (uploadError) throw uploadError;
       

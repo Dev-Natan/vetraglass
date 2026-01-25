@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { processFileWithWhiteBackground } from '@/utils/imageBackgroundProcessor';
 import { useAuth } from "@/contexts/AuthContext";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -603,13 +604,14 @@ export default function ProductTemplates() {
     mutationFn: async ({ templateId, file }: { templateId: string; file: File }) => {
       setUploadingImageId(templateId);
       
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      // Process image to have white background
+      const processedFile = await processFileWithWhiteBackground(file);
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.png`;
       const filePath = `products/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('product-templates')
-        .upload(filePath, file);
+        .upload(filePath, processedFile);
 
       if (uploadError) throw uploadError;
 

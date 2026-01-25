@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { processFileWithWhiteBackground } from '@/utils/imageBackgroundProcessor';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -103,13 +104,13 @@ export function OSPhotosGallery({ ordemServicoId }: OSPhotosGalleryProps) {
 
       setIsUploading(true);
 
-      // Upload file to storage
-      const fileExt = selectedFile.name.split('.').pop();
-      const fileName = `${ordemServicoId}/${Date.now()}.${fileExt}`;
+      // Process image to have white background
+      const processedFile = await processFileWithWhiteBackground(selectedFile);
+      const fileName = `${ordemServicoId}/${Date.now()}.png`;
 
       const { error: uploadError } = await supabase.storage
         .from('os-photos')
-        .upload(fileName, selectedFile);
+        .upload(fileName, processedFile);
 
       if (uploadError) throw uploadError;
 
