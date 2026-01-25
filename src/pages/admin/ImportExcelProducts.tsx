@@ -257,7 +257,6 @@ export default function ImportExcelProducts() {
             height_formula: item.heightFormula,
             cut_angle: item.cutAngle,
             pieces_quantity: item.piecesQuantity || 1,
-            sort_order: index + 1,
           };
         });
         
