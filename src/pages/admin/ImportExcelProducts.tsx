@@ -75,6 +75,56 @@ export default function ImportExcelProducts() {
     }
   };
 
+  // Helper to normalize text for comparison (remove accents, lowercase, trim)
+  const normalizeText = (text: string) => {
+    return text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
+
+  // Check if item name matches existing template (partial match)
+  const findMatchingTemplate = (itemName: string, itemCode: string | null | undefined) => {
+    const normalizedItemName = normalizeText(itemName);
+    const normalizedCode = itemCode ? normalizeText(itemCode) : '';
+    const fullName = itemCode ? `${itemCode} - ${itemName}` : itemName;
+    const normalizedFullName = normalizeText(fullName);
+    
+    for (const template of existingTemplates) {
+      const normalizedTemplateName = normalizeText(template.name);
+      
+      // Exact match on full name
+      if (normalizedTemplateName === normalizedFullName) {
+        return template.id;
+      }
+      
+      // Match on item name alone
+      if (normalizedTemplateName === normalizedItemName) {
+        return template.id;
+      }
+      
+      // Template contains the code and name parts
+      if (normalizedCode && 
+          normalizedTemplateName.includes(normalizedCode) && 
+          normalizedTemplateName.includes(normalizedItemName)) {
+        return template.id;
+      }
+      
+      // Partial match - template name contains item name or vice versa
+      if (normalizedTemplateName.includes(normalizedItemName) && normalizedItemName.length > 5) {
+        return template.id;
+      }
+      if (normalizedItemName.includes(normalizedTemplateName) && normalizedTemplateName.length > 5) {
+        return template.id;
+      }
+    }
+    
+    return null;
+  };
+
   const importMutation = useMutation({
     mutationFn: async (products: ParsedProduct[]) => {
       setImportStep('importing');
@@ -83,22 +133,41 @@ export default function ImportExcelProducts() {
       const uniqueItems = extractUniqueItemTemplates(products);
       const itemTemplateMap = new Map<string, string>();
       
-      // Map existing templates
+      // Map existing templates by normalized name
       for (const template of existingTemplates) {
-        itemTemplateMap.set(template.name.toLowerCase(), template.id);
+        const normalizedName = normalizeText(template.name);
+        itemTemplateMap.set(normalizedName, template.id);
       }
       
-      // 2. Create new item templates
-      const newItems = uniqueItems.filter(item => {
-        const key = item.name.toLowerCase();
-        return !itemTemplateMap.has(key);
-      });
+      // 2. Find or create item templates
+      const newItems: typeof uniqueItems = [];
+      const reuseCount = { count: 0 };
+      
+      for (const item of uniqueItems) {
+        const existingId = findMatchingTemplate(item.name, item.code);
+        const fullName = item.code ? `${item.code} - ${item.name}` : item.name;
+        const normalizedKey = normalizeText(fullName);
+        
+        if (existingId) {
+          // Reuse existing template
+          itemTemplateMap.set(normalizedKey, existingId);
+          itemTemplateMap.set(normalizeText(item.name), existingId);
+          reuseCount.count++;
+        } else {
+          // Mark for creation
+          newItems.push(item);
+        }
+      }
+      
+      console.log(`Reutilizando ${reuseCount.count} itens existentes, criando ${newItems.length} novos`);
       
       for (const item of newItems) {
+        const fullName = item.code ? `${item.code} - ${item.name}` : item.name;
+        
         const { data, error } = await supabase
           .from('item_templates')
           .insert({
-            name: item.code ? `${item.code} - ${item.name}` : item.name,
+            name: fullName,
             type: item.type,
             unit: item.unit,
             linha: 'Portões',
@@ -107,9 +176,11 @@ export default function ImportExcelProducts() {
           .select('id')
           .single();
         
-        if (error) throw new Error(`Erro ao criar item ${item.name}: ${error.message}`);
+        if (error) throw new Error(`Erro ao criar item ${fullName}: ${error.message}`);
         
-        itemTemplateMap.set(item.name.toLowerCase(), data.id);
+        const normalizedKey = normalizeText(fullName);
+        itemTemplateMap.set(normalizedKey, data.id);
+        itemTemplateMap.set(normalizeText(item.name), data.id);
       }
       
       // 3. Create product templates
@@ -136,11 +207,16 @@ export default function ImportExcelProducts() {
         
         // 4. Create product template items
         const itemsToCreate = product.items.map((item, index) => {
-          const key = item.name.toLowerCase();
-          const itemTemplateId = itemTemplateMap.get(key);
+          const fullName = item.code ? `${item.code} - ${item.name}` : item.name;
+          
+          // Try to find by full name first, then by item name alone
+          let itemTemplateId = itemTemplateMap.get(normalizeText(fullName));
+          if (!itemTemplateId) {
+            itemTemplateId = itemTemplateMap.get(normalizeText(item.name));
+          }
           
           if (!itemTemplateId) {
-            throw new Error(`Item template não encontrado para: ${item.name}`);
+            throw new Error(`Item template não encontrado para: ${fullName}`);
           }
           
           return {
