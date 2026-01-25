@@ -277,7 +277,10 @@ function parseCuttingRow(row: any[]): ParsedCuttingItem | null {
     heightFormula,
     cutAngle,
     piecesQuantity: quantity,
-    rawData: Object.fromEntries(row.map((cell, idx) => [String(idx), cell])),
+    rawData: row.reduce((acc, cell, idx) => {
+      if (cell !== undefined) acc[String(idx)] = cell;
+      return acc;
+    }, {} as Record<string, any>),
   };
 }
 
@@ -306,7 +309,10 @@ function parseAccessoryRow(row: any[]): ParsedCuttingItem | null {
     heightFormula: null,
     cutAngle: null,
     piecesQuantity: quantity,
-    rawData: Object.fromEntries(row.map((cell, idx) => [String(idx), cell])),
+    rawData: row.reduce((acc, cell, idx) => {
+      if (cell !== undefined) acc[String(idx)] = cell;
+      return acc;
+    }, {} as Record<string, any>),
   };
 }
 
@@ -364,7 +370,10 @@ function parseWithHeaders(data: any[][], fileName: string): ParsedProduct | null
       heightFormula: heightRaw !== null ? parseFormula(heightRaw) : null,
       cutAngle: angleRaw !== null && !isNaN(Number(angleRaw)) ? Number(angleRaw) : null,
       piecesQuantity: 1,
-      rawData: Object.fromEntries(headers.map((h, idx) => [h, row[idx]])),
+      rawData: headers.reduce((acc, h, idx) => {
+        if (h && row[idx] !== undefined) acc[h] = row[idx];
+        return acc;
+      }, {} as Record<string, any>),
     };
     
     items.push(item);
