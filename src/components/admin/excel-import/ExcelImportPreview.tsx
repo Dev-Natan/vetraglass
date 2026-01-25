@@ -6,28 +6,71 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ParsedProduct, ParsedCuttingItem, extractUniqueItemTemplates } from "@/utils/parseExcelCuttingSheet";
-import { Package, Layers, Edit2, Check, X } from "lucide-react";
+import { useProductCategories } from "@/hooks/useProductCategories";
+import { Package, Layers, Edit2, Check, X, Plus } from "lucide-react";
 
 interface ExcelImportPreviewProps {
   products: ParsedProduct[];
   onProductsChange: (products: ParsedProduct[]) => void;
   existingItemTemplates: { id: string; name: string; code?: string }[];
+  onNewCategoryRequest?: (name: string) => void;
 }
 
 export function ExcelImportPreview({ 
   products, 
   onProductsChange,
-  existingItemTemplates 
+  existingItemTemplates,
+  onNewCategoryRequest
 }: ExcelImportPreviewProps) {
   const [selectedProducts, setSelectedProducts] = useState<Set<number>>(
     new Set(products.map((_, i) => i))
   );
   const [editingProduct, setEditingProduct] = useState<number | null>(null);
   const [editedName, setEditedName] = useState("");
-
+  const [creatingCategory, setCreatingCategory] = useState<number | null>(null);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  
+  const { data: categories = [] } = useProductCategories(true);
+  
+  const handleCategoryChange = (productIndex: number, categorySlug: string) => {
+    if (categorySlug === '__new__') {
+      setCreatingCategory(productIndex);
+      setNewCategoryName("");
+      return;
+    }
+    
+    const newProducts = [...products];
+    newProducts[productIndex] = { ...newProducts[productIndex], category: categorySlug };
+    onProductsChange(newProducts);
+  };
+  
+  const handleCreateNewCategory = (productIndex: number) => {
+    if (!newCategoryName.trim()) return;
+    
+    // Add the new category name to the product (will be created during import)
+    const newProducts = [...products];
+    newProducts[productIndex] = { 
+      ...newProducts[productIndex], 
+      category: `new:${newCategoryName.trim()}` 
+    };
+    onProductsChange(newProducts);
+    
+    if (onNewCategoryRequest) {
+      onNewCategoryRequest(newCategoryName.trim());
+    }
+    
+    setCreatingCategory(null);
+    setNewCategoryName("");
+  };
+  
+  const cancelCreateCategory = () => {
+    setCreatingCategory(null);
+    setNewCategoryName("");
+  };
   const uniqueItems = extractUniqueItemTemplates(products);
   
   // Check which items already exist
@@ -152,7 +195,59 @@ export function ExcelImportPreview({
                           )}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline">{product.category}</Badge>
+                          {creatingCategory === index ? (
+                            <div className="flex items-center gap-1">
+                              <Input
+                                value={newCategoryName}
+                                onChange={(e) => setNewCategoryName(e.target.value)}
+                                placeholder="Nova categoria"
+                                className="h-8 w-32"
+                                autoFocus
+                              />
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8"
+                                onClick={() => handleCreateNewCategory(index)}
+                              >
+                                <Check className="h-4 w-4 text-green-600" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8"
+                                onClick={cancelCreateCategory}
+                              >
+                                <X className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <Select
+                              value={product.category.startsWith('new:') ? product.category : product.category}
+                              onValueChange={(value) => handleCategoryChange(index, value)}
+                            >
+                              <SelectTrigger className="h-8 w-36">
+                                <SelectValue>
+                                  {product.category.startsWith('new:') 
+                                    ? product.category.replace('new:', '') 
+                                    : categories.find(c => c.slug === product.category)?.name || product.category}
+                                </SelectValue>
+                              </SelectTrigger>
+                              <SelectContent>
+                                {categories.map((cat) => (
+                                  <SelectItem key={cat.id} value={cat.slug}>
+                                    {cat.name}
+                                  </SelectItem>
+                                ))}
+                                <SelectItem value="__new__" className="text-primary font-medium">
+                                  <div className="flex items-center gap-1">
+                                    <Plus className="h-3 w-3" />
+                                    Nova Categoria
+                                  </div>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
                         </TableCell>
                         <TableCell>{product.linha}</TableCell>
                         <TableCell className="text-center">
