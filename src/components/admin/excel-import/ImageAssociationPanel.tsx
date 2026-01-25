@@ -1,19 +1,19 @@
 import { useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ParsedProduct, ParsedCuttingItem } from "@/utils/parseExcelCuttingSheet";
 import { ExtractedImage, bufferToDataUrl } from "@/utils/excelImageExtractor";
-import { Image, Package, Layers, X, Check, AlertTriangle } from "lucide-react";
+import { Image, Package, Layers, Check, AlertTriangle, ImageOff } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export interface ImageAssignment {
   imageIndex: number;
   targetType: 'product' | 'item';
   productIndex?: number;
-  itemName?: string; // normalized item name
+  itemName?: string;
 }
 
 interface ImageAssociationPanelProps {
@@ -29,9 +29,12 @@ export function ImageAssociationPanel({
   imageAssignments,
   onAssignmentsChange,
 }: ImageAssociationPanelProps) {
-  const [selectedImage, setSelectedImage] = useState<number | null>(null);
+  const [selectedTarget, setSelectedTarget] = useState<{
+    type: 'product' | 'item';
+    id: string;
+  } | null>(null);
 
-  // Get unique items from all products for the dropdown
+  // Get unique items from all products
   const uniqueItems = useMemo(() => {
     const itemMap = new Map<string, { name: string; code?: string; type: string }>();
     
@@ -51,85 +54,87 @@ export function ImageAssociationPanel({
     return Array.from(itemMap.values());
   }, [products]);
 
-  const handleAssignToProduct = (imageIndex: number, productIndex: number) => {
-    const newAssignments = new Map(imageAssignments);
-    
-    if (productIndex === -1) {
-      // Unassign
-      newAssignments.delete(imageIndex);
+  // Get currently assigned image for a target
+  const getAssignedImage = (type: 'product' | 'item', id: string): number | null => {
+    for (const [imageIndex, assignment] of imageAssignments.entries()) {
+      if (type === 'product' && assignment.targetType === 'product') {
+        if (assignment.productIndex?.toString() === id) return imageIndex;
+      } else if (type === 'item' && assignment.targetType === 'item') {
+        if (assignment.itemName === id) return imageIndex;
+      }
+    }
+    return null;
+  };
+
+  // Handle selecting a target (product or item)
+  const handleSelectTarget = (type: 'product' | 'item', id: string) => {
+    if (selectedTarget?.type === type && selectedTarget?.id === id) {
+      setSelectedTarget(null);
     } else {
+      setSelectedTarget({ type, id });
+    }
+  };
+
+  // Handle assigning an image to the selected target
+  const handleAssignImage = (imageIndex: number) => {
+    if (!selectedTarget) return;
+
+    const newAssignments = new Map(imageAssignments);
+
+    // Remove any existing assignment for this target
+    for (const [idx, assignment] of newAssignments.entries()) {
+      if (selectedTarget.type === 'product' && assignment.targetType === 'product') {
+        if (assignment.productIndex?.toString() === selectedTarget.id) {
+          newAssignments.delete(idx);
+        }
+      } else if (selectedTarget.type === 'item' && assignment.targetType === 'item') {
+        if (assignment.itemName === selectedTarget.id) {
+          newAssignments.delete(idx);
+        }
+      }
+    }
+
+    // Remove any existing assignment for this image
+    newAssignments.delete(imageIndex);
+
+    // Create new assignment
+    if (selectedTarget.type === 'product') {
       newAssignments.set(imageIndex, {
         imageIndex,
         targetType: 'product',
-        productIndex,
+        productIndex: parseInt(selectedTarget.id),
       });
-    }
-    
-    onAssignmentsChange(newAssignments);
-  };
-
-  const handleAssignToItem = (imageIndex: number, itemName: string) => {
-    const newAssignments = new Map(imageAssignments);
-    
-    if (itemName === '__none__') {
-      newAssignments.delete(imageIndex);
     } else {
       newAssignments.set(imageIndex, {
         imageIndex,
         targetType: 'item',
-        itemName: itemName.toLowerCase(),
+        itemName: selectedTarget.id,
       });
+    }
+
+    onAssignmentsChange(newAssignments);
+    setSelectedTarget(null);
+  };
+
+  // Remove assignment for a target
+  const handleRemoveAssignment = (type: 'product' | 'item', id: string) => {
+    const newAssignments = new Map(imageAssignments);
+    
+    for (const [idx, assignment] of newAssignments.entries()) {
+      if (type === 'product' && assignment.targetType === 'product') {
+        if (assignment.productIndex?.toString() === id) {
+          newAssignments.delete(idx);
+          break;
+        }
+      } else if (type === 'item' && assignment.targetType === 'item') {
+        if (assignment.itemName === id) {
+          newAssignments.delete(idx);
+          break;
+        }
+      }
     }
     
     onAssignmentsChange(newAssignments);
-  };
-
-  const getAssignmentLabel = (imageIndex: number): string | null => {
-    const assignment = imageAssignments.get(imageIndex);
-    if (!assignment) return null;
-    
-    if (assignment.targetType === 'product' && assignment.productIndex !== undefined) {
-      return `Produto: ${products[assignment.productIndex]?.name || 'Desconhecido'}`;
-    }
-    
-    if (assignment.targetType === 'item' && assignment.itemName) {
-      const item = uniqueItems.find(i => i.name.toLowerCase() === assignment.itemName);
-      return `Item: ${item?.name || assignment.itemName}`;
-    }
-    
-    return null;
-  };
-
-  const getAssignmentValue = (imageIndex: number): string => {
-    const assignment = imageAssignments.get(imageIndex);
-    if (!assignment) return '__none__';
-    
-    if (assignment.targetType === 'product' && assignment.productIndex !== undefined) {
-      return `product:${assignment.productIndex}`;
-    }
-    
-    if (assignment.targetType === 'item' && assignment.itemName) {
-      return `item:${assignment.itemName}`;
-    }
-    
-    return '__none__';
-  };
-
-  const handleValueChange = (imageIndex: number, value: string) => {
-    if (value === '__none__') {
-      const newAssignments = new Map(imageAssignments);
-      newAssignments.delete(imageIndex);
-      onAssignmentsChange(newAssignments);
-      return;
-    }
-    
-    const [type, indexOrName] = value.split(':');
-    
-    if (type === 'product') {
-      handleAssignToProduct(imageIndex, parseInt(indexOrName));
-    } else if (type === 'item') {
-      handleAssignToItem(imageIndex, indexOrName);
-    }
   };
 
   if (extractedImages.length === 0) {
@@ -143,8 +148,8 @@ export function ImageAssociationPanel({
     );
   }
 
-  const assignedCount = imageAssignments.size;
-  const unassignedCount = extractedImages.length - assignedCount;
+  const productsWithImages = products.filter((_, i) => getAssignedImage('product', i.toString()) !== null).length;
+  const itemsWithImages = uniqueItems.filter(item => getAssignedImage('item', item.name.toLowerCase()) !== null).length;
 
   return (
     <Card>
@@ -152,133 +157,239 @@ export function ImageAssociationPanel({
         <div className="flex items-center justify-between">
           <CardTitle className="text-base flex items-center gap-2">
             <Image className="h-4 w-4" />
-            Associar Imagens ({extractedImages.length})
+            Associar Imagens
           </CardTitle>
-          <div className="flex gap-2">
+          <div className="flex gap-2 text-xs">
             <Badge variant="secondary" className="bg-green-50 text-green-700">
               <Check className="h-3 w-3 mr-1" />
-              {assignedCount} associadas
+              {productsWithImages}/{products.length} produtos
             </Badge>
-            {unassignedCount > 0 && (
-              <Badge variant="secondary" className="bg-amber-50 text-amber-700">
-                <AlertTriangle className="h-3 w-3 mr-1" />
-                {unassignedCount} sem associação
-              </Badge>
-            )}
+            <Badge variant="secondary" className="bg-blue-50 text-blue-700">
+              <Check className="h-3 w-3 mr-1" />
+              {itemsWithImages}/{uniqueItems.length} itens
+            </Badge>
           </div>
         </div>
+        {selectedTarget && (
+          <div className="mt-2 p-2 bg-primary/10 rounded-md text-sm flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-primary" />
+            <span>
+              Selecione uma imagem abaixo para{' '}
+              <strong>
+                {selectedTarget.type === 'product' 
+                  ? products[parseInt(selectedTarget.id)]?.name 
+                  : uniqueItems.find(i => i.name.toLowerCase() === selectedTarget.id)?.name}
+              </strong>
+            </span>
+          </div>
+        )}
       </CardHeader>
       <CardContent className="p-0">
-        <ScrollArea className="h-[300px]">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 p-4">
-            {extractedImages.map((image, index) => {
-              const dataUrl = bufferToDataUrl(image.buffer, image.mimeType);
-              const assignment = imageAssignments.get(index);
-              const isAssigned = !!assignment;
-              
-              return (
-                <Card 
-                  key={index} 
-                  className={`overflow-hidden transition-all ${
-                    isAssigned 
-                      ? 'ring-2 ring-green-500 ring-offset-1' 
-                      : 'hover:ring-2 hover:ring-primary/50'
-                  }`}
-                >
-                  <div className="aspect-square relative bg-muted">
+        <Tabs defaultValue="products" className="w-full">
+          <TabsList className="w-full rounded-none border-b">
+            <TabsTrigger value="products" className="flex-1">
+              <Package className="h-4 w-4 mr-2" />
+              Produtos ({products.length})
+            </TabsTrigger>
+            <TabsTrigger value="items" className="flex-1">
+              <Layers className="h-4 w-4 mr-2" />
+              Perfis/Itens ({uniqueItems.length})
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Products Tab */}
+          <TabsContent value="products" className="mt-0">
+            <ScrollArea className="h-[200px]">
+              <div className="p-3 space-y-2">
+                {products.map((product, index) => {
+                  const assignedImageIdx = getAssignedImage('product', index.toString());
+                  const isSelected = selectedTarget?.type === 'product' && selectedTarget?.id === index.toString();
+                  
+                  return (
+                    <div
+                      key={index}
+                      onClick={() => handleSelectTarget('product', index.toString())}
+                      className={cn(
+                        "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all",
+                        isSelected 
+                          ? "border-primary bg-primary/5 ring-2 ring-primary" 
+                          : "hover:border-primary/50 hover:bg-muted/50",
+                        assignedImageIdx !== null && !isSelected && "border-green-300 bg-green-50/50"
+                      )}
+                    >
+                      {/* Image preview or placeholder */}
+                      <div className="w-16 h-16 rounded-md border bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {assignedImageIdx !== null ? (
+                          <img
+                            src={bufferToDataUrl(
+                              extractedImages[assignedImageIdx].buffer,
+                              extractedImages[assignedImageIdx].mimeType
+                            )}
+                            alt={product.name}
+                            className="w-full h-full object-contain"
+                          />
+                        ) : (
+                          <ImageOff className="h-6 w-6 text-muted-foreground/50" />
+                        )}
+                      </div>
+                      
+                      {/* Product info */}
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-sm truncate">{product.name}</h4>
+                        <p className="text-xs text-muted-foreground">
+                          {product.items.length} itens • {product.linha || 'Sem linha'}
+                        </p>
+                      </div>
+
+                      {/* Status badge */}
+                      {assignedImageIdx !== null ? (
+                        <Badge 
+                          variant="outline" 
+                          className="bg-green-100 text-green-700 border-green-300"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveAssignment('product', index.toString());
+                          }}
+                        >
+                          <Check className="h-3 w-3 mr-1" />
+                          Imagem definida
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-muted-foreground">
+                          Clique para selecionar
+                        </Badge>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          </TabsContent>
+
+          {/* Items Tab */}
+          <TabsContent value="items" className="mt-0">
+            <ScrollArea className="h-[200px]">
+              <div className="p-3 space-y-2">
+                {uniqueItems.map((item) => {
+                  const itemKey = item.name.toLowerCase();
+                  const assignedImageIdx = getAssignedImage('item', itemKey);
+                  const isSelected = selectedTarget?.type === 'item' && selectedTarget?.id === itemKey;
+                  
+                  return (
+                    <div
+                      key={itemKey}
+                      onClick={() => handleSelectTarget('item', itemKey)}
+                      className={cn(
+                        "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all",
+                        isSelected 
+                          ? "border-primary bg-primary/5 ring-2 ring-primary" 
+                          : "hover:border-primary/50 hover:bg-muted/50",
+                        assignedImageIdx !== null && !isSelected && "border-green-300 bg-green-50/50"
+                      )}
+                    >
+                      {/* Image preview or placeholder */}
+                      <div className="w-12 h-12 rounded-md border bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {assignedImageIdx !== null ? (
+                          <img
+                            src={bufferToDataUrl(
+                              extractedImages[assignedImageIdx].buffer,
+                              extractedImages[assignedImageIdx].mimeType
+                            )}
+                            alt={item.name}
+                            className="w-full h-full object-contain"
+                          />
+                        ) : (
+                          <ImageOff className="h-5 w-5 text-muted-foreground/50" />
+                        )}
+                      </div>
+                      
+                      {/* Item info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-semibold text-sm truncate">{item.name}</h4>
+                          <Badge variant="outline" className="text-[10px]">
+                            {item.type === 'profile' ? 'Perfil' : 'Acessório'}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      {/* Status */}
+                      {assignedImageIdx !== null ? (
+                        <Badge 
+                          variant="outline" 
+                          className="bg-green-100 text-green-700 border-green-300"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveAssignment('item', itemKey);
+                          }}
+                        >
+                          <Check className="h-3 w-3 mr-1" />
+                          OK
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-muted-foreground text-xs">
+                          Selecionar
+                        </Badge>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          </TabsContent>
+        </Tabs>
+
+        <Separator />
+
+        {/* Images Grid */}
+        <div className="p-3">
+          <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+            <Image className="h-4 w-4" />
+            Imagens Disponíveis ({extractedImages.length})
+          </h4>
+          <ScrollArea className="h-[180px]">
+            <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
+              {extractedImages.map((image, index) => {
+                const dataUrl = bufferToDataUrl(image.buffer, image.mimeType);
+                const assignment = imageAssignments.get(index);
+                const isAssigned = !!assignment;
+                
+                return (
+                  <div
+                    key={index}
+                    onClick={() => selectedTarget && handleAssignImage(index)}
+                    className={cn(
+                      "aspect-square rounded-md border overflow-hidden transition-all relative group",
+                      selectedTarget 
+                        ? "cursor-pointer hover:ring-2 hover:ring-primary hover:scale-105" 
+                        : "cursor-default",
+                      isAssigned && "ring-2 ring-green-500 opacity-60"
+                    )}
+                  >
                     <img
                       src={dataUrl}
                       alt={`Imagem ${index + 1}`}
-                      className="absolute inset-0 w-full h-full object-contain p-1"
+                      className="w-full h-full object-contain bg-muted p-0.5"
                     />
+                    
                     {isAssigned && (
-                      <div className="absolute top-1 right-1">
-                        <Badge variant="default" className="bg-green-600 text-xs">
-                          <Check className="h-3 w-3" />
-                        </Badge>
+                      <div className="absolute inset-0 bg-green-500/20 flex items-center justify-center">
+                        <Check className="h-6 w-6 text-green-600" />
                       </div>
                     )}
+                    
                     <Badge 
                       variant="secondary" 
-                      className="absolute bottom-1 left-1 text-[10px] bg-black/60 text-white"
+                      className="absolute bottom-0.5 left-0.5 text-[8px] bg-black/70 text-white px-1"
                     >
-                      Linha {image.rowIndex}
+                      L{image.rowIndex}
                     </Badge>
                   </div>
-                  
-                  <div className="p-2 space-y-1.5">
-                    <Select
-                      value={getAssignmentValue(index)}
-                      onValueChange={(value) => handleValueChange(index, value)}
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="Selecionar destino..." />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-[300px]">
-                        <SelectItem value="__none__" className="text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <X className="h-3 w-3" />
-                            Não importar
-                          </div>
-                        </SelectItem>
-                        
-                        <Separator className="my-1" />
-                        
-                        {/* Products section */}
-                        <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">
-                          Produtos
-                        </div>
-                        {products.map((product, productIndex) => (
-                          <SelectItem 
-                            key={`product:${productIndex}`} 
-                            value={`product:${productIndex}`}
-                          >
-                            <div className="flex items-center gap-1">
-                              <Package className="h-3 w-3 text-primary" />
-                              <span className="truncate max-w-[180px]">{product.name}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                        
-                        <Separator className="my-1" />
-                        
-                        {/* Items section */}
-                        <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">
-                          Itens/Perfis ({uniqueItems.length})
-                        </div>
-                        {uniqueItems.slice(0, 50).map((item) => (
-                          <SelectItem 
-                            key={`item:${item.name.toLowerCase()}`} 
-                            value={`item:${item.name.toLowerCase()}`}
-                          >
-                            <div className="flex items-center gap-1">
-                              <Layers className="h-3 w-3 text-secondary-foreground" />
-                              <span className="truncate max-w-[180px]">{item.name}</span>
-                              <Badge variant="outline" className="text-[9px] ml-1">
-                                {item.type === 'profile' ? 'Perfil' : 'Acess.'}
-                              </Badge>
-                            </div>
-                          </SelectItem>
-                        ))}
-                        {uniqueItems.length > 50 && (
-                          <div className="px-2 py-1 text-xs text-muted-foreground">
-                            +{uniqueItems.length - 50} itens...
-                          </div>
-                        )}
-                      </SelectContent>
-                    </Select>
-                    
-                    {assignment && (
-                      <p className="text-[10px] text-muted-foreground truncate">
-                        → {getAssignmentLabel(index)}
-                      </p>
-                    )}
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-        </ScrollArea>
+                );
+              })}
+            </div>
+          </ScrollArea>
+        </div>
       </CardContent>
     </Card>
   );
