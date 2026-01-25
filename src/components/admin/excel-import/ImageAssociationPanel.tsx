@@ -56,11 +56,11 @@ export function ImageAssociationPanel({
 
   // Get currently assigned image for a target
   const getAssignedImage = (type: 'product' | 'item', id: string): number | null => {
-    for (const [imageIndex, assignment] of imageAssignments.entries()) {
+    for (const [, assignment] of imageAssignments.entries()) {
       if (type === 'product' && assignment.targetType === 'product') {
-        if (assignment.productIndex?.toString() === id) return imageIndex;
+        if (assignment.productIndex?.toString() === id) return assignment.imageIndex;
       } else if (type === 'item' && assignment.targetType === 'item') {
-        if (assignment.itemName === id) return imageIndex;
+        if (assignment.itemName === id) return assignment.imageIndex;
       }
     }
     return null;
