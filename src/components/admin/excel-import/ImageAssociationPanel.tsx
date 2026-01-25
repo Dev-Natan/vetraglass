@@ -4,9 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ParsedProduct, ParsedCuttingItem } from "@/utils/parseExcelCuttingSheet";
+import { ParsedProduct } from "@/utils/parseExcelCuttingSheet";
 import { ExtractedImage, bufferToDataUrl } from "@/utils/excelImageExtractor";
-import { Image, Package, Layers, Check, AlertTriangle, ImageOff } from "lucide-react";
+import { Image, Package, Layers, Check, AlertTriangle, ImageOff, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface ImageAssignment {
@@ -66,6 +66,17 @@ export function ImageAssociationPanel({
     return null;
   };
 
+  // Check how many targets use a specific image
+  const getImageUsageCount = (imageIndex: number): number => {
+    let count = 0;
+    for (const assignment of imageAssignments.values()) {
+      if (assignment.imageIndex === imageIndex) {
+        count++;
+      }
+    }
+    return count;
+  };
+
   // Handle selecting a target (product or item)
   const handleSelectTarget = (type: 'product' | 'item', id: string) => {
     if (selectedTarget?.type === type && selectedTarget?.id === id) {
@@ -76,12 +87,13 @@ export function ImageAssociationPanel({
   };
 
   // Handle assigning an image to the selected target
+  // Now allows the same image to be used by multiple targets
   const handleAssignImage = (imageIndex: number) => {
     if (!selectedTarget) return;
 
     const newAssignments = new Map(imageAssignments);
 
-    // Remove any existing assignment for this target
+    // Remove only the existing assignment for THIS specific target (not the image)
     for (const [idx, assignment] of newAssignments.entries()) {
       if (selectedTarget.type === 'product' && assignment.targetType === 'product') {
         if (assignment.productIndex?.toString() === selectedTarget.id) {
@@ -94,18 +106,22 @@ export function ImageAssociationPanel({
       }
     }
 
-    // Remove any existing assignment for this image
-    newAssignments.delete(imageIndex);
+    // Create new assignment with a unique key that combines image index and target
+    const assignmentKey = selectedTarget.type === 'product' 
+      ? `p_${selectedTarget.id}_${imageIndex}`
+      : `i_${selectedTarget.id}_${imageIndex}`;
+    
+    // Use a numeric key based on hash for the Map
+    const numericKey = Math.abs(hashCode(assignmentKey));
 
-    // Create new assignment
     if (selectedTarget.type === 'product') {
-      newAssignments.set(imageIndex, {
+      newAssignments.set(numericKey, {
         imageIndex,
         targetType: 'product',
         productIndex: parseInt(selectedTarget.id),
       });
     } else {
-      newAssignments.set(imageIndex, {
+      newAssignments.set(numericKey, {
         imageIndex,
         targetType: 'item',
         itemName: selectedTarget.id,
@@ -160,11 +176,11 @@ export function ImageAssociationPanel({
             Associar Imagens
           </CardTitle>
           <div className="flex gap-2 text-xs">
-            <Badge variant="secondary" className="bg-green-50 text-green-700">
+            <Badge variant="secondary" className="bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300">
               <Check className="h-3 w-3 mr-1" />
               {productsWithImages}/{products.length} produtos
             </Badge>
-            <Badge variant="secondary" className="bg-blue-50 text-blue-700">
+            <Badge variant="secondary" className="bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
               <Check className="h-3 w-3 mr-1" />
               {itemsWithImages}/{uniqueItems.length} itens
             </Badge>
@@ -214,7 +230,7 @@ export function ImageAssociationPanel({
                         isSelected 
                           ? "border-primary bg-primary/5 ring-2 ring-primary" 
                           : "hover:border-primary/50 hover:bg-muted/50",
-                        assignedImageIdx !== null && !isSelected && "border-green-300 bg-green-50/50"
+                        assignedImageIdx !== null && !isSelected && "border-green-300 bg-green-50/50 dark:border-green-700 dark:bg-green-950/30"
                       )}
                     >
                       {/* Image preview or placeholder */}
@@ -245,7 +261,7 @@ export function ImageAssociationPanel({
                       {assignedImageIdx !== null ? (
                         <Badge 
                           variant="outline" 
-                          className="bg-green-100 text-green-700 border-green-300"
+                          className="bg-green-100 text-green-700 border-green-300 dark:bg-green-900 dark:text-green-300 dark:border-green-700"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleRemoveAssignment('product', index.toString());
@@ -284,7 +300,7 @@ export function ImageAssociationPanel({
                         isSelected 
                           ? "border-primary bg-primary/5 ring-2 ring-primary" 
                           : "hover:border-primary/50 hover:bg-muted/50",
-                        assignedImageIdx !== null && !isSelected && "border-green-300 bg-green-50/50"
+                        assignedImageIdx !== null && !isSelected && "border-green-300 bg-green-50/50 dark:border-green-700 dark:bg-green-950/30"
                       )}
                     >
                       {/* Image preview or placeholder */}
@@ -317,7 +333,7 @@ export function ImageAssociationPanel({
                       {assignedImageIdx !== null ? (
                         <Badge 
                           variant="outline" 
-                          className="bg-green-100 text-green-700 border-green-300"
+                          className="bg-green-100 text-green-700 border-green-300 dark:bg-green-900 dark:text-green-300 dark:border-green-700"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleRemoveAssignment('item', itemKey);
@@ -346,13 +362,16 @@ export function ImageAssociationPanel({
           <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
             <Image className="h-4 w-4" />
             Imagens Disponíveis ({extractedImages.length})
+            <span className="text-xs text-muted-foreground font-normal">
+              — A mesma imagem pode ser usada em múltiplos itens
+            </span>
           </h4>
           <ScrollArea className="h-[180px]">
             <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
               {extractedImages.map((image, index) => {
                 const dataUrl = bufferToDataUrl(image.buffer, image.mimeType);
-                const assignment = imageAssignments.get(index);
-                const isAssigned = !!assignment;
+                const usageCount = getImageUsageCount(index);
+                const isUsed = usageCount > 0;
                 
                 return (
                   <div
@@ -363,7 +382,7 @@ export function ImageAssociationPanel({
                       selectedTarget 
                         ? "cursor-pointer hover:ring-2 hover:ring-primary hover:scale-105" 
                         : "cursor-default",
-                      isAssigned && "ring-2 ring-green-500 opacity-60"
+                      isUsed && "ring-2 ring-green-500"
                     )}
                   >
                     <img
@@ -372,9 +391,23 @@ export function ImageAssociationPanel({
                       className="w-full h-full object-contain bg-muted p-0.5"
                     />
                     
-                    {isAssigned && (
-                      <div className="absolute inset-0 bg-green-500/20 flex items-center justify-center">
-                        <Check className="h-6 w-6 text-green-600" />
+                    {isUsed && (
+                      <div className="absolute top-0.5 right-0.5 flex items-center gap-0.5">
+                        {usageCount > 1 && (
+                          <Badge 
+                            variant="secondary" 
+                            className="text-[8px] bg-blue-600 text-white px-1 h-4"
+                          >
+                            <Copy className="h-2 w-2 mr-0.5" />
+                            {usageCount}
+                          </Badge>
+                        )}
+                        <Badge 
+                          variant="secondary" 
+                          className="text-[8px] bg-green-600 text-white px-1 h-4"
+                        >
+                          <Check className="h-2 w-2" />
+                        </Badge>
                       </div>
                     )}
                     
@@ -393,4 +426,15 @@ export function ImageAssociationPanel({
       </CardContent>
     </Card>
   );
+}
+
+// Simple hash function to generate numeric keys
+function hashCode(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return hash;
 }
