@@ -16,6 +16,7 @@ import { OverdueReceivablesAlert } from '@/components/financeiro/OverdueReceivab
 import { SalesGoalCard } from '@/components/dashboard/SalesGoalCard';
 import { SystemReminders } from '@/components/dashboard/SystemReminders';
 import { TodayTasksWidget } from '@/components/dashboard/TodayTasksWidget';
+import { PendingPurchasesAlert } from '@/components/dashboard/PendingPurchasesAlert';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -115,6 +116,9 @@ export default function Index() {
 
             {/* Lembretes do Sistema */}
             <SystemReminders />
+
+            {/* Pedidos de Compra Pendentes */}
+            <PendingPurchasesAlert />
             
             {/* Alertas Financeiros */}
             <OverdueReceivablesAlert />
