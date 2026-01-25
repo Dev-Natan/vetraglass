@@ -37,6 +37,7 @@ import { usePagination } from '@/hooks/usePagination';
 import { PaginationControls } from '@/components/common/PaginationControls';
 import { CACHE_TIMES } from '@/lib/queryConfig';
 import { OSProductionBadge } from '@/components/ordens-servico/OSProductionBadge';
+import { consumeOSMaterials } from '@/utils/checkGlassStock';
 
 type OSStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
 type OSPriority = 'low' | 'normal' | 'high' | 'urgent';
@@ -109,6 +110,12 @@ export default function OrdensServico() {
       } else if (status === 'completed') {
         updates.actual_end = new Date().toISOString().split('T')[0];
         updates.current_stage = 'Finalizado';
+        
+        // Consumir materiais reservados do estoque
+        const consumeResult = await consumeOSMaterials(id);
+        if (!consumeResult.success) {
+          console.warn('Aviso ao consumir materiais:', consumeResult.error);
+        }
       }
       
       const { error } = await supabase
@@ -119,6 +126,9 @@ export default function OrdensServico() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ordens-servico'] });
+      queryClient.invalidateQueries({ queryKey: ['company-stock'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-reservations'] });
       toast.success('Status atualizado!');
     },
     onError: () => {

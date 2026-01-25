@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { DollarSign, CreditCard, Smartphone, Receipt, User, CheckCircle2, AlertCircle } from 'lucide-react';
+import { consumeOSMaterials } from '@/utils/checkGlassStock';
 import {
   Dialog,
   DialogContent,
@@ -176,7 +177,13 @@ export function FaturarSaldoDialog({
         }
       }
 
-      // 5. Atualizar ordens_servico como concluída
+      // 5. Consumir materiais reservados do estoque
+      const consumeResult = await consumeOSMaterials(ordemServico.id);
+      if (!consumeResult.success) {
+        console.warn('Aviso ao consumir materiais:', consumeResult.error);
+      }
+
+      // 6. Atualizar ordens_servico como concluída
       const { error: osError } = await supabase
         .from('ordens_servico')
         .update({
