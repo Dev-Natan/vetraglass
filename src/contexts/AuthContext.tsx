@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useRef, ReactNode } fro
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface Profile {
   id: string;
@@ -46,6 +47,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -62,11 +64,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     isMountedRef.current = true;
+
+    const clearAppStateForSecurity = () => {
+      // Limpa estado + cache para evitar qualquer vazamento de dados entre contas
+      localStorage.removeItem('currentCompanyId');
+      setProfile(null);
+      setCompanies([]);
+      setCurrentCompany(null);
+      setIsSaasAdmin(false);
+      // React Query pode manter dados da conta anterior em cache
+      queryClient.clear();
+    };
+
+    const hardResetAuthState = () => {
+      currentUserIdRef.current = null;
+      setUser(null);
+      setSession(null);
+      clearAppStateForSecurity();
+      setLoading(false);
+    };
     
     const handleSession = async (newSession: Session | null, source: string) => {
       if (!isMountedRef.current) return;
       
       const newUserId = newSession?.user?.id ?? null;
+
+      // Se a sessão mudou de usuário, limpamos TUDO antes de carregar dados do novo usuário.
+      // Isso evita que qualquer dado em cache (ou estado) “vaze” entre contas.
+      const previousUserId = currentUserIdRef.current;
+      if (previousUserId && newUserId && previousUserId !== newUserId) {
+        clearAppStateForSecurity();
+      }
       
       // Update session and user immediately
       setSession(newSession);
@@ -101,24 +129,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, newSession) => {
         console.log('Auth event:', event, 'Session:', !!newSession);
+
+        const newUserId = newSession?.user?.id ?? null;
+        const currentUserId = currentUserIdRef.current;
         
-        // Handle token refresh silently without clearing state
+        // TOKEN_REFRESHED pode acontecer em background. Se por qualquer motivo vier com outro user_id
+        // (ex.: múltiplas abas/dispositivos), tratamos como troca completa de sessão.
         if (event === 'TOKEN_REFRESHED') {
+          // Se não houver sessão válida, por segurança reseta tudo.
+          if (!newSession?.user || !newUserId) {
+            hardResetAuthState();
+            return;
+          }
+
+          // Se houve mudança de usuário DURANTE refresh, não troque silenciosamente:
+          // por segurança, desloga localmente e exige novo login.
+          if (currentUserId && currentUserId !== newUserId) {
+            console.warn('Token refresh retornou outro usuário. Fazendo logout por segurança.');
+            hardResetAuthState();
+            return;
+          }
+
+          currentUserIdRef.current = newUserId;
           setSession(newSession);
-          setUser(newSession?.user ?? null);
+          setUser(newSession.user);
           return;
         }
         
         // Handle signed out - clear state immediately and don't try to refetch
         if (event === 'SIGNED_OUT') {
-          currentUserIdRef.current = null;
-          setUser(null);
-          setSession(null);
-          setProfile(null);
-          setCompanies([]);
-          setCurrentCompany(null);
-          setIsSaasAdmin(false);
-          setLoading(false);
+          hardResetAuthState();
           return;
         }
         
@@ -129,19 +169,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             handleSession(newSession, `onAuthStateChange:${event}`);
           }
           return;
-        }
-        
-        // Handle SIGNED_IN only if it's a different user or we don't have a session
-        if (event === 'SIGNED_IN') {
-          const currentUserId = currentUserIdRef.current;
-          const newUserId = newSession?.user?.id;
-          
-          // If same user is already loaded, just update session without refetching
-          if (currentUserId && currentUserId === newUserId && profile) {
-            setSession(newSession);
-            setUser(newSession?.user ?? null);
-            return;
-          }
         }
         
         handleSession(newSession, `onAuthStateChange:${event}`);
@@ -156,7 +183,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) {
         console.warn('Error getting session, clearing auth state:', error.message);
         initialCheckDoneRef.current = true;
-        setLoading(false);
+        hardResetAuthState();
         return;
       }
       
@@ -318,6 +345,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setCompanies([]);
       setCurrentCompany(null);
       setIsSaasAdmin(false);
+
+      // Limpa cache para não exibir dados da conta anterior
+      queryClient.clear();
     }
   };
 
