@@ -495,7 +495,7 @@ export function AprovarOrcamentoDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col min-h-0 p-0">
         {/* Compact Header */}
         <div className="px-6 pt-5 pb-4 border-b bg-gradient-to-r from-primary/5 to-transparent">
           <div className="flex items-start justify-between gap-4">
