@@ -1368,6 +1368,7 @@ export type Database = {
           price_per_sqm: number | null
           product_template_id: string | null
           updated_at: string
+          uses_glass: boolean | null
         }
         Insert: {
           base_price?: number | null
@@ -1390,6 +1391,7 @@ export type Database = {
           price_per_sqm?: number | null
           product_template_id?: string | null
           updated_at?: string
+          uses_glass?: boolean | null
         }
         Update: {
           base_price?: number | null
@@ -1412,6 +1414,7 @@ export type Database = {
           price_per_sqm?: number | null
           product_template_id?: string | null
           updated_at?: string
+          uses_glass?: boolean | null
         }
         Relationships: [
           {
@@ -3477,6 +3480,50 @@ export type Database = {
           sort_order?: number | null
         }
         Relationships: []
+      }
+      product_glass_prices: {
+        Row: {
+          company_product_id: string
+          cost_per_sqm: number
+          created_at: string | null
+          glass_type: string
+          id: string
+          is_active: boolean | null
+          price_per_sqm: number
+          thickness_mm: number
+          updated_at: string | null
+        }
+        Insert: {
+          company_product_id: string
+          cost_per_sqm?: number
+          created_at?: string | null
+          glass_type: string
+          id?: string
+          is_active?: boolean | null
+          price_per_sqm?: number
+          thickness_mm: number
+          updated_at?: string | null
+        }
+        Update: {
+          company_product_id?: string
+          cost_per_sqm?: number
+          created_at?: string | null
+          glass_type?: string
+          id?: string
+          is_active?: boolean | null
+          price_per_sqm?: number
+          thickness_mm?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_glass_prices_company_product_id_fkey"
+            columns: ["company_product_id"]
+            isOneToOne: false
+            referencedRelation: "company_products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       product_linhas: {
         Row: {
