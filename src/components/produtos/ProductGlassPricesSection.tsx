@@ -78,6 +78,7 @@ export function ProductGlassPricesSection({
 
   const handleSave = async (data: {
     glass_type: string;
+    glass_color: string;
     thickness_mm: number;
     price_per_sqm: number;
     cost_per_sqm: number;
@@ -139,6 +140,7 @@ export function ProductGlassPricesSection({
               <TableHeader>
                 <TableRow>
                   <TableHead>Tipo de Vidro</TableHead>
+                  <TableHead>Cor</TableHead>
                   <TableHead className="text-center">Espessura</TableHead>
                   <TableHead className="text-right">Preço/m²</TableHead>
                   <TableHead className="text-right">Custo/m²</TableHead>
@@ -152,6 +154,7 @@ export function ProductGlassPricesSection({
                   return (
                     <TableRow key={price.id}>
                       <TableCell className="font-medium">{price.glass_type}</TableCell>
+                      <TableCell>{price.glass_color}</TableCell>
                       <TableCell className="text-center">
                         <Badge variant="secondary">{price.thickness_mm}mm</Badge>
                       </TableCell>
@@ -209,7 +212,7 @@ export function ProductGlassPricesSection({
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
             <AlertDialogDescription>
-              Deseja remover o preço de vidro "{priceToDelete?.glass_type} {priceToDelete?.thickness_mm}mm"?
+              Deseja remover o preço de vidro "{priceToDelete?.glass_type} {priceToDelete?.glass_color} {priceToDelete?.thickness_mm}mm"?
               Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>

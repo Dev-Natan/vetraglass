@@ -6,6 +6,7 @@ export interface ProductGlassPrice {
   id: string;
   company_product_id: string;
   glass_type: string;
+  glass_color: string;
   thickness_mm: number;
   price_per_sqm: number;
   cost_per_sqm: number;
@@ -17,10 +18,13 @@ export interface ProductGlassPrice {
 export interface ProductGlassPriceInput {
   company_product_id: string;
   glass_type: string;
+  glass_color: string;
   thickness_mm: number;
   price_per_sqm: number;
   cost_per_sqm: number;
 }
+
+export const DEFAULT_GLASS_COLORS = ['Incolor', 'Verde', 'Fumê', 'Bronze', 'Jateado'];
 
 export function useProductGlassPrices(companyProductId: string | null) {
   const queryClient = useQueryClient();
@@ -53,7 +57,7 @@ export function useProductGlassPrices(companyProductId: string | null) {
 
       if (error) {
         if (error.code === '23505') {
-          throw new Error('Já existe um preço para esta combinação de tipo e espessura');
+          throw new Error('Já existe um preço para esta combinação de tipo, cor e espessura');
         }
         throw error;
       }
@@ -86,7 +90,7 @@ export function useProductGlassPrices(companyProductId: string | null) {
 
       if (error) {
         if (error.code === '23505') {
-          throw new Error('Já existe um preço para esta combinação de tipo e espessura');
+          throw new Error('Já existe um preço para esta combinação de tipo, cor e espessura');
         }
         throw error;
       }
@@ -134,14 +138,15 @@ export function useProductGlassPrices(companyProductId: string | null) {
   });
 
   // Função para buscar preço específico para orçamento
-  const getGlassPrice = (glassType: string, thicknessMm: number) => {
+  const getGlassPrice = (glassType: string, glassColor: string, thicknessMm: number) => {
     return glassPrices.find(
-      (p) => p.glass_type === glassType && p.thickness_mm === thicknessMm && p.is_active
+      (p) => p.glass_type === glassType && p.glass_color === glassColor && p.thickness_mm === thicknessMm && p.is_active
     );
   };
 
   // Opções únicas para dropdowns
   const glassTypeOptions = [...new Set(glassPrices.map((p) => p.glass_type))];
+  const glassColorOptions = [...new Set(glassPrices.map((p) => p.glass_color))];
   const thicknessOptions = [...new Set(glassPrices.map((p) => p.thickness_mm))].sort((a, b) => a - b);
 
   return {
@@ -153,6 +158,7 @@ export function useProductGlassPrices(companyProductId: string | null) {
     deleteGlassPrice,
     getGlassPrice,
     glassTypeOptions,
+    glassColorOptions,
     thicknessOptions,
   };
 }
@@ -170,6 +176,7 @@ export function useProductGlassPriceOptions(companyProductId: string | null) {
         .eq('company_product_id', companyProductId)
         .eq('is_active', true)
         .order('glass_type')
+        .order('glass_color')
         .order('thickness_mm');
 
       if (error) throw error;
@@ -177,8 +184,9 @@ export function useProductGlassPriceOptions(companyProductId: string | null) {
       // Retorna opções formatadas para dropdown
       return (data as ProductGlassPrice[]).map((p) => ({
         value: p.id,
-        label: `${p.glass_type} ${p.thickness_mm}mm`,
+        label: `${p.glass_type} ${p.glass_color} ${p.thickness_mm}mm`,
         glassType: p.glass_type,
+        glassColor: p.glass_color,
         thicknessMm: p.thickness_mm,
         pricePerSqm: p.price_per_sqm,
         costPerSqm: p.cost_per_sqm,

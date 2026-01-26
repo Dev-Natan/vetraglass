@@ -3486,6 +3486,7 @@ export type Database = {
           company_product_id: string
           cost_per_sqm: number
           created_at: string | null
+          glass_color: string | null
           glass_type: string
           id: string
           is_active: boolean | null
@@ -3497,6 +3498,7 @@ export type Database = {
           company_product_id: string
           cost_per_sqm?: number
           created_at?: string | null
+          glass_color?: string | null
           glass_type: string
           id?: string
           is_active?: boolean | null
@@ -3508,6 +3510,7 @@ export type Database = {
           company_product_id?: string
           cost_per_sqm?: number
           created_at?: string | null
+          glass_color?: string | null
           glass_type?: string
           id?: string
           is_active?: boolean | null
