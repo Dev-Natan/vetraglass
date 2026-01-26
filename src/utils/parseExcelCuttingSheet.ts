@@ -1,8 +1,14 @@
-import * as XLSX from 'xlsx';
+/**
+ * Excel Cutting Sheet Parser
+ * 
+ * Uses ExcelJS for parsing Excel files (replacing vulnerable xlsx package)
+ */
+import ExcelJS from 'exceljs';
 import { extractImagesFromExcel, ExcelImageResult, ExtractedImage } from './excelImageExtractor';
 
 export { extractImagesFromExcel };
 export type { ExcelImageResult, ExtractedImage };
+
 export interface ParsedCuttingItem {
   code: string;
   name: string;
@@ -67,22 +73,61 @@ function findColumnIndex(headers: string[], patterns: string[]): number {
   return -1;
 }
 
-// Pattern to detect cutting list rows in the specific format:
-// "PC 027 / TUBÃO - MOLDURA PORTÃO" | ... | L | 4050 | 2 | ... | 45/45
-function isValidCuttingRow(row: any[]): boolean {
+// Get cell value from ExcelJS cell
+function getCellValue(cell: ExcelJS.Cell | undefined): any {
+  if (!cell) return null;
+  
+  // If cell has a formula, get the result
+  if (cell.formula) {
+    return cell.result ?? cell.value;
+  }
+  
+  // Handle different value types
+  const value = cell.value;
+  if (value === null || value === undefined) return null;
+  
+  // Handle rich text
+  if (typeof value === 'object' && 'richText' in value) {
+    return value.richText.map((rt: { text: string }) => rt.text).join('');
+  }
+  
+  // Handle formula result object
+  if (typeof value === 'object' && 'result' in value) {
+    return value.result;
+  }
+  
+  return value;
+}
+
+// Get formula from ExcelJS cell
+function getCellFormula(cell: ExcelJS.Cell | undefined): string | null {
+  if (!cell) return null;
+  
+  if (cell.formula) {
+    return cell.formula;
+  }
+  
+  // Check if value is a formula object
+  const value = cell.value;
+  if (typeof value === 'object' && value !== null && 'formula' in value) {
+    return (value as { formula: string }).formula;
+  }
+  
+  return null;
+}
+
+// Pattern to detect cutting list rows
+function isValidCuttingRow(row: (string | number | null)[]): boolean {
   if (!row || row.length < 5) return false;
   
-  // Check if first cell contains a profile code pattern (PC xxx, LB-xxx, PU-xxx, etc.)
   const firstCell = String(row[0] || '').trim();
   const hasProfileCode = /^(PC|LB|PU|TRD|TUBO|25-|BL-|E0)/i.test(firstCell);
   
-  // Check if row has L or A dimension indicator
   const hasLAIndicator = row.some(cell => {
     const val = String(cell || '').trim().toUpperCase();
     return val === 'L' || val === 'A';
   });
   
-  // Check if row has numeric values (dimensions and quantities)
   const hasNumericValues = row.filter(cell => {
     const num = Number(cell);
     return !isNaN(num) && num > 0;
@@ -92,12 +137,11 @@ function isValidCuttingRow(row: any[]): boolean {
 }
 
 // Pattern to detect accessory rows
-function isAccessoryRow(row: any[]): boolean {
+function isAccessoryRow(row: (string | number | null)[]): boolean {
   if (!row || row.length < 2) return false;
   
   const firstCell = String(row[0] || '').toLowerCase();
   
-  // Skip rows that are clearly not accessories
   if (firstCell.includes('#ref') || firstCell.includes('total') || firstCell.includes('perfis usados')) {
     return false;
   }
@@ -116,42 +160,31 @@ function parseFormula(value: any): string {
   
   const strValue = String(value).trim().toUpperCase();
   
-  // Check if it's a direct number
   if (!isNaN(Number(strValue))) {
     return strValue;
   }
   
-  // Convert common patterns to formulas
-  // L + 50, A - 20, L * 2, etc.
   let formula = strValue
     .replace(/LARGURA/gi, 'L')
     .replace(/ALTURA/gi, 'A')
     .replace(/\s+/g, ' ')
     .trim();
   
-  // Handle "L+50" without spaces
   formula = formula.replace(/([LA])([+\-*/])(\d+)/gi, '$1 $2 $3');
   
   return formula || '0';
 }
 
 function extractProductNameFromFileName(fileName: string): string {
-  // Remove extension
   let name = fileName.replace(/\.(xlsx?|csv)$/i, '');
-  
-  // Replace underscores with spaces
   name = name.replace(/_/g, ' ');
-  
-  // Capitalize first letter of each word
   name = name.replace(/\b\w/g, l => l.toUpperCase());
-  
   return name.trim();
 }
 
 function determineItemType(name: string, code: string): 'profile' | 'accessory' {
   const lowerName = (name + ' ' + code).toLowerCase();
   
-  // Accessories patterns
   const accessoryPatterns = [
     'fechadura', 'roldana', 'guia', 'parafuso', 'rebite', 
     'dobradiça', 'dobradica', 'trinco', 'puxador', 'fecho',
@@ -177,110 +210,27 @@ function determineUnit(name: string, type: 'profile' | 'accessory'): string {
   return 'barra';
 }
 
-export function parseExcelCuttingSheet(workbook: XLSX.WorkBook, fileName: string): ParsedProduct | null {
-  const sheetName = workbook.SheetNames[0];
-  const sheet = workbook.Sheets[sheetName];
-  
-  if (!sheet) return null;
-  
-  // Get data with formulas preserved
-  const data: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-  
-  if (data.length < 2) return null;
-  
-  // Build a map of cell formulas for quick lookup
-  const cellFormulas: Map<string, string> = new Map();
-  for (const cellAddress in sheet) {
-    if (cellAddress[0] === '!') continue; // Skip special keys
-    const cell = sheet[cellAddress];
-    if (cell && cell.f) {
-      // Store the formula (cell.f contains the formula without the = sign)
-      cellFormulas.set(cellAddress, cell.f);
-    }
-  }
-  
-  const items: ParsedCuttingItem[] = [];
-  
-  // Parse cutting items in the specific format used by the gate spreadsheets
-  for (let i = 0; i < data.length; i++) {
-    const row = data[i];
-    if (!row || row.length < 3) continue;
-    
-    // Check if this is a valid cutting row (profile/material)
-    if (isValidCuttingRow(row)) {
-      const item = parseCuttingRow(row, i, sheet, cellFormulas);
-      if (item) {
-        items.push(item);
-      }
-      continue;
-    }
-    
-    // Check if this is an accessory row
-    if (isAccessoryRow(row)) {
-      const item = parseAccessoryRow(row, i);
-      if (item) {
-        items.push(item);
-      }
-    }
-  }
-  
-  if (items.length === 0) {
-    // Fallback to traditional header-based parsing
-    return parseWithHeaders(data, fileName);
-  }
-  
-  const productName = extractProductNameFromFileName(fileName);
-  
-  return {
-    name: productName,
-    category: 'door',
-    linha: 'Portões',
-    description: `Produto importado de ${fileName}`,
-    items,
-    fileName,
-  };
-}
-
-// Helper to convert Excel column index to letter (0 = A, 1 = B, etc.)
-function colIndexToLetter(index: number): string {
-  let letter = '';
-  while (index >= 0) {
-    letter = String.fromCharCode((index % 26) + 65) + letter;
-    index = Math.floor(index / 26) - 1;
-  }
-  return letter;
-}
-
 // Extract formula from cell, normalizing to use L/A variables
-function extractCellFormula(
-  sheet: XLSX.WorkSheet,
-  cellFormulas: Map<string, string>,
+function extractCellFormulaFromWorksheet(
+  worksheet: ExcelJS.Worksheet,
   rowIndex: number,
   colIndex: number,
   cellValue: any
 ): string | null {
-  const cellAddress = colIndexToLetter(colIndex) + (rowIndex + 1);
-  const formula = cellFormulas.get(cellAddress);
+  const cell = worksheet.getCell(rowIndex + 1, colIndex + 1);
+  const formula = getCellFormula(cell);
   
   if (formula) {
-    // Normalize the formula: replace cell references with L/A
     let normalized = formula.toUpperCase()
-      .replace(/\$?([A-Z]+)\$?(\d+)/g, (match, col, row) => {
-        // Try to determine if this reference points to L or A based on context
-        // For now, preserve the formula structure but normalize common patterns
-        return match;
-      })
       .replace(/LARGURA/gi, 'L')
       .replace(/ALTURA/gi, 'A')
       .trim();
     
-    // If formula contains L or A references, return it
     if (/[LA]/.test(normalized) || /[+\-*/]/.test(normalized)) {
       return parseFormula(normalized);
     }
   }
   
-  // If no formula, check if the value itself is a formula-like string
   if (cellValue !== null && cellValue !== undefined) {
     const strValue = String(cellValue).trim().toUpperCase();
     if (/[LA]/.test(strValue) && /[+\-*/]/.test(strValue)) {
@@ -291,43 +241,34 @@ function extractCellFormula(
   return null;
 }
 
-// Parse a cutting row in the format: "PC 027 / TUBÃO - MOLDURA" | ... | L | 4050 | 2 | ... | 45/45
+// Parse a cutting row
 function parseCuttingRow(
-  row: any[], 
+  row: (string | number | null)[], 
   rowIndex: number,
-  sheet: XLSX.WorkSheet,
-  cellFormulas: Map<string, string>
+  worksheet: ExcelJS.Worksheet
 ): ParsedCuttingItem | null {
   const firstCell = String(row[0] || '').trim();
   if (!firstCell) return null;
   
-  // Extract code and name from first cell
   let code = '';
   let name = firstCell;
   
-  // First try to split by " / " (space-slash-space) which is the main separator
   if (firstCell.includes(' / ')) {
     const slashParts = firstCell.split(' / ');
     code = slashParts[0].trim();
     name = slashParts.slice(1).join(' / ').trim();
-  } 
-  // If no " / ", try splitting by " - " for patterns like "TRD - 5/8"
-  else if (firstCell.includes(' - ')) {
+  } else if (firstCell.includes(' - ')) {
     const dashParts = firstCell.split(' - ');
     if (dashParts[0].length <= 15 && /^[A-Z0-9\-]+$/i.test(dashParts[0].trim())) {
       code = dashParts[0].trim();
       name = dashParts.slice(1).join(' - ').trim();
     }
-  }
-  // For patterns like "25-517" without space separators, use as-is
-  else if (/^[A-Z0-9\-]+$/i.test(firstCell) && firstCell.length <= 20) {
+  } else if (/^[A-Z0-9\-]+$/i.test(firstCell) && firstCell.length <= 20) {
     code = firstCell;
     name = firstCell;
   }
   
-  // Find L or A indicator and get dimension value/formula
   let dimensionType: 'L' | 'A' | null = null;
-  let dimensionColIndex: number = -1;
   let quantity: number = 1;
   let cutAngle: number | null = null;
   let extractedFormula: string | null = null;
@@ -341,17 +282,13 @@ function parseCuttingRow(
   for (let j = 1; j < row.length; j++) {
     const cellValue = String(row[j] || '').trim().toUpperCase();
     
-    // Check for L or A indicator
     if (cellValue === 'L' || cellValue === 'A') {
       dimensionType = cellValue as 'L' | 'A';
-      dimensionColIndex = j + 1; // Column with the dimension value/formula
       
-      // Try to extract formula from the dimension cell
       if (j + 1 < row.length) {
-        extractedFormula = extractCellFormula(sheet, cellFormulas, rowIndex, j + 1, row[j + 1]);
+        extractedFormula = extractCellFormulaFromWorksheet(worksheet, rowIndex, j + 1, row[j + 1]);
       }
       
-      // Scan for quantity
       for (let k = j + 2; k < Math.min(row.length, j + 7); k++) {
         if (isLikelyCount(row[k], 999)) {
           quantity = Math.round(Number(row[k]));
@@ -360,19 +297,16 @@ function parseCuttingRow(
       }
     }
     
-    // Check for angle pattern (e.g., "45/45" or "90/90")
     if (/^\d+\/\d+$/.test(cellValue)) {
       const angleParts = cellValue.split('/');
       cutAngle = Number(angleParts[0]);
     }
   }
   
-  // Build formula based on dimension type
   let widthFormula: string | null = null;
   let heightFormula: string | null = null;
   
   if (dimensionType === 'L') {
-    // Use extracted formula if available, otherwise default to "L"
     widthFormula = extractedFormula || 'L';
   } else if (dimensionType === 'A') {
     heightFormula = extractedFormula || 'A';
@@ -390,18 +324,17 @@ function parseCuttingRow(
     piecesQuantity: quantity,
     rowIndex,
     rawData: row.reduce((acc, cell, idx) => {
-      if (cell !== undefined) acc[String(idx)] = cell;
+      if (cell !== undefined && cell !== null) acc[String(idx)] = cell;
       return acc;
     }, {} as Record<string, any>),
   };
 }
 
-// Parse accessory row in the format: "FECHADURA BICO-DE-PAPAGAIO" | ... | 1 | ...
-function parseAccessoryRow(row: any[], rowIndex: number): ParsedCuttingItem | null {
+// Parse accessory row
+function parseAccessoryRow(row: (string | number | null)[], rowIndex: number): ParsedCuttingItem | null {
   const name = String(row[0] || '').trim();
   if (!name) return null;
   
-  // Find quantity (usually after "QUANTIDADE" header or just a number in the row)
   let quantity = 1;
   for (let j = 1; j < row.length; j++) {
     const cellValue = Number(row[j]);
@@ -423,15 +356,14 @@ function parseAccessoryRow(row: any[], rowIndex: number): ParsedCuttingItem | nu
     piecesQuantity: quantity,
     rowIndex,
     rawData: row.reduce((acc, cell, idx) => {
-      if (cell !== undefined) acc[String(idx)] = cell;
+      if (cell !== undefined && cell !== null) acc[String(idx)] = cell;
       return acc;
     }, {} as Record<string, any>),
   };
 }
 
 // Fallback: traditional header-based parsing
-function parseWithHeaders(data: any[][], fileName: string): ParsedProduct | null {
-  // Find header row (first row with multiple non-empty cells)
+function parseWithHeaders(data: (string | number | null)[][], fileName: string): ParsedProduct | null {
   let headerRowIndex = 0;
   for (let i = 0; i < Math.min(10, data.length); i++) {
     const row = data[i];
@@ -443,7 +375,6 @@ function parseWithHeaders(data: any[][], fileName: string): ParsedProduct | null
   
   const headers = (data[headerRowIndex] || []).map(h => String(h || ''));
   
-  // Find column indices
   const codeIdx = findColumnIndex(headers, COLUMN_PATTERNS.code);
   const nameIdx = findColumnIndex(headers, COLUMN_PATTERNS.name);
   const qtyIdx = findColumnIndex(headers, COLUMN_PATTERNS.quantity);
@@ -506,6 +437,71 @@ function parseWithHeaders(data: any[][], fileName: string): ParsedProduct | null
   };
 }
 
+export async function parseExcelCuttingSheetAsync(fileBuffer: ArrayBuffer, fileName: string): Promise<ParsedProduct | null> {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(fileBuffer);
+  
+  const worksheet = workbook.getWorksheet(1);
+  if (!worksheet) return null;
+  
+  // Convert worksheet to 2D array
+  const data: (string | number | null)[][] = [];
+  worksheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
+    const rowData: (string | number | null)[] = [];
+    row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+      // Pad array if needed
+      while (rowData.length < colNumber - 1) {
+        rowData.push(null);
+      }
+      rowData.push(getCellValue(cell));
+    });
+    // Pad data array if needed
+    while (data.length < rowNumber - 1) {
+      data.push([]);
+    }
+    data.push(rowData);
+  });
+  
+  if (data.length < 2) return null;
+  
+  const items: ParsedCuttingItem[] = [];
+  
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    if (!row || row.length < 3) continue;
+    
+    if (isValidCuttingRow(row)) {
+      const item = parseCuttingRow(row, i, worksheet);
+      if (item) {
+        items.push(item);
+      }
+      continue;
+    }
+    
+    if (isAccessoryRow(row)) {
+      const item = parseAccessoryRow(row, i);
+      if (item) {
+        items.push(item);
+      }
+    }
+  }
+  
+  if (items.length === 0) {
+    return parseWithHeaders(data, fileName);
+  }
+  
+  const productName = extractProductNameFromFileName(fileName);
+  
+  return {
+    name: productName,
+    category: 'door',
+    linha: 'Portões',
+    description: `Produto importado de ${fileName}`,
+    items,
+    fileName,
+  };
+}
+
 export async function parseMultipleExcelFiles(files: FileList | File[], extractImages = true): Promise<ExcelParseResult> {
   const result: ExcelParseResult = {
     success: true,
@@ -518,9 +514,9 @@ export async function parseMultipleExcelFiles(files: FileList | File[], extractI
   for (const file of Array.from(files)) {
     try {
       const arrayBuffer = await file.arrayBuffer();
-      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
       
-      const product = parseExcelCuttingSheet(workbook, file.name);
+      // Use async parser with ExcelJS
+      const product = await parseExcelCuttingSheetAsync(arrayBuffer, file.name);
       
       if (product) {
         // Try to extract images
@@ -528,8 +524,6 @@ export async function parseMultipleExcelFiles(files: FileList | File[], extractI
           try {
             const imageResult = await extractImagesFromExcel(arrayBuffer);
             
-            // Store ALL extracted images for manual association
-            // Add file source info to each image
             for (const img of imageResult.allImages) {
               result.extractedImages.push({
                 ...img,
@@ -537,21 +531,16 @@ export async function parseMultipleExcelFiles(files: FileList | File[], extractI
               });
             }
             
-            // Auto-attach product image (first image in header area)
             if (imageResult.productImage) {
               product.productImageBuffer = imageResult.productImage.buffer;
               product.productImageExtension = imageResult.productImage.extension;
             }
-            
-            // Don't auto-attach item images anymore - let user manually associate
-            // This prevents incorrect associations
             
             if (imageResult.allImages.length > 0) {
               result.warnings.push(`${file.name}: ${imageResult.allImages.length} imagem(ns) encontrada(s) - associe manualmente`);
             }
           } catch (imgError) {
             console.warn('Error extracting images:', imgError);
-            // Don't fail the whole import if image extraction fails
           }
         }
         
