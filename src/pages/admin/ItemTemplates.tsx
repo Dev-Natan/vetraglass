@@ -33,8 +33,10 @@ import {
   ImageUp,
   CheckCircle2,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  AlertTriangle
 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Progress } from '@/components/ui/progress';
 import {
   DropdownMenu,
@@ -97,6 +99,19 @@ export default function ItemTemplates() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploadingImageId, setUploadingImageId] = useState<string | null>(null);
+  
+  // Force delete dialog state
+  const [forceDeleteDialog, setForceDeleteDialog] = useState<{
+    open: boolean;
+    itemId: string | null;
+    itemName: string;
+    errorMessage: string;
+  }>({
+    open: false,
+    itemId: null,
+    itemName: '',
+    errorMessage: '',
+  });
   
   // Bulk upload state
   const [bulkUploadDialogOpen, setBulkUploadDialogOpen] = useState(false);
@@ -227,23 +242,48 @@ export default function ItemTemplates() {
 
   // Delete mutation
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async ({ id, force = false }: { id: string; force?: boolean }) => {
       const { data, error } = await supabase.functions.invoke('admin-delete-item-template', {
-        body: { id },
+        body: { id, force },
       });
 
       if (error) throw error;
 
       if (!data?.success) {
+        // Check if it's an "in use" error that can be force-deleted
+        if (data?.code === 'IN_USE' || data?.code === 'IN_STOCK' || data?.code === 'IN_PRICES') {
+          const err = new Error(data?.error || 'Item em uso');
+          (err as any).canForce = true;
+          (err as any).code = data?.code;
+          throw err;
+        }
         throw new Error(data?.error || 'Não foi possível excluir este item.');
       }
+      
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['item-templates-admin'] });
-      toast.success('Item excluído!');
+      queryClient.invalidateQueries({ queryKey: ['product-templates'] });
+      if (data?.removed) {
+        toast.success(`Item excluído! Removido de ${data.removed.products} produtos, ${data.removed.stock} estoques, ${data.removed.companyItems} itens de empresa.`);
+      } else {
+        toast.success('Item excluído!');
+      }
+      setForceDeleteDialog({ open: false, itemId: null, itemName: '', errorMessage: '' });
     },
-    onError: (error) => {
-      toast.error('Erro ao excluir: ' + error.message);
+    onError: (error: Error) => {
+      const canForce = (error as any).canForce;
+      if (canForce) {
+        // Show force delete dialog instead of just toast
+        setForceDeleteDialog(prev => ({
+          ...prev,
+          open: true,
+          errorMessage: error.message,
+        }));
+      } else {
+        toast.error('Erro ao excluir: ' + error.message);
+      }
     },
   });
 
@@ -960,9 +1000,13 @@ export default function ItemTemplates() {
                         <DropdownMenuItem 
                           className="text-destructive"
                           onClick={() => {
-                            if (confirm("Excluir este item?")) {
-                              deleteMutation.mutate(item.id);
-                            }
+                            setForceDeleteDialog({
+                              open: false,
+                              itemId: item.id,
+                              itemName: item.name,
+                              errorMessage: '',
+                            });
+                            deleteMutation.mutate({ id: item.id, force: false });
                           }}
                         >
                           <Trash2 className="w-4 h-4 mr-2" />
@@ -1009,6 +1053,55 @@ export default function ItemTemplates() {
           </div>
         )}
       </div>
+
+      {/* Force Delete Confirmation Dialog */}
+      <AlertDialog 
+        open={forceDeleteDialog.open} 
+        onOpenChange={(open) => setForceDeleteDialog(prev => ({ ...prev, open }))}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Item em Uso
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p className="font-medium text-foreground">
+                {forceDeleteDialog.itemName}
+              </p>
+              <p className="text-sm">
+                {forceDeleteDialog.errorMessage}
+              </p>
+              <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                <strong>Atenção:</strong> Forçar exclusão irá remover este item de todos os produtos, estoques e preços configurados. Esta ação não pode ser desfeita.
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setForceDeleteDialog({ open: false, itemId: null, itemName: '', errorMessage: '' })}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (forceDeleteDialog.itemId) {
+                  deleteMutation.mutate({ id: forceDeleteDialog.itemId, force: true });
+                }
+              }}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Excluindo...
+                </>
+              ) : (
+                'Forçar Exclusão'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AdminLayout>
   );
 }
