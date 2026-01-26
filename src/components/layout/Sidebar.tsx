@@ -16,7 +16,6 @@ import {
   Scissors,
   Square,
   Settings,
-  Tag,
   Receipt,
   Calendar,
   Ruler,
@@ -59,7 +58,6 @@ const menuItems: MenuItem[] = [
   
   // Produtos & Estoque
   { icon: Package, label: 'Produtos', path: '/produtos', module: 'produtos' },
-  { icon: Tag, label: 'Preços', path: '/precos', module: 'precos' },
   { icon: Boxes, label: 'Estoque', path: '/estoque', module: 'estoque' },
   
   // Financeiro
@@ -104,7 +102,6 @@ export function Sidebar() {
       'medicoes': 'medicoes',
       'plano-corte': 'plano-corte',
       'produtos': 'produtos',
-      'precos': 'precos',
       'estoque': 'estoque',
       'pedidos-compra': 'pedidos-compra',
       'caixa-vendas': 'caixa-vendas',

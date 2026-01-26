@@ -28,7 +28,7 @@ const RedefinirSenha = lazy(() => import("./pages/RedefinirSenha"));
 const CompanySetup = lazy(() => import("./pages/CompanySetup"));
 const EditarProduto = lazy(() => import("./pages/EditarProduto"));
 const EditarProdutoEmpresa = lazy(() => import("./pages/EditarProdutoEmpresa"));
-const PrecosEmpresa = lazy(() => import("./pages/PrecosEmpresa"));
+
 const OrdemServicoDetalhes = lazy(() => import("./pages/OrdemServicoDetalhes"));
 const Financeiro = lazy(() => import("./pages/Financeiro"));
 const Funcionarios = lazy(() => import("./pages/Funcionarios"));
@@ -179,9 +179,6 @@ function AppRoutes() {
       } />
       <Route path="/produtos/empresa/editar/:id" element={
         <ProtectedRoute><LazyRoute><EditarProdutoEmpresa /></LazyRoute></ProtectedRoute>
-      } />
-      <Route path="/precos" element={
-        <ProtectedRoute><LazyRoute><PrecosEmpresa /></LazyRoute></ProtectedRoute>
       } />
       <Route path="/ordens-servico/:id" element={
         <ProtectedRoute><LazyRoute><OrdemServicoDetalhes /></LazyRoute></ProtectedRoute>

@@ -14,7 +14,6 @@ export type Module =
   | 'medicoes'
   | 'plano-corte'
   | 'produtos'
-  | 'precos'
   | 'estoque'
   | 'caixa-vendas'
   | 'financeiro'
