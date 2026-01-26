@@ -165,9 +165,12 @@ export function SalesGoalCard() {
           </Button>
 
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-md" aria-describedby="define-goal-description">
               <DialogHeader>
                 <DialogTitle>Definir Meta de Vendas</DialogTitle>
+                <p id="define-goal-description" className="text-sm text-muted-foreground">
+                  Configure o valor da meta mensal para acompanhar o progresso das vendas.
+                </p>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
@@ -267,9 +270,12 @@ export function SalesGoalCard() {
       </CardContent>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md" aria-describedby="edit-goal-description">
           <DialogHeader>
             <DialogTitle>Editar Meta de Vendas</DialogTitle>
+            <p id="edit-goal-description" className="text-sm text-muted-foreground">
+              Ajuste o valor da meta mensal de vendas.
+            </p>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">

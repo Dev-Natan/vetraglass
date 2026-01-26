@@ -72,12 +72,15 @@ export function CreateLinhaDialog({ open, onOpenChange }: CreateLinhaDialogProps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" aria-describedby="create-linha-description">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Plus className="w-5 h-5" />
             Criar Nova Linha de Produtos
           </DialogTitle>
+          <p id="create-linha-description" className="text-sm text-muted-foreground">
+            Defina o nome e descrição da nova linha de produtos.
+          </p>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">

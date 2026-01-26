@@ -41,9 +41,12 @@ export function SaveProjectDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent aria-describedby="save-project-description">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Atualizar Projeto' : 'Salvar Projeto de Vidro'}</DialogTitle>
+          <p id="save-project-description" className="text-sm text-muted-foreground">
+            Dê um nome ao projeto para salvá-lo e poder reutilizá-lo depois.
+          </p>
         </DialogHeader>
         
         <div className="space-y-4 py-4">

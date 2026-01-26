@@ -81,6 +81,10 @@ export default function ItemTemplates() {
   const [filterLinha, setFilterLinha] = useState<string>('all');
   const [showInactive, setShowInactive] = useState(false);
   
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const pageSize = 50;
+  
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ItemTemplate | null>(null);
@@ -129,20 +133,45 @@ export default function ItemTemplates() {
     isUploading: false,
   });
 
-  // Fetch items
-  const { data: items, isLoading } = useQuery({
-    queryKey: ['item-templates-admin'],
+  // Fetch items with server-side pagination
+  const { data: itemsData, isLoading } = useQuery({
+    queryKey: ['item-templates-admin', page, pageSize, searchTerm, filterType, filterLinha, showInactive],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+      
+      let query = supabase
         .from('item_templates')
-        .select('*')
+        .select('id, name, description, type, unit, linha, default_price, specifications, image_url, is_active, created_at', { count: 'exact' });
+      
+      // Apply filters
+      if (searchTerm) {
+        query = query.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
+      }
+      if (filterType !== 'all') {
+        query = query.eq('type', filterType as 'glass' | 'profile' | 'accessory' | 'service');
+      }
+      if (filterLinha !== 'all') {
+        query = query.eq('linha', filterLinha);
+      }
+      if (!showInactive) {
+        query = query.eq('is_active', true);
+      }
+      
+      const { data, error, count } = await query
         .order('type')
-        .order('name');
+        .order('name')
+        .range(from, to);
+        
       if (error) throw error;
-      return data as ItemTemplate[];
+      return { items: data as ItemTemplate[], total: count || 0 };
     },
     enabled: isSaasAdmin,
   });
+
+  const items = itemsData?.items;
+  const totalItems = itemsData?.total || 0;
+  const totalPages = Math.ceil(totalItems / pageSize);
 
   // Fetch available lines
   const { data: availableLines } = useQuery({
@@ -158,15 +187,29 @@ export default function ItemTemplates() {
     },
   });
 
-  // Filter items
-  const filteredItems = items?.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = filterType === 'all' || item.type === filterType;
-    const matchesLinha = filterLinha === 'all' || item.linha === filterLinha;
-    const matchesActive = showInactive || item.is_active;
-    return matchesSearch && matchesType && matchesLinha && matchesActive;
-  });
+  // Filter items is now done server-side, but we keep client-side filtering for immediate UI updates
+  const filteredItems = items;
+
+  // Reset page when filters change
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setPage(1);
+  };
+
+  const handleFilterTypeChange = (value: string) => {
+    setFilterType(value);
+    setPage(1);
+  };
+
+  const handleFilterLinhaChange = (value: string) => {
+    setFilterLinha(value);
+    setPage(1);
+  };
+
+  const handleShowInactiveChange = (value: boolean) => {
+    setShowInactive(value);
+    setPage(1);
+  };
 
   // Stats
   const stats = {
