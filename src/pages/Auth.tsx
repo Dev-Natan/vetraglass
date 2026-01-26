@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,10 +32,15 @@ const signupSchema = z.object({
 
 export default function Auth() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, loading: authLoading, signIn, signUp } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { rateLimitStatus, checkRateLimit, recordLoginAttempt, formatRemainingTime } = useRateLimiting();
+  
+  // Get initial tab from URL parameter
+  const initialTab = searchParams.get('tab') === 'signup' ? 'signup' : 'login';
+  const [activeTab, setActiveTab] = useState(initialTab);
   
   // Login form - now uses username
   const [loginUsername, setLoginUsername] = useState('');
@@ -49,9 +54,17 @@ export default function Auth() {
 
   useEffect(() => {
     if (user) {
-      navigate('/');
+      navigate('/dashboard');
     }
   }, [user, navigate]);
+  
+  // Update active tab when URL changes
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'signup') {
+      setActiveTab('signup');
+    }
+  }, [searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,7 +153,7 @@ export default function Auth() {
     setIsLoading(false);
     
     if (!error) {
-      navigate('/');
+      navigate('/dashboard');
     }
   };
 
@@ -167,7 +180,7 @@ export default function Auth() {
         </div>
 
         <Card className="border-border/50 shadow-xl">
-          <Tabs defaultValue="login" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <CardHeader className="pb-4">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Entrar</TabsTrigger>

@@ -10,6 +10,7 @@ import { LazyPageLoader } from "@/components/common/LazyPageLoader";
 import { Loader2 } from "lucide-react";
 
 // Core pages - loaded immediately (most used)
+import Landing from "./pages/Landing";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Produtos from "./pages/Produtos";
@@ -100,6 +101,26 @@ function IndexRedirect() {
   return <Index />;
 }
 
+function LandingRedirect() {
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+  
+  // If user is logged in, redirect to dashboard
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  // Show landing page for non-authenticated users
+  return <Landing />;
+}
+
 function CompanySetupRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
 
@@ -126,6 +147,9 @@ function LazyRoute({ children }: { children: React.ReactNode }) {
 function AppRoutes() {
   return (
     <Routes>
+      {/* Public landing page */}
+      <Route path="/" element={<LandingRedirect />} />
+      
       {/* Auth routes */}
       <Route path="/auth" element={<Auth />} />
       <Route path="/recuperar-senha" element={<LazyRoute><RecuperarSenha /></LazyRoute>} />
@@ -137,8 +161,8 @@ function AppRoutes() {
         </CompanySetupRoute>
       } />
       
-      {/* Core routes - not lazy */}
-      <Route path="/" element={<ProtectedRoute><IndexRedirect /></ProtectedRoute>} />
+      {/* Dashboard - protected */}
+      <Route path="/dashboard" element={<ProtectedRoute><IndexRedirect /></ProtectedRoute>} />
       <Route path="/clientes" element={<ProtectedRoute><Clientes /></ProtectedRoute>} />
       <Route path="/produtos" element={<ProtectedRoute><Produtos /></ProtectedRoute>} />
       <Route path="/produtos/linha/:linha" element={<ProtectedRoute><ProdutosLinha /></ProtectedRoute>} />
