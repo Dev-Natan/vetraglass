@@ -7,19 +7,13 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Building2, Users, Bell, Shield, Database, Upload, ImageIcon, Trash2, KeyRound, Save, Loader2, Receipt } from 'lucide-react';
+import { Building2, Users, Bell, Shield, Database, Upload, ImageIcon, Trash2, KeyRound, Save, Loader2 } from 'lucide-react';
 import EditarDadosFiscaisDialog from "@/components/configuracoes/EditarDadosFiscaisDialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 
 const settingsGroups = [
-  {
-    icon: Receipt,
-    title: 'Área Fiscal',
-    description: 'Certificado digital, NCM, CFOP e emissão de NF-e.',
-    path: '/configuracoes/fiscal',
-  },
   {
     icon: Users,
     title: 'Usuários e Permissões',
