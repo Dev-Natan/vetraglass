@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { ArrowLeft, Search, Trash2, Download, Percent, Plus, Filter, Check, ShoppingCart, Sparkles, Copy } from 'lucide-react';
+import { ArrowLeft, Search, Trash2, Download, Percent, Plus, Filter, Check, ShoppingCart, Sparkles, Copy, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -49,6 +49,7 @@ type DisplayProduct = {
   is_active: boolean;
   is_custom: boolean;
   base_price?: number | null;
+  companyProductId?: string; // ID in company_products table for pricing
 };
 
 export default function ProdutosLinha() {
@@ -271,16 +272,20 @@ export default function ProdutosLinha() {
           return matchesSearch && matchesCategory && companyProduct && companyProduct.is_active === false;
         }
       })
-      .map((p): DisplayProduct => ({
-        id: p.id,
-        name: p.name,
-        description: p.description,
-        category: p.category,
-        linha: p.linha,
-        image_url: p.image_url,
-        is_active: companyProducts.find(cp => cp.product_template_id === p.id)?.is_active ?? false,
-        is_custom: false,
-      }));
+      .map((p): DisplayProduct => {
+        const companyProduct = companyProducts.find(cp => cp.product_template_id === p.id);
+        return {
+          id: p.id,
+          name: p.name,
+          description: p.description,
+          category: p.category,
+          linha: p.linha,
+          image_url: p.image_url,
+          is_active: companyProduct?.is_active ?? false,
+          is_custom: false,
+          companyProductId: companyProduct?.id,
+        };
+      });
 
     // Filter custom products based on their is_active status
     const customFiltered = customProducts
@@ -300,6 +305,7 @@ export default function ProdutosLinha() {
         is_active: p.is_active,
         is_custom: true,
         base_price: p.base_price,
+        companyProductId: p.id, // For custom products, id IS the company_product_id
       }));
 
     return [...templateFiltered, ...customFiltered];
@@ -415,21 +421,41 @@ export default function ProdutosLinha() {
                   {/* Actions - based on product.is_active status */}
                   <div className="flex gap-2">
                     {product.is_active ? (
-                      // Product is active - show deactivate button
-                      <Button
-                        size="sm"
-                        className="flex-1 bg-amber-400 hover:bg-amber-500 text-amber-900 font-medium text-xs h-9"
-                        onClick={() => {
-                          if (product.is_custom) {
-                            deactivateCustomProductMutation.mutate(product.id);
-                          } else {
-                            deactivateProductMutation.mutate(product.id);
-                          }
-                        }}
-                        disabled={deactivateProductMutation.isPending || deactivateCustomProductMutation.isPending}
-                      >
-                        Desabilitar
-                      </Button>
+                      // Product is active - show deactivate and pricing buttons
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 h-9"
+                          onClick={() => {
+                            if (product.companyProductId) {
+                              setSelectedProductForPricing({
+                                id: product.companyProductId,
+                                name: product.name,
+                                image_url: product.image_url,
+                              });
+                              setEditPricingDialogOpen(true);
+                            }
+                          }}
+                        >
+                          <DollarSign className="w-4 h-4 mr-1" />
+                          Preços
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="flex-1 bg-amber-400 hover:bg-amber-500 text-amber-900 font-medium text-xs h-9"
+                          onClick={() => {
+                            if (product.is_custom) {
+                              deactivateCustomProductMutation.mutate(product.id);
+                            } else {
+                              deactivateProductMutation.mutate(product.id);
+                            }
+                          }}
+                          disabled={deactivateProductMutation.isPending || deactivateCustomProductMutation.isPending}
+                        >
+                          Desabilitar
+                        </Button>
+                      </>
                     ) : (
                       // Product is inactive - show activate button
                       <Button
@@ -532,21 +558,40 @@ export default function ProdutosLinha() {
                   {/* Actions - based on product.is_active status */}
                   <div className="col-span-6 flex items-center justify-end gap-2">
                     {product.is_active ? (
-                      // Product is active - show deactivate button
-                      <Button
-                        size="sm"
-                        className="bg-amber-400 hover:bg-amber-500 text-amber-900 font-medium"
-                        onClick={() => {
-                          if (product.is_custom) {
-                            deactivateCustomProductMutation.mutate(product.id);
-                          } else {
-                            deactivateProductMutation.mutate(product.id);
-                          }
-                        }}
-                        disabled={deactivateProductMutation.isPending || deactivateCustomProductMutation.isPending}
-                      >
-                        Desabilitar
-                      </Button>
+                      // Product is active - show pricing and deactivate buttons
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            if (product.companyProductId) {
+                              setSelectedProductForPricing({
+                                id: product.companyProductId,
+                                name: product.name,
+                                image_url: product.image_url,
+                              });
+                              setEditPricingDialogOpen(true);
+                            }
+                          }}
+                        >
+                          <DollarSign className="w-4 h-4 mr-1" />
+                          Preços
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="bg-amber-400 hover:bg-amber-500 text-amber-900 font-medium"
+                          onClick={() => {
+                            if (product.is_custom) {
+                              deactivateCustomProductMutation.mutate(product.id);
+                            } else {
+                              deactivateProductMutation.mutate(product.id);
+                            }
+                          }}
+                          disabled={deactivateProductMutation.isPending || deactivateCustomProductMutation.isPending}
+                        >
+                          Desabilitar
+                        </Button>
+                      </>
                     ) : (
                       // Product is inactive - show activate button
                       <Button
