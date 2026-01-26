@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,10 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Package, Check, ArrowLeft, Ruler, DollarSign, Sparkles } from 'lucide-react';
+import { Search, Package, Check, ArrowLeft, Ruler, DollarSign, Sparkles, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
 import { useProductLinhas } from '@/hooks/useProductLinhas';
+import { useGlassColors, useGlassThicknesses, useGlassPriceMatrix } from '@/hooks/useGlassPricing';
+import { useGlassTypes } from '@/hooks/useGlassTypes';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface AddProductPanelProps {
   onAdd: (product: {
@@ -29,28 +32,23 @@ interface AddProductPanelProps {
     has_glass?: boolean;
     glass_color?: string;
     glass_thickness?: string;
+    glass_price_per_sqm?: number;
     is_custom?: boolean;
   }) => void;
   onCancel: () => void;
 }
 
-const glassColors = [
-  { value: 'incolor', label: 'Incolor' },
-  { value: 'verde', label: 'Verde' },
-  { value: 'fume', label: 'Fumê' },
-];
-
-const glassThicknesses = [
-  { value: '4mm', label: '4mm' },
-  { value: '6mm', label: '6mm' },
-  { value: '8mm', label: '8mm' },
-  { value: '10mm', label: '10mm' },
-];
-
 export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   const { currentCompany } = useAuth();
   const { labels: categoryLabels, categories: productCategories } = useProductCategoryLabels();
   const { data: productLinhas } = useProductLinhas();
+  
+  // Dynamic glass options from database
+  const { data: dbGlassColors } = useGlassColors();
+  const { data: dbGlassThicknesses } = useGlassThicknesses();
+  const { data: glassPriceMatrix } = useGlassPriceMatrix();
+  const { data: glassTypes } = useGlassTypes();
+  
   const [selectedLinha, setSelectedLinha] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedProductId, setSelectedProductId] = useState<string>('');
@@ -60,8 +58,30 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   const [quantity, setQuantity] = useState<number>(1);
   const [customPrice, setCustomPrice] = useState<number | null>(null);
   const [hasGlass, setHasGlass] = useState<boolean>(true);
-  const [glassColor, setGlassColor] = useState<string>('incolor');
-  const [glassThickness, setGlassThickness] = useState<string>('4mm');
+  const [selectedGlassColorId, setSelectedGlassColorId] = useState<string>('');
+  const [selectedGlassThicknessId, setSelectedGlassThicknessId] = useState<string>('');
+  const [selectedGlassTypeId, setSelectedGlassTypeId] = useState<string>('');
+  
+  // Set defaults when data loads
+  useEffect(() => {
+    if (dbGlassColors?.length && !selectedGlassColorId) {
+      setSelectedGlassColorId(dbGlassColors[0].id);
+    }
+  }, [dbGlassColors, selectedGlassColorId]);
+  
+  useEffect(() => {
+    if (dbGlassThicknesses?.length && !selectedGlassThicknessId) {
+      setSelectedGlassThicknessId(dbGlassThicknesses[0].id);
+    }
+  }, [dbGlassThicknesses, selectedGlassThicknessId]);
+  
+  useEffect(() => {
+    if (glassTypes?.length && !selectedGlassTypeId) {
+      // Default to "Comum" or first type
+      const defaultType = glassTypes.find(t => t.slug === 'comum') || glassTypes[0];
+      if (defaultType) setSelectedGlassTypeId(defaultType.id);
+    }
+  }, [glassTypes, selectedGlassTypeId]);
 
   // Fetch all product templates
   const { data: productTemplates, isLoading } = useQuery({
@@ -167,9 +187,29 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     ? selectedProduct.company_product 
     : companyProducts?.find(cp => cp.product_template_id === selectedProductId);
   
+  // Get selected glass color and thickness details
+  const selectedGlassColor = dbGlassColors?.find(c => c.id === selectedGlassColorId);
+  const selectedGlassThickness = dbGlassThicknesses?.find(t => t.id === selectedGlassThicknessId);
+  
+  // Get glass price from matrix based on selected options
+  const glassPricePerSqm = useMemo(() => {
+    if (!hasGlass || !glassPriceMatrix || !selectedGlassColorId || !selectedGlassThicknessId || !selectedGlassTypeId) {
+      return 0;
+    }
+    const matrixEntry = glassPriceMatrix.find(
+      p => p.glass_type_id === selectedGlassTypeId &&
+           p.glass_color_id === selectedGlassColorId &&
+           p.glass_thickness_id === selectedGlassThicknessId
+    );
+    return matrixEntry?.price_per_sqm || 0;
+  }, [hasGlass, glassPriceMatrix, selectedGlassColorId, selectedGlassThicknessId, selectedGlassTypeId]);
+  
   // Use price_per_sqm as the primary pricing method
-  const pricePerSqm = Number((companyProduct as any)?.price_per_sqm) || Number(companyProduct?.base_price) || 0;
-  const basePrice = customPrice !== null ? customPrice : pricePerSqm;
+  const productPricePerSqm = Number((companyProduct as any)?.price_per_sqm) || Number(companyProduct?.base_price) || 0;
+  
+  // Total price per sqm = product price + glass price (if applicable)
+  const combinedPricePerSqm = productPricePerSqm + (hasGlass ? glassPricePerSqm : 0);
+  const basePrice = customPrice !== null ? customPrice : combinedPricePerSqm;
 
   // Calculate prices: area in m² × price per m²
   const area = width && height ? (width / 1000) * (height / 1000) : 0;
@@ -214,8 +254,9 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
       unit_price: unitPrice,
       total_price: totalPrice,
       has_glass: hasGlass,
-      glass_color: hasGlass ? glassColor : undefined,
-      glass_thickness: hasGlass ? glassThickness : undefined,
+      glass_color: hasGlass ? selectedGlassColor?.name : undefined,
+      glass_thickness: hasGlass ? selectedGlassThickness?.thickness : undefined,
+      glass_price_per_sqm: hasGlass ? glassPricePerSqm : undefined,
       is_custom: selectedProduct.is_custom,
     });
   };
@@ -343,8 +384,8 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
 
                     {/* Custom product badge */}
                     {isCustomProduct && (
-                      <div className="absolute top-1.5 right-1.5 z-10 w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center shadow-md" title="Produto Personalizado">
-                        <Sparkles className="w-3.5 h-3.5 text-white" />
+                      <div className="absolute top-1.5 right-1.5 z-10 w-6 h-6 rounded-full bg-warning flex items-center justify-center shadow-md" title="Produto Personalizado">
+                        <Sparkles className="w-3.5 h-3.5 text-warning-foreground" />
                       </div>
                     )}
 
@@ -370,7 +411,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
 
                     {/* Active indicator - only for non-custom products that don't have selection */}
                     {!isCustomProduct && !isSelected && (
-                      <div className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-green-500 ring-2 ring-white" />
+                      <div className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-success ring-2 ring-background" />
                     )}
                   </button>
                 );
@@ -440,37 +481,83 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
           </div>
           
           {hasGlass && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-3">
+              {/* Glass Type Selector */}
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Cor do Vidro</label>
-                <Select value={glassColor} onValueChange={setGlassColor}>
+                <label className="text-xs font-medium text-muted-foreground">Tipo de Vidro</label>
+                <Select value={selectedGlassTypeId} onValueChange={setSelectedGlassTypeId}>
                   <SelectTrigger className="bg-background h-10">
-                    <SelectValue placeholder="Selecione..." />
+                    <SelectValue placeholder="Selecione o tipo..." />
                   </SelectTrigger>
                   <SelectContent className="bg-popover border shadow-lg z-50">
-                    {glassColors.map((color) => (
-                      <SelectItem key={color.value} value={color.value}>
-                        {color.label}
+                    {glassTypes?.map((type) => (
+                      <SelectItem key={type.id} value={type.id}>
+                        {type.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Espessura</label>
-                <Select value={glassThickness} onValueChange={setGlassThickness}>
-                  <SelectTrigger className="bg-background h-10">
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover border shadow-lg z-50">
-                    {glassThicknesses.map((thickness) => (
-                      <SelectItem key={thickness.value} value={thickness.value}>
-                        {thickness.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">Cor do Vidro</label>
+                  <Select value={selectedGlassColorId} onValueChange={setSelectedGlassColorId}>
+                    <SelectTrigger className="bg-background h-10">
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border shadow-lg z-50">
+                      {dbGlassColors?.map((color) => (
+                        <SelectItem key={color.id} value={color.id}>
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-3 h-3 rounded-full border"
+                              style={{ backgroundColor: color.hex_color || '#ccc' }}
+                            />
+                            {color.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">Espessura</label>
+                  <Select value={selectedGlassThicknessId} onValueChange={setSelectedGlassThicknessId}>
+                    <SelectTrigger className="bg-background h-10">
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border shadow-lg z-50">
+                      {dbGlassThicknesses?.map((thickness) => (
+                        <SelectItem key={thickness.id} value={thickness.id}>
+                          {thickness.thickness}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
+              
+              {/* Glass Price Info */}
+              {glassPricePerSqm > 0 && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/20">
+                  <Info className="w-4 h-4 text-primary" />
+                  <span className="text-xs text-foreground">
+                    Vidro: {formatCurrency(glassPricePerSqm)}/m² • 
+                    Produto: {formatCurrency(productPricePerSqm)}/m² • 
+                    <strong className="ml-1">Total: {formatCurrency(combinedPricePerSqm)}/m²</strong>
+                  </span>
+                </div>
+              )}
+              
+              {hasGlass && glassPricePerSqm === 0 && dbGlassColors?.length && dbGlassThicknesses?.length && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-warning/10 border border-warning/30">
+                  <Info className="w-4 h-4 text-warning" />
+                  <span className="text-xs text-foreground">
+                    Preço não configurado para esta combinação. Configure em Preços → Vidros.
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -509,10 +596,23 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
             <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
               <DollarSign className="w-3 h-3" />
               Preço/m²
+              <Tooltip>
+                <TooltipTrigger>
+                  <Info className="w-3 h-3 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">
+                    {hasGlass && glassPricePerSqm > 0 
+                      ? `Produto (${formatCurrency(productPricePerSqm)}) + Vidro (${formatCurrency(glassPricePerSqm)})`
+                      : 'Preço base do produto'
+                    }
+                  </p>
+                </TooltipContent>
+              </Tooltip>
             </label>
             <Input
               type="number"
-              value={customPrice !== null ? customPrice : pricePerSqm || ''}
+              value={customPrice !== null ? customPrice : combinedPricePerSqm || ''}
               onChange={(e) => setCustomPrice(e.target.value ? Number(e.target.value) : null)}
               placeholder="0.00"
               min={0}
@@ -566,7 +666,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
               type="button" 
               onClick={handleAdd} 
               disabled={!canAdd}
-              className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white px-6"
+              className="flex-1 sm:flex-none bg-success hover:bg-success/90 text-success-foreground px-6"
             >
               Adicionar
             </Button>
