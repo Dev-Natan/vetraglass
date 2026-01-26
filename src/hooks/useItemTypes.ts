@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { CACHE_TIMES } from "@/lib/queryConfig";
 
 export interface ItemType {
   id: string;
@@ -19,7 +20,7 @@ export function useItemTypes(includeInactive = false) {
     queryFn: async () => {
       let query = supabase
         .from("item_types")
-        .select("*")
+        .select("id, slug, name, color, icon, unit_default, sort_order, is_active")
         .order("sort_order");
       
       if (!includeInactive) {
@@ -30,7 +31,7 @@ export function useItemTypes(includeInactive = false) {
       if (error) throw error;
       return data as ItemType[];
     },
-    staleTime: 1000 * 60 * 5, // Cache 5 minutes
+    ...CACHE_TIMES.STATIC,
   });
 }
 

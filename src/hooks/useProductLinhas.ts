@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { CACHE_TIMES } from "@/lib/queryConfig";
 
 export interface ProductLinha {
   id: string;
@@ -19,7 +20,7 @@ export function useProductLinhas(includeInactive = false) {
     queryFn: async () => {
       let query = supabase
         .from("product_linhas")
-        .select("*")
+        .select("id, slug, name, description, image_url, color, sort_order, is_active")
         .order("sort_order");
       
       if (!includeInactive) {
@@ -30,7 +31,7 @@ export function useProductLinhas(includeInactive = false) {
       if (error) throw error;
       return data as ProductLinha[];
     },
-    staleTime: 1000 * 60 * 5, // Cache 5 minutes
+    ...CACHE_TIMES.STATIC,
   });
 }
 

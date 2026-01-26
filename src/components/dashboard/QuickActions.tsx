@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Plus, FileText, Users, ShoppingCart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -9,7 +10,7 @@ const actions = [
   { icon: Plus, label: 'Nova OS', path: '/ordens-servico', variant: 'default' as const },
 ];
 
-export function QuickActions() {
+export const QuickActions = memo(function QuickActions() {
   const navigate = useNavigate();
 
   return (
@@ -27,4 +28,4 @@ export function QuickActions() {
       ))}
     </div>
   );
-}
+});

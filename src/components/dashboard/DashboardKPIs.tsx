@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,7 +18,7 @@ import { startOfMonth, endOfMonth, startOfDay, subMonths, format } from 'date-fn
 import { ptBR } from 'date-fns/locale';
 import { CACHE_TIMES } from '@/lib/queryConfig';
 
-export function DashboardKPIs() {
+export const DashboardKPIs = memo(function DashboardKPIs() {
   const { currentCompany } = useAuth();
   const today = new Date();
   const startMonth = startOfMonth(today);
@@ -282,4 +283,4 @@ export function DashboardKPIs() {
       )}
     </div>
   );
-}
+});

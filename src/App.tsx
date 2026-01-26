@@ -5,54 +5,64 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { createQueryClient } from "@/lib/queryConfig";
+import { lazy, Suspense } from "react";
+import { LazyPageLoader } from "@/components/common/LazyPageLoader";
+import { Loader2 } from "lucide-react";
+
+// Core pages - loaded immediately (most used)
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
-import RecuperarSenha from "./pages/RecuperarSenha";
-import RedefinirSenha from "./pages/RedefinirSenha";
-import CompanySetup from "./pages/CompanySetup";
-import Clientes from "./pages/Clientes";
 import Produtos from "./pages/Produtos";
 import ProdutosLinha from "./pages/ProdutosLinha";
-import EditarProduto from "./pages/EditarProduto";
-import EditarProdutoEmpresa from "./pages/EditarProdutoEmpresa";
-import Estoque from "./pages/Estoque";
-import PrecosEmpresa from "./pages/PrecosEmpresa";
 import Orcamentos from "./pages/Orcamentos";
 import OrdensServico from "./pages/OrdensServico";
-import OrdemServicoDetalhes from "./pages/OrdemServicoDetalhes";
-import Financeiro from "./pages/Financeiro";
-import Funcionarios from "./pages/Funcionarios";
+import Clientes from "./pages/Clientes";
 import CaixaVendas from "./pages/CaixaVendas";
+import Estoque from "./pages/Estoque";
 import PlanoCorte from "./pages/PlanoCorte";
-import ProjetoVidro from "./pages/ProjetoVidro";
-import Configuracoes from "./pages/Configuracoes";
-import ConfiguracoesFiscais from "./pages/ConfiguracoesFiscais";
-import ConfiguracoesUsuarios from "./pages/ConfiguracoesUsuarios";
-import ConfiguracoesPerfis from "./pages/ConfiguracoesPerfis";
-import ConfiguracoesNotificacoes from "./pages/ConfiguracoesNotificacoes";
-import ConfiguracoesSeguranca from "./pages/ConfiguracoesSeguranca";
-import ConfiguracoesDados from "./pages/ConfiguracoesDados";
-import NotasFiscais from "./pages/NotasFiscais";
-import Agenda from "./pages/Agenda";
-import Medicoes from "./pages/Medicoes";
-import Relatorios from "./pages/Relatorios";
-import ItemTemplates from "./pages/admin/ItemTemplates";
-import ProductTemplates from "./pages/admin/ProductTemplates";
-import AdminLinhas from "./pages/admin/AdminLinhas";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminCompanies from "./pages/admin/AdminCompanies";
-import ImportProducts from "./pages/admin/ImportProducts";
-import ImportExcelProducts from "./pages/admin/ImportExcelProducts";
-import AdminSupport from "./pages/admin/AdminSupport";
-import AdminAnnouncements from "./pages/admin/AdminAnnouncements";
-import AdminGlassFormulas from "./pages/admin/AdminGlassFormulas";
-import AdminCategories from "./pages/admin/AdminCategories";
-import AdminAuditLogs from "./pages/admin/AdminAuditLogs";
-import AdminSettings from "./pages/admin/AdminSettings";
-import AceitarConvite from "./pages/AceitarConvite";
-import PedidosCompra from "./pages/PedidosCompra";
-import NotFound from "./pages/NotFound";
-import { Loader2 } from "lucide-react";
+
+// Lazy loaded pages - less frequently used
+const RecuperarSenha = lazy(() => import("./pages/RecuperarSenha"));
+const RedefinirSenha = lazy(() => import("./pages/RedefinirSenha"));
+const CompanySetup = lazy(() => import("./pages/CompanySetup"));
+const EditarProduto = lazy(() => import("./pages/EditarProduto"));
+const EditarProdutoEmpresa = lazy(() => import("./pages/EditarProdutoEmpresa"));
+const PrecosEmpresa = lazy(() => import("./pages/PrecosEmpresa"));
+const OrdemServicoDetalhes = lazy(() => import("./pages/OrdemServicoDetalhes"));
+const Financeiro = lazy(() => import("./pages/Financeiro"));
+const Funcionarios = lazy(() => import("./pages/Funcionarios"));
+const ProjetoVidro = lazy(() => import("./pages/ProjetoVidro"));
+const NotasFiscais = lazy(() => import("./pages/NotasFiscais"));
+const Agenda = lazy(() => import("./pages/Agenda"));
+const Medicoes = lazy(() => import("./pages/Medicoes"));
+const Relatorios = lazy(() => import("./pages/Relatorios"));
+const PedidosCompra = lazy(() => import("./pages/PedidosCompra"));
+const AceitarConvite = lazy(() => import("./pages/AceitarConvite"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+
+// Settings pages - lazy loaded
+const Configuracoes = lazy(() => import("./pages/Configuracoes"));
+const ConfiguracoesFiscais = lazy(() => import("./pages/ConfiguracoesFiscais"));
+const ConfiguracoesUsuarios = lazy(() => import("./pages/ConfiguracoesUsuarios"));
+const ConfiguracoesPerfis = lazy(() => import("./pages/ConfiguracoesPerfis"));
+const ConfiguracoesNotificacoes = lazy(() => import("./pages/ConfiguracoesNotificacoes"));
+const ConfiguracoesSeguranca = lazy(() => import("./pages/ConfiguracoesSeguranca"));
+const ConfiguracoesDados = lazy(() => import("./pages/ConfiguracoesDados"));
+
+// Admin pages - lazy loaded (only for SaaS admins)
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const ItemTemplates = lazy(() => import("./pages/admin/ItemTemplates"));
+const ProductTemplates = lazy(() => import("./pages/admin/ProductTemplates"));
+const AdminLinhas = lazy(() => import("./pages/admin/AdminLinhas"));
+const AdminCompanies = lazy(() => import("./pages/admin/AdminCompanies"));
+const ImportProducts = lazy(() => import("./pages/admin/ImportProducts"));
+const ImportExcelProducts = lazy(() => import("./pages/admin/ImportExcelProducts"));
+const AdminSupport = lazy(() => import("./pages/admin/AdminSupport"));
+const AdminAnnouncements = lazy(() => import("./pages/admin/AdminAnnouncements"));
+const AdminGlassFormulas = lazy(() => import("./pages/admin/AdminGlassFormulas"));
+const AdminCategories = lazy(() => import("./pages/admin/AdminCategories"));
+const AdminAuditLogs = lazy(() => import("./pages/admin/AdminAuditLogs"));
+const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
 
 // Create optimized QueryClient with caching
 const queryClient = createQueryClient();
@@ -108,231 +118,143 @@ function CompanySetupRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Wrapper for lazy routes with Suspense
+function LazyRoute({ children }: { children: React.ReactNode }) {
+  return <Suspense fallback={<LazyPageLoader />}>{children}</Suspense>;
+}
+
 function AppRoutes() {
   return (
     <Routes>
+      {/* Auth routes */}
       <Route path="/auth" element={<Auth />} />
-      <Route path="/recuperar-senha" element={<RecuperarSenha />} />
-      <Route path="/redefinir-senha" element={<RedefinirSenha />} />
-      <Route path="/aceitar-convite" element={<AceitarConvite />} />
+      <Route path="/recuperar-senha" element={<LazyRoute><RecuperarSenha /></LazyRoute>} />
+      <Route path="/redefinir-senha" element={<LazyRoute><RedefinirSenha /></LazyRoute>} />
+      <Route path="/aceitar-convite" element={<LazyRoute><AceitarConvite /></LazyRoute>} />
       <Route path="/empresa/nova" element={
         <CompanySetupRoute>
-          <CompanySetup />
+          <LazyRoute><CompanySetup /></LazyRoute>
         </CompanySetupRoute>
       } />
-      <Route path="/" element={
-        <ProtectedRoute>
-          <IndexRedirect />
-        </ProtectedRoute>
-      } />
-      <Route path="/clientes" element={
-        <ProtectedRoute>
-          <Clientes />
-        </ProtectedRoute>
-      } />
-      <Route path="/produtos" element={
-        <ProtectedRoute>
-          <Produtos />
-        </ProtectedRoute>
-      } />
-      <Route path="/produtos/linha/:linha" element={
-        <ProtectedRoute>
-          <ProdutosLinha />
-        </ProtectedRoute>
-      } />
+      
+      {/* Core routes - not lazy */}
+      <Route path="/" element={<ProtectedRoute><IndexRedirect /></ProtectedRoute>} />
+      <Route path="/clientes" element={<ProtectedRoute><Clientes /></ProtectedRoute>} />
+      <Route path="/produtos" element={<ProtectedRoute><Produtos /></ProtectedRoute>} />
+      <Route path="/produtos/linha/:linha" element={<ProtectedRoute><ProdutosLinha /></ProtectedRoute>} />
+      <Route path="/orcamentos" element={<ProtectedRoute><Orcamentos /></ProtectedRoute>} />
+      <Route path="/ordens-servico" element={<ProtectedRoute><OrdensServico /></ProtectedRoute>} />
+      <Route path="/estoque" element={<ProtectedRoute><Estoque /></ProtectedRoute>} />
+      <Route path="/caixa-vendas" element={<ProtectedRoute><CaixaVendas /></ProtectedRoute>} />
+      <Route path="/vendas" element={<Navigate to="/caixa-vendas" replace />} />
+      <Route path="/plano-corte" element={<ProtectedRoute><PlanoCorte /></ProtectedRoute>} />
+      
+      {/* Lazy loaded routes */}
       <Route path="/produtos/editar/:id" element={
-        <ProtectedRoute>
-          <EditarProduto />
-        </ProtectedRoute>
+        <ProtectedRoute><LazyRoute><EditarProduto /></LazyRoute></ProtectedRoute>
       } />
       <Route path="/produtos/empresa/editar/:id" element={
-        <ProtectedRoute>
-          <EditarProdutoEmpresa />
-        </ProtectedRoute>
-      } />
-      <Route path="/estoque" element={
-        <ProtectedRoute>
-          <Estoque />
-        </ProtectedRoute>
+        <ProtectedRoute><LazyRoute><EditarProdutoEmpresa /></LazyRoute></ProtectedRoute>
       } />
       <Route path="/precos" element={
-        <ProtectedRoute>
-          <PrecosEmpresa />
-        </ProtectedRoute>
-      } />
-      <Route path="/orcamentos" element={
-        <ProtectedRoute>
-          <Orcamentos />
-        </ProtectedRoute>
-      } />
-      <Route path="/ordens-servico" element={
-        <ProtectedRoute>
-          <OrdensServico />
-        </ProtectedRoute>
+        <ProtectedRoute><LazyRoute><PrecosEmpresa /></LazyRoute></ProtectedRoute>
       } />
       <Route path="/ordens-servico/:id" element={
-        <ProtectedRoute>
-          <OrdemServicoDetalhes />
-        </ProtectedRoute>
+        <ProtectedRoute><LazyRoute><OrdemServicoDetalhes /></LazyRoute></ProtectedRoute>
       } />
       <Route path="/financeiro" element={
-        <ProtectedRoute>
-          <Financeiro />
-        </ProtectedRoute>
+        <ProtectedRoute><LazyRoute><Financeiro /></LazyRoute></ProtectedRoute>
       } />
       <Route path="/funcionarios" element={
-        <ProtectedRoute>
-          <Funcionarios />
-        </ProtectedRoute>
-      } />
-      <Route path="/caixa-vendas" element={
-        <ProtectedRoute>
-          <CaixaVendas />
-        </ProtectedRoute>
-      } />
-      {/* Redirect /vendas to /caixa-vendas for consistency */}
-      <Route path="/vendas" element={<Navigate to="/caixa-vendas" replace />} />
-      <Route path="/plano-corte" element={
-        <ProtectedRoute>
-          <PlanoCorte />
-        </ProtectedRoute>
+        <ProtectedRoute><LazyRoute><Funcionarios /></LazyRoute></ProtectedRoute>
       } />
       <Route path="/projeto-vidro" element={
-        <ProtectedRoute>
-          <ProjetoVidro />
-        </ProtectedRoute>
-      } />
-      <Route path="/configuracoes" element={
-        <ProtectedRoute>
-          <Configuracoes />
-        </ProtectedRoute>
-      } />
-      <Route path="/configuracoes/fiscal" element={
-        <ProtectedRoute>
-          <ConfiguracoesFiscais />
-        </ProtectedRoute>
-      } />
-      <Route path="/configuracoes/usuarios" element={
-        <ProtectedRoute>
-          <ConfiguracoesUsuarios />
-        </ProtectedRoute>
-      } />
-      <Route path="/configuracoes/perfis" element={
-        <ProtectedRoute>
-          <ConfiguracoesPerfis />
-        </ProtectedRoute>
-      } />
-      <Route path="/configuracoes/notificacoes" element={
-        <ProtectedRoute>
-          <ConfiguracoesNotificacoes />
-        </ProtectedRoute>
-      } />
-      <Route path="/configuracoes/seguranca" element={
-        <ProtectedRoute>
-          <ConfiguracoesSeguranca />
-        </ProtectedRoute>
-      } />
-      <Route path="/configuracoes/dados" element={
-        <ProtectedRoute>
-          <ConfiguracoesDados />
-        </ProtectedRoute>
+        <ProtectedRoute><LazyRoute><ProjetoVidro /></LazyRoute></ProtectedRoute>
       } />
       <Route path="/notas-fiscais" element={
-        <ProtectedRoute>
-          <NotasFiscais />
-        </ProtectedRoute>
+        <ProtectedRoute><LazyRoute><NotasFiscais /></LazyRoute></ProtectedRoute>
       } />
       <Route path="/pedidos-compra" element={
-        <ProtectedRoute>
-          <PedidosCompra />
-        </ProtectedRoute>
+        <ProtectedRoute><LazyRoute><PedidosCompra /></LazyRoute></ProtectedRoute>
       } />
       <Route path="/agenda" element={
-        <ProtectedRoute>
-          <Agenda />
-        </ProtectedRoute>
+        <ProtectedRoute><LazyRoute><Agenda /></LazyRoute></ProtectedRoute>
       } />
       <Route path="/medicoes" element={
-        <ProtectedRoute>
-          <Medicoes />
-        </ProtectedRoute>
+        <ProtectedRoute><LazyRoute><Medicoes /></LazyRoute></ProtectedRoute>
       } />
       <Route path="/relatorios" element={
-        <ProtectedRoute>
-          <Relatorios />
-        </ProtectedRoute>
+        <ProtectedRoute><LazyRoute><Relatorios /></LazyRoute></ProtectedRoute>
       } />
+      
+      {/* Settings routes - all lazy */}
+      <Route path="/configuracoes" element={
+        <ProtectedRoute><LazyRoute><Configuracoes /></LazyRoute></ProtectedRoute>
+      } />
+      <Route path="/configuracoes/fiscal" element={
+        <ProtectedRoute><LazyRoute><ConfiguracoesFiscais /></LazyRoute></ProtectedRoute>
+      } />
+      <Route path="/configuracoes/usuarios" element={
+        <ProtectedRoute><LazyRoute><ConfiguracoesUsuarios /></LazyRoute></ProtectedRoute>
+      } />
+      <Route path="/configuracoes/perfis" element={
+        <ProtectedRoute><LazyRoute><ConfiguracoesPerfis /></LazyRoute></ProtectedRoute>
+      } />
+      <Route path="/configuracoes/notificacoes" element={
+        <ProtectedRoute><LazyRoute><ConfiguracoesNotificacoes /></LazyRoute></ProtectedRoute>
+      } />
+      <Route path="/configuracoes/seguranca" element={
+        <ProtectedRoute><LazyRoute><ConfiguracoesSeguranca /></LazyRoute></ProtectedRoute>
+      } />
+      <Route path="/configuracoes/dados" element={
+        <ProtectedRoute><LazyRoute><ConfiguracoesDados /></LazyRoute></ProtectedRoute>
+      } />
+      
+      {/* Admin routes - all lazy */}
       <Route path="/admin" element={
-        <ProtectedRoute>
-          <AdminDashboard />
-        </ProtectedRoute>
+        <ProtectedRoute><LazyRoute><AdminDashboard /></LazyRoute></ProtectedRoute>
       } />
       <Route path="/admin/item-templates" element={
-        <ProtectedRoute>
-          <ItemTemplates />
-        </ProtectedRoute>
+        <ProtectedRoute><LazyRoute><ItemTemplates /></LazyRoute></ProtectedRoute>
       } />
       <Route path="/admin/product-templates" element={
-        <ProtectedRoute>
-          <ProductTemplates />
-        </ProtectedRoute>
+        <ProtectedRoute><LazyRoute><ProductTemplates /></LazyRoute></ProtectedRoute>
       } />
       <Route path="/admin/linhas" element={
-        <ProtectedRoute>
-          <AdminLinhas />
-        </ProtectedRoute>
+        <ProtectedRoute><LazyRoute><AdminLinhas /></LazyRoute></ProtectedRoute>
       } />
       <Route path="/admin/linhas/:linha" element={
-        <ProtectedRoute>
-          <ProductTemplates />
-        </ProtectedRoute>
+        <ProtectedRoute><LazyRoute><ProductTemplates /></LazyRoute></ProtectedRoute>
       } />
       <Route path="/admin/companies" element={
-        <ProtectedRoute>
-          <AdminCompanies />
-        </ProtectedRoute>
+        <ProtectedRoute><LazyRoute><AdminCompanies /></LazyRoute></ProtectedRoute>
       } />
       <Route path="/admin/import-products" element={
-        <ProtectedRoute>
-          <ImportProducts />
-        </ProtectedRoute>
+        <ProtectedRoute><LazyRoute><ImportProducts /></LazyRoute></ProtectedRoute>
       } />
       <Route path="/admin/import-excel" element={
-        <ProtectedRoute>
-          <ImportExcelProducts />
-        </ProtectedRoute>
+        <ProtectedRoute><LazyRoute><ImportExcelProducts /></LazyRoute></ProtectedRoute>
       } />
       <Route path="/admin/support" element={
-        <ProtectedRoute>
-          <AdminSupport />
-        </ProtectedRoute>
+        <ProtectedRoute><LazyRoute><AdminSupport /></LazyRoute></ProtectedRoute>
       } />
       <Route path="/admin/announcements" element={
-        <ProtectedRoute>
-          <AdminAnnouncements />
-        </ProtectedRoute>
+        <ProtectedRoute><LazyRoute><AdminAnnouncements /></LazyRoute></ProtectedRoute>
       } />
       <Route path="/admin/glass-formulas" element={
-        <ProtectedRoute>
-          <AdminGlassFormulas />
-        </ProtectedRoute>
+        <ProtectedRoute><LazyRoute><AdminGlassFormulas /></LazyRoute></ProtectedRoute>
       } />
       <Route path="/admin/categories" element={
-        <ProtectedRoute>
-          <AdminCategories />
-        </ProtectedRoute>
+        <ProtectedRoute><LazyRoute><AdminCategories /></LazyRoute></ProtectedRoute>
       } />
       <Route path="/admin/audit-logs" element={
-        <ProtectedRoute>
-          <AdminAuditLogs />
-        </ProtectedRoute>
+        <ProtectedRoute><LazyRoute><AdminAuditLogs /></LazyRoute></ProtectedRoute>
       } />
       <Route path="/admin/settings" element={
-        <ProtectedRoute>
-          <AdminSettings />
-        </ProtectedRoute>
+        <ProtectedRoute><LazyRoute><AdminSettings /></LazyRoute></ProtectedRoute>
       } />
-      <Route path="*" element={<NotFound />} />
+      
+      <Route path="*" element={<LazyRoute><NotFound /></LazyRoute>} />
     </Routes>
   );
 }
