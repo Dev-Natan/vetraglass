@@ -30,6 +30,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { evaluateFormula } from '@/utils/safeFormulaEvaluator';
 
 interface GlassFormula {
   id: string;
@@ -700,24 +701,8 @@ function FormulaPreview({ widthFormula, heightFormula }: { widthFormula: string;
   const testWidth = 1200;
   const testHeight = 1000;
 
-  const calculate = (formula: string, width: number, height: number): number | null => {
-    try {
-      let expr = formula
-        .replace(/Largura/gi, width.toString())
-        .replace(/\bL\b/gi, width.toString())
-        .replace(/Altura/gi, height.toString())
-        .replace(/\bA\b/gi, height.toString());
-      
-      // Simple safe eval for basic math
-      const result = Function('"use strict"; return (' + expr + ')')();
-      return typeof result === 'number' && !isNaN(result) ? Math.round(result) : null;
-    } catch {
-      return null;
-    }
-  };
-
-  const calculatedWidth = calculate(widthFormula, testWidth, testHeight);
-  const calculatedHeight = calculate(heightFormula, testWidth, testHeight);
+  const calculatedWidth = evaluateFormula(widthFormula, testWidth, testHeight) || null;
+  const calculatedHeight = evaluateFormula(heightFormula, testWidth, testHeight) || null;
 
   return (
     <div className="bg-muted/50 rounded-lg p-3 border">
