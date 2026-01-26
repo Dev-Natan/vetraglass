@@ -4,11 +4,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Settings } from 'lucide-react';
+import { Settings, Building2, KeyRound } from 'lucide-react';
 import { TaxDashboard } from '@/components/financeiro/TaxDashboard';
 import { TaxReports } from '@/components/financeiro/TaxReports';
 import { TaxCategories } from '@/components/financeiro/TaxCategories';
 import { TaxConfigDialog } from '@/components/financeiro/TaxConfigDialog';
+import { CertificadoEmpresaTab } from './CertificadoEmpresaTab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BarChart3, Receipt, Tag } from 'lucide-react';
 
@@ -16,7 +17,7 @@ export function FiscalConfigTab() {
   const { currentCompany } = useAuth();
   const queryClient = useQueryClient();
   const [taxConfigOpen, setTaxConfigOpen] = useState(false);
-  const [activeSubTab, setActiveSubTab] = useState('dashboard');
+  const [activeSubTab, setActiveSubTab] = useState('empresa');
 
   // Fetch sales for tax calculations
   const { data: sales = [] } = useQuery({
@@ -125,30 +126,39 @@ export function FiscalConfigTab() {
 
   return (
     <div className="space-y-6">
-      {/* Header with config button */}
-      <div className="flex justify-end">
-        <Button variant="outline" className="gap-2" onClick={() => setTaxConfigOpen(true)}>
-          <Settings className="w-4 h-4" />
-          Configurar Impostos
-        </Button>
-      </div>
-
       {/* Sub-tabs for fiscal content */}
       <Tabs value={activeSubTab} onValueChange={setActiveSubTab}>
-        <TabsList>
-          <TabsTrigger value="dashboard" className="gap-2">
-            <Receipt className="w-4 h-4" />
-            Dashboard
-          </TabsTrigger>
-          <TabsTrigger value="relatorios" className="gap-2">
-            <BarChart3 className="w-4 h-4" />
-            Relatórios
-          </TabsTrigger>
-          <TabsTrigger value="categorias" className="gap-2">
-            <Tag className="w-4 h-4" />
-            Categorias
-          </TabsTrigger>
-        </TabsList>
+        <div className="flex items-center justify-between">
+          <TabsList>
+            <TabsTrigger value="empresa" className="gap-2">
+              <Building2 className="w-4 h-4" />
+              Empresa & Certificado
+            </TabsTrigger>
+            <TabsTrigger value="dashboard" className="gap-2">
+              <Receipt className="w-4 h-4" />
+              Dashboard
+            </TabsTrigger>
+            <TabsTrigger value="relatorios" className="gap-2">
+              <BarChart3 className="w-4 h-4" />
+              Relatórios
+            </TabsTrigger>
+            <TabsTrigger value="categorias" className="gap-2">
+              <Tag className="w-4 h-4" />
+              Categorias
+            </TabsTrigger>
+          </TabsList>
+
+          {activeSubTab !== 'empresa' && (
+            <Button variant="outline" className="gap-2" onClick={() => setTaxConfigOpen(true)}>
+              <Settings className="w-4 h-4" />
+              Configurar Impostos
+            </Button>
+          )}
+        </div>
+
+        <TabsContent value="empresa" className="mt-6">
+          <CertificadoEmpresaTab />
+        </TabsContent>
 
         <TabsContent value="dashboard" className="mt-6">
           <TaxDashboard 
