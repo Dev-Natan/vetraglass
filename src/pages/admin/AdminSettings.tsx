@@ -30,8 +30,10 @@ import {
   Users,
   Building2,
   HardDrive,
-  Activity
+  Activity,
+  Puzzle
 } from "lucide-react";
+import { ModulesTab } from "@/components/admin/settings/ModulesTab";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -149,10 +151,14 @@ export default function AdminSettings() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid grid-cols-4 w-full max-w-2xl">
+          <TabsList className="grid grid-cols-5 w-full max-w-3xl">
             <TabsTrigger value="general" className="gap-2">
               <Globe className="h-4 w-4" />
               Geral
+            </TabsTrigger>
+            <TabsTrigger value="modules" className="gap-2">
+              <Puzzle className="h-4 w-4" />
+              Módulos
             </TabsTrigger>
             <TabsTrigger value="notifications" className="gap-2">
               <Bell className="h-4 w-4" />
@@ -167,6 +173,11 @@ export default function AdminSettings() {
               Manutenção
             </TabsTrigger>
           </TabsList>
+
+          {/* Modules Tab */}
+          <TabsContent value="modules">
+            <ModulesTab />
+          </TabsContent>
 
           {/* General Settings */}
           <TabsContent value="general" className="space-y-6">
