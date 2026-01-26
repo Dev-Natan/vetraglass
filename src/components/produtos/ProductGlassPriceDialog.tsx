@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ProductGlassPrice } from '@/hooks/useProductGlassPrices';
+import { ProductGlassPrice, DEFAULT_GLASS_COLORS } from '@/hooks/useProductGlassPrices';
 import { Badge } from '@/components/ui/badge';
 
 interface ProductGlassPriceDialogProps {
@@ -24,6 +24,7 @@ interface ProductGlassPriceDialogProps {
   onOpenChange: (open: boolean) => void;
   onSave: (data: {
     glass_type: string;
+    glass_color: string;
     thickness_mm: number;
     price_per_sqm: number;
     cost_per_sqm: number;
@@ -44,32 +45,51 @@ export function ProductGlassPriceDialog({
 }: ProductGlassPriceDialogProps) {
   const [glassType, setGlassType] = useState('');
   const [customGlassType, setCustomGlassType] = useState('');
+  const [glassColor, setGlassColor] = useState('Incolor');
+  const [customGlassColor, setCustomGlassColor] = useState('');
   const [thicknessMm, setThicknessMm] = useState<number>(6);
   const [pricePerSqm, setPricePerSqm] = useState<string>('');
   const [costPerSqm, setCostPerSqm] = useState<string>('');
   const [useCustomType, setUseCustomType] = useState(false);
+  const [useCustomColor, setUseCustomColor] = useState(false);
 
   useEffect(() => {
     if (editingPrice) {
-      const isCustom = !DEFAULT_GLASS_TYPES.includes(editingPrice.glass_type);
-      setUseCustomType(isCustom);
-      if (isCustom) {
+      // Glass type
+      const isCustomType = !DEFAULT_GLASS_TYPES.includes(editingPrice.glass_type);
+      setUseCustomType(isCustomType);
+      if (isCustomType) {
         setCustomGlassType(editingPrice.glass_type);
         setGlassType('custom');
       } else {
         setGlassType(editingPrice.glass_type);
         setCustomGlassType('');
       }
+      
+      // Glass color
+      const isCustomColor = !DEFAULT_GLASS_COLORS.includes(editingPrice.glass_color);
+      setUseCustomColor(isCustomColor);
+      if (isCustomColor) {
+        setCustomGlassColor(editingPrice.glass_color);
+        setGlassColor('custom');
+      } else {
+        setGlassColor(editingPrice.glass_color);
+        setCustomGlassColor('');
+      }
+      
       setThicknessMm(editingPrice.thickness_mm);
       setPricePerSqm(editingPrice.price_per_sqm.toString());
       setCostPerSqm(editingPrice.cost_per_sqm.toString());
     } else {
       setGlassType('');
       setCustomGlassType('');
+      setGlassColor('Incolor');
+      setCustomGlassColor('');
       setThicknessMm(6);
       setPricePerSqm('');
       setCostPerSqm('');
       setUseCustomType(false);
+      setUseCustomColor(false);
     }
   }, [editingPrice, open]);
 
@@ -77,11 +97,13 @@ export function ProductGlassPriceDialog({
     e.preventDefault();
     
     const finalGlassType = useCustomType ? customGlassType : glassType;
+    const finalGlassColor = useCustomColor ? customGlassColor : glassColor;
     
-    if (!finalGlassType.trim()) return;
+    if (!finalGlassType.trim() || !finalGlassColor.trim()) return;
 
     await onSave({
       glass_type: finalGlassType.trim(),
+      glass_color: finalGlassColor.trim(),
       thickness_mm: thicknessMm,
       price_per_sqm: parseFloat(pricePerSqm) || 0,
       cost_per_sqm: parseFloat(costPerSqm) || 0,
@@ -96,6 +118,17 @@ export function ProductGlassPriceDialog({
       setUseCustomType(false);
       setGlassType(value);
       setCustomGlassType('');
+    }
+  };
+
+  const handleGlassColorChange = (value: string) => {
+    if (value === 'custom') {
+      setUseCustomColor(true);
+      setGlassColor('custom');
+    } else {
+      setUseCustomColor(false);
+      setGlassColor(value);
+      setCustomGlassColor('');
     }
   };
 
@@ -135,6 +168,31 @@ export function ProductGlassPriceDialog({
                 placeholder="Digite o tipo de vidro"
                 value={customGlassType}
                 onChange={(e) => setCustomGlassType(e.target.value)}
+                className="mt-2"
+              />
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label>Cor do Vidro</Label>
+            <Select value={glassColor} onValueChange={handleGlassColorChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione a cor" />
+              </SelectTrigger>
+              <SelectContent>
+                {DEFAULT_GLASS_COLORS.map((color) => (
+                  <SelectItem key={color} value={color}>
+                    {color}
+                  </SelectItem>
+                ))}
+                <SelectItem value="custom">Outra (personalizada)</SelectItem>
+              </SelectContent>
+            </Select>
+            {useCustomColor && (
+              <Input
+                placeholder="Digite a cor do vidro"
+                value={customGlassColor}
+                onChange={(e) => setCustomGlassColor(e.target.value)}
                 className="mt-2"
               />
             )}
