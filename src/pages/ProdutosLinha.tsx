@@ -14,6 +14,7 @@ import { ActivateProductDialog } from '@/components/produtos/ActivateProductDial
 import { TipologiasSheet } from '@/components/produtos/TipologiasSheet';
 import { CreateCustomProductDialog } from '@/components/produtos/CreateCustomProductDialog';
 import { EditCustomProductDialog } from '@/components/produtos/EditCustomProductDialog';
+import { EditProductPricingDialog } from '@/components/produtos/EditProductPricingDialog';
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
 
 type ProductTemplate = {
@@ -65,6 +66,8 @@ export default function ProdutosLinha() {
   const [createCustomDialogOpen, setCreateCustomDialogOpen] = useState(false);
   const [editCustomDialogOpen, setEditCustomDialogOpen] = useState(false);
   const [selectedProductForEdit, setSelectedProductForEdit] = useState<DisplayProduct | null>(null);
+  const [editPricingDialogOpen, setEditPricingDialogOpen] = useState(false);
+  const [selectedProductForPricing, setSelectedProductForPricing] = useState<{ id: string; name: string; image_url?: string | null } | null>(null);
 
   const currentLinha = linhaParam ? decodeURIComponent(linhaParam) : '';
 
@@ -686,6 +689,20 @@ export default function ProdutosLinha() {
           onOpenChange={setEditCustomDialogOpen}
           product={selectedProductForEdit}
         />
+
+        {/* Edit Product Pricing Dialog */}
+        {selectedProductForPricing && (
+          <EditProductPricingDialog
+            open={editPricingDialogOpen}
+            onOpenChange={setEditPricingDialogOpen}
+            companyProductId={selectedProductForPricing.id}
+            productName={selectedProductForPricing.name}
+            productImageUrl={selectedProductForPricing.image_url}
+            onSuccess={() => {
+              queryClient.invalidateQueries({ queryKey: ['company-products'] });
+            }}
+          />
+        )}
       </div>
     </MainLayout>
   );

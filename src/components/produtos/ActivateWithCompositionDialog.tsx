@@ -40,10 +40,13 @@ import {
   CircleDot,
   Circle,
   CheckCircle2,
+  DollarSign,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { FormulaEditor } from './FormulaEditor';
 import { GlassFormulaEditor } from './GlassFormulaEditor';
+import { ProductPricingStep, ProductPricingData } from './ProductPricingStep';
+import { useGlassPriceMatrixMutations } from '@/hooks/useGlassPricing';
 
 interface ActivateWithCompositionDialogProps {
   open: boolean;
@@ -112,11 +115,23 @@ export function ActivateWithCompositionDialog({
   const { currentCompany } = useAuth();
   const queryClient = useQueryClient();
   const formRef = useRef<HTMLDivElement>(null);
+  const { bulkUpsertMutation } = useGlassPriceMatrixMutations();
+  
+  // Main wizard step: 'components' or 'pricing'
+  const [wizardStep, setWizardStep] = useState<'components' | 'pricing'>('components');
   const [activeTab, setActiveTab] = useState('glass');
   const [localItems, setLocalItems] = useState<ComponentItem[]>([]);
   const [isAddingItem, setIsAddingItem] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Pricing state
+  const [pricingData, setPricingData] = useState<ProductPricingData>({
+    costPerSqm: 0,
+    pricePerSqm: 0,
+    hasGlass: false,
+    glassPrices: [],
+  });
   const [autoLoadedGlassCount, setAutoLoadedGlassCount] = useState(0);
 
   // Form states for adding/editing
@@ -239,6 +254,24 @@ export function ActivateWithCompositionDialog({
       setAutoLoadedGlassCount(autoAddedCount);
     }
   }, [globalItems, glassFormulas, genericGlassTemplate]);
+
+  // Check if product has glass components
+  const hasGlassComponents = useMemo(() => {
+    return localItems.some(item => item.item_template?.type === 'glass');
+  }, [localItems]);
+
+  // Reset wizard step when dialog opens
+  useEffect(() => {
+    if (open) {
+      setWizardStep('components');
+      setPricingData({
+        costPerSqm: 0,
+        pricePerSqm: 0,
+        hasGlass: false,
+        glassPrices: [],
+      });
+    }
+  }, [open]);
 
   // Fetch available item templates for adding
   const { data: availableItems } = useQuery({
@@ -401,7 +434,7 @@ export function ActivateWithCompositionDialog({
     resetForm();
   };
 
-  // Activation mutation
+  // Activation mutation - now includes pricing
   const activateMutation = useMutation({
     mutationFn: async () => {
       if (!currentCompany?.id) throw new Error('Empresa não selecionada');
@@ -417,7 +450,51 @@ export function ActivateWithCompositionDialog({
 
       if (activateError) throw activateError;
 
-      // 2. Insert all items with company_id
+      // 2. Update company product with pricing
+      if (activatedProduct) {
+        const { error: priceError } = await supabase
+          .from('company_products')
+          .update({
+            cost_per_sqm: pricingData.costPerSqm,
+            price_per_sqm: pricingData.pricePerSqm,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', activatedProduct);
+
+        if (priceError) {
+          console.error('Error updating prices:', priceError);
+        }
+      }
+
+      // 3. Save glass prices if any
+      if (pricingData.hasGlass && pricingData.glassPrices.length > 0) {
+        // Get the default glass type (comum)
+        const { data: glassTypes } = await supabase
+          .from('glass_types')
+          .select('id')
+          .eq('slug', 'comum')
+          .single();
+
+        const glassTypeId = glassTypes?.id;
+
+        if (glassTypeId) {
+          const priceEntries = pricingData.glassPrices
+            .filter(p => p.price > 0 || p.cost > 0)
+            .map(p => ({
+              glass_type_id: glassTypeId,
+              glass_color_id: p.colorId,
+              glass_thickness_id: p.thicknessId,
+              cost_per_sqm: p.cost,
+              price_per_sqm: p.price,
+            }));
+
+          if (priceEntries.length > 0) {
+            await bulkUpsertMutation.mutateAsync(priceEntries);
+          }
+        }
+      }
+
+      // 4. Insert all items with company_id
       const itemInserts = localItems.map(item => ({
         company_id: currentCompany.id,
         product_template_id: productTemplateId,
@@ -441,7 +518,7 @@ export function ActivateWithCompositionDialog({
         }
       }
 
-      // 3. Add items to company stock with zero quantity
+      // 5. Add items to company stock with zero quantity
       const uniqueItemTemplateIds = [...new Set(localItems.map(i => i.item_template_id))];
 
       for (const itemTemplateId of uniqueItemTemplateIds) {
@@ -469,8 +546,9 @@ export function ActivateWithCompositionDialog({
       queryClient.invalidateQueries({ queryKey: ['company-products'] });
       queryClient.invalidateQueries({ queryKey: ['company-stock'] });
       queryClient.invalidateQueries({ queryKey: ['linha-products'] });
+      queryClient.invalidateQueries({ queryKey: ['glass-price-matrix'] });
       toast.success('Produto ativado com sucesso!', {
-        description: `${localItems.length} componentes configurados`,
+        description: `${localItems.length} componentes e preços configurados`,
       });
       onOpenChange(false);
       onSuccess?.();
@@ -508,6 +586,12 @@ export function ActivateWithCompositionDialog({
     onOpenChange(newOpen);
   };
 
+  // Wizard steps config
+  const wizardSteps = [
+    { id: 'components', label: 'Componentes', icon: Package },
+    { id: 'pricing', label: 'Preços', icon: DollarSign },
+  ];
+
   return (
     <>
       <Dialog open={open} onOpenChange={handleDialogClose}>
@@ -533,43 +617,81 @@ export function ActivateWithCompositionDialog({
                   Ativar: {productName}
                 </DialogTitle>
                 <DialogDescription className="mt-0.5 text-sm">
-                  Configure os componentes do produto
+                  {wizardStep === 'components' 
+                    ? 'Configure os componentes do produto' 
+                    : 'Defina os preços do produto'}
                 </DialogDescription>
               </div>
             </div>
             
-            {/* Progress Stepper */}
-            <div className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
-              {itemTypeTabs.map((tab, index) => {
-                const itemCount = getItemsByType(tab.value).length;
-                const isActive = activeTab === tab.value;
-                const isPast = itemTypeTabs.findIndex(t => t.value === activeTab) > index;
-                const hasItems = itemCount > 0;
+            {/* Main Wizard Steps */}
+            <div className="flex items-center gap-2 mb-3">
+              {wizardSteps.map((step, index) => {
+                const isActive = wizardStep === step.id;
+                const isPast = wizardSteps.findIndex(s => s.id === wizardStep) > index;
+                const StepIcon = step.icon;
                 
                 return (
                   <button
-                    key={tab.value}
-                    onClick={() => setActiveTab(tab.value)}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-md transition-all flex-1 justify-center ${
+                    key={step.id}
+                    onClick={() => {
+                      // Only allow going back, not forward (must use Next button)
+                      if (isPast) {
+                        setWizardStep(step.id as 'components' | 'pricing');
+                      }
+                    }}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all flex-1 justify-center ${
                       isActive 
                         ? 'bg-primary text-primary-foreground shadow-sm' 
-                        : hasItems
-                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50'
-                          : 'text-muted-foreground hover:bg-muted'
+                        : isPast
+                          ? 'bg-success/20 text-success hover:bg-success/30 cursor-pointer'
+                          : 'bg-muted text-muted-foreground'
                     }`}
+                    disabled={!isPast && !isActive}
                   >
-                    {hasItems && !isActive ? (
+                    {isPast ? (
                       <CheckCircle2 className="w-4 h-4 shrink-0" />
-                    ) : isActive ? (
-                      <CircleDot className="w-4 h-4 shrink-0" />
                     ) : (
-                      <Circle className="w-4 h-4 shrink-0" />
+                      <StepIcon className="w-4 h-4 shrink-0" />
                     )}
-                    <span className="text-xs font-medium hidden sm:inline">{tab.label}</span>
-                    <span className="text-xs font-medium sm:hidden">{tab.label.slice(0, 3)}</span>
-                    {itemCount > 0 && (
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                    <span className="text-sm font-medium">{step.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Item Type Tabs - only show in components step */}
+            {wizardStep === 'components' && (
+              <div className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
+                {itemTypeTabs.map((tab, index) => {
+                  const itemCount = getItemsByType(tab.value).length;
+                  const isActive = activeTab === tab.value;
+                  const hasItems = itemCount > 0;
+                  
+                  return (
+                    <button
+                      key={tab.value}
+                      onClick={() => setActiveTab(tab.value)}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-md transition-all flex-1 justify-center ${
                         isActive 
+                          ? 'bg-primary text-primary-foreground shadow-sm' 
+                          : hasItems
+                            ? 'bg-success/20 text-success hover:bg-success/30'
+                            : 'text-muted-foreground hover:bg-muted'
+                      }`}
+                    >
+                      {hasItems && !isActive ? (
+                        <CheckCircle2 className="w-4 h-4 shrink-0" />
+                      ) : isActive ? (
+                        <CircleDot className="w-4 h-4 shrink-0" />
+                      ) : (
+                        <Circle className="w-4 h-4 shrink-0" />
+                      )}
+                      <span className="text-xs font-medium hidden sm:inline">{tab.label}</span>
+                      <span className="text-xs font-medium sm:hidden">{tab.label.slice(0, 3)}</span>
+                      {itemCount > 0 && (
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                          isActive
                           ? 'bg-primary-foreground/20' 
                           : 'bg-current/10'
                       }`}>
@@ -580,6 +702,7 @@ export function ActivateWithCompositionDialog({
                 );
               })}
             </div>
+            )}
           </DialogHeader>
 
           {/* Content */}
@@ -588,7 +711,18 @@ export function ActivateWithCompositionDialog({
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
               </div>
+            ) : wizardStep === 'pricing' ? (
+              /* Pricing Step */
+              <ScrollArea className="flex-1 p-6">
+                <ProductPricingStep
+                  productName={productName}
+                  hasGlassComponents={hasGlassComponents}
+                  initialData={pricingData}
+                  onChange={setPricingData}
+                />
+              </ScrollArea>
             ) : (
+              /* Components Step */
               <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
 
                 {itemTypeTabs.map(tab => (
@@ -614,9 +748,9 @@ export function ActivateWithCompositionDialog({
 
                     {/* Auto-loaded glass indicator */}
                     {tab.value === 'glass' && autoLoadedGlassCount > 0 && (
-                      <div className="mb-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex items-center gap-2 mx-6">
-                        <Sparkles className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
-                        <p className="text-xs text-green-700 dark:text-green-300">
+                      <div className="mb-3 p-3 bg-success/10 border border-success/30 rounded-lg flex items-center gap-2 mx-6">
+                        <Sparkles className="w-4 h-4 text-success shrink-0" />
+                        <p className="text-xs text-success">
                           <strong>{autoLoadedGlassCount} vidro(s)</strong> carregado(s) automaticamente das fórmulas configuradas para este produto.
                         </p>
                       </div>
@@ -877,44 +1011,50 @@ export function ActivateWithCompositionDialog({
           {/* Footer with Navigation */}
           <DialogFooter className="p-4 border-t shrink-0">
             <div className="flex items-center justify-between w-full gap-2">
-              {/* Left: Navigation */}
+              {/* Left: Back button */}
               <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    const currentIndex = itemTypeTabs.findIndex(t => t.value === activeTab);
-                    if (currentIndex > 0) {
-                      setActiveTab(itemTypeTabs[currentIndex - 1].value);
-                    }
-                  }}
-                  disabled={itemTypeTabs.findIndex(t => t.value === activeTab) === 0}
-                  className="gap-1"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  <span className="hidden sm:inline">Anterior</span>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    const currentIndex = itemTypeTabs.findIndex(t => t.value === activeTab);
-                    if (currentIndex < itemTypeTabs.length - 1) {
-                      setActiveTab(itemTypeTabs[currentIndex + 1].value);
-                    }
-                  }}
-                  disabled={itemTypeTabs.findIndex(t => t.value === activeTab) === itemTypeTabs.length - 1}
-                  className="gap-1"
-                >
-                  <span className="hidden sm:inline">Próximo</span>
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
+                {wizardStep === 'pricing' ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setWizardStep('components')}
+                    className="gap-1"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    <span className="hidden sm:inline">Voltar</span>
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const currentIndex = itemTypeTabs.findIndex(t => t.value === activeTab);
+                      if (currentIndex > 0) {
+                        setActiveTab(itemTypeTabs[currentIndex - 1].value);
+                      }
+                    }}
+                    disabled={itemTypeTabs.findIndex(t => t.value === activeTab) === 0}
+                    className="gap-1"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    <span className="hidden sm:inline">Anterior</span>
+                  </Button>
+                )}
               </div>
 
               {/* Center: Status */}
               <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground">
-                <Package className="w-4 h-4" />
-                {localItems.length} componentes
+                {wizardStep === 'components' ? (
+                  <>
+                    <Package className="w-4 h-4" />
+                    {localItems.length} componentes
+                  </>
+                ) : (
+                  <>
+                    <DollarSign className="w-4 h-4" />
+                    {pricingData.pricePerSqm > 0 ? `R$ ${pricingData.pricePerSqm.toFixed(2)}/m²` : 'Defina o preço'}
+                  </>
+                )}
               </div>
               
               {/* Right: Actions */}
@@ -922,25 +1062,48 @@ export function ActivateWithCompositionDialog({
                 <Button variant="outline" size="sm" onClick={() => handleDialogClose(false)}>
                   Cancelar
                 </Button>
-                <Button
-                  size="sm"
-                  onClick={() => activateMutation.mutate()}
-                  disabled={activateMutation.isPending || localItems.length === 0}
-                  className="bg-green-600 hover:bg-green-700 gap-1"
-                >
-                  {activateMutation.isPending ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span className="hidden sm:inline">Ativando...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Check className="w-4 h-4" />
-                      <span className="hidden sm:inline">Ativar Produto</span>
-                      <span className="sm:hidden">Ativar</span>
-                    </>
-                  )}
-                </Button>
+                
+                {wizardStep === 'components' ? (
+                  /* Next button - go to pricing */
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      // Update hasGlass in pricingData based on components
+                      setPricingData(prev => ({
+                        ...prev,
+                        hasGlass: hasGlassComponents,
+                      }));
+                      setWizardStep('pricing');
+                    }}
+                    disabled={localItems.length === 0}
+                    className="gap-1"
+                  >
+                    <span className="hidden sm:inline">Próximo: Preços</span>
+                    <span className="sm:hidden">Próximo</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                ) : (
+                  /* Activate button */
+                  <Button
+                    size="sm"
+                    onClick={() => activateMutation.mutate()}
+                    disabled={activateMutation.isPending || localItems.length === 0}
+                    className="bg-success hover:bg-success/90 gap-1"
+                  >
+                    {activateMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span className="hidden sm:inline">Ativando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4" />
+                        <span className="hidden sm:inline">Ativar Produto</span>
+                        <span className="sm:hidden">Ativar</span>
+                      </>
+                    )}
+                  </Button>
+                )}
               </div>
             </div>
           </DialogFooter>
