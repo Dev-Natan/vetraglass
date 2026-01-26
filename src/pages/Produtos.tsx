@@ -234,14 +234,14 @@ export default function Produtos() {
 
   return (
     <MainLayout>
-      <div className="space-y-6 pb-24 animate-fade-in">
+      <div className="space-y-4 sm:space-y-6 pb-28 sm:pb-24 animate-fade-in">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="font-display font-bold text-2xl text-foreground">
+            <h1 className="font-display font-bold text-xl sm:text-2xl text-foreground">
               Produtos
             </h1>
-            <p className="text-muted-foreground text-sm">
+            <p className="text-muted-foreground text-xs sm:text-sm">
               {filteredLinhas.length} linhas ativas
             </p>
           </div>
@@ -254,22 +254,22 @@ export default function Produtos() {
               placeholder="Buscar linha..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-md"
+              className="w-full sm:max-w-md h-10"
               autoFocus
             />
           </div>
         )}
 
         {/* Products Grid */}
-        <div className="section-card">
+        <div className="section-card p-3 sm:p-4">
           {isLoading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-4">
               {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                <div key={i} className="h-36 rounded-lg bg-muted animate-pulse" />
+                <div key={i} className="h-28 sm:h-36 rounded-lg bg-muted animate-pulse" />
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-4">
               {/* Add Card - First Position */}
               <AddLinhaCard onClick={() => setCreateLinhaDialogOpen(true)} />
 
@@ -293,60 +293,60 @@ export default function Produtos() {
 
           {/* Empty State */}
           {!isLoading && filteredLinhas.length === 0 && (
-            <div className="text-center py-12 text-muted-foreground">
-              <p>Nenhuma linha encontrada.</p>
-              <p className="text-sm mt-1">Clique em "Adicionar" para baixar produtos.</p>
+            <div className="text-center py-8 sm:py-12 text-muted-foreground">
+              <p className="text-sm sm:text-base">Nenhuma linha encontrada.</p>
+              <p className="text-xs sm:text-sm mt-1">Clique em "Adicionar" para baixar produtos.</p>
             </div>
           )}
         </div>
       </div>
 
       {/* Fixed Bottom Toolbar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t p-4 z-40">
-        <div className="container mx-auto flex justify-center gap-12 sm:gap-16">
+      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t p-3 sm:p-4 z-40">
+        <div className="container mx-auto flex justify-center gap-4 sm:gap-16">
           <button 
             onClick={() => toast.info('Funcionalidade em desenvolvimento')}
-            className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+            className="flex flex-col items-center gap-0.5 sm:gap-1 text-muted-foreground hover:text-foreground transition-colors"
           >
-            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-              <Trash2 className="w-5 h-5" />
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-muted flex items-center justify-center">
+              <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <span className="text-xs">Lixeira</span>
+            <span className="text-[10px] sm:text-xs">Lixeira</span>
           </button>
           
           <button 
             onClick={() => setSearchOpen(!searchOpen)}
-            className={`flex flex-col items-center gap-1 transition-colors ${searchOpen ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+            className={`flex flex-col items-center gap-0.5 sm:gap-1 transition-colors ${searchOpen ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
           >
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${searchOpen ? 'bg-primary/10' : 'bg-muted'}`}>
-              <Search className="w-5 h-5" />
+            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center ${searchOpen ? 'bg-primary/10' : 'bg-muted'}`}>
+              <Search className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <span className="text-xs">Buscar</span>
+            <span className="text-[10px] sm:text-xs">Buscar</span>
           </button>
           
           <button 
             onClick={() => setAddLinhaSheetOpen(true)}
-            className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors relative"
+            className="flex flex-col items-center gap-0.5 sm:gap-1 text-muted-foreground hover:text-foreground transition-colors relative"
           >
-            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center relative">
-              <Download className="w-5 h-5" />
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-muted flex items-center justify-center relative">
+              <Download className="w-4 h-4 sm:w-5 sm:h-5" />
               {totalDownloadCount > 0 && (
-                <Badge className="absolute -top-1 -right-1 h-5 min-w-5 px-1 text-[10px] bg-green-500 hover:bg-green-500">
+                <Badge className="absolute -top-1 -right-1 h-4 sm:h-5 min-w-4 sm:min-w-5 px-1 text-[9px] sm:text-[10px] bg-green-500 hover:bg-green-500">
                   {totalDownloadCount}
                 </Badge>
               )}
             </div>
-            <span className="text-xs">Baixar tipologias</span>
+            <span className="text-[10px] sm:text-xs">Baixar</span>
           </button>
 
           <button 
             onClick={() => setCreateCustomDialogOpen(true)}
-            className="flex flex-col items-center gap-1 text-primary hover:text-primary/80 transition-colors"
+            className="flex flex-col items-center gap-0.5 sm:gap-1 text-primary hover:text-primary/80 transition-colors"
           >
-            <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-primary-foreground" />
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-primary flex items-center justify-center">
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground" />
             </div>
-            <span className="text-xs">Personalizado</span>
+            <span className="text-[10px] sm:text-xs">Novo</span>
           </button>
         </div>
       </div>

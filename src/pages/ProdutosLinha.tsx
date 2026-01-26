@@ -285,68 +285,167 @@ export default function ProdutosLinha() {
 
   return (
     <MainLayout>
-      <div className="space-y-4 animate-fade-in pb-24">
+      <div className="space-y-3 sm:space-y-4 animate-fade-in pb-28 sm:pb-24">
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/produtos')}>
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/produtos')} className="shrink-0">
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <div>
-            <h1 className="font-display font-bold text-2xl text-foreground">
+          <div className="min-w-0 flex-1">
+            <h1 className="font-display font-bold text-lg sm:text-2xl text-foreground truncate">
               {currentLinha}
             </h1>
-            <p className="text-muted-foreground text-sm">
+            <p className="text-muted-foreground text-xs sm:text-sm">
               {filteredProducts?.length || 0} produtos
             </p>
           </div>
         </div>
 
-        {/* Search and Toggle */}
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-          <div className="flex gap-2 flex-1 w-full sm:w-auto">
-            <Input
-              placeholder="Nome"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1"
-            />
-            <Button variant="default" size="sm" className="bg-sky-500 hover:bg-sky-600 shrink-0">
-              Buscar
-            </Button>
-          </div>
-          
-          {/* Toggle tabs */}
-          <div className="flex rounded-lg overflow-hidden border">
-            <button
-              onClick={() => setShowActive(true)}
-              className={`px-6 py-2 text-sm font-medium transition-colors ${
-                showActive 
-                  ? 'bg-sky-500 text-white' 
-                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
-              }`}
-            >
-              Habilitados
-            </button>
-            <button
-              onClick={() => setShowActive(false)}
-              className={`px-6 py-2 text-sm font-medium transition-colors ${
-                !showActive 
-                  ? 'bg-gray-400 text-white' 
-                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
-              }`}
-            >
-              Desabilitados
-            </button>
-          </div>
+        {/* Toggle tabs - mobile first */}
+        <div className="flex rounded-lg overflow-hidden border w-full sm:w-auto">
+          <button
+            onClick={() => setShowActive(true)}
+            className={`flex-1 sm:flex-none px-4 sm:px-6 py-2.5 text-xs sm:text-sm font-medium transition-colors ${
+              showActive 
+                ? 'bg-sky-500 text-white' 
+                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+            }`}
+          >
+            Habilitados
+          </button>
+          <button
+            onClick={() => setShowActive(false)}
+            className={`flex-1 sm:flex-none px-4 sm:px-6 py-2.5 text-xs sm:text-sm font-medium transition-colors ${
+              !showActive 
+                ? 'bg-gray-400 text-white' 
+                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+            }`}
+          >
+            Desabilitados
+          </button>
         </div>
 
-        {/* Products list */}
-        <div className="section-card p-0 overflow-hidden">
+        {/* Search */}
+        <div className="flex gap-2 w-full">
+          <Input
+            placeholder="Buscar produto..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="flex-1 h-10 text-sm"
+          />
+          <Button variant="default" size="sm" className="bg-sky-500 hover:bg-sky-600 shrink-0 h-10 px-4">
+            <Search className="w-4 h-4" />
+          </Button>
+        </div>
+
+        {/* Products list - Mobile Card View */}
+        <div className="space-y-2 sm:hidden">
+          {isLoading ? (
+            <div className="p-8 text-center text-muted-foreground">
+              Carregando...
+            </div>
+          ) : filteredProducts && filteredProducts.length > 0 ? (
+            filteredProducts.map((product) => {
+              const isActivated = product.is_custom || isProductActivated(product.id);
+              return (
+                <div
+                  key={product.id}
+                  className="bg-card border rounded-lg p-3 space-y-3"
+                >
+                  {/* Product header */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center shrink-0 p-1">
+                      {product.image_url ? (
+                        <img 
+                          src={product.image_url} 
+                          alt={product.name}
+                          className="w-full h-full object-contain"
+                        />
+                      ) : (
+                        <span className="text-2xl">{getCategoryIcon(product.category)}</span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-sky-600 uppercase text-sm leading-tight line-clamp-2">
+                        {product.name}
+                      </h3>
+                      {product.is_custom && (
+                        <Badge variant="secondary" className="text-[10px] mt-1 bg-purple-100 text-purple-700">
+                          Personalizado
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-2">
+                    {product.is_custom ? (
+                      <Button
+                        size="sm"
+                        className="flex-1 bg-amber-400 hover:bg-amber-500 text-amber-900 font-medium text-xs h-9"
+                        onClick={() => deactivateCustomProductMutation.mutate(product.id)}
+                        disabled={deactivateCustomProductMutation.isPending}
+                      >
+                        Desabilitar
+                      </Button>
+                    ) : isActivated ? (
+                      <Button
+                        size="sm"
+                        className="flex-1 bg-amber-400 hover:bg-amber-500 text-amber-900 font-medium text-xs h-9"
+                        onClick={() => deactivateProductMutation.mutate(product.id)}
+                        disabled={deactivateProductMutation.isPending}
+                      >
+                        Desabilitar
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium text-xs h-9"
+                        onClick={() => {
+                          setSelectedProductForActivation({ id: product.id, name: product.name });
+                          setActivateDialogOpen(true);
+                        }}
+                      >
+                        Habilitar
+                      </Button>
+                    )}
+                    
+                    <Button
+                      size="sm"
+                      className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-medium text-xs h-9"
+                      onClick={() => {
+                        if (product.is_custom) {
+                          setSelectedProductForEdit(product);
+                          setEditCustomDialogOpen(true);
+                        } else {
+                          navigate(`/produtos/editar/${product.id}`);
+                        }
+                      }}
+                    >
+                      Editar
+                    </Button>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="p-8 text-center text-muted-foreground text-sm">
+              {searchTerm 
+                ? 'Nenhum produto encontrado.'
+                : showActive 
+                  ? 'Nenhum produto habilitado.'
+                  : 'Nenhum produto desabilitado.'}
+            </div>
+          )}
+        </div>
+
+        {/* Products list - Desktop Table View */}
+        <div className="section-card p-0 overflow-hidden hidden sm:block">
           {/* Table header */}
           <div className="grid grid-cols-12 gap-4 p-4 bg-muted/30 border-b text-sm font-medium text-muted-foreground">
             <div className="col-span-5">Produto</div>
-            <div className="col-span-1 text-center hidden sm:block">Horas</div>
-            <div className="col-span-7 sm:col-span-6"></div>
+            <div className="col-span-1 text-center">Horas</div>
+            <div className="col-span-6"></div>
           </div>
 
           {isLoading ? (
@@ -388,13 +487,12 @@ export default function ProdutosLinha() {
                   </div>
 
                   {/* Hours */}
-                  <div className="col-span-1 text-center hidden sm:block text-muted-foreground text-sm">
+                  <div className="col-span-1 text-center text-muted-foreground text-sm">
                     {product.is_custom ? '-' : '5'}
                   </div>
 
                   {/* Actions */}
-                  <div className="col-span-7 sm:col-span-6 flex items-center justify-end gap-2">
-                    {/* Desabilitar */}
+                  <div className="col-span-6 flex items-center justify-end gap-2">
                     {product.is_custom ? (
                       <Button
                         size="sm"
@@ -426,7 +524,6 @@ export default function ProdutosLinha() {
                       </Button>
                     )}
                     
-                    {/* Fazer cópia - only for template products */}
                     {!product.is_custom && (
                       <Button
                         variant="ghost"
@@ -439,7 +536,6 @@ export default function ProdutosLinha() {
                       </Button>
                     )}
                     
-                    {/* Editar produto */}
                     <Button
                       size="sm"
                       className="bg-orange-500 hover:bg-orange-600 text-white font-medium"
@@ -471,49 +567,49 @@ export default function ProdutosLinha() {
         </div>
 
         {/* Bottom action bar */}
-        <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t p-4">
-          <div className="container mx-auto flex justify-center gap-8 sm:gap-12">
+        <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t p-3 sm:p-4 z-40">
+          <div className="container mx-auto flex justify-center gap-4 sm:gap-12">
             <button 
               onClick={() => toast.info('Funcionalidade em desenvolvimento')}
-              className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+              className="flex flex-col items-center gap-0.5 sm:gap-1 text-muted-foreground hover:text-foreground transition-colors"
             >
-              <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                <Trash2 className="w-5 h-5" />
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-muted flex items-center justify-center">
+                <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
-              <span className="text-xs">Lixeira</span>
+              <span className="text-[10px] sm:text-xs">Lixeira</span>
             </button>
             
             <button 
               onClick={() => setTipologiasSheetOpen(true)}
-              className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors relative"
+              className="flex flex-col items-center gap-0.5 sm:gap-1 text-muted-foreground hover:text-foreground transition-colors relative"
             >
-              <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center relative">
-                <Download className="w-5 h-5" />
-                <Badge className="absolute -top-1 -right-1 h-5 min-w-5 px-1 text-[10px] bg-sky-500 hover:bg-sky-500">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-muted flex items-center justify-center relative">
+                <Download className="w-4 h-4 sm:w-5 sm:h-5" />
+                <Badge className="absolute -top-1 -right-1 h-4 sm:h-5 min-w-4 sm:min-w-5 px-1 text-[9px] sm:text-[10px] bg-sky-500 hover:bg-sky-500">
                   344
                 </Badge>
               </div>
-              <span className="text-xs">Baixar tipologias</span>
+              <span className="text-[10px] sm:text-xs">Baixar</span>
             </button>
             
             <button 
               onClick={() => toast.info('Funcionalidade em desenvolvimento')}
-              className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+              className="flex flex-col items-center gap-0.5 sm:gap-1 text-muted-foreground hover:text-foreground transition-colors"
             >
-              <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                <Percent className="w-5 h-5" />
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-muted flex items-center justify-center">
+                <Percent className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
-              <span className="text-xs">Margem de lucro</span>
+              <span className="text-[10px] sm:text-xs">Margem</span>
             </button>
             
             <button 
               onClick={() => setCreateCustomDialogOpen(true)}
-              className="flex flex-col items-center gap-1 text-emerald-600 hover:text-emerald-700 transition-colors"
+              className="flex flex-col items-center gap-0.5 sm:gap-1 text-emerald-600 hover:text-emerald-700 transition-colors"
             >
-              <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center">
-                <Plus className="w-5 h-5 text-white" />
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-emerald-500 flex items-center justify-center">
+                <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
-              <span className="text-xs">Cadastrar produto</span>
+              <span className="text-[10px] sm:text-xs">Novo</span>
             </button>
           </div>
         </div>
