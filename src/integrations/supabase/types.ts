@@ -5148,41 +5148,46 @@ export type Database = {
         Args: { _token: string; _user_id: string }
         Returns: Json
       }
-      activate_product_template_for_company: {
-        Args: {
-          _commercial_name?: string
-          _company_id: string
-          _product_template_id: string
-        }
-        Returns: {
-          base_price: number | null
-          category: string | null
-          commercial_name: string
-          company_id: string
-          cost_per_sqm: number | null
-          created_at: string
-          description: string | null
-          id: string
-          image_url: string | null
-          is_active: boolean
-          is_custom: boolean | null
-          linha: string | null
-          margin_percent: number | null
-          max_height: number | null
-          max_width: number | null
-          min_height: number | null
-          min_width: number | null
-          price_per_sqm: number | null
-          product_template_id: string | null
-          updated_at: string
-        }
-        SetofOptions: {
-          from: "*"
-          to: "company_products"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+      activate_product_template_for_company:
+        | {
+            Args: { _company_id: string; _product_template_id: string }
+            Returns: string
+          }
+        | {
+            Args: {
+              _commercial_name?: string
+              _company_id: string
+              _product_template_id: string
+            }
+            Returns: {
+              base_price: number | null
+              category: string | null
+              commercial_name: string
+              company_id: string
+              cost_per_sqm: number | null
+              created_at: string
+              description: string | null
+              id: string
+              image_url: string | null
+              is_active: boolean
+              is_custom: boolean | null
+              linha: string | null
+              margin_percent: number | null
+              max_height: number | null
+              max_width: number | null
+              min_height: number | null
+              min_width: number | null
+              price_per_sqm: number | null
+              product_template_id: string | null
+              updated_at: string
+            }
+            SetofOptions: {
+              from: "*"
+              to: "company_products"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
       calculate_sale_commission: {
         Args: { _employee_id: string; _sale_id: string }
         Returns: number
