@@ -7,13 +7,19 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Package, Check, ArrowLeft, Ruler, DollarSign, Sparkles, Info } from 'lucide-react';
+import { Search, Package, Check, ArrowLeft, Ruler, DollarSign, Sparkles, Info, GlassWater } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
 import { useProductLinhas } from '@/hooks/useProductLinhas';
-import { useGlassColors, useGlassThicknesses, useGlassPriceMatrix } from '@/hooks/useGlassPricing';
-import { useGlassTypes } from '@/hooks/useGlassTypes';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+
+interface ProductGlassPrice {
+  id: string;
+  glass_type: string;
+  thickness_mm: number;
+  price_per_sqm: number;
+  cost_per_sqm: number;
+}
 
 interface AddProductPanelProps {
   onAdd: (product: {
@@ -30,7 +36,7 @@ interface AddProductPanelProps {
     unit_price: number;
     total_price: number;
     has_glass?: boolean;
-    glass_color?: string;
+    glass_type?: string;
     glass_thickness?: string;
     glass_price_per_sqm?: number;
     is_custom?: boolean;
@@ -40,14 +46,8 @@ interface AddProductPanelProps {
 
 export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   const { currentCompany } = useAuth();
-  const { labels: categoryLabels, categories: productCategories } = useProductCategoryLabels();
+  const { labels: categoryLabels } = useProductCategoryLabels();
   const { data: productLinhas } = useProductLinhas();
-  
-  // Dynamic glass options from database
-  const { data: dbGlassColors } = useGlassColors();
-  const { data: dbGlassThicknesses } = useGlassThicknesses();
-  const { data: glassPriceMatrix } = useGlassPriceMatrix();
-  const { data: glassTypes } = useGlassTypes();
   
   const [selectedLinha, setSelectedLinha] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -58,30 +58,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   const [quantity, setQuantity] = useState<number>(1);
   const [customPrice, setCustomPrice] = useState<number | null>(null);
   const [hasGlass, setHasGlass] = useState<boolean>(true);
-  const [selectedGlassColorId, setSelectedGlassColorId] = useState<string>('');
-  const [selectedGlassThicknessId, setSelectedGlassThicknessId] = useState<string>('');
-  const [selectedGlassTypeId, setSelectedGlassTypeId] = useState<string>('');
-  
-  // Set defaults when data loads
-  useEffect(() => {
-    if (dbGlassColors?.length && !selectedGlassColorId) {
-      setSelectedGlassColorId(dbGlassColors[0].id);
-    }
-  }, [dbGlassColors, selectedGlassColorId]);
-  
-  useEffect(() => {
-    if (dbGlassThicknesses?.length && !selectedGlassThicknessId) {
-      setSelectedGlassThicknessId(dbGlassThicknesses[0].id);
-    }
-  }, [dbGlassThicknesses, selectedGlassThicknessId]);
-  
-  useEffect(() => {
-    if (glassTypes?.length && !selectedGlassTypeId) {
-      // Default to "Comum" or first type
-      const defaultType = glassTypes.find(t => t.slug === 'comum') || glassTypes[0];
-      if (defaultType) setSelectedGlassTypeId(defaultType.id);
-    }
-  }, [glassTypes, selectedGlassTypeId]);
+  const [selectedGlassPriceId, setSelectedGlassPriceId] = useState<string>('');
 
   // Fetch all product templates
   const { data: productTemplates, isLoading } = useQuery({
@@ -186,29 +163,52 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   const companyProduct = selectedProduct?.is_custom 
     ? selectedProduct.company_product 
     : companyProducts?.find(cp => cp.product_template_id === selectedProductId);
-  
-  // Get selected glass color and thickness details
-  const selectedGlassColor = dbGlassColors?.find(c => c.id === selectedGlassColorId);
-  const selectedGlassThickness = dbGlassThicknesses?.find(t => t.id === selectedGlassThicknessId);
-  
-  // Get glass price from matrix based on selected options
-  const glassPricePerSqm = useMemo(() => {
-    if (!hasGlass || !glassPriceMatrix || !selectedGlassColorId || !selectedGlassThicknessId || !selectedGlassTypeId) {
-      return 0;
+
+  // Fetch glass prices for selected product
+  const { data: productGlassPrices } = useQuery({
+    queryKey: ['product-glass-prices', companyProduct?.id],
+    queryFn: async () => {
+      if (!companyProduct?.id) return [];
+      const { data, error } = await supabase
+        .from('product_glass_prices')
+        .select('*')
+        .eq('company_product_id', companyProduct.id)
+        .eq('is_active', true)
+        .order('glass_type')
+        .order('thickness_mm');
+      
+      if (error) throw error;
+      return data as ProductGlassPrice[];
+    },
+    enabled: !!companyProduct?.id
+  });
+
+  // Check if product uses glass
+  const productUsesGlass = (companyProduct as any)?.uses_glass ?? true;
+  const hasGlassPrices = (productGlassPrices?.length || 0) > 0;
+
+  // Set default glass price when product changes
+  useEffect(() => {
+    if (productGlassPrices?.length && !selectedGlassPriceId) {
+      setSelectedGlassPriceId(productGlassPrices[0].id);
     }
-    const matrixEntry = glassPriceMatrix.find(
-      p => p.glass_type_id === selectedGlassTypeId &&
-           p.glass_color_id === selectedGlassColorId &&
-           p.glass_thickness_id === selectedGlassThicknessId
-    );
-    return matrixEntry?.price_per_sqm || 0;
-  }, [hasGlass, glassPriceMatrix, selectedGlassColorId, selectedGlassThicknessId, selectedGlassTypeId]);
+  }, [productGlassPrices, selectedGlassPriceId]);
+
+  // Reset glass selection when product changes
+  useEffect(() => {
+    setSelectedGlassPriceId('');
+    setHasGlass(productUsesGlass);
+  }, [companyProduct?.id, productUsesGlass]);
+
+  // Get selected glass price details
+  const selectedGlassPrice = productGlassPrices?.find(p => p.id === selectedGlassPriceId);
+  const glassPricePerSqm = selectedGlassPrice?.price_per_sqm || 0;
   
   // Use price_per_sqm as the primary pricing method
   const productPricePerSqm = Number((companyProduct as any)?.price_per_sqm) || Number(companyProduct?.base_price) || 0;
   
   // Total price per sqm = product price + glass price (if applicable)
-  const combinedPricePerSqm = productPricePerSqm + (hasGlass ? glassPricePerSqm : 0);
+  const combinedPricePerSqm = productPricePerSqm + (hasGlass && productUsesGlass ? glassPricePerSqm : 0);
   const basePrice = customPrice !== null ? customPrice : combinedPricePerSqm;
 
   // Calculate prices: area in m² × price per m²
@@ -223,6 +223,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   const handleProductSelect = (productId: string) => {
     setSelectedProductId(productId);
     setCustomPrice(null);
+    setSelectedGlassPriceId('');
     
     // Auto-enable glass for Temperado line products
     const product = productTemplates?.find(p => p.id === productId);
@@ -253,9 +254,9 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
       quantity,
       unit_price: unitPrice,
       total_price: totalPrice,
-      has_glass: hasGlass,
-      glass_color: hasGlass ? selectedGlassColor?.name : undefined,
-      glass_thickness: hasGlass ? selectedGlassThickness?.thickness : undefined,
+      has_glass: hasGlass && productUsesGlass,
+      glass_type: hasGlass && selectedGlassPrice ? selectedGlassPrice.glass_type : undefined,
+      glass_thickness: hasGlass && selectedGlassPrice ? `${selectedGlassPrice.thickness_mm}mm` : undefined,
       glass_price_per_sqm: hasGlass ? glassPricePerSqm : undefined,
       is_custom: selectedProduct.is_custom,
     });
@@ -449,118 +450,89 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
           </div>
         )}
 
-        {/* Glass Options */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-3">
-            <label className="text-xs font-medium text-muted-foreground">Vidro:</label>
-            <div className="flex gap-2">
-              <Badge
-                variant={hasGlass ? 'default' : 'outline'}
-                className="cursor-pointer h-8 px-4"
-                onClick={() => setHasGlass(true)}
-              >
-                Com Vidro
-              </Badge>
-              <Badge
-                variant={!hasGlass ? 'default' : 'outline'}
-                className={cn(
-                  "cursor-pointer h-8 px-4",
-                  isTemperadoLine && "opacity-50 cursor-not-allowed"
+        {/* Glass Options - Only show if product uses glass */}
+        {productUsesGlass && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                <GlassWater className="w-3 h-3" />
+                Vidro:
+              </label>
+              <div className="flex gap-2">
+                <Badge
+                  variant={hasGlass ? 'default' : 'outline'}
+                  className="cursor-pointer h-8 px-4"
+                  onClick={() => setHasGlass(true)}
+                >
+                  Com Vidro
+                </Badge>
+                <Badge
+                  variant={!hasGlass ? 'default' : 'outline'}
+                  className={cn(
+                    "cursor-pointer h-8 px-4",
+                    isTemperadoLine && "opacity-50 cursor-not-allowed"
+                  )}
+                  onClick={() => !isTemperadoLine && setHasGlass(false)}
+                  title={isTemperadoLine ? "Produtos da linha Temperado sempre incluem vidro" : undefined}
+                >
+                  Sem Vidro
+                </Badge>
+                {isTemperadoLine && (
+                  <span className="text-xs text-muted-foreground italic ml-2">
+                    (Linha Temperado sempre inclui vidro)
+                  </span>
                 )}
-                onClick={() => !isTemperadoLine && setHasGlass(false)}
-                title={isTemperadoLine ? "Produtos da linha Temperado sempre incluem vidro" : undefined}
-              >
-                Sem Vidro
-              </Badge>
-              {isTemperadoLine && (
-                <span className="text-xs text-muted-foreground italic ml-2">
-                  (Linha Temperado sempre inclui vidro)
-                </span>
-              )}
+              </div>
             </div>
+            
+            {hasGlass && (
+              <div className="space-y-3">
+                {/* Glass Type + Thickness Selector - From product's glass prices */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">Tipo e Espessura do Vidro</label>
+                  {hasGlassPrices ? (
+                    <Select value={selectedGlassPriceId} onValueChange={setSelectedGlassPriceId}>
+                      <SelectTrigger className="bg-background h-10">
+                        <SelectValue placeholder="Selecione o vidro..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border shadow-lg z-50">
+                        {productGlassPrices?.map((gp) => (
+                          <SelectItem key={gp.id} value={gp.id}>
+                            <div className="flex items-center justify-between gap-4 w-full">
+                              <span>{gp.glass_type} {gp.thickness_mm}mm</span>
+                              <span className="text-muted-foreground text-xs">
+                                {formatCurrency(gp.price_per_sqm)}/m²
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-warning/10 border border-warning/30">
+                      <Info className="w-4 h-4 text-warning shrink-0" />
+                      <span className="text-xs text-foreground">
+                        Nenhum preço de vidro cadastrado para este produto. Configure em Produtos → Preços.
+                      </span>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Glass Price Info */}
+                {glassPricePerSqm > 0 && (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/20">
+                    <Info className="w-4 h-4 text-primary" />
+                    <span className="text-xs text-foreground">
+                      Produto: {formatCurrency(productPricePerSqm)}/m² + 
+                      Vidro: {formatCurrency(glassPricePerSqm)}/m² = 
+                      <strong className="ml-1">Total: {formatCurrency(combinedPricePerSqm)}/m²</strong>
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-          
-          {hasGlass && (
-            <div className="space-y-3">
-              {/* Glass Type Selector */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Tipo de Vidro</label>
-                <Select value={selectedGlassTypeId} onValueChange={setSelectedGlassTypeId}>
-                  <SelectTrigger className="bg-background h-10">
-                    <SelectValue placeholder="Selecione o tipo..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover border shadow-lg z-50">
-                    {glassTypes?.map((type) => (
-                      <SelectItem key={type.id} value={type.id}>
-                        {type.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Cor do Vidro</label>
-                  <Select value={selectedGlassColorId} onValueChange={setSelectedGlassColorId}>
-                    <SelectTrigger className="bg-background h-10">
-                      <SelectValue placeholder="Selecione..." />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border shadow-lg z-50">
-                      {dbGlassColors?.map((color) => (
-                        <SelectItem key={color.id} value={color.id}>
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className="w-3 h-3 rounded-full border"
-                              style={{ backgroundColor: color.hex_color || '#ccc' }}
-                            />
-                            {color.name}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Espessura</label>
-                  <Select value={selectedGlassThicknessId} onValueChange={setSelectedGlassThicknessId}>
-                    <SelectTrigger className="bg-background h-10">
-                      <SelectValue placeholder="Selecione..." />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border shadow-lg z-50">
-                      {dbGlassThicknesses?.map((thickness) => (
-                        <SelectItem key={thickness.id} value={thickness.id}>
-                          {thickness.thickness}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-              {/* Glass Price Info */}
-              {glassPricePerSqm > 0 && (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/20">
-                  <Info className="w-4 h-4 text-primary" />
-                  <span className="text-xs text-foreground">
-                    Vidro: {formatCurrency(glassPricePerSqm)}/m² • 
-                    Produto: {formatCurrency(productPricePerSqm)}/m² • 
-                    <strong className="ml-1">Total: {formatCurrency(combinedPricePerSqm)}/m²</strong>
-                  </span>
-                </div>
-              )}
-              
-              {hasGlass && glassPricePerSqm === 0 && dbGlassColors?.length && dbGlassThicknesses?.length && (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-warning/10 border border-warning/30">
-                  <Info className="w-4 h-4 text-warning" />
-                  <span className="text-xs text-foreground">
-                    Preço não configurado para esta combinação. Configure em Preços → Vidros.
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        )}
 
         {/* Dimensions, Price & Quantity */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
