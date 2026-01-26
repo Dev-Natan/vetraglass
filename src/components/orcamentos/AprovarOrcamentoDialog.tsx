@@ -470,58 +470,112 @@ export function AprovarOrcamentoDialog({
 
   const availableCondicoes = getCondicoesByForma(selectedFormaId);
 
+  const steps = [
+    { key: 'price-review' as const, label: 'Preços', fullLabel: 'Revisão de Preços', icon: RefreshCw },
+    { key: 'payment' as const, label: 'Pagamento', fullLabel: 'Forma de Pagamento', icon: CreditCard },
+    { key: 'confirm' as const, label: 'Confirmar', fullLabel: 'Confirmação', icon: CheckCircle },
+  ];
+
+  const currentStepIndex = steps.findIndex(s => s.key === currentStep);
+
+  const canNavigateToStep = (stepIndex: number) => {
+    // Can always go back
+    if (stepIndex < currentStepIndex) return true;
+    // Can only go forward one step at a time
+    if (stepIndex === currentStepIndex + 1) return true;
+    return false;
+  };
+
+  const navigateToStep = (stepKey: ApprovalStep) => {
+    const targetIndex = steps.findIndex(s => s.key === stepKey);
+    if (canNavigateToStep(targetIndex) || targetIndex < currentStepIndex) {
+      setCurrentStep(stepKey);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader className="pb-4 border-b">
-          <DialogTitle className="flex items-center gap-2 text-xl">
-            <CheckCircle className="w-6 h-6 text-green-500" />
-            Aprovar Orçamento #{quote.quote_number.toString().padStart(4, '0')}
-          </DialogTitle>
-          <DialogDescription className="flex items-center gap-4">
-            <span>{quote.customer_name}</span>
-            <span className="text-primary font-medium">{formatCurrency(quote.final_amount)}</span>
-            {isOldQuote && (
-              <Badge variant="destructive" className="gap-1">
-                <AlertTriangle className="w-3 h-3" />
-                {quoteAgeDays} dias - Revisar preços
-              </Badge>
-            )}
-          </DialogDescription>
-        </DialogHeader>
-
-        {/* Step Indicator */}
-        <div className="flex items-center justify-center gap-4 py-4 bg-muted/30 rounded-lg mx-1">
-          {[
-            { key: 'price-review', label: 'Revisão de Preços', icon: RefreshCw },
-            { key: 'payment', label: 'Forma de Pagamento', icon: CreditCard },
-            { key: 'confirm', label: 'Confirmar', icon: CheckCircle },
-          ].map((step, idx, arr) => (
-            <div key={step.key} className="flex items-center gap-2">
-              <div className={cn(
-                "w-10 h-10 rounded-full flex items-center justify-center transition-colors",
-                currentStep === step.key 
-                  ? "bg-primary text-primary-foreground" 
-                  : idx < arr.findIndex(s => s.key === currentStep)
-                    ? "bg-primary/20 text-primary"
-                    : "bg-muted text-muted-foreground"
-              )}>
-                <step.icon className="w-5 h-5" />
-              </div>
-              <span className={cn(
-                "text-sm font-medium hidden md:block",
-                currentStep === step.key ? "text-foreground" : "text-muted-foreground"
-              )}>
-                {step.label}
-              </span>
-              {idx < arr.length - 1 && (
-                <ArrowRight className="w-4 h-4 text-muted-foreground mx-2" />
-              )}
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+        {/* Compact Header */}
+        <div className="px-6 pt-5 pb-4 border-b bg-gradient-to-r from-primary/5 to-transparent">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <DialogTitle className="flex items-center gap-2 text-lg">
+                <div className="w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center flex-shrink-0">
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                </div>
+                <span className="truncate">Aprovar #{quote.quote_number.toString().padStart(4, '0')}</span>
+              </DialogTitle>
+              <DialogDescription className="flex items-center gap-3 mt-1 ml-10">
+                <span className="truncate">{quote.customer_name}</span>
+                <span className="text-primary font-semibold">{formatCurrency(quote.final_amount)}</span>
+                {isOldQuote && (
+                  <Badge variant="destructive" className="gap-1 flex-shrink-0">
+                    <AlertTriangle className="w-3 h-3" />
+                    {quoteAgeDays}d
+                  </Badge>
+                )}
+              </DialogDescription>
             </div>
-          ))}
+          </div>
+
+          {/* Stepper Navigation */}
+          <div className="flex items-center mt-4">
+            {steps.map((step, idx) => {
+              const isActive = currentStep === step.key;
+              const isCompleted = idx < currentStepIndex;
+              const isClickable = canNavigateToStep(idx) || isCompleted;
+              
+              return (
+                <div key={step.key} className="flex items-center flex-1 last:flex-none">
+                  <button
+                    type="button"
+                    onClick={() => isClickable && navigateToStep(step.key)}
+                    disabled={!isClickable}
+                    className={cn(
+                      "flex items-center gap-2 transition-all group",
+                      isClickable && "cursor-pointer",
+                      !isClickable && "cursor-not-allowed opacity-60"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all",
+                      isActive && "bg-primary text-primary-foreground ring-4 ring-primary/20",
+                      isCompleted && "bg-green-500 text-white",
+                      !isActive && !isCompleted && "bg-muted text-muted-foreground",
+                      isClickable && !isActive && "group-hover:bg-primary/20"
+                    )}>
+                      {isCompleted ? (
+                        <CheckCircle className="w-4 h-4" />
+                      ) : (
+                        <span>{idx + 1}</span>
+                      )}
+                    </div>
+                    <div className="hidden sm:block">
+                      <span className={cn(
+                        "text-sm font-medium",
+                        isActive && "text-primary",
+                        isCompleted && "text-green-600",
+                        !isActive && !isCompleted && "text-muted-foreground"
+                      )}>
+                        {step.label}
+                      </span>
+                    </div>
+                  </button>
+                  
+                  {idx < steps.length - 1 && (
+                    <div className={cn(
+                      "flex-1 h-0.5 mx-3 transition-colors",
+                      idx < currentStepIndex ? "bg-green-500" : "bg-border"
+                    )} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
-        <ScrollArea className="flex-1 py-4">
+        <ScrollArea className="flex-1 px-6 py-4">
           {/* Step 1: Price Review */}
           {currentStep === 'price-review' && (
             <div className="space-y-6 px-1">
@@ -1048,39 +1102,66 @@ export function AprovarOrcamentoDialog({
           )}
         </ScrollArea>
 
-        <DialogFooter className="border-t pt-4 gap-2">
-          {currentStep !== 'price-review' && (
-            <Button variant="outline" onClick={handleBack} size="lg">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Voltar
-            </Button>
-          )}
-          
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
-
-          {currentStep !== 'confirm' ? (
-            <Button onClick={handleNext} size="lg">
-              Próximo
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-          ) : (
-            <Button
-              onClick={() => approveMutation.mutate()}
-              disabled={approveMutation.isPending || (hasEntry && !isCaixaAberto)}
-              className="gap-2"
-              size="lg"
-            >
-              {approveMutation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+        {/* Footer with Navigation */}
+        <div className="border-t bg-muted/30 px-6 py-4">
+          <div className="flex items-center justify-between">
+            {/* Left: Back button or step info */}
+            <div className="flex items-center gap-2">
+              {currentStep !== 'price-review' ? (
+                <Button 
+                  variant="ghost" 
+                  onClick={handleBack} 
+                  className="gap-2 text-muted-foreground hover:text-foreground"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span className="hidden sm:inline">Voltar</span>
+                </Button>
               ) : (
-                <CheckCircle className="w-4 h-4" />
+                <span className="text-sm text-muted-foreground hidden sm:block">
+                  Passo {currentStepIndex + 1} de {steps.length}
+                </span>
               )}
-              Aprovar e Criar OS
-            </Button>
-          )}
-        </DialogFooter>
+            </div>
+
+            {/* Center: Current step indicator (mobile) */}
+            <div className="flex sm:hidden items-center gap-2">
+              <span className="text-xs text-muted-foreground">
+                {currentStepIndex + 1}/{steps.length}
+              </span>
+            </div>
+
+            {/* Right: Action buttons */}
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="ghost" 
+                onClick={() => onOpenChange(false)}
+                className="text-muted-foreground"
+              >
+                Cancelar
+              </Button>
+
+              {currentStep !== 'confirm' ? (
+                <Button onClick={handleNext} className="gap-2 min-w-[120px]">
+                  <span>{steps[currentStepIndex + 1]?.label || 'Próximo'}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => approveMutation.mutate()}
+                  disabled={approveMutation.isPending || (hasEntry && !isCaixaAberto)}
+                  className="gap-2 bg-green-600 hover:bg-green-700 min-w-[140px]"
+                >
+                  {approveMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <CheckCircle className="w-4 h-4" />
+                  )}
+                  Aprovar
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
