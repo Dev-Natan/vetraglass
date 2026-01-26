@@ -11,6 +11,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import {
   Form,
@@ -23,7 +24,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Select,
   SelectContent,
@@ -31,9 +31,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Package, ShoppingCart, User, FileText, UserPlus } from 'lucide-react';
+import { 
+  Plus, Package, ShoppingCart, User, ChevronRight, ChevronLeft, 
+  Check, Trash2, FileText
+} from 'lucide-react';
 import { AddProductPanel } from './AddProductPanel';
-import { QuoteItemCard } from './QuoteItemCard';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 
 const quoteSchema = z.object({
   customer_name: z.string().min(2, 'Nome é obrigatório'),
@@ -92,7 +101,7 @@ interface NovoOrcamentoDialogProps {
   quote?: Quote | null;
 }
 
-type ViewMode = 'form' | 'add-product';
+type Step = 'client' | 'products' | 'review';
 
 export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamentoDialogProps) {
   const { currentCompany } = useAuth();
@@ -100,8 +109,10 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
   const queryClient = useQueryClient();
   const [items, setItems] = useState<QuoteItem[]>([]);
   const [discountPercent, setDiscountPercent] = useState(0);
-  const [viewMode, setViewMode] = useState<ViewMode>('form');
+  const [currentStep, setCurrentStep] = useState<Step>('client');
   const [selectedClientId, setSelectedClientId] = useState<string>('');
+  const [showAddProduct, setShowAddProduct] = useState(false);
+  const [showContractFields, setShowContractFields] = useState(false);
 
   const isEditing = !!quote;
 
@@ -144,7 +155,6 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
     setSelectedClientId(clientId);
     
     if (clientId === 'new') {
-      // Clear form for new client
       form.setValue('customer_name', '');
       form.setValue('customer_phone', '');
       form.setValue('customer_email', '');
@@ -160,7 +170,6 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
       form.setValue('customer_phone', client.phone || '');
       form.setValue('customer_email', client.email || '');
       
-      // Build full address
       const addressParts = [
         client.address,
         client.city,
@@ -211,7 +220,8 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
         valid_until: quote.valid_until || '',
         notes: quote.notes || '',
       });
-      setViewMode('form');
+      setCurrentStep('client');
+      setShowAddProduct(false);
     } else if (open && !quote) {
       form.reset({
         customer_name: '',
@@ -228,7 +238,10 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
       });
       setItems([]);
       setDiscountPercent(0);
-      setViewMode('form');
+      setCurrentStep('client');
+      setShowAddProduct(false);
+      setSelectedClientId('');
+      setShowContractFields(false);
     }
   }, [open, quote, form]);
 
@@ -237,17 +250,6 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
       setItems(existingItems);
     }
   }, [existingItems]);
-
-  const calculatePriceFromDimensions = (item: QuoteItem, basePrice: number) => {
-    const widthM = (item.width || 0) / 1000;
-    const heightM = (item.height || 0) / 1000;
-    const area = widthM * heightM;
-    
-    if (area > 0) {
-      return basePrice * area;
-    }
-    return basePrice;
-  };
 
   const handleAddProduct = (product: {
     product_template_id: string;
@@ -284,29 +286,8 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
       glass_thickness: product.glass_thickness,
     };
     setItems([...items, newItem]);
-    setViewMode('form');
+    setShowAddProduct(false);
     toast({ title: 'Produto adicionado!' });
-  };
-
-  const updateItem = (index: number, field: keyof QuoteItem, value: any) => {
-    const newItems = [...items];
-    newItems[index] = { ...newItems[index], [field]: value };
-    
-    // Recalculate price based on dimensions
-    if (field === 'width' || field === 'height' || field === 'base_price_m2') {
-      const item = newItems[index];
-      const basePrice = item.base_price_m2 || 0;
-      
-      if (basePrice > 0) {
-        const calculatedPrice = calculatePriceFromDimensions(item, basePrice);
-        newItems[index].unit_price = Math.round(calculatedPrice * 100) / 100;
-      }
-    }
-    
-    // Recalculate total
-    newItems[index].total_price = newItems[index].quantity * newItems[index].unit_price;
-    
-    setItems(newItems);
   };
 
   const removeItem = (index: number) => {
@@ -451,78 +432,148 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
     }
   };
 
+  const steps: { key: Step; label: string; icon: React.ReactNode }[] = [
+    { key: 'client', label: 'Cliente', icon: <User className="w-4 h-4" /> },
+    { key: 'products', label: 'Produtos', icon: <Package className="w-4 h-4" /> },
+    { key: 'review', label: 'Finalizar', icon: <Check className="w-4 h-4" /> },
+  ];
+
+  const currentStepIndex = steps.findIndex(s => s.key === currentStep);
+
+  const canProceedFromClient = form.watch('customer_name')?.length >= 2;
+  const canProceedFromProducts = items.length > 0;
+
+  const handleNext = () => {
+    if (currentStep === 'client' && canProceedFromClient) {
+      setCurrentStep('products');
+    } else if (currentStep === 'products' && canProceedFromProducts) {
+      setCurrentStep('review');
+    }
+  };
+
+  const handleBack = () => {
+    if (currentStep === 'products') {
+      setCurrentStep('client');
+    } else if (currentStep === 'review') {
+      setCurrentStep('products');
+    }
+  };
+
+  if (showAddProduct) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
+          <DialogHeader className="p-6 pb-4 shrink-0">
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="w-5 h-5" />
+              Adicionar Produto
+            </DialogTitle>
+            <DialogDescription>
+              Selecione o produto e configure as dimensões.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto px-6 pb-6">
+            <AddProductPanel
+              onAdd={handleAddProduct}
+              onCancel={() => setShowAddProduct(false)}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
-        <DialogHeader className="p-6 pb-4 shrink-0">
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
+        <DialogHeader className="p-6 pb-4 shrink-0 border-b">
           <DialogTitle className="flex items-center gap-2">
-            {viewMode === 'form' ? (
-              <>
-                <ShoppingCart className="w-5 h-5" />
-                {isEditing ? 'Editar Orçamento' : 'Novo Orçamento'}
-              </>
-            ) : (
-              <>
-                <Package className="w-5 h-5" />
-                Adicionar Produto
-              </>
-            )}
+            <ShoppingCart className="w-5 h-5" />
+            {isEditing ? 'Editar Orçamento' : 'Novo Orçamento'}
           </DialogTitle>
+          <DialogDescription>
+            {currentStep === 'client' && 'Informe os dados do cliente'}
+            {currentStep === 'products' && 'Adicione os produtos do orçamento'}
+            {currentStep === 'review' && 'Revise e finalize o orçamento'}
+          </DialogDescription>
+          
+          {/* Step Indicator */}
+          <div className="flex items-center justify-center gap-2 pt-4">
+            {steps.map((step, index) => (
+              <div key={step.key} className="flex items-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (index < currentStepIndex) {
+                      setCurrentStep(step.key);
+                    }
+                  }}
+                  disabled={index > currentStepIndex}
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors",
+                    currentStep === step.key
+                      ? "bg-primary text-primary-foreground"
+                      : index < currentStepIndex
+                      ? "bg-primary/20 text-primary cursor-pointer hover:bg-primary/30"
+                      : "bg-muted text-muted-foreground"
+                  )}
+                >
+                  {step.icon}
+                  <span className="hidden sm:inline">{step.label}</span>
+                </button>
+                {index < steps.length - 1 && (
+                  <ChevronRight className="w-4 h-4 mx-1 text-muted-foreground" />
+                )}
+              </div>
+            ))}
+          </div>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-6 pb-6">
-          {viewMode === 'form' ? (
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-4">
-                {/* Customer Info Section */}
-                <div className="rounded-xl border bg-card p-4 space-y-4">
-                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                    <User className="w-4 h-4" />
-                    Dados do Cliente
-                  </div>
-                  
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              
+              {/* Step 1: Client */}
+              {currentStep === 'client' && (
+                <div className="space-y-4">
                   {/* Client Selector */}
-                  <div className="space-y-2">
-                    <FormLabel>Selecionar Cliente Cadastrado</FormLabel>
-                    <Select value={selectedClientId} onValueChange={handleClientSelect}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione um cliente ou digite novo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="new">
-                          <div className="flex items-center gap-2">
-                            <UserPlus className="w-4 h-4" />
-                            Novo Cliente (digitar dados)
-                          </div>
-                        </SelectItem>
-                        {clients?.map((client) => (
-                          <SelectItem key={client.id} value={client.id}>
-                            <div className="flex flex-col">
-                              <span>{client.name}</span>
-                              {client.phone && (
-                                <span className="text-xs text-muted-foreground">{client.phone}</span>
-                              )}
-                            </div>
+                  {(clients?.length || 0) > 0 && (
+                    <div className="space-y-2">
+                      <FormLabel>Cliente Cadastrado</FormLabel>
+                      <Select value={selectedClientId} onValueChange={handleClientSelect}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione ou digite novo cliente..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover border shadow-lg z-50">
+                          <SelectItem value="new">
+                            <span className="text-primary">+ Novo Cliente</span>
                           </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                          {clients?.map((client) => (
+                            <SelectItem key={client.id} value={client.id}>
+                              {client.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="customer_name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nome do Cliente *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Nome completo" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                  {/* Essential Fields */}
+                  <FormField
+                    control={form.control}
+                    name="customer_name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nome do Cliente *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Nome completo" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
                       name="customer_phone"
@@ -532,7 +583,6 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
                           <FormControl>
                             <Input placeholder="(00) 00000-0000" {...field} />
                           </FormControl>
-                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -545,33 +595,6 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
                           <FormControl>
                             <Input placeholder="email@exemplo.com" {...field} />
                           </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="valid_until"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Válido até</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} />
-                      </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="payment_terms"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Forma de Pagamento</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Ex: 50% entrada + 50% na entrega" {...field} />
-                          </FormControl>
-                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -586,198 +609,328 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
                         <FormControl>
                           <Input placeholder="Endereço completo" {...field} />
                         </FormControl>
-                        <FormMessage />
                       </FormItem>
                     )}
                   />
+
+                  {/* Collapsible Contract Fields */}
+                  <Collapsible open={showContractFields} onOpenChange={setShowContractFields}>
+                    <CollapsibleTrigger asChild>
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
+                      >
+                        <FileText className="w-4 h-4" />
+                        Dados para contrato (opcional)
+                        <ChevronRight className={cn(
+                          "w-4 h-4 ml-auto transition-transform",
+                          showContractFields && "rotate-90"
+                        )} />
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-4 pt-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="customer_document"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>CPF/CNPJ</FormLabel>
+                              <FormControl>
+                                <Input placeholder="000.000.000-00" {...field} />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="customer_document_type"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Tipo de Pessoa</FormLabel>
+                              <FormControl>
+                                <select 
+                                  {...field} 
+                                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                >
+                                  <option value="fisica">Pessoa Física</option>
+                                  <option value="juridica">Pessoa Jurídica</option>
+                                </select>
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="customer_profession"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Profissão</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Ex: Empresário" {...field} />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="customer_marital_status"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Estado Civil</FormLabel>
+                              <FormControl>
+                                <select 
+                                  {...field} 
+                                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                >
+                                  <option value="">Selecione...</option>
+                                  <option value="Solteiro(a)">Solteiro(a)</option>
+                                  <option value="Casado(a)">Casado(a)</option>
+                                  <option value="Divorciado(a)">Divorciado(a)</option>
+                                  <option value="Viúvo(a)">Viúvo(a)</option>
+                                </select>
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
                 </div>
+              )}
 
-                {/* Contract Fields Section */}
-                <div className="rounded-xl border bg-card p-4 space-y-4">
-                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                    <FileText className="w-4 h-4" />
-                    Dados para Contrato (opcional)
-                  </div>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="customer_document"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>CPF/CNPJ</FormLabel>
-                          <FormControl>
-                            <Input placeholder="000.000.000-00" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="customer_document_type"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Tipo de Pessoa</FormLabel>
-                          <FormControl>
-                            <select 
-                              {...field} 
-                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                            >
-                              <option value="fisica">Pessoa Física</option>
-                              <option value="juridica">Pessoa Jurídica</option>
-                            </select>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="customer_profession"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Profissão</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Ex: Empresário, Autônomo..." {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="customer_marital_status"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Estado Civil</FormLabel>
-                          <FormControl>
-                            <select 
-                              {...field} 
-                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                            >
-                              <option value="">Selecione...</option>
-                              <option value="Solteiro(a)">Solteiro(a)</option>
-                              <option value="Casado(a)">Casado(a)</option>
-                              <option value="Divorciado(a)">Divorciado(a)</option>
-                              <option value="Viúvo(a)">Viúvo(a)</option>
-                              <option value="União Estável">União Estável</option>
-                            </select>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                </div>
-
-                {/* Items Section */}
-                <div className="rounded-xl border bg-card p-4 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                      <Package className="w-4 h-4" />
-                      Produtos ({items.length})
-                    </div>
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={() => setViewMode('add-product')}
-                      className="gap-2"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Adicionar
-                    </Button>
-                  </div>
-
+              {/* Step 2: Products */}
+              {currentStep === 'products' && (
+                <div className="space-y-4">
+                  {/* Products List */}
                   {items.length === 0 ? (
                     <button
                       type="button"
-                      onClick={() => setViewMode('add-product')}
+                      onClick={() => setShowAddProduct(true)}
                       className="w-full border-2 border-dashed rounded-xl p-8 text-center text-muted-foreground hover:border-primary hover:text-primary transition-colors"
                     >
                       <Package className="w-10 h-10 mx-auto mb-3 opacity-50" />
                       <p className="font-medium">Nenhum produto adicionado</p>
-                      <p className="text-sm mt-1">Clique para selecionar um produto</p>
+                      <p className="text-sm mt-1">Clique para adicionar</p>
                     </button>
                   ) : (
                     <div className="space-y-3">
                       {items.map((item, index) => (
-                        <QuoteItemCard
+                        <div 
                           key={index}
-                          item={item}
-                          index={index}
-                          onUpdate={updateItem}
-                          onRemove={removeItem}
-                          formatCurrency={formatCurrency}
-                        />
+                          className="flex items-center gap-3 p-3 rounded-lg border bg-card"
+                        >
+                          <div className="w-12 h-12 rounded bg-muted flex items-center justify-center shrink-0">
+                            {item.image_url ? (
+                              <img 
+                                src={item.image_url.startsWith('http') ? item.image_url : `/products/${item.image_url}`} 
+                                alt={item.description}
+                                className="w-full h-full object-contain p-1"
+                              />
+                            ) : (
+                              <Package className="w-5 h-5 text-muted-foreground" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">{item.description}</p>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span>{item.width}x{item.height}mm</span>
+                              <span>•</span>
+                              <span>Qtd: {item.quantity}</span>
+                              {item.has_glass && item.glass_color && (
+                                <>
+                                  <span>•</span>
+                                  <Badge variant="secondary" className="text-[10px] px-1.5">
+                                    {item.glass_color} {item.glass_thickness}
+                                  </Badge>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                          <p className="font-semibold text-sm shrink-0">
+                            {formatCurrency(item.total_price)}
+                          </p>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="shrink-0 text-destructive hover:text-destructive"
+                            onClick={() => removeItem(index)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full gap-2"
+                        onClick={() => setShowAddProduct(true)}
+                      >
+                        <Plus className="w-4 h-4" />
+                        Adicionar Produto
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Step 3: Review */}
+              {currentStep === 'review' && (
+                <div className="space-y-4">
+                  {/* Client Summary */}
+                  <div className="p-4 rounded-lg border bg-card">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-muted-foreground">Cliente</span>
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => setCurrentStep('client')}
+                      >
+                        Editar
+                      </Button>
+                    </div>
+                    <p className="font-semibold">{form.watch('customer_name')}</p>
+                    {form.watch('customer_phone') && (
+                      <p className="text-sm text-muted-foreground">{form.watch('customer_phone')}</p>
+                    )}
+                  </div>
+
+                  {/* Products Summary */}
+                  <div className="p-4 rounded-lg border bg-card">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-muted-foreground">
+                        Produtos ({items.length})
+                      </span>
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => setCurrentStep('products')}
+                      >
+                        Editar
+                      </Button>
+                    </div>
+                    <div className="space-y-2">
+                      {items.map((item, index) => (
+                        <div key={index} className="flex justify-between text-sm">
+                          <span className="truncate flex-1">{item.description}</span>
+                          <span className="font-medium ml-2">{formatCurrency(item.total_price)}</span>
+                        </div>
                       ))}
                     </div>
-                  )}
-                </div>
-
-                {/* Totals */}
-                <div className="rounded-xl border bg-gradient-to-br from-primary/5 to-primary/10 p-4 space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Subtotal</span>
-                    <span className="font-medium">{formatCurrency(totalAmount)}</span>
                   </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-muted-foreground">Desconto (%)</span>
-                    <Input
-                      type="number"
-                      value={discountPercent}
-                      onChange={(e) => setDiscountPercent(Number(e.target.value))}
-                      min={0}
-                      max={100}
-                      className="w-20 h-8 text-right bg-background"
+
+                  {/* Payment & Validity */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="valid_until"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Válido até</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="payment_terms"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Forma de Pagamento</FormLabel>
+                          <FormControl>
+                            <Input placeholder="50% entrada + 50% entrega" {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
                     />
                   </div>
-                  {discountAmount > 0 && (
-                    <div className="flex justify-between text-sm text-destructive">
-                      <span>Desconto</span>
-                      <span>-{formatCurrency(discountAmount)}</span>
+
+                  {/* Notes */}
+                  <FormField
+                    control={form.control}
+                    name="notes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Observações</FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="Observações adicionais..." rows={2} {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Totals */}
+                  <div className="rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 p-4 space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Subtotal</span>
+                      <span className="font-medium">{formatCurrency(totalAmount)}</span>
                     </div>
-                  )}
-                  <div className="flex justify-between text-xl font-bold border-t pt-3">
-                    <span>Total</span>
-                    <span className="text-primary">{formatCurrency(finalAmount)}</span>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Desconto (%)</span>
+                      <Input
+                        type="number"
+                        value={discountPercent}
+                        onChange={(e) => setDiscountPercent(Number(e.target.value))}
+                        min={0}
+                        max={100}
+                        className="w-20 h-8 text-right bg-background"
+                      />
+                    </div>
+                    {discountAmount > 0 && (
+                      <div className="flex justify-between text-sm text-destructive">
+                        <span>Desconto</span>
+                        <span>-{formatCurrency(discountAmount)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-xl font-bold border-t pt-3">
+                      <span>Total</span>
+                      <span className="text-primary">{formatCurrency(finalAmount)}</span>
+                    </div>
                   </div>
                 </div>
+              )}
+            </form>
+          </Form>
+        </div>
 
-                {/* Notes */}
-                <FormField
-                  control={form.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Observações</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Observações adicionais..." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+        {/* Footer Actions */}
+        <div className="shrink-0 p-6 pt-4 border-t flex justify-between">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={currentStepIndex === 0 ? () => onOpenChange(false) : handleBack}
+          >
+            <ChevronLeft className="w-4 h-4 mr-2" />
+            {currentStepIndex === 0 ? 'Cancelar' : 'Voltar'}
+          </Button>
 
-                {/* Actions */}
-                <div className="flex justify-end gap-3 pb-2">
-                  <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                    Cancelar
-                  </Button>
-                  <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
-                    {isEditing ? 'Salvar Alterações' : 'Criar Orçamento'}
-                  </Button>
-                </div>
-              </form>
-            </Form>
+          {currentStep !== 'review' ? (
+            <Button
+              type="button"
+              onClick={handleNext}
+              disabled={
+                (currentStep === 'client' && !canProceedFromClient) ||
+                (currentStep === 'products' && !canProceedFromProducts)
+              }
+            >
+              Próximo
+              <ChevronRight className="w-4 h-4 ml-2" />
+            </Button>
           ) : (
-            <div className="py-4">
-              <AddProductPanel
-                onAdd={handleAddProduct}
-                onCancel={() => setViewMode('form')}
-              />
-            </div>
+            <Button 
+              type="button"
+              onClick={form.handleSubmit(onSubmit)}
+              disabled={createMutation.isPending || updateMutation.isPending}
+            >
+              {isEditing ? 'Salvar Alterações' : 'Criar Orçamento'}
+            </Button>
           )}
         </div>
       </DialogContent>
