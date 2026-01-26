@@ -1,9 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { format, addDays, addMonths } from 'date-fns';
+import { format, addDays, addMonths, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
   Dialog,
@@ -22,6 +22,9 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -29,21 +32,38 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { 
   CheckCircle, 
   DollarSign, 
   CreditCard, 
-  Smartphone, 
   Calendar as CalendarIcon,
   AlertCircle,
   Loader2,
   ClipboardList,
+  ArrowRight,
+  ArrowLeft,
+  RefreshCw,
+  TrendingUp,
+  TrendingDown,
+  AlertTriangle,
+  Percent,
+  Receipt,
   Wallet,
-  Receipt
+  Settings2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { generateOSDocuments } from '@/utils/generateOSDocuments';
 import { MaterialsAvailabilityPreview } from './MaterialsAvailabilityPreview';
+import { usePaymentOptions, CondicaoPagamento } from '@/hooks/usePaymentOptions';
+import { usePriceRevision, QuoteItemWithRevision } from '@/hooks/usePriceRevision';
 
 interface Quote {
   id: string;
@@ -54,6 +74,7 @@ interface Quote {
   customer_address?: string | null;
   total_amount: number;
   final_amount: number;
+  created_at?: string;
 }
 
 interface QuoteItem {
@@ -79,6 +100,8 @@ interface AprovarOrcamentoDialogProps {
   onSuccess?: () => void;
 }
 
+type ApprovalStep = 'price-review' | 'payment' | 'confirm';
+
 export function AprovarOrcamentoDialog({
   open,
   onOpenChange,
@@ -90,15 +113,44 @@ export function AprovarOrcamentoDialog({
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Step management
+  const [currentStep, setCurrentStep] = useState<ApprovalStep>('price-review');
+  
+  // Price revision state
+  const [useCurrentPrices, setUseCurrentPrices] = useState(false);
+  const [itemPriceOverrides, setItemPriceOverrides] = useState<Record<string, boolean>>({});
+  
+  // Payment state
+  const [selectedFormaId, setSelectedFormaId] = useState<string | null>(null);
+  const [selectedCondicaoId, setSelectedCondicaoId] = useState<string | null>(null);
+  
+  // Entry payment state
   const [entryAmount, setEntryAmount] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'dinheiro' | 'cartao' | 'pix'>('pix');
+  const [entryPaymentMethod, setEntryPaymentMethod] = useState<'dinheiro' | 'cartao' | 'pix'>('pix');
+  
+  // OS configuration
   const [estimatedEnd, setEstimatedEnd] = useState<Date | undefined>(addDays(new Date(), 7));
   const [priority, setPriority] = useState<'low' | 'normal' | 'high' | 'urgent'>('normal');
   const [notes, setNotes] = useState('');
-  
-  // Installment configuration for pending balance
-  const [installmentsCount, setInstallmentsCount] = useState(1);
-  const [firstDueDays, setFirstDueDays] = useState(30);
+
+  // Hooks
+  const { 
+    formasPagamento, 
+    condicoesPagamento, 
+    isLoading: isLoadingPayment,
+    hasPaymentOptions,
+    initializeDefaults,
+    calculatePayment,
+    getCondicoesByForma,
+  } = usePaymentOptions();
+
+  const {
+    revisedItems,
+    hasAnyPriceChanges,
+    totalOriginal,
+    totalWithCurrentPrices,
+    totalDifference,
+  } = usePriceRevision({ items, companyId: currentCompany?.id });
 
   // Check if cash register is open
   const { data: openCashRegister } = useQuery({
@@ -117,30 +169,62 @@ export function AprovarOrcamentoDialog({
     enabled: !!currentCompany?.id && open,
   });
 
-  const isCaixaAberto = !!openCashRegister;
-  const entryValue = parseFloat(entryAmount.replace(',', '.')) || 0;
-  const totalAmount = quote?.final_amount || 0;
-  const pendingAmount = totalAmount - entryValue;
-  const hasEntry = entryValue > 0;
+  // Calculate quote age
+  const quoteAgeDays = quote?.created_at 
+    ? differenceInDays(new Date(), new Date(quote.created_at))
+    : 0;
+  const isOldQuote = quoteAgeDays > 30;
 
-  // Generate installments preview for pending amount
-  const installmentsPreview = useMemo(() => {
-    if (pendingAmount <= 0 || installmentsCount < 1) return [];
-    
-    const baseAmount = Math.floor((pendingAmount / installmentsCount) * 100) / 100;
-    const remainder = pendingAmount - (baseAmount * installmentsCount);
-    
-    // If firstDueDays is 0, use the estimated delivery date
-    const firstDueDate = firstDueDays === 0 && estimatedEnd 
-      ? estimatedEnd 
-      : addDays(new Date(), firstDueDays);
-    
-    return Array.from({ length: installmentsCount }, (_, i) => ({
-      number: i + 1,
-      dueDate: addMonths(firstDueDate, i),
-      amount: i === 0 ? baseAmount + remainder : baseAmount,
-    }));
-  }, [pendingAmount, installmentsCount, firstDueDays, estimatedEnd]);
+  // Calculate final values
+  const valorBase = useMemo(() => {
+    if (useCurrentPrices) {
+      return revisedItems.reduce((sum, item) => {
+        const useCurrentForItem = itemPriceOverrides[item.id] !== false;
+        return sum + (useCurrentForItem && item.currentCalculatedTotal 
+          ? item.currentCalculatedTotal 
+          : item.total_price);
+      }, 0);
+    }
+    return totalOriginal;
+  }, [useCurrentPrices, revisedItems, itemPriceOverrides, totalOriginal]);
+
+  const selectedCondicao = condicoesPagamento.find(c => c.id === selectedCondicaoId) || null;
+  const paymentCalculation = calculatePayment(valorBase, selectedCondicao);
+  
+  const entryValue = parseFloat(entryAmount.replace(',', '.')) || 0;
+  const hasEntry = entryValue > 0;
+  const pendingAmount = paymentCalculation.valorFinal - entryValue;
+  const isCaixaAberto = !!openCashRegister;
+
+  // Reset form when dialog opens
+  useEffect(() => {
+    if (open) {
+      setCurrentStep('price-review');
+      setUseCurrentPrices(false);
+      setItemPriceOverrides({});
+      setSelectedFormaId(null);
+      setSelectedCondicaoId(null);
+      setEntryAmount('');
+      setEntryPaymentMethod('pix');
+      setEstimatedEnd(addDays(new Date(), 7));
+      setPriority('normal');
+      setNotes('');
+    }
+  }, [open]);
+
+  // Auto-select first payment option if available
+  useEffect(() => {
+    if (formasPagamento.length > 0 && !selectedFormaId) {
+      setSelectedFormaId(formasPagamento[0].id);
+    }
+  }, [formasPagamento, selectedFormaId]);
+
+  useEffect(() => {
+    const availableCondicoes = getCondicoesByForma(selectedFormaId);
+    if (availableCondicoes.length > 0 && !selectedCondicaoId) {
+      setSelectedCondicaoId(availableCondicoes[0].id);
+    }
+  }, [selectedFormaId, getCondicoesByForma, selectedCondicaoId]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -152,37 +236,59 @@ export function AprovarOrcamentoDialog({
         throw new Error('Dados incompletos');
       }
 
-      // Recalculate values inside mutation to ensure correct values
-      const mutationEntryValue = parseFloat(entryAmount.replace(',', '.')) || 0;
-      const mutationTotalAmount = quote.final_amount || 0;
-      const mutationPendingAmount = mutationTotalAmount - mutationEntryValue;
-      const mutationHasEntry = mutationEntryValue > 0;
-      
-      // Recalculate installments inside mutation
-      const mutationInstallments = (() => {
-        if (mutationPendingAmount <= 0 || installmentsCount < 1) return [];
-        
-        const baseAmount = Math.floor((mutationPendingAmount / installmentsCount) * 100) / 100;
-        const remainder = Math.round((mutationPendingAmount - (baseAmount * installmentsCount)) * 100) / 100;
-        
-        // If firstDueDays is 0, use the estimated delivery date
-        const firstDueDate = firstDueDays === 0 && estimatedEnd 
-          ? estimatedEnd 
-          : addDays(new Date(), firstDueDays);
-        
-        return Array.from({ length: installmentsCount }, (_, i) => ({
-          number: i + 1,
-          dueDate: addMonths(firstDueDate, i),
-          amount: i === 0 ? baseAmount + remainder : baseAmount,
-        }));
-      })();
+      const finalValue = paymentCalculation.valorFinal;
+      const reajusteAplicado = useCurrentPrices && hasAnyPriceChanges;
 
       // If there's an entry and cash is not open, error
-      if (mutationHasEntry && !isCaixaAberto) {
+      if (hasEntry && !isCaixaAberto) {
         throw new Error('Caixa precisa estar aberto para registrar entrada');
       }
 
-      // 1. Create order of service
+      // 1. Update quote with approval data
+      const { error: quoteUpdateError } = await supabase
+        .from('quotes')
+        .update({
+          status: 'approved',
+          forma_pagamento_id: selectedFormaId,
+          condicao_pagamento_id: selectedCondicaoId,
+          valor_original: totalOriginal,
+          valor_reajustado: useCurrentPrices ? valorBase : null,
+          valor_final_aprovado: finalValue,
+          reajuste_aplicado: reajusteAplicado,
+          approved_at: new Date().toISOString(),
+          approved_by: user.id,
+        })
+        .eq('id', quote.id);
+
+      if (quoteUpdateError) throw quoteUpdateError;
+
+      // 2. Save price revision history if applicable
+      if (reajusteAplicado) {
+        const revisions = revisedItems
+          .filter(item => item.needsRevision)
+          .map(item => ({
+            quote_id: quote.id,
+            quote_item_id: item.id,
+            preco_original: item.total_price,
+            preco_tabela_atual: item.currentCalculatedTotal || item.total_price,
+            preco_usado: itemPriceOverrides[item.id] !== false 
+              ? (item.currentCalculatedTotal || item.total_price)
+              : item.total_price,
+            usou_preco_atual: itemPriceOverrides[item.id] !== false,
+          }));
+
+        if (revisions.length > 0) {
+          const { error: revisionError } = await supabase
+            .from('quote_price_revisions')
+            .insert(revisions);
+          
+          if (revisionError) {
+            console.warn('Error saving price revisions:', revisionError);
+          }
+        }
+      }
+
+      // 3. Create order of service
       const { data: ordemServico, error: osError } = await supabase
         .from('ordens_servico')
         .insert({
@@ -195,9 +301,9 @@ export function AprovarOrcamentoDialog({
           status: 'pending',
           priority,
           estimated_end: estimatedEnd?.toISOString().split('T')[0],
-          total_amount: mutationTotalAmount,
-          paid_amount: mutationEntryValue,
-          pending_amount: mutationPendingAmount,
+          total_amount: finalValue,
+          paid_amount: entryValue,
+          pending_amount: pendingAmount,
           notes,
           current_stage: 'Aguardando início',
           stages: JSON.stringify([
@@ -214,21 +320,21 @@ export function AprovarOrcamentoDialog({
 
       let saleId: string | null = null;
 
-      // 2. If there's an entry, create partial sale
-      if (mutationHasEntry && openCashRegister) {
+      // 4. If there's an entry, create partial sale
+      if (hasEntry && openCashRegister) {
         const { data: sale, error: saleError } = await supabase
           .from('sales')
           .insert({
             company_id: currentCompany.id,
             cash_register_id: openCashRegister.id,
             customer_name: quote.customer_name,
-            subtotal: mutationEntryValue,
-            total_amount: mutationEntryValue,
-            payment_method: paymentMethod,
+            subtotal: entryValue,
+            total_amount: entryValue,
+            payment_method: entryPaymentMethod,
             payment_status: 'paid',
             sale_type: 'partial',
-            paid_amount: mutationEntryValue,
-            pending_amount: mutationPendingAmount,
+            paid_amount: entryValue,
+            pending_amount: pendingAmount,
             quote_id: quote.id,
             ordem_servico_id: ordemServico.id,
             sold_by: user.id,
@@ -240,18 +346,15 @@ export function AprovarOrcamentoDialog({
         if (saleError) throw saleError;
         saleId = sale.id;
 
-        // Create sale item for the entry (just informational, no stock deduction)
-        await supabase
-          .from('sale_items')
-          .insert({
-            sale_id: sale.id,
-            item_name: `Entrada - Orçamento #${quote.quote_number.toString().padStart(4, '0')}`,
-            item_unit: 'un',
-            quantity: 1,
-            unit_price: mutationEntryValue,
-            total_price: mutationEntryValue,
-            notes: `Entrada parcial referente ao orçamento #${quote.quote_number}`,
-          });
+        // Create sale item
+        await supabase.from('sale_items').insert({
+          sale_id: sale.id,
+          item_name: `Entrada - Orçamento #${quote.quote_number.toString().padStart(4, '0')}`,
+          item_unit: 'un',
+          quantity: 1,
+          unit_price: entryValue,
+          total_price: entryValue,
+        });
 
         // Update OS with sale_id
         await supabase
@@ -260,22 +363,29 @@ export function AprovarOrcamentoDialog({
           .eq('id', ordemServico.id);
       }
 
-      // 3. Create accounts_receivable for pending installments
-      if (mutationPendingAmount > 0 && mutationInstallments.length > 0) {
-        const installmentsToInsert = mutationInstallments.map((inst) => ({
-          company_id: currentCompany.id,
-          ordem_servico_id: ordemServico.id,
-          quote_id: quote.id,
-          sale_id: saleId,
-          customer_name: quote.customer_name,
-          description: `OS #${ordemServico.os_number} - Parcela ${inst.number}/${mutationInstallments.length}`,
-          total_amount: inst.amount,
-          installment_number: inst.number,
-          total_installments: mutationInstallments.length,
-          due_date: format(inst.dueDate, 'yyyy-MM-dd'),
-          status: 'pending',
-          created_by: user.id,
-        }));
+      // 5. Create accounts_receivable for pending installments
+      if (pendingAmount > 0 && selectedCondicao) {
+        const parcelas = selectedCondicao.parcelas;
+        const valorParcela = Math.round((pendingAmount / parcelas) * 100) / 100;
+        const resto = Math.round((pendingAmount - valorParcela * parcelas) * 100) / 100;
+
+        const installmentsToInsert = Array.from({ length: parcelas }, (_, i) => {
+          const dueDate = addMonths(addDays(new Date(), selectedCondicao.dias_entre_parcelas), i);
+          return {
+            company_id: currentCompany.id,
+            ordem_servico_id: ordemServico.id,
+            quote_id: quote.id,
+            sale_id: saleId,
+            customer_name: quote.customer_name,
+            description: `OS #${ordemServico.os_number} - Parcela ${i + 1}/${parcelas}`,
+            total_amount: i === 0 ? valorParcela + resto : valorParcela,
+            installment_number: i + 1,
+            total_installments: parcelas,
+            due_date: format(dueDate, 'yyyy-MM-dd'),
+            status: 'pending',
+            created_by: user.id,
+          };
+        });
 
         const { error: receivablesError } = await supabase
           .from('accounts_receivable')
@@ -283,72 +393,44 @@ export function AprovarOrcamentoDialog({
         
         if (receivablesError) {
           console.error('Error creating receivables:', receivablesError);
-          throw new Error(`Erro ao criar parcelas: ${receivablesError.message}`);
         }
       }
 
-      // 4. Update quote status to approved
-      const { error: quoteError } = await supabase
-        .from('quotes')
-        .update({ status: 'approved' })
-        .eq('id', quote.id);
-
-      if (quoteError) throw quoteError;
-
-      // 5. Generate OS documents (materials, cutting plan, glass projects)
+      // 6. Generate OS documents
       const docsResult = await generateOSDocuments(ordemServico.id, items);
       if (!docsResult.success) {
         console.warn('Error generating OS documents:', docsResult.error);
       }
 
-      // 6. Create delivery appointment in the agenda
+      // 7. Create delivery appointment
       if (estimatedEnd) {
-        const { error: appointmentError } = await supabase
-          .from('service_appointments')
-          .insert({
-            company_id: currentCompany.id,
-            title: `Entrega OS #${ordemServico.os_number}`,
-            appointment_type: 'delivery',
-            status: 'pending',
-            scheduled_date: format(estimatedEnd, 'yyyy-MM-dd'),
-            all_day: true,
-            customer_name: quote.customer_name,
-            customer_phone: quote.customer_phone,
-            customer_address: quote.customer_address,
-            ordem_servico_id: ordemServico.id,
-            quote_id: quote.id,
-            notes: `Entrega programada referente ao orçamento #${quote.quote_number.toString().padStart(4, '0')}`,
-          });
-
-        if (appointmentError) {
-          console.warn('Error creating delivery appointment:', appointmentError);
-        }
+        await supabase.from('service_appointments').insert({
+          company_id: currentCompany.id,
+          title: `Entrega OS #${ordemServico.os_number}`,
+          appointment_type: 'delivery',
+          status: 'pending',
+          scheduled_date: format(estimatedEnd, 'yyyy-MM-dd'),
+          all_day: true,
+          customer_name: quote.customer_name,
+          customer_phone: quote.customer_phone,
+          customer_address: quote.customer_address,
+          ordem_servico_id: ordemServico.id,
+          quote_id: quote.id,
+        });
       }
 
       return { ordemServico, saleId };
     },
     onSuccess: (data) => {
       const osNumber = data.ordemServico.os_number;
-      const parcelasMsg = installmentsPreview.length > 1 
-        ? ` ${installmentsPreview.length} parcelas criadas em Contas a Receber.`
-        : installmentsPreview.length === 1 
-        ? ' Parcela criada em Contas a Receber.'
-        : '';
-      
       toast({
         title: 'Orçamento aprovado!',
-        description: hasEntry
-          ? `OS #${osNumber} criada. Entrada de ${formatCurrency(entryValue)} registrada.${parcelasMsg}`
-          : `OS #${osNumber} criada. Valor pendente: ${formatCurrency(pendingAmount)}.${parcelasMsg}`,
+        description: `OS #${osNumber} criada com sucesso.`,
       });
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
       queryClient.invalidateQueries({ queryKey: ['sales-today'] });
       queryClient.invalidateQueries({ queryKey: ['ordens-servico'] });
       queryClient.invalidateQueries({ queryKey: ['accounts-receivable'] });
-      queryClient.invalidateQueries({ queryKey: ['receivables-due-today'] });
-      queryClient.invalidateQueries({ queryKey: ['service-appointments'] });
-      queryClient.invalidateQueries({ queryKey: ['today-appointments'] });
-      resetForm();
       onOpenChange(false);
       onSuccess?.();
     },
@@ -361,302 +443,514 @@ export function AprovarOrcamentoDialog({
     },
   });
 
-  const resetForm = () => {
-    setEntryAmount('');
-    setPaymentMethod('pix');
-    setEstimatedEnd(addDays(new Date(), 7));
-    setPriority('normal');
-    setNotes('');
-    setInstallmentsCount(1);
-    setFirstDueDays(30);
+  const handleNext = () => {
+    if (currentStep === 'price-review') {
+      setCurrentStep('payment');
+    } else if (currentStep === 'payment') {
+      setCurrentStep('confirm');
+    }
+  };
+
+  const handleBack = () => {
+    if (currentStep === 'payment') {
+      setCurrentStep('price-review');
+    } else if (currentStep === 'confirm') {
+      setCurrentStep('payment');
+    }
+  };
+
+  const toggleItemPriceOverride = (itemId: string) => {
+    setItemPriceOverrides(prev => ({
+      ...prev,
+      [itemId]: prev[itemId] === false ? true : false,
+    }));
   };
 
   if (!quote) return null;
 
+  const availableCondicoes = getCondicoesByForma(selectedFormaId);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader className="pb-4 border-b">
           <DialogTitle className="flex items-center gap-2 text-xl">
             <CheckCircle className="w-6 h-6 text-green-500" />
             Aprovar Orçamento #{quote.quote_number.toString().padStart(4, '0')}
           </DialogTitle>
-          <DialogDescription className="text-base">
-            {quote.customer_name} • Total: {formatCurrency(totalAmount)}
+          <DialogDescription className="flex items-center gap-4">
+            <span>{quote.customer_name}</span>
+            <span className="text-primary font-medium">{formatCurrency(quote.final_amount)}</span>
+            {isOldQuote && (
+              <Badge variant="destructive" className="gap-1">
+                <AlertTriangle className="w-3 h-3" />
+                {quoteAgeDays} dias - Revisar preços
+              </Badge>
+            )}
           </DialogDescription>
         </DialogHeader>
 
-        {/* Visual Flow Preview */}
-        <div className="flex items-center justify-between gap-2 px-4 py-3 bg-muted/30 rounded-lg mx-1">
+        {/* Step Indicator */}
+        <div className="flex items-center justify-center gap-4 py-4 bg-muted/30 rounded-lg mx-1">
           {[
-            { label: 'Aprovação', active: true },
-            { label: 'Entrada', active: hasEntry },
-            { label: 'OS Criada', active: true },
-            { label: 'Produção', active: false },
-            { label: 'Faturamento', active: false },
+            { key: 'price-review', label: 'Revisão de Preços', icon: RefreshCw },
+            { key: 'payment', label: 'Forma de Pagamento', icon: CreditCard },
+            { key: 'confirm', label: 'Confirmar', icon: CheckCircle },
           ].map((step, idx, arr) => (
-            <div key={step.label} className="flex items-center gap-2 flex-1">
+            <div key={step.key} className="flex items-center gap-2">
               <div className={cn(
-                "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0",
-                step.active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                "w-10 h-10 rounded-full flex items-center justify-center transition-colors",
+                currentStep === step.key 
+                  ? "bg-primary text-primary-foreground" 
+                  : idx < arr.findIndex(s => s.key === currentStep)
+                    ? "bg-primary/20 text-primary"
+                    : "bg-muted text-muted-foreground"
               )}>
-                {idx + 1}
+                <step.icon className="w-5 h-5" />
               </div>
               <span className={cn(
-                "text-sm hidden md:block",
-                step.active ? "text-foreground font-medium" : "text-muted-foreground"
+                "text-sm font-medium hidden md:block",
+                currentStep === step.key ? "text-foreground" : "text-muted-foreground"
               )}>
                 {step.label}
               </span>
               {idx < arr.length - 1 && (
-                <div className={cn(
-                  "flex-1 h-0.5 mx-2",
-                  step.active ? "bg-primary" : "bg-muted"
-                )} />
+                <ArrowRight className="w-4 h-4 text-muted-foreground mx-2" />
               )}
             </div>
           ))}
         </div>
 
-        <div className="flex-1 overflow-y-auto py-4">
-          <div className="grid md:grid-cols-2 gap-6 px-1">
-            {/* Left Column - Payment & Entry */}
-            <div className="space-y-6">
-              {/* Summary Card */}
-              <div className="bg-gradient-to-br from-primary/15 to-primary/5 rounded-xl p-5 border border-primary/20">
-                <div className="flex items-center gap-2 mb-3">
-                  <DollarSign className="w-5 h-5 text-primary" />
-                  <span className="font-semibold">Valor do Orçamento</span>
+        <ScrollArea className="flex-1 py-4">
+          {/* Step 1: Price Review */}
+          {currentStep === 'price-review' && (
+            <div className="space-y-6 px-1">
+              {/* Alert for old quotes */}
+              {isOldQuote && (
+                <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-amber-800 dark:text-amber-200">
+                      Orçamento com {quoteAgeDays} dias
+                    </p>
+                    <p className="text-sm text-amber-700 dark:text-amber-300">
+                      Recomendamos revisar os preços antes de aprovar para garantir que a margem esteja atualizada.
+                    </p>
+                  </div>
                 </div>
-                <div className="text-3xl font-bold text-primary">{formatCurrency(totalAmount)}</div>
+              )}
+
+              {/* Global price update toggle */}
+              <div className="flex items-center justify-between p-4 border rounded-xl bg-card">
+                <div className="flex items-center gap-3">
+                  <RefreshCw className={cn("w-5 h-5", hasAnyPriceChanges ? "text-amber-500" : "text-muted-foreground")} />
+                  <div>
+                    <Label className="text-base font-medium">Atualizar para preços atuais da tabela</Label>
+                    <p className="text-sm text-muted-foreground">
+                      {hasAnyPriceChanges 
+                        ? `Diferença detectada: ${formatCurrency(totalDifference)} (${totalDifference > 0 ? '+' : ''}${((totalDifference / totalOriginal) * 100).toFixed(1)}%)`
+                        : 'Nenhuma alteração de preço detectada'}
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={useCurrentPrices}
+                  onCheckedChange={setUseCurrentPrices}
+                  disabled={!hasAnyPriceChanges}
+                />
               </div>
 
-              {/* Entry Payment */}
-              <div className="space-y-4 p-4 border rounded-xl bg-card">
-                <div className="flex items-center gap-2">
-                  <Wallet className="w-5 h-5 text-primary" />
-                  <span className="font-semibold">Entrada (opcional)</span>
+              {/* Price comparison table */}
+              <div className="border rounded-xl overflow-hidden">
+                <div className="bg-muted/50 px-4 py-3 border-b">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <DollarSign className="w-4 h-4" />
+                    Comparação de Preços
+                  </h3>
                 </div>
-
-                {!isCaixaAberto && (
-                  <div className="flex items-center gap-2 p-3 bg-destructive/10 text-destructive rounded-lg text-sm">
-                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                    <span>Caixa fechado. Abra o caixa para registrar entrada.</span>
-                  </div>
-                )}
-
-                <div>
-                  <Label htmlFor="entryAmount">Valor da entrada</Label>
-                  <div className="relative mt-1">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                      R$
-                    </span>
-                    <Input
-                      id="entryAmount"
-                      value={entryAmount}
-                      onChange={(e) => setEntryAmount(e.target.value)}
-                      placeholder="0,00"
-                      className="pl-9 h-12 text-lg"
-                      disabled={!isCaixaAberto}
-                    />
-                  </div>
-                </div>
-
-                {hasEntry && isCaixaAberto && (
-                  <div className="space-y-3">
-                    <div>
-                      <Label>Forma de pagamento</Label>
-                      <RadioGroup
-                        value={paymentMethod}
-                        onValueChange={(v) => setPaymentMethod(v as typeof paymentMethod)}
-                        className="flex gap-3 mt-2"
-                      >
-                        <div className="flex items-center space-x-2 p-3 border rounded-lg flex-1 cursor-pointer hover:bg-muted/50 transition-colors">
-                          <RadioGroupItem value="dinheiro" id="dinheiro" />
-                          <Label htmlFor="dinheiro" className="flex items-center gap-2 cursor-pointer flex-1">
-                            <DollarSign className="w-4 h-4" />
-                            Dinheiro
-                          </Label>
-                        </div>
-                        <div className="flex items-center space-x-2 p-3 border rounded-lg flex-1 cursor-pointer hover:bg-muted/50 transition-colors">
-                          <RadioGroupItem value="cartao" id="cartao" />
-                          <Label htmlFor="cartao" className="flex items-center gap-2 cursor-pointer flex-1">
-                            <CreditCard className="w-4 h-4" />
-                            Cartão
-                          </Label>
-                        </div>
-                        <div className="flex items-center space-x-2 p-3 border rounded-lg flex-1 cursor-pointer hover:bg-muted/50 transition-colors">
-                          <RadioGroupItem value="pix" id="pix" />
-                          <Label htmlFor="pix" className="flex items-center gap-2 cursor-pointer flex-1">
-                            <Smartphone className="w-4 h-4" />
-                            Pix
-                          </Label>
-                        </div>
-                      </RadioGroup>
-                    </div>
-                    
-                    <div className="flex items-start gap-2 p-3 bg-primary/10 text-primary rounded-lg text-sm">
-                      <Receipt className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                      <span>
-                        O valor será registrado como venda no caixa aberto.
-                      </span>
-                    </div>
-                  </div>
-                )}
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[40%]">Item</TableHead>
+                      <TableHead className="text-right">Valor Original</TableHead>
+                      <TableHead className="text-right">Valor Tabela Atual</TableHead>
+                      <TableHead className="text-right">Diferença</TableHead>
+                      {useCurrentPrices && <TableHead className="text-center w-24">Usar Atual</TableHead>}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {revisedItems.map((item) => (
+                      <TableRow key={item.id} className={cn(item.needsRevision && "bg-amber-50/50 dark:bg-amber-950/20")}>
+                        <TableCell>
+                          <div className="font-medium">{item.description}</div>
+                          {item.width && item.height && (
+                            <div className="text-xs text-muted-foreground">
+                              {item.width}x{item.height}mm • Qtd: {item.quantity}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {formatCurrency(item.total_price)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {item.currentCalculatedTotal !== null ? (
+                            <span className={cn(
+                              "font-medium",
+                              item.priceDifference > 0 && "text-green-600",
+                              item.priceDifference < 0 && "text-red-600"
+                            )}>
+                              {formatCurrency(item.currentCalculatedTotal)}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {item.needsRevision ? (
+                            <div className="flex items-center justify-end gap-1">
+                              {item.priceDifference > 0 ? (
+                                <TrendingUp className="w-4 h-4 text-green-600" />
+                              ) : (
+                                <TrendingDown className="w-4 h-4 text-red-600" />
+                              )}
+                              <span className={cn(
+                                "font-medium",
+                                item.priceDifference > 0 ? "text-green-600" : "text-red-600"
+                              )}>
+                                {item.priceDifference > 0 ? '+' : ''}{item.percentDifference.toFixed(1)}%
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        {useCurrentPrices && (
+                          <TableCell className="text-center">
+                            {item.needsRevision && (
+                              <Checkbox
+                                checked={itemPriceOverrides[item.id] !== false}
+                                onCheckedChange={() => toggleItemPriceOverride(item.id)}
+                              />
+                            )}
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
 
-              {/* Installments Configuration */}
-              {pendingAmount > 0 && (
-                <div className="space-y-4 p-4 border rounded-xl bg-card">
-                  <div className="flex items-center gap-2">
-                    <Receipt className="w-5 h-5 text-primary" />
-                    <span className="font-semibold">Parcelamento do Saldo</span>
-                    <Badge variant="secondary" className="ml-auto">
-                      {formatCurrency(pendingAmount)}
-                    </Badge>
+              {/* Summary */}
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="p-4 border rounded-xl bg-card">
+                  <div className="text-sm text-muted-foreground mb-1">Valor Original</div>
+                  <div className="text-2xl font-bold">{formatCurrency(totalOriginal)}</div>
+                </div>
+                <div className={cn(
+                  "p-4 border rounded-xl",
+                  useCurrentPrices ? "bg-primary/10 border-primary/30" : "bg-card"
+                )}>
+                  <div className="text-sm text-muted-foreground mb-1">
+                    {useCurrentPrices ? 'Valor Atualizado' : 'Valor a Usar'}
                   </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Número de Parcelas</Label>
-                      <Select
-                        value={String(installmentsCount)}
-                        onValueChange={(v) => setInstallmentsCount(parseInt(v))}
-                      >
-                        <SelectTrigger className="mt-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {[1, 2, 3, 4, 5, 6, 8, 10, 12].map((n) => (
-                            <SelectItem key={n} value={String(n)}>
-                              {n}x de {formatCurrency(pendingAmount / n)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <Label>Primeiro Vencimento</Label>
-                      <Select
-                        value={String(firstDueDays)}
-                        onValueChange={(v) => setFirstDueDays(parseInt(v))}
-                      >
-                        <SelectTrigger className="mt-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="0">Na entrega</SelectItem>
-                          <SelectItem value="7">7 dias</SelectItem>
-                          <SelectItem value="15">15 dias</SelectItem>
-                          <SelectItem value="30">30 dias</SelectItem>
-                          <SelectItem value="45">45 dias</SelectItem>
-                          <SelectItem value="60">60 dias</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  <div className="text-2xl font-bold text-primary">
+                    {formatCurrency(valorBase)}
                   </div>
-
-                  {/* Installments Preview */}
-                  {installmentsPreview.length > 0 && (
-                    <div className="rounded-lg border bg-muted/30 p-3 space-y-2 max-h-32 overflow-y-auto">
-                      <p className="text-xs text-muted-foreground font-medium sticky top-0 bg-muted/30">Parcelas a Receber:</p>
-                      {installmentsPreview.map((inst) => (
-                        <div key={inst.number} className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">
-                            {inst.number}/{installmentsPreview.length} - {format(inst.dueDate, 'dd/MM/yyyy', { locale: ptBR })}
-                          </span>
-                          <span className="font-medium">{formatCurrency(inst.amount)}</span>
-                        </div>
-                      ))}
+                  {useCurrentPrices && totalDifference !== 0 && (
+                    <div className={cn(
+                      "text-sm font-medium",
+                      totalDifference > 0 ? "text-green-600" : "text-red-600"
+                    )}>
+                      {totalDifference > 0 ? '+' : ''}{formatCurrency(totalDifference)}
                     </div>
                   )}
                 </div>
-              )}
+              </div>
             </div>
+          )}
 
-            {/* Right Column - OS Details & Summary */}
-            <div className="space-y-6">
-              {/* Service Order Details */}
-              <div className="space-y-4 p-4 border rounded-xl bg-card">
-                <div className="flex items-center gap-2">
-                  <ClipboardList className="w-5 h-5 text-primary" />
-                  <span className="font-semibold">Ordem de Serviço</span>
+          {/* Step 2: Payment Configuration */}
+          {currentStep === 'payment' && (
+            <div className="space-y-6 px-1">
+              {/* Initialize payment options if needed */}
+              {!hasPaymentOptions && (
+                <div className="flex items-center justify-between p-4 border rounded-xl bg-amber-50 dark:bg-amber-950/30">
+                  <div>
+                    <p className="font-medium">Configurar opções de pagamento</p>
+                    <p className="text-sm text-muted-foreground">
+                      Crie as formas e condições de pagamento padrão para sua empresa.
+                    </p>
+                  </div>
+                  <Button onClick={() => initializeDefaults.mutate()} disabled={initializeDefaults.isPending}>
+                    {initializeDefaults.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Settings2 className="w-4 h-4" />}
+                    <span className="ml-2">Configurar</span>
+                  </Button>
+                </div>
+              )}
+
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Left: Payment Method Selection */}
+                <div className="space-y-4">
+                  {/* Payment Method */}
+                  <div className="p-4 border rounded-xl bg-card space-y-4">
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="w-5 h-5 text-primary" />
+                      <Label className="text-base font-semibold">Forma de Pagamento</Label>
+                    </div>
+                    
+                    <Select value={selectedFormaId || ''} onValueChange={setSelectedFormaId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a forma de pagamento" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {formasPagamento.map(forma => (
+                          <SelectItem key={forma.id} value={forma.id}>
+                            <div className="flex items-center gap-2">
+                              <span>{forma.nome}</span>
+                              <Badge variant="outline" className="text-xs">
+                                {forma.tipo === 'avista' ? 'À vista' : forma.tipo === 'parcelado' ? 'Parcelado' : 'Misto'}
+                              </Badge>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Payment Condition */}
+                  <div className="p-4 border rounded-xl bg-card space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Percent className="w-5 h-5 text-primary" />
+                      <Label className="text-base font-semibold">Condição de Pagamento</Label>
+                    </div>
+                    
+                    <Select value={selectedCondicaoId || ''} onValueChange={setSelectedCondicaoId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a condição" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableCondicoes.map(condicao => (
+                          <SelectItem key={condicao.id} value={condicao.id}>
+                            <div className="flex items-center justify-between gap-4 w-full">
+                              <span>{condicao.nome}</span>
+                              {condicao.desconto_percent > 0 && (
+                                <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                                  -{condicao.desconto_percent}%
+                                </Badge>
+                              )}
+                              {condicao.juros_percent > 0 && (
+                                <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300">
+                                  +{condicao.juros_percent}%
+                                </Badge>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {selectedCondicao && (
+                      <div className="text-sm text-muted-foreground space-y-1 pt-2 border-t">
+                        <div className="flex justify-between">
+                          <span>Parcelas:</span>
+                          <span className="font-medium">{selectedCondicao.parcelas}x</span>
+                        </div>
+                        {selectedCondicao.dias_entre_parcelas > 0 && (
+                          <div className="flex justify-between">
+                            <span>Intervalo:</span>
+                            <span className="font-medium">{selectedCondicao.dias_entre_parcelas} dias</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Entry Payment */}
+                  <div className="p-4 border rounded-xl bg-card space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Wallet className="w-5 h-5 text-primary" />
+                      <Label className="text-base font-semibold">Entrada (opcional)</Label>
+                    </div>
+
+                    {!isCaixaAberto && (
+                      <div className="flex items-center gap-2 p-3 bg-destructive/10 text-destructive rounded-lg text-sm">
+                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                        <span>Caixa fechado. Abra o caixa para registrar entrada.</span>
+                      </div>
+                    )}
+
+                    <div>
+                      <Label htmlFor="entryAmount">Valor da entrada</Label>
+                      <div className="relative mt-1">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">R$</span>
+                        <Input
+                          id="entryAmount"
+                          value={entryAmount}
+                          onChange={(e) => setEntryAmount(e.target.value)}
+                          placeholder="0,00"
+                          className="pl-9 h-12 text-lg"
+                          disabled={!isCaixaAberto}
+                        />
+                      </div>
+                    </div>
+
+                    {hasEntry && isCaixaAberto && (
+                      <div>
+                        <Label>Forma de pagamento da entrada</Label>
+                        <RadioGroup
+                          value={entryPaymentMethod}
+                          onValueChange={(v) => setEntryPaymentMethod(v as typeof entryPaymentMethod)}
+                          className="flex gap-3 mt-2"
+                        >
+                          {['dinheiro', 'cartao', 'pix'].map(method => (
+                            <div key={method} className="flex items-center space-x-2 p-2 border rounded-lg flex-1">
+                              <RadioGroupItem value={method} id={`entry-${method}`} />
+                              <Label htmlFor={`entry-${method}`} className="cursor-pointer capitalize">
+                                {method === 'cartao' ? 'Cartão' : method.charAt(0).toUpperCase() + method.slice(1)}
+                              </Label>
+                            </div>
+                          ))}
+                        </RadioGroup>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
+                {/* Right: Payment Summary */}
                 <div className="space-y-4">
-                  <div>
-                    <Label>Prioridade</Label>
-                    <RadioGroup
-                      value={priority}
-                      onValueChange={(v) => setPriority(v as typeof priority)}
-                      className="grid grid-cols-4 gap-2 mt-2"
-                    >
-                      {[
-                        { value: 'low', label: 'Baixa', color: 'text-blue-600' },
-                        { value: 'normal', label: 'Normal', color: 'text-green-600' },
-                        { value: 'high', label: 'Alta', color: 'text-orange-600' },
-                        { value: 'urgent', label: 'Urgente', color: 'text-red-600' },
-                      ].map((p) => (
-                        <div key={p.value} className="flex items-center">
-                          <RadioGroupItem value={p.value} id={p.value} className="sr-only peer" />
-                          <Label 
-                            htmlFor={p.value} 
-                            className={cn(
-                              "flex-1 text-center py-2 px-3 border rounded-lg cursor-pointer text-sm transition-all",
-                              "peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/10 peer-data-[state=checked]:font-medium",
-                              "hover:bg-muted/50"
-                            )}
-                          >
-                            {p.label}
-                          </Label>
+                  <div className="p-6 border-2 border-primary/30 rounded-xl bg-gradient-to-br from-primary/5 to-transparent space-y-4">
+                    <h3 className="font-semibold text-lg flex items-center gap-2">
+                      <Receipt className="w-5 h-5 text-primary" />
+                      Resumo do Pagamento
+                    </h3>
+
+                    <div className="space-y-3">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Valor base</span>
+                        <span>{formatCurrency(valorBase)}</span>
+                      </div>
+
+                      {paymentCalculation.desconto > 0 && (
+                        <div className="flex justify-between text-sm text-green-600">
+                          <span>Desconto ({selectedCondicao?.desconto_percent}%)</span>
+                          <span>-{formatCurrency(paymentCalculation.desconto)}</span>
                         </div>
-                      ))}
-                    </RadioGroup>
+                      )}
+
+                      {paymentCalculation.juros > 0 && (
+                        <div className="flex justify-between text-sm text-amber-600">
+                          <span>Juros ({selectedCondicao?.juros_percent}%)</span>
+                          <span>+{formatCurrency(paymentCalculation.juros)}</span>
+                        </div>
+                      )}
+
+                      <Separator />
+
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium">Valor Final</span>
+                        <span className="text-2xl font-bold text-primary">
+                          {formatCurrency(paymentCalculation.valorFinal)}
+                        </span>
+                      </div>
+
+                      {hasEntry && (
+                        <>
+                          <div className="flex justify-between text-sm bg-green-50 dark:bg-green-950/30 p-2 rounded">
+                            <span className="text-green-700 dark:text-green-300">Entrada</span>
+                            <span className="text-green-700 dark:text-green-300 font-medium">
+                              -{formatCurrency(entryValue)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="font-medium">Saldo Restante</span>
+                            <span className="text-xl font-bold">{formatCurrency(pendingAmount)}</span>
+                          </div>
+                        </>
+                      )}
+
+                      {selectedCondicao && selectedCondicao.parcelas > 1 && (
+                        <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                          <div className="flex justify-between text-sm font-medium">
+                            <span>Parcelamento</span>
+                            <span>{paymentCalculation.parcelas}x</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-muted-foreground">Valor da parcela</span>
+                            <span className="text-lg font-bold">
+                              {formatCurrency(hasEntry ? pendingAmount / paymentCalculation.parcelas : paymentCalculation.valorParcela)}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
-                  <div>
-                    <Label>Previsão de entrega</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            'w-full justify-start text-left font-normal mt-1 h-11',
-                            !estimatedEnd && 'text-muted-foreground'
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {estimatedEnd ? format(estimatedEnd, "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : 'Selecionar data'}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={estimatedEnd}
-                          onSelect={setEstimatedEnd}
-                          initialFocus
-                          locale={ptBR}
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
+                  {/* OS Configuration */}
+                  <div className="p-4 border rounded-xl bg-card space-y-4">
+                    <div className="flex items-center gap-2">
+                      <ClipboardList className="w-5 h-5 text-primary" />
+                      <Label className="text-base font-semibold">Configuração da OS</Label>
+                    </div>
 
-                  <div>
-                    <Label htmlFor="notes">Observações</Label>
-                    <Textarea
-                      id="notes"
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      placeholder="Observações sobre o serviço..."
-                      rows={3}
-                      className="mt-1 resize-none"
-                    />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Prioridade</Label>
+                        <Select value={priority} onValueChange={(v) => setPriority(v as typeof priority)}>
+                          <SelectTrigger className="mt-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="low">Baixa</SelectItem>
+                            <SelectItem value="normal">Normal</SelectItem>
+                            <SelectItem value="high">Alta</SelectItem>
+                            <SelectItem value="urgent">Urgente</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label>Previsão de entrega</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" className="w-full justify-start mt-1">
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {estimatedEnd ? format(estimatedEnd, 'dd/MM/yyyy') : 'Selecionar'}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={estimatedEnd}
+                              onSelect={setEstimatedEnd}
+                              initialFocus
+                              locale={ptBR}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="notes">Observações</Label>
+                      <Textarea
+                        id="notes"
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        placeholder="Observações sobre o serviço..."
+                        rows={2}
+                        className="mt-1"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
+            </div>
+          )}
 
-              {/* Materials Availability Preview */}
+          {/* Step 3: Confirmation */}
+          {currentStep === 'confirm' && (
+            <div className="space-y-6 px-1">
+              {/* Materials Preview */}
               {items.length > 0 && (
                 <div className="p-4 border rounded-xl bg-card">
                   <MaterialsAvailabilityPreview 
@@ -667,72 +961,125 @@ export function AprovarOrcamentoDialog({
               )}
 
               {/* Final Summary */}
-              <div className="rounded-xl border-2 border-primary/30 overflow-hidden">
-                <div className="bg-primary/10 px-4 py-3 border-b border-primary/20">
-                  <span className="font-semibold">Resumo da Aprovação</span>
-                </div>
-                <div className="p-4 space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Valor total</span>
-                    <span className="font-bold text-lg">{formatCurrency(totalAmount)}</span>
-                  </div>
-                  
-                  <div className={cn(
-                    "flex justify-between items-center p-3 rounded-lg",
-                    hasEntry ? "bg-emerald-50 dark:bg-emerald-950/30" : "bg-muted/30"
-                  )}>
-                    <span className={cn("text-sm", hasEntry ? "text-emerald-700 dark:text-emerald-300" : "text-muted-foreground")}>
-                      Entrada a receber agora
-                    </span>
-                    <span className={cn("font-bold text-lg", hasEntry ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground")}>
-                      {hasEntry ? formatCurrency(entryValue) : 'Sem entrada'}
-                    </span>
-                  </div>
-                  
-                  <Separator />
-                  
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium">Saldo a receber</span>
-                    <Badge 
-                      variant={pendingAmount > 0 ? 'secondary' : 'default'} 
-                      className={cn(
-                        "text-lg px-4 py-1.5",
-                        pendingAmount === 0 && "bg-emerald-500"
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="p-4 border rounded-xl bg-card">
+                    <h3 className="font-semibold mb-4">Resumo do Orçamento</h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Cliente</span>
+                        <span className="font-medium">{quote.customer_name}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Valor Original</span>
+                        <span>{formatCurrency(totalOriginal)}</span>
+                      </div>
+                      {useCurrentPrices && (
+                        <div className="flex justify-between text-primary">
+                          <span>Valor Reajustado</span>
+                          <span className="font-medium">{formatCurrency(valorBase)}</span>
+                        </div>
                       )}
-                    >
-                      {formatCurrency(pendingAmount)}
-                    </Badge>
+                      <Separator />
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Condição</span>
+                        <span>{selectedCondicao?.nome || '-'}</span>
+                      </div>
+                      <div className="flex justify-between font-bold text-lg">
+                        <span>Valor Final</span>
+                        <span className="text-primary">{formatCurrency(paymentCalculation.valorFinal)}</span>
+                      </div>
+                    </div>
                   </div>
-                  
-                  {pendingAmount > 0 && installmentsCount > 1 && (
-                    <div className="flex justify-between text-sm text-muted-foreground bg-muted/30 rounded-lg p-3">
-                      <span>Parcelamento</span>
-                      <span className="font-medium">{installmentsCount}x de {formatCurrency(pendingAmount / installmentsCount)}</span>
+
+                  <div className="p-4 border rounded-xl bg-card">
+                    <h3 className="font-semibold mb-4">Ordem de Serviço</h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Prioridade</span>
+                        <Badge variant={priority === 'urgent' ? 'destructive' : priority === 'high' ? 'default' : 'secondary'}>
+                          {priority === 'low' ? 'Baixa' : priority === 'normal' ? 'Normal' : priority === 'high' ? 'Alta' : 'Urgente'}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Previsão de entrega</span>
+                        <span>{estimatedEnd ? format(estimatedEnd, 'dd/MM/yyyy') : '-'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="p-6 border-2 border-primary/30 rounded-xl bg-gradient-to-br from-primary/10 to-transparent">
+                    <h3 className="font-semibold text-lg mb-4">Financeiro</h3>
+                    <div className="space-y-3">
+                      {hasEntry && (
+                        <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-950/30 rounded-lg">
+                          <span className="text-green-700 dark:text-green-300 font-medium">Entrada a receber</span>
+                          <span className="text-xl font-bold text-green-600">{formatCurrency(entryValue)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Saldo pendente</span>
+                        <span className="text-xl font-bold">{formatCurrency(pendingAmount)}</span>
+                      </div>
+                      {selectedCondicao && selectedCondicao.parcelas > 1 && (
+                        <div className="text-sm text-muted-foreground">
+                          Em {selectedCondicao.parcelas}x de {formatCurrency(pendingAmount / selectedCondicao.parcelas)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {hasEntry && !isCaixaAberto && (
+                    <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl">
+                      <div className="flex items-center gap-2 text-destructive">
+                        <AlertCircle className="w-5 h-5" />
+                        <span className="font-medium">Caixa precisa estar aberto</span>
+                      </div>
+                      <p className="text-sm text-destructive/80 mt-1">
+                        Para registrar a entrada, abra o caixa antes de aprovar.
+                      </p>
                     </div>
                   )}
                 </div>
               </div>
             </div>
-          </div>
-        </div>
+          )}
+        </ScrollArea>
 
         <DialogFooter className="border-t pt-4 gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} size="lg">
+          {currentStep !== 'price-review' && (
+            <Button variant="outline" onClick={handleBack} size="lg">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Voltar
+            </Button>
+          )}
+          
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button
-            onClick={() => approveMutation.mutate()}
-            disabled={approveMutation.isPending || (hasEntry && !isCaixaAberto)}
-            className="gap-2"
-            size="lg"
-          >
-            {approveMutation.isPending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <CheckCircle className="w-4 h-4" />
-            )}
-            Aprovar e Criar OS
-          </Button>
+
+          {currentStep !== 'confirm' ? (
+            <Button onClick={handleNext} size="lg">
+              Próximo
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          ) : (
+            <Button
+              onClick={() => approveMutation.mutate()}
+              disabled={approveMutation.isPending || (hasEntry && !isCaixaAberto)}
+              className="gap-2"
+              size="lg"
+            >
+              {approveMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <CheckCircle className="w-4 h-4" />
+              )}
+              Aprovar e Criar OS
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

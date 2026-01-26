@@ -1658,6 +1658,73 @@ export type Database = {
           },
         ]
       }
+      condicoes_pagamento: {
+        Row: {
+          company_id: string
+          created_at: string
+          desconto_percent: number
+          dias_entre_parcelas: number
+          forma_pagamento_id: string | null
+          id: string
+          is_active: boolean
+          juros_percent: number
+          nome: string
+          parcelas: number
+          sort_order: number | null
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          desconto_percent?: number
+          dias_entre_parcelas?: number
+          forma_pagamento_id?: string | null
+          id?: string
+          is_active?: boolean
+          juros_percent?: number
+          nome: string
+          parcelas?: number
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          desconto_percent?: number
+          dias_entre_parcelas?: number
+          forma_pagamento_id?: string | null
+          id?: string
+          is_active?: boolean
+          juros_percent?: number
+          nome?: string
+          parcelas?: number
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "condicoes_pagamento_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "condicoes_pagamento_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "condicoes_pagamento_forma_pagamento_id_fkey"
+            columns: ["forma_pagamento_id"]
+            isOneToOne: false
+            referencedRelation: "formas_pagamento"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_commissions: {
         Row: {
           commission_amount: number
@@ -2008,6 +2075,54 @@ export type Database = {
             columns: ["parent_expense_id"]
             isOneToOne: false
             referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      formas_pagamento: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          nome: string
+          sort_order: number | null
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          nome: string
+          sort_order?: number | null
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          nome?: string
+          sort_order?: number | null
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "formas_pagamento_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "formas_pagamento_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -4061,9 +4176,60 @@ export type Database = {
           },
         ]
       }
+      quote_price_revisions: {
+        Row: {
+          created_at: string
+          id: string
+          preco_original: number
+          preco_tabela_atual: number
+          preco_usado: number
+          quote_id: string
+          quote_item_id: string
+          usou_preco_atual: boolean
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          preco_original: number
+          preco_tabela_atual: number
+          preco_usado: number
+          quote_id: string
+          quote_item_id: string
+          usou_preco_atual?: boolean
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          preco_original?: number
+          preco_tabela_atual?: number
+          preco_usado?: number
+          quote_id?: string
+          quote_item_id?: string
+          usou_preco_atual?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_price_revisions_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_price_revisions_quote_item_id_fkey"
+            columns: ["quote_item_id"]
+            isOneToOne: false
+            referencedRelation: "quote_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quotes: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           company_id: string
+          condicao_pagamento_id: string | null
           created_at: string
           customer_address: string | null
           customer_document: string | null
@@ -4078,17 +4244,25 @@ export type Database = {
           discount_amount: number | null
           discount_percent: number | null
           final_amount: number
+          forma_pagamento_id: string | null
           id: string
           notes: string | null
           payment_terms: string | null
           quote_number: number
+          reajuste_aplicado: boolean | null
           status: string
           total_amount: number
           updated_at: string
           valid_until: string | null
+          valor_final_aprovado: number | null
+          valor_original: number | null
+          valor_reajustado: number | null
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           company_id: string
+          condicao_pagamento_id?: string | null
           created_at?: string
           customer_address?: string | null
           customer_document?: string | null
@@ -4103,17 +4277,25 @@ export type Database = {
           discount_amount?: number | null
           discount_percent?: number | null
           final_amount?: number
+          forma_pagamento_id?: string | null
           id?: string
           notes?: string | null
           payment_terms?: string | null
           quote_number?: number
+          reajuste_aplicado?: boolean | null
           status?: string
           total_amount?: number
           updated_at?: string
           valid_until?: string | null
+          valor_final_aprovado?: number | null
+          valor_original?: number | null
+          valor_reajustado?: number | null
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           company_id?: string
+          condicao_pagamento_id?: string | null
           created_at?: string
           customer_address?: string | null
           customer_document?: string | null
@@ -4128,14 +4310,19 @@ export type Database = {
           discount_amount?: number | null
           discount_percent?: number | null
           final_amount?: number
+          forma_pagamento_id?: string | null
           id?: string
           notes?: string | null
           payment_terms?: string | null
           quote_number?: number
+          reajuste_aplicado?: boolean | null
           status?: string
           total_amount?: number
           updated_at?: string
           valid_until?: string | null
+          valor_final_aprovado?: number | null
+          valor_original?: number | null
+          valor_reajustado?: number | null
         }
         Relationships: [
           {
@@ -4150,6 +4337,20 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_condicao_pagamento_id_fkey"
+            columns: ["condicao_pagamento_id"]
+            isOneToOne: false
+            referencedRelation: "condicoes_pagamento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_forma_pagamento_id_fkey"
+            columns: ["forma_pagamento_id"]
+            isOneToOne: false
+            referencedRelation: "formas_pagamento"
             referencedColumns: ["id"]
           },
         ]
@@ -5536,6 +5737,10 @@ export type Database = {
           _name: string
         }
         Returns: string
+      }
+      create_default_payment_options: {
+        Args: { _company_id: string }
+        Returns: undefined
       }
       create_default_permission_profiles: {
         Args: { _company_id: string }
