@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { DollarSign, Package, Search, Save, Filter } from 'lucide-react';
+import { DollarSign, Package, Search, Save, Filter, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +21,8 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { GlassPricingTab } from '@/components/precos/GlassPricingTab';
 
 interface ProductPrice {
   id?: string;
@@ -265,6 +267,8 @@ export default function PrecosEmpresa() {
 
   const isLoading = loadingTemplates || loadingProducts;
 
+  const [activeTab, setActiveTab] = useState<string>('products');
+
   return (
     <MainLayout>
       <div className="space-y-6 animate-fade-in">
@@ -272,13 +276,13 @@ export default function PrecosEmpresa() {
           <div>
             <h1 className="font-display font-bold text-2xl text-foreground flex items-center gap-2">
               <DollarSign className="w-7 h-7 text-primary" />
-              Preços dos Produtos
+              Preços
             </h1>
             <p className="text-muted-foreground">
-              Defina o preço de venda por m² de cada produto
+              Configure preços de produtos e vidros
             </p>
           </div>
-          {hasChanges && (
+          {activeTab === 'products' && hasChanges && (
             <Button 
               onClick={handleSave} 
               disabled={saveMutation.isPending}
@@ -289,6 +293,20 @@ export default function PrecosEmpresa() {
             </Button>
           )}
         </div>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="products" className="gap-2">
+              <Package className="w-4 h-4" />
+              Produtos
+            </TabsTrigger>
+            <TabsTrigger value="glass" className="gap-2">
+              <Layers className="w-4 h-4" />
+              Vidros
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="products" className="mt-6">
 
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-4 p-4 rounded-lg border bg-card">
@@ -515,11 +533,17 @@ export default function PrecosEmpresa() {
                       </div>
                     </div>
                   ))}
-                </AccordionContent>
+              </AccordionContent>
               </AccordionItem>
             ))}
           </Accordion>
         )}
+          </TabsContent>
+
+          <TabsContent value="glass" className="mt-6">
+            <GlassPricingTab />
+          </TabsContent>
+        </Tabs>
       </div>
     </MainLayout>
   );

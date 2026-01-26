@@ -2009,6 +2009,57 @@ export type Database = {
           },
         ]
       }
+      glass_colors: {
+        Row: {
+          company_id: string
+          created_at: string
+          hex_color: string | null
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          hex_color?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          hex_color?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "glass_colors_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "glass_colors_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       glass_line_formulas: {
         Row: {
           created_at: string
@@ -2058,6 +2109,81 @@ export type Database = {
             columns: ["product_template_id"]
             isOneToOne: false
             referencedRelation: "product_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      glass_price_matrix: {
+        Row: {
+          company_id: string
+          cost_per_sqm: number
+          created_at: string
+          glass_color_id: string
+          glass_thickness_id: string
+          glass_type_id: string
+          id: string
+          is_active: boolean
+          price_per_sqm: number
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          cost_per_sqm?: number
+          created_at?: string
+          glass_color_id: string
+          glass_thickness_id: string
+          glass_type_id: string
+          id?: string
+          is_active?: boolean
+          price_per_sqm?: number
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          cost_per_sqm?: number
+          created_at?: string
+          glass_color_id?: string
+          glass_thickness_id?: string
+          glass_type_id?: string
+          id?: string
+          is_active?: boolean
+          price_per_sqm?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "glass_price_matrix_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "glass_price_matrix_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "glass_price_matrix_glass_color_id_fkey"
+            columns: ["glass_color_id"]
+            isOneToOne: false
+            referencedRelation: "glass_colors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "glass_price_matrix_glass_thickness_id_fkey"
+            columns: ["glass_thickness_id"]
+            isOneToOne: false
+            referencedRelation: "glass_thicknesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "glass_price_matrix_glass_type_id_fkey"
+            columns: ["glass_type_id"]
+            isOneToOne: false
+            referencedRelation: "glass_types"
             referencedColumns: ["id"]
           },
         ]
@@ -2125,6 +2251,54 @@ export type Database = {
             columns: ["product_template_id"]
             isOneToOne: false
             referencedRelation: "product_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      glass_thicknesses: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          sort_order: number
+          thickness: string
+          thickness_mm: number
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+          thickness: string
+          thickness_mm: number
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+          thickness?: string
+          thickness_mm?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "glass_thicknesses_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "glass_thicknesses_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -5415,6 +5589,10 @@ export type Database = {
         }
       }
       initialize_company_item_prices: {
+        Args: { _company_id: string }
+        Returns: undefined
+      }
+      initialize_glass_options_for_company: {
         Args: { _company_id: string }
         Returns: undefined
       }
