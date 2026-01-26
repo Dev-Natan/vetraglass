@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -11,10 +11,9 @@ import {
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Download,
   ShoppingCart,
@@ -24,10 +23,7 @@ import {
   FileDown,
   Loader2,
   X,
-  Filter,
-  Sparkles,
 } from 'lucide-react';
-import { toast } from 'sonner';
 import { ActivateWithCompositionDialog } from './ActivateWithCompositionDialog';
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
 
@@ -52,7 +48,6 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
   const queryClient = useQueryClient();
   const { labels: categoryLabels } = useProductCategoryLabels();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedForDownload, setSelectedForDownload] = useState<Set<string>>(new Set());
   const [activateDialogOpen, setActivateDialogOpen] = useState(false);
   const [selectedProductForActivation, setSelectedProductForActivation] = useState<{
     id: string;
@@ -135,120 +130,6 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
     return groups;
   }, [filteredProducts]);
 
-  const setDownloadSelection = (productId: string, checked: boolean) => {
-    setSelectedForDownload((prev) => {
-      const next = new Set(prev);
-      if (checked) next.add(productId);
-      else next.delete(productId);
-      return next;
-    });
-  };
-
-  const toggleDownloadSelection = (productId: string) => {
-    setSelectedForDownload((prev) => {
-      const next = new Set(prev);
-      if (next.has(productId)) next.delete(productId);
-      else next.add(productId);
-      return next;
-    });
-  };
-
-  const selectAllForDownload = () => {
-    setSelectedForDownload(new Set(filteredProducts.map((p) => p.id)));
-  };
-
-  const clearDownloadSelection = () => {
-    setSelectedForDownload(new Set());
-  };
-
-  // Batch activation mutation
-  const batchActivateMutation = useMutation({
-    mutationFn: async (productIds: string[]) => {
-      if (!currentCompany?.id) throw new Error('Empresa não selecionada');
-
-      const results: unknown[] = [];
-      const errors: { productId: string; message: string }[] = [];
-      for (const productId of productIds) {
-        // Skip already activated products
-        if (isProductActivated(productId)) continue;
-
-        // Activate the product template for the company
-        const { data, error } = await supabase.rpc(
-          'activate_product_template_for_company',
-          {
-            _company_id: currentCompany.id,
-            _product_template_id: productId,
-          }
-        );
-
-        if (error) {
-          console.error(`Error activating product ${productId}:`, error);
-          errors.push({
-            productId,
-            message: (error as any)?.message || 'Erro desconhecido',
-          });
-          continue;
-        }
-
-        results.push(data);
-      }
-
-      if (results.length === 0 && errors.length > 0) {
-        throw new Error(errors[0].message);
-      }
-
-      return { results, errors };
-    },
-    onSuccess: ({ results, errors }) => {
-      // Invalidar todos os caches relacionados à ativação
-      queryClient.invalidateQueries({ queryKey: ['company-products'] });
-      queryClient.invalidateQueries({ queryKey: ['linha-products'] });
-      queryClient.invalidateQueries({ queryKey: ['allLinhas'] });
-      queryClient.invalidateQueries({ queryKey: ['company-items'] });
-      queryClient.invalidateQueries({ queryKey: ['company-stock'] });
-      queryClient.invalidateQueries({ queryKey: ['company-product-items'] });
-      
-      const count = results.length;
-      if (count > 0) {
-        toast.success(`${count} produto(s) ativado(s) com sucesso!`, {
-          description: 'Todos os perfis, vidros e acessórios foram adicionados à composição.'
-        });
-
-        if (errors.length > 0) {
-          toast.error(`${errors.length} produto(s) não puderam ser ativados`, {
-            description: errors[0]?.message,
-          });
-        }
-        clearDownloadSelection();
-      } else {
-        toast.info('Nenhum produto novo foi ativado');
-      }
-    },
-    onError: (error) => {
-      console.error('Batch activation error:', error);
-      toast.error('Erro ao ativar produtos', {
-        description: error.message,
-      });
-    },
-  });
-
-  const handleDownload = () => {
-    if (selectedForDownload.size === 0) {
-      toast.error('Selecione pelo menos um produto');
-      return;
-    }
-    
-    const productIds = Array.from(selectedForDownload);
-    const notActivatedIds = productIds.filter(id => !isProductActivated(id));
-    
-    if (notActivatedIds.length === 0) {
-      toast.info('Todos os produtos selecionados já estão ativados');
-      return;
-    }
-    
-    batchActivateMutation.mutate(notActivatedIds);
-  };
-
   const handleActivateClick = (product: ProductTemplate) => {
     setSelectedProductForActivation({ 
       id: product.id, 
@@ -278,7 +159,7 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
                   Tipologias - {linha}
                 </SheetTitle>
                 <SheetDescription className="mt-1">
-                  Baixe os desenhos técnicos ou ative produtos para venda
+                  Visualize e ative produtos para venda
                 </SheetDescription>
               </div>
               <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)}>
@@ -312,21 +193,6 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
                 </TabsTrigger>
               </TabsList>
             </Tabs>
-
-            {/* Selection Controls */}
-            <div className="flex items-center justify-between mt-4">
-              <span className="text-sm text-muted-foreground">
-                {selectedForDownload.size} selecionado(s) para download
-              </span>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={selectAllForDownload}>
-                  Selecionar Todos
-                </Button>
-                <Button variant="outline" size="sm" onClick={clearDownloadSelection}>
-                  Limpar
-                </Button>
-              </div>
-            </div>
           </SheetHeader>
 
           {/* Products List */}
@@ -354,27 +220,13 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
                     <div className="grid grid-cols-1 gap-2">
                       {categoryProducts.map((product) => {
                         const isActivated = isProductActivated(product.id);
-                        const isSelectedForDownload = selectedForDownload.has(product.id);
                         const imageUrl = getProductImage(product.image_url);
 
                         return (
                           <div
                             key={product.id}
-                            className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-all ${
-                              isSelectedForDownload
-                                ? 'border-primary bg-primary/5'
-                                : 'border-border hover:border-muted-foreground/50'
-                            }`}
+                            className="flex items-center gap-3 p-3 rounded-lg border-2 border-border hover:border-muted-foreground/50 transition-all"
                           >
-                            {/* Download Checkbox */}
-                            <Checkbox
-                              checked={isSelectedForDownload}
-                               onCheckedChange={(checked) =>
-                                 setDownloadSelection(product.id, checked === true)
-                               }
-                              className="shrink-0"
-                            />
-
                             {/* Image */}
                             <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center shrink-0 overflow-hidden">
                               {imageUrl ? (
@@ -429,27 +281,10 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
           </ScrollArea>
 
           {/* Footer */}
-          <div className="p-4 sm:p-6 border-t bg-card flex items-center justify-between gap-4">
-            <div className="text-sm text-muted-foreground">
+          <div className="p-4 sm:p-6 border-t bg-card">
+            <div className="text-sm text-muted-foreground text-center">
               {activatedCount} de {products?.length || 0} produtos ativos para venda
             </div>
-            <Button
-              onClick={handleDownload}
-              disabled={selectedForDownload.size === 0 || batchActivateMutation.isPending}
-              className="gap-2 bg-green-600 hover:bg-green-700"
-            >
-              {batchActivateMutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Ativando...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4" />
-                  Ativar ({selectedForDownload.size})
-                </>
-              )}
-            </Button>
           </div>
         </SheetContent>
       </Sheet>
@@ -464,6 +299,9 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
           productImageUrl={selectedProductForActivation.image_url}
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ['company-products'] });
+            queryClient.invalidateQueries({ queryKey: ['linha-products'] });
+            queryClient.invalidateQueries({ queryKey: ['company-items'] });
+            queryClient.invalidateQueries({ queryKey: ['company-stock'] });
           }}
         />
       )}
