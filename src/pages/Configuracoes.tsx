@@ -7,7 +7,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Building2, Users, Bell, Shield, Database, Upload, ImageIcon, Trash2, KeyRound, Save, Loader2 } from 'lucide-react';
+import { Building2, Users, Bell, Shield, Database, Upload, ImageIcon, Trash2, KeyRound, Save, Loader2, CreditCard } from 'lucide-react';
 import EditarDadosFiscaisDialog from "@/components/configuracoes/EditarDadosFiscaisDialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -19,6 +19,12 @@ const settingsGroups = [
     title: 'Usuários e Permissões',
     description: 'Controle o acesso dos funcionários ao sistema.',
     path: '/configuracoes/usuarios',
+  },
+  {
+    icon: CreditCard,
+    title: 'Formas de Pagamento',
+    description: 'Configure formas e condições de pagamento, descontos e juros.',
+    path: '/configuracoes/pagamento',
   },
   {
     icon: Bell,
