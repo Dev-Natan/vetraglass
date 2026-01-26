@@ -108,17 +108,24 @@ export function FecharCaixaDialog({
   const fixedFund = companyCash?.fixed_fund || summary.openingAmount;
   const expectedCash = summary.openingAmount + summary.totalDinheiro + (summary.totalEntradas || 0) - (summary.totalSaidas || 0);
   const difference = totalCounted - (expectedCash + summary.totalCartao + summary.totalPix);
-  const grossExcess = Math.max(0, totalCounted - fixedFund);
+  const profit = totalCounted - fixedFund; // Pode ser negativo
   const pendingAdvances = advancesSummary?.total_pending || 0;
   
+  // Calcular retorno do fundo fixo (mínimo entre contado e fundo)
+  const fundToReturn = Math.min(totalCounted, fixedFund);
+  
+  // Compensação só ocorre se houver lucro
   const compensation = useMemo(() => {
-    if (grossExcess <= 0 || pendingAdvances <= 0) {
-      return { amount: 0, netExcess: grossExcess };
+    if (profit <= 0 || pendingAdvances <= 0) {
+      return { amount: 0, netProfit: Math.max(0, profit) };
     }
-    const compensationAmount = Math.min(grossExcess, pendingAdvances);
-    return { amount: compensationAmount, netExcess: grossExcess - compensationAmount };
-  }, [grossExcess, pendingAdvances]);
+    const compensationAmount = Math.min(profit, pendingAdvances);
+    return { amount: compensationAmount, netProfit: profit - compensationAmount };
+  }, [profit, pendingAdvances]);
 
+  // Total que retorna para empresa = fundo + lucro líquido
+  const totalToReturn = fundToReturn + compensation.netProfit;
+  
   const todayReinforcementsTotal = todayAdvances.reduce((sum, adv) => sum + Number(adv.amount), 0);
   const closingBelowFund = totalCounted < fixedFund && totalCounted > 0;
   const hasCounts = cashCounts.some(c => c.amount > 0);
@@ -240,32 +247,43 @@ export function FecharCaixaDialog({
             )}
 
             {/* Resumo do Recolhimento */}
-            {hasCounts && grossExcess > 0 && companyCash && (
+            {hasCounts && totalCounted > 0 && companyCash && (
               <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2 text-sm">
                 <h4 className="font-medium flex items-center gap-2">
                   <Wallet className="h-4 w-4 text-primary" />
                   Resumo do Fechamento
                 </h4>
                 <div className="space-y-1 pl-4">
+                  {/* Retorno do fundo fixo */}
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Excedente bruto:</span>
-                    <span>{formatCurrency(grossExcess)}</span>
+                    <span className="text-muted-foreground">Retorno fundo fixo:</span>
+                    <span className="text-primary">{formatCurrency(fundToReturn)}</span>
                   </div>
+                  {/* Lucro do dia */}
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Lucro do dia:</span>
+                    <span className={profit >= 0 ? 'text-green-600' : 'text-red-600'}>
+                      {profit >= 0 ? '+' : ''}{formatCurrency(profit)}
+                    </span>
+                  </div>
+                  {/* Compensação de adiantamentos */}
                   {compensation.amount > 0 && (
                     <div className="flex justify-between text-amber-600">
-                      <span>Compensação:</span>
+                      <span>Compensação adiant.:</span>
                       <span>-{formatCurrency(compensation.amount)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between font-medium text-green-600">
-                    <span>Excedente líquido:</span>
-                    <span>{formatCurrency(compensation.netExcess)}</span>
+                  <Separator className="my-1" />
+                  {/* Total retornado para empresa */}
+                  <div className="flex justify-between font-medium text-primary">
+                    <span>Total para empresa:</span>
+                    <span>{formatCurrency(totalToReturn)}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t">
                   <span>Caixa Empresa: {formatCurrency(companyCash.current_balance)}</span>
                   <ArrowRight className="h-3 w-3" />
-                  <span className="text-primary font-medium">{formatCurrency(companyCash.current_balance + compensation.netExcess)}</span>
+                  <span className="text-primary font-medium">{formatCurrency(companyCash.current_balance + totalToReturn)}</span>
                 </div>
               </div>
             )}
