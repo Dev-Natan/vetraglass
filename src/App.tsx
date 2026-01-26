@@ -48,6 +48,7 @@ const ConfiguracoesUsuarios = lazy(() => import("./pages/ConfiguracoesUsuarios")
 const ConfiguracoesPerfis = lazy(() => import("./pages/ConfiguracoesPerfis"));
 const ConfiguracoesNotificacoes = lazy(() => import("./pages/ConfiguracoesNotificacoes"));
 const ConfiguracoesSeguranca = lazy(() => import("./pages/ConfiguracoesSeguranca"));
+const ConfiguracoesPagamento = lazy(() => import("./pages/ConfiguracoesPagamento"));
 const ConfiguracoesDados = lazy(() => import("./pages/ConfiguracoesDados"));
 
 // Admin pages - lazy loaded (only for SaaS admins)
@@ -229,6 +230,9 @@ function AppRoutes() {
       } />
       <Route path="/configuracoes/dados" element={
         <ProtectedRoute><LazyRoute><ConfiguracoesDados /></LazyRoute></ProtectedRoute>
+      } />
+      <Route path="/configuracoes/pagamento" element={
+        <ProtectedRoute><LazyRoute><ConfiguracoesPagamento /></LazyRoute></ProtectedRoute>
       } />
       
       {/* Admin routes - all lazy */}
