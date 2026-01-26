@@ -27,6 +27,7 @@ import { MovimentacaoCaixaDialog } from '@/components/caixa/MovimentacaoCaixaDia
 import { CaixaAlertasHoje } from '@/components/caixa/CaixaAlertasHoje';
 import { CaixaMovimentacoesTable } from '@/components/caixa/CaixaMovimentacoesTable';
 import { PendingDepositsAlert } from '@/components/caixa/PendingDepositsAlert';
+import { ReceivePaymentDialog } from '@/components/caixa/ReceivePaymentDialog';
 import { generateSalePdf } from '@/utils/generateSalePdf';
 import { generateDailyCashPdf } from '@/utils/generateDailyCashPdf';
 
@@ -65,6 +66,23 @@ export default function CaixaVendas() {
   
   // Dialog movimentação do caixa do dia
   const [movimentacaoCaixaOpen, setMovimentacaoCaixaOpen] = useState(false);
+  
+  // Dialog recebimento de pagamento
+  const [receivePaymentOpen, setReceivePaymentOpen] = useState(false);
+  const [selectedReceivable, setSelectedReceivable] = useState<{
+    id: string;
+    customer_name: string;
+    description: string;
+    total_amount: number;
+    paid_amount: number | null;
+    installment_number: number;
+    total_installments: number;
+    due_date: string;
+    status: string;
+    sale_id?: string | null;
+    ordem_servico_id?: string | null;
+    quote_id?: string | null;
+  } | null>(null);
 
   // Buscar caixa da empresa (usado para abrir/fechar caixa)
   const { data: companyCash } = useQuery({
@@ -442,38 +460,38 @@ export default function CaixaVendas() {
     }
   };
 
-  // Handler: Receber parcela via caixa do dia
-  const handleReceivePayment = async (receivable: { id: string; customer_name: string; total_amount: number; installment_number: number; total_installments: number }) => {
-    if (!openCashRegister?.id || !currentCompany?.id || !user?.id) {
+  // Handler: Receber parcela via caixa do dia - abre dialog com suporte a pagamento parcial
+  const handleReceivePayment = (receivable: { 
+    id: string; 
+    customer_name: string; 
+    description?: string;
+    total_amount: number; 
+    paid_amount?: number | null;
+    installment_number: number; 
+    total_installments: number;
+    due_date?: string;
+    status?: string;
+    sale_id?: string | null;
+    ordem_servico_id?: string | null;
+  }) => {
+    if (!openCashRegister?.id) {
       toast.error('Caixa não está aberto');
       return;
     }
-    try {
-      // Criar movimento de entrada no caixa
-      await supabase.from('cash_movements').insert({
-        company_id: currentCompany.id,
-        cash_register_id: openCashRegister.id,
-        type: 'entrada',
-        category: 'recebimento',
-        amount: receivable.total_amount,
-        description: `Parcela ${receivable.installment_number}/${receivable.total_installments} - ${receivable.customer_name}`,
-        receivable_id: receivable.id,
-        payment_method: 'dinheiro',
-        created_by: user.id,
-      });
-      // Atualizar status da parcela
-      await supabase.from('accounts_receivable').update({ 
-        status: 'paid', 
-        paid_date: new Date().toISOString(),
-        paid_amount: receivable.total_amount,
-        payment_method: 'dinheiro'
-      }).eq('id', receivable.id);
-      toast.success('Parcela recebida com sucesso!');
-      queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
-      queryClient.invalidateQueries({ queryKey: ['receivables-due-today'] });
-    } catch (error: any) {
-      toast.error(`Erro: ${error.message}`);
-    }
+    setSelectedReceivable({
+      id: receivable.id,
+      customer_name: receivable.customer_name,
+      description: receivable.description || `Parcela ${receivable.installment_number}/${receivable.total_installments}`,
+      total_amount: receivable.total_amount,
+      paid_amount: receivable.paid_amount || null,
+      installment_number: receivable.installment_number,
+      total_installments: receivable.total_installments,
+      due_date: receivable.due_date || format(new Date(), 'yyyy-MM-dd'),
+      status: receivable.status || 'pending',
+      sale_id: receivable.sale_id || null,
+      ordem_servico_id: receivable.ordem_servico_id || null,
+    });
+    setReceivePaymentOpen(true);
   };
 
   const isCashOpen = !!openCashRegister;
@@ -649,6 +667,18 @@ export default function CaixaVendas() {
           currentDailyBalance={cashSummary.expectedAmount}
         />
       )}
+
+      {/* Dialog Receber Pagamento - suporta pagamento parcial */}
+      <ReceivePaymentDialog
+        open={receivePaymentOpen}
+        onOpenChange={setReceivePaymentOpen}
+        receivable={selectedReceivable}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['receivables-due-today'] });
+          queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
+          queryClient.invalidateQueries({ queryKey: ['cash-summary'] });
+        }}
+      />
     </MainLayout>
   );
 }
