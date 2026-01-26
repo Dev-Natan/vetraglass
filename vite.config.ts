@@ -50,9 +50,23 @@ export default defineConfig(({ mode }) => ({
         lang: 'pt-BR'
       },
       workbox: {
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MB limit
+        skipWaiting: true,
+        clientsClaim: true,
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
+          {
+            urlPattern: /\.(?:js|css|html)$/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'app-assets',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60
+              },
+              networkTimeoutSeconds: 3
+            }
+          },
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
             handler: 'NetworkFirst',
@@ -60,8 +74,9 @@ export default defineConfig(({ mode }) => ({
               cacheName: 'supabase-cache',
               expiration: {
                 maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 // 24 hours
-              }
+                maxAgeSeconds: 60 * 60
+              },
+              networkTimeoutSeconds: 5
             }
           }
         ]
