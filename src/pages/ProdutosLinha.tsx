@@ -68,15 +68,15 @@ export default function ProdutosLinha() {
 
   const currentLinha = linhaParam ? decodeURIComponent(linhaParam) : '';
 
-  // Fetch products for this linha
+  // Fetch ALL product templates for this linha (active templates only - global status)
   const { data: products, isLoading } = useQuery({
-    queryKey: ['linha-products', currentLinha, showActive],
+    queryKey: ['linha-products', currentLinha],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('product_templates')
         .select('*')
         .eq('linha', currentLinha)
-        .eq('is_active', showActive)
+        .eq('is_active', true) // Templates globalmente ativos
         .order('name');
       
       if (error) throw error;
@@ -85,14 +85,14 @@ export default function ProdutosLinha() {
     enabled: !!currentLinha,
   });
 
-  // Fetch company products to know which ones are activated
+  // Fetch company products with their activation status
   const { data: companyProducts = [] } = useQuery({
     queryKey: ['company-products', currentCompany?.id],
     queryFn: async () => {
       if (!currentCompany?.id) return [];
       const { data, error } = await supabase
         .from('company_products')
-        .select('id, product_template_id, is_active')
+        .select('id, product_template_id, is_active, commercial_name')
         .eq('company_id', currentCompany.id);
       
       if (error) throw error;
@@ -101,9 +101,9 @@ export default function ProdutosLinha() {
     enabled: !!currentCompany?.id,
   });
 
-  // Fetch custom products for this linha
+  // Fetch custom products for this linha (all, we filter by showActive in filteredProducts)
   const { data: customProducts = [] } = useQuery({
-    queryKey: ['custom-products', currentCompany?.id, currentLinha, showActive],
+    queryKey: ['custom-products', currentCompany?.id, currentLinha],
     queryFn: async () => {
       if (!currentCompany?.id) return [];
       const { data, error } = await supabase
@@ -111,8 +111,7 @@ export default function ProdutosLinha() {
         .select('id, commercial_name, description, category, linha, image_url, is_active, is_custom, base_price')
         .eq('company_id', currentCompany.id)
         .eq('linha', currentLinha)
-        .eq('is_custom', true)
-        .eq('is_active', showActive);
+        .eq('is_custom', true);
       
       if (error) throw error;
       return (data || []) as CustomProduct[];
@@ -195,6 +194,29 @@ export default function ProdutosLinha() {
     },
   });
 
+  // Reactivate custom product
+  const reactivateCustomProductMutation = useMutation({
+    mutationFn: async (productId: string) => {
+      if (!currentCompany?.id) throw new Error('Empresa não selecionada');
+      
+      const { error } = await supabase
+        .from('company_products')
+        .update({ is_active: true, updated_at: new Date().toISOString() })
+        .eq('company_id', currentCompany.id)
+        .eq('id', productId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-products'] });
+      queryClient.invalidateQueries({ queryKey: ['custom-products'] });
+      toast.success('Produto personalizado reativado!');
+    },
+    onError: (error) => {
+      toast.error('Erro ao reativar: ' + error.message);
+    },
+  });
+
   // Toggle active mutation (for templates - admin only)
   const toggleActiveMutation = useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
@@ -226,15 +248,25 @@ export default function ProdutosLinha() {
     return Array.from(categories).sort();
   }, [products, customProducts]);
 
-  // Combine and filter products
+  // Combine and filter products based on showActive tab
   const filteredProducts = useMemo((): DisplayProduct[] => {
-    // Filter template products that are activated
+    // Filter template products based on company activation status
     const templateFiltered = (products || [])
       .filter((p) => {
         const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
-        const isActivated = companyProducts.some(cp => cp.product_template_id === p.id && cp.is_active);
-        return matchesSearch && matchesCategory && isActivated;
+        
+        // Find the company product record for this template
+        const companyProduct = companyProducts.find(cp => cp.product_template_id === p.id);
+        
+        // Check if matches the current tab (showActive)
+        if (showActive) {
+          // Show only products that are activated for the company
+          return matchesSearch && matchesCategory && companyProduct?.is_active === true;
+        } else {
+          // Show products that exist in company_products but are deactivated
+          return matchesSearch && matchesCategory && companyProduct && companyProduct.is_active === false;
+        }
       })
       .map((p): DisplayProduct => ({
         id: p.id,
@@ -243,16 +275,17 @@ export default function ProdutosLinha() {
         category: p.category,
         linha: p.linha,
         image_url: p.image_url,
-        is_active: p.is_active,
+        is_active: companyProducts.find(cp => cp.product_template_id === p.id)?.is_active ?? false,
         is_custom: false,
       }));
 
-    // Filter custom products
+    // Filter custom products based on their is_active status
     const customFiltered = customProducts
       .filter((p) => {
         const matchesSearch = p.commercial_name.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
-        return matchesSearch && matchesCategory;
+        const matchesActiveStatus = p.is_active === showActive;
+        return matchesSearch && matchesCategory && matchesActiveStatus;
       })
       .map((p): DisplayProduct => ({
         id: p.id,
@@ -267,7 +300,7 @@ export default function ProdutosLinha() {
       }));
 
     return [...templateFiltered, ...customFiltered];
-  }, [products, customProducts, searchTerm, selectedCategory, companyProducts]);
+  }, [products, customProducts, searchTerm, selectedCategory, companyProducts, showActive]);
 
   const getCategoryIcon = (category: string) => {
     // Simple placeholder icons based on category
@@ -346,7 +379,6 @@ export default function ProdutosLinha() {
             </div>
           ) : filteredProducts && filteredProducts.length > 0 ? (
             filteredProducts.map((product) => {
-              const isActivated = product.is_custom || isProductActivated(product.id);
               return (
                 <div
                   key={product.id}
@@ -377,34 +409,38 @@ export default function ProdutosLinha() {
                     </div>
                   </div>
 
-                  {/* Actions */}
+                  {/* Actions - based on product.is_active status */}
                   <div className="flex gap-2">
-                    {product.is_custom ? (
+                    {product.is_active ? (
+                      // Product is active - show deactivate button
                       <Button
                         size="sm"
                         className="flex-1 bg-amber-400 hover:bg-amber-500 text-amber-900 font-medium text-xs h-9"
-                        onClick={() => deactivateCustomProductMutation.mutate(product.id)}
-                        disabled={deactivateCustomProductMutation.isPending}
-                      >
-                        Desabilitar
-                      </Button>
-                    ) : isActivated ? (
-                      <Button
-                        size="sm"
-                        className="flex-1 bg-amber-400 hover:bg-amber-500 text-amber-900 font-medium text-xs h-9"
-                        onClick={() => deactivateProductMutation.mutate(product.id)}
-                        disabled={deactivateProductMutation.isPending}
+                        onClick={() => {
+                          if (product.is_custom) {
+                            deactivateCustomProductMutation.mutate(product.id);
+                          } else {
+                            deactivateProductMutation.mutate(product.id);
+                          }
+                        }}
+                        disabled={deactivateProductMutation.isPending || deactivateCustomProductMutation.isPending}
                       >
                         Desabilitar
                       </Button>
                     ) : (
+                      // Product is inactive - show activate button
                       <Button
                         size="sm"
                         className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium text-xs h-9"
                         onClick={() => {
-                          setSelectedProductForActivation({ id: product.id, name: product.name });
-                          setActivateDialogOpen(true);
+                          if (product.is_custom) {
+                            reactivateCustomProductMutation.mutate(product.id);
+                          } else {
+                            // For template products, use the RPC function
+                            activateProductMutation.mutate(product.id);
+                          }
                         }}
+                        disabled={activateProductMutation.isPending || reactivateCustomProductMutation.isPending}
                       >
                         Habilitar
                       </Button>
@@ -455,7 +491,6 @@ export default function ProdutosLinha() {
           ) : filteredProducts && filteredProducts.length > 0 ? (
             <div className="divide-y">
               {filteredProducts.map((product) => {
-                const isActivated = product.is_custom || isProductActivated(product.id);
                 return (
                 <div
                   key={product.id}
@@ -491,34 +526,38 @@ export default function ProdutosLinha() {
                     {product.is_custom ? '-' : '5'}
                   </div>
 
-                  {/* Actions */}
+                  {/* Actions - based on product.is_active status */}
                   <div className="col-span-6 flex items-center justify-end gap-2">
-                    {product.is_custom ? (
+                    {product.is_active ? (
+                      // Product is active - show deactivate button
                       <Button
                         size="sm"
                         className="bg-amber-400 hover:bg-amber-500 text-amber-900 font-medium"
-                        onClick={() => deactivateCustomProductMutation.mutate(product.id)}
-                        disabled={deactivateCustomProductMutation.isPending}
-                      >
-                        Desabilitar
-                      </Button>
-                    ) : isActivated ? (
-                      <Button
-                        size="sm"
-                        className="bg-amber-400 hover:bg-amber-500 text-amber-900 font-medium"
-                        onClick={() => deactivateProductMutation.mutate(product.id)}
-                        disabled={deactivateProductMutation.isPending}
+                        onClick={() => {
+                          if (product.is_custom) {
+                            deactivateCustomProductMutation.mutate(product.id);
+                          } else {
+                            deactivateProductMutation.mutate(product.id);
+                          }
+                        }}
+                        disabled={deactivateProductMutation.isPending || deactivateCustomProductMutation.isPending}
                       >
                         Desabilitar
                       </Button>
                     ) : (
+                      // Product is inactive - show activate button
                       <Button
                         size="sm"
                         className="bg-green-500 hover:bg-green-600 text-white font-medium"
                         onClick={() => {
-                          setSelectedProductForActivation({ id: product.id, name: product.name });
-                          setActivateDialogOpen(true);
+                          if (product.is_custom) {
+                            reactivateCustomProductMutation.mutate(product.id);
+                          } else {
+                            // For template products, use the RPC function
+                            activateProductMutation.mutate(product.id);
+                          }
                         }}
+                        disabled={activateProductMutation.isPending || reactivateCustomProductMutation.isPending}
                       >
                         Habilitar
                       </Button>
