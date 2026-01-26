@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -27,7 +28,7 @@ const iconStyles = {
   warning: 'bg-amber-500/10 text-amber-500',
 };
 
-export function MetricCard({ 
+export const MetricCard = memo(function MetricCard({ 
   title, 
   value, 
   icon: Icon, 
@@ -56,7 +57,7 @@ export function MetricCard({
             <span className={cn(
               "text-sm font-medium px-2 py-1 rounded-full",
               trend.isPositive 
-                ? "bg-emerald-500/10 text-emerald-600" 
+                ? "bg-success/10 text-success" 
                 : "bg-destructive/10 text-destructive"
             )}>
               {trend.isPositive ? '+' : ''}{trend.value}%
@@ -69,4 +70,4 @@ export function MetricCard({
       </div>
     </div>
   );
-}
+});

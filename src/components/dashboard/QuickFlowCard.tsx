@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,7 +26,7 @@ const quickFlowActions = [
   { label: 'Plano de Corte', path: '/plano-corte', variant: 'outline' as const },
 ];
 
-export function QuickFlowCard() {
+export const QuickFlowCard = memo(function QuickFlowCard() {
   return (
     <Card className="bg-gradient-to-r from-muted/30 to-muted/10 border-border/50">
       <CardContent className="p-4">
@@ -72,4 +73,4 @@ export function QuickFlowCard() {
       </CardContent>
     </Card>
   );
-}
+});

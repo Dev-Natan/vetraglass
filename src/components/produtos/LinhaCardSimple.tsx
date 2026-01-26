@@ -1,7 +1,7 @@
+import { memo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 interface LinhaCardSimpleProps {
   linha: string;
@@ -10,7 +10,7 @@ interface LinhaCardSimpleProps {
   isRemovable?: boolean;
 }
 
-export function LinhaCardSimple({ 
+export const LinhaCardSimple = memo(function LinhaCardSimple({ 
   linha, 
   onViewProducts,
   onRemove,
@@ -25,7 +25,7 @@ export function LinhaCardSimple({
             e.stopPropagation();
             onRemove();
           }}
-          className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 z-10 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-white transition-colors shadow-sm"
+          className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 z-10 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-destructive hover:bg-destructive/90 flex items-center justify-center text-destructive-foreground transition-colors shadow-sm"
         >
           <X className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
         </button>
@@ -39,7 +39,7 @@ export function LinhaCardSimple({
         
         <Button 
           onClick={onViewProducts}
-          className="w-full bg-sky-500 hover:bg-sky-600 text-white text-xs sm:text-sm h-8 sm:h-9"
+          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground text-xs sm:text-sm h-8 sm:h-9"
           size="sm"
         >
           Ver produtos
@@ -47,4 +47,4 @@ export function LinhaCardSimple({
       </div>
     </Card>
   );
-}
+});
