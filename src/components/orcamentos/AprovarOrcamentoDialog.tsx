@@ -238,6 +238,9 @@ export function AprovarOrcamentoDialog({
 
       const finalValue = paymentCalculation.valorFinal;
       const reajusteAplicado = useCurrentPrices && hasAnyPriceChanges;
+      
+      // Calculate correct paid_amount for OS
+      const osPaidAmount = hasEntry && isCaixaAberto ? entryValue : 0;
 
       // If there's an entry and cash is not open, error
       if (hasEntry && !isCaixaAberto) {
@@ -302,8 +305,8 @@ export function AprovarOrcamentoDialog({
           priority,
           estimated_end: estimatedEnd?.toISOString().split('T')[0],
           total_amount: finalValue,
-          paid_amount: entryValue,
-          pending_amount: pendingAmount,
+          paid_amount: osPaidAmount,
+          pending_amount: finalValue - osPaidAmount,
           notes,
           current_stage: 'Aguardando início',
           stages: JSON.stringify([
@@ -320,47 +323,93 @@ export function AprovarOrcamentoDialog({
 
       let saleId: string | null = null;
 
-      // 4. If there's an entry, create partial sale
-      if (hasEntry && openCashRegister) {
-        const { data: sale, error: saleError } = await supabase
-          .from('sales')
+      // 4. If there's an entry, create deposit record and partial sale
+      if (hasEntry) {
+        // 4.1 Create quote_deposits record
+        const { error: depositError } = await supabase
+          .from('quote_deposits')
           .insert({
             company_id: currentCompany.id,
-            cash_register_id: openCashRegister.id,
-            customer_name: quote.customer_name,
-            subtotal: entryValue,
-            total_amount: entryValue,
-            payment_method: entryPaymentMethod,
-            payment_status: 'paid',
-            sale_type: 'partial',
-            paid_amount: entryValue,
-            pending_amount: pendingAmount,
             quote_id: quote.id,
             ordem_servico_id: ordemServico.id,
-            sold_by: user.id,
-            notes: `Entrada do orçamento #${quote.quote_number.toString().padStart(4, '0')}`,
-          })
-          .select()
-          .single();
+            customer_name: quote.customer_name,
+            customer_phone: quote.customer_phone,
+            amount: entryValue,
+            payment_method: entryPaymentMethod,
+            status: isCaixaAberto ? 'received' : 'pending',
+            cash_register_id: isCaixaAberto ? openCashRegister?.id : null,
+            created_by: user.id,
+          });
 
-        if (saleError) throw saleError;
-        saleId = sale.id;
+        if (depositError) {
+          console.error('Error creating deposit:', depositError);
+        }
 
-        // Create sale item
-        await supabase.from('sale_items').insert({
-          sale_id: sale.id,
-          item_name: `Entrada - Orçamento #${quote.quote_number.toString().padStart(4, '0')}`,
-          item_unit: 'un',
-          quantity: 1,
-          unit_price: entryValue,
-          total_price: entryValue,
-        });
+        // 4.2 Create accounts_receivable for the entry
+        const { error: entryReceivableError } = await supabase
+          .from('accounts_receivable')
+          .insert({
+            company_id: currentCompany.id,
+            ordem_servico_id: ordemServico.id,
+            quote_id: quote.id,
+            customer_name: quote.customer_name,
+            description: `Entrada - Orç. #${quote.quote_number.toString().padStart(4, '0')}`,
+            total_amount: entryValue,
+            paid_amount: isCaixaAberto ? entryValue : 0,
+            status: isCaixaAberto ? 'paid' : 'pending',
+            due_date: format(new Date(), 'yyyy-MM-dd'),
+            receivable_type: 'entrada_orcamento',
+            installment_number: 0,
+            total_installments: 0,
+            created_by: user.id,
+          });
 
-        // Update OS with sale_id
-        await supabase
-          .from('ordens_servico')
-          .update({ sale_id: sale.id })
-          .eq('id', ordemServico.id);
+        if (entryReceivableError) {
+          console.error('Error creating entry receivable:', entryReceivableError);
+        }
+
+        // 4.3 If cash register is open, create partial sale
+        if (openCashRegister) {
+          const { data: sale, error: saleError } = await supabase
+            .from('sales')
+            .insert({
+              company_id: currentCompany.id,
+              cash_register_id: openCashRegister.id,
+              customer_name: quote.customer_name,
+              subtotal: entryValue,
+              total_amount: entryValue,
+              payment_method: entryPaymentMethod,
+              payment_status: 'paid',
+              sale_type: 'partial',
+              paid_amount: entryValue,
+              pending_amount: pendingAmount,
+              quote_id: quote.id,
+              ordem_servico_id: ordemServico.id,
+              sold_by: user.id,
+              notes: `Entrada do orçamento #${quote.quote_number.toString().padStart(4, '0')}`,
+            })
+            .select()
+            .single();
+
+          if (saleError) throw saleError;
+          saleId = sale.id;
+
+          // Create sale item
+          await supabase.from('sale_items').insert({
+            sale_id: sale.id,
+            item_name: `Entrada - Orçamento #${quote.quote_number.toString().padStart(4, '0')}`,
+            item_unit: 'un',
+            quantity: 1,
+            unit_price: entryValue,
+            total_price: entryValue,
+          });
+
+          // Update OS with sale_id
+          await supabase
+            .from('ordens_servico')
+            .update({ sale_id: sale.id })
+            .eq('id', ordemServico.id);
+        }
       }
 
       // 5. Create accounts_receivable for pending installments
@@ -431,6 +480,8 @@ export function AprovarOrcamentoDialog({
       queryClient.invalidateQueries({ queryKey: ['sales-today'] });
       queryClient.invalidateQueries({ queryKey: ['ordens-servico'] });
       queryClient.invalidateQueries({ queryKey: ['accounts-receivable'] });
+      queryClient.invalidateQueries({ queryKey: ['quote-deposit'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-deposits'] });
       onOpenChange(false);
       onSuccess?.();
     },

@@ -61,7 +61,7 @@ export function OSFinancialDashboard({
     enabled: !!ordemServicoId,
   });
 
-  // Fetch entry deposit info
+  // Fetch entry deposit info from quote_deposits
   const { data: depositInfo } = useQuery({
     queryKey: ['quote-deposit', quoteId],
     queryFn: async () => {
@@ -77,6 +77,30 @@ export function OSFinancialDashboard({
     },
     enabled: !!quoteId,
   });
+
+  // Fallback: fetch entry from sales if quote_deposits is empty
+  const { data: entrySale } = useQuery({
+    queryKey: ['os-entry-sale', ordemServicoId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('sales')
+        .select('*')
+        .eq('ordem_servico_id', ordemServicoId)
+        .eq('sale_type', 'partial')
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!ordemServicoId && !depositInfo,
+  });
+
+  // Combine deposit info: prefer quote_deposits, fallback to sales
+  const effectiveDeposit = depositInfo || (entrySale ? {
+    amount: entrySale.total_amount,
+    payment_method: entrySale.payment_method,
+    status: entrySale.payment_status === 'paid' ? 'paid' : 'pending',
+  } : null);
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -213,7 +237,7 @@ export function OSFinancialDashboard({
       </Card>
 
       {/* Entry Info */}
-      {depositInfo && (
+      {effectiveDeposit && (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
@@ -224,13 +248,13 @@ export function OSFinancialDashboard({
           <CardContent>
             <div className="flex items-center justify-between">
               <div>
-                <div className="font-bold text-lg">{formatCurrency(depositInfo.amount)}</div>
+                <div className="font-bold text-lg">{formatCurrency(effectiveDeposit.amount)}</div>
                 <div className="text-xs text-muted-foreground">
-                  {getPaymentMethodLabel(depositInfo.payment_method)}
+                  {getPaymentMethodLabel(effectiveDeposit.payment_method)}
                 </div>
               </div>
-              <Badge variant={depositInfo.status === 'paid' ? 'default' : depositInfo.status === 'pending' ? 'secondary' : 'outline'}>
-                {depositInfo.status === 'paid' ? 'Pago' : depositInfo.status === 'pending' ? 'Pendente' : 'Faturado'}
+              <Badge variant={effectiveDeposit.status === 'paid' ? 'default' : effectiveDeposit.status === 'pending' ? 'secondary' : 'outline'}>
+                {effectiveDeposit.status === 'paid' ? 'Pago' : effectiveDeposit.status === 'pending' ? 'Pendente' : 'Faturado'}
               </Badge>
             </div>
           </CardContent>
