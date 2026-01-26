@@ -1,227 +1,193 @@
 
-# Plano: Precificação Integrada ao Produto
+# Plano: Correção do Retorno do Fundo Fixo no Fechamento de Caixa
 
-## Objetivo
-Simplificar o sistema de precificação removendo o módulo separado (`/precos`) e integrando a definição de preços diretamente na página de produtos. Ao ativar um produto para venda, o usuário definirá o preço do produto e, se o produto contiver vidros, configurará também os preços por cor e espessura.
+## Problema Identificado
 
----
+O sistema atual só retorna o **excedente** (valor acima do fundo fixo) para o caixa da empresa, mas **não retorna o próprio fundo fixo**. Isso causa uma perda contábil progressiva a cada ciclo de abertura/fechamento.
 
-## Visão Geral das Mudanças
-
+### Exemplo do Bug:
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│                    FLUXO ATUAL                                  │
-├─────────────────────────────────────────────────────────────────┤
-│  Produtos ──────► Ativar ──────► Módulo Preços (separado)       │
-│                                       ↓                         │
-│                              Definir preço produto              │
-│                              Definir matriz vidros              │
-└─────────────────────────────────────────────────────────────────┘
-
-                              ↓ ↓ ↓
-
-┌─────────────────────────────────────────────────────────────────┐
-│                    FLUXO NOVO                                   │
-├─────────────────────────────────────────────────────────────────┤
-│  Produtos ──────► Ativar ──────► Definir Preços (no mesmo modal)│
-│                                       ↓                         │
-│                              ┌─ Preço base/m² do produto        │
-│                              └─ Se tem vidro: matriz de preços  │
-│                                 por cor × espessura             │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│ ABERTURA                                                    │
+├─────────────────────────────────────────────────────────────┤
+│ Caixa Empresa: R$ 2.000                                     │
+│ Transfere fundo fixo: -R$ 500                               │
+│ Caixa Empresa após: R$ 1.500                                │
+└─────────────────────────────────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────────┐
+│ OPERAÇÃO DO DIA                                             │
+├─────────────────────────────────────────────────────────────┤
+│ Vendas em dinheiro: +R$ 300                                 │
+│ Total no caixa: R$ 800                                      │
+└─────────────────────────────────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────────┐
+│ FECHAMENTO (ATUAL - INCORRETO)                              │
+├─────────────────────────────────────────────────────────────┤
+│ Excedente = R$ 800 - R$ 500 = R$ 300                        │
+│ Retorna apenas R$ 300 para empresa                          │
+│ Caixa Empresa final: R$ 1.800                               │
+│ ❌ PERDA DE R$ 200!                                         │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 1. Criar Novo Componente de Precificação para Ativação
+## Solução Proposta
 
-**Arquivo:** `src/components/produtos/ProductPricingStep.tsx`
+Alterar a lógica de fechamento para **retornar TODO o valor contado** para o caixa da empresa, incluindo o fundo fixo.
 
-Este componente será integrado ao fluxo de ativação de produtos e incluirá:
-
-- **Campos de Preço Base:**
-  - Custo por m² (R$)
-  - Preço de venda por m² (R$)
-  - Margem de lucro calculada automaticamente
-
-- **Seção de Vidros (condicional):**
-  - Aparece apenas se o produto contiver componentes do tipo `glass`
-  - Lista as cores de vidro disponíveis (ou permite criar novas)
-  - Lista as espessuras disponíveis (ou permite criar novas)
-  - Matriz simplificada para definir custo/preço por combinação
-
----
-
-## 2. Modificar Diálogo de Ativação de Produto
-
-**Arquivo:** `src/components/produtos/ActivateWithCompositionDialog.tsx`
-
-**Alterações:**
-- Adicionar uma nova etapa/tab "Preços" após a configuração de componentes
-- Integrar o componente `ProductPricingStep`
-- Detectar automaticamente se o produto tem vidros pelos componentes (`item_template.type === 'glass'`)
-- Ao confirmar ativação, salvar:
-  - `company_products.price_per_sqm` e `cost_per_sqm`
-  - Entradas na `glass_price_matrix` se houver vidros configurados
-
-**Fluxo do Diálogo:**
+### Fluxo Corrigido:
 ```text
-┌────────────────────────────────────────────────────────┐
-│            Ativar Produto para Venda                   │
-├────────────────────────────────────────────────────────┤
-│  [1. Componentes]  [2. Preços]  [3. Confirmar]         │
-│                                                        │
-│  Etapa 1: Selecionar/ajustar componentes               │
-│  Etapa 2: Definir preço do produto + vidros            │
-│  Etapa 3: Resumo e confirmação                         │
-└────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│ FECHAMENTO (CORRIGIDO)                                      │
+├─────────────────────────────────────────────────────────────┤
+│ 1. Registrar entrada: fundo fixo + lucro do dia             │
+│    → R$ 500 (fundo) + R$ 300 (lucro) = R$ 800               │
+│                                                             │
+│ 2. Compensar adiantamentos pendentes (se houver)            │
+│                                                             │
+│ 3. Caixa Empresa: R$ 1.500 + R$ 800 = R$ 2.300              │
+│ ✅ Saldo correto!                                           │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 3. Criar Componente de Edição de Preços (Para Produtos Já Ativados)
+## Implementação Técnica
 
-**Arquivo:** `src/components/produtos/EditProductPricingDialog.tsx`
+### 1. Atualizar função `close_daily_cash_multiuser`
 
-- Permite editar preços de produtos já habilitados
-- Acessível via botão na listagem de produtos (tab "Habilitados")
-- Mesma interface do `ProductPricingStep`, mas para edição
+**Mudanças na lógica:**
 
----
+```sql
+-- ANTES (incorreto):
+v_gross_excess := GREATEST(0, v_actual_amount - v_fixed_fund);
+-- Só retorna o excedente
 
-## 4. Atualizar Página de Produtos
+-- DEPOIS (correto):
+-- Retorna TODO o valor contado (fundo + excedente)
+-- Primeiro: retorna o fundo fixo
+-- Depois: calcula e retorna o lucro (após compensações)
+```
 
-**Arquivo:** `src/pages/ProdutosLinha.tsx`
+**Nova lógica de fechamento:**
 
-**Alterações:**
-- Adicionar botão "Editar Preços" para produtos habilitados
-- Exibir indicador visual de "Preço configurado" ou "Sem preço"
-- Mostrar o preço atual por m² no card do produto (se configurado)
+1. **Retornar o fundo fixo** para a empresa (R$ 500)
+2. **Calcular o lucro do dia**: `actual_amount - fixed_fund`
+3. **Compensar adiantamentos** do lucro (se houver)
+4. **Retornar lucro líquido** após compensações
 
----
+### 2. Criar duas movimentações separadas
 
-## 5. Atualizar Diálogo de Produto Personalizado
+Para maior clareza contábil:
 
-**Arquivo:** `src/components/produtos/CreateCustomProductDialog.tsx`
+| Movimento | Categoria | Valor | Descrição |
+|-----------|-----------|-------|-----------|
+| 1 | `retorno_fundo_fixo` | R$ 500 | "Retorno do fundo fixo do caixa" |
+| 2 | `lucro_caixa` | R$ 300 | "Recolhimento do caixa - lucro do dia" |
 
-**Alterações:**
-- Adicionar checkbox "Produto contém vidro"
-- Se marcado, exibir seção de configuração de preços de vidro
-- Campos adicionais:
-  - Custo por m² (já existe `base_price`, renomear para clareza)
-  - Preço de venda por m²
-  - Matriz de vidros (se aplicável)
+### 3. Atualizar campos de retorno
 
----
-
-## 6. Simplificar/Remover Módulo de Preços Separado
-
-**Opção A - Remoção Completa:**
-- Remover `/precos` do menu de navegação
-- Depreciar `src/pages/PrecosEmpresa.tsx`
-- Manter tabelas `glass_price_matrix`, `glass_colors`, `glass_thicknesses`
-
-**Opção B - Manter como Visão Geral (Recomendado):**
-- Simplificar `/precos` para ser apenas uma visualização consolidada
-- Remover capacidade de edição (redirecionar para o produto específico)
-- Servir como dashboard de preços configurados
+Adicionar novos campos ao retorno da função:
+- `fixed_fund_returned`: Valor do fundo fixo retornado
+- `profit_collected`: Lucro do dia recolhido
 
 ---
 
-## 7. Atualizar Hooks Existentes
+## Arquivos a Modificar
 
-**Arquivo:** `src/hooks/useGlassPricing.ts`
+### Banco de Dados
 
-**Alterações:**
-- Adicionar função para buscar preços de vidro por produto específico
-- Criar hook `useProductGlassPricing(productId)` para gerenciar preços de vidro no contexto do produto
+| Arquivo | Alteração |
+|---------|-----------|
+| Nova migração SQL | Recriar função `close_daily_cash_multiuser` com lógica corrigida |
+
+### Frontend (Ajustes visuais)
+
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/components/caixa/FecharCaixaDialog.tsx` | Exibir separadamente: fundo fixo + lucro no resumo |
 
 ---
 
-## Detalhes Técnicos
+## Detalhes da Migração SQL
 
-### Estrutura de Dados (Banco - sem alterações de schema)
+```sql
+-- Lógica principal corrigida:
 
-As tabelas existentes já suportam o novo fluxo:
-- `company_products`: `price_per_sqm`, `cost_per_sqm`
-- `glass_price_matrix`: mantém a matriz por empresa
+-- 1. Calcular valores
+v_profit := v_actual_amount - v_fixed_fund; -- Pode ser negativo (prejuízo)
+v_total_to_return := v_actual_amount; -- Todo o dinheiro contado
 
-### Lógica de Detecção de Vidro
+-- 2. Se há adiantamentos pendentes, compensar do lucro (não do fundo)
+IF v_profit > 0 THEN
+  v_compensation_result := compensate_advances_on_closing(..., v_profit);
+  v_net_profit := (v_compensation_result->>'net_excess')::NUMERIC;
+ELSE
+  v_net_profit := v_profit; -- Prejuízo integral
+END IF;
 
-```typescript
-// Detectar se produto tem vidro através dos componentes
-const hasGlassComponents = components?.some(
-  c => c.item_template?.type === 'glass'
+-- 3. SEMPRE retornar o fundo fixo (se foi contado)
+v_fund_to_return := LEAST(v_actual_amount, v_fixed_fund);
+
+-- 4. Registrar movimentação de retorno do fundo fixo
+INSERT INTO company_cash_movements (
+  type, category, amount, description
+) VALUES (
+  'entrada', 'retorno_fundo_fixo', v_fund_to_return,
+  'Retorno do fundo fixo do caixa do dia'
 );
-```
 
-### Validações
+-- 5. Registrar movimentação de lucro (se houver)
+IF v_net_profit > 0 THEN
+  INSERT INTO company_cash_movements (
+    type, category, amount, description
+  ) VALUES (
+    'entrada', 'lucro_caixa', v_net_profit,
+    'Recolhimento - lucro do caixa do dia'
+  );
+END IF;
 
-- Preço de venda deve ser maior ou igual ao custo
-- Ao ativar produto com vidro, exigir ao menos uma configuração de cor/espessura
-- Alertar se margem de lucro for negativa ou muito baixa
-
----
-
-## Interface de Usuário - Prévia Visual
-
-### Tab de Preços no Diálogo de Ativação
-
-```text
-┌──────────────────────────────────────────────────────────────┐
-│  ⚡ Definir Preços                                           │
-├──────────────────────────────────────────────────────────────┤
-│                                                              │
-│  📦 Preço do Produto                                         │
-│  ┌─────────────────────────────────────────────────────────┐ │
-│  │  Custo/m²:    R$ [_______]                              │ │
-│  │  Venda/m²:    R$ [_______]                              │ │
-│  │  Margem:      ⬤ 35.5%                                   │ │
-│  └─────────────────────────────────────────────────────────┘ │
-│                                                              │
-│  🔷 Preços de Vidro (produto contém 2 painéis de vidro)     │
-│  ┌─────────────────────────────────────────────────────────┐ │
-│  │  Cores: [Incolor] [Verde] [Fumê] [Bronze] [+ Adicionar] │ │
-│  │  Espessuras: [4mm] [6mm] [8mm] [+ Adicionar]            │ │
-│  │                                                         │ │
-│  │  Matriz de Preços:                                      │ │
-│  │  ┌──────────┬─────────┬─────────┬─────────┐             │ │
-│  │  │   Cor    │   4mm   │   6mm   │   8mm   │             │ │
-│  │  ├──────────┼─────────┼─────────┼─────────┤             │ │
-│  │  │ Incolor  │ C:___   │ C:___   │ C:___   │             │ │
-│  │  │          │ V:___   │ V:___   │ V:___   │             │ │
-│  │  ├──────────┼─────────┼─────────┼─────────┤             │ │
-│  │  │ Verde    │ C:___   │ C:___   │ C:___   │             │ │
-│  │  │          │ V:___   │ V:___   │ V:___   │             │ │
-│  │  └──────────┴─────────┴─────────┴─────────┘             │ │
-│  └─────────────────────────────────────────────────────────┘ │
-│                                                              │
-│                    [Voltar]  [Ativar Produto]                │
-└──────────────────────────────────────────────────────────────┘
+-- 6. Atualizar saldo da empresa
+UPDATE company_cash
+SET current_balance = current_balance + v_fund_to_return + GREATEST(0, v_net_profit);
 ```
 
 ---
 
-## Arquivos a Criar/Modificar
+## Casos de Uso Testados
 
-| Arquivo | Ação | Descrição |
-|---------|------|-----------|
-| `src/components/produtos/ProductPricingStep.tsx` | **Criar** | Componente de configuração de preços |
-| `src/components/produtos/EditProductPricingDialog.tsx` | **Criar** | Diálogo para editar preços de produtos ativos |
-| `src/components/produtos/GlassPricingMatrix.tsx` | **Criar** | Componente de matriz de preços de vidro (reutilizável) |
-| `src/components/produtos/ActivateWithCompositionDialog.tsx` | **Modificar** | Adicionar etapa de preços |
-| `src/components/produtos/CreateCustomProductDialog.tsx` | **Modificar** | Adicionar opção de vidro e preços |
-| `src/pages/ProdutosLinha.tsx` | **Modificar** | Adicionar indicadores de preço e botão de edição |
-| `src/hooks/useProductGlassPricing.ts` | **Criar** | Hook para gerenciar preços de vidro por produto |
-| `src/pages/PrecosEmpresa.tsx` | **Simplificar** | Converter para visualização apenas |
+### Caso 1: Fechamento Normal (com lucro)
+- Abertura: R$ 500
+- Vendas: R$ 300
+- Contado: R$ 800
+- **Retorno**: R$ 500 (fundo) + R$ 300 (lucro) = R$ 800 ✅
+
+### Caso 2: Fechamento Exato (sem lucro)
+- Abertura: R$ 500
+- Vendas: R$ 0
+- Contado: R$ 500
+- **Retorno**: R$ 500 (fundo) + R$ 0 (lucro) = R$ 500 ✅
+
+### Caso 3: Fechamento com Falta
+- Abertura: R$ 500
+- Contado: R$ 450
+- **Retorno**: R$ 450 (todo o contado)
+- Registra falta de R$ 50 para compensação futura ✅
+
+### Caso 4: Com Adiantamentos Pendentes
+- Abertura: R$ 500
+- Vendas: R$ 400
+- Contado: R$ 900
+- Adiantamentos: R$ 200
+- **Retorno**: R$ 500 (fundo) + R$ 400 (lucro) - R$ 200 (compensação) = R$ 700 ✅
 
 ---
 
-## Benefícios da Mudança
+## Resumo das Alterações
 
-1. **Experiência mais intuitiva**: Preço definido no contexto do produto
-2. **Menos navegação**: Não precisa ir para outro módulo
-3. **Fluxo completo**: Ativar produto + definir preço em um só lugar
-4. **Contexto visual**: Ver o produto enquanto define o preço
-5. **Menos erros**: Garantir que preços sejam configurados na ativação
-6. ** Aplicar as mudanças no orçamento, para que ao escolher a cor do vidros ( pra produtos que tem vidros em sua composiçao) altere automaticamente
+1. **Migração SQL**: Recriar `close_daily_cash_multiuser` para retornar o fundo fixo + lucro
+2. **Frontend**: Atualizar `FecharCaixaDialog.tsx` para exibir breakdown claro
+3. **Testes**: Validar os 4 casos de uso acima
