@@ -16,6 +16,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 interface ProductGlassPrice {
   id: string;
   glass_type: string;
+  glass_color: string;
   thickness_mm: number;
   price_per_sqm: number;
   cost_per_sqm: number;
@@ -37,6 +38,7 @@ interface AddProductPanelProps {
     total_price: number;
     has_glass?: boolean;
     glass_type?: string;
+    glass_color?: string;
     glass_thickness?: string;
     glass_price_per_sqm?: number;
     is_custom?: boolean;
@@ -175,6 +177,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
         .eq('company_product_id', companyProduct.id)
         .eq('is_active', true)
         .order('glass_type')
+        .order('glass_color')
         .order('thickness_mm');
       
       if (error) throw error;
@@ -256,6 +259,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
       total_price: totalPrice,
       has_glass: hasGlass && productUsesGlass,
       glass_type: hasGlass && selectedGlassPrice ? selectedGlassPrice.glass_type : undefined,
+      glass_color: hasGlass && selectedGlassPrice ? selectedGlassPrice.glass_color : undefined,
       glass_thickness: hasGlass && selectedGlassPrice ? `${selectedGlassPrice.thickness_mm}mm` : undefined,
       glass_price_per_sqm: hasGlass ? glassPricePerSqm : undefined,
       is_custom: selectedProduct.is_custom,
@@ -499,7 +503,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                         {productGlassPrices?.map((gp) => (
                           <SelectItem key={gp.id} value={gp.id}>
                             <div className="flex items-center justify-between gap-4 w-full">
-                              <span>{gp.glass_type} {gp.thickness_mm}mm</span>
+                              <span>{gp.glass_type} {gp.glass_color} {gp.thickness_mm}mm</span>
                               <span className="text-muted-foreground text-xs">
                                 {formatCurrency(gp.price_per_sqm)}/m²
                               </span>
