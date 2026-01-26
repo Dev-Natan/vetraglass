@@ -185,13 +185,19 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
       return results;
     },
     onSuccess: (results) => {
+      // Invalidar todos os caches relacionados à ativação
       queryClient.invalidateQueries({ queryKey: ['company-products'] });
       queryClient.invalidateQueries({ queryKey: ['linha-products'] });
       queryClient.invalidateQueries({ queryKey: ['allLinhas'] });
+      queryClient.invalidateQueries({ queryKey: ['company-items'] });
+      queryClient.invalidateQueries({ queryKey: ['company-stock'] });
+      queryClient.invalidateQueries({ queryKey: ['company-product-items'] });
       
       const count = results.length;
       if (count > 0) {
-        toast.success(`${count} produto(s) ativado(s) com sucesso!`);
+        toast.success(`${count} produto(s) ativado(s) com sucesso!`, {
+          description: 'Todos os perfis, vidros e acessórios foram adicionados à composição.'
+        });
         clearDownloadSelection();
       } else {
         toast.info('Nenhum produto novo foi ativado');
