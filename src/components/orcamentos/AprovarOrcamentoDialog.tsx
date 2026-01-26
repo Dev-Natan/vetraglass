@@ -375,352 +375,356 @@ export function AprovarOrcamentoDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <CheckCircle className="w-5 h-5 text-green-500" />
-            Aprovar Orçamento
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader className="pb-4 border-b">
+          <DialogTitle className="flex items-center gap-2 text-xl">
+            <CheckCircle className="w-6 h-6 text-green-500" />
+            Aprovar Orçamento #{quote.quote_number.toString().padStart(4, '0')}
           </DialogTitle>
-          <DialogDescription>
-            Orçamento #{quote.quote_number.toString().padStart(4, '0')} - {quote.customer_name}
+          <DialogDescription className="text-base">
+            {quote.customer_name} • Total: {formatCurrency(totalAmount)}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
-          {/* Visual Flow Preview */}
-          <div className="flex items-center justify-between gap-2 px-2">
-            {[
-              { label: 'Aprovação', active: true },
-              { label: 'Entrada', active: hasEntry },
-              { label: 'OS Criada', active: true },
-              { label: 'Produção', active: false },
-              { label: 'Faturamento', active: false },
-            ].map((step, idx, arr) => (
-              <div key={step.label} className="flex items-center gap-1 flex-1">
+        {/* Visual Flow Preview */}
+        <div className="flex items-center justify-between gap-2 px-4 py-3 bg-muted/30 rounded-lg mx-1">
+          {[
+            { label: 'Aprovação', active: true },
+            { label: 'Entrada', active: hasEntry },
+            { label: 'OS Criada', active: true },
+            { label: 'Produção', active: false },
+            { label: 'Faturamento', active: false },
+          ].map((step, idx, arr) => (
+            <div key={step.label} className="flex items-center gap-2 flex-1">
+              <div className={cn(
+                "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0",
+                step.active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+              )}>
+                {idx + 1}
+              </div>
+              <span className={cn(
+                "text-sm hidden md:block",
+                step.active ? "text-foreground font-medium" : "text-muted-foreground"
+              )}>
+                {step.label}
+              </span>
+              {idx < arr.length - 1 && (
                 <div className={cn(
-                  "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0",
-                  step.active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-                )}>
-                  {idx + 1}
+                  "flex-1 h-0.5 mx-2",
+                  step.active ? "bg-primary" : "bg-muted"
+                )} />
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div className="flex-1 overflow-y-auto py-4">
+          <div className="grid md:grid-cols-2 gap-6 px-1">
+            {/* Left Column - Payment & Entry */}
+            <div className="space-y-6">
+              {/* Summary Card */}
+              <div className="bg-gradient-to-br from-primary/15 to-primary/5 rounded-xl p-5 border border-primary/20">
+                <div className="flex items-center gap-2 mb-3">
+                  <DollarSign className="w-5 h-5 text-primary" />
+                  <span className="font-semibold">Valor do Orçamento</span>
                 </div>
-                <span className={cn(
-                  "text-[10px] hidden sm:block",
-                  step.active ? "text-foreground font-medium" : "text-muted-foreground"
-                )}>
-                  {step.label}
-                </span>
-                {idx < arr.length - 1 && (
-                  <div className={cn(
-                    "flex-1 h-0.5 mx-1",
-                    step.active ? "bg-primary" : "bg-muted"
-                  )} />
+                <div className="text-3xl font-bold text-primary">{formatCurrency(totalAmount)}</div>
+              </div>
+
+              {/* Entry Payment */}
+              <div className="space-y-4 p-4 border rounded-xl bg-card">
+                <div className="flex items-center gap-2">
+                  <Wallet className="w-5 h-5 text-primary" />
+                  <span className="font-semibold">Entrada (opcional)</span>
+                </div>
+
+                {!isCaixaAberto && (
+                  <div className="flex items-center gap-2 p-3 bg-destructive/10 text-destructive rounded-lg text-sm">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    <span>Caixa fechado. Abra o caixa para registrar entrada.</span>
+                  </div>
+                )}
+
+                <div>
+                  <Label htmlFor="entryAmount">Valor da entrada</Label>
+                  <div className="relative mt-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                      R$
+                    </span>
+                    <Input
+                      id="entryAmount"
+                      value={entryAmount}
+                      onChange={(e) => setEntryAmount(e.target.value)}
+                      placeholder="0,00"
+                      className="pl-9 h-12 text-lg"
+                      disabled={!isCaixaAberto}
+                    />
+                  </div>
+                </div>
+
+                {hasEntry && isCaixaAberto && (
+                  <div className="space-y-3">
+                    <div>
+                      <Label>Forma de pagamento</Label>
+                      <RadioGroup
+                        value={paymentMethod}
+                        onValueChange={(v) => setPaymentMethod(v as typeof paymentMethod)}
+                        className="flex gap-3 mt-2"
+                      >
+                        <div className="flex items-center space-x-2 p-3 border rounded-lg flex-1 cursor-pointer hover:bg-muted/50 transition-colors">
+                          <RadioGroupItem value="dinheiro" id="dinheiro" />
+                          <Label htmlFor="dinheiro" className="flex items-center gap-2 cursor-pointer flex-1">
+                            <DollarSign className="w-4 h-4" />
+                            Dinheiro
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2 p-3 border rounded-lg flex-1 cursor-pointer hover:bg-muted/50 transition-colors">
+                          <RadioGroupItem value="cartao" id="cartao" />
+                          <Label htmlFor="cartao" className="flex items-center gap-2 cursor-pointer flex-1">
+                            <CreditCard className="w-4 h-4" />
+                            Cartão
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2 p-3 border rounded-lg flex-1 cursor-pointer hover:bg-muted/50 transition-colors">
+                          <RadioGroupItem value="pix" id="pix" />
+                          <Label htmlFor="pix" className="flex items-center gap-2 cursor-pointer flex-1">
+                            <Smartphone className="w-4 h-4" />
+                            Pix
+                          </Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+                    
+                    <div className="flex items-start gap-2 p-3 bg-primary/10 text-primary rounded-lg text-sm">
+                      <Receipt className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                      <span>
+                        O valor será registrado como venda no caixa aberto.
+                      </span>
+                    </div>
+                  </div>
                 )}
               </div>
-            ))}
-          </div>
 
-          {/* Summary */}
-          <div className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg p-4 space-y-2 border border-primary/20">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Valor do orçamento</span>
-              <span className="font-bold text-xl text-primary">{formatCurrency(totalAmount)}</span>
-            </div>
-          </div>
+              {/* Installments Configuration */}
+              {pendingAmount > 0 && (
+                <div className="space-y-4 p-4 border rounded-xl bg-card">
+                  <div className="flex items-center gap-2">
+                    <Receipt className="w-5 h-5 text-primary" />
+                    <span className="font-semibold">Parcelamento do Saldo</span>
+                    <Badge variant="secondary" className="ml-auto">
+                      {formatCurrency(pendingAmount)}
+                    </Badge>
+                  </div>
 
-          <Separator />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Número de Parcelas</Label>
+                      <Select
+                        value={String(installmentsCount)}
+                        onValueChange={(v) => setInstallmentsCount(parseInt(v))}
+                      >
+                        <SelectTrigger className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[1, 2, 3, 4, 5, 6, 8, 10, 12].map((n) => (
+                            <SelectItem key={n} value={String(n)}>
+                              {n}x de {formatCurrency(pendingAmount / n)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-          {/* Materials Availability Preview */}
-          {items.length > 0 && (
-            <MaterialsAvailabilityPreview 
-              quoteItems={items}
-              companyId={currentCompany?.id}
-            />
-          )}
+                    <div>
+                      <Label>Primeiro Vencimento</Label>
+                      <Select
+                        value={String(firstDueDays)}
+                        onValueChange={(v) => setFirstDueDays(parseInt(v))}
+                      >
+                        <SelectTrigger className="mt-1">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0">Na entrega</SelectItem>
+                          <SelectItem value="7">7 dias</SelectItem>
+                          <SelectItem value="15">15 dias</SelectItem>
+                          <SelectItem value="30">30 dias</SelectItem>
+                          <SelectItem value="45">45 dias</SelectItem>
+                          <SelectItem value="60">60 dias</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
 
-          <Separator />
-
-          {/* Entry Payment */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Wallet className="w-4 h-4 text-primary" />
-              <Label className="text-base font-medium">Entrada (opcional)</Label>
-            </div>
-
-            {!isCaixaAberto && (
-              <div className="flex items-center gap-2 p-3 bg-destructive/10 text-destructive rounded-lg text-sm">
-                <AlertCircle className="w-4 h-4" />
-                Caixa fechado. Abra o caixa para registrar entrada.
-              </div>
-            )}
-
-            <div className="space-y-3">
-              <div>
-                <Label htmlFor="entryAmount">Valor da entrada</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                    R$
-                  </span>
-                  <Input
-                    id="entryAmount"
-                    value={entryAmount}
-                    onChange={(e) => setEntryAmount(e.target.value)}
-                    placeholder="0,00"
-                    className="pl-9"
-                    disabled={!isCaixaAberto}
-                  />
+                  {/* Installments Preview */}
+                  {installmentsPreview.length > 0 && (
+                    <div className="rounded-lg border bg-muted/30 p-3 space-y-2 max-h-32 overflow-y-auto">
+                      <p className="text-xs text-muted-foreground font-medium sticky top-0 bg-muted/30">Parcelas a Receber:</p>
+                      {installmentsPreview.map((inst) => (
+                        <div key={inst.number} className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">
+                            {inst.number}/{installmentsPreview.length} - {format(inst.dueDate, 'dd/MM/yyyy', { locale: ptBR })}
+                          </span>
+                          <span className="font-medium">{formatCurrency(inst.amount)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </div>
+              )}
+            </div>
 
-              {hasEntry && isCaixaAberto && (
-                <>
+            {/* Right Column - OS Details & Summary */}
+            <div className="space-y-6">
+              {/* Service Order Details */}
+              <div className="space-y-4 p-4 border rounded-xl bg-card">
+                <div className="flex items-center gap-2">
+                  <ClipboardList className="w-5 h-5 text-primary" />
+                  <span className="font-semibold">Ordem de Serviço</span>
+                </div>
+
+                <div className="space-y-4">
                   <div>
-                    <Label>Forma de pagamento</Label>
+                    <Label>Prioridade</Label>
                     <RadioGroup
-                      value={paymentMethod}
-                      onValueChange={(v) => setPaymentMethod(v as typeof paymentMethod)}
-                      className="flex gap-4 mt-2"
+                      value={priority}
+                      onValueChange={(v) => setPriority(v as typeof priority)}
+                      className="grid grid-cols-4 gap-2 mt-2"
                     >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="dinheiro" id="dinheiro" />
-                        <Label htmlFor="dinheiro" className="flex items-center gap-1 cursor-pointer">
-                          <DollarSign className="w-4 h-4" />
-                          Dinheiro
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="cartao" id="cartao" />
-                        <Label htmlFor="cartao" className="flex items-center gap-1 cursor-pointer">
-                          <CreditCard className="w-4 h-4" />
-                          Cartão
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="pix" id="pix" />
-                        <Label htmlFor="pix" className="flex items-center gap-1 cursor-pointer">
-                          <Smartphone className="w-4 h-4" />
-                          Pix
-                        </Label>
-                      </div>
+                      {[
+                        { value: 'low', label: 'Baixa', color: 'text-blue-600' },
+                        { value: 'normal', label: 'Normal', color: 'text-green-600' },
+                        { value: 'high', label: 'Alta', color: 'text-orange-600' },
+                        { value: 'urgent', label: 'Urgente', color: 'text-red-600' },
+                      ].map((p) => (
+                        <div key={p.value} className="flex items-center">
+                          <RadioGroupItem value={p.value} id={p.value} className="sr-only peer" />
+                          <Label 
+                            htmlFor={p.value} 
+                            className={cn(
+                              "flex-1 text-center py-2 px-3 border rounded-lg cursor-pointer text-sm transition-all",
+                              "peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/10 peer-data-[state=checked]:font-medium",
+                              "hover:bg-muted/50"
+                            )}
+                          >
+                            {p.label}
+                          </Label>
+                        </div>
+                      ))}
                     </RadioGroup>
                   </div>
+
+                  <div>
+                    <Label>Previsão de entrega</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            'w-full justify-start text-left font-normal mt-1 h-11',
+                            !estimatedEnd && 'text-muted-foreground'
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {estimatedEnd ? format(estimatedEnd, "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : 'Selecionar data'}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={estimatedEnd}
+                          onSelect={setEstimatedEnd}
+                          initialFocus
+                          locale={ptBR}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="notes">Observações</Label>
+                    <Textarea
+                      id="notes"
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Observações sobre o serviço..."
+                      rows={3}
+                      className="mt-1 resize-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Materials Availability Preview */}
+              {items.length > 0 && (
+                <div className="p-4 border rounded-xl bg-card">
+                  <MaterialsAvailabilityPreview 
+                    quoteItems={items}
+                    companyId={currentCompany?.id}
+                  />
+                </div>
+              )}
+
+              {/* Final Summary */}
+              <div className="rounded-xl border-2 border-primary/30 overflow-hidden">
+                <div className="bg-primary/10 px-4 py-3 border-b border-primary/20">
+                  <span className="font-semibold">Resumo da Aprovação</span>
+                </div>
+                <div className="p-4 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Valor total</span>
+                    <span className="font-bold text-lg">{formatCurrency(totalAmount)}</span>
+                  </div>
                   
-                  <div className="flex items-start gap-2 p-3 bg-primary/10 text-primary rounded-lg text-sm">
-                    <Receipt className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    <span>
-                      O valor da entrada será registrado como venda no caixa aberto. 
-                      Certifique-se de receber o valor do cliente antes de aprovar.
+                  <div className={cn(
+                    "flex justify-between items-center p-3 rounded-lg",
+                    hasEntry ? "bg-emerald-50 dark:bg-emerald-950/30" : "bg-muted/30"
+                  )}>
+                    <span className={cn("text-sm", hasEntry ? "text-emerald-700 dark:text-emerald-300" : "text-muted-foreground")}>
+                      Entrada a receber agora
+                    </span>
+                    <span className={cn("font-bold text-lg", hasEntry ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground")}>
+                      {hasEntry ? formatCurrency(entryValue) : 'Sem entrada'}
                     </span>
                   </div>
-                </>
-              )}
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Service Order Details */}
-          {/* Entry Payment */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <ClipboardList className="w-4 h-4 text-primary" />
-              <Label className="text-base font-medium">Ordem de Serviço</Label>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Prioridade</Label>
-                <RadioGroup
-                  value={priority}
-                  onValueChange={(v) => setPriority(v as typeof priority)}
-                  className="flex flex-wrap gap-2 mt-2"
-                >
-                  <div className="flex items-center space-x-1">
-                    <RadioGroupItem value="low" id="low" />
-                    <Label htmlFor="low" className="cursor-pointer text-sm">Baixa</Label>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <RadioGroupItem value="normal" id="normal" />
-                    <Label htmlFor="normal" className="cursor-pointer text-sm">Normal</Label>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <RadioGroupItem value="high" id="high" />
-                    <Label htmlFor="high" className="cursor-pointer text-sm">Alta</Label>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <RadioGroupItem value="urgent" id="urgent" />
-                    <Label htmlFor="urgent" className="cursor-pointer text-sm">Urgente</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-
-              <div>
-                <Label>Previsão de entrega</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
+                  
+                  <Separator />
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">Saldo a receber</span>
+                    <Badge 
+                      variant={pendingAmount > 0 ? 'secondary' : 'default'} 
                       className={cn(
-                        'w-full justify-start text-left font-normal mt-2',
-                        !estimatedEnd && 'text-muted-foreground'
+                        "text-lg px-4 py-1.5",
+                        pendingAmount === 0 && "bg-emerald-500"
                       )}
                     >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {estimatedEnd ? format(estimatedEnd, 'dd/MM/yyyy', { locale: ptBR }) : 'Selecionar'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={estimatedEnd}
-                      onSelect={setEstimatedEnd}
-                      initialFocus
-                      locale={ptBR}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="notes">Observações</Label>
-              <Textarea
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Observações sobre o serviço..."
-                rows={3}
-              />
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Installments Configuration (when there's pending amount) */}
-          {pendingAmount > 0 && (
-            <>
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Receipt className="w-4 h-4 text-primary" />
-                  <Label className="text-base font-medium">Parcelamento do Saldo</Label>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Número de Parcelas</Label>
-                    <Select
-                      value={String(installmentsCount)}
-                      onValueChange={(v) => setInstallmentsCount(parseInt(v))}
-                    >
-                      <SelectTrigger className="mt-2">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {[1, 2, 3, 4, 5, 6, 8, 10, 12].map((n) => (
-                          <SelectItem key={n} value={String(n)}>
-                            {n}x de {formatCurrency(pendingAmount / n)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {formatCurrency(pendingAmount)}
+                    </Badge>
                   </div>
-
-                  <div>
-                    <Label>Primeiro Vencimento</Label>
-                    <Select
-                      value={String(firstDueDays)}
-                      onValueChange={(v) => setFirstDueDays(parseInt(v))}
-                    >
-                      <SelectTrigger className="mt-2">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="0">Na entrega</SelectItem>
-                        <SelectItem value="7">7 dias</SelectItem>
-                        <SelectItem value="15">15 dias</SelectItem>
-                        <SelectItem value="30">30 dias</SelectItem>
-                        <SelectItem value="45">45 dias</SelectItem>
-                        <SelectItem value="60">60 dias</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Installments Preview */}
-                {installmentsPreview.length > 0 && (
-                  <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
-                    <p className="text-xs text-muted-foreground font-medium">Parcelas a Receber:</p>
-                    {installmentsPreview.map((inst) => (
-                      <div key={inst.number} className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">
-                          Parcela {inst.number}/{installmentsPreview.length} - {format(inst.dueDate, 'dd/MM/yyyy', { locale: ptBR })}
-                        </span>
-                        <span className="font-medium">{formatCurrency(inst.amount)}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <Separator />
-            </>
-          )}
-
-          {/* Final Summary */}
-          <div className="rounded-lg border-2 border-primary/30 overflow-hidden">
-            <div className="bg-primary/10 px-4 py-2 border-b border-primary/20">
-              <span className="text-sm font-medium">Resumo da Aprovação</span>
-            </div>
-            <div className="p-4 space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Valor total do serviço</span>
-                <span className="font-bold">{formatCurrency(totalAmount)}</span>
-              </div>
-              
-              <div className={cn(
-                "flex justify-between items-center p-2 rounded-lg",
-                hasEntry ? "bg-emerald-50 dark:bg-emerald-950/30" : "bg-muted/30"
-              )}>
-                <span className={cn("text-sm", hasEntry ? "text-emerald-700 dark:text-emerald-300" : "text-muted-foreground")}>
-                  Entrada a receber agora
-                </span>
-                <span className={cn("font-bold", hasEntry ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground")}>
-                  {hasEntry ? formatCurrency(entryValue) : 'Sem entrada'}
-                </span>
-              </div>
-              
-              <Separator />
-              
-              <div className="flex justify-between items-center">
-                <span className="font-medium">Saldo a receber</span>
-                <Badge 
-                  variant={pendingAmount > 0 ? 'secondary' : 'default'} 
-                  className={cn(
-                    "text-base px-3 py-1",
-                    pendingAmount === 0 && "bg-emerald-500"
+                  
+                  {pendingAmount > 0 && installmentsCount > 1 && (
+                    <div className="flex justify-between text-sm text-muted-foreground bg-muted/30 rounded-lg p-3">
+                      <span>Parcelamento</span>
+                      <span className="font-medium">{installmentsCount}x de {formatCurrency(pendingAmount / installmentsCount)}</span>
+                    </div>
                   )}
-                >
-                  {formatCurrency(pendingAmount)}
-                </Badge>
-              </div>
-              
-              {pendingAmount > 0 && installmentsCount > 1 && (
-                <div className="flex justify-between text-xs text-muted-foreground bg-muted/30 rounded p-2">
-                  <span>Parcelamento</span>
-                  <span className="font-medium">{installmentsCount}x de {formatCurrency(pendingAmount / installmentsCount)}</span>
                 </div>
-              )}
+              </div>
             </div>
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <DialogFooter className="border-t pt-4 gap-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)} size="lg">
             Cancelar
           </Button>
           <Button
             onClick={() => approveMutation.mutate()}
             disabled={approveMutation.isPending || (hasEntry && !isCaixaAberto)}
             className="gap-2"
+            size="lg"
           >
             {approveMutation.isPending ? (
               <Loader2 className="w-4 h-4 animate-spin" />
