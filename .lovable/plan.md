@@ -1,110 +1,53 @@
 
-# Plano: Adicionar Acesso à Área Fiscal nas Configurações
+Objetivo
+- Corrigir a navegação vertical (scroll com roda do mouse/trackpad) dentro do modal “Aprovar Orçamento”, permitindo acessar o conteúdo abaixo/ acima mantendo cabeçalho e rodapé fixos.
 
-## Problema Identificado
+Diagnóstico (provável causa)
+- Hoje o `DialogContent` tem `max-h-[90vh]`, mas não tem uma altura “definida” (`height`). Em layouts flex, quando o container pai tem altura “auto”, o filho com `flex-1` (o `ScrollArea`) não consegue calcular a área disponível corretamente.
+- Resultado: o conteúdo fica “cortado” pelo `overflow-hidden` do `DialogContent` e o `ScrollArea` não vira uma área rolável (não existe overflow interno de fato), então a roda do mouse não faz nada.
 
-A página de Configurações Fiscais (`/configuracoes/fiscal`) já existe e contém:
-- Upload de certificado digital A1 (.pfx/.p12)
-- Validação automática de CNPJ e validade
-- Configuração do modo fiscal
-- Dados fiscais da empresa (Inscrição Municipal, Estadual, Código IBGE)
+O que vou mudar (sem alterar outras telas)
+1) Ajustar o container do modal para ter altura real
+- Arquivo: `src/components/orcamentos/AprovarOrcamentoDialog.tsx`
+- Alterar o `DialogContent` para ter uma altura fixa baseada na viewport (mantendo o “máximo” visual):
+  - Trocar de:
+    - `max-h-[90vh]`
+  - Para algo como:
+    - `h-[90vh] max-h-[90vh]` (ou somente `h-[90vh]`, conforme o comportamento desejado)
+  - Manter `overflow-hidden`, `flex flex-col` e `min-h-0`.
 
-Porém, não há nenhum link visível para acessá-la na página de Configurações principal.
+2) Garantir que header e footer não “roubem” a altura do scroll
+- Adicionar `shrink-0` no header (bloco do topo) e no footer (bloco dos botões), para assegurar que o “miolo” é quem absorve a rolagem.
+  - Header: a `<div className="px-6 ...">` do topo
+  - Footer: a `<div className="border-t ...">` de baixo
 
-## Solução
+3) Garantir que a área rolável consegue encolher e virar overflow interno
+- No `ScrollArea`, adicionar `min-h-0` junto do `flex-1`.
+  - De:
+    - `className="flex-1 px-6 py-4"`
+  - Para:
+    - `className="flex-1 min-h-0 px-6 py-4"`
 
-Adicionar um card de acesso rápido na página de Configurações (`/configuracoes`) para a Área Fiscal.
+4) (Fallback de robustez, se ainda houver problema em algum browser)
+- Se, mesmo com altura fixa, o Radix `ScrollArea` ainda não capturar a roda do mouse em algum ambiente específico, eu troco apenas neste modal o `ScrollArea` por um container nativo:
+  - `div className="flex-1 min-h-0 overflow-y-auto ..."`
+- Isso garante 100% de rolagem com mouse/trackpad, mantendo header e footer fixos. (Eu só aplico esse fallback se necessário.)
 
----
+Como vou validar
+- Abrir “Aprovar Orçamento” com bastante conteúdo (como no seu print).
+- Testar:
+  - Roda do mouse para baixo/cima
+  - Trackpad (scroll inercial)
+  - Drag na barra (quando visível)
+- Confirmar que:
+  - Cabeçalho e rodapé permanecem fixos
+  - O conteúdo do passo 1, 2 e 3 rola normalmente
+  - Não há “corte” do conteúdo no fim da tela
 
-## Alteração Proposta
+Risco/impacto
+- Mudança localizada apenas no modal `AprovarOrcamentoDialog`.
+- Não mexe na página `/orcamentos` nem em outras telas, e evita efeitos colaterais globais.
 
-### Arquivo: `src/pages/Configuracoes.tsx`
-
-Adicionar ao array `settingsGroups` um novo item para Configurações Fiscais:
-
-```typescript
-const settingsGroups = [
-  {
-    icon: Receipt,  // Ícone de nota fiscal
-    title: 'Área Fiscal',
-    description: 'Certificado digital, NCM, CFOP e emissão de NF-e.',
-    path: '/configuracoes/fiscal',
-  },
-  // ... demais itens existentes
-];
-```
-
-O card será exibido junto com os outros:
-
-| Card Atual | Card a Adicionar |
-|------------|------------------|
-| Usuários e Permissões | **Área Fiscal** (NOVO) |
-| Notificações | |
-| Segurança | |
-| Dados e Exportação | |
-
----
-
-## Resultado Visual
-
-Após a alteração, a página de Configurações exibirá:
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│ Configurações                                                   │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  [Dados da Empresa] - Card existente com logo, CNPJ, etc.       │
-│                                                                 │
-│  [Token de Login] - Card existente                              │
-│                                                                 │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
-│  │ 📋 Área Fiscal  │  │ 👥 Usuários     │  │ 🔔 Notificações │ │
-│  │ Certificado     │  │ Controle de     │  │ Alertas por     │ │
-│  │ digital, NF-e   │  │ acesso          │  │ email           │ │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘ │
-│                                                                 │
-│  ┌─────────────────┐  ┌─────────────────┐                      │
-│  │ 🔒 Segurança    │  │ 💾 Dados        │                      │
-│  │ Senhas e        │  │ Exportação e    │                      │
-│  │ backups         │  │ backups         │                      │
-│  └─────────────────┘  └─────────────────┘                      │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Detalhes Técnicos
-
-### Importar ícone
-
-```typescript
-import { Receipt } from 'lucide-react';
-```
-
-### Novo item no array
-
-```typescript
-{
-  icon: Receipt,
-  title: 'Área Fiscal',
-  description: 'Certificado digital, NCM, CFOP e emissão de NF-e.',
-  path: '/configuracoes/fiscal',
-},
-```
-
----
-
-## Arquivos a Modificar
-
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/pages/Configuracoes.tsx` | Adicionar card "Área Fiscal" ao array `settingsGroups` |
-
----
-
-## Resumo
-
-Alteração simples de **uma única linha** para tornar visível a área fiscal que já existe e já contém toda a funcionalidade de certificado digital.
+Arquivos envolvidos
+- `src/components/orcamentos/AprovarOrcamentoDialog.tsx` (principal)
+- (Opcional, somente se o fallback for necessário) ajustes apenas no modal para usar scroll nativo em vez do `ScrollArea`.
