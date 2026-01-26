@@ -474,13 +474,108 @@ export type Database = {
           },
         ]
       }
+      cash_register_audits: {
+        Row: {
+          adjustment_amount: number | null
+          audited_at: string | null
+          auditor_action: string | null
+          auditor_id: string | null
+          auditor_name: string | null
+          auditor_notes: string | null
+          cash_register_id: string
+          company_id: string
+          counts_submitted: Json
+          created_at: string
+          difference: number
+          expected_amount: number
+          id: string
+          operator_id: string
+          operator_name: string | null
+          operator_notes: string | null
+          status: string
+          submitted_at: string
+          total_counted: number
+          updated_at: string
+        }
+        Insert: {
+          adjustment_amount?: number | null
+          audited_at?: string | null
+          auditor_action?: string | null
+          auditor_id?: string | null
+          auditor_name?: string | null
+          auditor_notes?: string | null
+          cash_register_id: string
+          company_id: string
+          counts_submitted: Json
+          created_at?: string
+          difference: number
+          expected_amount: number
+          id?: string
+          operator_id: string
+          operator_name?: string | null
+          operator_notes?: string | null
+          status?: string
+          submitted_at?: string
+          total_counted: number
+          updated_at?: string
+        }
+        Update: {
+          adjustment_amount?: number | null
+          audited_at?: string | null
+          auditor_action?: string | null
+          auditor_id?: string | null
+          auditor_name?: string | null
+          auditor_notes?: string | null
+          cash_register_id?: string
+          company_id?: string
+          counts_submitted?: Json
+          created_at?: string
+          difference?: number
+          expected_amount?: number
+          id?: string
+          operator_id?: string
+          operator_name?: string | null
+          operator_notes?: string | null
+          status?: string
+          submitted_at?: string
+          total_counted?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_register_audits_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_register_audits_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_register_audits_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cash_registers: {
         Row: {
           actual_amount: number | null
+          audit_notes: string | null
+          audited_at: string | null
+          audited_by: string | null
           closed_at: string | null
           closed_by: string | null
           closing_amount: number | null
           closing_justification: string | null
+          closing_requested_at: string | null
           company_id: string
           created_at: string
           difference: number | null
@@ -491,15 +586,22 @@ export type Database = {
           opened_at: string
           opened_by: string
           opening_amount: number
+          operator_id: string | null
+          previous_discrepancy: number | null
+          previous_discrepancy_notes: string | null
           status: string
           updated_at: string
         }
         Insert: {
           actual_amount?: number | null
+          audit_notes?: string | null
+          audited_at?: string | null
+          audited_by?: string | null
           closed_at?: string | null
           closed_by?: string | null
           closing_amount?: number | null
           closing_justification?: string | null
+          closing_requested_at?: string | null
           company_id: string
           created_at?: string
           difference?: number | null
@@ -510,15 +612,22 @@ export type Database = {
           opened_at?: string
           opened_by: string
           opening_amount?: number
+          operator_id?: string | null
+          previous_discrepancy?: number | null
+          previous_discrepancy_notes?: string | null
           status?: string
           updated_at?: string
         }
         Update: {
           actual_amount?: number | null
+          audit_notes?: string | null
+          audited_at?: string | null
+          audited_by?: string | null
           closed_at?: string | null
           closed_by?: string | null
           closing_amount?: number | null
           closing_justification?: string | null
+          closing_requested_at?: string | null
           company_id?: string
           created_at?: string
           difference?: number | null
@@ -529,6 +638,9 @@ export type Database = {
           opened_at?: string
           opened_by?: string
           opening_amount?: number
+          operator_id?: string | null
+          previous_discrepancy?: number | null
+          previous_discrepancy_notes?: string | null
           status?: string
           updated_at?: string
         }
@@ -3050,6 +3162,80 @@ export type Database = {
             columns: ["sale_id"]
             isOneToOne: false
             referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      operator_discrepancies: {
+        Row: {
+          amount: number
+          cash_register_id: string
+          company_id: string
+          compensated_amount: number | null
+          compensated_at: string | null
+          compensated_in_register_id: string | null
+          created_at: string
+          discrepancy_type: string
+          id: string
+          notes: string | null
+          operator_id: string
+          status: string
+        }
+        Insert: {
+          amount: number
+          cash_register_id: string
+          company_id: string
+          compensated_amount?: number | null
+          compensated_at?: string | null
+          compensated_in_register_id?: string | null
+          created_at?: string
+          discrepancy_type: string
+          id?: string
+          notes?: string | null
+          operator_id: string
+          status?: string
+        }
+        Update: {
+          amount?: number
+          cash_register_id?: string
+          company_id?: string
+          compensated_amount?: number | null
+          compensated_at?: string | null
+          compensated_in_register_id?: string | null
+          created_at?: string
+          discrepancy_type?: string
+          id?: string
+          notes?: string | null
+          operator_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operator_discrepancies_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operator_discrepancies_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operator_discrepancies_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operator_discrepancies_compensated_in_register_id_fkey"
+            columns: ["compensated_in_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
             referencedColumns: ["id"]
           },
         ]
@@ -5660,6 +5846,15 @@ export type Database = {
         }
         Returns: Json
       }
+      complete_cash_audit: {
+        Args: {
+          _action: string
+          _adjustment_amount?: number
+          _audit_id: string
+          _notes?: string
+        }
+        Returns: Json
+      }
       create_company_and_assign_admin: {
         Args: {
           _address?: string
@@ -5785,10 +5980,15 @@ export type Database = {
         Args: { p_username: string }
         Returns: string
       }
+      get_operator_pending_discrepancies: {
+        Args: { _company_id: string; _operator_id: string }
+        Returns: Json
+      }
       get_pending_advances_summary: {
         Args: { _company_id: string }
         Returns: Json
       }
+      get_pending_cash_audits: { Args: { _company_id: string }; Returns: Json }
       get_user_company_ids: { Args: { _user_id: string }; Returns: string[] }
       get_user_open_cash_register: {
         Args: { _company_id: string }
@@ -5963,6 +6163,10 @@ export type Database = {
       }
       reset_company_product_to_template: {
         Args: { p_company_product_id: string; p_user_id: string }
+        Returns: Json
+      }
+      submit_cash_closing_for_audit: {
+        Args: { _cash_register_id: string; _counts: Json; _notes?: string }
         Returns: Json
       }
       update_overdue_receivables: { Args: never; Returns: undefined }
