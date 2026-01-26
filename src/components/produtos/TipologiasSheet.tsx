@@ -135,14 +135,20 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
     return groups;
   }, [filteredProducts]);
 
+  const setDownloadSelection = (productId: string, checked: boolean) => {
+    setSelectedForDownload((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(productId);
+      else next.delete(productId);
+      return next;
+    });
+  };
+
   const toggleDownloadSelection = (productId: string) => {
     setSelectedForDownload((prev) => {
       const next = new Set(prev);
-      if (next.has(productId)) {
-        next.delete(productId);
-      } else {
-        next.add(productId);
-      }
+      if (next.has(productId)) next.delete(productId);
+      else next.add(productId);
       return next;
     });
   };
@@ -160,7 +166,8 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
     mutationFn: async (productIds: string[]) => {
       if (!currentCompany?.id) throw new Error('Empresa não selecionada');
 
-      const results = [];
+      const results: unknown[] = [];
+      const errors: { productId: string; message: string }[] = [];
       for (const productId of productIds) {
         // Skip already activated products
         if (isProductActivated(productId)) continue;
@@ -176,15 +183,23 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
 
         if (error) {
           console.error(`Error activating product ${productId}:`, error);
+          errors.push({
+            productId,
+            message: (error as any)?.message || 'Erro desconhecido',
+          });
           continue;
         }
 
         results.push(data);
       }
 
-      return results;
+      if (results.length === 0 && errors.length > 0) {
+        throw new Error(errors[0].message);
+      }
+
+      return { results, errors };
     },
-    onSuccess: (results) => {
+    onSuccess: ({ results, errors }) => {
       // Invalidar todos os caches relacionados à ativação
       queryClient.invalidateQueries({ queryKey: ['company-products'] });
       queryClient.invalidateQueries({ queryKey: ['linha-products'] });
@@ -198,6 +213,12 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
         toast.success(`${count} produto(s) ativado(s) com sucesso!`, {
           description: 'Todos os perfis, vidros e acessórios foram adicionados à composição.'
         });
+
+        if (errors.length > 0) {
+          toast.error(`${errors.length} produto(s) não puderam ser ativados`, {
+            description: errors[0]?.message,
+          });
+        }
         clearDownloadSelection();
       } else {
         toast.info('Nenhum produto novo foi ativado');
@@ -348,7 +369,9 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
                             {/* Download Checkbox */}
                             <Checkbox
                               checked={isSelectedForDownload}
-                              onCheckedChange={() => toggleDownloadSelection(product.id)}
+                               onCheckedChange={(checked) =>
+                                 setDownloadSelection(product.id, checked === true)
+                               }
                               className="shrink-0"
                             />
 
