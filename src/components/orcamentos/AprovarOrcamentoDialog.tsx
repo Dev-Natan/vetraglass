@@ -495,9 +495,9 @@ export function AprovarOrcamentoDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col min-h-0 p-0">
+      <DialogContent className="max-w-5xl h-[90vh] max-h-[90vh] overflow-hidden flex flex-col min-h-0 p-0">
         {/* Compact Header */}
-        <div className="px-6 pt-5 pb-4 border-b bg-gradient-to-r from-primary/5 to-transparent">
+        <div className="px-6 pt-5 pb-4 border-b bg-gradient-to-r from-primary/5 to-transparent shrink-0">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
               <DialogTitle className="flex items-center gap-2 text-lg">
@@ -575,7 +575,7 @@ export function AprovarOrcamentoDialog({
           </div>
         </div>
 
-        <ScrollArea className="flex-1 px-6 py-4">
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
           {/* Step 1: Price Review */}
           {currentStep === 'price-review' && (
             <div className="space-y-6 px-1">
@@ -1100,10 +1100,10 @@ export function AprovarOrcamentoDialog({
               </div>
             </div>
           )}
-        </ScrollArea>
+        </div>
 
         {/* Footer with Navigation */}
-        <div className="border-t bg-muted/30 px-6 py-4">
+        <div className="border-t bg-muted/30 px-6 py-4 shrink-0">
           <div className="flex items-center justify-between">
             {/* Left: Back button or step info */}
             <div className="flex items-center gap-2">
