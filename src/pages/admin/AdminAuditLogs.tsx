@@ -352,12 +352,15 @@ export default function AdminAuditLogs() {
 
         {/* Details Dialog */}
         <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-          <DialogContent className="max-w-3xl max-h-[80vh]">
+          <DialogContent className="max-w-3xl max-h-[80vh]" aria-describedby="audit-log-details-description">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Activity className="h-5 w-5" />
                 Detalhes do Log
               </DialogTitle>
+              <p id="audit-log-details-description" className="text-sm text-muted-foreground">
+                Informações detalhadas sobre a ação registrada.
+              </p>
             </DialogHeader>
             {selectedLog && (
               <ScrollArea className="max-h-[60vh]">

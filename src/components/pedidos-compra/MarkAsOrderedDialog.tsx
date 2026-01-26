@@ -42,9 +42,12 @@ export function MarkAsOrderedDialog({ open, onOpenChange, order }: MarkAsOrdered
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent aria-describedby="mark-ordered-description">
         <DialogHeader>
           <DialogTitle>Marcar Pedido como Enviado</DialogTitle>
+          <p id="mark-ordered-description" className="text-sm text-muted-foreground">
+            Informe os dados do fornecedor e previsão de entrega.
+          </p>
         </DialogHeader>
         
         <div className="space-y-4 py-4">

@@ -51,7 +51,7 @@ export default function Estoque() {
     enabled: !!currentCompany?.id,
   });
 
-  // Fetch item templates
+  // Fetch item templates (optimized select)
   const {
     data: itemTemplates,
     isLoading: loadingItems,
@@ -61,7 +61,7 @@ export default function Estoque() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('item_templates')
-        .select('*')
+        .select('id, name, type, unit, image_url, linha')
         .eq('is_active', true);
 
       if (error) throw error;

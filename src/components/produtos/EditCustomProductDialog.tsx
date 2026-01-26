@@ -84,9 +84,12 @@ export function EditCustomProductDialog({ open, onOpenChange, product }: EditCus
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" aria-describedby="edit-product-description">
         <DialogHeader>
           <DialogTitle>Editar Produto Personalizado</DialogTitle>
+          <p id="edit-product-description" className="text-sm text-muted-foreground">
+            Atualize as informações do produto personalizado.
+          </p>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">

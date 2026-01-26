@@ -121,9 +121,12 @@ export function ClientDialog({ open, onOpenChange, client, onSave, isLoading }: 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" aria-describedby="client-dialog-description">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Editar Cliente' : 'Novo Cliente'}</DialogTitle>
+          <p id="client-dialog-description" className="text-sm text-muted-foreground">
+            {isEditing ? 'Atualize os dados do cliente.' : 'Preencha os dados para cadastrar um novo cliente.'}
+          </p>
         </DialogHeader>
 
         {isEditing ? (

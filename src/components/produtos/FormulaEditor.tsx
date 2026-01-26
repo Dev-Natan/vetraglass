@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, forwardRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -45,13 +45,14 @@ const operators = [
   { label: ')', value: ')', icon: null },
 ];
 
-export function FormulaEditor({ 
-  value, 
-  onChange, 
-  showPiecesQuantity = false,
-  piecesQuantity = 1,
-  onPiecesChange
-}: FormulaEditorProps) {
+export const FormulaEditor = forwardRef<HTMLDivElement, FormulaEditorProps>(
+  function FormulaEditor({ 
+    value, 
+    onChange, 
+    showPiecesQuantity = false,
+    piecesQuantity = 1,
+    onPiecesChange
+  }, ref) {
   const [previewResult, setPreviewResult] = useState<string | null>(null);
   const [isValid, setIsValid] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
@@ -100,7 +101,7 @@ export function FormulaEditor({
   const formulaType = getFormulaType(value);
 
   return (
-    <div className="space-y-4">
+    <div ref={ref} className="space-y-4">
       {/* Main input with status indicator */}
       <div className="space-y-2">
         <Label className="flex items-center gap-2">
@@ -296,4 +297,4 @@ export function FormulaEditor({
       </div>
     </div>
   );
-}
+});

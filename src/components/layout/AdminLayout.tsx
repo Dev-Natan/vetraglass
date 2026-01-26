@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, forwardRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useSupportTickets } from "@/hooks/useSupportTickets";
 import { useAdminStats } from "@/hooks/useAdminStats";
 
 const adminMenuItems = [
@@ -112,11 +111,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     return location.pathname.startsWith(path);
   };
 
-  const NavItem = ({ item }: { item: (typeof adminMenuItems)[0] }) => {
-    const hasBadge = item.showBadge && openTicketsCount > 0;
-    
-    const content = (
+  const NavItemContent = forwardRef<HTMLAnchorElement, { item: (typeof adminMenuItems)[0]; hasBadge: boolean }>(
+    ({ item, hasBadge, ...props }, ref) => (
       <Link
+        ref={ref}
         to={item.path}
         className={cn(
           "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative",
@@ -125,6 +123,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             : "text-muted-foreground hover:bg-muted hover:text-foreground",
           collapsed && "justify-center px-2"
         )}
+        {...props}
       >
         <div className="relative">
           <item.icon className={cn("shrink-0", collapsed ? "w-5 h-5" : "w-4 h-4")} />
@@ -145,12 +144,19 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           </span>
         )}
       </Link>
-    );
+    )
+  );
+  NavItemContent.displayName = "NavItemContent";
+
+  const NavItem = ({ item }: { item: (typeof adminMenuItems)[0] }) => {
+    const hasBadge = item.showBadge && openTicketsCount > 0;
 
     if (collapsed) {
       return (
         <Tooltip delayDuration={0}>
-          <TooltipTrigger asChild>{content}</TooltipTrigger>
+          <TooltipTrigger asChild>
+            <NavItemContent item={item} hasBadge={hasBadge} />
+          </TooltipTrigger>
           <TooltipContent side="right" className="font-medium flex items-center gap-2">
             {item.title}
             {hasBadge && (
@@ -163,7 +169,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       );
     }
 
-    return content;
+    return <NavItemContent item={item} hasBadge={hasBadge} />;
   };
 
   return (
