@@ -21,6 +21,7 @@ import {
   Calendar,
   Ruler,
   Headphones,
+  Lock,
   LucideIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -30,6 +31,8 @@ import { Badge } from '@/components/ui/badge';
 import { SupportSidebar } from '@/components/support/SupportSidebar';
 import { useSupportTickets } from '@/hooks/useSupportTickets';
 import { usePermissions, Module } from '@/hooks/usePermissions';
+import { useEnabledModulesMap } from '@/hooks/useModuleSettings';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface MenuItem {
   icon: LucideIcon;
@@ -77,6 +80,7 @@ export function Sidebar() {
   const [supportOpen, setSupportOpen] = useState(false);
   const { openTicketsCount } = useSupportTickets();
   const { canAccess, isAdmin } = usePermissions();
+  const enabledModules = useEnabledModulesMap();
 
   const handleSignOut = async () => {
     try {
@@ -87,7 +91,34 @@ export function Sidebar() {
     }
   };
 
-  // Filter menu items based on permissions
+  // Check if a module is globally disabled
+  const isModuleDisabled = (moduleKey: string | undefined): boolean => {
+    if (!moduleKey) return false;
+    // Map module permission key to module_key in settings
+    const keyMap: Record<string, string> = {
+      'dashboard': 'dashboard',
+      'clientes': 'clientes',
+      'orcamentos': 'orcamentos',
+      'ordens-servico': 'ordens-servico',
+      'agenda': 'agenda',
+      'medicoes': 'medicoes',
+      'plano-corte': 'plano-corte',
+      'produtos': 'produtos',
+      'precos': 'precos',
+      'estoque': 'estoque',
+      'pedidos-compra': 'pedidos-compra',
+      'caixa-vendas': 'caixa-vendas',
+      'financeiro': 'financeiro',
+      'notas-fiscais': 'notas-fiscais',
+      'funcionarios': 'funcionarios',
+      'relatorios': 'relatorios',
+      'configuracoes': 'configuracoes',
+    };
+    const settingsKey = keyMap[moduleKey] || moduleKey;
+    return enabledModules[settingsKey] === false;
+  };
+
+  // Filter menu items based on permissions (but keep disabled modules visible)
   const visibleMenuItems = menuItems.filter(item => {
     // If no module defined, always show (like dashboard)
     if (!item.module) return true;
@@ -156,25 +187,51 @@ export function Sidebar() {
 
         {/* Navigation */}
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          {visibleMenuItems.map((item) => {
-            const isActive = location.pathname === item.path;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                onClick={() => setIsMobileOpen(false)}
-                className={cn(
-                  "flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200",
-                  isActive 
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium" 
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                )}
-              >
-                <item.icon className="w-5 h-5" />
-                <span className="text-sm">{item.label}</span>
-              </Link>
-            );
-          })}
+          <TooltipProvider delayDuration={300}>
+            {visibleMenuItems.map((item) => {
+              const isActive = location.pathname === item.path;
+              const isDisabled = isModuleDisabled(item.module);
+
+              if (isDisabled) {
+                return (
+                  <Tooltip key={item.path}>
+                    <TooltipTrigger asChild>
+                      <div
+                        className={cn(
+                          "flex items-center gap-3 px-4 py-2.5 rounded-lg cursor-not-allowed",
+                          "text-sidebar-foreground/40 bg-sidebar-accent/30"
+                        )}
+                      >
+                        <item.icon className="w-5 h-5" />
+                        <span className="text-sm flex-1">{item.label}</span>
+                        <Lock className="w-4 h-4 text-sidebar-foreground/30" />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">
+                      <p>Módulo não disponível</p>
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              }
+
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => setIsMobileOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200",
+                    isActive 
+                      ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium" 
+                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                  )}
+                >
+                  <item.icon className="w-5 h-5" />
+                  <span className="text-sm">{item.label}</span>
+                </Link>
+              );
+            })}
+          </TooltipProvider>
         </nav>
 
         {/* Footer */}

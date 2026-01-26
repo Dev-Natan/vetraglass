@@ -4819,6 +4819,42 @@ export type Database = {
           },
         ]
       }
+      system_module_settings: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          is_enabled: boolean | null
+          module_key: string
+          module_name: string
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          module_key: string
+          module_name: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          module_key?: string
+          module_name?: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       system_reminders: {
         Row: {
           company_id: string
@@ -5391,6 +5427,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      is_module_enabled: { Args: { _module_key: string }; Returns: boolean }
       is_saas_admin: { Args: { _user_id: string }; Returns: boolean }
       log_audit_event: {
         Args: {
