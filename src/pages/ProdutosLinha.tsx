@@ -435,6 +435,9 @@ export default function ProdutosLinha() {
                                 image_url: product.image_url,
                               });
                               setEditPricingDialogOpen(true);
+                            } else {
+                              toast.error('Erro ao carregar dados do produto. Recarregue a página.');
+                              queryClient.invalidateQueries({ queryKey: ['company-products'] });
                             }
                           }}
                         >
@@ -571,6 +574,9 @@ export default function ProdutosLinha() {
                                 image_url: product.image_url,
                               });
                               setEditPricingDialogOpen(true);
+                            } else {
+                              toast.error('Erro ao carregar dados do produto. Recarregue a página.');
+                              queryClient.invalidateQueries({ queryKey: ['company-products'] });
                             }
                           }}
                         >
