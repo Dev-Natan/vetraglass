@@ -183,9 +183,21 @@ export function parseExcelCuttingSheet(workbook: XLSX.WorkBook, fileName: string
   
   if (!sheet) return null;
   
+  // Get data with formulas preserved
   const data: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
   
   if (data.length < 2) return null;
+  
+  // Build a map of cell formulas for quick lookup
+  const cellFormulas: Map<string, string> = new Map();
+  for (const cellAddress in sheet) {
+    if (cellAddress[0] === '!') continue; // Skip special keys
+    const cell = sheet[cellAddress];
+    if (cell && cell.f) {
+      // Store the formula (cell.f contains the formula without the = sign)
+      cellFormulas.set(cellAddress, cell.f);
+    }
+  }
   
   const items: ParsedCuttingItem[] = [];
   
@@ -196,7 +208,7 @@ export function parseExcelCuttingSheet(workbook: XLSX.WorkBook, fileName: string
     
     // Check if this is a valid cutting row (profile/material)
     if (isValidCuttingRow(row)) {
-      const item = parseCuttingRow(row, i);
+      const item = parseCuttingRow(row, i, sheet, cellFormulas);
       if (item) {
         items.push(item);
       }
@@ -229,19 +241,67 @@ export function parseExcelCuttingSheet(workbook: XLSX.WorkBook, fileName: string
   };
 }
 
+// Helper to convert Excel column index to letter (0 = A, 1 = B, etc.)
+function colIndexToLetter(index: number): string {
+  let letter = '';
+  while (index >= 0) {
+    letter = String.fromCharCode((index % 26) + 65) + letter;
+    index = Math.floor(index / 26) - 1;
+  }
+  return letter;
+}
+
+// Extract formula from cell, normalizing to use L/A variables
+function extractCellFormula(
+  sheet: XLSX.WorkSheet,
+  cellFormulas: Map<string, string>,
+  rowIndex: number,
+  colIndex: number,
+  cellValue: any
+): string | null {
+  const cellAddress = colIndexToLetter(colIndex) + (rowIndex + 1);
+  const formula = cellFormulas.get(cellAddress);
+  
+  if (formula) {
+    // Normalize the formula: replace cell references with L/A
+    let normalized = formula.toUpperCase()
+      .replace(/\$?([A-Z]+)\$?(\d+)/g, (match, col, row) => {
+        // Try to determine if this reference points to L or A based on context
+        // For now, preserve the formula structure but normalize common patterns
+        return match;
+      })
+      .replace(/LARGURA/gi, 'L')
+      .replace(/ALTURA/gi, 'A')
+      .trim();
+    
+    // If formula contains L or A references, return it
+    if (/[LA]/.test(normalized) || /[+\-*/]/.test(normalized)) {
+      return parseFormula(normalized);
+    }
+  }
+  
+  // If no formula, check if the value itself is a formula-like string
+  if (cellValue !== null && cellValue !== undefined) {
+    const strValue = String(cellValue).trim().toUpperCase();
+    if (/[LA]/.test(strValue) && /[+\-*/]/.test(strValue)) {
+      return parseFormula(strValue);
+    }
+  }
+  
+  return null;
+}
+
 // Parse a cutting row in the format: "PC 027 / TUBÃO - MOLDURA" | ... | L | 4050 | 2 | ... | 45/45
-function parseCuttingRow(row: any[], rowIndex: number): ParsedCuttingItem | null {
+function parseCuttingRow(
+  row: any[], 
+  rowIndex: number,
+  sheet: XLSX.WorkSheet,
+  cellFormulas: Map<string, string>
+): ParsedCuttingItem | null {
   const firstCell = String(row[0] || '').trim();
   if (!firstCell) return null;
   
   // Extract code and name from first cell
-  // Examples:
-  //   "PC 027 / TUBÃO - MOLDURA PORTÃO" -> code: "PC 027", name: "TUBÃO - MOLDURA PORTÃO"
-  //   "25-517 / BL-02 MARCO LATERAL" -> code: "25-517", name: "BL-02 MARCO LATERAL"
-  //   "LB-050 / E051A - LAMBRI FIXO" -> code: "LB-050", name: "E051A - LAMBRI FIXO"
-  //   "TUBO RETANGULAR 2/1 REFORÇO" -> code: "", name: "TUBO RETANGULAR 2/1 REFORÇO"
-  //   "TRD - 5/8" -> code: "TRD", name: "5/8"
-  
   let code = '';
   let name = firstCell;
   
@@ -254,7 +314,6 @@ function parseCuttingRow(row: any[], rowIndex: number): ParsedCuttingItem | null
   // If no " / ", try splitting by " - " for patterns like "TRD - 5/8"
   else if (firstCell.includes(' - ')) {
     const dashParts = firstCell.split(' - ');
-    // Only use first part as code if it looks like a code (short, alphanumeric)
     if (dashParts[0].length <= 15 && /^[A-Z0-9\-]+$/i.test(dashParts[0].trim())) {
       code = dashParts[0].trim();
       name = dashParts.slice(1).join(' - ').trim();
@@ -266,16 +325,16 @@ function parseCuttingRow(row: any[], rowIndex: number): ParsedCuttingItem | null
     name = firstCell;
   }
   
-  // Find L or A indicator and get dimension value
+  // Find L or A indicator and get dimension value/formula
   let dimensionType: 'L' | 'A' | null = null;
-  let dimensionValue: number | null = null;
+  let dimensionColIndex: number = -1;
   let quantity: number = 1;
   let cutAngle: number | null = null;
+  let extractedFormula: string | null = null;
 
   const isLikelyCount = (value: unknown, max: number) => {
     const n = Number(value);
     if (!Number.isFinite(n) || n <= 0 || n > max) return false;
-    // quantities must be integer-like; avoid decimals like 10.73333333
     return Math.abs(n - Math.round(n)) < 1e-6;
   };
   
@@ -285,21 +344,20 @@ function parseCuttingRow(row: any[], rowIndex: number): ParsedCuttingItem | null
     // Check for L or A indicator
     if (cellValue === 'L' || cellValue === 'A') {
       dimensionType = cellValue as 'L' | 'A';
-      // Next cell should be the dimension value
+      dimensionColIndex = j + 1; // Column with the dimension value/formula
+      
+      // Try to extract formula from the dimension cell
       if (j + 1 < row.length) {
-        const nextValue = Number(row[j + 1]);
-        if (!isNaN(nextValue) && nextValue > 0) {
-          dimensionValue = nextValue;
+        extractedFormula = extractCellFormula(sheet, cellFormulas, rowIndex, j + 1, row[j + 1]);
+      }
+      
+      // Scan for quantity
+      for (let k = j + 2; k < Math.min(row.length, j + 7); k++) {
+        if (isLikelyCount(row[k], 999)) {
+          quantity = Math.round(Number(row[k]));
+          break;
         }
       }
-       // After dimension, scan next cells for a small integer quantity.
-       // Some spreadsheets put totals/metros (decimal) right after the dimension.
-       for (let k = j + 2; k < Math.min(row.length, j + 7); k++) {
-         if (isLikelyCount(row[k], 999)) {
-           quantity = Math.round(Number(row[k]));
-           break;
-         }
-       }
     }
     
     // Check for angle pattern (e.g., "45/45" or "90/90")
@@ -309,17 +367,15 @@ function parseCuttingRow(row: any[], rowIndex: number): ParsedCuttingItem | null
     }
   }
   
-  // Build formula based on dimension type and value
-  // If L is used, the formula relates to width (Largura)
-  // If A is used, the formula relates to height (Altura)
+  // Build formula based on dimension type
   let widthFormula: string | null = null;
   let heightFormula: string | null = null;
   
-  if (dimensionType === 'L' && dimensionValue !== null) {
-    // This dimension uses Largura (L) - store as a formula hint
-    widthFormula = `L`; // Will be refined based on actual formulas
-  } else if (dimensionType === 'A' && dimensionValue !== null) {
-    heightFormula = `A`; // Will be refined based on actual formulas
+  if (dimensionType === 'L') {
+    // Use extracted formula if available, otherwise default to "L"
+    widthFormula = extractedFormula || 'L';
+  } else if (dimensionType === 'A') {
+    heightFormula = extractedFormula || 'A';
   }
   
   return {
