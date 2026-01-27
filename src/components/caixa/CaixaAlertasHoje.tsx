@@ -44,11 +44,11 @@ export function CaixaAlertasHoje({
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
-  const expenses = expensesDueToday || [];
-  const receivables = receivablesDueToday || [];
+  const expenses = Array.isArray(expensesDueToday) ? expensesDueToday : [];
+  const receivables = Array.isArray(receivablesDueToday) ? receivablesDueToday : [];
   
-  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-  const totalReceivables = receivables.reduce((sum, r) => sum + r.total_amount, 0);
+  const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+  const totalReceivables = receivables.reduce((sum, r) => sum + (r.total_amount || 0), 0);
   const hasAlerts = expenses.length > 0 || receivables.length > 0;
 
   if (!hasAlerts) {
@@ -78,7 +78,7 @@ export function CaixaAlertasHoje({
           <AlertTriangle className="h-4 w-4" />
           Atenção Hoje
           <Badge variant="outline" className="ml-auto border-amber-300 text-amber-700 dark:border-amber-700 dark:text-amber-400">
-            {expensesDueToday.length + receivablesDueToday.length} pendências
+            {expenses.length + receivables.length} pendências
           </Badge>
         </CardTitle>
       </CardHeader>
