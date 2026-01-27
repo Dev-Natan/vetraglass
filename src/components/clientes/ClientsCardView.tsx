@@ -8,6 +8,7 @@ import {
   MessageCircle,
   Eye
 } from 'lucide-react';
+import { openWhatsapp } from '@/utils/whatsapp';
 
 interface Client {
   id: string;
@@ -30,12 +31,7 @@ interface ClientsCardViewProps {
 export function ClientsCardView({ clients, onView, onDelete }: ClientsCardViewProps) {
   const handleWhatsApp = (client: Client, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!client.phone) return;
-    
-    const phoneDigits = client.phone.replace(/\D/g, '');
-    const whatsappNumber = phoneDigits.startsWith('55') ? phoneDigits : `55${phoneDigits}`;
-    const message = encodeURIComponent(`Olá ${client.name}, tudo bem?`);
-    window.open(`https://wa.me/${whatsappNumber}?text=${message}`, '_blank');
+    openWhatsapp(client.phone, `Olá ${client.name}, tudo bem?`);
   };
 
   const formatPhone = (phone: string | null) => {
