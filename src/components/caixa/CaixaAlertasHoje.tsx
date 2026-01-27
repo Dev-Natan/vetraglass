@@ -44,9 +44,12 @@ export function CaixaAlertasHoje({
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
-  const totalExpenses = expensesDueToday.reduce((sum, e) => sum + e.amount, 0);
-  const totalReceivables = receivablesDueToday.reduce((sum, r) => sum + r.total_amount, 0);
-  const hasAlerts = expensesDueToday.length > 0 || receivablesDueToday.length > 0;
+  const expenses = expensesDueToday || [];
+  const receivables = receivablesDueToday || [];
+  
+  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const totalReceivables = receivables.reduce((sum, r) => sum + r.total_amount, 0);
+  const hasAlerts = expenses.length > 0 || receivables.length > 0;
 
   if (!hasAlerts) {
     return null;
@@ -81,15 +84,15 @@ export function CaixaAlertasHoje({
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Despesas a pagar */}
-        {expensesDueToday.length > 0 && (
+        {expenses.length > 0 && (
           <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm font-medium text-red-600 dark:text-red-400">
+            <div className="flex items-center gap-2 text-sm font-medium text-destructive">
               <ArrowDownCircle className="h-4 w-4" />
-              Despesas a Pagar ({expensesDueToday.length})
+              Despesas a Pagar ({expenses.length})
               <span className="ml-auto font-bold">{formatCurrency(totalExpenses)}</span>
             </div>
             <div className="space-y-2 pl-6">
-              {expensesDueToday.map((expense) => (
+              {expenses.map((expense) => (
                 <div
                   key={expense.id}
                   className="flex items-center justify-between p-2 rounded-lg bg-background border"
@@ -101,7 +104,7 @@ export function CaixaAlertasHoje({
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-red-600">
+                    <span className="text-sm font-bold text-destructive">
                       {formatCurrency(expense.amount)}
                     </span>
                     <Button
@@ -121,15 +124,15 @@ export function CaixaAlertasHoje({
         )}
 
         {/* Parcelas a receber */}
-        {receivablesDueToday.length > 0 && (
+        {receivables.length > 0 && (
           <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm font-medium text-green-600 dark:text-green-400">
+            <div className="flex items-center gap-2 text-sm font-medium text-primary">
               <ArrowUpCircle className="h-4 w-4" />
-              Parcelas a Receber ({receivablesDueToday.length})
+              Parcelas a Receber ({receivables.length})
               <span className="ml-auto font-bold">{formatCurrency(totalReceivables)}</span>
             </div>
             <div className="space-y-2 pl-6">
-              {receivablesDueToday.map((receivable) => (
+              {receivables.map((receivable) => (
                 <div
                   key={receivable.id}
                   className="flex items-center justify-between p-2 rounded-lg bg-background border"
@@ -141,7 +144,7 @@ export function CaixaAlertasHoje({
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-green-600">
+                    <span className="text-sm font-bold text-primary">
                       {formatCurrency(receivable.total_amount)}
                     </span>
                     <Button
