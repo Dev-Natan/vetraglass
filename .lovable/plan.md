@@ -1,181 +1,146 @@
 
-## Correção do Processo de Venda - Registro de Entradas e Parcelas
 
-### Problemas Identificados
+# Centralização do Utilitário WhatsApp
 
-Após análise detalhada do código, identifiquei os seguintes problemas no fluxo de aprovação de orçamentos:
-
-#### 1. Entrada (Sinal) Não Registrada na Tabela Correta
-O sistema possui uma tabela `quote_deposits` projetada para rastrear entradas/sinais de orçamentos, porém o diálogo de aprovação (`AprovarOrcamentoDialog.tsx`) **NÃO insere registros nessa tabela**. Ele apenas cria um registro de "venda parcial" na tabela `sales`.
-
-**Impacto:**
-- A entrada não aparece no Dashboard Financeiro da OS (que busca em `quote_deposits`)
-- Os alertas de "Entradas Pendentes" no Caixa não funcionam
-- A visibilidade do sinal fica comprometida em várias telas
-
-#### 2. Parcelas Sendo Criadas Mesmo Quando Não Deveriam
-A lógica de criação de parcelas usa `pendingAmount > 0`, mas não considera corretamente o tipo de condição de pagamento (à vista vs parcelado).
+## Resumo
+Criar uma função utilitária centralizada `getWhatsappLink` que será usada em todo o sistema para gerar links do WhatsApp, eliminando código duplicado em 4+ componentes.
 
 ---
 
-### Correções Planejadas
+## Problema Atual
 
-#### Arquivo: `src/components/orcamentos/AprovarOrcamentoDialog.tsx`
+O código de geração de links WhatsApp está **duplicado** em múltiplos componentes:
 
-**Mudança 1: Criar registro em `quote_deposits`**
+| Arquivo | Função |
+|---------|--------|
+| `ClientQuickActions.tsx` | `handleWhatsApp()` |
+| `ClientsCardView.tsx` | `handleWhatsApp()` |
+| `ClientsTableView.tsx` | `handleWhatsApp()` |
+| `OverdueReceivablesAlert.tsx` | `handleWhatsApp()` |
 
-```text
-Após a linha 319 (criação da OS), adicionar:
+Cada um repete a mesma lógica:
+1. Limpar telefone (remover não-dígitos)
+2. Adicionar DDI 55 se necessário
+3. Codificar mensagem
+4. Montar URL `wa.me`
 
-if (hasEntry) {
-  // Criar registro de depósito/entrada
-  await supabase.from('quote_deposits').insert({
-    company_id: currentCompany.id,
-    quote_id: quote.id,
-    ordem_servico_id: ordemServico.id,
-    customer_name: quote.customer_name,
-    customer_phone: quote.customer_phone,
-    amount: entryValue,
-    payment_method: entryPaymentMethod,
-    status: isCaixaAberto ? 'received' : 'pending',
-    cash_register_id: isCaixaAberto ? openCashRegister.id : null,
-    created_by: user.id,
-  });
+---
+
+## Solução
+
+### 1. Criar arquivo utilitário
+
+**Novo arquivo:** `src/utils/whatsapp.ts`
+
+```typescript
+/**
+ * Gera link do WhatsApp Web com mensagem pré-preenchida
+ * @param phone - Telefone (qualquer formato)
+ * @param message - Mensagem opcional
+ * @returns URL do wa.me ou string vazia se inválido
+ */
+export function getWhatsappLink(phone: string | null | undefined, message?: string): string {
+  if (!phone) return '';
+  
+  // Remove tudo que não é dígito
+  const cleanPhone = phone.replace(/\D/g, '');
+  
+  if (!cleanPhone) return '';
+
+  let fullPhone = cleanPhone;
+
+  // Adicionar DDI Brasil (55) se estiver faltando
+  // Telefone BR: 10 dígitos (fixo) ou 11 dígitos (celular)
+  if (fullPhone.length === 10 || fullPhone.length === 11) {
+    fullPhone = `55${fullPhone}`;
+  }
+  
+  const encodedMessage = encodeURIComponent(message || '');
+  return `https://wa.me/${fullPhone}?text=${encodedMessage}`;
+}
+
+/**
+ * Abre WhatsApp em nova aba
+ * @param phone - Telefone
+ * @param message - Mensagem
+ * @returns true se abriu, false se telefone inválido
+ */
+export function openWhatsapp(phone: string | null | undefined, message?: string): boolean {
+  const link = getWhatsappLink(phone, message);
+  if (!link) return false;
+  
+  window.open(link, '_blank');
+  return true;
 }
 ```
 
-**Mudança 2: Adicionar registro de `accounts_receivable` para a entrada**
-
-A entrada também deve aparecer em `accounts_receivable` com tipo `entrada_orcamento`:
-
-```text
-if (hasEntry) {
-  await supabase.from('accounts_receivable').insert({
-    company_id: currentCompany.id,
-    ordem_servico_id: ordemServico.id,
-    quote_id: quote.id,
-    customer_name: quote.customer_name,
-    description: `Entrada - Orç. #${quote.quote_number.toString().padStart(4, '0')}`,
-    total_amount: entryValue,
-    paid_amount: isCaixaAberto ? entryValue : null,
-    status: isCaixaAberto ? 'paid' : 'pending',
-    due_date: format(new Date(), 'yyyy-MM-dd'),
-    receivable_type: 'entrada_orcamento',
-    installment_number: 0,
-    total_installments: 0,
-    created_by: user.id,
-  });
-}
-```
-
-**Mudança 3: Atualizar OS com `paid_amount` incluindo a entrada**
-
-Garantir que a OS reflita o valor já recebido:
-
-```text
-// Linha 292-318: Na criação da OS
-paid_amount: hasEntry && isCaixaAberto ? entryValue : 0,
-```
-
 ---
 
-### Arquivo: `src/components/ordens-servico/OSFinancialDashboard.tsx`
+### 2. Refatorar componentes
 
-**Mudança 4: Fallback para exibição de entrada**
+#### `ClientQuickActions.tsx`
+```typescript
+import { openWhatsapp } from '@/utils/whatsapp';
 
-Se não houver `quote_deposits`, buscar em `sales` com `sale_type: 'partial'`:
+const handleWhatsApp = () => {
+  if (!openWhatsapp(client.phone, `Olá ${client.name}, tudo bem?`)) {
+    toast.error('Cliente não possui telefone cadastrado');
+  }
+};
+```
 
-```text
-// Adicionar lógica de fallback no query
-const { data: entrySale } = useQuery({
-  queryKey: ['os-entry-sale', ordemServicoId],
-  queryFn: async () => {
-    const { data } = await supabase
-      .from('sales')
-      .select('*')
-      .eq('ordem_servico_id', ordemServicoId)
-      .eq('sale_type', 'partial')
-      .maybeSingle();
-    return data;
-  },
-  enabled: !!ordemServicoId && !depositInfo,
-});
+#### `ClientsCardView.tsx`
+```typescript
+import { openWhatsapp } from '@/utils/whatsapp';
+
+const handleWhatsApp = (client: Client, e: React.MouseEvent) => {
+  e.stopPropagation();
+  openWhatsapp(client.phone, `Olá ${client.name}, tudo bem?`);
+};
+```
+
+#### `ClientsTableView.tsx`
+```typescript
+import { openWhatsapp } from '@/utils/whatsapp';
+
+const handleWhatsApp = (client: Client, e: React.MouseEvent) => {
+  e.stopPropagation();
+  openWhatsapp(client.phone, `Olá ${client.name}, tudo bem?`);
+};
+```
+
+#### `OverdueReceivablesAlert.tsx`
+```typescript
+import { openWhatsapp } from '@/utils/whatsapp';
+
+const handleWhatsApp = (customerPhone?: string) => {
+  openWhatsapp(
+    customerPhone,
+    'Olá! Estamos entrando em contato referente ao pagamento pendente. Por favor, entre em contato conosco para regularizar.'
+  );
+};
 ```
 
 ---
 
-### Resumo das Alterações
+## Benefícios
 
-| Componente | Alteração |
-|------------|-----------|
-| `AprovarOrcamentoDialog.tsx` | Inserir em `quote_deposits` ao aprovar |
-| `AprovarOrcamentoDialog.tsx` | Criar `accounts_receivable` tipo `entrada_orcamento` |
-| `AprovarOrcamentoDialog.tsx` | Atualizar `paid_amount` da OS corretamente |
-| `OSFinancialDashboard.tsx` | Adicionar fallback para exibir entrada via `sales` |
-
----
-
-### Resultado Esperado
-
-Após as correções:
-- A entrada aparecerá no Dashboard Financeiro da OS
-- Os alertas de depósitos pendentes funcionarão corretamente
-- O valor da entrada será exibido nas vendas do caixa
-- As parcelas serão criadas apenas para o saldo restante
-- O rastreamento financeiro será consistente em todo o sistema
+| Antes | Depois |
+|-------|--------|
+| Lógica duplicada em 4 arquivos | Função única reutilizável |
+| Manutenção difícil | Alterar em um lugar afeta todos |
+| Sem validação consistente | Validação padronizada |
+| Código verboso | Chamada de 1 linha |
 
 ---
 
-### Detalhes Técnicos
+## Arquivos Afetados
 
-**Tabelas Envolvidas:**
-- `quote_deposits` - Rastreia entradas/sinais de orçamentos
-- `accounts_receivable` - Unifica todas as cobranças (entrada + parcelas)
-- `sales` - Registra movimentações de caixa
-- `ordens_servico` - Armazena totais (total, pago, pendente)
+| Ação | Arquivo |
+|------|---------|
+| **Criar** | `src/utils/whatsapp.ts` |
+| Editar | `src/components/clientes/ClientQuickActions.tsx` |
+| Editar | `src/components/clientes/ClientsCardView.tsx` |
+| Editar | `src/components/clientes/ClientsTableView.tsx` |
+| Editar | `src/components/financeiro/OverdueReceivablesAlert.tsx` |
 
-**Fluxo Corrigido:**
-```text
-Aprovar Orçamento
-       │
-       ▼
-┌──────────────────┐
-│ Criar OS         │
-│ paid_amount = 0  │
-│ ou entryValue    │
-└────────┬─────────┘
-         │
-    Tem entrada?
-    ┌────┴────┐
-   SIM       NÃO
-    │         │
-    ▼         │
-┌────────────┐│
-│ INSERT     ││
-│ quote_     ││
-│ deposits   ││
-└─────┬──────┘│
-      │       │
-      ▼       │
-┌────────────┐│
-│ INSERT     ││
-│ accounts_  ││
-│ receivable ││
-│ (entrada)  ││
-└─────┬──────┘│
-      │       │
-      ▼       ▼
-┌─────────────────┐
-│ Caixa aberto?   │
-│ → INSERT sales  │
-│ → INSERT sale_  │
-│   items         │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ INSERT accounts_│
-│ receivable      │
-│ (parcelas)      │
-└─────────────────┘
-```
