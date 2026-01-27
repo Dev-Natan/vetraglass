@@ -368,8 +368,41 @@ export function AprovarOrcamentoDialog({
           console.error('Error creating entry receivable:', entryReceivableError);
         }
 
-        // 4.3 If cash register is open, create partial sale
+        // 4.3 If cash register is open, create cash movement and partial sale
         if (openCashRegister) {
+          // IMPORTANTE: Criar movimento de caixa vinculado ao ORÇAMENTO
+          // Esse vínculo será transferido para a VENDA quando o orçamento for faturado
+          const { data: cashMovement, error: cashMovementError } = await supabase
+            .from('cash_movements')
+            .insert({
+              cash_register_id: openCashRegister.id,
+              company_id: currentCompany.id,
+              type: 'entrada',
+              category: 'entrada_orcamento',
+              amount: entryValue,
+              description: `Entrada - Orç. #${quote.quote_number.toString().padStart(4, '0')} - ${quote.customer_name}`,
+              payment_method: entryPaymentMethod,
+              created_by: user.id,
+              // Vínculo obrigatório: origem e referência
+              origem: 'orcamento',
+            })
+            .select('id')
+            .single();
+
+          if (cashMovementError) {
+            console.error('Error creating cash movement:', cashMovementError);
+          }
+
+          // Atualizar quote_deposit com o cash_movement_id
+          if (cashMovement?.id) {
+            await supabase
+              .from('quote_deposits')
+              .update({ cash_movement_id: cashMovement.id })
+              .eq('quote_id', quote.id)
+              .eq('status', 'received');
+          }
+
+          // Criar venda parcial (para rastreamento, sem duplicar movimento de caixa)
           const { data: sale, error: saleError } = await supabase
             .from('sales')
             .insert({
@@ -393,6 +426,14 @@ export function AprovarOrcamentoDialog({
 
           if (saleError) throw saleError;
           saleId = sale.id;
+
+          // Vincular cash_movement à venda para rastreabilidade
+          if (cashMovement?.id) {
+            await supabase
+              .from('cash_movements')
+              .update({ sale_id: sale.id })
+              .eq('id', cashMovement.id);
+          }
 
           // Create sale item
           await supabase.from('sale_items').insert({

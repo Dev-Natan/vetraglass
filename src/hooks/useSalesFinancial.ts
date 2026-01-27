@@ -97,6 +97,7 @@ export function useSalesFinancial() {
       } = params;
 
       // 1. Criar movimento de caixa (entrada real de dinheiro)
+      // REGRA: Toda movimentação deve ter origem e referência
       const { data: cashMovement, error: movementError } = await supabase
         .from('cash_movements')
         .insert({
@@ -109,6 +110,7 @@ export function useSalesFinancial() {
           payment_method: paymentMethod,
           sale_id: saleId,
           created_by: user.id,
+          // Vínculo obrigatório: origem e referência
           origem: 'venda',
         })
         .select('id')
@@ -244,6 +246,7 @@ export function useSalesFinancial() {
         : `Pagamento - ${receivable.customer_name}`;
 
       // 2. Criar movimento de caixa (entrada real de dinheiro)
+      // REGRA: Toda movimentação deve ter origem e referência
       const { data: cashMovement, error: movementError } = await supabase
         .from('cash_movements')
         .insert({
@@ -257,6 +260,7 @@ export function useSalesFinancial() {
           receivable_id: receivableId,
           sale_id: receivable.sale_id,
           created_by: user.id,
+          // Vínculo obrigatório: origem e referência
           origem: 'conta_receber',
         })
         .select('id')
