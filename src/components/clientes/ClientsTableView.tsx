@@ -1,0 +1,204 @@
+import { useState } from 'react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { 
+  ArrowUpDown, 
+  Phone, 
+  MapPin, 
+  Eye,
+  Trash2,
+  MessageCircle
+} from 'lucide-react';
+
+interface Client {
+  id: string;
+  name: string;
+  document: string | null;
+  document_type: 'CPF' | 'CNPJ' | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+}
+
+interface ClientsTableViewProps {
+  clients: Client[];
+  onView: (client: Client) => void;
+  onDelete: (client: Client) => void;
+}
+
+type SortField = 'name' | 'city' | 'document_type';
+type SortDirection = 'asc' | 'desc';
+
+export function ClientsTableView({ clients, onView, onDelete }: ClientsTableViewProps) {
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const sortedClients = [...clients].sort((a, b) => {
+    const aValue = a[sortField] || '';
+    const bValue = b[sortField] || '';
+    const comparison = aValue.localeCompare(bValue);
+    return sortDirection === 'asc' ? comparison : -comparison;
+  });
+
+  const handleWhatsApp = (client: Client, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!client.phone) return;
+    
+    const phoneDigits = client.phone.replace(/\D/g, '');
+    const whatsappNumber = phoneDigits.startsWith('55') ? phoneDigits : `55${phoneDigits}`;
+    const message = encodeURIComponent(`Olá ${client.name}, tudo bem?`);
+    window.open(`https://wa.me/${whatsappNumber}?text=${message}`, '_blank');
+  };
+
+  const formatAddress = (client: Client) => {
+    const parts = [client.city, client.state].filter(Boolean);
+    return parts.length > 0 ? parts.join(' - ') : '-';
+  };
+
+  return (
+    <div className="rounded-lg border bg-card">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[300px]">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1 -ml-3 font-medium"
+                onClick={() => handleSort('name')}
+              >
+                Cliente
+                <ArrowUpDown className="h-4 w-4" />
+              </Button>
+            </TableHead>
+            <TableHead>Contato</TableHead>
+            <TableHead>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1 -ml-3 font-medium"
+                onClick={() => handleSort('city')}
+              >
+                Cidade
+                <ArrowUpDown className="h-4 w-4" />
+              </Button>
+            </TableHead>
+            <TableHead>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1 -ml-3 font-medium"
+                onClick={() => handleSort('document_type')}
+              >
+                Tipo
+                <ArrowUpDown className="h-4 w-4" />
+              </Button>
+            </TableHead>
+            <TableHead className="text-right">Ações</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {sortedClients.map((client) => (
+            <TableRow 
+              key={client.id}
+              className="cursor-pointer hover:bg-muted/50"
+              onClick={() => onView(client)}
+            >
+              <TableCell>
+                <div>
+                  <p className="font-medium">{client.name}</p>
+                  {client.document && (
+                    <p className="text-xs text-muted-foreground">{client.document}</p>
+                  )}
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="space-y-1">
+                  {client.phone && (
+                    <div className="flex items-center gap-1 text-sm">
+                      <Phone className="h-3 w-3 text-muted-foreground" />
+                      {client.phone}
+                    </div>
+                  )}
+                  {client.email && (
+                    <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                      {client.email}
+                    </p>
+                  )}
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-1 text-sm">
+                  <MapPin className="h-3 w-3 text-muted-foreground" />
+                  {formatAddress(client)}
+                </div>
+              </TableCell>
+              <TableCell>
+                {client.document_type && (
+                  <Badge variant="outline" className="text-xs">
+                    {client.document_type}
+                  </Badge>
+                )}
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="flex items-center justify-end gap-1">
+                  {client.phone && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={(e) => handleWhatsApp(client, e)}
+                    >
+                      <MessageCircle className="h-4 w-4 text-green-600" />
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onView(client);
+                    }}
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(client);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
