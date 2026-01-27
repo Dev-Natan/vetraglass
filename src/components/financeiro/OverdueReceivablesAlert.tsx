@@ -4,11 +4,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, Phone, MessageCircle, DollarSign, ChevronRight, Calendar } from 'lucide-react';
+import { AlertTriangle, MessageCircle, ChevronRight, Calendar } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
-import { cn } from '@/lib/utils';
+import { openWhatsapp } from '@/utils/whatsapp';
 
 interface OverdueReceivable {
   id: string;
@@ -73,12 +73,11 @@ export function OverdueReceivablesAlert() {
 
   const totalOverdue = overdueReceivables.reduce((sum, r) => sum + r.total_amount, 0);
 
-  const handleWhatsApp = (customerName: string) => {
-    // This would need the customer phone - for now just show a message
-    const message = encodeURIComponent(
-      `Olá! Estamos entrando em contato referente ao pagamento pendente. Por favor, entre em contato conosco para regularizar.`
+  const handleWhatsApp = (customerPhone?: string) => {
+    openWhatsapp(
+      customerPhone,
+      'Olá! Estamos entrando em contato referente ao pagamento pendente. Por favor, entre em contato conosco para regularizar.'
     );
-    window.open(`https://wa.me/?text=${message}`, '_blank');
   };
 
   return (

@@ -9,6 +9,7 @@ import {
   MapPin
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { openWhatsapp } from '@/utils/whatsapp';
 
 interface ClientQuickActionsProps {
   client: {
@@ -37,15 +38,9 @@ export function ClientQuickActions({ client, onClose }: ClientQuickActionsProps)
   };
 
   const handleWhatsApp = () => {
-    if (!client.phone) {
+    if (!openWhatsapp(client.phone, `Olá ${client.name}, tudo bem?`)) {
       toast.error('Cliente não possui telefone cadastrado');
-      return;
     }
-    
-    const phoneDigits = client.phone.replace(/\D/g, '');
-    const whatsappNumber = phoneDigits.startsWith('55') ? phoneDigits : `55${phoneDigits}`;
-    const message = encodeURIComponent(`Olá ${client.name}, tudo bem?`);
-    window.open(`https://wa.me/${whatsappNumber}?text=${message}`, '_blank');
   };
 
   const handleCall = () => {
