@@ -59,17 +59,7 @@ export default function ClientMapView({ position, clientName, onPositionChange }
         eventHandlers={{
           dragend: handleDragEnd,
         }}
-      >
-        <Popup>
-          <div className="text-center">
-            <strong>{clientName}</strong>
-            <br />
-            <span className="text-xs text-gray-500">
-              Arraste para ajustar a posição
-            </span>
-          </div>
-        </Popup>
-      </Marker>
+      />
       <MapController center={position} />
     </MapContainer>
   );
