@@ -71,7 +71,8 @@ export function ReceberEntradaDialog({
         ? `Entrada - OS #${String(osNumber).padStart(4, '0')} - ${deposit.customer_name}`
         : `Entrada - Orçamento #${String(quoteNumber || 0).padStart(4, '0')} - ${deposit.customer_name}`;
 
-      // 1. Criar movimento de caixa (ENTRADA, não venda)
+      // 1. Criar movimento de caixa (ENTRADA vinculada ao ORÇAMENTO)
+      // IMPORTANTE: origem='orcamento' para rastreabilidade
       const { data: cashMovement, error: movementError } = await supabase
         .from('cash_movements')
         .insert({
@@ -83,6 +84,8 @@ export function ReceberEntradaDialog({
           description: description,
           payment_method: paymentMethod,
           created_by: user.id,
+          // Vínculo obrigatório ao orçamento (será transferido para venda ao faturar)
+          origem: 'orcamento',
         })
         .select('id')
         .single();

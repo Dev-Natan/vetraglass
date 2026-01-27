@@ -3,7 +3,7 @@ import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { DollarSign, CreditCard, Smartphone, Receipt, User, CheckCircle2, AlertCircle } from 'lucide-react';
+import { DollarSign, CreditCard, Smartphone, Receipt, User, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
 import { consumeOSMaterials } from '@/utils/checkGlassStock';
 import {
   Dialog,
@@ -65,21 +65,49 @@ export function FaturarSaldoDialog({
     enabled: !!currentCompany?.id && open,
   });
 
-  // Buscar entrada já recebida (quote_deposit com status 'received')
-  const { data: depositInfo } = useQuery({
-    queryKey: ['quote-deposit-info', ordemServico.quote_id],
+  // FLUXO CORRIGIDO: Buscar TODAS as entradas já pagas do orçamento
+  const { data: allDeposits, isLoading: isLoadingDeposits } = useQuery({
+    queryKey: ['quote-all-deposits', ordemServico.quote_id],
     queryFn: async () => {
-      if (!ordemServico.quote_id) return null;
+      if (!ordemServico.quote_id) return { deposits: [], totalReceived: 0 };
       
-      const { data, error } = await supabase
+      // Buscar todos os depósitos recebidos
+      const { data: deposits, error: depositsError } = await supabase
         .from('quote_deposits')
         .select('id, amount, status, received_at, payment_method')
         .eq('quote_id', ordemServico.quote_id)
-        .eq('status', 'received')
-        .maybeSingle();
+        .in('status', ['received', 'pending']);
       
-      if (error) throw error;
-      return data;
+      if (depositsError) throw depositsError;
+
+      // Também buscar vendas parciais já vinculadas
+      const { data: partialSales, error: salesError } = await supabase
+        .from('sales')
+        .select('id, total_amount, paid_amount')
+        .eq('ordem_servico_id', ordemServico.id)
+        .eq('sale_type', 'partial');
+
+      if (salesError) console.warn('Erro ao buscar vendas parciais:', salesError);
+
+      // Calcular total recebido via depósitos
+      const depositsReceived = (deposits || [])
+        .filter(d => d.status === 'received')
+        .reduce((sum, d) => sum + Number(d.amount), 0);
+
+      // Calcular total recebido via vendas parciais
+      const salesReceived = (partialSales || [])
+        .reduce((sum, s) => sum + Number(s.paid_amount || s.total_amount), 0);
+
+      // Total efetivamente recebido
+      const totalReceived = Math.max(depositsReceived, salesReceived, ordemServico.paid_amount || 0);
+      
+      return {
+        deposits: deposits || [],
+        partialSales: partialSales || [],
+        totalReceived,
+        depositsReceived,
+        salesReceived,
+      };
     },
     enabled: !!ordemServico.quote_id && open,
   });
@@ -101,25 +129,30 @@ export function FaturarSaldoDialog({
         throw new Error('Nenhum caixa aberto. Abra o caixa para faturar.');
       }
 
-      const saldoRestante = ordemServico.pending_amount;
+      // CORREÇÃO: Usar o valor REAL das entradas já recebidas
+      const entradaJaRecebida = allDeposits?.totalReceived || 0;
+      const totalOrcamento = ordemServico.total_amount;
+      const saldoRestante = Math.max(0, totalOrcamento - entradaJaRecebida);
       
-      if (saldoRestante <= 0) {
+      if (saldoRestante <= 0 && entradaJaRecebida <= 0) {
         throw new Error('Não há saldo pendente para faturar');
       }
 
-      // 1. Criar venda (apenas do saldo restante!)
+      // 1. Criar venda COMPLETA (valor total do orçamento)
       const { data: sale, error: saleError } = await supabase
         .from('sales')
         .insert({
           company_id: currentCompany.id,
           cash_register_id: openCashRegister.id,
           customer_name: ordemServico.customer_name,
-          total_amount: saldoRestante,
-          subtotal: saldoRestante,
+          total_amount: totalOrcamento, // Valor TOTAL do orçamento
+          subtotal: totalOrcamento,
+          paid_amount: entradaJaRecebida + saldoRestante, // Tudo será pago
+          pending_amount: 0, // Sem pendência após faturamento
           payment_method: paymentMethod,
           sale_type: 'full',
-          payment_status: 'completed',
-          notes: `Faturamento final - OS #${String(ordemServico.os_number).padStart(4, '0')}`,
+          payment_status: 'paid',
+          notes: `Faturamento completo - OS #${String(ordemServico.os_number).padStart(4, '0')}`,
           sold_by: user.id,
           ordem_servico_id: ordemServico.id,
           quote_id: ordemServico.quote_id,
@@ -129,92 +162,129 @@ export function FaturarSaldoDialog({
 
       if (saleError) throw saleError;
 
-      // 2. Criar movimento de caixa (tipo VENDA)
-      const { error: movementError } = await supabase
-        .from('cash_movements')
-        .insert({
-          cash_register_id: openCashRegister.id,
-          company_id: currentCompany.id,
-          type: 'entrada',
-          category: 'venda',
-          amount: saldoRestante,
-          description: `Venda - OS #${String(ordemServico.os_number).padStart(4, '0')} - ${ordemServico.customer_name}`,
-          payment_method: paymentMethod,
-          sale_id: sale.id,
-          created_by: user.id,
-        });
+      // 2. Criar movimento de caixa APENAS para o saldo restante (não duplicar entrada)
+      if (saldoRestante > 0) {
+        const { error: movementError } = await supabase
+          .from('cash_movements')
+          .insert({
+            cash_register_id: openCashRegister.id,
+            company_id: currentCompany.id,
+            type: 'entrada',
+            category: 'venda',
+            amount: saldoRestante,
+            description: `Saldo final - OS #${String(ordemServico.os_number).padStart(4, '0')} - ${ordemServico.customer_name}`,
+            payment_method: paymentMethod,
+            sale_id: sale.id,
+            created_by: user.id,
+            origem: 'venda',
+          });
 
-      if (movementError) throw movementError;
+        if (movementError) throw movementError;
+      }
 
-      // 3. Atualizar quote_deposit para 'billed' (se existir)
-      if (depositInfo?.id) {
-        const { error: depositError } = await supabase
+      // 3. TRANSFERIR VÍNCULO: Atualizar movimentações de entrada para pertencerem à venda
+      const receivedDeposits = (allDeposits?.deposits || []).filter(d => d.status === 'received');
+      for (const deposit of receivedDeposits) {
+        // Buscar cash_movement vinculado ao deposit
+        const { data: depositData } = await supabase
           .from('quote_deposits')
-          .update({ status: 'billed' })
-          .eq('id', depositInfo.id);
+          .select('cash_movement_id')
+          .eq('id', deposit.id)
+          .single();
 
-        if (depositError) {
-          console.warn('Erro ao atualizar quote_deposit:', depositError);
+        if (depositData?.cash_movement_id) {
+          // Transferir vínculo: orcamento → venda
+          await supabase
+            .from('cash_movements')
+            .update({
+              origem: 'venda',
+              sale_id: sale.id,
+            })
+            .eq('id', depositData.cash_movement_id);
         }
       }
 
-      // 4. Atualizar accounts_receivable do saldo como pago
+      // 4. Atualizar quote_deposits para 'billed'
       if (ordemServico.quote_id) {
-        const { error: receivableError } = await supabase
+        await supabase
+          .from('quote_deposits')
+          .update({ status: 'billed' })
+          .eq('quote_id', ordemServico.quote_id)
+          .in('status', ['received', 'pending']);
+      }
+
+      // 5. Atualizar accounts_receivable - vincular à venda e marcar como pago
+      if (ordemServico.quote_id) {
+        // Atualizar entradas
+        await supabase
+          .from('accounts_receivable')
+          .update({
+            status: 'paid',
+            sale_id: sale.id,
+            paid_date: new Date().toISOString().split('T')[0],
+          })
+          .eq('quote_id', ordemServico.quote_id)
+          .eq('receivable_type', 'entrada_orcamento');
+
+        // Atualizar parcelas
+        await supabase
           .from('accounts_receivable')
           .update({
             status: 'paid',
             paid_date: new Date().toISOString().split('T')[0],
             paid_amount: saldoRestante,
             payment_method: paymentMethod,
+            sale_id: sale.id,
           })
           .eq('quote_id', ordemServico.quote_id)
           .or('receivable_type.eq.saldo_final,receivable_type.eq.installment')
           .eq('status', 'pending');
-
-        if (receivableError) {
-          console.warn('Erro ao atualizar accounts_receivable:', receivableError);
-        }
       }
 
-      // 5. Consumir materiais reservados do estoque
+      // 6. Consumir materiais reservados do estoque
       const consumeResult = await consumeOSMaterials(ordemServico.id);
       if (!consumeResult.success) {
         console.warn('Aviso ao consumir materiais:', consumeResult.error);
       }
 
-      // 6. Atualizar ordens_servico como concluída
+      // 7. Atualizar ordens_servico como concluída
       const { error: osError } = await supabase
         .from('ordens_servico')
         .update({
           status: 'completed',
-          paid_amount: ordemServico.total_amount,
+          sale_id: sale.id,
+          paid_amount: totalOrcamento,
           pending_amount: 0,
         })
         .eq('id', ordemServico.id);
 
       if (osError) throw osError;
 
-      // 6. Atualizar quotes como concluído
+      // 8. Atualizar quotes como concluído
       if (ordemServico.quote_id) {
-        const { error: quoteError } = await supabase
+        await supabase
           .from('quotes')
           .update({
             status: 'completed',
             deposit_status: 'billed',
           })
           .eq('id', ordemServico.quote_id);
-
-        if (quoteError) {
-          console.warn('Erro ao atualizar quote:', quoteError);
-        }
       }
 
-      return sale;
+      return { 
+        sale, 
+        entradaJaRecebida, 
+        saldoFaturado: saldoRestante,
+        totalFaturado: totalOrcamento,
+      };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      const mensagem = data.entradaJaRecebida > 0
+        ? `Entrada de ${formatCurrency(data.entradaJaRecebida)} reconhecida. Saldo de ${formatCurrency(data.saldoFaturado)} faturado.`
+        : `Venda de ${formatCurrency(data.totalFaturado)} registrada`;
+
       toast.success('Serviço faturado e concluído!', {
-        description: `Venda de ${formatCurrency(ordemServico.pending_amount)} registrada`,
+        description: mensagem,
       });
       queryClient.invalidateQueries({ queryKey: ['ordens-servico'] });
       queryClient.invalidateQueries({ queryKey: ['sales'] });
@@ -222,6 +292,7 @@ export function FaturarSaldoDialog({
       queryClient.invalidateQueries({ queryKey: ['cash-summary'] });
       queryClient.invalidateQueries({ queryKey: ['accounts-receivable'] });
       queryClient.invalidateQueries({ queryKey: ['pending-deposits'] });
+      queryClient.invalidateQueries({ queryKey: ['quotes'] });
       onSuccess();
     },
     onError: (error) => {
@@ -237,9 +308,9 @@ export function FaturarSaldoDialog({
   };
 
   const isCaixaAberto = !!openCashRegister?.id;
-  const entradaRecebida = Number(depositInfo?.amount || 0);
+  const entradaRecebida = allDeposits?.totalReceived || 0;
   const totalOrcamento = ordemServico.total_amount;
-  const saldoRestante = ordemServico.pending_amount;
+  const saldoRestante = Math.max(0, totalOrcamento - entradaRecebida);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -261,8 +332,8 @@ export function FaturarSaldoDialog({
             <p className="font-medium">{ordemServico.customer_name}</p>
           </div>
 
-          {/* Resumo Financeiro */}
-          <div className="space-y-2 p-4 bg-muted/50 rounded-lg">
+          {/* Resumo Financeiro Detalhado */}
+          <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Valor total do orçamento:</span>
               <span className="font-medium">{formatCurrency(totalOrcamento)}</span>
@@ -272,22 +343,29 @@ export function FaturarSaldoDialog({
               <div className="flex justify-between text-sm">
                 <span className="flex items-center gap-1 text-green-600">
                   <CheckCircle2 className="h-3 w-3" />
-                  Entrada já recebida:
+                  Entrada(s) já recebida(s):
                 </span>
                 <span className="font-medium text-green-600">
-                  {formatCurrency(entradaRecebida)}
+                  - {formatCurrency(entradaRecebida)}
                 </span>
               </div>
             )}
             
             <Separator className="my-2" />
             
-            <div className="flex justify-between">
-              <span className="font-medium">Saldo a faturar:</span>
+            <div className="flex justify-between items-center">
+              <span className="font-medium">Saldo a faturar agora:</span>
               <span className="text-lg font-bold text-primary">
                 {formatCurrency(saldoRestante)}
               </span>
             </div>
+
+            {entradaRecebida > 0 && (
+              <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-950/20 rounded text-xs text-green-700 dark:text-green-400">
+                <ArrowRight className="h-3 w-3" />
+                As entradas anteriores serão vinculadas automaticamente a esta venda
+              </div>
+            )}
           </div>
 
           {/* Alerta se caixa fechado */}
@@ -300,10 +378,10 @@ export function FaturarSaldoDialog({
             </Alert>
           )}
 
-          {/* Forma de Pagamento */}
-          {isCaixaAberto && (
+          {/* Forma de Pagamento (apenas se há saldo) */}
+          {isCaixaAberto && saldoRestante > 0 && (
             <div>
-              <Label className="text-sm font-medium">Forma de Pagamento</Label>
+              <Label className="text-sm font-medium">Forma de Pagamento do Saldo</Label>
               <RadioGroup
                 value={paymentMethod}
                 onValueChange={(v) => setPaymentMethod(v as typeof paymentMethod)}
@@ -333,6 +411,16 @@ export function FaturarSaldoDialog({
               </RadioGroup>
             </div>
           )}
+
+          {/* Caso não haja saldo (já está tudo pago) */}
+          {isCaixaAberto && saldoRestante === 0 && entradaRecebida >= totalOrcamento && (
+            <Alert className="border-green-200 bg-green-50 dark:bg-green-950/20">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-700 dark:text-green-400">
+                O valor total já foi recebido via entradas. Clique em "Faturar e Concluir" para finalizar a OS.
+              </AlertDescription>
+            </Alert>
+          )}
         </div>
 
         <DialogFooter>
@@ -345,7 +433,7 @@ export function FaturarSaldoDialog({
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={faturarMutation.isPending || !isCaixaAberto}
+            disabled={faturarMutation.isPending || !isCaixaAberto || isLoadingDeposits}
           >
             {faturarMutation.isPending ? 'Processando...' : 'Faturar e Concluir'}
           </Button>
