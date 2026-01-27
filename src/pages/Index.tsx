@@ -7,16 +7,19 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { DashboardKPIs } from '@/components/dashboard/DashboardKPIs';
-import { SalesChart } from '@/components/dashboard/SalesChart';
+import { ProductionKPIs } from '@/components/dashboard/ProductionKPIs';
+import { ProductionBlockedAlert } from '@/components/dashboard/ProductionBlockedAlert';
+import { PendingPurchasesAlert } from '@/components/dashboard/PendingPurchasesAlert';
+import { OverdueReceivablesAlert } from '@/components/financeiro/OverdueReceivablesAlert';
+import { FinancialAlerts } from '@/components/dashboard/FinancialAlerts';
+import { FinancialOSSummary } from '@/components/dashboard/FinancialOSSummary';
+import { TodayTasksWidget } from '@/components/dashboard/TodayTasksWidget';
+import { OSDueTodayWidget } from '@/components/dashboard/OSDueTodayWidget';
+import { SystemReminders } from '@/components/dashboard/SystemReminders';
+import { ProductionFlowChart } from '@/components/dashboard/ProductionFlowChart';
+import { RevenueVsCostChart } from '@/components/dashboard/RevenueVsCostChart';
 import { RecentActivity } from '@/components/dashboard/RecentActivity';
 import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
-import { FinancialAlerts } from '@/components/dashboard/FinancialAlerts';
-import { OverdueReceivablesAlert } from '@/components/financeiro/OverdueReceivablesAlert';
-import { SalesGoalCard } from '@/components/dashboard/SalesGoalCard';
-import { SystemReminders } from '@/components/dashboard/SystemReminders';
-import { TodayTasksWidget } from '@/components/dashboard/TodayTasksWidget';
-import { PendingPurchasesAlert } from '@/components/dashboard/PendingPurchasesAlert';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -57,7 +60,7 @@ export default function Index() {
         {/* Onboarding - só aparece para novos usuários */}
         {currentCompany && <OnboardingChecklist />}
 
-        {/* Ações Rápidas - Seção Principal */}
+        {/* Ações Rápidas */}
         <section className="animate-fade-in">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {quickActions.map((action) => (
@@ -103,35 +106,48 @@ export default function Index() {
           </div>
         </section>
 
-        {/* KPIs e Alertas */}
         {currentCompany && (
-          <section className="space-y-4 animate-fade-in">
-            <DashboardKPIs />
-            
-            {/* Tarefas e Meta lado a lado */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <TodayTasksWidget />
-              <SalesGoalCard />
-            </div>
+          <>
+            {/* 🔥 LINHA 1 — PRODUÇÃO */}
+            <section className="animate-fade-in">
+              <ProductionKPIs />
+            </section>
 
-            {/* Lembretes do Sistema */}
-            <SystemReminders />
+            {/* 🚨 LINHA 2 — ALERTAS */}
+            <section className="space-y-3 animate-fade-in">
+              <ProductionBlockedAlert />
+              <PendingPurchasesAlert />
+              <OverdueReceivablesAlert />
+              <FinancialAlerts />
+            </section>
 
-            {/* Pedidos de Compra Pendentes */}
-            <PendingPurchasesAlert />
-            
-            {/* Alertas Financeiros */}
-            <OverdueReceivablesAlert />
-            <FinancialAlerts />
-          </section>
-        )}
+            {/* 💰 LINHA 3 — FINANCEIRO REAL */}
+            <section className="animate-fade-in">
+              <FinancialOSSummary />
+            </section>
 
-        {/* Gráficos e Atividades */}
-        {currentCompany && (
-          <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-slide-up">
-            <SalesChart />
-            <RecentActivity />
-          </section>
+            {/* ⏰ LINHA 4 — OPERAÇÃO DO DIA */}
+            <section className="animate-fade-in">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <TodayTasksWidget />
+                <OSDueTodayWidget />
+              </div>
+            </section>
+
+            <section className="animate-fade-in">
+              <SystemReminders />
+            </section>
+
+            {/* 📊 LINHA 5 — HISTÓRICO */}
+            <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-slide-up">
+              <ProductionFlowChart />
+              <RevenueVsCostChart />
+            </section>
+
+            <section className="animate-slide-up">
+              <RecentActivity />
+            </section>
+          </>
         )}
 
         {/* Links Rápidos */}
