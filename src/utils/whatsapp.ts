@@ -33,7 +33,15 @@ export function getWhatsappLink(phone: string | null | undefined, message?: stri
 export function openWhatsapp(phone: string | null | undefined, message?: string): boolean {
   const link = getWhatsappLink(phone, message);
   if (!link) return false;
-  
-  window.open(link, '_blank');
+
+  // Em PWA / iOS Safari, window.open pode ser bloqueado.
+  // Disparar um clique real em <a> tende a ser mais confiável.
+  const a = document.createElement('a');
+  a.href = link;
+  a.target = '_blank';
+  a.rel = 'noopener noreferrer';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
   return true;
 }
