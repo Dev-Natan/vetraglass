@@ -1,124 +1,253 @@
 
 
-# Centralização do Utilitário WhatsApp
+# Integração do Mapa de Localização do Cliente
 
 ## Resumo
-Criar uma função utilitária centralizada `getWhatsappLink` que será usada em todo o sistema para gerar links do WhatsApp, eliminando código duplicado em 4+ componentes.
+Criar um componente `MapaClienteDialog` que exibe o endereço do cliente em um mapa interativo usando Leaflet, permitindo arrastar o marcador para ajustar a localização e salvar as coordenadas no banco de dados.
 
 ---
 
-## Problema Atual
+## Infraestrutura Existente
 
-O código de geração de links WhatsApp está **duplicado** em múltiplos componentes:
-
-| Arquivo | Função |
+| Recurso | Status |
 |---------|--------|
-| `ClientQuickActions.tsx` | `handleWhatsApp()` |
-| `ClientsCardView.tsx` | `handleWhatsApp()` |
-| `ClientsTableView.tsx` | `handleWhatsApp()` |
-| `OverdueReceivablesAlert.tsx` | `handleWhatsApp()` |
-
-Cada um repete a mesma lógica:
-1. Limpar telefone (remover não-dígitos)
-2. Adicionar DDI 55 se necessário
-3. Codificar mensagem
-4. Montar URL `wa.me`
+| Colunas `latitude`/`longitude` na tabela `clients` | ✅ Já existe |
+| Dependências `react-leaflet` e `leaflet` | ✅ Instalados |
+| Edge function `geocode-address` | ✅ Funcionando |
+| Tipos TypeScript atualizados | ✅ Incluem lat/lng |
 
 ---
 
-## Solução
+## Implementação
 
-### 1. Criar arquivo utilitário
+### 1. Criar componente MapaClienteDialog
 
-**Novo arquivo:** `src/utils/whatsapp.ts`
+**Novo arquivo:** `src/components/clientes/MapaClienteDialog.tsx`
 
-```typescript
-/**
- * Gera link do WhatsApp Web com mensagem pré-preenchida
- * @param phone - Telefone (qualquer formato)
- * @param message - Mensagem opcional
- * @returns URL do wa.me ou string vazia se inválido
- */
-export function getWhatsappLink(phone: string | null | undefined, message?: string): string {
-  if (!phone) return '';
-  
-  // Remove tudo que não é dígito
-  const cleanPhone = phone.replace(/\D/g, '');
-  
-  if (!cleanPhone) return '';
+Funcionalidades:
+- Exibe mapa Leaflet com marcador na posição do cliente
+- Se cliente já tem coordenadas salvas, usa diretamente
+- Se não tem, chama edge function `geocode-address` para buscar
+- Marcador arrastável para ajuste fino da posição
+- Botão salvar atualiza `latitude`/`longitude` no banco
 
-  let fullPhone = cleanPhone;
-
-  // Adicionar DDI Brasil (55) se estiver faltando
-  // Telefone BR: 10 dígitos (fixo) ou 11 dígitos (celular)
-  if (fullPhone.length === 10 || fullPhone.length === 11) {
-    fullPhone = `55${fullPhone}`;
-  }
-  
-  const encodedMessage = encodeURIComponent(message || '');
-  return `https://wa.me/${fullPhone}?text=${encodedMessage}`;
-}
-
-/**
- * Abre WhatsApp em nova aba
- * @param phone - Telefone
- * @param message - Mensagem
- * @returns true se abriu, false se telefone inválido
- */
-export function openWhatsapp(phone: string | null | undefined, message?: string): boolean {
-  const link = getWhatsappLink(phone, message);
-  if (!link) return false;
-  
-  window.open(link, '_blank');
-  return true;
-}
+```text
+┌────────────────────────────────────────────┐
+│  📍 Localização do Cliente                 │
+├────────────────────────────────────────────┤
+│                                            │
+│         ┌──────────────────────┐           │
+│         │                      │           │
+│         │    🗺️ MAPA LEAFLET   │           │
+│         │       📍 (arraste)   │           │
+│         │                      │           │
+│         └──────────────────────┘           │
+│                                            │
+│  📌 Rua das Flores, 123 - São Paulo/SP     │
+│                                            │
+│  💡 Arraste o pino para ajustar posição    │
+│                                            │
+│  ┌──────────┐  ┌─────────────────────┐     │
+│  │ Cancelar │  │ ✅ Salvar Posição   │     │
+│  └──────────┘  └─────────────────────┘     │
+└────────────────────────────────────────────┘
 ```
 
 ---
 
-### 2. Refatorar componentes
+### 2. Adaptar código compartilhado ao projeto
 
-#### `ClientQuickActions.tsx`
+Mudanças principais do código original:
+
+| Original | Adaptação |
+|----------|-----------|
+| `base44.functions.invoke('geocode')` | `supabase.functions.invoke('geocode-address')` |
+| `base44.entities.Cliente.update()` | `supabase.from('clients').update()` |
+| `cliente.endereco`, `cliente.numero` | `client.address` (já inclui número) |
+| `cliente.cidade`, `cliente.estado` | `client.city`, `client.state` |
+| `cliente.nome` | `client.name` |
+
+---
+
+### 3. Integrar ao ClientQuickActions
+
+Atualizar o botão "Mapa" para abrir o diálogo ao invés do Google Maps:
+
 ```typescript
-import { openWhatsapp } from '@/utils/whatsapp';
+// ClientQuickActions.tsx
+const [mapDialogOpen, setMapDialogOpen] = useState(false);
 
-const handleWhatsApp = () => {
-  if (!openWhatsapp(client.phone, `Olá ${client.name}, tudo bem?`)) {
-    toast.error('Cliente não possui telefone cadastrado');
+// Botão "Ver no Mapa" → abre MapaClienteDialog
+<Button onClick={() => setMapDialogOpen(true)}>
+  <MapPin /> Ver Mapa
+</Button>
+
+<MapaClienteDialog 
+  open={mapDialogOpen}
+  onClose={() => setMapDialogOpen(false)}
+  client={client}
+/>
+```
+
+---
+
+### 4. Adicionar aba "Mapa" no Client360Dialog
+
+Nova aba na visão 360° do cliente:
+
+```typescript
+// Client360Dialog.tsx
+<TabsTrigger value="mapa">
+  <MapPin /> Mapa
+</TabsTrigger>
+
+<TabsContent value="mapa">
+  <MapaClienteEmbed client={client} />
+</TabsContent>
+```
+
+---
+
+### 5. Adicionar CSS do Leaflet
+
+Importar estilos no componente:
+
+```typescript
+import 'leaflet/dist/leaflet.css';
+```
+
+E corrigir ícones padrão do Leaflet (bug conhecido):
+
+```typescript
+import L from 'leaflet';
+
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+```
+
+---
+
+## Fluxo de Funcionamento
+
+```text
+┌─────────────────┐
+│ Abrir Dialog    │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐    Sim     ┌──────────────────┐
+│ Tem lat/lng?    │───────────▶│ Exibir no mapa   │
+└────────┬────────┘            └──────────────────┘
+         │ Não
+         ▼
+┌─────────────────┐    Não     ┌──────────────────┐
+│ Tem endereço?   │───────────▶│ Erro: sem dados  │
+└────────┬────────┘            └──────────────────┘
+         │ Sim
+         ▼
+┌─────────────────┐
+│ Chamar geocode  │
+│ edge function   │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐    Não     ┌──────────────────┐
+│ Encontrou?      │───────────▶│ Erro: não achado │
+└────────┬────────┘            └──────────────────┘
+         │ Sim
+         ▼
+┌─────────────────┐
+│ Exibir no mapa  │
+│ (marcador drag) │
+└────────┬────────┘
+         │ Usuário arrasta
+         ▼
+┌─────────────────┐
+│ Habilita botão  │
+│ "Salvar"        │
+└────────┬────────┘
+         │ Clica
+         ▼
+┌─────────────────┐
+│ UPDATE clients  │
+│ SET lat/lng     │
+└─────────────────┘
+```
+
+---
+
+## Arquivos Afetados
+
+| Ação | Arquivo |
+|------|---------|
+| **Criar** | `src/components/clientes/MapaClienteDialog.tsx` |
+| Editar | `src/components/clientes/ClientQuickActions.tsx` |
+| Editar | `src/components/clientes/Client360Dialog.tsx` |
+
+---
+
+## Detalhes Técnicos
+
+### Chamada da Edge Function
+
+```typescript
+const { data, error } = await supabase.functions.invoke('geocode-address', {
+  body: {
+    client_id: client.id,
+    address: client.address,
+    city: client.city,
+    state: client.state,
+  },
+});
+
+if (data?.success) {
+  setPosition([data.latitude, data.longitude]);
+}
+```
+
+### Salvamento das Coordenadas
+
+```typescript
+const handleSave = async () => {
+  if (!position || !client) return;
+
+  const { error } = await supabase
+    .from('clients')
+    .update({
+      latitude: position[0],
+      longitude: position[1],
+    })
+    .eq('id', client.id);
+
+  if (!error) {
+    toast.success('Localização salva!');
+    queryClient.invalidateQueries({ queryKey: ['clients'] });
+    onClose();
   }
 };
 ```
 
-#### `ClientsCardView.tsx`
+### Marcador Arrastável
+
 ```typescript
-import { openWhatsapp } from '@/utils/whatsapp';
-
-const handleWhatsApp = (client: Client, e: React.MouseEvent) => {
-  e.stopPropagation();
-  openWhatsapp(client.phone, `Olá ${client.name}, tudo bem?`);
-};
-```
-
-#### `ClientsTableView.tsx`
-```typescript
-import { openWhatsapp } from '@/utils/whatsapp';
-
-const handleWhatsApp = (client: Client, e: React.MouseEvent) => {
-  e.stopPropagation();
-  openWhatsapp(client.phone, `Olá ${client.name}, tudo bem?`);
-};
-```
-
-#### `OverdueReceivablesAlert.tsx`
-```typescript
-import { openWhatsapp } from '@/utils/whatsapp';
-
-const handleWhatsApp = (customerPhone?: string) => {
-  openWhatsapp(
-    customerPhone,
-    'Olá! Estamos entrando em contato referente ao pagamento pendente. Por favor, entre em contato conosco para regularizar.'
-  );
-};
+<Marker
+  position={position}
+  draggable={true}
+  eventHandlers={{
+    dragend: (e) => {
+      const marker = e.target;
+      const newPos = marker.getLatLng();
+      setPosition([newPos.lat, newPos.lng]);
+      setHasChanged(true);
+    },
+  }}
+>
+  <Popup>{client.name}</Popup>
+</Marker>
 ```
 
 ---
@@ -127,20 +256,8 @@ const handleWhatsApp = (customerPhone?: string) => {
 
 | Antes | Depois |
 |-------|--------|
-| Lógica duplicada em 4 arquivos | Função única reutilizável |
-| Manutenção difícil | Alterar em um lugar afeta todos |
-| Sem validação consistente | Validação padronizada |
-| Código verboso | Chamada de 1 linha |
-
----
-
-## Arquivos Afetados
-
-| Ação | Arquivo |
-|------|---------|
-| **Criar** | `src/utils/whatsapp.ts` |
-| Editar | `src/components/clientes/ClientQuickActions.tsx` |
-| Editar | `src/components/clientes/ClientsCardView.tsx` |
-| Editar | `src/components/clientes/ClientsTableView.tsx` |
-| Editar | `src/components/financeiro/OverdueReceivablesAlert.tsx` |
+| Link abre Google Maps externo | Mapa embutido no sistema |
+| Não salva coordenadas | Coordenadas persistidas |
+| Sem ajuste de posição | Marcador arrastável |
+| Geocode manual | Geocode automático |
 
