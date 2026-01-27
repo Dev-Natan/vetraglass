@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { AlertOctagon, ArrowRight, Package } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AlertOctagon, ArrowRight, Package } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { CACHE_TIMES } from '@/lib/queryConfig';
 
@@ -90,7 +90,7 @@ export function ProductionBlockedAlert() {
       </CardHeader>
       <CardContent className="space-y-2">
         <p className="text-sm text-red-600/80 dark:text-red-400/80 mb-3">
-          Ordens de serviço aguardando materiais para continuar a produção.
+          Produção parada até resolver compras pendentes.
         </p>
         
         <div className="space-y-2">
@@ -112,7 +112,7 @@ export function ProductionBlockedAlert() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700">
                   {os.pendingMaterials} material{os.pendingMaterials > 1 ? 'is' : ''}
                 </Badge>
                 <ArrowRight className="h-4 w-4 text-muted-foreground" />
@@ -122,9 +122,9 @@ export function ProductionBlockedAlert() {
         </div>
 
         {blockedOrders.length > 3 && (
-          <Button variant="link" asChild className="w-full text-red-600">
-            <Link to="/ordens-servico?filter=blocked">
-              Ver todas as {blockedOrders.length} OS travadas
+          <Button variant="link" asChild className="w-full text-red-600 dark:text-red-400">
+            <Link to="/pedidos-compra">
+              Ver todos os {blockedOrders.length} pedidos pendentes
             </Link>
           </Button>
         )}
