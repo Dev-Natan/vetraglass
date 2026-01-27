@@ -301,6 +301,7 @@ export async function cancelStockReservation(
 
 /**
  * Consume stock reservations when completing an OS
+ * Also updates material_consumption records to 'consumed'
  */
 export async function consumeOSMaterials(
   ordemServicoId: string
@@ -316,7 +317,17 @@ export async function consumeOSMaterials(
     if (fetchError) throw fetchError;
 
     if (!reservations || reservations.length === 0) {
-      return { success: true }; // No reservations to consume
+      // Even without reservations, mark consumption as consumed
+      await supabase
+        .from('material_consumption')
+        .update({
+          status: 'consumed',
+          consumed_at: new Date().toISOString(),
+        })
+        .eq('ordem_servico_id', ordemServicoId)
+        .in('status', ['pending', 'available']);
+      
+      return { success: true };
     }
 
     const { data: user } = await supabase.auth.getUser();
@@ -339,18 +350,22 @@ export async function consumeOSMaterials(
       }
 
       // 2. Create stock movement record
-      await supabase.from('stock_movements').insert({
-        company_id: reservation.company_id,
-        company_item_id: reservation.company_item_id,
-        type: 'saida',
-        category: 'consumo_producao',
-        quantity: reservation.quantity_reserved,
-        unit_cost: reservation.unit_cost,
-        description: `Consumo para OS`,
-        reference_id: ordemServicoId,
-        reference_type: 'ordem_servico',
-        created_by: user?.user?.id,
-      });
+      const { data: stockMovement } = await supabase
+        .from('stock_movements')
+        .insert({
+          company_id: reservation.company_id,
+          company_item_id: reservation.company_item_id,
+          type: 'saida',
+          category: 'consumo_producao',
+          quantity: reservation.quantity_reserved,
+          unit_cost: reservation.unit_cost,
+          description: `Consumo para OS`,
+          reference_id: ordemServicoId,
+          reference_type: 'ordem_servico',
+          created_by: user?.user?.id,
+        })
+        .select('id')
+        .single();
 
       // 3. Mark reservation as consumed
       await supabase
@@ -360,7 +375,29 @@ export async function consumeOSMaterials(
           consumed_at: new Date().toISOString(),
         })
         .eq('id', reservation.id);
+
+      // 4. Update material_consumption linked to this reservation
+      if (stockMovement?.id) {
+        await supabase
+          .from('material_consumption')
+          .update({
+            status: 'consumed',
+            consumed_at: new Date().toISOString(),
+            stock_movement_id: stockMovement.id,
+          })
+          .eq('stock_reservation_id', reservation.id);
+      }
     }
+
+    // Mark any remaining consumption records as consumed
+    await supabase
+      .from('material_consumption')
+      .update({
+        status: 'consumed',
+        consumed_at: new Date().toISOString(),
+      })
+      .eq('ordem_servico_id', ordemServicoId)
+      .in('status', ['pending', 'available']);
 
     return { success: true };
   } catch (error) {

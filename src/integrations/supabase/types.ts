@@ -2710,6 +2710,145 @@ export type Database = {
         }
         Relationships: []
       }
+      material_consumption: {
+        Row: {
+          company_id: string
+          company_item_id: string | null
+          consumed_at: string | null
+          created_at: string
+          formula_used: string | null
+          id: string
+          input_height: number | null
+          input_quantity: number | null
+          input_width: number | null
+          item_name: string
+          item_template_id: string | null
+          item_type: string
+          ordem_servico_id: string
+          purchase_order_item_id: string | null
+          quantity_calculated: number
+          quote_item_id: string | null
+          released_at: string | null
+          status: string
+          stock_movement_id: string | null
+          stock_reservation_id: string | null
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          company_item_id?: string | null
+          consumed_at?: string | null
+          created_at?: string
+          formula_used?: string | null
+          id?: string
+          input_height?: number | null
+          input_quantity?: number | null
+          input_width?: number | null
+          item_name: string
+          item_template_id?: string | null
+          item_type: string
+          ordem_servico_id: string
+          purchase_order_item_id?: string | null
+          quantity_calculated?: number
+          quote_item_id?: string | null
+          released_at?: string | null
+          status?: string
+          stock_movement_id?: string | null
+          stock_reservation_id?: string | null
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          company_item_id?: string | null
+          consumed_at?: string | null
+          created_at?: string
+          formula_used?: string | null
+          id?: string
+          input_height?: number | null
+          input_quantity?: number | null
+          input_width?: number | null
+          item_name?: string
+          item_template_id?: string | null
+          item_type?: string
+          ordem_servico_id?: string
+          purchase_order_item_id?: string | null
+          quantity_calculated?: number
+          quote_item_id?: string | null
+          released_at?: string | null
+          status?: string
+          stock_movement_id?: string | null
+          stock_reservation_id?: string | null
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "material_consumption_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_consumption_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_consumption_company_item_id_fkey"
+            columns: ["company_item_id"]
+            isOneToOne: false
+            referencedRelation: "company_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_consumption_item_template_id_fkey"
+            columns: ["item_template_id"]
+            isOneToOne: false
+            referencedRelation: "item_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_consumption_ordem_servico_id_fkey"
+            columns: ["ordem_servico_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_consumption_purchase_order_item_id_fkey"
+            columns: ["purchase_order_item_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_consumption_quote_item_id_fkey"
+            columns: ["quote_item_id"]
+            isOneToOne: false
+            referencedRelation: "quote_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_consumption_stock_movement_id_fkey"
+            columns: ["stock_movement_id"]
+            isOneToOne: false
+            referencedRelation: "stock_movements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_consumption_stock_reservation_id_fkey"
+            columns: ["stock_reservation_id"]
+            isOneToOne: false
+            referencedRelation: "stock_reservations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       measurement_checklist: {
         Row: {
           created_at: string
@@ -5811,6 +5950,10 @@ export type Database = {
         Args: { _company_id: string; _user_id: string }
         Returns: Json
       }
+      cancel_os_materials: {
+        Args: { _ordem_servico_id: string }
+        Returns: number
+      }
       check_employee_username_exists: {
         Args: { p_username: string }
         Returns: boolean
@@ -6150,6 +6293,10 @@ export type Database = {
           _user_id?: string
         }
         Returns: Json
+      }
+      release_materials_for_production: {
+        Args: { _ordem_servico_id: string }
+        Returns: number
       }
       request_cash_reinforcement: {
         Args: {

@@ -61,6 +61,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { generateOSDocuments } from '@/utils/generateOSDocuments';
+import { generateMaterialConsumption, linkReservationsToConsumption } from '@/utils/generateMaterialConsumption';
 import { MaterialsAvailabilityPreview } from './MaterialsAvailabilityPreview';
 import { usePaymentOptions, CondicaoPagamento } from '@/hooks/usePaymentOptions';
 import { usePriceRevision, QuoteItemWithRevision } from '@/hooks/usePriceRevision';
@@ -492,7 +493,28 @@ export function AprovarOrcamentoDialog({
         console.warn('Error generating OS documents:', docsResult.error);
       }
 
-      // 7. Create delivery appointment
+      // 7. Generate material consumption records (status='pending')
+      const consumptionResult = await generateMaterialConsumption(
+        ordemServico.id,
+        currentCompany.id,
+        items.map(item => ({
+          id: item.id,
+          description: item.description,
+          width: item.width,
+          height: item.height,
+          quantity: item.quantity,
+          company_product_id: item.company_product_id,
+          product_template_id: item.product_template_id,
+        }))
+      );
+      if (!consumptionResult.success) {
+        console.warn('Error generating material consumption:', consumptionResult.error);
+      }
+
+      // 8. Link stock reservations to consumption records
+      await linkReservationsToConsumption(ordemServico.id);
+
+      // 9. Create delivery appointment
       if (estimatedEnd) {
         await supabase.from('service_appointments').insert({
           company_id: currentCompany.id,
@@ -523,6 +545,7 @@ export function AprovarOrcamentoDialog({
       queryClient.invalidateQueries({ queryKey: ['accounts-receivable'] });
       queryClient.invalidateQueries({ queryKey: ['quote-deposit'] });
       queryClient.invalidateQueries({ queryKey: ['pending-deposits'] });
+      queryClient.invalidateQueries({ queryKey: ['material-consumption'] });
       onOpenChange(false);
       onSuccess?.();
     },

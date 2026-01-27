@@ -38,6 +38,7 @@ import { PaginationControls } from '@/components/common/PaginationControls';
 import { CACHE_TIMES } from '@/lib/queryConfig';
 import { OSProductionBadge } from '@/components/ordens-servico/OSProductionBadge';
 import { consumeOSMaterials } from '@/utils/checkGlassStock';
+import { releaseMaterialsForProduction, cancelMaterialConsumption } from '@/utils/generateMaterialConsumption';
 
 type OSStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
 type OSPriority = 'low' | 'normal' | 'high' | 'urgent';
@@ -107,6 +108,12 @@ export default function OrdensServico() {
       if (status === 'in_progress') {
         updates.actual_start = new Date().toISOString().split('T')[0];
         updates.current_stage = 'Em produção';
+        
+        // Release materials for production (pending → available)
+        const releaseResult = await releaseMaterialsForProduction(id);
+        if (!releaseResult.success) {
+          console.warn('Aviso ao liberar materiais:', releaseResult);
+        }
       } else if (status === 'completed') {
         updates.actual_end = new Date().toISOString().split('T')[0];
         updates.current_stage = 'Finalizado';
@@ -115,6 +122,12 @@ export default function OrdensServico() {
         const consumeResult = await consumeOSMaterials(id);
         if (!consumeResult.success) {
           console.warn('Aviso ao consumir materiais:', consumeResult.error);
+        }
+      } else if (status === 'cancelled') {
+        // Cancel material consumption records
+        const cancelResult = await cancelMaterialConsumption(id);
+        if (!cancelResult.success) {
+          console.warn('Aviso ao cancelar materiais:', cancelResult);
         }
       }
       
@@ -129,6 +142,7 @@ export default function OrdensServico() {
       queryClient.invalidateQueries({ queryKey: ['company-stock'] });
       queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
       queryClient.invalidateQueries({ queryKey: ['stock-reservations'] });
+      queryClient.invalidateQueries({ queryKey: ['material-consumption'] });
       toast.success('Status atualizado!');
     },
     onError: () => {
