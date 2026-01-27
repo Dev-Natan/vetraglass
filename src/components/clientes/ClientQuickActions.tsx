@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { 
@@ -10,6 +11,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { openWhatsapp } from '@/utils/whatsapp';
+import { MapaClienteDialog } from './MapaClienteDialog';
 
 interface ClientQuickActionsProps {
   client: {
@@ -20,12 +22,15 @@ interface ClientQuickActionsProps {
     address?: string | null;
     city?: string | null;
     state?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
   };
   onClose?: () => void;
 }
 
 export function ClientQuickActions({ client, onClose }: ClientQuickActionsProps) {
   const navigate = useNavigate();
+  const [mapDialogOpen, setMapDialogOpen] = useState(false);
 
   const handleNewQuote = () => {
     navigate(`/orcamentos?novo=true&clienteId=${client.id}`);
@@ -62,14 +67,15 @@ export function ClientQuickActions({ client, onClose }: ClientQuickActionsProps)
   };
 
   const handleMaps = () => {
-    const addressParts = [client.address, client.city, client.state].filter(Boolean);
-    if (addressParts.length === 0) {
+    const hasLocation = client.latitude && client.longitude;
+    const hasAddress = client.address || client.city;
+    
+    if (!hasLocation && !hasAddress) {
       toast.error('Cliente não possui endereço cadastrado');
       return;
     }
     
-    const query = encodeURIComponent(addressParts.join(', '));
-    window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+    setMapDialogOpen(true);
   };
 
   return (
@@ -136,13 +142,19 @@ export function ClientQuickActions({ client, onClose }: ClientQuickActionsProps)
             variant="outline"
             size="sm"
             className="gap-2"
-            disabled={!client.address && !client.city}
+            disabled={!client.address && !client.city && !client.latitude}
           >
             <MapPin className="h-4 w-4 text-red-600" />
             Mapa
           </Button>
         </div>
       </div>
+
+      <MapaClienteDialog
+        open={mapDialogOpen}
+        onClose={() => setMapDialogOpen(false)}
+        client={client}
+      />
     </div>
   );
 }

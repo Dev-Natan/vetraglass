@@ -25,6 +25,8 @@ interface Client {
   state: string;
   zip_code: string;
   notes: string;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 interface Client360DialogProps {
