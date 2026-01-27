@@ -6,6 +6,11 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  optimizeDeps: {
+    // react-leaflet + leaflet sometimes get stuck in Vite prebundle cache, causing
+    // runtime Context errors after version changes. Excluding forces normal ESM loading.
+    exclude: ['react-leaflet', '@react-leaflet/core', 'leaflet'],
+  },
   server: {
     host: "::",
     port: 8080,
@@ -14,6 +19,12 @@ export default defineConfig(({ mode }) => ({
     react(),
     mode === "development" && componentTagger(),
     VitePWA({
+      // In dev/preview we want to aggressively eliminate stale SW caches (they can keep
+      // old JS bundles and cause runtime errors). This registers a self-destroying SW.
+      selfDestroying: mode === 'development',
+      devOptions: {
+        enabled: mode === 'development',
+      },
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'robots.txt'],
       manifest: {
