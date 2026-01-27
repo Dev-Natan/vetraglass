@@ -1,36 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { Loader2, MapPin, Check, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
 
-// Fix leaflet default icon issue
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
-
-interface MapControllerProps {
-  center: [number, number] | null;
-}
-
-function MapController({ center }: MapControllerProps) {
-  const map = useMap();
-  useEffect(() => {
-    if (center) {
-      map.setView(center, 16);
-      map.invalidateSize();
-    }
-  }, [center, map]);
-  return null;
-}
+// Lazy load the map component to avoid react-leaflet context issues
+const ClientMapView = lazy(() => import('./ClientMapView'));
 
 interface Client {
   id: string;
@@ -116,13 +93,9 @@ export function MapaClienteDialog({ open, onClose, client }: MapaClienteDialogPr
     }
   };
 
-  const handleDragEnd = (e: L.DragEndEvent) => {
-    const marker = e.target;
-    const newPos = marker.getLatLng();
-    if (newPos) {
-      setPosition([newPos.lat, newPos.lng]);
-      setHasChanged(true);
-    }
+  const handlePositionChange = (newPosition: [number, number]) => {
+    setPosition(newPosition);
+    setHasChanged(true);
   };
 
   const handleSave = async () => {
@@ -187,35 +160,17 @@ export function MapaClienteDialog({ open, onClose, client }: MapaClienteDialogPr
           )}
 
           {!loading && position && (
-            <MapContainer
-              center={position}
-              zoom={16}
-              style={{ height: '100%', width: '100%' }}
-              scrollWheelZoom={true}
-            >
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-              <Marker
+            <Suspense fallback={
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            }>
+              <ClientMapView
                 position={position}
-                draggable={true}
-                eventHandlers={{
-                  dragend: handleDragEnd,
-                }}
-              >
-                <Popup>
-                  <div className="text-center">
-                    <strong>{client.name}</strong>
-                    <br />
-                    <span className="text-xs text-muted-foreground">
-                      Arraste para ajustar a posição
-                    </span>
-                  </div>
-                </Popup>
-              </Marker>
-              <MapController center={position} />
-            </MapContainer>
+                clientName={client.name}
+                onPositionChange={handlePositionChange}
+              />
+            </Suspense>
           )}
         </div>
 
