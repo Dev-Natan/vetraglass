@@ -1,263 +1,319 @@
 
+# Plano de Implementação: Material Consumption com Separação APROVADO vs PRODUÇÃO
 
-# Integração do Mapa de Localização do Cliente
+## Contexto do Ajuste
 
-## Resumo
-Criar um componente `MapaClienteDialog` que exibe o endereço do cliente em um mapa interativo usando Leaflet, permitindo arrastar o marcador para ajustar a localização e salvar as coordenadas no banco de dados.
+Você sugeriu uma melhoria crítica no fluxo proposto:
+
+```text
+                ANTES (Plano Original)              DEPOIS (Seu Ajuste)
+                ─────────────────────               ───────────────────────
+                
+  APROVADO ───► Gera OS                  APROVADO ───► Gera OS
+                    │                                      │
+                    └── Gera material_consumption          └── Gera material_consumption
+                    └── Reserva estoque                    └── Reserva estoque (TRAVA)
+                    └── Cria PO para faltantes             └── Cria PO para faltantes
+                                                           
+                                                     STATUS = 'pending' (aguardando)
+                                                           │
+                                                           ▼
+  (não existe)                           PRODUÇÃO ───► Libera para consumo real
+                                                           │
+                                                           └── Muda status para 'available'
+                                                           
+  CONCLUÍDO ───► consumeOSMaterials()    CONCLUÍDO ───► consumeOSMaterials()
+                    │                                      │
+                    └── Baixa estoque                      └── Baixa estoque
+                    └── stock_movement                     └── stock_movement
+```
+
+**Benefícios do ajuste:**
+- Material não é baixado de algo que pode ser cancelado
+- Separação clara entre "demanda calculada" e "consumo executado"
+- Permite visualizar materiais necessários antes de iniciar produção
+- Fluxo profissional usado em sistemas ERP
 
 ---
 
-## Infraestrutura Existente
+## Arquitetura Proposta
 
-| Recurso | Status |
-|---------|--------|
-| Colunas `latitude`/`longitude` na tabela `clients` | ✅ Já existe |
-| Dependências `react-leaflet` e `leaflet` | ✅ Instalados |
-| Edge function `geocode-address` | ✅ Funcionando |
-| Tipos TypeScript atualizados | ✅ Incluem lat/lng |
+### Nova Tabela: `material_consumption`
+
+```sql
+CREATE TABLE material_consumption (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id UUID NOT NULL REFERENCES companies(id),
+  ordem_servico_id UUID NOT NULL REFERENCES ordens_servico(id),
+  quote_item_id UUID REFERENCES quote_items(id),
+  company_item_id UUID REFERENCES company_items(id),
+  item_template_id UUID REFERENCES item_templates(id),
+  
+  -- Dados do item
+  item_name TEXT NOT NULL,
+  item_type TEXT NOT NULL,
+  unit TEXT NOT NULL DEFAULT 'un',
+  
+  -- Quantidades calculadas
+  quantity_calculated NUMERIC NOT NULL DEFAULT 0,
+  
+  -- Contexto do cálculo (rastreabilidade)
+  formula_used TEXT,
+  input_width NUMERIC,
+  input_height NUMERIC,
+  input_quantity INTEGER DEFAULT 1,
+  
+  -- Status do fluxo
+  status TEXT NOT NULL DEFAULT 'pending',
+  -- 'pending'   = calculado, aguardando início da produção
+  -- 'available' = produção iniciada, material liberado para uso
+  -- 'consumed'  = baixado do estoque
+  -- 'cancelled' = OS cancelada
+  
+  -- Rastreabilidade
+  released_at TIMESTAMPTZ,        -- quando entrou em produção
+  consumed_at TIMESTAMPTZ,        -- quando foi baixado
+  stock_movement_id UUID,         -- link com stock_movements
+  stock_reservation_id UUID,      -- link com reserva existente
+  purchase_order_item_id UUID,    -- se veio de compra
+  
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+### Fluxo de Status Detalhado
+
+```text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          CICLO DE VIDA DO CONSUMO                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+1. ORÇAMENTO APROVADO (status='approved')
+   │
+   ├── Sistema lê composição de cada produto (company_product_items)
+   ├── Avalia fórmulas com largura/altura
+   ├── Cria registros em material_consumption com status='pending'
+   ├── Cria stock_reservations (trava estoque disponível)
+   └── Cria purchase_orders para materiais faltantes
+
+2. OS INICIADA (status='in_progress')
+   │
+   ├── Sistema atualiza material_consumption SET status='available'
+   ├── Atualiza released_at = now()
+   └── Produção pode visualizar materiais liberados
+
+3. OS CONCLUÍDA (status='completed')
+   │
+   ├── Sistema executa consumeOSMaterials()
+   ├── Para cada material_consumption:
+   │     ├── Baixa company_stock
+   │     ├── Cria stock_movements (saida)
+   │     └── SET status='consumed', consumed_at=now()
+   └── stock_reservations → status='consumed'
+
+4. OS CANCELADA (status='cancelled')
+   │
+   ├── material_consumption SET status='cancelled'
+   └── stock_reservations SET status='cancelled' (libera estoque)
+```
 
 ---
 
 ## Implementação
 
-### 1. Criar componente MapaClienteDialog
+### Fase 1: Criar Tabela e Função de Geração
 
-**Novo arquivo:** `src/components/clientes/MapaClienteDialog.tsx`
+**1.1. Migration SQL**
+```sql
+-- Tabela de consumo de materiais calculado
+CREATE TABLE material_consumption (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  ordem_servico_id UUID NOT NULL REFERENCES ordens_servico(id) ON DELETE CASCADE,
+  quote_item_id UUID REFERENCES quote_items(id) ON DELETE SET NULL,
+  company_item_id UUID REFERENCES company_items(id),
+  item_template_id UUID REFERENCES item_templates(id),
+  
+  item_name TEXT NOT NULL,
+  item_type TEXT NOT NULL,
+  unit TEXT NOT NULL DEFAULT 'un',
+  
+  quantity_calculated NUMERIC NOT NULL DEFAULT 0,
+  
+  formula_used TEXT,
+  input_width NUMERIC,
+  input_height NUMERIC,
+  input_quantity INTEGER DEFAULT 1,
+  
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'available', 'consumed', 'cancelled')),
+  
+  released_at TIMESTAMPTZ,
+  consumed_at TIMESTAMPTZ,
+  stock_movement_id UUID,
+  stock_reservation_id UUID REFERENCES stock_reservations(id),
+  purchase_order_item_id UUID,
+  
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
 
-Funcionalidades:
-- Exibe mapa Leaflet com marcador na posição do cliente
-- Se cliente já tem coordenadas salvas, usa diretamente
-- Se não tem, chama edge function `geocode-address` para buscar
-- Marcador arrastável para ajuste fino da posição
-- Botão salvar atualiza `latitude`/`longitude` no banco
+-- Índices para performance
+CREATE INDEX idx_mc_ordem_servico ON material_consumption(ordem_servico_id);
+CREATE INDEX idx_mc_company ON material_consumption(company_id);
+CREATE INDEX idx_mc_status ON material_consumption(status);
+CREATE INDEX idx_mc_company_item ON material_consumption(company_item_id);
 
-```text
-┌────────────────────────────────────────────┐
-│  📍 Localização do Cliente                 │
-├────────────────────────────────────────────┤
-│                                            │
-│         ┌──────────────────────┐           │
-│         │                      │           │
-│         │    🗺️ MAPA LEAFLET   │           │
-│         │       📍 (arraste)   │           │
-│         │                      │           │
-│         └──────────────────────┘           │
-│                                            │
-│  📌 Rua das Flores, 123 - São Paulo/SP     │
-│                                            │
-│  💡 Arraste o pino para ajustar posição    │
-│                                            │
-│  ┌──────────┐  ┌─────────────────────┐     │
-│  │ Cancelar │  │ ✅ Salvar Posição   │     │
-│  └──────────┘  └─────────────────────┘     │
-└────────────────────────────────────────────┘
+-- RLS
+ALTER TABLE material_consumption ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Company users can view own material consumption"
+  ON material_consumption FOR SELECT
+  USING (company_id IN (
+    SELECT company_id FROM user_companies 
+    WHERE user_id = auth.uid() AND is_active = true
+  ));
+
+CREATE POLICY "Company users can insert material consumption"
+  ON material_consumption FOR INSERT
+  WITH CHECK (company_id IN (
+    SELECT company_id FROM user_companies 
+    WHERE user_id = auth.uid() AND is_active = true
+  ));
+
+CREATE POLICY "Company users can update own material consumption"
+  ON material_consumption FOR UPDATE
+  USING (company_id IN (
+    SELECT company_id FROM user_companies 
+    WHERE user_id = auth.uid() AND is_active = true
+  ));
 ```
 
----
+**1.2. Nova Utility: `generateMaterialConsumption.ts`**
+- Lê composição do produto (`company_product_items`)
+- Avalia fórmulas usando mathjs/expr-eval
+- Insere registros em `material_consumption`
+- Vincula com `stock_reservations` existentes
 
-### 2. Adaptar código compartilhado ao projeto
+**1.3. Integrar em `AprovarOrcamentoDialog.tsx`**
+- Após criar OS (linha ~320), chamar `generateMaterialConsumption()`
+- Manter fluxo de reservas existente
+- Vincular reservas com consumption records
 
-Mudanças principais do código original:
+### Fase 2: Ajustar Transição para Produção
 
-| Original | Adaptação |
-|----------|-----------|
-| `base44.functions.invoke('geocode')` | `supabase.functions.invoke('geocode-address')` |
-| `base44.entities.Cliente.update()` | `supabase.from('clients').update()` |
-| `cliente.endereco`, `cliente.numero` | `client.address` (já inclui número) |
-| `cliente.cidade`, `cliente.estado` | `client.city`, `client.state` |
-| `cliente.nome` | `client.name` |
-
----
-
-### 3. Integrar ao ClientQuickActions
-
-Atualizar o botão "Mapa" para abrir o diálogo ao invés do Google Maps:
+**2.1. Modificar `updateStatusMutation` em `OrdensServico.tsx`**
+- Quando status muda para `in_progress`:
+  - Atualizar `material_consumption` SET status='available', released_at=now()
 
 ```typescript
-// ClientQuickActions.tsx
-const [mapDialogOpen, setMapDialogOpen] = useState(false);
-
-// Botão "Ver no Mapa" → abre MapaClienteDialog
-<Button onClick={() => setMapDialogOpen(true)}>
-  <MapPin /> Ver Mapa
-</Button>
-
-<MapaClienteDialog 
-  open={mapDialogOpen}
-  onClose={() => setMapDialogOpen(false)}
-  client={client}
-/>
-```
-
----
-
-### 4. Adicionar aba "Mapa" no Client360Dialog
-
-Nova aba na visão 360° do cliente:
-
-```typescript
-// Client360Dialog.tsx
-<TabsTrigger value="mapa">
-  <MapPin /> Mapa
-</TabsTrigger>
-
-<TabsContent value="mapa">
-  <MapaClienteEmbed client={client} />
-</TabsContent>
-```
-
----
-
-### 5. Adicionar CSS do Leaflet
-
-Importar estilos no componente:
-
-```typescript
-import 'leaflet/dist/leaflet.css';
-```
-
-E corrigir ícones padrão do Leaflet (bug conhecido):
-
-```typescript
-import L from 'leaflet';
-
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
-```
-
----
-
-## Fluxo de Funcionamento
-
-```text
-┌─────────────────┐
-│ Abrir Dialog    │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐    Sim     ┌──────────────────┐
-│ Tem lat/lng?    │───────────▶│ Exibir no mapa   │
-└────────┬────────┘            └──────────────────┘
-         │ Não
-         ▼
-┌─────────────────┐    Não     ┌──────────────────┐
-│ Tem endereço?   │───────────▶│ Erro: sem dados  │
-└────────┬────────┘            └──────────────────┘
-         │ Sim
-         ▼
-┌─────────────────┐
-│ Chamar geocode  │
-│ edge function   │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐    Não     ┌──────────────────┐
-│ Encontrou?      │───────────▶│ Erro: não achado │
-└────────┬────────┘            └──────────────────┘
-         │ Sim
-         ▼
-┌─────────────────┐
-│ Exibir no mapa  │
-│ (marcador drag) │
-└────────┬────────┘
-         │ Usuário arrasta
-         ▼
-┌─────────────────┐
-│ Habilita botão  │
-│ "Salvar"        │
-└────────┬────────┘
-         │ Clica
-         ▼
-┌─────────────────┐
-│ UPDATE clients  │
-│ SET lat/lng     │
-└─────────────────┘
-```
-
----
-
-## Arquivos Afetados
-
-| Ação | Arquivo |
-|------|---------|
-| **Criar** | `src/components/clientes/MapaClienteDialog.tsx` |
-| Editar | `src/components/clientes/ClientQuickActions.tsx` |
-| Editar | `src/components/clientes/Client360Dialog.tsx` |
-
----
-
-## Detalhes Técnicos
-
-### Chamada da Edge Function
-
-```typescript
-const { data, error } = await supabase.functions.invoke('geocode-address', {
-  body: {
-    client_id: client.id,
-    address: client.address,
-    city: client.city,
-    state: client.state,
-  },
-});
-
-if (data?.success) {
-  setPosition([data.latitude, data.longitude]);
+// Em OrdensServico.tsx, no updateStatusMutation
+if (status === 'in_progress') {
+  // Liberar materiais para consumo
+  await supabase
+    .from('material_consumption')
+    .update({ 
+      status: 'available', 
+      released_at: new Date().toISOString() 
+    })
+    .eq('ordem_servico_id', id)
+    .eq('status', 'pending');
 }
 ```
 
-### Salvamento das Coordenadas
+### Fase 3: Atualizar Consumo Final
+
+**3.1. Modificar `consumeOSMaterials()` em `checkGlassStock.ts`**
+- Além de consumir `stock_reservations`, atualizar `material_consumption`
+- Criar vínculo com `stock_movements` gerados
 
 ```typescript
-const handleSave = async () => {
-  if (!position || !client) return;
-
-  const { error } = await supabase
-    .from('clients')
-    .update({
-      latitude: position[0],
-      longitude: position[1],
-    })
-    .eq('id', client.id);
-
-  if (!error) {
-    toast.success('Localização salva!');
-    queryClient.invalidateQueries({ queryKey: ['clients'] });
-    onClose();
-  }
-};
+// Em consumeOSMaterials()
+// Após criar stock_movement, atualizar consumption:
+await supabase
+  .from('material_consumption')
+  .update({
+    status: 'consumed',
+    consumed_at: new Date().toISOString(),
+    stock_movement_id: stockMovement.id,
+  })
+  .eq('stock_reservation_id', reservation.id);
 ```
 
-### Marcador Arrastável
+### Fase 4: UI de Visualização
 
-```typescript
-<Marker
-  position={position}
-  draggable={true}
-  eventHandlers={{
-    dragend: (e) => {
-      const marker = e.target;
-      const newPos = marker.getLatLng();
-      setPosition([newPos.lat, newPos.lng]);
-      setHasChanged(true);
-    },
-  }}
->
-  <Popup>{client.name}</Popup>
-</Marker>
+**4.1. Novo Componente: `OSConsumptionStatus.tsx`**
+- Card que mostra materiais calculados vs consumidos
+- Indicadores visuais por status (pending/available/consumed)
+- Exibido na página de detalhes da OS
+
+```text
+┌─────────────────────────────────────────────────────┐
+│ 📦 Materiais para Produção                          │
+├─────────────────────────────────────────────────────┤
+│ ┌────────────────────────┐ ┌────────────────────┐   │
+│ │ Perfis de Alumínio     │ │ Vidros             │   │
+│ │ ────────────────────── │ │ ──────────────────  │   │
+│ │ ● SU-007    4.2m       │ │ ● 8mm Incolor      │   │
+│ │ ● SU-041    2.8m       │ │   1.2m² (comprar)  │   │
+│ │ ● SU-053    1.6m       │ │                    │   │
+│ └────────────────────────┘ └────────────────────┘   │
+│                                                     │
+│ Status: 🟡 Aguardando início da produção            │
+└─────────────────────────────────────────────────────┘
 ```
+
+### Fase 5: Tratamento de Cancelamento
+
+**5.1. Modificar fluxo de cancelamento**
+- Quando OS é cancelada, atualizar todos os consumption para 'cancelled'
+- Manter comportamento existente de liberar reservas
 
 ---
 
-## Benefícios
+## Arquivos a Criar/Modificar
 
-| Antes | Depois |
-|-------|--------|
-| Link abre Google Maps externo | Mapa embutido no sistema |
-| Não salva coordenadas | Coordenadas persistidas |
-| Sem ajuste de posição | Marcador arrastável |
-| Geocode manual | Geocode automático |
+| Ação | Arquivo |
+|------|---------|
+| **Criar** | Migration para tabela `material_consumption` |
+| **Criar** | `src/utils/generateMaterialConsumption.ts` |
+| **Criar** | `src/components/ordens-servico/OSConsumptionStatus.tsx` |
+| Modificar | `src/components/orcamentos/AprovarOrcamentoDialog.tsx` |
+| Modificar | `src/pages/OrdensServico.tsx` |
+| Modificar | `src/utils/checkGlassStock.ts` |
+| Modificar | `src/pages/OrdemServicoDetalhes.tsx` |
 
+---
+
+## Benefícios do Fluxo Ajustado
+
+| Situação | Antes | Depois |
+|----------|-------|--------|
+| OS cancelada | Materiais já reservados, precisa reverter | Só cancela registros pending |
+| Visualização | Não sabe o que precisa até produzir | Dashboard mostra demanda calculada |
+| Rastreabilidade | Só sabe o que saiu | Sabe o que foi calculado vs consumido |
+| Relatórios | Consumo médio por OS | Consumo real vs planejado |
+
+---
+
+## Ordem de Execução
+
+1. ✅ Criar migration da tabela `material_consumption`
+2. ✅ Criar função `generateMaterialConsumption()`
+3. ✅ Integrar no `AprovarOrcamentoDialog`
+4. ✅ Ajustar transição pending → in_progress
+5. ✅ Ajustar `consumeOSMaterials()`
+6. ✅ Criar componente de visualização
+7. ✅ Testar fluxo completo
+
+---
+
+## Migração de Dados Existentes
+
+Para OS já criadas, podemos:
+1. Gerar consumption retroativamente baseado em `stock_reservations` existentes
+2. Marcar como 'consumed' se OS já está concluída
+3. Ou deixar apenas para novas OS (mais seguro)
+
+Recomendo opção 3 (apenas novas OS) para evitar inconsistências.
