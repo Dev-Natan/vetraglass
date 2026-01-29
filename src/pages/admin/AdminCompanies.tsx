@@ -1,13 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { AdminLayout } from '@/components/layout/AdminLayout';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
 import { Loader2, Search, Building2, Users, Phone, Mail, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -15,69 +14,48 @@ import { ptBR } from 'date-fns/locale';
 interface Company {
   id: string;
   name: string;
-  cnpj: string;
+  cnpj: string | null;
   email: string | null;
   phone: string | null;
   address: string | null;
   logo_url: string | null;
   created_at: string;
-  user_count?: number;
+  user_count: number;
 }
 
 export default function AdminCompanies() {
   const { isSaasAdmin } = useAuth();
-  const { toast } = useToast();
-  
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
-  useEffect(() => {
-    if (isSaasAdmin) {
-      fetchCompanies();
-    }
-  }, [isSaasAdmin]);
-
-  const fetchCompanies = async () => {
-    try {
-      // Fetch companies with user count
-      const { data: companiesData, error: companiesError } = await supabase
+  // Optimized query with JOIN to get user counts in a single request
+  const { data: companies = [], isLoading } = useQuery({
+    queryKey: ['admin-companies'],
+    queryFn: async (): Promise<Company[]> => {
+      const { data, error } = await supabase
         .from('companies')
-        .select('*')
+        .select(`
+          id, name, cnpj, email, phone, address, logo_url, created_at,
+          user_companies(count)
+        `)
         .order('created_at', { ascending: false });
       
-      if (companiesError) throw companiesError;
-
-      // Fetch user counts for each company
-      const { data: userCountsData, error: userCountsError } = await supabase
-        .from('user_companies')
-        .select('company_id');
+      if (error) throw error;
       
-      if (userCountsError) throw userCountsError;
-
-      // Count users per company
-      const userCounts: Record<string, number> = {};
-      userCountsData?.forEach(uc => {
-        userCounts[uc.company_id] = (userCounts[uc.company_id] || 0) + 1;
-      });
-
-      // Add user count to companies
-      const companiesWithCount = companiesData?.map(company => ({
-        ...company,
-        user_count: userCounts[company.id] || 0,
+      return data?.map(company => ({
+        id: company.id,
+        name: company.name,
+        cnpj: company.cnpj,
+        email: company.email,
+        phone: company.phone,
+        address: company.address,
+        logo_url: company.logo_url,
+        created_at: company.created_at,
+        user_count: (company.user_companies as any)?.[0]?.count || 0,
       })) || [];
-
-      setCompanies(companiesWithCount);
-    } catch (error: any) {
-      toast({
-        title: 'Erro ao carregar empresas',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    enabled: isSaasAdmin,
+    staleTime: 1000 * 60 * 2, // Cache for 2 minutes
+  });
 
   const filteredCompanies = companies.filter(company => {
     const searchLower = searchTerm.toLowerCase();
@@ -98,7 +76,7 @@ export default function AdminCompanies() {
     return cnpj;
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
