@@ -1,196 +1,334 @@
 
 
-# Plano: Tutorial Interativo para Novos Usuarios
+# Plano Completo: CNPJ Opcional com Unicidade Garantida
 
 ## Objetivo
 
-Criar um sistema de tutorial guiado (product tour) que apresenta as principais funcionalidades do sistema para novos usuarios atraves de passos interativos com destaque visual e tooltips explicativos.
+Modificar o sistema para que o CNPJ/CPF seja **opcional** durante o cadastro de empresa, mas quando informado:
+1. Deve ser validado no formato correto
+2. Sera vinculado exclusivamente aquela conta
+3. Nao podera ser usado por outra empresa (unicidade garantida pelo banco)
 
 ---
 
-## Arquitetura da Solucao
+## Etapa 1: Migracao do Banco de Dados
 
-O tutorial sera composto por:
+### 1.1 Alterar Coluna para Aceitar NULL
 
-1. **Hook de estado** - Gerencia o progresso e visibilidade do tutorial
-2. **Componente de Overlay** - Cria destaque visual nos elementos
-3. **Componente de Tooltip** - Exibe instrucoes em cada passo
-4. **Integracao com Dashboard** - Inicia o tutorial para novos usuarios
-5. **Botao para reiniciar** - Permite usuario acessar o tutorial novamente
+```sql
+-- Remover a constraint NOT NULL do campo cnpj
+ALTER TABLE public.companies ALTER COLUMN cnpj DROP NOT NULL;
 
-```text
-+------------------+     +-------------------+     +------------------+
-|  useTutorial     |---->|  TutorialProvider |---->|  TutorialOverlay |
-|  (hook estado)   |     |  (contexto React) |     |  (spotlight UI)  |
-+------------------+     +-------------------+     +------------------+
-                                  |
-                                  v
-                         +------------------+
-                         |  TutorialTooltip |
-                         |  (passos guia)   |
-                         +------------------+
+-- O indice UNIQUE existente ja permite multiplos NULLs em PostgreSQL
+-- Isso significa:
+-- - Varias empresas podem ter cnpj = NULL (sem documento)
+-- - Apenas UMA empresa pode ter um CNPJ especifico (ex: 12345678000199)
+```
+
+### 1.2 Atualizar Funcao RPC
+
+```sql
+CREATE OR REPLACE FUNCTION public.create_company_and_assign_admin(
+  _name TEXT,
+  _cnpj TEXT DEFAULT NULL,
+  _phone TEXT DEFAULT NULL,
+  _email TEXT DEFAULT NULL,
+  _address TEXT DEFAULT NULL
+)
+RETURNS public.companies
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_company public.companies;
+  v_uid uuid;
+  v_clean_cnpj TEXT;
+BEGIN
+  v_uid := auth.uid();
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'Not authenticated';
+  END IF;
+
+  -- Limpar CNPJ: se vazio ou apenas espacos, sera NULL
+  v_clean_cnpj := NULLIF(TRIM(_cnpj), '');
+  
+  -- Se CNPJ foi informado, verificar se ja existe
+  IF v_clean_cnpj IS NOT NULL THEN
+    IF EXISTS (SELECT 1 FROM public.companies WHERE cnpj = v_clean_cnpj) THEN
+      RAISE EXCEPTION 'CNPJ_JA_CADASTRADO';
+    END IF;
+  END IF;
+
+  INSERT INTO public.companies (name, cnpj, phone, email, address)
+  VALUES (
+    _name,
+    v_clean_cnpj,
+    NULLIF(TRIM(_phone), ''),
+    NULLIF(TRIM(_email), ''),
+    NULLIF(TRIM(_address), '')
+  )
+  RETURNING * INTO v_company;
+
+  INSERT INTO public.user_companies (user_id, company_id, role, is_active)
+  VALUES (v_uid, v_company.id, 'admin', true)
+  ON CONFLICT (user_id, company_id) DO UPDATE
+    SET role = EXCLUDED.role, is_active = true;
+
+  PERFORM create_default_permissions(v_company.id);
+  
+  RETURN v_company;
+END;
+$$;
 ```
 
 ---
 
-## Passos do Tutorial
+## Etapa 2: Atualizar Frontend - CompanySetup.tsx
 
-O tutorial tera 6 passos principais:
+### 2.1 Schema de Validacao (Zod)
 
-| Passo | Elemento Target | Titulo | Descricao |
-|-------|-----------------|--------|-----------|
-| 1 | Logo Vetra | Bem-vindo ao Vetra! | Este e seu sistema de gestao para vidracarias |
-| 2 | Menu Clientes | Cadastro de Clientes | Comece cadastrando seus clientes aqui |
-| 3 | Menu Produtos | Catalogo de Produtos | Importe e gerencie seus produtos |
-| 4 | Menu Orcamentos | Orcamentos | Crie orcamentos profissionais |
-| 5 | Menu Caixa & Vendas | Vendas e Caixa | Registre vendas e controle o caixa |
-| 6 | Onboarding Checklist | Proximos Passos | Siga este checklist para configurar |
-
----
-
-## Arquivos a Criar
-
-### 1. Hook de Tutorial
-**Arquivo:** `src/hooks/useTutorial.ts`
-
-Responsabilidades:
-- Controlar passo atual (0-5)
-- Verificar se tutorial ja foi completado (localStorage)
-- Funcoes: nextStep, prevStep, skipTutorial, restartTutorial
-- Verificar se e primeiro acesso do usuario
-
-### 2. Contexto do Tutorial
-**Arquivo:** `src/contexts/TutorialContext.tsx`
-
-Responsabilidades:
-- Prover estado global do tutorial
-- Permitir acesso de qualquer componente
-- Gerenciar visibilidade do overlay
-
-### 3. Componente TutorialOverlay
-**Arquivo:** `src/components/tutorial/TutorialOverlay.tsx`
-
-Responsabilidades:
-- Renderizar overlay escuro com "spotlight" no elemento atual
-- Posicionar tooltip proximo ao elemento destacado
-- Mostrar progresso (passo X de Y)
-- Botoes: Anterior, Proximo, Pular
-
-Visual:
-```text
-+------------------------------------------------+
-|  [Fundo escuro com blur]                       |
-|                                                |
-|     +------------------+                       |
-|     | [Elemento dest.] |  <-- Recorte claro    |
-|     +------------------+                       |
-|              |                                 |
-|              v                                 |
-|     +------------------------+                 |
-|     | Titulo do Passo       |                 |
-|     | Descricao explicativa |                 |
-|     | [Anterior] [Proximo]  |                 |
-|     | Passo 2 de 6          |                 |
-|     +------------------------+                 |
-+------------------------------------------------+
-```
-
-### 4. Componente TutorialTooltip
-**Arquivo:** `src/components/tutorial/TutorialTooltip.tsx`
-
-Responsabilidades:
-- Card com seta apontando para elemento
-- Animacao de entrada suave
-- Estilo consistente com design system
-
-### 5. Definicao dos Passos
-**Arquivo:** `src/components/tutorial/tutorialSteps.ts`
-
-Conteudo:
-- Array com configuracao de cada passo
-- Seletores CSS para elementos target
-- Textos e posicionamento
-
----
-
-## Arquivos a Modificar
-
-### 1. MainLayout.tsx
-- Adicionar TutorialProvider envolvendo children
-- Renderizar TutorialOverlay
-
-### 2. Sidebar.tsx
-- Adicionar data-attributes nos itens de menu para facilitar selecao
-- Exemplo: `data-tutorial="menu-clientes"`
-
-### 3. OnboardingChecklist.tsx
-- Adicionar data-attribute para tutorial
-- Mostrar botao "Ver Tutorial Novamente" quando checklist estiver visivel
-
-### 4. Index.tsx (Dashboard)
-- Iniciar tutorial automaticamente no primeiro acesso
-
----
-
-## Logica de Exibicao
-
-1. **Primeiro acesso**: Tutorial inicia automaticamente
-2. **Apos completar/pular**: Estado salvo em localStorage
-3. **Reiniciar**: Botao no OnboardingChecklist ou menu de configuracoes
-4. **Responsividade**: Tutorial oculto em mobile (tela pequena demais)
-
----
-
-## Detalhes Tecnicos
-
-### Estado Persistente
+**De:**
 ```typescript
-const TUTORIAL_COMPLETED_KEY = 'vetraglass_tutorial_completed';
-// Armazena: userId_companyId -> 'true'
+const companySchema = z.object({
+  document: z.string().refine((val) => {
+    const result = validateCPFOrCNPJ(val);
+    return result.valid;
+  }, 'CPF ou CNPJ invalido'),
+  // ...
+});
 ```
 
-### Selecao de Elementos
+**Para:**
 ```typescript
-// Usar data-attributes para selecionar elementos
-document.querySelector('[data-tutorial="menu-clientes"]')
+const companySchema = z.object({
+  document: z.string().optional().refine((val) => {
+    // Se vazio, e valido (campo opcional)
+    if (!val || val.trim() === '') return true;
+    // Se preenchido, deve ser CPF ou CNPJ valido
+    const result = validateCPFOrCNPJ(val);
+    return result.valid;
+  }, 'CPF ou CNPJ invalido'),
+  // ...
+});
 ```
 
-### Posicionamento do Tooltip
-- Calcular posicao do elemento target
-- Posicionar tooltip ao lado (direita para sidebar)
-- Ajustar se sair da viewport
+### 2.2 Label do Campo
 
-### Animacoes
-- Fade-in do overlay
-- Scale-in do tooltip
-- Transicao suave entre passos
+**De:**
+```tsx
+<Label htmlFor="document">CPF ou CNPJ *</Label>
+```
+
+**Para:**
+```tsx
+<Label htmlFor="document">CPF ou CNPJ (opcional)</Label>
+```
+
+### 2.3 Texto Explicativo
+
+```tsx
+<p className="text-xs text-muted-foreground">
+  O documento e opcional. Se informado, sera vinculado 
+  exclusivamente a esta empresa e nao podera ser usado 
+  em outra conta.
+</p>
+```
+
+### 2.4 Submit com Tratamento de Erro
+
+```typescript
+const handleSubmit = async (e: React.FormEvent) => {
+  // ...validacao...
+  
+  try {
+    const { data: companyData, error: companyError } = await supabase
+      .rpc('create_company_and_assign_admin', {
+        _name: name,
+        _cnpj: document ? document.replace(/\D/g, '') : null, // Envia null se vazio
+        _phone: phone || null,
+        _email: email || null,
+        _address: address || null,
+      });
+    
+    if (companyError) {
+      // Tratar erro de CNPJ duplicado
+      if (companyError.message.includes('CNPJ_JA_CADASTRADO')) {
+        toast({
+          title: "CNPJ ja em uso",
+          description: "Este CNPJ ja esta vinculado a outra empresa no sistema.",
+          variant: "destructive",
+        });
+        setErrors(prev => ({ ...prev, document: 'CNPJ ja cadastrado' }));
+        return;
+      }
+      throw companyError;
+    }
+    
+    // ... sucesso ...
+  } catch (error) {
+    // ... tratamento generico ...
+  }
+};
+```
 
 ---
 
-## Estrutura de Pastas Final
+## Etapa 3: Atualizar Modulo de Notas Fiscais
+
+### 3.1 Validacao Pre-Emissao
+
+O arquivo `NovaNotaFiscalDialog.tsx` ja valida a configuracao fiscal. Precisamos adicionar verificacao de CNPJ:
+
+```typescript
+const validateFiscalConfig = async () => {
+  // ... codigo existente ...
+  
+  // Verificar se empresa tem CNPJ (obrigatorio para NF)
+  if (!company?.cnpj) {
+    setConfigValidation({ 
+      valid: false, 
+      error: 'CNPJ da empresa e obrigatorio para emissao de notas fiscais. Configure em Dados da Empresa.',
+      field: 'cnpj'
+    });
+    return;
+  }
+  
+  // ... resto da validacao ...
+};
+```
+
+### 3.2 Bloquear Emissao sem CNPJ
+
+O sistema ja possui Alert para configuracao incompleta. O CNPJ ausente sera tratado como configuracao incompleta.
+
+---
+
+## Etapa 4: Atualizar Geracoes de PDF
+
+### Arquivos que Usam company.cnpj
+
+| Arquivo | Tratamento Atual | Atualizacao Necessaria |
+|---------|------------------|------------------------|
+| `generateSalePdf.ts` | `if (company?.cnpj)` | Ja trata como opcional |
+| `generateQuotePdf.ts` | Interface exige cnpj | Atualizar interface |
+| `generateContractPdf.ts` | `company?.cnpj` | Ja trata como opcional |
+| `generateDailyCashPdf.ts` | Usa diretamente | Adicionar verificacao |
+| `generateMaterialsListPdf.ts` | Usa diretamente | Adicionar verificacao |
+| `generateGlassProductionPdf.ts` | Usa diretamente | Adicionar verificacao |
+
+### 4.1 Exemplo de Atualizacao
+
+**generateDailyCashPdf.ts - Linha 113:**
+```typescript
+// De:
+const cnpjFormatted = company.cnpj.replace(/(\d{2})...
+
+// Para:
+if (company.cnpj) {
+  const cnpjFormatted = company.cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+  doc.text(`CNPJ: ${cnpjFormatted}`, pageWidth / 2, currentY, { align: 'center' });
+  currentY += 4;
+}
+```
+
+### 4.2 Atualizar Interface Company
+
+Em varios arquivos, a interface exige cnpj como string:
+
+```typescript
+// De:
+interface Company {
+  name: string;
+  cnpj: string;  // obrigatorio
+}
+
+// Para:
+interface Company {
+  name: string;
+  cnpj?: string | null;  // opcional
+}
+```
+
+---
+
+## Etapa 5: Atualizar Tipos TypeScript
+
+O arquivo `src/types/index.ts` precisa refletir a mudanca:
+
+```typescript
+export interface Company {
+  id: string;
+  name: string;
+  logo?: string;
+  cnpj?: string | null;  // Agora opcional
+}
+```
+
+---
+
+## Resumo de Arquivos a Modificar
+
+| Etapa | Arquivo | Tipo |
+|-------|---------|------|
+| 1 | Migracao SQL | Schema + RPC |
+| 2 | `src/pages/CompanySetup.tsx` | Frontend |
+| 3 | `src/components/notas/NovaNotaFiscalDialog.tsx` | Validacao |
+| 4 | `src/utils/generateQuotePdf.ts` | PDF |
+| 4 | `src/utils/generateSalePdf.ts` | PDF (ja ok) |
+| 4 | `src/utils/generateContractPdf.ts` | PDF (ja ok) |
+| 4 | `src/utils/generateDailyCashPdf.ts` | PDF |
+| 4 | `src/utils/generateMaterialsListPdf.ts` | PDF |
+| 4 | `src/utils/generateGlassProductionPdf.ts` | PDF |
+| 5 | `src/types/index.ts` | TypeScript |
+
+---
+
+## Fluxo de Cadastro Atualizado
 
 ```text
-src/
-  components/
-    tutorial/
-      TutorialOverlay.tsx
-      TutorialTooltip.tsx
-      TutorialProgress.tsx
-      tutorialSteps.ts
-  contexts/
-    TutorialContext.tsx
-  hooks/
-    useTutorial.ts
+    Usuario preenche formulario
+              |
+              v
+    Documento informado?
+        /         \
+      SIM         NAO
+       |           |
+       v           |
+   Valida formato  |
+       |           |
+       v           |
+   Documento existe?
+     /       \     |
+   SIM       NAO   |
+    |         |    |
+    v         v    v
+  ERRO!    Cria empresa (cnpj preenchido ou null)
+           Empresa vinculada ao usuario
 ```
 
 ---
 
-## Resultado Esperado
+## Comportamento Esperado
 
-- Novos usuarios verao um tour guiado na primeira visita
-- Tutorial destaca elementos importantes com spotlight
-- Navegacao intuitiva entre passos
-- Possibilidade de pular e reiniciar
-- Integracao visual com o design existente
-- Nao interfere com usuarios que ja completaram
+### Cenario 1: Cadastro SEM documento
+- Usuario preenche apenas nome
+- Empresa criada com `cnpj = NULL`
+- Funciona normalmente exceto emissao de NF
+
+### Cenario 2: Cadastro COM documento valido
+- Usuario preenche nome + CPF/CNPJ
+- Sistema valida formato
+- Empresa criada com documento vinculado
+- Emissao de NF disponivel (se CNPJ)
+
+### Cenario 3: Tentativa de usar documento ja cadastrado
+- Usuario preenche documento que ja existe
+- Sistema retorna erro claro: "CNPJ ja em uso"
+- Usuario precisa usar outro documento ou deixar vazio
+
+### Cenario 4: Emissao de NF sem CNPJ
+- Usuario tenta emitir NF
+- Sistema bloqueia com mensagem clara
+- Link para configurar dados da empresa
 
