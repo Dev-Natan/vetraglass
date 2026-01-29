@@ -2,10 +2,14 @@ import { memo } from 'react';
 import { Factory, AlertTriangle, Package, Wallet } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Link } from 'react-router-dom';
-import type { DashboardData } from '@/hooks/useDashboardData';
+import type { OSStats, MaterialsStats, ReceivablesStats } from '@/hooks/useDashboardData';
 
 interface ProductionKPIsProps {
-  data?: DashboardData;
+  data?: {
+    osStats?: OSStats;
+    materialsStats?: MaterialsStats;
+    receivablesStats?: ReceivablesStats;
+  };
 }
 
 export const ProductionKPIs = memo(function ProductionKPIs({ data }: ProductionKPIsProps) {
