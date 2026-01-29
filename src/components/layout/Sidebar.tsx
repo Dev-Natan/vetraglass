@@ -21,6 +21,7 @@ import {
   Ruler,
   Headphones,
   Lock,
+  Lightbulb,
   LucideIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -70,6 +71,9 @@ const menuItems: MenuItem[] = [
   // Administração
   { icon: UserCog, label: 'Funcionários', path: '/funcionarios', module: 'funcionarios', tutorialId: 'menu-funcionarios' },
   { icon: Settings, label: 'Configurações', path: '/configuracoes', module: 'configuracoes', tutorialId: 'menu-configuracoes' },
+  
+  // Feedback
+  { icon: Lightbulb, label: 'Sugestões', path: '/feedbacks', tutorialId: 'menu-feedbacks' },
 ];
 
 export function Sidebar() {
