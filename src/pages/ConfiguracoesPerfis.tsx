@@ -55,7 +55,7 @@ const MODULES: { id: Module; label: string; description: string }[] = [
   { id: 'ordens-servico', label: 'Ordens de Serviço', description: 'Acompanhar OS' },
   { id: 'agenda', label: 'Agenda', description: 'Visualizar e gerenciar agenda' },
   { id: 'medicoes', label: 'Medições', description: 'Registrar medições' },
-  { id: 'plano-corte', label: 'Plano de Corte', description: 'Otimização de corte' },
+  { id: 'plano-corte', label: 'Produção', description: 'Plano de corte e vidros' },
   { id: 'produtos', label: 'Produtos', description: 'Catálogo e preços' },
   { id: 'estoque', label: 'Estoque', description: 'Controle de estoque' },
   { id: 'caixa-vendas', label: 'Caixa', description: 'PDV e vendas' },
