@@ -152,17 +152,11 @@ export function Sidebar() {
         {/* Logo */}
         <div className="p-5 border-b border-sidebar-border">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <img 
-                src="/vetra-logo.png" 
-                alt="Vetra Logo" 
-                className="w-10 h-10 object-contain mix-blend-multiply"
-              />
-              <div>
-                <h1 className="font-display font-bold text-lg text-sidebar-foreground">Vetra</h1>
-                <p className="text-xs text-sidebar-foreground/50">Sistema de Gestão</p>
-              </div>
-            </div>
+            <img 
+              src="/vetra-logo.png" 
+              alt="Vetra Logo" 
+              className="h-10 object-contain mix-blend-multiply"
+            />
             <Button
               variant="ghost"
               size="icon"
