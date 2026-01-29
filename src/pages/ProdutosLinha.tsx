@@ -145,6 +145,7 @@ export default function ProdutosLinha() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company-products'] });
+      queryClient.invalidateQueries({ queryKey: ['company-products-with-templates'] });
       toast.success('Produto ativado para venda!');
     },
     onError: (error) => {
@@ -168,6 +169,7 @@ export default function ProdutosLinha() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company-products'] });
       queryClient.invalidateQueries({ queryKey: ['custom-products'] });
+      queryClient.invalidateQueries({ queryKey: ['company-products-with-templates'] });
       toast.success('Produto desativado para venda');
     },
     onError: (error) => {
@@ -191,6 +193,7 @@ export default function ProdutosLinha() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company-products'] });
       queryClient.invalidateQueries({ queryKey: ['custom-products'] });
+      queryClient.invalidateQueries({ queryKey: ['company-products-with-templates'] });
       toast.success('Produto personalizado desativado');
     },
     onError: (error) => {
@@ -214,6 +217,7 @@ export default function ProdutosLinha() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company-products'] });
       queryClient.invalidateQueries({ queryKey: ['custom-products'] });
+      queryClient.invalidateQueries({ queryKey: ['company-products-with-templates'] });
       toast.success('Produto personalizado reativado!');
     },
     onError: (error) => {
