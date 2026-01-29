@@ -2191,6 +2191,95 @@ export type Database = {
           },
         ]
       }
+      feedback_votes: {
+        Row: {
+          created_at: string
+          feedback_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          feedback_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          feedback_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_votes_feedback_id_fkey"
+            columns: ["feedback_id"]
+            isOneToOne: false
+            referencedRelation: "feedbacks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feedbacks: {
+        Row: {
+          admin_response: string | null
+          category: string
+          company_id: string
+          created_at: string
+          description: string
+          id: string
+          is_public: boolean
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+          votes_count: number
+        }
+        Insert: {
+          admin_response?: string | null
+          category?: string
+          company_id: string
+          created_at?: string
+          description: string
+          id?: string
+          is_public?: boolean
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+          votes_count?: number
+        }
+        Update: {
+          admin_response?: string | null
+          category?: string
+          company_id?: string
+          created_at?: string
+          description?: string
+          id?: string
+          is_public?: boolean
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+          votes_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedbacks_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedbacks_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       formas_pagamento: {
         Row: {
           company_id: string

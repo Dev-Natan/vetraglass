@@ -38,6 +38,7 @@ const Agenda = lazy(() => import("./pages/Agenda"));
 const Medicoes = lazy(() => import("./pages/Medicoes"));
 const Relatorios = lazy(() => import("./pages/Relatorios"));
 const PedidosCompra = lazy(() => import("./pages/PedidosCompra"));
+const Feedbacks = lazy(() => import("./pages/Feedbacks"));
 const AceitarConvite = lazy(() => import("./pages/AceitarConvite"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -65,6 +66,7 @@ const AdminGlassFormulas = lazy(() => import("./pages/admin/AdminGlassFormulas")
 const AdminCategories = lazy(() => import("./pages/admin/AdminCategories"));
 const AdminAuditLogs = lazy(() => import("./pages/admin/AdminAuditLogs"));
 const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
+const AdminFeedbacks = lazy(() => import("./pages/admin/AdminFeedbacks"));
 
 // Create optimized QueryClient with caching
 const queryClient = createQueryClient();
@@ -208,6 +210,9 @@ function AppRoutes() {
       <Route path="/relatorios" element={
         <ProtectedRoute><LazyRoute><Relatorios /></LazyRoute></ProtectedRoute>
       } />
+      <Route path="/feedbacks" element={
+        <ProtectedRoute><LazyRoute><Feedbacks /></LazyRoute></ProtectedRoute>
+      } />
       
       {/* Settings routes - all lazy */}
       <Route path="/configuracoes" element={
@@ -277,6 +282,9 @@ function AppRoutes() {
       } />
       <Route path="/admin/settings" element={
         <ProtectedRoute><LazyRoute><AdminSettings /></LazyRoute></ProtectedRoute>
+      } />
+      <Route path="/admin/feedbacks" element={
+        <ProtectedRoute><LazyRoute><AdminFeedbacks /></LazyRoute></ProtectedRoute>
       } />
       
       <Route path="*" element={<LazyRoute><NotFound /></LazyRoute>} />

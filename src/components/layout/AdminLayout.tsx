@@ -88,6 +88,11 @@ const adminMenuItems = [
     icon: Activity,
   },
   {
+    title: "Feedbacks",
+    path: "/admin/feedbacks",
+    icon: Megaphone,
+  },
+  {
     title: "Configurações",
     path: "/admin/settings",
     icon: Settings,
