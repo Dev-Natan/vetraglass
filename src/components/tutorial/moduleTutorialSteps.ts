@@ -218,10 +218,10 @@ export const moduleTutorials: Record<string, ModuleTutorial> = {
     ],
   },
 
-  // Notas Fiscais
+  // Fiscal
   'notas-fiscais': {
     moduleId: 'notas-fiscais',
-    moduleName: 'Notas Fiscais',
+    moduleName: 'Fiscal',
     steps: [
       {
         id: 'nf-intro',

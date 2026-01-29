@@ -66,7 +66,7 @@ const menuItems: MenuItem[] = [
   
   // Financeiro
   { icon: DollarSign, label: 'Financeiro', path: '/financeiro', module: 'financeiro', tutorialId: 'menu-financeiro' },
-  { icon: Receipt, label: 'Notas Fiscais', path: '/notas-fiscais', module: 'notas-fiscais', tutorialId: 'menu-notas-fiscais' },
+  { icon: Receipt, label: 'Fiscal', path: '/notas-fiscais', module: 'notas-fiscais', tutorialId: 'menu-notas-fiscais' },
   
   // Administração
   { icon: UserCog, label: 'Funcionários', path: '/funcionarios', module: 'funcionarios', tutorialId: 'menu-funcionarios' },
