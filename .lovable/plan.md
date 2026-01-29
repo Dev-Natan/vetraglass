@@ -1,107 +1,130 @@
 
-# Plano: Unificar Plano de Corte e Projeto de Vidros
 
-## Visão Geral
-Transformar o módulo Produção em uma interface única e fluida onde o usuário pode ver tanto os cortes de perfil quanto os vidros em uma experiência integrada, sem precisar alternar entre abas.
+# Plano: Unificar Agenda com Ordens de Serviço
+
+## Visao Geral
+Combinar a pagina Agenda e Ordens de Servico em uma unica interface unificada chamada "Ordens de Servico", onde o usuario pode gerenciar tanto as OS quanto os agendamentos em um so lugar.
 
 ---
 
-## Arquitetura Proposta
+## Arquitetura
 
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│                         PRODUÇÃO                                │
-├─────────────────────────────────────────────────────────────────┤
-│  [Seletores: Linha > Categoria > Produto]  [Vão: L x A]  [Qtd] │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │              VISUALIZAÇÃO UNIFICADA                       │  │
-│  │   (Desenho técnico do produto com perfis e vidros)        │  │
-│  │   - Painéis de vidro clicáveis para editar furos/recortes│  │
-│  │   - Zoom, dimensões, área total, peso estimado            │  │
-│  └──────────────────────────────────────────────────────────┘  │
-│                                                                 │
-│  ┌─────────────────────┐  ┌─────────────────────────────────┐  │
-│  │ TABELA DE VIDROS    │  │ TABELA DE PERFIS                │  │
-│  │ (com área, peso,    │  │ (com ângulos, posição,          │  │
-│  │  checkboxes, etc.)  │  │  checkboxes, etc.)              │  │
-│  └─────────────────────┘  └─────────────────────────────────┘  │
-│                                                                 │
-│  [Sub-aba: Otimização de Barras]  [Salvar Projeto] [Exportar]  │
-└─────────────────────────────────────────────────────────────────┘
++-----------------------------------------------------------------------+
+|                         ORDENS DE SERVICO                             |
++-----------------------------------------------------------------------+
+|  [Stats: Pendentes | Em Andamento | Concluidas | Atrasadas | Hoje]    |
++-----------------------------------------------------------------------+
+|                                                                       |
+|  TABS: [ Lista de OS ]  [ Calendario ]  [ Hoje ]                      |
+|                                                                       |
+|  +-------------------------------------------------------------+     |
+|  | TAB: Lista de OS                                            |     |
+|  | - Grid de cards com OS (layout atual mantido)               |     |
+|  | - Badge de agendamentos proximos em cada card               |     |
+|  +-------------------------------------------------------------+     |
+|                                                                       |
+|  +-------------------------------------------------------------+     |
+|  | TAB: Calendario                                              |     |
+|  | - Calendario mensal com eventos de agendamentos              |     |
+|  | - Sidebar com detalhes do dia e proximos agendamentos        |     |
+|  | - Botao "Novo Agendamento"                                   |     |
+|  +-------------------------------------------------------------+     |
+|                                                                       |
+|  +-------------------------------------------------------------+     |
+|  | TAB: Hoje                                                    |     |
+|  | - Timeline visual do dia atual                               |     |
+|  | - OS atrasadas destacadas                                    |     |
+|  | - Acoes rapidas para iniciar/concluir                        |     |
+|  +-------------------------------------------------------------+     |
++-----------------------------------------------------------------------+
 ```
 
 ---
 
-## Mudanças Principais
+## Arquivos a Criar
 
-### 1. Interface Unificada
-- Remover as tabs "Plano de Corte" vs "Projeto de Vidros"
-- Layout em seções verticais fluídas:
-  - Header com seletores e dimensões do vão
-  - Canvas visual unificado (sempre visível)
-  - Tabelas lado a lado (vidros + perfis)
-  - Sub-aba para Otimização de Barras
+### 1. `src/components/ordens-servico/OSCalendarView.tsx`
+Componente com o calendario mensal completo, incluindo:
+- Calendario visual com eventos coloridos por tipo
+- Sidebar com proximos agendamentos
+- Dialog para criar novos agendamentos
+- Deteccao de conflitos de horario
+- Estatisticas mensais
+- Impressao de agenda
 
-### 2. Canvas Visual Melhorado
-- Mostrar desenho técnico do produto completo (não só vidros)
-- Manter interatividade: clicar em vidro abre editor de furos/recortes
-- Adicionar indicadores visuais para perfis ao redor dos vidros
-- Zoom e controles já existentes permanecem
-
-### 3. Tabelas Unificadas
-- Exibir vidros e perfis em uma visualização compacta lado a lado
-- Manter checkboxes para tracking de produção
-- Barra de progresso única combinando vidros + perfis
-
-### 4. Ações Centralizadas
-- Botão único "Exportar" com dropdown: PDF, CSV, Etiquetas
-- Botão "Salvar Projeto" para salvar estado completo
-- Botão "Carregar Projetos" para recuperar projetos salvos
+### 2. `src/components/ordens-servico/OSTodayView.tsx`
+Componente com a timeline do dia atual:
+- Cards de resumo (agendamentos, pendentes, concluidos, atrasados)
+- Lista de OS atrasadas com destaque
+- OS com entrega prevista para hoje
+- Timeline visual dos agendamentos do dia
+- Acoes rapidas para iniciar/concluir
 
 ---
 
-## Benefícios
+## Arquivos a Modificar
+
+### 1. `src/pages/OrdensServico.tsx`
+- Adicionar sistema de tabs com 3 abas: Lista | Calendario | Hoje
+- Mover a lista atual de OS para dentro da primeira tab
+- Importar e renderizar os novos componentes
+- Adicionar stat card "Agenda Hoje" aos cards existentes
+- Buscar contagem de agendamentos do dia
+
+### 2. `src/components/layout/Sidebar.tsx`
+- Remover o item de menu "Agenda" (linha 62)
+- Manter apenas "Ordens de Servico" no menu
+
+### 3. `src/App.tsx`
+- Alterar rota `/agenda` para redirecionar para `/ordens-servico?tab=calendario`
+
+---
+
+## Detalhes Tecnicos
+
+### Componentes Reutilizados
+- Logica de calendario da Agenda.tsx
+- `appointmentTypeConfig` (tipos de agendamento)
+- `statusConfig` (status de agendamentos)
+- Logica de deteccao de conflitos de horario
+- Dialog de criacao de agendamentos
+
+### Queries
+- `appointments` - agendamentos do mes (existente)
+- `today-appointments` - agendamentos de hoje (novo)
+- `today-os` - OS com entrega hoje ou atrasadas (novo)
+
+### Cores dos Tipos de Agendamento
+- Medicao: Verde (#10b981)
+- Instalacao: Azul (#3b82f6)
+- Manutencao: Amarelo (#f59e0b)
+- Visita: Roxo (#8b5cf6)
+- Entrega: Rosa (#ec4899)
+- Outros: Cinza (#6b7280)
+
+---
+
+## Fluxo do Usuario
+
+1. Usuario acessa "Ordens de Servico"
+2. Ve stats cards unificados com resumo
+3. Pode alternar entre:
+   - **Lista**: Ver todas as OS em cards
+   - **Calendario**: Ver visao mensal com agendamentos
+   - **Hoje**: Foco no dia atual com timeline
+4. Ao criar agendamento no calendario, pode vincular a OS
+5. Na tab Hoje, ve timeline de atividades e OS atrasadas
+6. Clicar em OS ou agendamento abre detalhes
+
+---
+
+## Beneficios
 
 | Antes | Depois |
 |-------|--------|
-| Duas abas separadas, contexto fragmentado | Interface única e fluída |
-| Duplicação de seletores entre abas | Seletores únicos no topo |
-| Precisa alternar para ver vidros vs perfis | Visualização completa em uma tela |
-| Dados calculados duas vezes | Cálculo único compartilhado |
-
----
-
-## Detalhes Técnicos
-
-### Arquivos a Modificar:
-1. **`src/pages/Producao.tsx`** - Reestruturar layout, remover tabs principais
-2. **`src/components/projeto-vidro/GlassProjectCanvas.tsx`** - Adaptar para ser a visualização principal
-
-### Arquivos a Criar:
-1. **`src/components/producao/UnifiedProductionView.tsx`** - Novo componente unificado
-2. **`src/components/producao/ProductionHeader.tsx`** - Header com seletores e dimensões
-3. **`src/components/producao/ProductionTables.tsx`** - Tabelas lado a lado
-
-### Componentes Reutilizados:
-- `ProfileCutsTable` - mantido para perfis
-- `GlassCutsTable` - mantido para vidros  
-- `BarOptimizationView` - mantido como sub-seção
-- `HoleCutoutEditor` - mantido para edição de vidros
-- `SaveProjectDialog` / `SavedProjectsSheet` - mantidos
-
----
-
-## Fluxo do Usuário
-
-1. Usuário entra em Produção
-2. Seleciona linha, categoria, produto
-3. Define dimensões do vão e quantidade
-4. Visualização unificada mostra desenho técnico completo
-5. Pode clicar em qualquer vidro para adicionar furos/recortes
-6. Tabelas abaixo mostram detalhes de vidros e perfis
-7. Pode marcar itens como concluídos (checkboxes)
-8. Expande "Otimização de Barras" se necessário
-9. Salva ou exporta o projeto
+| Duas paginas separadas | Interface unica e coesa |
+| Navegacao fragmentada | Tudo em um lugar |
+| Agendamentos desconectados | Integrado com OS |
+| Duplicacao de contexto | Fluxo unificado |
 
