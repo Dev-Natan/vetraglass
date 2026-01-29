@@ -42,21 +42,23 @@ export function ProductionHeader({
   productName
 }: ProductionHeaderProps) {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 p-4 bg-card rounded-xl border shadow-sm">
-      {/* Product Image */}
-      <div className="flex justify-center lg:justify-start">
-        <div className="w-full max-w-[180px] aspect-square bg-muted rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center overflow-hidden">
-          {productImageUrl ? (
-            <img 
-              src={productImageUrl} 
-              alt={productName || 'Produto'}
-              className="w-full h-full object-contain"
-            />
-          ) : (
-            <div className="text-5xl text-muted-foreground/30">🪟</div>
-          )}
+    <div className={`grid grid-cols-1 ${selectedProduct ? 'lg:grid-cols-4' : ''} gap-6 p-4 bg-card rounded-xl border shadow-sm`}>
+      {/* Product Image - Only show when product is selected */}
+      {selectedProduct && (
+        <div className="flex justify-center lg:justify-start">
+          <div className="w-full max-w-[180px] aspect-square bg-muted rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center overflow-hidden">
+            {productImageUrl ? (
+              <img 
+                src={productImageUrl} 
+                alt={productName || 'Produto'}
+                className="w-full h-full object-contain"
+              />
+            ) : (
+              <div className="text-5xl text-muted-foreground/30">🪟</div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Filters and Dimensions */}
       <div className="lg:col-span-3 space-y-4">
