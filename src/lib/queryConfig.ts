@@ -109,15 +109,15 @@ export const queryKeys = {
   },
 };
 
-// Create optimized QueryClient
+// Create QueryClient with ZERO CACHE - dados sempre frescos do servidor
 export function createQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        // Default stale time (2 minutes)
-        staleTime: CACHE_TIMES.SEMI_STATIC.staleTime,
-        // Default gc time (5 minutes)
-        gcTime: CACHE_TIMES.SEMI_STATIC.gcTime,
+        // ZERO CACHE: dados sempre considerados desatualizados
+        staleTime: 0,
+        // ZERO CACHE: sem garbage collection cache
+        gcTime: 0,
         // Retry configuration
         retry: (failureCount, error: any) => {
           // Don't retry on 4xx errors
@@ -127,9 +127,9 @@ export function createQueryClient() {
           return failureCount < 2;
         },
         retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-        // Refetch configuration
-        refetchOnWindowFocus: false, // Disable to reduce unnecessary requests
-        refetchOnMount: true,
+        // ZERO CACHE: sempre recarregar dados
+        refetchOnWindowFocus: true,
+        refetchOnMount: 'always',
         refetchOnReconnect: true,
       },
       mutations: {
