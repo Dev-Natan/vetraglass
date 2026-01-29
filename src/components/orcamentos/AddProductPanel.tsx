@@ -62,31 +62,29 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   const [hasGlass, setHasGlass] = useState<boolean>(true);
   const [selectedGlassPriceId, setSelectedGlassPriceId] = useState<string>('');
 
-  // Fetch all product templates
-  const { data: productTemplates, isLoading } = useQuery({
-    queryKey: ['product-templates'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('product_templates')
-        .select('*')
-        .eq('is_active', true)
-        .order('linha')
-        .order('category')
-        .order('name');
-      
-      if (error) throw error;
-      return data || [];
-    },
-  });
-
-  // Fetch company products to get prices
-  const { data: companyProducts } = useQuery({
-    queryKey: ['company-products', currentCompany?.id],
+  // Fetch active company products with template data
+  const { data: companyProducts, isLoading } = useQuery({
+    queryKey: ['company-products-with-templates', currentCompany?.id],
     queryFn: async () => {
       if (!currentCompany?.id) return [];
       const { data, error } = await supabase
         .from('company_products')
-        .select('*')
+        .select(`
+          id,
+          commercial_name,
+          base_price,
+          price_per_sqm,
+          description,
+          image_url,
+          linha,
+          category,
+          is_custom,
+          uses_glass,
+          product_template_id,
+          product_template:product_templates (
+            id, name, description, category, linha, image_url
+          )
+        `)
         .eq('company_id', currentCompany.id)
         .eq('is_active', true);
       
@@ -96,53 +94,46 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     enabled: !!currentCompany?.id
   });
 
-  // Get unique linhas
+  // Get unique linhas from active company products
   const linhas = useMemo(() => {
-    return [...new Set(productTemplates?.map(p => p.linha).filter(Boolean) || [])];
-  }, [productTemplates]);
+    const linhaSet = new Set<string>();
+    companyProducts?.forEach(p => {
+      const linha = p.linha || (p.product_template as any)?.linha;
+      if (linha) linhaSet.add(linha);
+    });
+    return Array.from(linhaSet).sort();
+  }, [companyProducts]);
 
-  // Get categories for selected linha
+  // Get categories for selected linha from active company products
   const categories = useMemo(() => {
     if (!selectedLinha) return [];
-    const cats = productTemplates
-      ?.filter(p => p.linha === selectedLinha)
-      .map(p => p.category)
-      .filter(Boolean) || [];
-    return [...new Set(cats)];
-  }, [productTemplates, selectedLinha]);
+    const catSet = new Set<string>();
+    companyProducts
+      ?.filter(p => (p.linha || (p.product_template as any)?.linha) === selectedLinha)
+      .forEach(p => {
+        const cat = p.category || (p.product_template as any)?.category;
+        if (cat) catSet.add(cat);
+      });
+    return Array.from(catSet).sort();
+  }, [companyProducts, selectedLinha]);
 
-  // Get products based on filters - include both template-based and custom products
+  // Get filtered products from active company products
   const filteredProducts = useMemo(() => {
-    // Get IDs of products activated by the company (template-based)
-    const activatedTemplateIds = new Set(
-      companyProducts?.filter(cp => cp.product_template_id).map(cp => cp.product_template_id) || []
-    );
-    
-    // Template-based products
-    let templateProducts = (productTemplates || [])
-      .filter(p => activatedTemplateIds.has(p.id))
-      .map(p => ({
-        ...p,
-        is_custom: false,
-        company_product: companyProducts?.find(cp => cp.product_template_id === p.id)
-      }));
-    
-    // Custom products (is_custom = true)
-    const customProducts = (companyProducts || [])
-      .filter(cp => (cp as any).is_custom === true)
-      .map(cp => ({
+    let products = (companyProducts || []).map(cp => {
+      const template = cp.product_template as any;
+      return {
         id: cp.id,
-        name: cp.commercial_name,
-        description: cp.description,
-        category: (cp as any).category || 'other',
-        linha: (cp as any).linha || 'Personalizado',
-        image_url: (cp as any).image_url || null,
-        is_active: cp.is_active,
-        is_custom: true,
-        company_product: cp
-      }));
-    
-    let products = [...templateProducts, ...customProducts];
+        name: cp.commercial_name || template?.name || 'Produto',
+        description: cp.description || template?.description,
+        category: cp.category || template?.category || 'other',
+        linha: cp.linha || template?.linha || 'Personalizado',
+        image_url: cp.image_url || template?.image_url || null,
+        is_custom: cp.is_custom ?? false,
+        uses_glass: cp.uses_glass ?? true,
+        company_product: cp,
+        product_template_id: cp.product_template_id
+      };
+    });
     
     if (selectedLinha) {
       products = products.filter(p => p.linha === selectedLinha);
@@ -159,12 +150,10 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     }
     
     return products;
-  }, [productTemplates, companyProducts, selectedLinha, selectedCategory, searchQuery]);
+  }, [companyProducts, selectedLinha, selectedCategory, searchQuery]);
 
   const selectedProduct = filteredProducts?.find(p => p.id === selectedProductId);
-  const companyProduct = selectedProduct?.is_custom 
-    ? selectedProduct.company_product 
-    : companyProducts?.find(cp => cp.product_template_id === selectedProductId);
+  const companyProduct = selectedProduct?.company_product;
 
   // Fetch glass prices for selected product
   const { data: productGlassPrices } = useQuery({
@@ -229,7 +218,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     setSelectedGlassPriceId('');
     
     // Auto-enable glass for Temperado line products
-    const product = productTemplates?.find(p => p.id === productId);
+    const product = filteredProducts?.find(p => p.id === productId);
     if (product?.linha?.toLowerCase().includes('temperado')) {
       setHasGlass(true);
     }
@@ -245,9 +234,9 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     if (!selectedProduct) return;
 
     onAdd({
-      product_template_id: selectedProduct.is_custom ? null : selectedProductId,
+      product_template_id: selectedProduct.is_custom ? null : selectedProduct.product_template_id,
       company_product_id: companyProduct?.id,
-      name: companyProduct?.commercial_name || selectedProduct.name,
+      name: selectedProduct.name,
       base_price: basePrice,
       image_url: selectedProduct.image_url,
       linha: selectedProduct.linha,

@@ -52,32 +52,29 @@ export function ProductSelectionSheet({ open, onOpenChange, onSelectProduct }: P
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Fetch all product templates
-  const { data: productTemplates, isLoading } = useQuery({
-    queryKey: ['product-templates'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('product_templates')
-        .select('*')
-        .eq('is_active', true)
-        .order('linha')
-        .order('category')
-        .order('name');
-      
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: open
-  });
-
-  // Fetch company products to get prices
-  const { data: companyProducts } = useQuery({
-    queryKey: ['company-products', currentCompany?.id],
+  // Fetch active company products with template data
+  const { data: companyProducts, isLoading } = useQuery({
+    queryKey: ['company-products-with-templates', currentCompany?.id],
     queryFn: async () => {
       if (!currentCompany?.id) return [];
       const { data, error } = await supabase
         .from('company_products')
-        .select('*')
+        .select(`
+          id,
+          commercial_name,
+          base_price,
+          price_per_sqm,
+          description,
+          image_url,
+          linha,
+          category,
+          is_custom,
+          uses_glass,
+          product_template_id,
+          product_template:product_templates (
+            id, name, description, category, linha, image_url
+          )
+        `)
         .eq('company_id', currentCompany.id)
         .eq('is_active', true);
       
@@ -87,36 +84,54 @@ export function ProductSelectionSheet({ open, onOpenChange, onSelectProduct }: P
     enabled: !!currentCompany?.id && open
   });
 
-  // Get unique linhas - only from products activated by the company
-  const activatedTemplateIds = useMemo(() => {
-    return new Set(companyProducts?.map(cp => cp.product_template_id) || []);
+  // Transform company products to a unified format
+  const activeProducts = useMemo(() => {
+    return (companyProducts || []).map(cp => {
+      const template = cp.product_template as any;
+      return {
+        id: cp.id,
+        name: cp.commercial_name || template?.name || 'Produto',
+        description: cp.description || template?.description,
+        category: cp.category || template?.category || 'other',
+        linha: cp.linha || template?.linha || 'Personalizado',
+        image_url: cp.image_url || template?.image_url || null,
+        is_custom: cp.is_custom ?? false,
+        base_price: cp.base_price,
+        price_per_sqm: cp.price_per_sqm,
+        company_product: cp,
+        product_template_id: cp.product_template_id
+      };
+    });
   }, [companyProducts]);
 
-  const activatedProducts = useMemo(() => {
-    return productTemplates?.filter(p => activatedTemplateIds.has(p.id)) || [];
-  }, [productTemplates, activatedTemplateIds]);
-
+  // Get unique linhas from active company products
   const linhas = useMemo(() => {
-    return [...new Set(activatedProducts.map(p => p.linha).filter(Boolean))];
-  }, [activatedProducts]);
+    const linhaSet = new Set<string>();
+    activeProducts.forEach(p => {
+      if (p.linha) linhaSet.add(p.linha);
+    });
+    return Array.from(linhaSet).sort();
+  }, [activeProducts]);
 
   // Get categories for selected linha
   const categories = useMemo(() => {
     if (!selectedLinha) return [];
-    const cats = activatedProducts
+    const catSet = new Set<string>();
+    activeProducts
       .filter(p => p.linha === selectedLinha)
-      .map(p => p.category)
-      .filter(Boolean);
-    return [...new Set(cats)];
-  }, [activatedProducts, selectedLinha]);
+      .forEach(p => {
+        if (p.category) catSet.add(p.category);
+      });
+    return Array.from(catSet).sort();
+  }, [activeProducts, selectedLinha]);
 
   // Get products for selected linha and category
   const products = useMemo(() => {
     if (!selectedLinha || !selectedCategory) return [];
-    return activatedProducts.filter(
+    return activeProducts.filter(
       p => p.linha === selectedLinha && p.category === selectedCategory
     );
-  }, [activatedProducts, selectedLinha, selectedCategory]);
+  }, [activeProducts, selectedLinha, selectedCategory]);
 
   // Filtered products by search
   const filteredProducts = useMemo(() => {
@@ -138,21 +153,20 @@ export function ProductSelectionSheet({ open, onOpenChange, onSelectProduct }: P
     setStep('product');
   };
 
-  const handleSelectProduct = (templateId: string) => {
-    const template = productTemplates?.find(p => p.id === templateId);
-    if (!template) return;
+  const handleSelectProduct = (productId: string) => {
+    const product = activeProducts.find(p => p.id === productId);
+    if (!product) return;
 
-    const existingProduct = companyProducts?.find(p => p.product_template_id === templateId);
-    const basePrice = Number(existingProduct?.base_price) || 0;
+    const basePrice = Number(product.price_per_sqm) || Number(product.base_price) || 0;
 
     onSelectProduct({
-      product_template_id: templateId,
-      company_product_id: existingProduct?.id,
-      name: existingProduct?.commercial_name || template.name,
+      product_template_id: product.is_custom ? '' : (product.product_template_id || ''),
+      company_product_id: product.company_product?.id,
+      name: product.name,
       base_price: basePrice,
-      image_url: template.image_url,
-      linha: template.linha,
-      category: template.category,
+      image_url: product.image_url,
+      linha: product.linha,
+      category: product.category,
     });
 
     resetSelection();
@@ -310,11 +324,11 @@ export function ProductSelectionSheet({ open, onOpenChange, onSelectProduct }: P
                     </p>
                     <div className="grid grid-cols-2 gap-3">
                       {linhas.map((linha) => {
-                        const count = productTemplates?.filter(p => p.linha === linha).length || 0;
+                        const count = activeProducts.filter(p => p.linha === linha).length;
                         return (
                           <button
                             key={linha}
-                            onClick={() => handleSelectLinha(linha!)}
+                            onClick={() => handleSelectLinha(linha)}
                             className="group relative p-5 rounded-xl border-2 border-border bg-card hover:border-primary hover:shadow-lg transition-all text-left"
                           >
                             <div className="text-2xl mb-2">📐</div>
@@ -340,20 +354,20 @@ export function ProductSelectionSheet({ open, onOpenChange, onSelectProduct }: P
                     </p>
                     <div className="grid grid-cols-2 gap-3">
                       {categories.map((category) => {
-                        const count = productTemplates?.filter(
+                        const count = activeProducts.filter(
                           p => p.linha === selectedLinha && p.category === category
-                        ).length || 0;
+                        ).length;
                         return (
                           <button
                             key={category}
-                            onClick={() => handleSelectCategory(category!)}
+                            onClick={() => handleSelectCategory(category)}
                             className="group relative p-5 rounded-xl border-2 border-border bg-card hover:border-primary hover:shadow-lg transition-all text-left"
                           >
                             <div className="text-2xl mb-2">
-                              {categoryIcons[category!] || '📦'}
+                              {categoryIcons[category] || '📦'}
                             </div>
                             <h3 className="font-semibold text-base group-hover:text-primary transition-colors">
-                              {categoryLabels[category!] || category}
+                              {categoryLabels[category] || category}
                             </h3>
                             <p className="text-xs text-muted-foreground mt-1">
                               {count} {count === 1 ? 'produto' : 'produtos'}
@@ -384,11 +398,9 @@ export function ProductSelectionSheet({ open, onOpenChange, onSelectProduct }: P
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {filteredProducts.map((product) => {
-                          const companyProduct = companyProducts?.find(
-                            cp => cp.product_template_id === product.id
-                          );
-                          const hasPrice = !!companyProduct?.base_price;
+                          const hasPrice = Number(product.price_per_sqm) > 0 || Number(product.base_price) > 0;
                           const imageUrl = getProductImage(product.image_url);
+                          const isCustomProduct = product.is_custom;
 
                           return (
                             <button
@@ -414,25 +426,28 @@ export function ProductSelectionSheet({ open, onOpenChange, onSelectProduct }: P
                                   </div>
                                 )}
                                 
-                                {companyProduct && (
-                                  <div className="absolute top-2 right-2">
-                                    <Badge className="bg-green-500/90 text-white gap-1 text-xs">
-                                      <Check className="w-3 h-3" />
-                                      Ativo
+                                <div className="absolute top-2 right-2 flex gap-1">
+                                  {isCustomProduct && (
+                                    <Badge variant="secondary" className="gap-1 text-xs">
+                                      ✨ Personalizado
                                     </Badge>
-                                  </div>
-                                )}
+                                  )}
+                                  <Badge variant="default" className="bg-success text-success-foreground gap-1 text-xs">
+                                    <Check className="w-3 h-3" />
+                                    Ativo
+                                  </Badge>
+                                </div>
                               </div>
 
                               {/* Product Info */}
                               <div className="p-3">
                                 <h3 className="font-medium text-sm group-hover:text-primary transition-colors line-clamp-2">
-                                  {companyProduct?.commercial_name || product.name}
+                                  {product.name}
                                 </h3>
                                 <div className="mt-2 flex items-center justify-between">
                                   {hasPrice ? (
                                     <span className="text-sm font-bold text-primary">
-                                      R$ {Number(companyProduct.base_price).toFixed(2)}/m²
+                                      R$ {(Number(product.price_per_sqm) || Number(product.base_price)).toFixed(2)}/m²
                                     </span>
                                   ) : (
                                     <span className="text-xs text-muted-foreground">
