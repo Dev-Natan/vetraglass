@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -28,7 +29,7 @@ interface ClientsCardViewProps {
   onDelete: (client: Client) => void;
 }
 
-export function ClientsCardView({ clients, onView, onDelete }: ClientsCardViewProps) {
+export const ClientsCardView = memo(function ClientsCardView({ clients, onView, onDelete }: ClientsCardViewProps) {
   const handleWhatsApp = (client: Client, e: React.MouseEvent) => {
     e.stopPropagation();
     openWhatsapp(client.phone, `Olá ${client.name}, tudo bem?`);
@@ -129,4 +130,4 @@ export function ClientsCardView({ clients, onView, onDelete }: ClientsCardViewPr
       ))}
     </div>
   );
-}
+});

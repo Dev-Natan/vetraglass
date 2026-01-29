@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -27,7 +28,7 @@ interface VendaItemCardProps {
   onRemove: (id: string) => void;
 }
 
-export function VendaItemCard({
+export const VendaItemCard = memo(function VendaItemCard({
   item,
   onQuantityChange,
   onPriceChange,
@@ -288,4 +289,4 @@ export function VendaItemCard({
       </Button>
     </div>
   );
-}
+}, (prev, next) => prev.item.id === next.item.id && prev.item.totalPrice === next.item.totalPrice && prev.item.quantity === next.item.quantity);

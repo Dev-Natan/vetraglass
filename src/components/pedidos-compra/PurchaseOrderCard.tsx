@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -27,7 +28,7 @@ interface PurchaseOrderCardProps {
   onReceive?: (order: PurchaseOrder) => void;
 }
 
-export function PurchaseOrderCard({ order, onView, onMarkOrdered, onReceive }: PurchaseOrderCardProps) {
+export const PurchaseOrderCard = memo(function PurchaseOrderCard({ order, onView, onMarkOrdered, onReceive }: PurchaseOrderCardProps) {
   const status = statusConfig[order.status] || statusConfig.pending;
   
   const formatCurrency = (value: number) =>
@@ -114,4 +115,4 @@ export function PurchaseOrderCard({ order, onView, onMarkOrdered, onReceive }: P
       </CardContent>
     </Card>
   );
-}
+}, (prev, next) => prev.order.id === next.order.id && prev.order.status === next.order.status);
