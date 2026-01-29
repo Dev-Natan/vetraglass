@@ -1,177 +1,254 @@
 
 
-# Plano: Otimização da Página de Empresas (AdminCompanies)
+# Plano de Otimização SEM Cache
 
-## Problema Identificado
+## Diagnóstico: Por que está lento?
 
-A página de empresas está demorando muito para carregar devido a **múltiplas consultas sequenciais ao banco de dados**:
+O sistema faz **muitas requisições ao banco**, todas em **sequência** ou **paralelas não otimizadas**:
 
-| Componente | Consultas | Tipo |
-|------------|-----------|------|
-| AuthContext | 3 consultas | saas_admins, profiles, user_companies |
-| useAdminStats | 8 consultas | companies, item_templates (2x), product_templates, product_linhas, categories, tickets, profiles |
-| AdminCompanies | 2 consultas | companies, user_companies |
-| **Total** | **13 consultas** | Executadas em sequência |
+### Contagem de Queries por Página
 
-Cada consulta espera a anterior terminar, causando o efeito de "cascata" que torna o carregamento lento.
+| Página | Componentes | Queries |
+|--------|-------------|---------|
+| Login (AuthContext) | 3 consultas sequenciais | ~1-2s |
+| Dashboard (Index) | 14 componentes com queries independentes | ~15-20 queries |
+| AdminCompanies | 1 query otimizada (já feito) | OK |
+
+### Dashboard - Detalhamento das Queries
+
+```text
+ProductionKPIs ............ 3 queries (OS total, in_progress, overdue)
+FinancialOSSummary ........ 5 queries (deposits, receivables, pending, expenses, completed)
+ProductionBlockedAlert .... 1 query
+PendingPurchasesAlert ..... 1 query
+FinancialAlerts ........... 3 queries (expenses, overdue, receivables today)
+TodayTasksWidget .......... 2 queries (OS today, appointments)
+OSDueTodayWidget .......... 1 query
+SystemReminders ........... 1 query
+ProductionFlowChart ....... 1 query
+RevenueVsCostChart ........ 1 query
+RecentActivity ............ 3 queries (sales, quotes, orders)
+─────────────────────────────────────────
+TOTAL                       ~22 queries no Dashboard
+```
 
 ---
 
-## Solucao Proposta
+## Estratégias SEM Cache
 
-### 1. Converter useAdminStats para Consultas Paralelas
+### 1. Lazy Loading Total (Maior Impacto)
 
-**Antes:** 8 consultas executadas uma após a outra
-**Depois:** 8 consultas executadas simultaneamente com `Promise.all()`
+Converter as 10 páginas core para lazy loading:
+
+**Antes:** Bundle inicial ~600KB (10 páginas + dependências)
+**Depois:** Bundle inicial ~150KB (só Landing + Auth)
 
 ```typescript
-// Exemplo da mudança
-const [
-  { count: companiesCount },
-  { count: itemTemplatesCount },
-  { count: productTemplatesCount },
-  // ...
-] = await Promise.all([
-  supabase.from("companies").select("*", { count: "exact", head: true }),
-  supabase.from("item_templates").select("*", { count: "exact", head: true }),
-  supabase.from("product_templates").select("*", { count: "exact", head: true }),
-  // ...
+// src/App.tsx - Carregar sob demanda
+const Index = lazy(() => import("./pages/Index"));
+const Clientes = lazy(() => import("./pages/Clientes"));
+const Produtos = lazy(() => import("./pages/Produtos"));
+const Orcamentos = lazy(() => import("./pages/Orcamentos"));
+const OrdensServico = lazy(() => import("./pages/OrdensServico"));
+const CaixaVendas = lazy(() => import("./pages/CaixaVendas"));
+const Estoque = lazy(() => import("./pages/Estoque"));
+const PlanoCorte = lazy(() => import("./pages/PlanoCorte"));
+const ProdutosLinha = lazy(() => import("./pages/ProdutosLinha"));
+```
+
+| Métrica | Antes | Depois |
+|---------|-------|--------|
+| Bundle inicial | ~600KB | ~150KB |
+| Tempo de login | 2-3s | 0.5-1s |
+| Trade-off | N/A | 100-200ms por módulo na 1ª vez |
+
+---
+
+### 2. Paralelizar Queries do AuthContext
+
+As 3 queries do login são executadas **em sequência**:
+
+```typescript
+// ATUAL: Sequencial (~1.5s total)
+const saasAdmin = await supabase.from('saas_admins')...  // 300ms
+const profile = await supabase.from('profiles')...       // 300ms
+const companies = await supabase.from('user_companies')... // 300ms
+
+// OTIMIZADO: Paralelo (~400ms total)
+const [saasAdmin, profile, companies] = await Promise.all([
+  supabase.from('saas_admins').select('id').eq('user_id', userId).maybeSingle(),
+  supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle(),
+  supabase.from('user_companies').select(`...`).eq('user_id', userId).eq('is_active', true),
 ]);
 ```
 
-**Ganho estimado:** De ~2-3 segundos para ~300-500ms
+| Métrica | Antes | Depois |
+|---------|-------|--------|
+| Login completo | 1.5-2s | 0.4-0.6s |
+| Queries | 3 sequenciais | 3 paralelas |
 
 ---
 
-### 2. Otimizar AdminCompanies com JOIN no Banco
+### 3. Agregação de Dados do Dashboard
 
-**Antes:** 2 consultas separadas + processamento no frontend
+Criar uma **única função** que busca todos os dados em paralelo:
+
+**Arquivo:** `src/hooks/useDashboardData.ts` (NOVO)
+
 ```typescript
-// Consulta 1: Busca empresas
-const { data: companiesData } = await supabase.from('companies').select('*');
-
-// Consulta 2: Busca user_companies (todos!)
-const { data: userCountsData } = await supabase.from('user_companies').select('company_id');
-
-// Processa no frontend para contar usuarios
+export function useDashboardData() {
+  const { currentCompany } = useAuth();
+  
+  return useQuery({
+    queryKey: ['dashboard-all', currentCompany?.id],
+    queryFn: async () => {
+      // Todas as 22 queries executadas em paralelo (Promise.all)
+      const [
+        osStats,
+        materialsStats,
+        receivablesStats,
+        financialData,
+        blockedOrders,
+        pendingPurchases,
+        financialAlerts,
+        todayTasks,
+        todayOS,
+        systemReminders,
+        productionFlow,
+        revenueVsCost,
+        recentActivity,
+      ] = await Promise.all([
+        fetchOSStats(companyId),
+        fetchMaterialsStats(companyId),
+        fetchReceivablesStats(companyId),
+        fetchFinancialOSSummary(companyId),
+        fetchBlockedOrders(companyId),
+        fetchPendingPurchases(companyId),
+        fetchFinancialAlerts(companyId),
+        fetchTodayTasks(companyId),
+        fetchTodayOS(companyId),
+        fetchSystemReminders(companyId),
+        fetchProductionFlow(companyId),
+        fetchRevenueVsCost(companyId),
+        fetchRecentActivity(companyId),
+      ]);
+      
+      return { osStats, materialsStats, ... };
+    },
+  });
+}
 ```
 
-**Depois:** 1 consulta com agregacao usando subquery
+**Impacto:** De 22 queries sequenciais (~5-6s) para 22 paralelas (~0.5-1s)
+
+---
+
+### 4. Componentes Recebem Props (Não Fazem Queries)
+
+**Antes:** Cada componente faz sua própria query
+**Depois:** Dashboard distribui dados como props
+
 ```typescript
-const { data: companiesData } = await supabase
-  .from('companies')
-  .select(`
-    id, name, cnpj, email, phone, address, logo_url, created_at,
-    user_companies(count)
-  `)
-  .order('created_at', { ascending: false });
+// Index.tsx (Antes)
+<ProductionKPIs />  // Faz 3 queries internas
+<FinancialOSSummary />  // Faz 5 queries internas
+
+// Index.tsx (Depois)
+const { data } = useDashboardData();  // 1 hook, todas queries paralelas
+
+<ProductionKPIs data={data.osStats} />  // Só renderiza
+<FinancialOSSummary data={data.financialData} />  // Só renderiza
 ```
 
-**Ganho estimado:** Reduz 2 consultas para 1
+---
+
+### 5. Memoização de Componentes de Lista
+
+Evita re-renders desnecessários em listas:
+
+```typescript
+// Componentes que renderizam múltiplos itens
+export const QuoteCard = memo(function QuoteCard({ quote, onEdit }) {
+  // ...
+}, (prev, next) => prev.quote.id === next.quote.id);
+
+export const OSCard = memo(function OSCard({ os }) {
+  // ...
+}, (prev, next) => prev.os.id === next.os.id);
+
+export const ClientCard = memo(function ClientCard({ client }) {
+  // ...
+});
+```
 
 ---
 
-### 3. Usar React Query com staleTime Adequado
+### 6. Select Específico (Menos Dados na Rede)
 
-A pagina ja usa state local, mas migrar para React Query permitira:
-- Cache automatico entre navegacoes
-- Revalidacao inteligente em background
-- Estado de loading mais elegante
+Buscar apenas campos necessários:
+
+```typescript
+// Antes: Traz TODOS os campos
+const { data } = await supabase.from('quotes').select('*');
+
+// Depois: Só campos usados
+const { data } = await supabase
+  .from('quotes')
+  .select('id, quote_number, customer_name, status, final_amount, created_at');
+```
+
+**Impacto:** 30-50% menos dados transferidos
 
 ---
 
-### 4. Adicionar Paginacao (para escalar)
+## Resumo de Impactos
 
-Embora hoje existam apenas 6 empresas, preparar o sistema para crescer:
-- Limite inicial de 50 empresas por pagina
-- Paginacao server-side usando `.range(from, to)`
+| Otimização | Impacto no Tempo | Complexidade |
+|------------|------------------|--------------|
+| Lazy Loading Total | -75% bundle inicial | Baixa |
+| AuthContext Paralelo | -60% tempo login | Baixa |
+| Dashboard Agregado | -80% tempo dashboard | Média |
+| Componentes com Props | Menos re-fetches | Média |
+| Memoização | Menos re-renders | Baixa |
+| Select Específico | -30% transferência | Baixa |
+
+---
+
+## Prioridade de Implementação
+
+### Fase 1 (Impacto Imediato)
+1. **Lazy Loading Total** - `src/App.tsx`
+2. **AuthContext Paralelo** - `src/contexts/AuthContext.tsx`
+
+### Fase 2 (Dashboard Rápido)
+3. **useDashboardData** - NOVO hook agregador
+4. **Index.tsx** - Usar hook e distribuir props
+5. **Componentes Dashboard** - Receber props
+
+### Fase 3 (Refinamentos)
+6. **Memoização** - Componentes de lista
+7. **Select Específico** - Queries otimizadas
 
 ---
 
 ## Arquivos a Modificar
 
-| Arquivo | Mudanca |
+### Fase 1 (2 arquivos)
+| Arquivo | Mudança |
 |---------|---------|
-| `src/hooks/useAdminStats.ts` | Paralelizar consultas com Promise.all |
-| `src/pages/admin/AdminCompanies.tsx` | Usar agregacao SQL + React Query |
+| `src/App.tsx` | Lazy loading nas 10 páginas core |
+| `src/contexts/AuthContext.tsx` | Promise.all nas 3 queries |
 
----
+### Fase 2 (16 arquivos)
+| Arquivo | Mudança |
+|---------|---------|
+| `src/hooks/useDashboardData.ts` | **NOVO** - Agregador |
+| `src/pages/Index.tsx` | Usar hook, distribuir props |
+| 14 componentes dashboard | Receber data via props |
 
-## Impacto Esperado
-
-| Metrica | Antes | Depois |
-|---------|-------|--------|
-| Consultas ao banco | 13+ sequenciais | 3-4 paralelas |
-| Tempo de carregamento | 2-4 segundos | < 500ms |
-| Experiencia do usuario | Tela de loading prolongada | Carregamento instantaneo |
-
----
-
-## Detalhes Tecnicos
-
-### useAdminStats.ts - Paralelizacao
-
-```typescript
-queryFn: async (): Promise<AdminStats> => {
-  const [
-    companiesResult,
-    itemTemplatesResult,
-    activeItemTemplatesResult,
-    productTemplatesResult,
-    productLinhasResult,
-    categoriesResult,
-    ticketsResult,
-    usersResult,
-  ] = await Promise.all([
-    supabase.from("companies").select("*", { count: "exact", head: true }),
-    supabase.from("item_templates").select("*", { count: "exact", head: true }),
-    supabase.from("item_templates").select("*", { count: "exact", head: true }).eq("is_active", true),
-    supabase.from("product_templates").select("*", { count: "exact", head: true }),
-    supabase.from("product_linhas").select("*", { count: "exact", head: true }),
-    supabase.from("product_categories").select("*", { count: "exact", head: true }),
-    supabase.from("support_tickets").select("*", { count: "exact", head: true }).in("status", ["open", "in_progress", "waiting"]),
-    supabase.from("profiles").select("*", { count: "exact", head: true }),
-  ]);
-
-  return {
-    companiesCount: companiesResult.count || 0,
-    activeCompaniesCount: companiesResult.count || 0,
-    itemTemplatesCount: itemTemplatesResult.count || 0,
-    productTemplatesCount: productTemplatesResult.count || 0,
-    productLinhasCount: productLinhasResult.count || 0,
-    categoriesCount: categoriesResult.count || 0,
-    openTicketsCount: ticketsResult.count || 0,
-    usersCount: usersResult.count || 0,
-  };
-}
-```
-
-### AdminCompanies.tsx - Migracao para React Query + JOIN
-
-```typescript
-import { useQuery } from '@tanstack/react-query';
-
-// Hook dedicado
-const { data: companies = [], isLoading } = useQuery({
-  queryKey: ['admin-companies'],
-  queryFn: async () => {
-    const { data, error } = await supabase
-      .from('companies')
-      .select(`
-        id, name, cnpj, email, phone, address, logo_url, created_at,
-        user_companies(count)
-      `)
-      .order('created_at', { ascending: false });
-    
-    if (error) throw error;
-    
-    return data?.map(company => ({
-      ...company,
-      user_count: company.user_companies?.[0]?.count || 0
-    })) || [];
-  },
-  enabled: isSaasAdmin,
-  staleTime: 1000 * 60 * 2, // Cache por 2 minutos
-});
-```
+### Fase 3 (Incremental)
+| Arquivo | Mudança |
+|---------|---------|
+| Componentes de Cards | React.memo() |
+| Queries diversas | select() específico |
 
