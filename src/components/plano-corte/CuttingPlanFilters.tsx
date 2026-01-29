@@ -5,7 +5,7 @@ import { useProductCategoryLabels } from '@/hooks/useProductCategories';
 interface CuttingPlanFiltersProps {
   availableLinhas: string[];
   availableCategories: string[];
-  filteredProducts: Array<{ id: string; name: string }>;
+  filteredProducts: Array<{ id: string; name: string; image_url?: string | null }>;
   selectedLinha: string;
   selectedCategory: string;
   selectedProduct: string;
@@ -30,6 +30,8 @@ export function CuttingPlanFilters({
   const translateCategory = (category: string) => {
     return categoryLabels[category] || category;
   };
+
+  const selectedProductData = filteredProducts.find(p => p.id === selectedProduct);
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
@@ -76,13 +78,43 @@ export function CuttingPlanFilters({
           onValueChange={onProductChange}
           disabled={!selectedCategory}
         >
-          <SelectTrigger className="w-full h-9">
-            <SelectValue placeholder="Selecione" />
+          <SelectTrigger className="w-full h-10">
+            {selectedProductData ? (
+              <div className="flex items-center gap-2 overflow-hidden">
+                {selectedProductData.image_url && (
+                  <img 
+                    src={selectedProductData.image_url} 
+                    alt="" 
+                    className="w-6 h-6 object-contain rounded flex-shrink-0"
+                  />
+                )}
+                <span className="truncate">{selectedProductData.name}</span>
+              </div>
+            ) : (
+              <SelectValue placeholder="Selecione" />
+            )}
           </SelectTrigger>
-          <SelectContent className="max-w-[350px]">
+          <SelectContent className="max-w-[400px]">
             {filteredProducts.map(product => (
-              <SelectItem key={product.id} value={product.id} className="truncate">
-                {product.name}
+              <SelectItem 
+                key={product.id} 
+                value={product.id} 
+                className="py-2"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-muted rounded flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    {product.image_url ? (
+                      <img 
+                        src={product.image_url} 
+                        alt={product.name}
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <span className="text-lg text-muted-foreground">🪟</span>
+                    )}
+                  </div>
+                  <span className="truncate">{product.name}</span>
+                </div>
               </SelectItem>
             ))}
           </SelectContent>
