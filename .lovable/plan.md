@@ -1,156 +1,94 @@
 
 
-# Plano: Corrigir Seleção de Produtos no Orçamento
+# Plano: Corrigir Cache de Produtos Desabilitados nos Orçamentos
 
 ## Problema Identificado
 
-O painel de adição de produtos aos orçamentos (`AddProductPanel`) está buscando produtos da biblioteca global (`product_templates`) ao invés de filtrar pelos produtos realmente ativados pela empresa. Isso causa:
+Os produtos desabilitados estão aparecendo na aba de adicionar produtos porque o cache do React Query não está sendo invalidado corretamente.
 
-1. Linhas e categorias sendo populadas a partir de templates globais
-2. Produtos inativos ou não habilitados aparecendo na lista
-3. Falta de organização hierárquica clara por linha → categoria → produto
+### Causa Raiz
 
-## Solução Proposta
+O sistema utiliza query keys diferentes para os mesmos dados:
 
-Reorganizar a busca de dados para priorizar os produtos da empresa (`company_products`) e exibir apenas os ativos.
+| Página | Query Key |
+|--------|-----------|
+| `ProdutosLinha.tsx` | `['company-products', companyId]` |
+| `AddProductPanel.tsx` | `['company-products-with-templates', companyId]` |
+| `ProductSelectionSheet.tsx` | `['company-products-with-templates', companyId]` |
+
+Quando um produto é ativado/desativado em `ProdutosLinha`, apenas `['company-products']` e `['custom-products']` são invalidados, mas **NÃO** `['company-products-with-templates']`.
+
+Resultado: O painel de adicionar produtos exibe dados em cache que ainda contêm produtos inativos.
 
 ---
 
-## Mudanças Técnicas
+## Solucao
 
-### 1. Refatorar Consulta de Produtos (`AddProductPanel.tsx`)
+Adicionar invalidacao do cache `company-products-with-templates` em todas as mutacoes que alteram o status de produtos.
 
-**Antes:** 
-- Busca todos os `product_templates` ativos globalmente
-- Filtra manualmente pelos IDs ativados em `company_products`
+---
 
-**Depois:**
-- Buscar diretamente de `company_products` onde `is_active = true` e `company_id = currentCompany.id`
-- Fazer join com `product_templates` para obter imagens e metadados quando aplicável
-- Incluir produtos personalizados (`is_custom = true`)
+## Alteracoes Tecnicas
 
-```text
-┌─────────────────────────────────────────────────────────┐
-│  Nova Estrutura de Dados                                │
-├─────────────────────────────────────────────────────────┤
-│                                                         │
-│  company_products (is_active = true)                    │
-│      ├── Template-based: join product_templates         │
-│      │   └── Herda: imagem, linha, categoria            │
-│      │                                                  │
-│      └── Custom (is_custom = true)                      │
-│          └── Usa: campos diretos do company_products    │
-│                                                         │
-└─────────────────────────────────────────────────────────┘
-```
+### Arquivo: `src/pages/ProdutosLinha.tsx`
 
-### 2. Atualizar Filtros de Linha e Categoria
+Modificar 4 mutacoes para incluir invalidacao adicional:
 
-Modificar os filtros para extrair linhas e categorias a partir dos **produtos ativos da empresa**:
-
+**1. `activateProductMutation` (linha 147)**
 ```typescript
-// Linhas disponíveis - extraídas dos produtos ativos
-const linhas = useMemo(() => {
-  const linhaSet = new Set<string>();
-  activeCompanyProducts?.forEach(p => {
-    const linha = p.linha || p.product_template?.linha;
-    if (linha) linhaSet.add(linha);
-  });
-  return Array.from(linhaSet).sort();
-}, [activeCompanyProducts]);
-
-// Categorias para a linha selecionada
-const categories = useMemo(() => {
-  if (!selectedLinha) return [];
-  const catSet = new Set<string>();
-  activeCompanyProducts
-    ?.filter(p => (p.linha || p.product_template?.linha) === selectedLinha)
-    .forEach(p => {
-      const cat = p.category || p.product_template?.category;
-      if (cat) catSet.add(cat);
-    });
-  return Array.from(catSet).sort();
-}, [activeCompanyProducts, selectedLinha]);
+onSuccess: () => {
+  queryClient.invalidateQueries({ queryKey: ['company-products'] });
+  queryClient.invalidateQueries({ queryKey: ['company-products-with-templates'] }); // NOVO
+  toast.success('Produto ativado para venda!');
+},
 ```
 
-### 3. Melhorar Consulta SQL
-
-Nova query com join otimizado:
-
-```sql
-company_products
-  .select(`
-    id,
-    commercial_name,
-    base_price,
-    price_per_sqm,
-    description,
-    image_url,
-    linha,
-    category,
-    is_custom,
-    uses_glass,
-    product_template_id,
-    product_template:product_templates (
-      id, name, description, category, linha, image_url
-    )
-  `)
-  .eq('company_id', currentCompany.id)
-  .eq('is_active', true)
+**2. `deactivateProductMutation` (linhas 169-170)**
+```typescript
+onSuccess: () => {
+  queryClient.invalidateQueries({ queryKey: ['company-products'] });
+  queryClient.invalidateQueries({ queryKey: ['custom-products'] });
+  queryClient.invalidateQueries({ queryKey: ['company-products-with-templates'] }); // NOVO
+  toast.success('Produto desativado para venda');
+},
 ```
 
-### 4. Atualizar Grid de Produtos
+**3. `deactivateCustomProductMutation` (linhas 193-194)**
+```typescript
+onSuccess: () => {
+  queryClient.invalidateQueries({ queryKey: ['company-products'] });
+  queryClient.invalidateQueries({ queryKey: ['custom-products'] });
+  queryClient.invalidateQueries({ queryKey: ['company-products-with-templates'] }); // NOVO
+  toast.success('Produto personalizado desativado');
+},
+```
 
-O grid de seleção exibirá:
-- **Nome comercial** da empresa (ou nome do template se não personalizado)
-- **Imagem** do produto (empresa ou template)
-- **Badge "Personalizado"** para produtos `is_custom = true`
-- Filtrado por **linha selecionada** e **categoria selecionada**
-
-### 5. Atualizar ProductSelectionSheet.tsx (Opcional)
-
-Se este componente ainda for utilizado, aplicar as mesmas correções para manter consistência.
+**4. `reactivateCustomProductMutation` (linhas 215-216)**
+```typescript
+onSuccess: () => {
+  queryClient.invalidateQueries({ queryKey: ['company-products'] });
+  queryClient.invalidateQueries({ queryKey: ['custom-products'] });
+  queryClient.invalidateQueries({ queryKey: ['company-products-with-templates'] }); // NOVO
+  toast.success('Produto personalizado reativado!');
+},
+```
 
 ---
 
-## Arquivos a Modificar
+## Resumo das Alteracoes
 
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/components/orcamentos/AddProductPanel.tsx` | Refatorar queries e filtros |
-| `src/components/orcamentos/ProductSelectionSheet.tsx` | Mesma lógica de filtros |
-
----
-
-## Fluxo de Seleção Atualizado
-
-```text
-┌────────────────────────────────────────────────────┐
-│   Seleção de Produto para Orçamento                │
-├────────────────────────────────────────────────────┤
-│                                                    │
-│  1. Selecionar LINHA                               │
-│     └── Dropdown com linhas dos produtos ativos    │
-│                                                    │
-│  2. Selecionar CATEGORIA (chips)                   │
-│     └── Filtrado pela linha selecionada            │
-│                                                    │
-│  3. Selecionar PRODUTO (grid visual)               │
-│     └── Apenas produtos ativos da empresa          │
-│     └── Mostra nome comercial + imagem             │
-│                                                    │
-│  4. Definir dimensões e adicionar                  │
-│                                                    │
-└────────────────────────────────────────────────────┘
-```
+| Arquivo | Linhas | Descricao |
+|---------|--------|-----------|
+| `ProdutosLinha.tsx` | 147 | Adicionar invalidacao em activateProductMutation |
+| `ProdutosLinha.tsx` | 169-170 | Adicionar invalidacao em deactivateProductMutation |
+| `ProdutosLinha.tsx` | 193-194 | Adicionar invalidacao em deactivateCustomProductMutation |
+| `ProdutosLinha.tsx` | 215-216 | Adicionar invalidacao em reactivateCustomProductMutation |
 
 ---
 
 ## Resultado Esperado
 
-- Dropdown de **Linha** mostra apenas linhas com produtos ativados
-- Chips de **Categoria** mostram apenas categorias da linha selecionada  
-- Grid de **Produtos** exibe somente produtos ativos da empresa
-- Produtos personalizados aparecem com badge distintivo
-- Performance otimizada com uma única query principal
+- Quando um produto for ativado ou desativado na pagina de Produtos, o cache sera limpo
+- Ao abrir o painel de adicionar produtos no Orcamento, uma nova busca sera feita
+- Somente produtos com `is_active = true` serao exibidos
 
