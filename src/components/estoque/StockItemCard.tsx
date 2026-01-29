@@ -1,0 +1,126 @@
+import { memo } from 'react';
+import { Package, MapPin, DollarSign, Power, Scissors } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import type { StockItem } from '@/hooks/useStockData';
+
+const itemTypeLabels: Record<string, string> = {
+  glass: 'Vidro',
+  profile: 'Perfil',
+  accessory: 'Acessório',
+  service: 'Serviço',
+};
+
+interface StockItemCardProps {
+  item: StockItem;
+  onEdit: (item: StockItem) => void;
+  onToggleActive: (e: React.MouseEvent, stockId: string, currentActive: boolean) => void;
+  showActivateBtn?: boolean;
+}
+
+export const StockItemCard = memo(function StockItemCard({
+  item,
+  onEdit,
+  onToggleActive,
+  showActivateBtn = true,
+}: StockItemCardProps) {
+  return (
+    <div
+      className={`flex items-center justify-between gap-3 p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer ${
+        item.is_active === false ? 'opacity-60' : ''
+      }`}
+      onClick={() => onEdit(item)}
+    >
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        {item.item_template?.image_url ? (
+          <div className="h-12 w-12 rounded-md border bg-white p-1 flex items-center justify-center shrink-0">
+            <img
+              src={item.item_template.image_url}
+              alt={item.item_template?.name ?? 'Item'}
+              loading="lazy"
+              className="max-h-full max-w-full object-contain"
+            />
+          </div>
+        ) : (
+          <div className="h-12 w-12 rounded-md border bg-background flex items-center justify-center shrink-0">
+            <Package className="h-6 w-6 text-muted-foreground" />
+          </div>
+        )}
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 min-w-0 flex-wrap">
+            <p className="font-medium truncate">{item.item_template?.name ?? `Item (${item.item_template_id})`}</p>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0">
+              {itemTypeLabels[item.item_template?.type || ''] || item.item_template?.type}
+            </span>
+            {item.allow_fractional && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary shrink-0 flex items-center gap-1" title="Venda fracionada habilitada">
+                <Scissors className="w-3 h-3" />
+                Fracionado
+              </span>
+            )}
+          </div>
+          {item.location && (
+            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+              <MapPin className="w-3 h-3" />
+              {item.location}
+            </p>
+          )}
+          {item.priceInfo && ((item.priceInfo.cost ?? 0) > 0 || item.priceInfo.price > 0) ? (
+            <div className="flex items-center gap-3 mt-1 text-xs">
+              {(item.priceInfo.cost ?? 0) > 0 && (
+                <span className="text-muted-foreground">
+                  Custo: R$ {Number(item.priceInfo.cost).toFixed(2)}
+                </span>
+              )}
+              {item.priceInfo.price > 0 && (
+                <span className="text-green-600 font-medium">
+                  Venda: R$ {Number(item.priceInfo.price).toFixed(2)}
+                </span>
+              )}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground/70 flex items-center gap-1 mt-1">
+              <DollarSign className="w-3 h-3" />
+              Clique para definir preços
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <div className="text-right">
+          <p className="font-semibold text-lg">
+            {item.quantity}{' '}
+            <span className="text-sm text-muted-foreground">{item.item_template?.unit}</span>
+          </p>
+          {(item.min_quantity ?? 0) > 0 && (
+            <p className="text-xs text-muted-foreground">Mín: {item.min_quantity}</p>
+          )}
+        </div>
+
+        {showActivateBtn && (
+          <Button
+            variant={item.is_active !== false ? 'outline' : 'default'}
+            size="icon"
+            className="shrink-0"
+            onClick={(e) => onToggleActive(e, item.id, item.is_active !== false)}
+            title={item.is_active !== false ? 'Desativar item' : 'Ativar item'}
+          >
+            <Power className="w-4 h-4" />
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}, (prevProps, nextProps) => {
+  // Custom comparison for better performance
+  return (
+    prevProps.item.id === nextProps.item.id &&
+    prevProps.item.quantity === nextProps.item.quantity &&
+    prevProps.item.is_active === nextProps.item.is_active &&
+    prevProps.item.min_quantity === nextProps.item.min_quantity &&
+    prevProps.item.priceInfo?.cost === nextProps.item.priceInfo?.cost &&
+    prevProps.item.priceInfo?.price === nextProps.item.priceInfo?.price &&
+    prevProps.showActivateBtn === nextProps.showActivateBtn
+  );
+});

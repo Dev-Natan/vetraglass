@@ -1,0 +1,126 @@
+import { memo } from 'react';
+import { Package, AlertTriangle, Power } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import type { StockItem } from '@/hooks/useStockData';
+
+interface StockGridViewProps {
+  items: StockItem[];
+  onEdit: (item: StockItem) => void;
+  onToggleActive: (e: React.MouseEvent, stockId: string, currentActive: boolean) => void;
+}
+
+const StockGridCard = memo(function StockGridCard({
+  item,
+  onEdit,
+  onToggleActive,
+}: {
+  item: StockItem;
+  onEdit: (item: StockItem) => void;
+  onToggleActive: (e: React.MouseEvent, stockId: string, currentActive: boolean) => void;
+}) {
+  const isLowStock = item.quantity <= (item.min_quantity || 0) && (item.min_quantity || 0) > 0;
+  const isZeroStock = item.quantity === 0;
+
+  return (
+    <div
+      className={`relative flex flex-col items-center p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer ${
+        item.is_active === false ? 'opacity-60' : ''
+      }`}
+      onClick={() => onEdit(item)}
+    >
+      {/* Status Badge */}
+      {isZeroStock && (
+        <Badge variant="destructive" className="absolute top-2 right-2 text-xs">
+          Zerado
+        </Badge>
+      )}
+      {isLowStock && !isZeroStock && (
+        <Badge variant="outline" className="absolute top-2 right-2 text-xs border-amber-500 text-amber-600">
+          <AlertTriangle className="w-3 h-3 mr-1" />
+          Baixo
+        </Badge>
+      )}
+
+      {/* Image */}
+      <div className="h-20 w-20 rounded-md border bg-white p-2 flex items-center justify-center mb-3">
+        {item.item_template?.image_url ? (
+          <img
+            src={item.item_template.image_url}
+            alt={item.item_template?.name ?? 'Item'}
+            loading="lazy"
+            className="max-h-full max-w-full object-contain"
+          />
+        ) : (
+          <Package className="h-10 w-10 text-muted-foreground/50" />
+        )}
+      </div>
+
+      {/* Name */}
+      <p className="font-medium text-sm text-center line-clamp-2 mb-1">
+        {item.item_template?.name ?? `Item`}
+      </p>
+
+      {/* Quantity */}
+      <p className={`text-lg font-bold ${isZeroStock ? 'text-destructive' : isLowStock ? 'text-amber-600' : ''}`}>
+        {item.quantity} <span className="text-xs text-muted-foreground font-normal">{item.item_template?.unit}</span>
+      </p>
+
+      {/* Price Info */}
+      {item.priceInfo && item.priceInfo.price > 0 && (
+        <p className="text-xs text-green-600 mt-1">
+          R$ {Number(item.priceInfo.price).toFixed(2)}
+        </p>
+      )}
+
+      {/* Toggle Button */}
+      <Button
+        variant={item.is_active !== false ? 'outline' : 'default'}
+        size="sm"
+        className="absolute bottom-2 right-2 h-7 w-7 p-0"
+        onClick={(e) => onToggleActive(e, item.id, item.is_active !== false)}
+        title={item.is_active !== false ? 'Desativar' : 'Ativar'}
+      >
+        <Power className="w-3 h-3" />
+      </Button>
+    </div>
+  );
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.item.id === nextProps.item.id &&
+    prevProps.item.quantity === nextProps.item.quantity &&
+    prevProps.item.is_active === nextProps.item.is_active &&
+    prevProps.item.min_quantity === nextProps.item.min_quantity
+  );
+});
+
+export const StockGridView = memo(function StockGridView({
+  items,
+  onEdit,
+  onToggleActive,
+}: StockGridViewProps) {
+  if (items.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <Package className="w-12 h-12 text-muted-foreground/50 mb-4" />
+        <h3 className="font-medium text-foreground mb-1">Nenhum item encontrado</h3>
+        <p className="text-sm text-muted-foreground">
+          Tente ajustar os filtros ou adicione novos itens.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+      {items.map((item) => (
+        <StockGridCard
+          key={item.id}
+          item={item}
+          onEdit={onEdit}
+          onToggleActive={onToggleActive}
+        />
+      ))}
+    </div>
+  );
+});
