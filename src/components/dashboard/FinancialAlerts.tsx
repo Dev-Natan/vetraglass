@@ -1,107 +1,17 @@
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { memo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Receipt, Wallet, ArrowRight, Calendar } from 'lucide-react';
-import { format, startOfDay, endOfDay, addDays } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
-import { CACHE_TIMES } from '@/lib/queryConfig';
+import type { FinancialAlertsData } from '@/hooks/useDashboardData';
 
-export function FinancialAlerts() {
-  const { currentCompany } = useAuth();
+interface FinancialAlertsProps {
+  data?: FinancialAlertsData;
+}
+
+export const FinancialAlerts = memo(function FinancialAlerts({ data }: FinancialAlertsProps) {
   const navigate = useNavigate();
-  const today = new Date();
-
-  // Despesas vencendo hoje
-  const { data: expensesDueToday } = useQuery({
-    queryKey: ['expenses-due-today', currentCompany?.id],
-    queryFn: async () => {
-      if (!currentCompany?.id) return { count: 0, total: 0, items: [] };
-
-      const todayStr = format(today, 'yyyy-MM-dd');
-
-      const { data, error } = await supabase
-        .from('expenses')
-        .select('id, description, amount, due_date, category')
-        .eq('company_id', currentCompany.id)
-        .eq('status', 'pending')
-        .eq('due_date', todayStr)
-        .order('amount', { ascending: false });
-
-      if (error) throw error;
-
-      const total = (data || []).reduce((sum, exp) => sum + (exp.amount || 0), 0);
-
-      return {
-        count: data?.length || 0,
-        total,
-        items: data || [],
-      };
-    },
-    enabled: !!currentCompany?.id,
-    ...CACHE_TIMES.DYNAMIC,
-  });
-
-  // Contas a receber atrasadas
-  const { data: overdueReceivables } = useQuery({
-    queryKey: ['overdue-receivables', currentCompany?.id],
-    queryFn: async () => {
-      if (!currentCompany?.id) return { count: 0, total: 0, items: [] };
-
-      const todayStr = format(today, 'yyyy-MM-dd');
-
-      const { data, error } = await supabase
-        .from('accounts_receivable')
-        .select('id, customer_name, description, total_amount, due_date, status')
-        .eq('company_id', currentCompany.id)
-        .in('status', ['pending', 'partial'])
-        .lt('due_date', todayStr)
-        .order('due_date', { ascending: true });
-
-      if (error) throw error;
-
-      const total = (data || []).reduce((sum, rec) => sum + (rec.total_amount || 0), 0);
-
-      return {
-        count: data?.length || 0,
-        total,
-        items: data || [],
-      };
-    },
-    enabled: !!currentCompany?.id,
-    ...CACHE_TIMES.DYNAMIC,
-  });
-
-  // Contas a receber vencendo hoje
-  const { data: receivablesDueToday } = useQuery({
-    queryKey: ['receivables-due-today', currentCompany?.id],
-    queryFn: async () => {
-      if (!currentCompany?.id) return { count: 0, total: 0 };
-
-      const todayStr = format(today, 'yyyy-MM-dd');
-
-      const { data, error } = await supabase
-        .from('accounts_receivable')
-        .select('id, total_amount')
-        .eq('company_id', currentCompany.id)
-        .in('status', ['pending', 'partial'])
-        .eq('due_date', todayStr);
-
-      if (error) throw error;
-
-      const total = (data || []).reduce((sum, rec) => sum + (rec.total_amount || 0), 0);
-
-      return {
-        count: data?.length || 0,
-        total,
-      };
-    },
-    enabled: !!currentCompany?.id,
-    ...CACHE_TIMES.DYNAMIC,
-  });
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -109,6 +19,10 @@ export function FinancialAlerts() {
       currency: 'BRL',
     }).format(value);
   };
+
+  const expensesDueToday = data?.expensesDueToday;
+  const overdueReceivables = data?.overdueReceivables;
+  const receivablesDueToday = data?.receivablesDueToday;
 
   const totalAlerts = 
     (expensesDueToday?.count || 0) + 
@@ -214,4 +128,4 @@ export function FinancialAlerts() {
       </CardContent>
     </Card>
   );
-}
+});

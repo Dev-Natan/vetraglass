@@ -1,60 +1,14 @@
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { memo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { subDays, format, startOfDay, endOfDay } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import { TrendingUp } from 'lucide-react';
-import { CACHE_TIMES } from '@/lib/queryConfig';
+import type { ChartDataPoint } from '@/hooks/useDashboardData';
 
-export function RevenueVsCostChart() {
-  const { currentCompany } = useAuth();
-  const today = new Date();
+interface RevenueVsCostChartProps {
+  data?: ChartDataPoint[];
+}
 
-  const { data: chartData, isLoading } = useQuery({
-    queryKey: ['revenue-vs-cost-chart', currentCompany?.id],
-    queryFn: async () => {
-      if (!currentCompany?.id) return [];
-
-      const days: { date: string; label: string; receita: number; custo: number }[] = [];
-      
-      for (let i = 6; i >= 0; i--) {
-        const day = subDays(today, i);
-        const dayStart = startOfDay(day);
-        const dayEnd = endOfDay(day);
-        const dayStr = format(day, 'yyyy-MM-dd');
-
-        // Receitas (entradas de caixa)
-        const { data: movements } = await supabase
-          .from('cash_movements')
-          .select('amount, type')
-          .eq('company_id', currentCompany.id)
-          .gte('created_at', dayStart.toISOString())
-          .lte('created_at', dayEnd.toISOString());
-
-        const receita = (movements || [])
-          .filter(m => m.type === 'entrada')
-          .reduce((sum, m) => sum + (m.amount || 0), 0);
-
-        const custo = (movements || [])
-          .filter(m => m.type === 'saida')
-          .reduce((sum, m) => sum + (m.amount || 0), 0);
-
-        days.push({
-          date: dayStr,
-          label: format(day, 'EEE', { locale: ptBR }),
-          receita,
-          custo,
-        });
-      }
-
-      return days;
-    },
-    enabled: !!currentCompany?.id,
-    ...CACHE_TIMES.DYNAMIC,
-  });
-
+export const RevenueVsCostChart = memo(function RevenueVsCostChart({ data: chartData }: RevenueVsCostChartProps) {
   const formatCurrency = (value: number) => {
     if (value >= 1000) {
       return `R$ ${(value / 1000).toFixed(1)}k`;
@@ -62,27 +16,9 @@ export function RevenueVsCostChart() {
     return `R$ ${value.toFixed(0)}`;
   };
 
-  const totalReceita = chartData?.reduce((sum, d) => sum + d.receita, 0) || 0;
-  const totalCusto = chartData?.reduce((sum, d) => sum + d.custo, 0) || 0;
+  const totalReceita = chartData?.reduce((sum, d) => sum + (d.receita || 0), 0) || 0;
+  const totalCusto = chartData?.reduce((sum, d) => sum + (d.custo || 0), 0) || 0;
   const lucro = totalReceita - totalCusto;
-
-  if (isLoading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-primary" />
-            Receita vs Custo
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[200px] flex items-center justify-center">
-            <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <Card>
@@ -161,4 +97,4 @@ export function RevenueVsCostChart() {
       </CardContent>
     </Card>
   );
-}
+});

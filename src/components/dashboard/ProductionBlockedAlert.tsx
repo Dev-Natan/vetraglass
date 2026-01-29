@@ -1,79 +1,17 @@
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { memo } from 'react';
 import { AlertOctagon, ArrowRight, Package } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { CACHE_TIMES } from '@/lib/queryConfig';
+import type { BlockedOS } from '@/hooks/useDashboardData';
 
-interface BlockedOS {
-  id: string;
-  os_number: number;
-  customer_name: string;
-  pendingMaterials: number;
+interface ProductionBlockedAlertProps {
+  data?: BlockedOS[];
 }
 
-export function ProductionBlockedAlert() {
-  const { currentCompany } = useAuth();
-
-  const { data: blockedOrders, isLoading } = useQuery({
-    queryKey: ['production-blocked-os', currentCompany?.id],
-    queryFn: async (): Promise<BlockedOS[]> => {
-      if (!currentCompany?.id) return [];
-
-      // Buscar pedidos de compra pendentes que têm OS vinculada
-      const { data: pendingPOs, error } = await supabase
-        .from('purchase_orders')
-        .select('id, ordem_servico_id, status')
-        .eq('company_id', currentCompany.id)
-        .not('ordem_servico_id', 'is', null)
-        .in('status', ['pending', 'ordered', 'partial']);
-
-      if (error || !pendingPOs || pendingPOs.length === 0) return [];
-
-      // Agrupar por OS e contar itens pendentes
-      const osMap = new Map<string, number>();
-      
-      for (const po of pendingPOs) {
-        if (po.ordem_servico_id) {
-          // Contar itens pendentes deste pedido
-          const { count } = await supabase
-            .from('purchase_order_items')
-            .select('*', { count: 'exact', head: true })
-            .eq('purchase_order_id', po.id)
-            .eq('status', 'pending');
-          
-          const current = osMap.get(po.ordem_servico_id) || 0;
-          osMap.set(po.ordem_servico_id, current + (count || 0));
-        }
-      }
-
-      if (osMap.size === 0) return [];
-
-      // Buscar dados das OS
-      const osIds = Array.from(osMap.keys());
-      const { data: orders } = await supabase
-        .from('ordens_servico')
-        .select('id, os_number, customer_name')
-        .in('id', osIds)
-        .in('status', ['pending', 'in_progress']);
-
-      return (orders || [])
-        .filter(os => (osMap.get(os.id) || 0) > 0)
-        .map(os => ({
-          id: os.id,
-          os_number: os.os_number,
-          customer_name: os.customer_name,
-          pendingMaterials: osMap.get(os.id) || 0,
-        }));
-    },
-    enabled: !!currentCompany?.id,
-    ...CACHE_TIMES.DYNAMIC,
-  });
-
-  if (isLoading || !blockedOrders || blockedOrders.length === 0) {
+export const ProductionBlockedAlert = memo(function ProductionBlockedAlert({ data: blockedOrders }: ProductionBlockedAlertProps) {
+  if (!blockedOrders || blockedOrders.length === 0) {
     return null;
   }
 
@@ -131,4 +69,4 @@ export function ProductionBlockedAlert() {
       </CardContent>
     </Card>
   );
-}
+});
