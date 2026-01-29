@@ -153,9 +153,11 @@ export function Sidebar() {
         <div className="p-5 border-b border-sidebar-border">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-sidebar-primary flex items-center justify-center font-display font-bold text-sidebar-primary-foreground text-lg">
-                V
-              </div>
+              <img 
+                src="/vetra-logo.png" 
+                alt="Vetra Logo" 
+                className="w-10 h-10 object-contain"
+              />
               <div>
                 <h1 className="font-display font-bold text-lg text-sidebar-foreground">Vetra</h1>
                 <p className="text-xs text-sidebar-foreground/50">Sistema de Gestão</p>
