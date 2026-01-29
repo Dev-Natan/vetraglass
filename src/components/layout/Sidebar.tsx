@@ -45,23 +45,21 @@ const menuItems: MenuItem[] = [
   // Visão Geral
   { icon: LayoutDashboard, label: 'Dashboard', path: '/', module: 'dashboard' },
   
-  // Comercial (fluxo de vendas)
+  // Comercial
   { icon: Users, label: 'Clientes', path: '/clientes', module: 'clientes' },
+  { icon: Package, label: 'Produtos', path: '/produtos', module: 'produtos' },
+  { icon: Boxes, label: 'Estoque', path: '/estoque', module: 'estoque' },
   { icon: FileText, label: 'Orçamentos', path: '/orcamentos', module: 'orcamentos' },
+  { icon: ShoppingCart, label: 'Caixa & Vendas', path: '/caixa-vendas', module: 'caixa-vendas' },
   { icon: ClipboardList, label: 'Ordens de Serviço', path: '/ordens-servico', module: 'ordens-servico' },
   
-  // Operacional (produção)
+  // Operacional
   { icon: Calendar, label: 'Agenda', path: '/agenda', module: 'agenda' },
   { icon: Ruler, label: 'Medições', path: '/medicoes', module: 'medicoes' },
   { icon: Scissors, label: 'Plano de Corte', path: '/plano-corte', module: 'plano-corte' },
   { icon: Square, label: 'Projeto de Vidro', path: '/projeto-vidro', module: 'plano-corte' },
   
-  // Produtos & Estoque
-  { icon: Package, label: 'Produtos', path: '/produtos', module: 'produtos' },
-  { icon: Boxes, label: 'Estoque', path: '/estoque', module: 'estoque' },
-  
   // Financeiro
-  { icon: ShoppingCart, label: 'Caixa & Vendas', path: '/caixa-vendas', module: 'caixa-vendas' },
   { icon: DollarSign, label: 'Financeiro', path: '/financeiro', module: 'financeiro' },
   { icon: Receipt, label: 'Notas Fiscais', path: '/notas-fiscais', module: 'notas-fiscais' },
   
