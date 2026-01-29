@@ -23,6 +23,7 @@ const Clientes = lazy(() => import("./pages/Clientes"));
 const CaixaVendas = lazy(() => import("./pages/CaixaVendas"));
 const Estoque = lazy(() => import("./pages/Estoque"));
 const PlanoCorte = lazy(() => import("./pages/PlanoCorte"));
+const Producao = lazy(() => import("./pages/Producao"));
 const RecuperarSenha = lazy(() => import("./pages/RecuperarSenha"));
 const RedefinirSenha = lazy(() => import("./pages/RedefinirSenha"));
 const CompanySetup = lazy(() => import("./pages/CompanySetup"));
@@ -174,7 +175,8 @@ function AppRoutes() {
       <Route path="/estoque" element={<ProtectedRoute><LazyRoute><Estoque /></LazyRoute></ProtectedRoute>} />
       <Route path="/caixa-vendas" element={<ProtectedRoute><LazyRoute><CaixaVendas /></LazyRoute></ProtectedRoute>} />
       <Route path="/vendas" element={<Navigate to="/caixa-vendas" replace />} />
-      <Route path="/plano-corte" element={<ProtectedRoute><LazyRoute><PlanoCorte /></LazyRoute></ProtectedRoute>} />
+      <Route path="/plano-corte" element={<Navigate to="/producao" replace />} />
+      <Route path="/producao" element={<ProtectedRoute><LazyRoute><Producao /></LazyRoute></ProtectedRoute>} />
       
       {/* Lazy loaded routes */}
       <Route path="/produtos/editar/:id" element={
@@ -192,9 +194,7 @@ function AppRoutes() {
       <Route path="/funcionarios" element={
         <ProtectedRoute><LazyRoute><Funcionarios /></LazyRoute></ProtectedRoute>
       } />
-      <Route path="/projeto-vidro" element={
-        <ProtectedRoute><LazyRoute><ProjetoVidro /></LazyRoute></ProtectedRoute>
-      } />
+      <Route path="/projeto-vidro" element={<Navigate to="/producao?tab=vidros" replace />} />
       <Route path="/notas-fiscais" element={
         <ProtectedRoute><LazyRoute><NotasFiscais /></LazyRoute></ProtectedRoute>
       } />

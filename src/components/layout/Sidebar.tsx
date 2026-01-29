@@ -61,8 +61,7 @@ const menuItems: MenuItem[] = [
   // Operacional
   { icon: Calendar, label: 'Agenda', path: '/agenda', module: 'agenda', tutorialId: 'menu-agenda' },
   { icon: Ruler, label: 'Medições', path: '/medicoes', module: 'medicoes', tutorialId: 'menu-medicoes' },
-  { icon: Scissors, label: 'Plano de Corte', path: '/plano-corte', module: 'plano-corte', tutorialId: 'menu-plano-corte' },
-  { icon: Square, label: 'Projeto de Vidro', path: '/projeto-vidro', module: 'plano-corte', tutorialId: 'menu-projeto-vidro' },
+  { icon: Scissors, label: 'Produção', path: '/producao', module: 'plano-corte', tutorialId: 'menu-producao' },
   
   // Financeiro
   { icon: DollarSign, label: 'Financeiro', path: '/financeiro', module: 'financeiro', tutorialId: 'menu-financeiro' },
