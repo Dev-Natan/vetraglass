@@ -9,6 +9,7 @@ import { TutorialProvider } from '@/contexts/TutorialContext';
 import { TutorialOverlay } from '@/components/tutorial/TutorialOverlay';
 import { ModuleTutorialProvider } from '@/contexts/ModuleTutorialContext';
 import { ModuleTutorialOverlay } from '@/components/tutorial/ModuleTutorialOverlay';
+import { useSessionTimeout } from '@/hooks/useSessionTimeout';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -16,6 +17,9 @@ interface MainLayoutProps {
 
 export function MainLayout({ children }: MainLayoutProps) {
   const { profile, currentCompany } = useAuth();
+  
+  // Ativa monitoramento de timeout de sessão por inatividade
+  useSessionTimeout();
 
   const getGreeting = () => {
     const hour = new Date().getHours();

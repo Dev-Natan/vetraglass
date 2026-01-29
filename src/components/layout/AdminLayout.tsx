@@ -28,6 +28,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useAdminStats } from "@/hooks/useAdminStats";
+import { useSessionTimeout } from "@/hooks/useSessionTimeout";
 
 const adminMenuItems = [
   {
@@ -103,6 +104,9 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const [collapsed, setCollapsed] = useState(false);
   const { data: stats } = useAdminStats();
   const openTicketsCount = stats?.openTicketsCount || 0;
+  
+  // Ativa monitoramento de timeout de sessão por inatividade
+  useSessionTimeout();
 
   const isActive = (path: string) => {
     if (path === "/admin") {
