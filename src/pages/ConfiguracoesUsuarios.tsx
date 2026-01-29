@@ -21,7 +21,7 @@ const MODULES: { id: Module; label: string; description: string }[] = [
   { id: 'medicoes', label: 'Medições', description: 'Registrar medições em obra' },
   { id: 'produtos', label: 'Produtos', description: 'Catálogo e preços de produtos' },
   { id: 'estoque', label: 'Estoque', description: 'Controle de estoque' },
-  { id: 'caixa-vendas', label: 'Caixa e Vendas', description: 'PDV e vendas diretas' },
+  { id: 'caixa-vendas', label: 'Caixa', description: 'PDV e vendas diretas' },
   { id: 'financeiro', label: 'Financeiro', description: 'Relatórios financeiros e impostos' },
   { id: 'notas-fiscais', label: 'Fiscal', description: 'Emissão de NF-e/NFS-e' },
   { id: 'funcionarios', label: 'Funcionários', description: 'Gerenciar equipe' },

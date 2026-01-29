@@ -108,10 +108,10 @@ export const moduleTutorials: Record<string, ModuleTutorial> = {
     ],
   },
 
-  // Caixa & Vendas
+  // Caixa
   'caixa-vendas': {
     moduleId: 'caixa-vendas',
-    moduleName: 'Caixa & Vendas',
+    moduleName: 'Caixa',
     steps: [
       {
         id: 'caixa-intro',
