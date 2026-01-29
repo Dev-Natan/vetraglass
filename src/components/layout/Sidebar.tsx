@@ -33,11 +33,15 @@ import { usePermissions, Module } from '@/hooks/usePermissions';
 import { useEnabledModulesMap } from '@/hooks/useModuleSettings';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
+// MenuItem interface moved below imports
+
+// Menu organizado por fluxo de trabalho
 interface MenuItem {
   icon: LucideIcon;
   label: string;
   path: string;
   module?: Module;
+  tutorialId?: string;
 }
 
 // Menu organizado por fluxo de trabalho
@@ -46,11 +50,11 @@ const menuItems: MenuItem[] = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/', module: 'dashboard' },
   
   // Comercial
-  { icon: Users, label: 'Clientes', path: '/clientes', module: 'clientes' },
-  { icon: Package, label: 'Produtos', path: '/produtos', module: 'produtos' },
+  { icon: Users, label: 'Clientes', path: '/clientes', module: 'clientes', tutorialId: 'menu-clientes' },
+  { icon: Package, label: 'Produtos', path: '/produtos', module: 'produtos', tutorialId: 'menu-produtos' },
   { icon: Boxes, label: 'Estoque', path: '/estoque', module: 'estoque' },
-  { icon: FileText, label: 'Orçamentos', path: '/orcamentos', module: 'orcamentos' },
-  { icon: ShoppingCart, label: 'Caixa & Vendas', path: '/caixa-vendas', module: 'caixa-vendas' },
+  { icon: FileText, label: 'Orçamentos', path: '/orcamentos', module: 'orcamentos', tutorialId: 'menu-orcamentos' },
+  { icon: ShoppingCart, label: 'Caixa & Vendas', path: '/caixa-vendas', module: 'caixa-vendas', tutorialId: 'menu-caixa' },
   { icon: ClipboardList, label: 'Ordens de Serviço', path: '/ordens-servico', module: 'ordens-servico' },
   
   // Operacional
@@ -150,7 +154,7 @@ export function Sidebar() {
         isMobileOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         {/* Logo */}
-        <div className="p-5 border-b border-sidebar-border">
+        <div className="p-5 border-b border-sidebar-border" data-tutorial="logo">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
@@ -214,6 +218,7 @@ export function Sidebar() {
                   key={item.path}
                   to={item.path}
                   onClick={() => setIsMobileOpen(false)}
+                  data-tutorial={item.tutorialId}
                   className={cn(
                     "flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200",
                     isActive 

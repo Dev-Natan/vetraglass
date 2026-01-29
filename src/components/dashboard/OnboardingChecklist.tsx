@@ -10,9 +10,11 @@ import {
   ShoppingCart, 
   FileText,
   Sparkles,
-  X
+  X,
+  PlayCircle
 } from 'lucide-react';
 import { useOnboardingStatus } from '@/hooks/useOnboardingStatus';
+import { useTutorial } from '@/contexts/TutorialContext';
 
 interface ChecklistItem {
   id: string;
@@ -34,6 +36,8 @@ export function OnboardingChecklist() {
     isDismissed,
     dismissOnboarding 
   } = useOnboardingStatus();
+
+  const { restartTutorial } = useTutorial();
 
   // Don't show if loading, complete, or dismissed
   if (isLoading || isComplete || isDismissed) {
@@ -79,7 +83,10 @@ export function OnboardingChecklist() {
   const progressPercent = (completedCount / items.length) * 100;
 
   return (
-    <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-background to-background animate-fade-in">
+    <Card 
+      className="border-primary/20 bg-gradient-to-br from-primary/5 via-background to-background animate-fade-in"
+      data-tutorial="onboarding-checklist"
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
@@ -93,14 +100,25 @@ export function OnboardingChecklist() {
               </p>
             </div>
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-8 w-8 text-muted-foreground hover:text-foreground"
-            onClick={dismissOnboarding}
-          >
-            <X className="w-4 h-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 text-xs text-muted-foreground hover:text-foreground gap-1"
+              onClick={restartTutorial}
+            >
+              <PlayCircle className="w-3.5 h-3.5" />
+              Ver Tutorial
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+              onClick={dismissOnboarding}
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
         <div className="mt-3">
           <div className="flex items-center justify-between text-xs text-muted-foreground mb-1.5">
