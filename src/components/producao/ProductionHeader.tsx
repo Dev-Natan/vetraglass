@@ -60,20 +60,18 @@ export function ProductionHeader({
 
       {/* Filters and Dimensions */}
       <div className="lg:col-span-3 space-y-4">
-        {/* Product Selection */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <CuttingPlanFilters
-            availableLinhas={availableLinhas}
-            availableCategories={availableCategories}
-            filteredProducts={filteredProducts}
-            selectedLinha={selectedLinha}
-            selectedCategory={selectedCategory}
-            selectedProduct={selectedProduct}
-            onLinhaChange={onLinhaChange}
-            onCategoryChange={onCategoryChange}
-            onProductChange={onProductChange}
-          />
-        </div>
+        {/* Product Selection - Full width filters */}
+        <CuttingPlanFilters
+          availableLinhas={availableLinhas}
+          availableCategories={availableCategories}
+          filteredProducts={filteredProducts}
+          selectedLinha={selectedLinha}
+          selectedCategory={selectedCategory}
+          selectedProduct={selectedProduct}
+          onLinhaChange={onLinhaChange}
+          onCategoryChange={onCategoryChange}
+          onProductChange={onProductChange}
+        />
 
         {productName && (
           <h2 className="text-xl font-bold uppercase text-foreground">

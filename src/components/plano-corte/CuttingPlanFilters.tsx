@@ -32,16 +32,16 @@ export function CuttingPlanFilters({
   };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <div className="space-y-2 min-w-[200px]">
-        <Label>Linha</Label>
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
+      <div className="space-y-2">
+        <Label className="text-xs text-muted-foreground">Linha</Label>
         <Select value={selectedLinha} onValueChange={onLinhaChange}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Selecione a linha" className="truncate" />
+          <SelectTrigger className="w-full h-9">
+            <SelectValue placeholder="Selecione a linha" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="max-w-[300px]">
             {availableLinhas.map(linha => (
-              <SelectItem key={linha} value={linha}>
+              <SelectItem key={linha} value={linha} className="truncate">
                 {linha}
               </SelectItem>
             ))}
@@ -50,13 +50,13 @@ export function CuttingPlanFilters({
       </div>
 
       <div className="space-y-2">
-        <Label>Categoria</Label>
+        <Label className="text-xs text-muted-foreground">Categoria</Label>
         <Select 
           value={selectedCategory} 
           onValueChange={onCategoryChange}
           disabled={!selectedLinha}
         >
-          <SelectTrigger>
+          <SelectTrigger className="w-full h-9">
             <SelectValue placeholder="Selecione" />
           </SelectTrigger>
           <SelectContent>
@@ -70,18 +70,18 @@ export function CuttingPlanFilters({
       </div>
 
       <div className="space-y-2">
-        <Label>Produto</Label>
+        <Label className="text-xs text-muted-foreground">Produto</Label>
         <Select 
           value={selectedProduct} 
           onValueChange={onProductChange}
           disabled={!selectedCategory}
         >
-          <SelectTrigger>
+          <SelectTrigger className="w-full h-9">
             <SelectValue placeholder="Selecione" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="max-w-[350px]">
             {filteredProducts.map(product => (
-              <SelectItem key={product.id} value={product.id}>
+              <SelectItem key={product.id} value={product.id} className="truncate">
                 {product.name}
               </SelectItem>
             ))}
