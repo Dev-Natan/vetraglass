@@ -1,71 +1,204 @@
-# Plano de Otimização - Módulo de Estoque
 
-## Status: ✅ CONCLUÍDO
+# Análise de Segurança do Login - Diagnóstico e Correções
 
----
+## Diagnóstico: Por que o Sistema "Loga Sozinho"?
 
-## Implementações Realizadas
+### Comportamento Identificado
 
-### ✅ Fase 1: Performance
+O sistema **não está logando sozinho** - ele está **restaurando uma sessão válida** armazenada no navegador. Isso é comportamento esperado, mas pode ser problemático dependendo das necessidades de segurança.
 
-| Item | Status | Descrição |
-|------|--------|-----------|
-| Hook `useStockData` | ✅ | Queries paralelas com `staleTime` otimizado |
-| `StockItemCard` memoizado | ✅ | React.memo com comparação customizada |
-| Seleção de campos específicos | ✅ | Reduz transferência de dados |
+```text
+Fluxo Atual:
+┌──────────────────┐    ┌─────────────────────┐    ┌─────────────────┐
+│ Usuário abre app │ → │ Supabase verifica   │ → │ Se token válido │
+│                  │    │ localStorage        │    │ → Login auto    │
+└──────────────────┘    └─────────────────────┘    └─────────────────┘
+```
 
-### ✅ Fase 2: Interface e Usabilidade
+### Causa Raiz
 
-| Item | Status | Descrição |
-|------|--------|-----------|
-| KPIs Financeiros | ✅ | Total itens, valor, alertas, zerados |
-| Busca por nome | ✅ | Campo de busca textual |
-| Filtro por categoria | ✅ | Perfis, Vidros, Acessórios, Serviços |
-| Filtro por linha | ✅ | Dinâmico baseado nos templates |
-| Filtro por status | ✅ | Baixo, zerado, normal |
-| Ordenação | ✅ | Nome, quantidade, valor |
-| Visualização Grid | ✅ | Toggle lista/grid |
+| Configuração | Valor Atual | Impacto |
+|--------------|-------------|---------|
+| `persistSession` | `true` | Sessão salva no localStorage |
+| `autoRefreshToken` | `true` | Token renovado automaticamente |
+| Token JWT expira | ~1 hora | Mas é renovado antes de expirar |
+| Timeout de inatividade | **NÃO IMPLEMENTADO** | Configuração existe mas não funciona |
 
-### ✅ Fase 3: Novas Funcionalidades
+### Evidências nos Logs
 
-| Item | Status | Descrição |
-|------|--------|-----------|
-| Exportação Excel | ✅ | Relatório completo com formatação |
-| Cores condicionais | ✅ | Destaque para itens baixos/zerados |
-| Totais automáticos | ✅ | Soma de quantidades e valores |
+```text
+Console: "Auth event: SIGNED_IN Session: true"
+         ↳ Indica restauração de sessão existente, não login novo
 
----
-
-## Arquivos Criados/Modificados
-
-### Novos Arquivos
-- `src/hooks/useStockData.ts` - Hook agregador com queries paralelas
-- `src/components/estoque/StockItemCard.tsx` - Card memoizado
-- `src/components/estoque/StockKPIs.tsx` - Cards de métricas
-- `src/components/estoque/StockFilters.tsx` - Filtros avançados
-- `src/components/estoque/StockGridView.tsx` - Visualização em grid
-- `src/utils/exportStockToExcel.ts` - Exportação para Excel
-
-### Arquivos Modificados
-- `src/pages/Estoque.tsx` - Refatorado para usar novos componentes
+Auth Logs: "Session not found" no logout
+         ↳ Indica tentativa de logout com sessão já expirada/inválida
+```
 
 ---
 
-## Métricas de Impacto
+## Vulnerabilidades de Segurança Identificadas
 
-| Métrica | Antes | Depois |
-|---------|-------|--------|
-| Queries no carregamento | 3 sequenciais | 3 paralelas |
-| Re-renders por interação | Todos itens | Apenas alterado |
-| Busca de itens | Só categoria | Nome + categoria + linha + status |
-| Visão financeira | Nenhuma | KPIs completos |
-| Exportação | Manual | 1 clique |
+### CRÍTICO: Timeout de Inatividade Não Funciona
+
+A página `ConfiguracoesSeguranca.tsx` permite configurar `session_timeout_minutes`, mas **não há código que implemente essa funcionalidade**.
+
+```text
+Configuração existe:     session_timeout_minutes: 480 (8 horas)
+Implementação:           ❌ AUSENTE
+
+Resultado: Usuários nunca são deslogados por inatividade,
+           mesmo que o admin configure 1 hora de timeout.
+```
+
+### MÉDIO: Sessão Persistente Indefinidamente
+
+Enquanto o token for renovado (usuário com aba aberta), a sessão persiste para sempre.
+
+### BAIXO: localStorage Acessível
+
+Tokens armazenados em localStorage podem ser acessados por scripts maliciosos (XSS).
 
 ---
 
-## Itens Pendentes (Baixa Prioridade)
+## Plano de Correção
 
-- [ ] Campo SKU/Código de barras (requer migração DB)
-- [ ] Alertas inteligentes com previsão de ruptura
-- [ ] Virtualização para estoques > 50 itens
-- [ ] Histórico de movimentações por item no dialog
+### Fase 1: Implementar Timeout de Inatividade (CRÍTICO)
+
+Criar um hook que monitora atividade do usuário e força logout após inatividade.
+
+**Arquivo NOVO:** `src/hooks/useSessionTimeout.ts`
+
+```typescript
+// Lógica:
+// 1. Busca session_timeout_minutes da company_security_settings
+// 2. Monitora eventos de interação (click, keypress, mousemove)
+// 3. Reseta timer a cada interação
+// 4. Quando timer expira → força logout
+```
+
+**Integração:** Adicionar hook ao `MainLayout.tsx` para todas as páginas protegidas.
+
+### Fase 2: Melhorar Segurança da Sessão
+
+| Melhoria | Implementação |
+|----------|---------------|
+| Invalidar sessões antigas | Limpar tokens antigos no login |
+| Detectar sessões em múltiplos dispositivos | Alertar usuário (opcional) |
+| Logout em todas as abas | Usar broadcast channel API |
+
+### Fase 3: Log de Auditoria Aprimorado
+
+Registrar eventos de segurança:
+- Login com restauração de sessão
+- Logout por timeout
+- Tentativas de acesso com sessão expirada
+
+---
+
+## Arquivos a Criar/Modificar
+
+### Fase 1 - Timeout de Inatividade
+
+| Arquivo | Ação |
+|---------|------|
+| `src/hooks/useSessionTimeout.ts` | **CRIAR** - Hook de monitoramento |
+| `src/components/layout/MainLayout.tsx` | Integrar hook |
+| `src/components/layout/AdminLayout.tsx` | Integrar hook |
+
+### Fase 2 - Melhorias de Sessão (Opcional)
+
+| Arquivo | Ação |
+|---------|------|
+| `src/contexts/AuthContext.tsx` | Adicionar lógica de sincronização entre abas |
+
+---
+
+## Implementação Técnica do Hook
+
+```typescript
+// useSessionTimeout.ts
+
+export function useSessionTimeout() {
+  const { signOut, currentCompany } = useAuth();
+  const timeoutRef = useRef<NodeJS.Timeout>();
+  
+  // Buscar configuração de timeout da empresa
+  const { data: settings } = useQuery({
+    queryKey: ['security-settings-timeout', currentCompany?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('company_security_settings')
+        .select('session_timeout_minutes')
+        .eq('company_id', currentCompany.id)
+        .maybeSingle();
+      return data?.session_timeout_minutes ?? 480; // 8h default
+    },
+    enabled: !!currentCompany?.id,
+  });
+
+  const resetTimer = useCallback(() => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    
+    const timeoutMs = (settings ?? 480) * 60 * 1000;
+    timeoutRef.current = setTimeout(async () => {
+      toast.warning('Sessão expirada por inatividade');
+      await signOut();
+    }, timeoutMs);
+  }, [settings, signOut]);
+
+  useEffect(() => {
+    const events = ['mousedown', 'keydown', 'touchstart', 'scroll'];
+    
+    events.forEach(event => 
+      window.addEventListener(event, resetTimer, { passive: true })
+    );
+    
+    resetTimer(); // Iniciar timer
+    
+    return () => {
+      events.forEach(event => window.removeEventListener(event, resetTimer));
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [resetTimer]);
+}
+```
+
+---
+
+## Resposta à Pergunta Original
+
+### "O sistema está logando sozinho?"
+
+**Não exatamente.** O que acontece é:
+
+1. Usuário faz login uma vez
+2. Token é salvo no localStorage
+3. Ao reabrir o app, Supabase encontra o token válido
+4. Sistema restaura a sessão automaticamente
+
+**Isso é comportamento padrão e esperado**, mas pode ser ajustado:
+
+| Opção | Como Fazer |
+|-------|------------|
+| **Desabilitar persistência** | Mudar `persistSession: false` no client (não recomendado para UX) |
+| **Implementar timeout** | Fase 1 deste plano (RECOMENDADO) |
+| **Exigir login a cada X horas** | Forçar renovação de sessão periodicamente |
+
+---
+
+## Resumo de Impactos
+
+| Correção | Segurança | UX | Complexidade |
+|----------|-----------|-----|--------------|
+| Timeout de inatividade | Alta | Média (pode incomodar) | Baixa |
+| Logout multi-aba | Média | Boa | Média |
+| Auditoria aprimorada | Informativa | N/A | Baixa |
+
+---
+
+## Recomendação
+
+Implementar a **Fase 1 (Timeout de Inatividade)** imediatamente, pois:
+- A configuração já existe na interface mas não funciona
+- É expectativa do usuário que funcione
+- Resolve o problema de "sessão eterna"
