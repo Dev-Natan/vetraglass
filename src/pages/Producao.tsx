@@ -1,25 +1,18 @@
 import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { ArrowLeft, Printer, Download, Tags, BarChart3, Scissors, Square, Save, FileDown, FolderOpen } from 'lucide-react';
+import { ArrowLeft, Download, Tags, Save, FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent } from '@/components/ui/card';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { evaluateFormula, getFormulaPosition } from '@/utils/safeFormulaEvaluator';
-import { CuttingPlanFilters } from '@/components/plano-corte/CuttingPlanFilters';
-import { ProfileCutsTable, type ProfileCutItem } from '@/components/plano-corte/ProfileCutsTable';
-import { GlassCutsTable, type GlassCutItem } from '@/components/plano-corte/GlassCutsTable';
-import { BarOptimizationView } from '@/components/plano-corte/BarOptimizationView';
+import { type ProfileCutItem } from '@/components/plano-corte/ProfileCutsTable';
+import { type GlassCutItem } from '@/components/plano-corte/GlassCutsTable';
 import { generateCuttingLabels, expandCutsToLabels } from '@/utils/generateCuttingLabels';
 import { exportCuttingPlanToCSV, type CuttingPlanExport } from '@/utils/exportCuttingToExcel';
-import { GlassProjectCanvas } from '@/components/projeto-vidro/GlassProjectCanvas';
-import { PiecesTable } from '@/components/projeto-vidro/PiecesTable';
-import { ProductInfoHeader } from '@/components/projeto-vidro/ProductInfoHeader';
+import { ProductionHeader } from '@/components/producao/ProductionHeader';
+import { UnifiedProductionView } from '@/components/producao/UnifiedProductionView';
 import { SaveProjectDialog } from '@/components/projeto-vidro/SaveProjectDialog';
 import { SavedProjectsSheet } from '@/components/projeto-vidro/SavedProjectsSheet';
 import { Hole, Cutout } from '@/components/projeto-vidro/HoleCutoutEditor';
@@ -70,24 +63,16 @@ export interface GlassPanelData {
 export default function Producao() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [searchParams] = useSearchParams();
   const { currentCompany, isSaasAdmin } = useAuth();
   
-  // Main tab state - default from URL or 'corte'
-  const initialTab = searchParams.get('tab') || 'corte';
-  const [mainTab, setMainTab] = useState<'corte' | 'vidros'>(initialTab as 'corte' | 'vidros');
-  
-  // Cutting plan state
+  // State
   const [selectedLinha, setSelectedLinha] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedProduct, setSelectedProduct] = useState<string>('');
   const [width, setWidth] = useState<number>(1000);
   const [height, setHeight] = useState<number>(1000);
   const [quantity, setQuantity] = useState<number>(1);
-  const [cuttingSubTab, setCuttingSubTab] = useState<'cortes' | 'otimizacao'>('cortes');
   const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
-  
-  // Glass project state
   const [lockHeight, setLockHeight] = useState<number>(1000);
   const [panelModifications, setPanelModifications] = useState<Record<string, { holes: Hole[]; cutouts: Cutout[] }>>({});
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
@@ -389,7 +374,7 @@ export default function Producao() {
       });
   }, [productItems, width, height]);
 
-  // Group panels by unique dimensions for the table
+  // Group panels by unique dimensions for export
   const groupedPanels = useMemo(() => {
     const groups: Record<string, { letters: string[]; width: number; height: number; quantity: number; widthFormula: string | null; heightFormula: string | null }> = {};
     
@@ -437,11 +422,6 @@ export default function Producao() {
       return next;
     });
   };
-
-  // Calculate completion progress
-  const totalItems = calculatedCuts.length + calculatedGlassCuts.length;
-  const completedCount = completedItems.size;
-  const progressPercent = totalItems > 0 ? Math.round((completedCount / totalItems) * 100) : 0;
 
   // Generate labels
   const handleGenerateLabels = () => {
@@ -568,7 +548,7 @@ export default function Producao() {
     }
   };
 
-  const handleExportGlassPdf = () => {
+  const handleExportPdf = () => {
     const pdf = generateGlassProjectPdf({
       productName: selectedProductData?.name || 'Produto',
       productImage: getStorageUrl(selectedProductData?.image_url || null),
@@ -584,9 +564,11 @@ export default function Producao() {
       companyName: currentCompany?.name || 'Vetra Glass'
     });
     
-    pdf.save(`projeto-vidro-${selectedProductData?.name || 'produto'}.pdf`);
+    pdf.save(`producao-${selectedProductData?.name || 'projeto'}.pdf`);
     toast.success('PDF exportado com sucesso!');
   };
+
+  const hasData = calculatedCuts.length > 0 || calculatedGlassCuts.length > 0;
 
   return (
     <MainLayout>
@@ -599,295 +581,84 @@ export default function Producao() {
             </Button>
             <div>
               <h1 className="text-2xl font-bold text-foreground">Produção</h1>
-              <p className="text-sm text-muted-foreground">Plano de corte e projeto de vidros</p>
+              <p className="text-sm text-muted-foreground">Plano de corte e projeto de vidros unificado</p>
             </div>
           </div>
           
           <div className="flex items-center gap-2">
-            {/* Progress indicator */}
-            {mainTab === 'corte' && totalItems > 0 && (
-              <div className="hidden sm:flex items-center gap-2 mr-4">
-                <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-primary transition-all duration-300"
-                    style={{ width: `${progressPercent}%` }}
-                  />
-                </div>
-                <span className="text-sm text-muted-foreground">{progressPercent}%</span>
-              </div>
-            )}
+            <SavedProjectsSheet onLoadProject={handleLoadProject} />
             
-            {mainTab === 'corte' ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="gap-2" disabled={!selectedProduct || calculatedCuts.length === 0}>
-                    <Download className="w-4 h-4" />
-                    Exportar
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-popover border shadow-md">
-                  <DropdownMenuItem onClick={handleExportCSV}>
-                    <Download className="w-4 h-4 mr-2" />
-                    Exportar CSV
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleGenerateLabels}>
-                    <Tags className="w-4 h-4 mr-2" />
-                    Gerar Etiquetas
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <div className="flex gap-2">
-                <SavedProjectsSheet onLoadProject={handleLoadProject} />
-                <Button variant="outline" onClick={handleExportGlassPdf} disabled={!selectedProduct || glassPanels.length === 0}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2" disabled={!hasData}>
+                  <Download className="w-4 h-4" />
+                  Exportar
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-popover border shadow-md">
+                <DropdownMenuItem onClick={handleExportPdf}>
                   <FileDown className="w-4 h-4 mr-2" />
                   Exportar PDF
-                </Button>
-                <Button onClick={() => setSaveDialogOpen(true)} disabled={!selectedProduct || glassPanels.length === 0}>
-                  <Save className="w-4 h-4 mr-2" />
-                  Salvar Projeto
-                </Button>
-              </div>
-            )}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportCSV}>
+                  <Download className="w-4 h-4 mr-2" />
+                  Exportar CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleGenerateLabels}>
+                  <Tags className="w-4 h-4 mr-2" />
+                  Gerar Etiquetas
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            
+            <Button onClick={() => setSaveDialogOpen(true)} disabled={!hasData}>
+              <Save className="w-4 h-4 mr-2" />
+              Salvar Projeto
+            </Button>
           </div>
         </div>
 
-        {/* Main Tabs */}
-        <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as 'corte' | 'vidros')}>
-          <TabsList className="w-auto">
-            <TabsTrigger value="corte" className="px-6 gap-2">
-              <Scissors className="w-4 h-4" />
-              Plano de Corte
-            </TabsTrigger>
-            <TabsTrigger value="vidros" className="px-6 gap-2">
-              <Square className="w-4 h-4" />
-              Projeto de Vidros
-            </TabsTrigger>
-          </TabsList>
+        {/* Product Selection Header */}
+        <ProductionHeader
+          availableLinhas={availableLinhas}
+          availableCategories={availableCategories}
+          filteredProducts={filteredProducts}
+          selectedLinha={selectedLinha}
+          selectedCategory={selectedCategory}
+          selectedProduct={selectedProduct}
+          onLinhaChange={handleLinhaChange}
+          onCategoryChange={handleCategoryChange}
+          onProductChange={handleProductChange}
+          width={width}
+          height={height}
+          quantity={quantity}
+          onWidthChange={setWidth}
+          onHeightChange={setHeight}
+          onQuantityChange={setQuantity}
+          productImageUrl={getStorageUrl(selectedProductData?.image_url || null)}
+          productName={selectedProductData?.name || null}
+        />
 
-          {/* Cutting Plan Tab */}
-          <TabsContent value="corte" className="mt-6 space-y-6">
-            {/* Product Selection & Info */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Product Image */}
-              <div className="flex justify-center">
-                <div className="w-full max-w-[250px] aspect-square bg-muted rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
-                  {selectedProductData?.image_url ? (
-                    <img 
-                      src={getStorageUrl(selectedProductData.image_url) || ''} 
-                      alt={selectedProductData.name}
-                      className="w-full h-full object-contain rounded-lg"
-                    />
-                  ) : (
-                    <div className="text-6xl text-muted-foreground/30">🪟</div>
-                  )}
-                </div>
-              </div>
-
-              {/* Product Selection & Dimensions */}
-              <div className="lg:col-span-2 space-y-4">
-                <CuttingPlanFilters
-                  availableLinhas={availableLinhas}
-                  availableCategories={availableCategories}
-                  filteredProducts={filteredProducts}
-                  selectedLinha={selectedLinha}
-                  selectedCategory={selectedCategory}
-                  selectedProduct={selectedProduct}
-                  onLinhaChange={handleLinhaChange}
-                  onCategoryChange={handleCategoryChange}
-                  onProductChange={handleProductChange}
-                />
-
-                {selectedProductData && (
-                  <h2 className="text-xl font-bold uppercase text-foreground">
-                    {selectedProductData.name}
-                  </h2>
-                )}
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>Largura do Vão</Label>
-                    <Input 
-                      type="number" 
-                      value={width} 
-                      onChange={e => setWidth(Number(e.target.value))}
-                      className="bg-muted"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Altura do Vão</Label>
-                    <Input 
-                      type="number" 
-                      value={height} 
-                      onChange={e => setHeight(Number(e.target.value))}
-                      className="bg-muted"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Quantidade</Label>
-                    <Input 
-                      type="number" 
-                      value={quantity} 
-                      onChange={e => setQuantity(Number(e.target.value))}
-                      min={1}
-                      className="bg-muted"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Cutting Sub-Tabs */}
-            <Tabs value={cuttingSubTab} onValueChange={(v) => setCuttingSubTab(v as 'cortes' | 'otimizacao')}>
-              <TabsList className="w-auto">
-                <TabsTrigger value="cortes" className="px-6 gap-2">
-                  <Printer className="w-4 h-4" />
-                  Cortes
-                </TabsTrigger>
-                <TabsTrigger value="otimizacao" className="px-6 gap-2">
-                  <BarChart3 className="w-4 h-4" />
-                  Otimização de Barras
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="cortes" className="mt-4 space-y-6">
-                <GlassCutsTable 
-                  glassCuts={calculatedGlassCuts}
-                  showCheckboxes
-                  onToggleComplete={handleToggleComplete}
-                />
-                <ProfileCutsTable 
-                  cuts={calculatedCuts}
-                  showCheckboxes
-                  onToggleComplete={handleToggleComplete}
-                  getStorageUrl={getStorageUrl}
-                />
-              </TabsContent>
-
-              <TabsContent value="otimizacao" className="mt-4">
-                {barOptimizationData.length > 0 ? (
-                  <BarOptimizationView cuts={barOptimizationData} />
-                ) : (
-                  <div className="text-center py-12 text-muted-foreground">
-                    Selecione um produto para ver a otimização de barras
-                  </div>
-                )}
-              </TabsContent>
-            </Tabs>
-          </TabsContent>
-
-          {/* Glass Project Tab */}
-          <TabsContent value="vidros" className="mt-6 space-y-6">
-            {/* Filters */}
-            <Card>
-              <CardContent className="pt-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-                  <CuttingPlanFilters
-                    availableLinhas={availableLinhas}
-                    availableCategories={availableCategories}
-                    filteredProducts={filteredProducts}
-                    selectedLinha={selectedLinha}
-                    selectedCategory={selectedCategory}
-                    selectedProduct={selectedProduct}
-                    onLinhaChange={handleLinhaChange}
-                    onCategoryChange={handleCategoryChange}
-                    onProductChange={handleProductChange}
-                  />
-                  
-                  <div className="space-y-2">
-                    <Label>Largura do Vão (mm)</Label>
-                    <Input
-                      type="number"
-                      value={width}
-                      onChange={e => setWidth(parseInt(e.target.value) || 0)}
-                      min={0}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Altura do Vão (mm)</Label>
-                    <Input
-                      type="number"
-                      value={height}
-                      onChange={e => setHeight(parseInt(e.target.value) || 0)}
-                      min={0}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Main Content */}
-            {selectedProduct && glassPanels.length > 0 && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Left side - Product Info + Pieces Table */}
-                <div className="space-y-4">
-                  <ProductInfoHeader 
-                    productName={selectedProductData?.name || ''}
-                    productImage={getStorageUrl(selectedProductData?.image_url || null)}
-                    category={selectedProductData?.category || ''}
-                    linha={selectedProductData?.linha || ''}
-                    width={width}
-                    height={height}
-                    quantity={quantity}
-                    onQuantityChange={setQuantity}
-                    glassType={glassType}
-                    onGlassTypeChange={setGlassType}
-                    hardwareType={hardwareType}
-                    onHardwareTypeChange={setHardwareType}
-                  />
-                  
-                  <PiecesTable 
-                    panels={glassPanels}
-                    groupedPanels={groupedPanels}
-                    totalWidth={width}
-                    totalHeight={height}
-                    lockHeight={lockHeight}
-                    onLockHeightChange={setLockHeight}
-                  />
-                </div>
-
-                {/* Right side - Canvas */}
-                <div className="lg:col-span-2">
-                  <GlassProjectCanvas 
-                    panels={glassPanels}
-                    totalWidth={width}
-                    totalHeight={height}
-                    quantity={quantity}
-                    lockHeight={lockHeight}
-                    panelModifications={panelModifications}
-                    onPanelModificationsChange={setPanelModifications}
-                    glassType={glassType}
-                    hardwareType={hardwareType}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Empty States */}
-            {selectedProduct && glassPanels.length === 0 && (
-              <Card>
-                <CardContent className="py-16 text-center">
-                  <p className="text-muted-foreground">
-                    Nenhum vidro encontrado para este produto.
-                    <br />
-                    Verifique se o produto possui vidros configurados na composição.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-
-            {!selectedProduct && (
-              <Card>
-                <CardContent className="py-16 text-center">
-                  <p className="text-muted-foreground">
-                    Selecione um produto para visualizar o projeto de vidros.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-        </Tabs>
+        {/* Unified Production View */}
+        <UnifiedProductionView
+          profileCuts={calculatedCuts}
+          glassCuts={calculatedGlassCuts}
+          glassPanels={glassPanels}
+          barOptimizationData={barOptimizationData}
+          width={width}
+          height={height}
+          quantity={quantity}
+          lockHeight={lockHeight}
+          onLockHeightChange={setLockHeight}
+          panelModifications={panelModifications}
+          onPanelModificationsChange={setPanelModifications}
+          glassType={glassType}
+          hardwareType={hardwareType}
+          completedItems={completedItems}
+          onToggleComplete={handleToggleComplete}
+          getStorageUrl={getStorageUrl}
+          selectedProduct={selectedProduct}
+        />
       </div>
 
       {/* Save Project Dialog */}
