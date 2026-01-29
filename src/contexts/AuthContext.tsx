@@ -3,6 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
+import { logSessionRestored, logLoginSuccess, logLoginFailed, logManualLogout } from '@/utils/securityAudit';
 
 interface Profile {
   id: string;
@@ -104,6 +105,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Track current user to prevent stale data from overwriting
         currentUserIdRef.current = newUserId;
         setLoading(true);
+        
+        // Registrar restauração de sessão (auto-login via localStorage)
+        if (source === 'getSession' || source === 'onAuthStateChange:INITIAL_SESSION') {
+          logSessionRestored(newSession.user.id);
+        }
         
         try {
           // Pass a check function to ensure we don't apply stale data
@@ -280,17 +286,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
     
     if (error) {
+      // Registrar tentativa de login falha
+      logLoginFailed(email, error.message);
+      
       toast({
         title: "Erro ao entrar",
         description: error.message,
         variant: "destructive",
       });
+    } else if (data.user) {
+      // Registrar login bem-sucedido
+      logLoginSuccess(data.user.id, email);
     }
     
     return { error };
@@ -327,6 +339,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    // Registrar logout manual antes de limpar o estado
+    if (user?.id) {
+      logManualLogout(user.id, currentCompany?.id);
+    }
+    
+    // Notificar outras abas sobre o logout
+    try {
+      const channel = new BroadcastChannel('vetra-session');
+      channel.postMessage({ type: 'logout' });
+      channel.close();
+    } catch (e) {
+      // Ignora se BroadcastChannel não suportado
+    }
+    
     try {
       const { error } = await supabase.auth.signOut();
       

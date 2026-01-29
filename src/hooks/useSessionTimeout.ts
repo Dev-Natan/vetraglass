@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { logSessionTimeout, logCrossTabLogout } from '@/utils/securityAudit';
 
 const DEFAULT_TIMEOUT_MINUTES = 480; // 8 horas
 const ACTIVITY_EVENTS = ['mousedown', 'keydown', 'touchstart', 'scroll', 'mousemove'];
@@ -34,12 +35,17 @@ export function useSessionTimeout() {
 
   const handleTimeout = useCallback(async () => {
     console.log('[SessionTimeout] Sessão expirada por inatividade');
+    
+    // Registrar evento de segurança
+    const inactiveMinutes = Math.round((Date.now() - lastActivityRef.current) / 60000);
+    logSessionTimeout(user?.id || '', currentCompany?.id, inactiveMinutes);
+    
     toast.warning('Sessão expirada', {
       description: 'Você foi desconectado por inatividade. Faça login novamente.',
       duration: 5000,
     });
     await signOut();
-  }, [signOut]);
+  }, [signOut, user?.id, currentCompany?.id]);
 
   const resetTimer = useCallback(() => {
     // Limpar timeout anterior
@@ -85,6 +91,7 @@ export function useSessionTimeout() {
         timeoutRef.current = setTimeout(handleTimeout, minutes * 60 * 1000);
       } else if (event.data.type === 'logout') {
         // Outra aba fez logout, fazer logout aqui também
+        logCrossTabLogout(user?.id || '', currentCompany?.id);
         signOut();
       }
     };
