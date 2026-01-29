@@ -156,7 +156,7 @@ export function Sidebar() {
               <img 
                 src="/vetra-logo.png" 
                 alt="Vetra Logo" 
-                className="w-10 h-10 object-contain"
+                className="w-10 h-10 object-contain mix-blend-multiply"
               />
               <div>
                 <h1 className="font-display font-bold text-lg text-sidebar-foreground">Vetra</h1>
