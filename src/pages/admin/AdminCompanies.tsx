@@ -83,13 +83,14 @@ export default function AdminCompanies() {
     const searchLower = searchTerm.toLowerCase();
     return (
       company.name.toLowerCase().includes(searchLower) ||
-      company.cnpj.includes(searchTerm) ||
+      company.cnpj?.includes(searchTerm) ||
       company.email?.toLowerCase().includes(searchLower) ||
       company.phone?.includes(searchTerm)
     );
   });
 
-  const formatCNPJ = (cnpj: string) => {
+  const formatCNPJ = (cnpj: string | null) => {
+    if (!cnpj) return '-';
     const cleaned = cnpj.replace(/\D/g, '');
     if (cleaned.length === 14) {
       return cleaned.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
