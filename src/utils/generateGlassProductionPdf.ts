@@ -35,7 +35,7 @@ interface OSInfo {
 
 interface Company {
   name: string;
-  cnpj: string;
+  cnpj?: string | null;
   phone?: string | null;
 }
 
@@ -92,7 +92,9 @@ export function generateGlassProductionPdf(
   if (company) {
     doc.setFontSize(9);
     doc.text(company.name, pageWidth - margin, 15, { align: 'right' });
-    doc.text(`CNPJ: ${company.cnpj}`, pageWidth - margin, 22, { align: 'right' });
+    if (company.cnpj) {
+      doc.text(`CNPJ: ${company.cnpj}`, pageWidth - margin, 22, { align: 'right' });
+    }
   }
   
   y = 45;

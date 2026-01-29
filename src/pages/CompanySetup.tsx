@@ -22,7 +22,10 @@ interface CNPJData {
 
 const companySchema = z.object({
   name: z.string().min(2, 'Nome deve ter no mínimo 2 caracteres'),
-  document: z.string().refine((val) => {
+  document: z.string().optional().refine((val) => {
+    // Se vazio, é válido (campo opcional)
+    if (!val || val.trim() === '') return true;
+    // Se preenchido, deve ser CPF ou CNPJ válido
     const result = validateCPFOrCNPJ(val);
     return result.valid;
   }, 'CPF ou CNPJ inválido'),
@@ -130,9 +133,12 @@ export default function CompanySetup() {
     e.preventDefault();
     setErrors({});
     
+    // Limpar documento antes de validar
+    const cleanDocument = document ? document.replace(/\D/g, '') : '';
+    
     const validation = companySchema.safeParse({
       name,
-      document: document.replace(/\D/g, ''),
+      document: cleanDocument,
       phone,
       email,
       address,
@@ -158,13 +164,25 @@ export default function CompanySetup() {
       const { data: companyData, error: companyError } = await supabase
         .rpc('create_company_and_assign_admin', {
           _name: name,
-          _cnpj: document.replace(/\D/g, ''),
-          _phone: phone || '',
-          _email: email || '',
-          _address: address || '',
+          _cnpj: cleanDocument || null, // Envia null se vazio
+          _phone: phone || null,
+          _email: email || null,
+          _address: address || null,
         });
       
-      if (companyError) throw companyError;
+      if (companyError) {
+        // Tratar erro de CNPJ duplicado
+        if (companyError.message.includes('CNPJ_JA_CADASTRADO')) {
+          toast({
+            title: "CNPJ já em uso",
+            description: "Este CNPJ já está vinculado a outra empresa no sistema.",
+            variant: "destructive",
+          });
+          setErrors(prev => ({ ...prev, document: 'CNPJ já cadastrado' }));
+          return;
+        }
+        throw companyError;
+      }
       
       toast({
         title: "Empresa cadastrada!",
@@ -233,7 +251,7 @@ export default function CompanySetup() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="document">CPF ou CNPJ *</Label>
+                <Label htmlFor="document">CPF ou CNPJ (opcional)</Label>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <Input
@@ -281,7 +299,7 @@ export default function CompanySetup() {
                   </div>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  Digite um CPF (11 dígitos) ou CNPJ (14 dígitos) válido. Para CNPJ, clique em "Consultar" para validar na Receita Federal.
+                  O documento é opcional. Se informado, será vinculado exclusivamente a esta empresa e não poderá ser usado em outra conta.
                 </p>
               </div>
               

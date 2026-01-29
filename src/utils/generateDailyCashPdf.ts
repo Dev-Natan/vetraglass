@@ -32,7 +32,7 @@ interface CashRegister {
 
 interface Company {
   name: string;
-  cnpj: string;
+  cnpj?: string | null;
   address?: string | null;
   phone?: string | null;
 }
@@ -110,9 +110,12 @@ export function generateDailyCashPdf(
 
     doc.setFontSize(9);
     doc.setTextColor(100);
-    const cnpjFormatted = company.cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
-    doc.text(`CNPJ: ${cnpjFormatted}`, pageWidth / 2, currentY, { align: 'center' });
-    currentY += 4;
+    
+    if (company.cnpj) {
+      const cnpjFormatted = company.cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+      doc.text(`CNPJ: ${cnpjFormatted}`, pageWidth / 2, currentY, { align: 'center' });
+      currentY += 4;
+    }
 
     if (company.address) {
       doc.text(company.address, pageWidth / 2, currentY, { align: 'center' });
