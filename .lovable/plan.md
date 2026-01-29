@@ -1,25 +1,56 @@
 
-# Plano: Substituir Logo por Imagem com Fundo Transparente
 
-## Objetivo
+# Plano: Corrigir Logo da Sidebar com Fundo Transparente
 
-Substituir o logo atual (`public/vetra-logo.png`) pela nova imagem enviada, que possui fundo transparente e se integrara perfeitamente com a sidebar escura.
+## Problema Identificado
+
+A imagem do logo atual possui fundo branco, que fica visivel e contrasta mal com a sidebar azul do sistema.
+
+---
+
+## Solucao Proposta
+
+Usar CSS com `mix-blend-mode: multiply` para fazer o fundo branco da imagem se mesclar com o fundo azul da sidebar, tornando-o visualmente transparente.
+
+Esta tecnica funciona porque:
+- O modo `multiply` multiplica as cores dos pixels
+- Branco (255, 255, 255) multiplicado por qualquer cor resulta na propria cor
+- Assim, o fundo branco "desaparece" e so o logo colorido fica visivel
 
 ---
 
 ## Alteracao Tecnica
 
-### Arquivo: `public/vetra-logo.png`
-
-Substituir pela nova imagem enviada:
-
-```
-user-uploads://ChatGPT_Image_29_de_jan._de_2026_07_39_25.png -> public/vetra-logo.png
-```
-
 ### Arquivo: `src/components/layout/Sidebar.tsx`
 
-Nenhuma alteracao necessaria - o codigo ja referencia `/vetra-logo.png`.
+Adicionar a classe `mix-blend-mode: multiply` na tag de imagem do logo:
+
+**Antes (linha 156-160):**
+```typescript
+<img 
+  src="/vetra-logo.png" 
+  alt="Vetra Logo" 
+  className="w-10 h-10 object-contain"
+/>
+```
+
+**Depois:**
+```typescript
+<img 
+  src="/vetra-logo.png" 
+  alt="Vetra Logo" 
+  className="w-10 h-10 object-contain mix-blend-multiply"
+/>
+```
+
+---
+
+## Alternativa (caso o resultado visual nao fique bom)
+
+Se o `mix-blend-multiply` nao produzir um resultado satisfatorio, a alternativa seria:
+
+1. Processar a imagem para remover o fundo branco usando uma ferramenta externa
+2. Ou criar um CSS filter customizado para tornar pixels brancos transparentes
 
 ---
 
@@ -27,12 +58,13 @@ Nenhuma alteracao necessaria - o codigo ja referencia `/vetra-logo.png`.
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `public/vetra-logo.png` | Substituir pela nova imagem com fundo transparente |
+| `src/components/layout/Sidebar.tsx` | Adicionar `mix-blend-multiply` na classe da imagem |
 
 ---
 
 ## Resultado Esperado
 
-- Logo com os vidros azuis e checkmark prateado exibido na sidebar
-- Fundo transparente, integrando perfeitamente com a sidebar escura
-- Nome "Vetra" e subtitulo "Sistema de Gestao" mantidos ao lado do logo
+- Logo dos vidros azuis com checkmark prateado exibido na sidebar
+- Fundo branco removido visualmente, integrando com a sidebar azul
+- Nenhuma alteracao na imagem necessaria
+
