@@ -16,6 +16,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { PaymentConfig } from '@/components/caixa/InstallmentPaymentSheet';
 import { calculateFormulaQuantity } from '@/utils/safeFormulaEvaluator';
+import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 
 import { FecharCaixaDialog } from '@/components/caixa/FecharCaixaDialog';
 import { NovaVendaDialog, VendaItem } from '@/components/caixa/NovaVendaDialog';
@@ -53,6 +54,10 @@ export default function CaixaVendas() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  
+  // Module tutorial trigger
+  useModuleTutorialTrigger('caixa-vendas');
+  
   const [hasRequestedCashOpen, setHasRequestedCashOpen] = useState(false);
   
   // Removido: abrirCaixaOpen - abertura agora é feita apenas no Financeiro

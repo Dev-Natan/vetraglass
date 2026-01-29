@@ -39,6 +39,7 @@ import { CACHE_TIMES } from '@/lib/queryConfig';
 import { OSProductionBadge } from '@/components/ordens-servico/OSProductionBadge';
 import { consumeOSMaterials } from '@/utils/checkGlassStock';
 import { releaseMaterialsForProduction, cancelMaterialConsumption } from '@/utils/generateMaterialConsumption';
+import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 
 type OSStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
 type OSPriority = 'low' | 'normal' | 'high' | 'urgent';
@@ -77,6 +78,10 @@ export default function OrdensServico() {
   const navigate = useNavigate();
   const { currentCompany } = useAuth();
   const queryClient = useQueryClient();
+  
+  // Module tutorial trigger
+  useModuleTutorialTrigger('ordens-servico');
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<OSStatus | 'all' | 'overdue'>('in_progress');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);

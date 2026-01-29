@@ -12,10 +12,15 @@ import { HistoricoMovimentosTab } from '@/components/estoque/HistoricoMovimentos
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 
 export default function Estoque() {
   const { currentCompany } = useAuth();
   const queryClient = useQueryClient();
+  
+  // Module tutorial trigger
+  useModuleTutorialTrigger('estoque');
+  
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [priceDialogOpen, setPriceDialogOpen] = useState(false);
   const [entradaDialogOpen, setEntradaDialogOpen] = useState(false);
@@ -249,7 +254,7 @@ export default function Estoque() {
   return (
     <MainLayout>
       <div className="space-y-6 animate-fade-in">
-        <div className="flex flex-col sm:flex-row justify-between gap-4">
+        <div data-tutorial="estoque-header" className="flex flex-col sm:flex-row justify-between gap-4">
           <div>
             <h1 className="font-display font-bold text-2xl text-foreground flex items-center gap-2">
               <Boxes className="w-7 h-7 text-primary" />
@@ -257,7 +262,7 @@ export default function Estoque() {
             </h1>
             <p className="text-muted-foreground">Controle de entradas e saídas</p>
           </div>
-          <div className="flex gap-2">
+          <div data-tutorial="estoque-acoes" className="flex gap-2">
             <Button variant="outline" className="gap-2" onClick={() => setSaidaDialogOpen(true)}>
               <TrendingDown className="w-4 h-4" />
               Registrar Saída

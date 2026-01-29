@@ -54,6 +54,7 @@ import { CaixaReportTab } from '@/components/financeiro/CaixaReportTab';
 import { CashFlowProjection } from '@/components/financeiro/CashFlowProjection';
 import { calculateFormulaQuantity } from '@/utils/safeFormulaEvaluator';
 import { MonthSelector, getMonthDateRange } from '@/components/common/MonthSelector';
+import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 
 type PaymentFilter = 'all' | 'dinheiro' | 'cartao' | 'pix';
 type StatusFilter = 'all' | 'paid' | 'pending' | 'cancelled';
@@ -90,6 +91,9 @@ const statusConfig = {
 export default function Financeiro() {
   const { currentCompany } = useAuth();
   const queryClient = useQueryClient();
+
+  // Module tutorial trigger
+  useModuleTutorialTrigger('financeiro');
 
   // Month selection state - shared across all tabs
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());

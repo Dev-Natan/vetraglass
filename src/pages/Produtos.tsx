@@ -14,11 +14,16 @@ import { Trash2, Search, Download, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 
 export default function Produtos() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { currentCompany } = useAuth();
+  
+  // Module tutorial trigger
+  useModuleTutorialTrigger('produtos');
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [tipologiasSheetOpen, setTipologiasSheetOpen] = useState(false);
   const [selectedLinhaForDownload, setSelectedLinhaForDownload] = useState<string | null>(null);

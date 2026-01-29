@@ -6,47 +6,49 @@ export interface TutorialStep {
   position: 'right' | 'bottom' | 'left' | 'top';
 }
 
+// Tutorial global simplificado - apenas visão geral das áreas principais
+// Tutoriais detalhados de cada módulo estão em moduleTutorialSteps.ts
 export const tutorialSteps: TutorialStep[] = [
   {
     id: 'welcome',
     target: 'logo',
     title: 'Bem-vindo ao Vetra! 👋',
-    description: 'Este é seu sistema completo de gestão para vidraçarias. Vamos fazer um tour rápido pelas principais funcionalidades.',
+    description: 'Este é seu sistema completo de gestão para vidraçarias. Vamos conhecer as principais áreas rapidamente.',
     position: 'right',
   },
   {
-    id: 'clientes',
+    id: 'comercial',
     target: 'menu-clientes',
-    title: 'Cadastro de Clientes',
-    description: 'Aqui você cadastra e gerencia todos os seus clientes. Mantenha o histórico de compras e contatos organizados.',
+    title: 'Área Comercial',
+    description: 'Clientes, Produtos, Orçamentos e Vendas. Gerencie todo seu processo comercial de forma integrada.',
     position: 'right',
   },
   {
-    id: 'produtos',
-    target: 'menu-produtos',
-    title: 'Catálogo de Produtos',
-    description: 'Importe linhas de produtos, configure preços e gerencie seu catálogo completo de esquadrias e vidros.',
+    id: 'producao',
+    target: 'menu-ordens-servico',
+    title: 'Produção e Operacional',
+    description: 'Ordens de Serviço, Plano de Corte, Medições e Agenda. Controle toda sua produção.',
     position: 'right',
   },
   {
-    id: 'orcamentos',
-    target: 'menu-orcamentos',
-    title: 'Orçamentos Profissionais',
-    description: 'Crie orçamentos detalhados com cálculo automático de materiais. Envie PDFs profissionais para seus clientes.',
+    id: 'financeiro',
+    target: 'menu-financeiro',
+    title: 'Financeiro',
+    description: 'Contas a receber, despesas, fluxo de caixa e notas fiscais. Tudo organizado.',
     position: 'right',
   },
   {
-    id: 'vendas',
-    target: 'menu-caixa',
-    title: 'Caixa & Vendas',
-    description: 'Registre vendas, controle o caixa diário e acompanhe seus recebimentos em um só lugar.',
+    id: 'configuracoes',
+    target: 'menu-configuracoes',
+    title: 'Configurações',
+    description: 'Personalize o sistema, gerencie funcionários e defina permissões de acesso.',
     position: 'right',
   },
   {
     id: 'checklist',
     target: 'onboarding-checklist',
     title: 'Próximos Passos',
-    description: 'Siga este checklist para configurar seu sistema. Complete cada etapa para começar a usar todas as funcionalidades!',
+    description: 'Ao abrir cada módulo pela primeira vez, você receberá um tutorial específico. Complete o checklist para configurar seu sistema!',
     position: 'bottom',
   },
 ];
