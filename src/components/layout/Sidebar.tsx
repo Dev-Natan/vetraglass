@@ -18,7 +18,6 @@ import {
   Receipt,
   Ruler,
   Headphones,
-  Lock,
   Lightbulb,
   LucideIcon
 } from 'lucide-react';
@@ -30,7 +29,6 @@ import { SupportSidebar } from '@/components/support/SupportSidebar';
 import { useSupportTickets } from '@/hooks/useSupportTickets';
 import { usePermissions, Module } from '@/hooks/usePermissions';
 import { useEnabledModulesMap } from '@/hooks/useModuleSettings';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // MenuItem interface moved below imports
 
@@ -117,8 +115,10 @@ export function Sidebar() {
     return enabledModules[settingsKey] === false;
   };
 
-  // Filter menu items based on permissions (but keep disabled modules visible)
+  // Filter menu items based on permissions AND module enabled status
   const visibleMenuItems = menuItems.filter(item => {
+    // First check if module is globally disabled - hide completely
+    if (isModuleDisabled(item.module)) return false;
     // If no module defined, always show (like dashboard)
     if (!item.module) return true;
     // Admin sees everything
@@ -186,52 +186,27 @@ export function Sidebar() {
 
         {/* Navigation */}
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          <TooltipProvider delayDuration={300}>
-            {visibleMenuItems.map((item) => {
-              const isActive = location.pathname === item.path;
-              const isDisabled = isModuleDisabled(item.module);
+          {visibleMenuItems.map((item) => {
+            const isActive = location.pathname === item.path;
 
-              if (isDisabled) {
-                return (
-                  <Tooltip key={item.path}>
-                    <TooltipTrigger asChild>
-                      <div
-                        className={cn(
-                          "flex items-center gap-3 px-4 py-2.5 rounded-lg cursor-not-allowed",
-                          "text-sidebar-foreground/40 bg-sidebar-accent/30"
-                        )}
-                      >
-                        <item.icon className="w-5 h-5" />
-                        <span className="text-sm flex-1">{item.label}</span>
-                        <Lock className="w-4 h-4 text-sidebar-foreground/30" />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">
-                      <p>Módulo não disponível</p>
-                    </TooltipContent>
-                  </Tooltip>
-                );
-              }
-
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  onClick={() => setIsMobileOpen(false)}
-                  data-tutorial={item.tutorialId}
-                  className={cn(
-                    "flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200",
-                    isActive 
-                      ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium" 
-                      : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                  )}
-                >
-                  <item.icon className="w-5 h-5" />
-                  <span className="text-sm">{item.label}</span>
-                </Link>
-              );
-            })}
-          </TooltipProvider>
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                onClick={() => setIsMobileOpen(false)}
+                data-tutorial={item.tutorialId}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200",
+                  isActive 
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium" 
+                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                )}
+              >
+                <item.icon className="w-5 h-5" />
+                <span className="text-sm">{item.label}</span>
+              </Link>
+            );
+          })}
         </nav>
 
         {/* Footer */}

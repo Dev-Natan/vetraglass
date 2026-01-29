@@ -169,7 +169,7 @@ export function ModulesTab() {
             Controle de Módulos
           </CardTitle>
           <CardDescription>
-            Habilite ou desabilite módulos do sistema. Módulos desabilitados aparecem bloqueados no menu para todos os usuários.
+            Habilite ou desabilite módulos do sistema. Módulos desabilitados ficam ocultos no menu para todos os usuários.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -228,7 +228,7 @@ export function ModulesTab() {
             <p className="font-medium">Nota importante:</p>
             <p>
               Dashboard e Configurações são essenciais e não podem ser desabilitados. 
-              Módulos bloqueados aparecem no menu com um ícone de cadeado, indicando que a funcionalidade não está disponível.
+              Módulos desabilitados ficam completamente ocultos no menu lateral dos usuários.
             </p>
           </div>
         </CardContent>
