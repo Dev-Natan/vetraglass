@@ -111,8 +111,21 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
 
 export function useTutorial() {
   const context = useContext(TutorialContext);
+  
+  // Return safe defaults if used outside provider
   if (context === undefined) {
-    throw new Error('useTutorial must be used within a TutorialProvider');
+    return {
+      isActive: false,
+      currentStep: 0,
+      totalSteps: 0,
+      startTutorial: () => {},
+      nextStep: () => {},
+      prevStep: () => {},
+      skipTutorial: () => {},
+      restartTutorial: () => {},
+      currentStepData: null,
+    };
   }
+  
   return context;
 }
