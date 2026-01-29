@@ -337,8 +337,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.warn('Erro inesperado no logout:', error);
     } finally {
-      // SEMPRE limpar o estado local, independente do resultado
-      localStorage.removeItem('currentCompanyId');
+      // ZERO CACHE: Limpar TODO o storage para garantir dados frescos
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Limpar estado React
       setUser(null);
       setSession(null);
       setProfile(null);
@@ -346,7 +349,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setCurrentCompany(null);
       setIsSaasAdmin(false);
 
-      // Limpa cache para não exibir dados da conta anterior
+      // Limpa cache React Query
       queryClient.clear();
     }
   };
