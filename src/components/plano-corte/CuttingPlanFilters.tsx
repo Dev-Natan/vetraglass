@@ -33,11 +33,11 @@ export function CuttingPlanFilters({
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <div className="space-y-2">
+      <div className="space-y-2 min-w-[200px]">
         <Label>Linha</Label>
         <Select value={selectedLinha} onValueChange={onLinhaChange}>
-          <SelectTrigger>
-            <SelectValue placeholder="Selecione a linha" />
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Selecione a linha" className="truncate" />
           </SelectTrigger>
           <SelectContent>
             {availableLinhas.map(linha => (
