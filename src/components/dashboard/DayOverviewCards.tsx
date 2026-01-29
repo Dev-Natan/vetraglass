@@ -30,7 +30,7 @@ export const DayOverviewCards = memo(function DayOverviewCards({ data }: DayOver
       color: 'text-blue-600 dark:text-blue-400',
       bgColor: 'bg-blue-500/10',
       borderColor: 'border-blue-500/20',
-      link: '/ordens-servico?tab=calendario',
+      link: '/ordens-servico?tab=hoje',
     },
     {
       icon: DollarSign,
@@ -64,7 +64,7 @@ export const DayOverviewCards = memo(function DayOverviewCards({ data }: DayOver
       color: (data?.osAttentionCount || 0) > 0 ? 'text-destructive' : 'text-muted-foreground',
       bgColor: (data?.osAttentionCount || 0) > 0 ? 'bg-destructive/10' : 'bg-muted/50',
       borderColor: (data?.osAttentionCount || 0) > 0 ? 'border-destructive/30' : 'border-border',
-      link: '/ordens-servico',
+      link: '/ordens-servico?tab=lista',
       alert: (data?.osAttentionCount || 0) > 0,
     },
   ];
