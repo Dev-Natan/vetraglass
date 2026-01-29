@@ -1,109 +1,17 @@
 import { memo } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
 import { Factory, AlertTriangle, Package, Wallet } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { CACHE_TIMES } from '@/lib/queryConfig';
 import { Link } from 'react-router-dom';
+import type { DashboardData } from '@/hooks/useDashboardData';
 
-export const ProductionKPIs = memo(function ProductionKPIs() {
-  const { currentCompany } = useAuth();
-  const companyId = currentCompany?.id;
+interface ProductionKPIsProps {
+  data?: DashboardData;
+}
 
-  // 🏭 OS EM PRODUÇÃO
-  const { data: osData } = useQuery({
-    queryKey: ['kpi-os-producao', companyId],
-    enabled: !!companyId,
-    queryFn: async () => {
-      const hoje = new Date().toISOString().split('T')[0];
-      
-      // Total em produção
-      const { count: total } = await supabase
-        .from('ordens_servico')
-        .select('*', { count: 'exact', head: true })
-        .eq('company_id', companyId!)
-        .in('status', ['pending', 'in_progress']);
-      
-      // Em andamento
-      const { count: inProgress } = await supabase
-        .from('ordens_servico')
-        .select('*', { count: 'exact', head: true })
-        .eq('company_id', companyId!)
-        .eq('status', 'in_progress');
-
-      // Atrasadas
-      const { count: overdue } = await supabase
-        .from('ordens_servico')
-        .select('*', { count: 'exact', head: true })
-        .eq('company_id', companyId!)
-        .in('status', ['pending', 'in_progress'])
-        .not('estimated_end', 'is', null)
-        .lt('estimated_end', hoje);
-
-      return {
-        total: total || 0,
-        inProgress: inProgress || 0,
-        overdue: overdue || 0,
-      };
-    },
-    ...CACHE_TIMES.DYNAMIC,
-  });
-
-  // 📦 MATERIAIS PENDENTES
-  const { data: materialsData } = useQuery({
-    queryKey: ['kpi-materiais-pendentes', companyId],
-    enabled: !!companyId,
-    queryFn: async () => {
-      const { data: pendingPOs } = await supabase
-        .from('purchase_orders')
-        .select('id, status')
-        .eq('company_id', companyId!)
-        .in('status', ['pending', 'ordered', 'partial']);
-
-      if (!pendingPOs || pendingPOs.length === 0) {
-        return { pending: 0, urgentOrders: 0 };
-      }
-
-      const poIds = pendingPOs.map(po => po.id);
-      const { count } = await supabase
-        .from('purchase_order_items')
-        .select('*', { count: 'exact', head: true })
-        .in('purchase_order_id', poIds)
-        .eq('status', 'pending');
-
-      // Pedidos urgentes (status = pending ainda não foram encomendados)
-      const urgentOrders = pendingPOs.filter(po => po.status === 'pending').length;
-
-      return { 
-        pending: count || 0, 
-        urgentOrders 
-      };
-    },
-    ...CACHE_TIMES.DYNAMIC,
-  });
-
-  // 💰 SALDO A RECEBER (contas a receber pendentes de OS)
-  const { data: receivablesData } = useQuery({
-    queryKey: ['kpi-saldo-receber-os', companyId],
-    enabled: !!companyId,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('accounts_receivable')
-        .select('total_amount, paid_amount')
-        .eq('company_id', companyId!)
-        .not('ordem_servico_id', 'is', null)
-        .in('status', ['pending', 'partial']);
-
-      const total = data?.reduce(
-        (acc, ar) => acc + ((ar.total_amount || 0) - (ar.paid_amount || 0)),
-        0
-      ) || 0;
-
-      return { total, count: data?.length || 0 };
-    },
-    ...CACHE_TIMES.DYNAMIC,
-  });
+export const ProductionKPIs = memo(function ProductionKPIs({ data }: ProductionKPIsProps) {
+  const osData = data?.osStats;
+  const materialsData = data?.materialsStats;
+  const receivablesData = data?.receivablesStats;
 
   const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });

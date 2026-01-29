@@ -1,6 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { memo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -8,103 +6,17 @@ import {
   FileText, 
   ClipboardList,
   Clock,
-  CheckCircle,
-  AlertCircle
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
-import { CACHE_TIMES } from '@/lib/queryConfig';
+import type { ActivityItem } from '@/hooks/useDashboardData';
 
-interface ActivityItem {
-  id: string;
-  type: 'sale' | 'quote' | 'order';
-  title: string;
-  subtitle: string;
-  status: string;
-  value: number;
-  timestamp: string;
+interface RecentActivityProps {
+  data?: ActivityItem[];
 }
 
-export function RecentActivity() {
-  const { currentCompany } = useAuth();
-
-  const { data: activities, isLoading } = useQuery({
-    queryKey: ['dashboard-recent-activity', currentCompany?.id],
-    queryFn: async () => {
-      if (!currentCompany?.id) return [];
-
-      const items: ActivityItem[] = [];
-
-      // Últimas vendas
-      const { data: sales } = await supabase
-        .from('sales')
-        .select('id, sale_number, customer_name, total_amount, payment_status, created_at')
-        .eq('company_id', currentCompany.id)
-        .order('created_at', { ascending: false })
-        .limit(3);
-
-      (sales || []).forEach(s => {
-        items.push({
-          id: s.id,
-          type: 'sale',
-          title: `Venda #${String(s.sale_number).padStart(4, '0')}`,
-          subtitle: s.customer_name || 'Cliente não informado',
-          status: s.payment_status,
-          value: s.total_amount,
-          timestamp: s.created_at,
-        });
-      });
-
-      // Últimos orçamentos
-      const { data: quotes } = await supabase
-        .from('quotes')
-        .select('id, quote_number, customer_name, final_amount, status, created_at')
-        .eq('company_id', currentCompany.id)
-        .order('created_at', { ascending: false })
-        .limit(3);
-
-      (quotes || []).forEach(q => {
-        items.push({
-          id: q.id,
-          type: 'quote',
-          title: `Orçamento #${String(q.quote_number).padStart(4, '0')}`,
-          subtitle: q.customer_name,
-          status: q.status,
-          value: q.final_amount,
-          timestamp: q.created_at,
-        });
-      });
-
-      // Últimas OS
-      const { data: orders } = await supabase
-        .from('ordens_servico')
-        .select('id, os_number, customer_name, total_amount, status, created_at')
-        .eq('company_id', currentCompany.id)
-        .order('created_at', { ascending: false })
-        .limit(3);
-
-      (orders || []).forEach(o => {
-        items.push({
-          id: o.id,
-          type: 'order',
-          title: `OS #${String(o.os_number).padStart(4, '0')}`,
-          subtitle: o.customer_name,
-          status: o.status,
-          value: o.total_amount,
-          timestamp: o.created_at,
-        });
-      });
-
-      // Ordenar por data mais recente
-      return items.sort((a, b) => 
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      ).slice(0, 6);
-    },
-    enabled: !!currentCompany?.id,
-    ...CACHE_TIMES.DYNAMIC,
-  });
-
+export const RecentActivity = memo(function RecentActivity({ data: activities }: RecentActivityProps) {
   const getIcon = (type: ActivityItem['type']) => {
     switch (type) {
       case 'sale':
@@ -150,24 +62,6 @@ export function RecentActivity() {
   const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
-
-  if (isLoading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Clock className="h-4 w-4 text-muted-foreground" />
-            Atividade Recente
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <Card>
@@ -222,4 +116,4 @@ export function RecentActivity() {
       </CardContent>
     </Card>
   );
-}
+});

@@ -1,83 +1,20 @@
+import { memo } from 'react';
 import { Link } from 'react-router-dom';
 import { Package, Truck, ArrowRight, Clock, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { CACHE_TIMES } from '@/lib/queryConfig';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import type { PurchaseSummary } from '@/hooks/useDashboardData';
 
-interface PendingPurchaseSummary {
-  pending: number;
-  ordered: number;
-  partial: number;
-  totalItems: number;
-  oldestOrder: string | null;
-  urgentOrders: number;
+interface PendingPurchasesAlertProps {
+  data?: PurchaseSummary;
 }
 
-export function PendingPurchasesAlert() {
-  const { currentCompany } = useAuth();
-
-  const { data: summary, isLoading } = useQuery({
-    queryKey: ['pending-purchases-summary', currentCompany?.id],
-    queryFn: async (): Promise<PendingPurchaseSummary> => {
-      if (!currentCompany?.id) {
-        return { pending: 0, ordered: 0, partial: 0, totalItems: 0, oldestOrder: null, urgentOrders: 0 };
-      }
-
-      // Get counts by status
-      const { data: orders, error } = await supabase
-        .from('purchase_orders')
-        .select('id, status, created_at, expected_delivery')
-        .eq('company_id', currentCompany.id)
-        .in('status', ['pending', 'ordered', 'partial']);
-
-      if (error) throw error;
-
-      const pending = orders?.filter(o => o.status === 'pending').length || 0;
-      const ordered = orders?.filter(o => o.status === 'ordered').length || 0;
-      const partial = orders?.filter(o => o.status === 'partial').length || 0;
-
-      // Find oldest order
-      const oldestOrder = orders?.length 
-        ? orders.reduce((oldest, current) => 
-            new Date(current.created_at) < new Date(oldest.created_at) ? current : oldest
-          ).created_at
-        : null;
-
-      // Count urgent orders (expected delivery today or overdue)
-      const today = new Date().toISOString().split('T')[0];
-      const urgentOrders = orders?.filter(o => 
-        o.expected_delivery && o.expected_delivery <= today && o.status !== 'received'
-      ).length || 0;
-
-      // Get total items pending
-      const orderIds = orders?.map(o => o.id) || [];
-      let totalItems = 0;
-      
-      if (orderIds.length > 0) {
-        const { count } = await supabase
-          .from('purchase_order_items')
-          .select('*', { count: 'exact', head: true })
-          .in('purchase_order_id', orderIds)
-          .eq('status', 'pending');
-        
-        totalItems = count || 0;
-      }
-
-      return { pending, ordered, partial, totalItems, oldestOrder, urgentOrders };
-    },
-    enabled: !!currentCompany?.id,
-    ...CACHE_TIMES.DYNAMIC,
-    refetchInterval: 60000, // Refresh every minute
-  });
-
+export const PendingPurchasesAlert = memo(function PendingPurchasesAlert({ data: summary }: PendingPurchasesAlertProps) {
   // Don't render if no pending purchases
-  if (isLoading || !summary || (summary.pending === 0 && summary.ordered === 0 && summary.partial === 0)) {
+  if (!summary || (summary.pending === 0 && summary.ordered === 0 && summary.partial === 0)) {
     return null;
   }
 
@@ -187,4 +124,4 @@ export function PendingPurchasesAlert() {
       </CardContent>
     </Card>
   );
-}
+});

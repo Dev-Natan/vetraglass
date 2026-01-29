@@ -24,6 +24,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useTaskReminders } from '@/hooks/useTaskReminders';
+import { useDashboardData } from '@/hooks/useDashboardData';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Ações rápidas principais
 const quickActions = [
@@ -48,11 +50,32 @@ const quickActions = [
   },
 ];
 
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[1, 2, 3, 4].map((i) => (
+          <Skeleton key={i} className="h-32" />
+        ))}
+      </div>
+      <Skeleton className="h-40" />
+      <Skeleton className="h-48" />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Skeleton className="h-64" />
+        <Skeleton className="h-64" />
+      </div>
+    </div>
+  );
+}
+
 export default function Index() {
   const { currentCompany } = useAuth();
   
   // Ativa lembretes de tarefas próximas (15 min antes)
   useTaskReminders();
+
+  // Hook agregador - todas as queries do dashboard em paralelo
+  const { data: dashboardData, isLoading } = useDashboardData();
 
   return (
     <MainLayout>
@@ -108,45 +131,51 @@ export default function Index() {
 
         {currentCompany && (
           <>
-            {/* 🔥 LINHA 1 — PRODUÇÃO */}
-            <section className="animate-fade-in">
-              <ProductionKPIs />
-            </section>
+            {isLoading ? (
+              <DashboardSkeleton />
+            ) : (
+              <>
+                {/* 🔥 LINHA 1 — PRODUÇÃO */}
+                <section className="animate-fade-in">
+                  <ProductionKPIs data={dashboardData} />
+                </section>
 
-            {/* 🚨 LINHA 2 — ALERTAS */}
-            <section className="space-y-3 animate-fade-in">
-              <ProductionBlockedAlert />
-              <PendingPurchasesAlert />
-              <OverdueReceivablesAlert />
-              <FinancialAlerts />
-            </section>
+                {/* 🚨 LINHA 2 — ALERTAS */}
+                <section className="space-y-3 animate-fade-in">
+                  <ProductionBlockedAlert data={dashboardData?.blockedOrders} />
+                  <PendingPurchasesAlert data={dashboardData?.purchaseSummary} />
+                  <OverdueReceivablesAlert />
+                  <FinancialAlerts data={dashboardData?.financialAlerts} />
+                </section>
 
-            {/* 💰 LINHA 3 — FINANCEIRO REAL */}
-            <section className="animate-fade-in">
-              <FinancialOSSummary />
-            </section>
+                {/* 💰 LINHA 3 — FINANCEIRO REAL */}
+                <section className="animate-fade-in">
+                  <FinancialOSSummary data={dashboardData?.financialOSData} />
+                </section>
 
-            {/* ⏰ LINHA 4 — OPERAÇÃO DO DIA */}
-            <section className="animate-fade-in">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <TodayTasksWidget />
-                <OSDueTodayWidget />
-              </div>
-            </section>
+                {/* ⏰ LINHA 4 — OPERAÇÃO DO DIA */}
+                <section className="animate-fade-in">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <TodayTasksWidget data={dashboardData?.todayTasks} />
+                    <OSDueTodayWidget data={dashboardData?.osDueToday} />
+                  </div>
+                </section>
 
-            <section className="animate-fade-in">
-              <SystemReminders />
-            </section>
+                <section className="animate-fade-in">
+                  <SystemReminders />
+                </section>
 
-            {/* 📊 LINHA 5 — HISTÓRICO */}
-            <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-slide-up">
-              <ProductionFlowChart />
-              <RevenueVsCostChart />
-            </section>
+                {/* 📊 LINHA 5 — HISTÓRICO */}
+                <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-slide-up">
+                  <ProductionFlowChart data={dashboardData?.productionFlow} />
+                  <RevenueVsCostChart data={dashboardData?.revenueVsCost} />
+                </section>
 
-            <section className="animate-slide-up">
-              <RecentActivity />
-            </section>
+                <section className="animate-slide-up">
+                  <RecentActivity data={dashboardData?.recentActivity} />
+                </section>
+              </>
+            )}
           </>
         )}
 
