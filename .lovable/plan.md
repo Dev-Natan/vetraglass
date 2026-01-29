@@ -1,149 +1,98 @@
 
-
-# Plano: Desativar Cache Completamente (Zero Cache)
+# Plano: Exibir Produtos Somente Após Selecionar Linha
 
 ## Objetivo
 
-Eliminar todos os mecanismos de cache do sistema para garantir que os dados sejam sempre buscados frescos do servidor, resolvendo problemas de sincronização entre telas.
+Melhorar a experiencia do usuario no painel de adicao de produtos do orcamento, exibindo uma mensagem orientativa ao inves de produtos vazios ou todos os produtos antes da selecao de uma linha.
 
 ---
 
-## Alterações Necessárias
+## Comportamento Atual vs Desejado
 
-### 1. Remover PWA / Service Worker (`vite.config.ts`)
-
-O Service Worker é o principal vilão - ele cacheia arquivos JS, CSS, HTML e até chamadas de API.
-
-**Antes:**
-```typescript
-VitePWA({
-  selfDestroying: mode === 'development',
-  devOptions: { enabled: mode === 'development' },
-  registerType: 'autoUpdate',
-  workbox: {
-    // Cache de assets e Supabase...
-  }
-})
-```
-
-**Depois:**
-```typescript
-// PWA COMPLETAMENTE REMOVIDO
-// Comentar ou remover todo o bloco VitePWA
-```
-
-**Impacto:**
-- Sem instalação como app
-- Sem cache de arquivos
-- Sem funcionamento offline
-- Sempre versão mais recente
+| Situacao | Atual | Desejado |
+|----------|-------|----------|
+| Sem linha selecionada | Exibe TODOS os produtos | Exibe mensagem "Selecione uma linha" |
+| Com linha selecionada | Exibe produtos filtrados | Mantém igual |
+| Sem resultados | Exibe "Nenhum produto encontrado" | Mantém igual |
 
 ---
 
-### 2. Limpar Service Workers Existentes (`src/main.tsx`)
+## Alteracoes Tecnicas
 
-Substituir a lógica de atualização por uma lógica de remoção completa de SWs antigos:
+### Arquivo: `src/components/orcamentos/AddProductPanel.tsx`
 
-**Antes:**
+**1. Modificar a logica de `filteredProducts`**
+
+Retornar array vazio quando nenhuma linha estiver selecionada:
+
 ```typescript
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.addEventListener("controllerchange", () => {...});
-  // Lógica de atualização periódica
-}
-```
-
-**Depois:**
-```typescript
-// Desregistrar todos os Service Workers existentes
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.getRegistrations().then((registrations) => {
-    for (const registration of registrations) {
-      registration.unregister();
-    }
+// Linhas 121-153
+const filteredProducts = useMemo(() => {
+  // Se não há linha selecionada, não mostrar produtos
+  if (!selectedLinha) return [];
+  
+  let products = (companyProducts || []).map(cp => {
+    // ... resto do código
   });
-  // Limpar caches do Service Worker
-  if ('caches' in window) {
-    caches.keys().then((names) => {
-      for (const name of names) {
-        caches.delete(name);
-      }
-    });
-  }
-}
+  
+  // ... filtros existentes
+  return products;
+}, [companyProducts, selectedLinha, selectedCategory, searchQuery]);
 ```
+
+**2. Adicionar estado visual para "selecione uma linha"**
+
+No grid de produtos (linhas 348-354), adicionar condicao para exibir mensagem orientativa:
+
+```typescript
+{!selectedLinha ? (
+  <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-8">
+    <Layers className="w-12 h-12 mb-3 opacity-50" />
+    <p className="text-sm font-medium">Selecione uma linha</p>
+    <p className="text-xs mt-1 text-center">
+      Escolha a linha do produto no filtro acima para ver os produtos disponiveis
+    </p>
+  </div>
+) : filteredProducts.length === 0 ? (
+  // Estado existente de "nenhum produto encontrado"
+) : (
+  // Grid de produtos
+)}
+```
+
+**3. Importar icone adicional**
+
+Adicionar `Layers` aos imports do lucide-react para o estado visual.
 
 ---
 
-### 3. Desativar Cache do React Query (`src/lib/queryConfig.ts`)
+## Fluxo do Usuario Apos Alteracao
 
-**Antes:**
-```typescript
-queries: {
-  staleTime: CACHE_TIMES.SEMI_STATIC.staleTime,  // 2 minutos
-  gcTime: CACHE_TIMES.SEMI_STATIC.gcTime,        // 5 minutos
-  refetchOnWindowFocus: false,
-  refetchOnMount: true,
-}
-```
-
-**Depois:**
-```typescript
-queries: {
-  staleTime: 0,           // Dados sempre "stale"
-  gcTime: 0,              // Sem garbage collection cache
-  refetchOnWindowFocus: true,   // Recarregar ao focar
-  refetchOnMount: 'always',     // Sempre recarregar
-  refetchOnReconnect: true,
-}
-```
-
----
-
-### 4. Limpeza de Storage no Logout (`src/contexts/AuthContext.tsx`)
-
-Já está parcialmente implementado, mas vamos garantir limpeza completa:
-
-**Adicionar no signOut:**
-```typescript
-// Limpar TODO o localStorage (não só currentCompanyId)
-localStorage.clear();
-sessionStorage.clear();
+```text
+1. Usuario abre painel de adicionar produto
+   ↓
+2. Ve mensagem "Selecione uma linha" (sem produtos)
+   ↓
+3. Escolhe uma linha no dropdown
+   ↓
+4. Produtos da linha aparecem no grid
+   ↓
+5. Pode filtrar por categoria ou busca
 ```
 
 ---
 
 ## Arquivos a Modificar
 
-| Arquivo | Alteração |
+| Arquivo | Alteracao |
 |---------|-----------|
-| `vite.config.ts` | Remover/comentar plugin VitePWA |
-| `src/main.tsx` | Desregistrar SWs e limpar caches |
-| `src/lib/queryConfig.ts` | staleTime: 0, gcTime: 0 |
-| `src/contexts/AuthContext.tsx` | localStorage.clear() no logout |
-
----
-
-## Considerações
-
-**Prós:**
-- Dados sempre atualizados
-- Zero problemas de sincronização
-- Comportamento previsível
-- Usuário sempre vê versão mais recente
-
-**Contras:**
-- Mais requisições ao servidor
-- Sem funcionamento offline
-- App não pode ser "instalado" no celular
-- Carregamento pode parecer mais lento
+| `src/components/orcamentos/AddProductPanel.tsx` | Adicionar condicao para exibir estado vazio antes da selecao de linha |
 
 ---
 
 ## Resultado Esperado
 
-Após as alterações:
-1. Produtos desativados desaparecem imediatamente dos orçamentos
-2. Mudanças são refletidas instantaneamente em todas as telas
-3. Não há mais dados em cache causando inconsistências
-4. Sistema sempre busca dados frescos do servidor
-
+- Ao abrir o painel, usuario ve mensagem clara para selecionar uma linha
+- Apos selecionar a linha, produtos aparecem imediatamente
+- Experiencia mais guiada e menos confusa
+- Interface mais limpa sem exibir produtos desnecessariamente
