@@ -58,7 +58,7 @@ const MODULES: { id: Module; label: string; description: string }[] = [
   { id: 'plano-corte', label: 'Plano de Corte', description: 'Otimização de corte' },
   { id: 'produtos', label: 'Produtos', description: 'Catálogo e preços' },
   { id: 'estoque', label: 'Estoque', description: 'Controle de estoque' },
-  { id: 'caixa-vendas', label: 'Caixa e Vendas', description: 'PDV e vendas' },
+  { id: 'caixa-vendas', label: 'Caixa', description: 'PDV e vendas' },
   { id: 'financeiro', label: 'Financeiro', description: 'Relatórios financeiros' },
   { id: 'notas-fiscais', label: 'Fiscal', description: 'Emissão de NF' },
   { id: 'funcionarios', label: 'Funcionários', description: 'Gerenciar equipe' },

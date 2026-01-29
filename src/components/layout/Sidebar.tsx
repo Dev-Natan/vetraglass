@@ -55,7 +55,7 @@ const menuItems: MenuItem[] = [
   { icon: Package, label: 'Produtos', path: '/produtos', module: 'produtos', tutorialId: 'menu-produtos' },
   { icon: Boxes, label: 'Estoque', path: '/estoque', module: 'estoque', tutorialId: 'menu-estoque' },
   { icon: FileText, label: 'Orçamentos', path: '/orcamentos', module: 'orcamentos', tutorialId: 'menu-orcamentos' },
-  { icon: ShoppingCart, label: 'Caixa & Vendas', path: '/caixa-vendas', module: 'caixa-vendas', tutorialId: 'menu-caixa' },
+  { icon: ShoppingCart, label: 'Caixa', path: '/caixa-vendas', module: 'caixa-vendas', tutorialId: 'menu-caixa' },
   { icon: ClipboardList, label: 'Ordens de Serviço', path: '/ordens-servico', module: 'ordens-servico', tutorialId: 'menu-ordens-servico' },
   
   // Operacional
