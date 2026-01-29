@@ -1,16 +1,33 @@
-import { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useMemo, useCallback } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Boxes, TrendingDown, TrendingUp, Package, Plus, MapPin, DollarSign, Power, Scissors, History } from 'lucide-react';
+import { Boxes, TrendingDown, TrendingUp, Plus, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AddStockDialog } from '@/components/estoque/AddStockDialog';
 import { EditItemPriceDialog } from '@/components/estoque/EditItemPriceDialog';
 import { RegistrarMovimentoDialog } from '@/components/estoque/RegistrarMovimentoDialog';
 import { HistoricoMovimentosTab } from '@/components/estoque/HistoricoMovimentosTab';
+import { StockItemCard } from '@/components/estoque/StockItemCard';
+import { StockKPIs } from '@/components/estoque/StockKPIs';
+import { StockFilters, type StockStatus, type StockSortBy, type ViewMode } from '@/components/estoque/StockFilters';
+import { StockGridView } from '@/components/estoque/StockGridView';
+import { useStockData, type StockItem } from '@/hooks/useStockData';
+
+interface RegistrarMovimentoStockItem {
+  id: string;
+  item_template_id: string;
+  quantity: number;
+  item_template?: {
+    id: string;
+    name: string;
+    unit?: string;
+    image_url?: string;
+  };
+}
+import { exportStockToExcel } from '@/utils/exportStockToExcel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 
@@ -21,6 +38,7 @@ export default function Estoque() {
   // Module tutorial trigger
   useModuleTutorialTrigger('estoque');
   
+  // Dialog states
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [priceDialogOpen, setPriceDialogOpen] = useState(false);
   const [entradaDialogOpen, setEntradaDialogOpen] = useState(false);
@@ -32,64 +50,35 @@ export default function Estoque() {
     imageUrl?: string | null;
     unit?: string;
   } | null>(null);
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
 
-  // Fetch company stock
+  // Filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [linhaFilter, setLinhaFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState<StockStatus>('all');
+  const [sortBy, setSortBy] = useState<StockSortBy>('name');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [isExporting, setIsExporting] = useState(false);
+
+  // Use aggregated stock data hook
   const {
-    data: stockData,
-    isLoading: loadingStock,
-    error: stockError,
-  } = useQuery({
-    queryKey: ['company-stock', currentCompany?.id],
-    queryFn: async () => {
-      if (!currentCompany?.id) return [];
+    activeItems,
+    inactiveItems,
+    lowStockItems,
+    itemTemplates,
+    isLoading,
+    error: loadError,
+    kpis,
+  } = useStockData({ companyId: currentCompany?.id });
 
-      const { data, error } = await supabase
-        .from('company_stock')
-        .select('*')
-        .eq('company_id', currentCompany.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!currentCompany?.id,
-  });
-
-  // Fetch item templates (optimized select)
-  const {
-    data: itemTemplates,
-    isLoading: loadingItems,
-    error: itemsError,
-  } = useQuery({
-    queryKey: ['item-templates'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('item_templates')
-        .select('id, name, type, unit, image_url, linha')
-        .eq('is_active', true);
-
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  // Fetch company item prices
-  const { data: itemPrices } = useQuery({
-    queryKey: ['company-item-prices', currentCompany?.id],
-    queryFn: async () => {
-      if (!currentCompany?.id) return [];
-
-      const { data, error } = await supabase
-        .from('company_item_prices')
-        .select('*')
-        .eq('company_id', currentCompany.id);
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!currentCompany?.id,
-  });
+  // Get unique linhas for filter
+  const linhas = useMemo(() => {
+    const uniqueLinhas = new Set<string>();
+    itemTemplates.forEach((t) => {
+      if (t.linha) uniqueLinhas.add(t.linha);
+    });
+    return Array.from(uniqueLinhas).sort();
+  }, [itemTemplates]);
 
   // Toggle active mutation
   const toggleActiveMutation = useMutation({
@@ -105,32 +94,82 @@ export default function Estoque() {
       queryClient.invalidateQueries({ queryKey: ['company-stock'] });
       toast.success(isActive ? 'Item ativado' : 'Item desativado');
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error('Erro ao atualizar item: ' + error.message);
     },
   });
 
-  // Combine stock with item details and prices
-  const stockItems = useMemo(() => {
-    if (!stockData || !itemTemplates) return [];
-    return stockData.map((stock) => {
-      const item_template = itemTemplates.find((t) => t.id === stock.item_template_id);
-      const priceInfo = itemPrices?.find((p) => p.item_template_id === stock.item_template_id);
-      return { ...stock, item_template, priceInfo };
+  // Filtered and sorted items
+  const filteredItems = useMemo(() => {
+    let items = [...activeItems];
+
+    // Search filter
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase();
+      items = items.filter((item) =>
+        item.item_template?.name?.toLowerCase().includes(search)
+      );
+    }
+
+    // Category filter
+    if (categoryFilter !== 'all') {
+      items = items.filter((item) => item.item_template?.type === categoryFilter);
+    }
+
+    // Linha filter
+    if (linhaFilter !== 'all') {
+      items = items.filter((item) => item.item_template?.linha === linhaFilter);
+    }
+
+    // Status filter
+    if (statusFilter === 'low') {
+      items = items.filter(
+        (item) => item.quantity <= (item.min_quantity || 0) && (item.min_quantity || 0) > 0
+      );
+    } else if (statusFilter === 'zero') {
+      items = items.filter((item) => item.quantity === 0);
+    } else if (statusFilter === 'normal') {
+      items = items.filter(
+        (item) => item.quantity > (item.min_quantity || 0) || (item.min_quantity || 0) === 0
+      );
+    }
+
+    // Sort
+    items.sort((a, b) => {
+      if (sortBy === 'name') {
+        return (a.item_template?.name || '').localeCompare(b.item_template?.name || '');
+      } else if (sortBy === 'quantity') {
+        return b.quantity - a.quantity;
+      } else if (sortBy === 'value') {
+        const aValue = a.quantity * (a.priceInfo?.cost || 0);
+        const bValue = b.quantity * (b.priceInfo?.cost || 0);
+        return bValue - aValue;
+      }
+      return 0;
     });
-  }, [stockData, itemTemplates, itemPrices]);
 
-  // Filter by category
-  const filteredStockItems = useMemo(() => {
-    if (categoryFilter === 'all') return stockItems;
-    return stockItems.filter((item) => item.item_template?.type === categoryFilter);
-  }, [stockItems, categoryFilter]);
+    return items;
+  }, [activeItems, searchTerm, categoryFilter, linhaFilter, statusFilter, sortBy]);
 
-  // Split active/inactive
-  const activeItems = useMemo(() => filteredStockItems.filter((i) => i.is_active !== false), [filteredStockItems]);
-  const inactiveItems = useMemo(() => filteredStockItems.filter((i) => i.is_active === false), [filteredStockItems]);
+  // Inactive items with same filters
+  const filteredInactiveItems = useMemo(() => {
+    let items = [...inactiveItems];
 
-  const handleOpenPriceDialog = (item: typeof stockItems[0]) => {
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase();
+      items = items.filter((item) =>
+        item.item_template?.name?.toLowerCase().includes(search)
+      );
+    }
+
+    if (categoryFilter !== 'all') {
+      items = items.filter((item) => item.item_template?.type === categoryFilter);
+    }
+
+    return items;
+  }, [inactiveItems, searchTerm, categoryFilter]);
+
+  const handleOpenPriceDialog = useCallback((item: StockItem) => {
     setSelectedItem({
       id: item.item_template_id,
       name: item.item_template?.name ?? 'Item',
@@ -138,118 +177,30 @@ export default function Estoque() {
       unit: item.item_template?.unit,
     });
     setPriceDialogOpen(true);
-  };
+  }, []);
 
-  const handleToggleActive = (e: React.MouseEvent, stockId: string, currentActive: boolean) => {
+  const handleToggleActive = useCallback((e: React.MouseEvent, stockId: string, currentActive: boolean) => {
     e.stopPropagation();
     toggleActiveMutation.mutate({ stockId, isActive: !currentActive });
-  };
+  }, [toggleActiveMutation]);
 
-  const isLoading = loadingStock || loadingItems;
-  const loadError = stockError || itemsError;
+  const handleExport = useCallback(async () => {
+    if (filteredItems.length === 0) {
+      toast.error('Nenhum item para exportar');
+      return;
+    }
 
-  // Filter low stock items (only active)
-  const lowStockItems = activeItems?.filter(
-    (item) => item.quantity <= (item.min_quantity || 0) && item.min_quantity > 0
-  );
-
-  const itemTypeLabels: Record<string, string> = {
-    glass: 'Vidro',
-    profile: 'Perfil',
-    accessory: 'Acessório',
-    service: 'Serviço',
-  };
-
-  const renderStockItem = (item: typeof stockItems[0], showActivateBtn = true) => (
-    <div
-      key={item.id}
-      className={`flex items-center justify-between gap-3 p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer ${
-        item.is_active === false ? 'opacity-60' : ''
-      }`}
-      onClick={() => handleOpenPriceDialog(item)}
-    >
-      <div className="flex items-center gap-3 min-w-0 flex-1">
-        {item.item_template?.image_url ? (
-          <div className="h-12 w-12 rounded-md border bg-white p-1 flex items-center justify-center shrink-0">
-            <img
-              src={item.item_template.image_url}
-              alt={item.item_template?.name ?? 'Item'}
-              loading="lazy"
-              className="max-h-full max-w-full object-contain"
-            />
-          </div>
-        ) : (
-          <div className="h-12 w-12 rounded-md border bg-background flex items-center justify-center shrink-0">
-            <Package className="h-6 w-6 text-muted-foreground" />
-          </div>
-        )}
-
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 min-w-0">
-            <p className="font-medium truncate">{item.item_template?.name ?? `Item (${item.item_template_id})`}</p>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0">
-              {itemTypeLabels[item.item_template?.type || ''] || item.item_template?.type}
-            </span>
-            {(item as any).allow_fractional && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary shrink-0 flex items-center gap-1" title="Venda fracionada habilitada">
-                <Scissors className="w-3 h-3" />
-                Fracionado
-              </span>
-            )}
-          </div>
-          {item.location && (
-            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-              <MapPin className="w-3 h-3" />
-              {item.location}
-            </p>
-          )}
-          {item.priceInfo && (item.priceInfo.cost > 0 || item.priceInfo.price > 0) ? (
-            <div className="flex items-center gap-3 mt-1 text-xs">
-              {item.priceInfo.cost > 0 && (
-                <span className="text-muted-foreground">
-                  Custo: R$ {Number(item.priceInfo.cost).toFixed(2)}
-                </span>
-              )}
-              {item.priceInfo.price > 0 && (
-                <span className="text-green-600 font-medium">
-                  Venda: R$ {Number(item.priceInfo.price).toFixed(2)}
-                </span>
-              )}
-            </div>
-          ) : (
-            <p className="text-xs text-muted-foreground/70 flex items-center gap-1 mt-1">
-              <DollarSign className="w-3 h-3" />
-              Clique para definir preços
-            </p>
-          )}
-        </div>
-      </div>
-
-      <div className="flex items-center gap-3">
-        <div className="text-right">
-          <p className="font-semibold text-lg">
-            {item.quantity}{' '}
-            <span className="text-sm text-muted-foreground">{item.item_template?.unit}</span>
-          </p>
-          {item.min_quantity > 0 && (
-            <p className="text-xs text-muted-foreground">Mín: {item.min_quantity}</p>
-          )}
-        </div>
-
-        {showActivateBtn && (
-          <Button
-            variant={item.is_active !== false ? 'outline' : 'default'}
-            size="icon"
-            className="shrink-0"
-            onClick={(e) => handleToggleActive(e, item.id, item.is_active !== false)}
-            title={item.is_active !== false ? 'Desativar item' : 'Ativar item'}
-          >
-            <Power className="w-4 h-4" />
-          </Button>
-        )}
-      </div>
-    </div>
-  );
+    setIsExporting(true);
+    try {
+      await exportStockToExcel(filteredItems, currentCompany?.name);
+      toast.success('Relatório exportado com sucesso!');
+    } catch (error) {
+      toast.error('Erro ao exportar relatório');
+      console.error(error);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [filteredItems, currentCompany?.name]);
 
   return (
     <MainLayout>
@@ -278,6 +229,14 @@ export default function Estoque() {
           </div>
         </div>
 
+        {/* KPIs */}
+        <StockKPIs
+          totalItems={kpis.totalItems}
+          totalValue={kpis.totalValue}
+          lowStockCount={kpis.lowStockCount}
+          zeroStockCount={kpis.zeroStockCount}
+        />
+
         {/* Main Tabs */}
         <Tabs value={mainTab} onValueChange={setMainTab}>
           <TabsList>
@@ -291,140 +250,129 @@ export default function Estoque() {
             </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="estoque" className="mt-4">
-
-        {!currentCompany && (
-          <div className="rounded-lg border border-border bg-muted p-4 text-sm text-muted-foreground">
-            Selecione uma empresa para ver o estoque.
-          </div>
-        )}
-
-        {loadError && (
-          <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
-            Erro ao carregar estoque: {(loadError as any)?.message ?? String(loadError)}
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Stock Alerts */}
-          <div className="section-card lg:col-span-1">
-            <h2 className="font-display font-semibold text-lg text-foreground mb-4 flex items-center gap-2">
-              <Package className="w-5 h-5 text-destructive" />
-              Estoque Baixo
-            </h2>
-            {lowStockItems && lowStockItems.length > 0 ? (
-              <div className="space-y-2">
-                {lowStockItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-destructive/10 border border-destructive/20"
-                  >
-                    <div className="flex items-center gap-3">
-                      {item.item_template?.image_url ? (
-                        <div className="h-10 w-10 rounded-md border bg-background p-1 flex items-center justify-center">
-                          <img
-                            src={item.item_template.image_url}
-                            alt={item.item_template?.name ?? 'Item'}
-                            loading="lazy"
-                            className="max-h-full max-w-full object-contain"
-                          />
-                        </div>
-                      ) : (
-                        <div className="h-10 w-10 rounded-md border bg-background flex items-center justify-center">
-                          <Package className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                      )}
-
-                      <div>
-                        <p className="font-medium text-sm">
-                          {item.item_template?.name ?? `Item (${item.item_template_id})`}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Mínimo: {item.min_quantity} {item.item_template?.unit}
-                        </p>
-                      </div>
-                    </div>
-
-                    <span className="text-destructive font-semibold">
-                      {item.quantity} {item.item_template?.unit}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <Package className="w-10 h-10 text-muted-foreground/50 mb-3" />
-                <p className="text-sm text-muted-foreground">Nenhum alerta de estoque</p>
+          <TabsContent value="estoque" className="mt-4 space-y-4">
+            {!currentCompany && (
+              <div className="rounded-lg border border-border bg-muted p-4 text-sm text-muted-foreground">
+                Selecione uma empresa para ver o estoque.
               </div>
             )}
-          </div>
 
-          {/* Stock List with Tabs */}
-          <div className="section-card lg:col-span-2">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-              <h2 className="font-display font-semibold text-lg text-foreground">Itens em Estoque</h2>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filtrar categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas categorias</SelectItem>
-                  <SelectItem value="profile">Perfis</SelectItem>
-                  <SelectItem value="glass">Vidros</SelectItem>
-                  <SelectItem value="accessory">Acessórios</SelectItem>
-                  <SelectItem value="service">Serviços</SelectItem>
-                </SelectContent>
-              </Select>
+            {loadError && (
+              <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
+                Erro ao carregar estoque: {loadError?.message ?? String(loadError)}
+              </div>
+            )}
+
+            {/* Filters */}
+            <div className="section-card">
+              <StockFilters
+                searchTerm={searchTerm}
+                onSearchChange={setSearchTerm}
+                categoryFilter={categoryFilter}
+                onCategoryChange={setCategoryFilter}
+                statusFilter={statusFilter}
+                onStatusChange={setStatusFilter}
+                sortBy={sortBy}
+                onSortChange={setSortBy}
+                viewMode={viewMode}
+                onViewModeChange={setViewMode}
+                onExport={handleExport}
+                isExporting={isExporting}
+                linhas={linhas}
+                linhaFilter={linhaFilter}
+                onLinhaChange={setLinhaFilter}
+              />
             </div>
 
-            <Tabs defaultValue="active" className="w-full">
-              <TabsList className="mb-4">
-                <TabsTrigger value="active">
-                  Ativos ({activeItems.length})
-                </TabsTrigger>
-                <TabsTrigger value="inactive">
-                  Desativados ({inactiveItems.length})
-                </TabsTrigger>
-              </TabsList>
+            {/* Stock List/Grid */}
+            <div className="section-card">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="font-display font-semibold text-lg text-foreground">
+                  Itens em Estoque ({filteredItems.length})
+                </h2>
+              </div>
 
-              <TabsContent value="active">
-                {isLoading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                  </div>
-                ) : activeItems.length > 0 ? (
-                  <div className="space-y-2">{activeItems.map((item) => renderStockItem(item))}</div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <Boxes className="w-12 h-12 text-muted-foreground/50 mb-4" />
-                    <h3 className="font-medium text-foreground mb-1">Nenhum item ativo</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Adicione itens para controlar seu estoque.
-                    </p>
-                    <Button onClick={() => setAddDialogOpen(true)} className="gap-2">
-                      <Plus className="w-4 h-4" />
-                      Adicionar Primeiro Item
-                    </Button>
-                  </div>
-                )}
-              </TabsContent>
+              <Tabs defaultValue="active" className="w-full">
+                <TabsList className="mb-4">
+                  <TabsTrigger value="active">
+                    Ativos ({filteredItems.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="inactive">
+                    Desativados ({filteredInactiveItems.length})
+                  </TabsTrigger>
+                </TabsList>
 
-              <TabsContent value="inactive">
-                {inactiveItems.length > 0 ? (
-                  <div className="space-y-2">{inactiveItems.map((item) => renderStockItem(item))}</div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <Package className="w-12 h-12 text-muted-foreground/50 mb-4" />
-                    <h3 className="font-medium text-foreground mb-1">Nenhum item desativado</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Itens desativados aparecerão aqui.
-                    </p>
-                  </div>
-                )}
-              </TabsContent>
-            </Tabs>
-          </div>
-        </div>
+                <TabsContent value="active">
+                  {isLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    </div>
+                  ) : viewMode === 'grid' ? (
+                    <StockGridView
+                      items={filteredItems}
+                      onEdit={handleOpenPriceDialog}
+                      onToggleActive={handleToggleActive}
+                    />
+                  ) : filteredItems.length > 0 ? (
+                    <div className="space-y-2">
+                      {filteredItems.map((item) => (
+                        <StockItemCard
+                          key={item.id}
+                          item={item}
+                          onEdit={handleOpenPriceDialog}
+                          onToggleActive={handleToggleActive}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <Boxes className="w-12 h-12 text-muted-foreground/50 mb-4" />
+                      <h3 className="font-medium text-foreground mb-1">Nenhum item encontrado</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        {searchTerm || categoryFilter !== 'all' || statusFilter !== 'all'
+                          ? 'Tente ajustar os filtros.'
+                          : 'Adicione itens para controlar seu estoque.'}
+                      </p>
+                      {!searchTerm && categoryFilter === 'all' && statusFilter === 'all' && (
+                        <Button onClick={() => setAddDialogOpen(true)} className="gap-2">
+                          <Plus className="w-4 h-4" />
+                          Adicionar Primeiro Item
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="inactive">
+                  {viewMode === 'grid' ? (
+                    <StockGridView
+                      items={filteredInactiveItems}
+                      onEdit={handleOpenPriceDialog}
+                      onToggleActive={handleToggleActive}
+                    />
+                  ) : filteredInactiveItems.length > 0 ? (
+                    <div className="space-y-2">
+                      {filteredInactiveItems.map((item) => (
+                        <StockItemCard
+                          key={item.id}
+                          item={item}
+                          onEdit={handleOpenPriceDialog}
+                          onToggleActive={handleToggleActive}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <Boxes className="w-12 h-12 text-muted-foreground/50 mb-4" />
+                      <h3 className="font-medium text-foreground mb-1">Nenhum item desativado</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Itens desativados aparecerão aqui.
+                      </p>
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </div>
           </TabsContent>
           
           <TabsContent value="historico" className="mt-4">
@@ -433,7 +381,12 @@ export default function Estoque() {
         </Tabs>
       </div>
 
-      <AddStockDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} />
+      {/* Dialogs */}
+      <AddStockDialog
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
+      />
+
       <EditItemPriceDialog
         open={priceDialogOpen}
         onOpenChange={setPriceDialogOpen}
@@ -442,17 +395,39 @@ export default function Estoque() {
         itemImageUrl={selectedItem?.imageUrl}
         itemUnit={selectedItem?.unit}
       />
+
       <RegistrarMovimentoDialog
         open={entradaDialogOpen}
         onOpenChange={setEntradaDialogOpen}
         tipo="entrada"
-        stockItems={stockItems}
+        stockItems={activeItems.map(item => ({
+          id: item.id,
+          item_template_id: item.item_template_id,
+          quantity: item.quantity,
+          item_template: item.item_template ? {
+            id: item.item_template.id,
+            name: item.item_template.name,
+            unit: item.item_template.unit,
+            image_url: item.item_template.image_url || undefined,
+          } : undefined,
+        }))}
       />
+
       <RegistrarMovimentoDialog
         open={saidaDialogOpen}
         onOpenChange={setSaidaDialogOpen}
         tipo="saida"
-        stockItems={stockItems}
+        stockItems={activeItems.map(item => ({
+          id: item.id,
+          item_template_id: item.item_template_id,
+          quantity: item.quantity,
+          item_template: item.item_template ? {
+            id: item.item_template.id,
+            name: item.item_template.name,
+            unit: item.item_template.unit,
+            image_url: item.item_template.image_url || undefined,
+          } : undefined,
+        }))}
       />
     </MainLayout>
   );
