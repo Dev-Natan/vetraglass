@@ -1,3 +1,4 @@
+import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
@@ -60,8 +61,9 @@ interface ModuleRowProps {
   isLoading: boolean;
 }
 
-function ModuleRow({ module, onToggle, isLoading }: ModuleRowProps) {
+const ModuleRow = React.memo(function ModuleRow({ module, onToggle, isLoading }: ModuleRowProps) {
   const IconComponent = iconMap[module.icon || ""] || Puzzle;
+  const isEssential = module.module_key === "dashboard" || module.module_key === "configuracoes";
 
   return (
     <div className="flex items-center justify-between py-3 px-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
@@ -80,7 +82,7 @@ function ModuleRow({ module, onToggle, isLoading }: ModuleRowProps) {
             ) : (
               <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 text-xs">
                 <Lock className="h-3 w-3 mr-1" />
-                Bloqueado
+                Oculto
               </Badge>
             )}
           </div>
@@ -88,13 +90,13 @@ function ModuleRow({ module, onToggle, isLoading }: ModuleRowProps) {
         </div>
       </div>
       <Switch
-        checked={module.is_enabled}
+        checked={module.is_enabled === true}
         onCheckedChange={(checked) => onToggle(module.module_key, checked)}
-        disabled={isLoading || module.module_key === "dashboard" || module.module_key === "configuracoes"}
+        disabled={isLoading || isEssential}
       />
     </div>
   );
-}
+});
 
 export function ModulesTab() {
   const { data: modules, isLoading } = useModuleSettings();
