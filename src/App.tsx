@@ -201,9 +201,7 @@ function AppRoutes() {
       <Route path="/pedidos-compra" element={
         <ProtectedRoute><LazyRoute><PedidosCompra /></LazyRoute></ProtectedRoute>
       } />
-      <Route path="/agenda" element={
-        <ProtectedRoute><LazyRoute><Agenda /></LazyRoute></ProtectedRoute>
-      } />
+      <Route path="/agenda" element={<Navigate to="/ordens-servico?tab=calendario" replace />} />
       <Route path="/medicoes" element={
         <ProtectedRoute><LazyRoute><Medicoes /></LazyRoute></ProtectedRoute>
       } />
