@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { ArrowLeft, Printer, Download, Tags, BarChart3, Scissors, Square, Save, FileDown } from 'lucide-react';
+import { ArrowLeft, Printer, Download, Tags, BarChart3, Scissors, Square, Save, FileDown, FolderOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,6 +21,7 @@ import { GlassProjectCanvas } from '@/components/projeto-vidro/GlassProjectCanva
 import { PiecesTable } from '@/components/projeto-vidro/PiecesTable';
 import { ProductInfoHeader } from '@/components/projeto-vidro/ProductInfoHeader';
 import { SaveProjectDialog } from '@/components/projeto-vidro/SaveProjectDialog';
+import { SavedProjectsSheet } from '@/components/projeto-vidro/SavedProjectsSheet';
 import { Hole, Cutout } from '@/components/projeto-vidro/HoleCutoutEditor';
 import { generateGlassProjectPdf } from '@/utils/generateGlassProjectPdf';
 import { toast } from 'sonner';
@@ -542,6 +543,31 @@ export default function Producao() {
     await saveProjectMutation.mutateAsync({ name, notes });
   };
 
+  // Handler to load a saved project
+  const handleLoadProject = (project: any) => {
+    if (project.product_template_id) {
+      setSelectedProduct(project.product_template_id);
+    }
+    setWidth(project.vao_width);
+    setHeight(project.vao_height);
+    setQuantity(project.quantity);
+    setLockHeight(project.lock_height);
+    
+    // Restore panel modifications from saved panels
+    if (project.panels && Array.isArray(project.panels)) {
+      const mods: Record<string, { holes: Hole[]; cutouts: Cutout[] }> = {};
+      project.panels.forEach((panel: any) => {
+        if (panel.holes?.length > 0 || panel.cutouts?.length > 0) {
+          mods[panel.id] = {
+            holes: panel.holes || [],
+            cutouts: panel.cutouts || []
+          };
+        }
+      });
+      setPanelModifications(mods);
+    }
+  };
+
   const handleExportGlassPdf = () => {
     const pdf = generateGlassProjectPdf({
       productName: selectedProductData?.name || 'Produto',
@@ -612,6 +638,7 @@ export default function Producao() {
               </DropdownMenu>
             ) : (
               <div className="flex gap-2">
+                <SavedProjectsSheet onLoadProject={handleLoadProject} />
                 <Button variant="outline" onClick={handleExportGlassPdf} disabled={!selectedProduct || glassPanels.length === 0}>
                   <FileDown className="w-4 h-4 mr-2" />
                   Exportar PDF
