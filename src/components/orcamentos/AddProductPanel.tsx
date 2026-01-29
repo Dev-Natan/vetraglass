@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Package, Check, ArrowLeft, Ruler, DollarSign, Sparkles, Info, GlassWater } from 'lucide-react';
+import { Search, Package, Check, ArrowLeft, Ruler, DollarSign, Sparkles, Info, GlassWater, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
 import { useProductLinhas } from '@/hooks/useProductLinhas';
@@ -119,6 +119,9 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
 
   // Get filtered products from active company products
   const filteredProducts = useMemo(() => {
+    // Se não há linha selecionada, não mostrar produtos
+    if (!selectedLinha) return [];
+    
     let products = (companyProducts || []).map(cp => {
       const template = cp.product_template as any;
       return {
@@ -135,9 +138,9 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
       };
     });
     
-    if (selectedLinha) {
-      products = products.filter(p => p.linha === selectedLinha);
-    }
+    // Filtra pela linha selecionada
+    products = products.filter(p => p.linha === selectedLinha);
+    
     if (selectedCategory) {
       products = products.filter(p => p.category === selectedCategory);
     }
@@ -336,7 +339,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
       {/* Scrollable Middle - Products Grid */}
       <div className="flex-1 min-h-0 mb-4">
         <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 block">
-          Selecione um produto ({filteredProducts.length})
+          Selecione um produto {selectedLinha ? `(${filteredProducts.length})` : ''}
         </label>
         <ScrollArea className="h-[240px] rounded-xl border bg-muted/20 p-3">
           {isLoading ? (
@@ -344,6 +347,14 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <div key={i} className="aspect-square rounded-xl bg-muted animate-pulse" />
               ))}
+            </div>
+          ) : !selectedLinha ? (
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-8">
+              <Layers className="w-12 h-12 mb-3 opacity-50" />
+              <p className="text-sm font-medium">Selecione uma linha</p>
+              <p className="text-xs mt-1 text-center max-w-[200px]">
+                Escolha a linha do produto no filtro acima para ver os produtos disponíveis
+              </p>
             </div>
           ) : filteredProducts.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-8">
