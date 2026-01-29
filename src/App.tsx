@@ -9,20 +9,20 @@ import { lazy, Suspense } from "react";
 import { LazyPageLoader } from "@/components/common/LazyPageLoader";
 import { Loader2 } from "lucide-react";
 
-// Core pages - loaded immediately (most used)
+// Core pages - loaded immediately (minimal bundle)
 import Landing from "./pages/Landing";
-import Index from "./pages/Index";
 import Auth from "./pages/Auth";
-import Produtos from "./pages/Produtos";
-import ProdutosLinha from "./pages/ProdutosLinha";
-import Orcamentos from "./pages/Orcamentos";
-import OrdensServico from "./pages/OrdensServico";
-import Clientes from "./pages/Clientes";
-import CaixaVendas from "./pages/CaixaVendas";
-import Estoque from "./pages/Estoque";
-import PlanoCorte from "./pages/PlanoCorte";
 
-// Lazy loaded pages - less frequently used
+// Lazy loaded pages - all core pages loaded on demand
+const Index = lazy(() => import("./pages/Index"));
+const Produtos = lazy(() => import("./pages/Produtos"));
+const ProdutosLinha = lazy(() => import("./pages/ProdutosLinha"));
+const Orcamentos = lazy(() => import("./pages/Orcamentos"));
+const OrdensServico = lazy(() => import("./pages/OrdensServico"));
+const Clientes = lazy(() => import("./pages/Clientes"));
+const CaixaVendas = lazy(() => import("./pages/CaixaVendas"));
+const Estoque = lazy(() => import("./pages/Estoque"));
+const PlanoCorte = lazy(() => import("./pages/PlanoCorte"));
 const RecuperarSenha = lazy(() => import("./pages/RecuperarSenha"));
 const RedefinirSenha = lazy(() => import("./pages/RedefinirSenha"));
 const CompanySetup = lazy(() => import("./pages/CompanySetup"));
@@ -99,7 +99,7 @@ function IndexRedirect() {
     return <Navigate to="/admin" replace />;
   }
   
-  return <Index />;
+  return <Suspense fallback={<LazyPageLoader />}><Index /></Suspense>;
 }
 
 function LandingRedirect() {
@@ -164,15 +164,15 @@ function AppRoutes() {
       
       {/* Dashboard - protected */}
       <Route path="/dashboard" element={<ProtectedRoute><IndexRedirect /></ProtectedRoute>} />
-      <Route path="/clientes" element={<ProtectedRoute><Clientes /></ProtectedRoute>} />
-      <Route path="/produtos" element={<ProtectedRoute><Produtos /></ProtectedRoute>} />
-      <Route path="/produtos/linha/:linha" element={<ProtectedRoute><ProdutosLinha /></ProtectedRoute>} />
-      <Route path="/orcamentos" element={<ProtectedRoute><Orcamentos /></ProtectedRoute>} />
-      <Route path="/ordens-servico" element={<ProtectedRoute><OrdensServico /></ProtectedRoute>} />
-      <Route path="/estoque" element={<ProtectedRoute><Estoque /></ProtectedRoute>} />
-      <Route path="/caixa-vendas" element={<ProtectedRoute><CaixaVendas /></ProtectedRoute>} />
+      <Route path="/clientes" element={<ProtectedRoute><LazyRoute><Clientes /></LazyRoute></ProtectedRoute>} />
+      <Route path="/produtos" element={<ProtectedRoute><LazyRoute><Produtos /></LazyRoute></ProtectedRoute>} />
+      <Route path="/produtos/linha/:linha" element={<ProtectedRoute><LazyRoute><ProdutosLinha /></LazyRoute></ProtectedRoute>} />
+      <Route path="/orcamentos" element={<ProtectedRoute><LazyRoute><Orcamentos /></LazyRoute></ProtectedRoute>} />
+      <Route path="/ordens-servico" element={<ProtectedRoute><LazyRoute><OrdensServico /></LazyRoute></ProtectedRoute>} />
+      <Route path="/estoque" element={<ProtectedRoute><LazyRoute><Estoque /></LazyRoute></ProtectedRoute>} />
+      <Route path="/caixa-vendas" element={<ProtectedRoute><LazyRoute><CaixaVendas /></LazyRoute></ProtectedRoute>} />
       <Route path="/vendas" element={<Navigate to="/caixa-vendas" replace />} />
-      <Route path="/plano-corte" element={<ProtectedRoute><PlanoCorte /></ProtectedRoute>} />
+      <Route path="/plano-corte" element={<ProtectedRoute><LazyRoute><PlanoCorte /></LazyRoute></ProtectedRoute>} />
       
       {/* Lazy loaded routes */}
       <Route path="/produtos/editar/:id" element={
