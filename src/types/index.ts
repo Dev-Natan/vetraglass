@@ -2,7 +2,7 @@ export interface Company {
   id: string;
   name: string;
   logo?: string;
-  cnpj: string;
+  cnpj?: string | null;
 }
 
 export interface Order {

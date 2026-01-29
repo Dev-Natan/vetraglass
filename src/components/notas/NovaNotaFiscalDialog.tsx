@@ -118,6 +118,17 @@ export default function NovaNotaFiscalDialog({
     
     setValidatingConfig(true);
     try {
+      // Verificar se empresa tem CNPJ (obrigatório para NF)
+      if (!company?.cnpj) {
+        setConfigValidation({ 
+          valid: false, 
+          error: 'CNPJ da empresa é obrigatório para emissão de notas fiscais. Configure em Dados da Empresa.',
+          field: 'cnpj'
+        });
+        setValidatingConfig(false);
+        return;
+      }
+      
       const { data, error } = await supabase.functions.invoke("focusnfe", {
         body: {
           action: "validar_configuracao",

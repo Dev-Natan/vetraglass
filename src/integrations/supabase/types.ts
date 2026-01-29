@@ -809,7 +809,7 @@ export type Database = {
           certificado_serial: string | null
           certificado_status: string | null
           certificado_ultima_verificacao: string | null
-          cnpj: string
+          cnpj: string | null
           codigo_municipio_ibge: string | null
           created_at: string
           email: string | null
@@ -838,7 +838,7 @@ export type Database = {
           certificado_serial?: string | null
           certificado_status?: string | null
           certificado_ultima_verificacao?: string | null
-          cnpj: string
+          cnpj?: string | null
           codigo_municipio_ibge?: string | null
           created_at?: string
           email?: string | null
@@ -867,7 +867,7 @@ export type Database = {
           certificado_serial?: string | null
           certificado_status?: string | null
           certificado_ultima_verificacao?: string | null
-          cnpj?: string
+          cnpj?: string | null
           codigo_municipio_ibge?: string | null
           created_at?: string
           email?: string | null
@@ -6001,7 +6001,7 @@ export type Database = {
       create_company_and_assign_admin: {
         Args: {
           _address?: string
-          _cnpj: string
+          _cnpj?: string
           _email?: string
           _name: string
           _phone?: string
@@ -6017,7 +6017,7 @@ export type Database = {
           certificado_serial: string | null
           certificado_status: string | null
           certificado_ultima_verificacao: string | null
-          cnpj: string
+          cnpj: string | null
           codigo_municipio_ibge: string | null
           created_at: string
           email: string | null

@@ -38,7 +38,7 @@ interface Quote {
 
 interface Company {
   name: string;
-  cnpj: string;
+  cnpj?: string | null;
   phone?: string | null;
   email?: string | null;
   address?: string | null;
@@ -164,7 +164,7 @@ export async function generateQuotePdf(
   doc.setTextColor(...mutedColor);
   doc.text('CNPJ:', companyInfoX, y + 11);
   doc.setTextColor(...textColor);
-  doc.text(company?.cnpj || '-', companyInfoX + 22, y + 11);
+  doc.text(company?.cnpj ? company.cnpj : '-', companyInfoX + 22, y + 11);
   
   doc.setTextColor(...mutedColor);
   doc.text('Telefone:', companyInfoX, y + 17);
