@@ -56,7 +56,8 @@ export function usePurchaseOrders(statusFilter?: string) {
       let query = supabase
         .from('purchase_orders')
         .select(`
-          *,
+          id, company_id, ordem_servico_id, order_number, supplier_name, status,
+          total_estimated, total_actual, expected_delivery, received_at, notes, created_at,
           ordens_servico:ordens_servico(os_number, customer_name)
         `)
         .eq('company_id', currentCompany.id)
@@ -101,7 +102,7 @@ export function usePurchaseOrderItems(purchaseOrderId: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('purchase_order_items')
-        .select('*')
+        .select('id, purchase_order_id, item_template_id, os_material_id, os_glass_project_id, description, quantity, unit, width_mm, height_mm, estimated_cost, actual_cost, status, received_at, received_quantity, notes, created_at')
         .eq('purchase_order_id', purchaseOrderId)
         .order('created_at');
       
@@ -118,7 +119,7 @@ export function usePurchaseOrdersByOS(ordemServicoId: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('purchase_orders')
-        .select('*')
+        .select('id, company_id, ordem_servico_id, order_number, supplier_name, status, total_estimated, total_actual, expected_delivery, received_at, notes, created_at')
         .eq('ordem_servico_id', ordemServicoId)
         .order('created_at', { ascending: false });
       

@@ -1,9 +1,9 @@
+import { memo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Trash2, Package, Edit2 } from 'lucide-react';
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
-
 interface QuoteItem {
   id?: string;
   company_product_id?: string;
@@ -37,7 +37,7 @@ interface QuoteItemCardProps {
   formatCurrency: (value: number) => string;
 }
 
-export function QuoteItemCard({ item, index, onUpdate, onRemove, formatCurrency }: QuoteItemCardProps) {
+export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate, onRemove, formatCurrency }: QuoteItemCardProps) {
   const { labels: categoryLabels } = useProductCategoryLabels();
   
   const getProductImage = (imageUrl: string | null | undefined) => {
@@ -174,4 +174,4 @@ export function QuoteItemCard({ item, index, onUpdate, onRemove, formatCurrency 
       </div>
     </div>
   );
-}
+}, (prev, next) => prev.item.id === next.item.id && prev.item.total_price === next.item.total_price);
