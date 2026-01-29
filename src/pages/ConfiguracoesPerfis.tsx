@@ -60,7 +60,7 @@ const MODULES: { id: Module; label: string; description: string }[] = [
   { id: 'estoque', label: 'Estoque', description: 'Controle de estoque' },
   { id: 'caixa-vendas', label: 'Caixa e Vendas', description: 'PDV e vendas' },
   { id: 'financeiro', label: 'Financeiro', description: 'Relatórios financeiros' },
-  { id: 'notas-fiscais', label: 'Notas Fiscais', description: 'Emissão de NF' },
+  { id: 'notas-fiscais', label: 'Fiscal', description: 'Emissão de NF' },
   { id: 'funcionarios', label: 'Funcionários', description: 'Gerenciar equipe' },
   { id: 'configuracoes', label: 'Configurações', description: 'Configurações do sistema' },
 ];
