@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Calendar, ChevronLeft, ChevronRight, Plus, Clock, MapPin, User, Phone, Wrench, Ruler, Eye, Trash2, Printer, FileText, DollarSign, AlertTriangle, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 
 interface Appointment {
   id: string;
@@ -72,6 +73,10 @@ export default function Agenda() {
   const { currentCompany, user } = useAuth();
   const companyId = currentCompany?.id;
   const queryClient = useQueryClient();
+  
+  // Module tutorial trigger
+  useModuleTutorialTrigger('agenda');
+  
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);

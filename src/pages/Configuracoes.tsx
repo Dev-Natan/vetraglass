@@ -12,6 +12,7 @@ import EditarDadosFiscaisDialog from "@/components/configuracoes/EditarDadosFisc
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
+import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 
 const settingsGroups = [
   {
@@ -48,6 +49,10 @@ const settingsGroups = [
 
 export default function Configuracoes() {
   const { currentCompany, setCurrentCompany } = useAuth();
+  
+  // Module tutorial trigger
+  useModuleTutorialTrigger('configuracoes');
+  
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [loginToken, setLoginToken] = useState("");

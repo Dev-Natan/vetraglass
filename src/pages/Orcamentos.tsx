@@ -62,6 +62,7 @@ import { usePagination } from '@/hooks/usePagination';
 import { PaginationControls } from '@/components/common/PaginationControls';
 import { CACHE_TIMES, queryKeys } from '@/lib/queryConfig';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 
 type QuoteStatus = 'pending' | 'approved' | 'rejected' | 'expired' | 'converted';
 
@@ -100,6 +101,9 @@ export default function Orcamentos() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
+  
+  // Module tutorial trigger
+  useModuleTutorialTrigger('orcamentos');
   
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<QuoteStatus | 'all'>('pending');
@@ -350,7 +354,7 @@ export default function Orcamentos() {
     <MainLayout>
       <div className="space-y-6 animate-fade-in pb-24">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div data-tutorial="orcamentos-header" className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-display font-bold text-foreground flex items-center gap-2">
               <FileText className="w-7 h-7 text-primary" />
@@ -361,7 +365,7 @@ export default function Orcamentos() {
         </div>
 
         {/* Status Tabs */}
-        <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as QuoteStatus | 'all')} className="w-full">
+        <Tabs data-tutorial="orcamentos-tabs" value={statusFilter} onValueChange={(v) => setStatusFilter(v as QuoteStatus | 'all')} className="w-full">
           <TabsList className="w-full justify-start overflow-x-auto flex-nowrap">
             <TabsTrigger value="all" className="gap-2">
               Todos

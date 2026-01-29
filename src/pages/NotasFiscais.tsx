@@ -29,6 +29,7 @@ import { ptBR } from "date-fns/locale";
 import NovaNotaFiscalDialog from "@/components/notas/NovaNotaFiscalDialog";
 import DetalhesNotaDialog from "@/components/notas/DetalhesNotaDialog";
 import { FiscalConfigTab } from "@/components/fiscal/FiscalConfigTab";
+import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 
 type NotaFiscal = {
   id: string;
@@ -58,6 +59,9 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
 
 export default function NotasFiscais() {
   const { companies } = useAuth();
+  
+  // Module tutorial trigger
+  useModuleTutorialTrigger('notas-fiscais');
   const companyId = companies[0]?.id;
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");

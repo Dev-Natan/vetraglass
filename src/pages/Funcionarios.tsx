@@ -16,6 +16,7 @@ import { PermissionGuard } from '@/components/PermissionGuard';
 import { generateCredentialCardPdf, generateCredentialSheetPdf } from '@/utils/generateCredentialCardPdf';
 import { generateEmployeeBadgePdf, imageUrlToBase64 } from '@/utils/generateEmployeeBadgePdf';
 import { toast } from 'sonner';
+import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 
 const roleLabels: Record<string, string> = {
   operador: 'Operador',
@@ -41,6 +42,9 @@ export default function Funcionarios() {
   const { employees, isLoading, createEmployee, updateEmployee, deleteEmployee, toggleEmployeeStatus } = useEmployees();
   const { canCreate, isAdmin, isManager } = usePermissions();
   const { currentCompany } = useAuth();
+
+  // Module tutorial trigger
+  useModuleTutorialTrigger('funcionarios');
 
   const [searchTerm, setSearchTerm] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);

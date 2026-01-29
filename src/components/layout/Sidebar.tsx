@@ -47,29 +47,29 @@ interface MenuItem {
 // Menu organizado por fluxo de trabalho
 const menuItems: MenuItem[] = [
   // Visão Geral
-  { icon: LayoutDashboard, label: 'Dashboard', path: '/', module: 'dashboard' },
+  { icon: LayoutDashboard, label: 'Dashboard', path: '/', module: 'dashboard', tutorialId: 'menu-dashboard' },
   
   // Comercial
   { icon: Users, label: 'Clientes', path: '/clientes', module: 'clientes', tutorialId: 'menu-clientes' },
   { icon: Package, label: 'Produtos', path: '/produtos', module: 'produtos', tutorialId: 'menu-produtos' },
-  { icon: Boxes, label: 'Estoque', path: '/estoque', module: 'estoque' },
+  { icon: Boxes, label: 'Estoque', path: '/estoque', module: 'estoque', tutorialId: 'menu-estoque' },
   { icon: FileText, label: 'Orçamentos', path: '/orcamentos', module: 'orcamentos', tutorialId: 'menu-orcamentos' },
   { icon: ShoppingCart, label: 'Caixa & Vendas', path: '/caixa-vendas', module: 'caixa-vendas', tutorialId: 'menu-caixa' },
-  { icon: ClipboardList, label: 'Ordens de Serviço', path: '/ordens-servico', module: 'ordens-servico' },
+  { icon: ClipboardList, label: 'Ordens de Serviço', path: '/ordens-servico', module: 'ordens-servico', tutorialId: 'menu-ordens-servico' },
   
   // Operacional
-  { icon: Calendar, label: 'Agenda', path: '/agenda', module: 'agenda' },
-  { icon: Ruler, label: 'Medições', path: '/medicoes', module: 'medicoes' },
-  { icon: Scissors, label: 'Plano de Corte', path: '/plano-corte', module: 'plano-corte' },
-  { icon: Square, label: 'Projeto de Vidro', path: '/projeto-vidro', module: 'plano-corte' },
+  { icon: Calendar, label: 'Agenda', path: '/agenda', module: 'agenda', tutorialId: 'menu-agenda' },
+  { icon: Ruler, label: 'Medições', path: '/medicoes', module: 'medicoes', tutorialId: 'menu-medicoes' },
+  { icon: Scissors, label: 'Plano de Corte', path: '/plano-corte', module: 'plano-corte', tutorialId: 'menu-plano-corte' },
+  { icon: Square, label: 'Projeto de Vidro', path: '/projeto-vidro', module: 'plano-corte', tutorialId: 'menu-projeto-vidro' },
   
   // Financeiro
-  { icon: DollarSign, label: 'Financeiro', path: '/financeiro', module: 'financeiro' },
-  { icon: Receipt, label: 'Notas Fiscais', path: '/notas-fiscais', module: 'notas-fiscais' },
+  { icon: DollarSign, label: 'Financeiro', path: '/financeiro', module: 'financeiro', tutorialId: 'menu-financeiro' },
+  { icon: Receipt, label: 'Notas Fiscais', path: '/notas-fiscais', module: 'notas-fiscais', tutorialId: 'menu-notas-fiscais' },
   
   // Administração
-  { icon: UserCog, label: 'Funcionários', path: '/funcionarios', module: 'funcionarios' },
-  { icon: Settings, label: 'Configurações', path: '/configuracoes', module: 'configuracoes' },
+  { icon: UserCog, label: 'Funcionários', path: '/funcionarios', module: 'funcionarios', tutorialId: 'menu-funcionarios' },
+  { icon: Settings, label: 'Configurações', path: '/configuracoes', module: 'configuracoes', tutorialId: 'menu-configuracoes' },
 ];
 
 export function Sidebar() {

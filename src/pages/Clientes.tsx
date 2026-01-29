@@ -27,6 +27,7 @@ import { usePagination } from '@/hooks/usePagination';
 import { PaginationControls } from '@/components/common/PaginationControls';
 import { CACHE_TIMES, queryKeys } from '@/lib/queryConfig';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 
 interface Client {
   id: string;
@@ -51,6 +52,9 @@ export default function Clientes() {
   const { currentCompany } = useAuth();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
+  
+  // Module tutorial trigger
+  useModuleTutorialTrigger('clientes');
   
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
@@ -202,7 +206,7 @@ export default function Clientes() {
     <MainLayout>
       <div className="pb-32 space-y-4">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div data-tutorial="clientes-header" className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold">Clientes</h1>
             <p className="text-muted-foreground text-sm">
@@ -227,6 +231,7 @@ export default function Clientes() {
             </ToggleGroup>
 
             <Button 
+              data-tutorial="clientes-btn-novo"
               onClick={() => {
                 setSelectedClient(null);
                 setDialogOpen(true);
@@ -240,7 +245,7 @@ export default function Clientes() {
         </div>
 
         {/* Search */}
-        <div className="relative max-w-md">
+        <div data-tutorial="clientes-search" className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             type="text"
