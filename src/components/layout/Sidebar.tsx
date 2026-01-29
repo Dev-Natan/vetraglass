@@ -14,10 +14,8 @@ import {
   X,
   ShoppingCart,
   Scissors,
-  Square,
   Settings,
   Receipt,
-  Calendar,
   Ruler,
   Headphones,
   Lock,
@@ -59,7 +57,6 @@ const menuItems: MenuItem[] = [
   { icon: ClipboardList, label: 'Ordens de Serviço', path: '/ordens-servico', module: 'ordens-servico', tutorialId: 'menu-ordens-servico' },
   
   // Operacional
-  { icon: Calendar, label: 'Agenda', path: '/agenda', module: 'agenda', tutorialId: 'menu-agenda' },
   { icon: Ruler, label: 'Medições', path: '/medicoes', module: 'medicoes', tutorialId: 'menu-medicoes' },
   { icon: Scissors, label: 'Produção', path: '/producao', module: 'plano-corte', tutorialId: 'menu-producao' },
   
