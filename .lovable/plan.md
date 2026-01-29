@@ -1,56 +1,61 @@
 
 
-# Plano: Corrigir Logo da Sidebar com Fundo Transparente
+# Plano: Usar Logo Completo na Sidebar
 
-## Problema Identificado
+## Objetivo
 
-A imagem do logo atual possui fundo branco, que fica visivel e contrasta mal com a sidebar azul do sistema.
-
----
-
-## Solucao Proposta
-
-Usar CSS com `mix-blend-mode: multiply` para fazer o fundo branco da imagem se mesclar com o fundo azul da sidebar, tornando-o visualmente transparente.
-
-Esta tecnica funciona porque:
-- O modo `multiply` multiplica as cores dos pixels
-- Branco (255, 255, 255) multiplicado por qualquer cor resulta na propria cor
-- Assim, o fundo branco "desaparece" e so o logo colorido fica visivel
+Substituir a area atual do logo (icone + texto separados) por uma unica imagem que contem o logo completo "Vetra" (icone dos vidros azuis + texto "Vetra" integrado).
 
 ---
 
-## Alteracao Tecnica
+## Situacao Atual
 
-### Arquivo: `src/components/layout/Sidebar.tsx`
+A sidebar possui:
+- Uma imagem pequena do icone (40x40px)
+- Texto "Vetra" separado em um elemento `<h1>`
+- Subtitulo "Sistema de Gestao" em um elemento `<p>`
 
-Adicionar a classe `mix-blend-mode: multiply` na tag de imagem do logo:
+---
 
-**Antes (linha 156-160):**
+## Alteracoes Tecnicas
+
+### 1. Copiar nova imagem para o projeto
+
+```
+user-uploads://ChatGPT_Image_29_de_jan._de_2026_07_51_49.png -> public/vetra-logo.png
+```
+
+### 2. Modificar Sidebar.tsx
+
+Substituir a estrutura atual por uma unica imagem do logo completo:
+
+**Antes (linhas 155-164):**
 ```typescript
-<img 
-  src="/vetra-logo.png" 
-  alt="Vetra Logo" 
-  className="w-10 h-10 object-contain"
-/>
+<div className="flex items-center gap-3">
+  <img 
+    src="/vetra-logo.png" 
+    alt="Vetra Logo" 
+    className="w-10 h-10 object-contain mix-blend-multiply"
+  />
+  <div>
+    <h1 className="font-display font-bold text-lg text-sidebar-foreground">Vetra</h1>
+    <p className="text-xs text-sidebar-foreground/50">Sistema de Gestão</p>
+  </div>
+</div>
 ```
 
 **Depois:**
 ```typescript
-<img 
-  src="/vetra-logo.png" 
-  alt="Vetra Logo" 
-  className="w-10 h-10 object-contain mix-blend-multiply"
-/>
+<div className="flex items-center">
+  <img 
+    src="/vetra-logo.png" 
+    alt="Vetra Logo" 
+    className="h-10 object-contain mix-blend-multiply"
+  />
+</div>
 ```
 
----
-
-## Alternativa (caso o resultado visual nao fique bom)
-
-Se o `mix-blend-multiply` nao produzir um resultado satisfatorio, a alternativa seria:
-
-1. Processar a imagem para remover o fundo branco usando uma ferramenta externa
-2. Ou criar um CSS filter customizado para tornar pixels brancos transparentes
+A imagem sera dimensionada pela altura (`h-10` = 40px) e a largura sera automatica para manter a proporcao.
 
 ---
 
@@ -58,13 +63,15 @@ Se o `mix-blend-multiply` nao produzir um resultado satisfatorio, a alternativa 
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `src/components/layout/Sidebar.tsx` | Adicionar `mix-blend-multiply` na classe da imagem |
+| `public/vetra-logo.png` | Substituir pela nova imagem completa |
+| `src/components/layout/Sidebar.tsx` | Remover texto separado e usar apenas a imagem |
 
 ---
 
 ## Resultado Esperado
 
-- Logo dos vidros azuis com checkmark prateado exibido na sidebar
-- Fundo branco removido visualmente, integrando com a sidebar azul
-- Nenhuma alteracao na imagem necessaria
+- Logo completo (icone + texto "Vetra") em uma unica imagem
+- Fundo branco removido via `mix-blend-multiply`
+- Layout mais limpo e profissional
+- Subtitulo "Sistema de Gestao" removido (pois o texto ja esta na imagem)
 
