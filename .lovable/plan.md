@@ -1,61 +1,45 @@
 
 
-# Plano: Usar Logo Completo na Sidebar
+# Plano: Restaurar Logo Original com Icone "V" e Texto Separado
 
 ## Objetivo
 
-Substituir a area atual do logo (icone + texto separados) por uma unica imagem que contem o logo completo "Vetra" (icone dos vidros azuis + texto "Vetra" integrado).
-
----
-
-## Situacao Atual
-
-A sidebar possui:
-- Uma imagem pequena do icone (40x40px)
-- Texto "Vetra" separado em um elemento `<h1>`
-- Subtitulo "Sistema de Gestao" em um elemento `<p>`
+Restaurar o logo da sidebar para a versao original que mostra:
+- Icone azul com a letra "V" em um quadrado arredondado
+- Texto "Vetra" ao lado
+- Subtitulo "Sistema de Gestao" abaixo
 
 ---
 
 ## Alteracoes Tecnicas
 
-### 1. Copiar nova imagem para o projeto
+### Arquivo: `src/components/layout/Sidebar.tsx`
 
+Restaurar a estrutura original do logo com o icone "V" e textos separados:
+
+**Codigo atual (linhas 155-159):**
+```typescript
+<img 
+  src="/vetra-logo.png" 
+  alt="Vetra Logo" 
+  className="h-10 object-contain mix-blend-multiply"
+/>
 ```
-user-uploads://ChatGPT_Image_29_de_jan._de_2026_07_51_49.png -> public/vetra-logo.png
-```
 
-### 2. Modificar Sidebar.tsx
-
-Substituir a estrutura atual por uma unica imagem do logo completo:
-
-**Antes (linhas 155-164):**
+**Codigo restaurado:**
 ```typescript
 <div className="flex items-center gap-3">
-  <img 
-    src="/vetra-logo.png" 
-    alt="Vetra Logo" 
-    className="w-10 h-10 object-contain mix-blend-multiply"
-  />
+  <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+    <span className="text-white text-xl font-bold">V</span>
+  </div>
   <div>
     <h1 className="font-display font-bold text-lg text-sidebar-foreground">Vetra</h1>
-    <p className="text-xs text-sidebar-foreground/50">Sistema de Gestão</p>
+    <p className="text-xs text-sidebar-foreground/50">Sistema de Gestao</p>
   </div>
 </div>
 ```
 
-**Depois:**
-```typescript
-<div className="flex items-center">
-  <img 
-    src="/vetra-logo.png" 
-    alt="Vetra Logo" 
-    className="h-10 object-contain mix-blend-multiply"
-  />
-</div>
-```
-
-A imagem sera dimensionada pela altura (`h-10` = 40px) e a largura sera automatica para manter a proporcao.
+Esta versao usa um icone CSS puro (quadrado azul com "V" branco) em vez de depender de uma imagem externa, garantindo consistencia visual.
 
 ---
 
@@ -63,15 +47,15 @@ A imagem sera dimensionada pela altura (`h-10` = 40px) e a largura sera automati
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `public/vetra-logo.png` | Substituir pela nova imagem completa |
-| `src/components/layout/Sidebar.tsx` | Remover texto separado e usar apenas a imagem |
+| `src/components/layout/Sidebar.tsx` | Restaurar estrutura original com icone "V" e textos |
 
 ---
 
 ## Resultado Esperado
 
-- Logo completo (icone + texto "Vetra") em uma unica imagem
-- Fundo branco removido via `mix-blend-multiply`
-- Layout mais limpo e profissional
-- Subtitulo "Sistema de Gestao" removido (pois o texto ja esta na imagem)
+- Icone azul com "V" branco em quadrado arredondado
+- Texto "Vetra" em destaque ao lado
+- Subtitulo "Sistema de Gestao" abaixo
+- Nao depende de imagem externa
+- Visual identico a imagem de referencia enviada
 
