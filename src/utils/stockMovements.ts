@@ -26,6 +26,7 @@ interface StockMovementParams {
   referenceId?: string;
   referenceType?: ReferenceType;
   unitCost?: number;
+  valorFinanceiro?: number;
 }
 
 interface StockEntryParams extends StockMovementParams {
@@ -195,7 +196,10 @@ export async function registerStockEntry(
 
     if (updateError) throw new Error(`Erro ao atualizar estoque: ${updateError.message}`);
 
-    // Registrar movimento
+    // Registrar movimento com custo
+    const unitCost = params.unitCost || 0;
+    const valorFinanceiro = params.valorFinanceiro || (quantity * unitCost);
+    
     const { data: movement, error: movementError } = await supabase
       .from('stock_movements')
       .insert({
@@ -208,6 +212,8 @@ export async function registerStockEntry(
         description: description || `Entrada: ${category}`,
         reference_id: referenceId,
         reference_type: referenceType,
+        unit_cost: unitCost,
+        valor_financeiro: valorFinanceiro,
       })
       .select('id')
       .single();

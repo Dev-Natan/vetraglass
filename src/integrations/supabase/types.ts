@@ -1056,6 +1056,11 @@ export type Database = {
       }
       company_items: {
         Row: {
+          aliquota_iss: number | null
+          cest: string | null
+          cfop_venda: string | null
+          cfop_venda_interestadual: string | null
+          codigo_servico: string | null
           company_id: string
           cost: number | null
           created_at: string
@@ -1070,6 +1075,8 @@ export type Database = {
           item_template_id: string | null
           linha: string | null
           name: string
+          ncm: string | null
+          origem: string | null
           sale_price: number | null
           specifications: Json | null
           type: string
@@ -1077,6 +1084,11 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          aliquota_iss?: number | null
+          cest?: string | null
+          cfop_venda?: string | null
+          cfop_venda_interestadual?: string | null
+          codigo_servico?: string | null
           company_id: string
           cost?: number | null
           created_at?: string
@@ -1091,6 +1103,8 @@ export type Database = {
           item_template_id?: string | null
           linha?: string | null
           name: string
+          ncm?: string | null
+          origem?: string | null
           sale_price?: number | null
           specifications?: Json | null
           type?: string
@@ -1098,6 +1112,11 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          aliquota_iss?: number | null
+          cest?: string | null
+          cfop_venda?: string | null
+          cfop_venda_interestadual?: string | null
+          codigo_servico?: string | null
           company_id?: string
           cost?: number | null
           created_at?: string
@@ -1112,6 +1131,8 @@ export type Database = {
           item_template_id?: string | null
           linha?: string | null
           name?: string
+          ncm?: string | null
+          origem?: string | null
           sale_price?: number | null
           specifications?: Json | null
           type?: string

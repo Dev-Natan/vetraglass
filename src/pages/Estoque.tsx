@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Boxes, TrendingDown, TrendingUp, Plus, History } from 'lucide-react';
+import { Boxes, TrendingDown, TrendingUp, ShoppingCart, History, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AddStockDialog } from '@/components/estoque/AddStockDialog';
 import { EditItemPriceDialog } from '@/components/estoque/EditItemPriceDialog';
@@ -223,8 +223,8 @@ export default function Estoque() {
               Registrar Entrada
             </Button>
             <Button className="gap-2" onClick={() => setAddDialogOpen(true)}>
-              <Plus className="w-4 h-4" />
-              Adicionar Item
+              <ShoppingCart className="w-4 h-4" />
+              Registrar Compra
             </Button>
           </div>
         </div>
@@ -335,8 +335,8 @@ export default function Estoque() {
                       </p>
                       {!searchTerm && categoryFilter === 'all' && statusFilter === 'all' && (
                         <Button onClick={() => setAddDialogOpen(true)} className="gap-2">
-                          <Plus className="w-4 h-4" />
-                          Adicionar Primeiro Item
+                          <ShoppingCart className="w-4 h-4" />
+                          Registrar Primeira Compra
                         </Button>
                       )}
                     </div>
