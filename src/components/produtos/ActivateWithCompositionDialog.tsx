@@ -518,27 +518,10 @@ export function ActivateWithCompositionDialog({
         }
       }
 
-      // 5. Add items to company stock with zero quantity
-      const uniqueItemTemplateIds = [...new Set(localItems.map(i => i.item_template_id))];
-
-      for (const itemTemplateId of uniqueItemTemplateIds) {
-        const { data: existing } = await supabase
-          .from('company_stock')
-          .select('id')
-          .eq('company_id', currentCompany.id)
-          .eq('item_template_id', itemTemplateId)
-          .single();
-
-        if (!existing) {
-          await supabase.from('company_stock').insert({
-            company_id: currentCompany.id,
-            item_template_id: itemTemplateId,
-            quantity: 0,
-            min_quantity: 0,
-            is_active: true,
-          });
-        }
-      }
+      // REGRA DE OURO: NÃO criar estoque automaticamente
+      // O estoque deve ser cadastrado manualmente pelo usuário quando comprar materiais.
+      // Isso garante rastreabilidade total: todo item no estoque tem origem conhecida.
+      // Os componentes do produto são apenas referências técnicas, não estoque físico.
 
       return activatedProduct;
     },

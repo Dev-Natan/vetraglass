@@ -45,16 +45,14 @@ interface StockMovementResult {
 }
 
 /**
- * Garante que existe um registro de estoque para o item
- * Se não existir, cria com quantidade inicial (padrão 0)
+ * Busca estoque existente para o item.
+ * REGRA DE OURO: Não cria estoque automaticamente - isso viola o controle rigoroso.
+ * O estoque deve ser cadastrado manualmente pelo usuário antes de qualquer movimentação.
  */
-export async function ensureStockExists(
+export async function getExistingStock(
   companyId: string,
-  itemTemplateId: string,
-  companyItemId?: string,
-  initialQuantity: number = 0
-): Promise<{ stockId: string; currentQuantity: number }> {
-  // Tentar encontrar estoque existente
+  itemTemplateId: string
+): Promise<{ stockId: string; currentQuantity: number } | null> {
   const { data: existingStock } = await supabase
     .from('company_stock')
     .select('id, quantity')
@@ -62,34 +60,36 @@ export async function ensureStockExists(
     .eq('item_template_id', itemTemplateId)
     .maybeSingle();
 
-  if (existingStock) {
-    return { 
-      stockId: existingStock.id, 
-      currentQuantity: existingStock.quantity 
-    };
+  if (!existingStock) {
+    return null;
   }
 
-  // Criar novo registro de estoque
-  const { data: newStock, error } = await supabase
-    .from('company_stock')
-    .insert({
-      company_id: companyId,
-      item_template_id: itemTemplateId,
-      company_item_id: companyItemId || null,
-      quantity: initialQuantity,
-      min_quantity: 0,
-      is_active: true,
-      allow_fractional: false,
-    })
-    .select('id, quantity')
-    .single();
-
-  if (error) throw new Error(`Erro ao criar estoque: ${error.message}`);
-  
   return { 
-    stockId: newStock.id, 
-    currentQuantity: newStock.quantity 
+    stockId: existingStock.id, 
+    currentQuantity: existingStock.quantity 
   };
+}
+
+/**
+ * @deprecated Use getExistingStock instead. 
+ * Esta função agora apenas busca estoque existente e NÃO cria automaticamente.
+ * Mantida para compatibilidade, mas lança erro se o estoque não existir.
+ */
+export async function ensureStockExists(
+  companyId: string,
+  itemTemplateId: string,
+  companyItemId?: string,
+  initialQuantity: number = 0
+): Promise<{ stockId: string; currentQuantity: number }> {
+  const existing = await getExistingStock(companyId, itemTemplateId);
+  
+  if (!existing) {
+    throw new Error(
+      'Item não cadastrado no estoque. Cadastre-o primeiro em Estoque > Adicionar Item antes de registrar movimentações.'
+    );
+  }
+
+  return existing;
 }
 
 /**
@@ -132,6 +132,8 @@ async function checkDuplicateMovement(
 
 /**
  * Registra uma entrada de estoque (compra, devolução, ajuste positivo)
+ * REGRA DE OURO: Falha se o item não estiver cadastrado no estoque.
+ * O usuário deve cadastrar o item manualmente antes de registrar entradas.
  */
 export async function registerStockEntry(
   params: StockEntryParams
@@ -166,13 +168,19 @@ export async function registerStockEntry(
       }
     }
 
-    // Garantir que estoque existe
+    // REGRA DE OURO: Buscar estoque existente - NÃO criar automaticamente
+    const existingStock = await getExistingStock(companyId, itemTemplateId);
+    
+    if (!existingStock) {
+      return {
+        success: false,
+        newQuantity: 0,
+        error: 'Item não cadastrado no estoque. Cadastre-o primeiro em Estoque > Adicionar Item antes de registrar movimentações.',
+      };
+    }
+
+    const { stockId, currentQuantity } = existingStock;
     const resolvedCompanyItemId = companyItemId || await getCompanyItemId(companyId, itemTemplateId);
-    const { stockId, currentQuantity } = await ensureStockExists(
-      companyId, 
-      itemTemplateId,
-      resolvedCompanyItemId || undefined
-    );
 
     const newQuantity = currentQuantity + quantity;
 
