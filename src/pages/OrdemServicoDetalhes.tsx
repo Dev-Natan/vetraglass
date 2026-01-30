@@ -312,7 +312,7 @@ export default function OrdemServicoDetalhes() {
         <OSProductionProgress ordemServicoId={ordem.id} />
 
         {/* Material Consumption Status - NEW */}
-        <OSConsumptionStatus ordemServicoId={ordem.id} />
+        <OSConsumptionStatus ordemServicoId={ordem.id} osStatus={ordem.status} />
 
         {/* Materials Status */}
         <OSMaterialsStatus ordemServicoId={ordem.id} />
