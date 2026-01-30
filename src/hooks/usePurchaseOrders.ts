@@ -241,7 +241,7 @@ export function useReceivePurchaseOrderItems() {
         
         // Se o item tem item_template_id, registrar entrada no estoque
         if (itemDetail?.item_template_id) {
-          await registerStockEntry({
+          const result = await registerStockEntry({
             companyId: purchaseOrder.company_id,
             itemTemplateId: itemDetail.item_template_id,
             quantity: item.receivedQuantity,
@@ -250,6 +250,18 @@ export function useReceivePurchaseOrderItems() {
             referenceId: purchaseOrderId,
             referenceType: 'purchase_order',
           });
+
+          // REGRA DE OURO: Se item não está cadastrado no estoque, informar ao usuário
+          if (!result.success && result.error?.includes('não cadastrado')) {
+            throw new Error(
+              `O item "${itemDetail.description}" não está cadastrado no estoque. ` +
+              `Cadastre-o primeiro em Estoque > Adicionar Item antes de receber a compra.`
+            );
+          }
+
+          if (!result.success) {
+            throw new Error(result.error || 'Erro ao registrar entrada no estoque');
+          }
         }
       }
       
