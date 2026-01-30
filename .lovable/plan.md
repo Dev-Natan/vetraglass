@@ -1,217 +1,102 @@
 
+# Plano: Corrigir Estado Visual dos Toggles de Módulos
 
-# Plano: Dashboard Simplificado - Foco no Dia-a-Dia
+## Problema Identificado
 
-## Visao Geral
-Redesenhar o dashboard para mostrar apenas informacoes acionaveis do dia atual, removendo acoes rapidas (ja existem no menu) e graficos complexos. O foco sera em: **servicos do dia, compromissos, cobrancas e despesas do dia**.
+Através da análise do console, identifiquei dois problemas:
 
----
+1. **Warning de React**: "Function components cannot be given refs" no `ModuleRow`
+2. **React.memo impedindo re-render**: O componente está memoizado mas a comparação de props pode estar falhando
 
-## Nova Estrutura do Dashboard
-
-```text
-+-----------------------------------------------------------------------+
-|                        DASHBOARD - Visao do Dia                       |
-+-----------------------------------------------------------------------+
-|                                                                       |
-|  +-----------------------+  +-----------------------+                 |
-|  | Compromissos Hoje     |  | Cobrar Hoje           |                 |
-|  | 3 agendamentos        |  | R$ 2.500              |                 |
-|  +-----------------------+  +-----------------------+                 |
-|                                                                       |
-|  +-----------------------+  +-----------------------+                 |
-|  | Pagar Hoje            |  | OS Vencendo/Atrasadas |                 |
-|  | R$ 800                |  | 2 atencao             |                 |
-|  +-----------------------+  +-----------------------+                 |
-|                                                                       |
-+-----------------------------------------------------------------------+
-|                                                                       |
-|  +-------------------------------------------------------------+     |
-|  | MINHA AGENDA DE HOJE                                         |     |
-|  | Timeline visual com todos os compromissos do dia             |     |
-|  |                                                              |     |
-|  | 08:00 - Medicao - Joao Silva - Rua das Flores, 123           |     |
-|  | 10:30 - Instalacao - Maria Santos - Av. Brasil, 456          |     |
-|  | 14:00 - Entrega OS #0015 - Pedro Lima                        |     |
-|  | 16:00 - Visita - Ana Costa                                   |     |
-|  +-------------------------------------------------------------+     |
-|                                                                       |
-+-----------------------------------------------------------------------+
-|                                                                       |
-|  +-------------------------+  +----------------------------------+   |
-|  | COBRANCAS DO DIA        |  | DESPESAS DO DIA                  |   |
-|  |                         |  |                                   |   |
-|  | Cliente A - R$ 1.200    |  | Fornecedor X - R$ 400            |   |
-|  | Cliente B - R$ 1.300    |  | Energia - R$ 200                 |   |
-|  |                         |  | Aluguel - R$ 200                 |   |
-|  | Total: R$ 2.500         |  | Total: R$ 800                    |   |
-|  | [Registrar Recebimento] |  | [Pagar Despesa]                  |   |
-|  +-------------------------+  +----------------------------------+   |
-|                                                                       |
-+-----------------------------------------------------------------------+
-|                                                                       |
-|  +-------------------------------------------------------------+     |
-|  | OS QUE PRECISAM DE ATENCAO                                   |     |
-|  | (Atrasadas ou vencendo hoje)                                 |     |
-|  |                                                              |     |
-|  | OS #0012 - Cliente X - 2 dias atrasada                       |     |
-|  | OS #0015 - Cliente Y - Vence hoje                            |     |
-|  +-------------------------------------------------------------+     |
-|                                                                       |
-+-----------------------------------------------------------------------+
-```
+O Switch está funcionando tecnicamente (o módulo é desativado no banco), mas a **UI não atualiza visualmente** após a mutação.
 
 ---
 
-## O Que REMOVER
+## Causa Raiz
 
-| Componente | Motivo |
-|------------|--------|
-| Acoes Rapidas (Nova Venda, Novo Orcamento, Nova OS) | Ja existe no menu lateral |
-| Links Rapidos (Clientes, Produtos, etc) | Redundante com sidebar |
-| ProductionKPIs (4 cards) | Substituir por KPIs focados no dia |
-| ProductionBlockedAlert | Manter apenas se tiver bloqueios |
-| PendingPurchasesAlert | Mover para pagina de Compras |
-| OverdueReceivablesAlert | Integrar na lista de cobrancas |
-| FinancialOSSummary (mensal) | Muito detalhado, mover para Relatorios |
-| SystemReminders | Integrar nas listas do dia |
-| ProductionFlowChart | Mover para Relatorios |
-| RevenueVsCostChart | Mover para Relatorios |
-| RecentActivity | Baixo valor, remover |
+O `React.memo` está usando comparação shallow por padrão. Quando os dados são invalidados e refetchados, o objeto `module` pode ter a mesma referência ou a comparação está falhando.
+
+Além disso, o uso de `React.memo` com named function está causando warning de ref.
 
 ---
 
-## O Que CRIAR
+## Solução
 
-### 1. `src/components/dashboard/DayOverviewCards.tsx`
-4 cards compactos com resumo do dia:
-- Compromissos Hoje (quantidade de agendamentos)
-- Cobrar Hoje (valor total a receber hoje)
-- Pagar Hoje (valor total de despesas vencendo hoje)
-- OS Atencao (quantidade de OS atrasadas/vencendo)
+### Arquivo: `src/components/admin/settings/ModulesTab.tsx`
 
-### 2. `src/components/dashboard/TodaySchedule.tsx`
-Timeline visual com todos os compromissos do dia:
-- Agendamentos (medicao, instalacao, visita, entrega)
-- OS com entrega prevista para hoje
-- Ordenado por horario
-- Icones coloridos por tipo
-- Clicavel para ir aos detalhes
+**1. Remover React.memo do ModuleRow**
 
-### 3. `src/components/dashboard/TodayReceivables.tsx`
-Lista de cobrancas a fazer hoje:
-- Clientes com parcelas vencendo hoje
-- Parcelas ja atrasadas (destacadas)
-- Valor total
-- Botao de acao para registrar recebimento
-
-### 4. `src/components/dashboard/TodayExpenses.tsx`
-Lista de despesas a pagar hoje:
-- Despesas com vencimento hoje
-- Despesas ja atrasadas (destacadas)
-- Valor total
-- Botao de acao para pagar
-
-### 5. `src/components/dashboard/OSAttentionList.tsx`
-OS que precisam de atencao imediata:
-- OS atrasadas (vermelho)
-- OS vencendo hoje (amarelo)
-- Dias de atraso
-- Link para detalhes da OS
-
----
-
-## Arquivos a Modificar
-
-### 1. `src/pages/Index.tsx`
-- Remover todas as importacoes de componentes antigos
-- Substituir por novos componentes focados no dia
-- Layout simplificado em 3 secoes:
-  1. Cards de resumo do dia
-  2. Agenda + Cobrancas/Despesas lado a lado
-  3. OS que precisam de atencao
-
-### 2. `src/hooks/useDashboardData.ts`
-- Simplificar para buscar apenas dados do dia:
-  - Agendamentos de hoje
-  - Cobrancas de hoje (vencendo e atrasadas)
-  - Despesas de hoje (vencendo e atrasadas)
-  - OS atrasadas e vencendo hoje
-- Remover queries de graficos (produtionFlow, revenueVsCost)
-- Remover recentActivity
-
----
-
-## Detalhes Tecnicos
-
-### Queries Necessarias
+O React.memo está causando problemas de re-render. Como a lista de módulos é pequena (menos de 20 itens), o ganho de performance é negligível e está causando bugs.
 
 ```typescript
-// Agendamentos de hoje
-const todayAppointments = supabase
-  .from('service_appointments')
-  .select('*')
-  .eq('scheduled_date', today)
-  .neq('status', 'cancelled')
-  .order('scheduled_time_start');
+// ANTES
+const ModuleRow = React.memo(function ModuleRow({ ... }) {
+  ...
+});
 
-// Cobrancas de hoje + atrasadas
-const todayReceivables = supabase
-  .from('accounts_receivable')
-  .select('*')
-  .in('status', ['pending', 'partial'])
-  .lte('due_date', today); // Hoje ou antes
-
-// Despesas de hoje + atrasadas
-const todayExpenses = supabase
-  .from('expenses')
-  .select('*')
-  .eq('status', 'pending')
-  .lte('due_date', today); // Hoje ou antes
-
-// OS atrasadas ou vencendo hoje
-const attentionOS = supabase
-  .from('ordens_servico')
-  .select('*')
-  .in('status', ['pending', 'in_progress'])
-  .lte('estimated_end', today);
+// DEPOIS
+function ModuleRow({ module, onToggle, isLoading }: ModuleRowProps) {
+  ...
+}
 ```
 
-### Cores e Icones
+**2. Adicionar key única baseada no estado**
 
-| Tipo | Cor | Icone |
-|------|-----|-------|
-| Medicao | Verde (#10b981) | MapPin |
-| Instalacao | Azul (#3b82f6) | Wrench |
-| Entrega | Rosa (#ec4899) | Truck |
-| Visita | Roxo (#8b5cf6) | Users |
-| Cobranca | Verde (#22c55e) | DollarSign |
-| Despesa | Vermelho (#ef4444) | Receipt |
-| OS Atrasada | Vermelho (#ef4444) | AlertTriangle |
-| OS Hoje | Amarelo (#f59e0b) | Clock |
+Forçar re-render quando o estado muda usando uma key composta:
+
+```typescript
+// ANTES
+<ModuleRow
+  key={module.id}
+  module={module}
+  ...
+/>
+
+// DEPOIS  
+<ModuleRow
+  key={`${module.id}-${module.is_enabled}`}
+  module={module}
+  ...
+/>
+```
+
+**3. Garantir que o Switch receba prop checked corretamente**
+
+Adicionar conversão explícita para boolean:
+
+```typescript
+// ANTES
+checked={module.is_enabled === true}
+
+// DEPOIS
+checked={Boolean(module.is_enabled)}
+```
 
 ---
 
-## Beneficios
+## Mudanças Completas
 
-| Antes | Depois |
-|-------|--------|
-| 11+ componentes | 5 componentes focados |
-| Muitas queries | Queries otimizadas do dia |
-| Scroll extenso | Tudo visivel sem scroll |
-| Info dispersa | Foco no acionavel |
-| Graficos historicos | Dados do momento |
-| Acoes duplicadas | Interface limpa |
+```text
+src/components/admin/settings/ModulesTab.tsx
+├── Linha 64: Remover React.memo wrapper
+├── Linha 217: Adicionar key composta com estado
+└── Linha 93: Usar Boolean() para checked
+```
 
 ---
 
-## Fluxo do Usuario
+## Resultado Esperado
 
-1. Usuario abre o dashboard
-2. Ve 4 cards com resumo rapido do dia
-3. Ve a agenda do dia em timeline
-4. Ve lista de cobrancas a fazer com botao de acao
-5. Ve lista de despesas a pagar com botao de acao
-6. Ve OS que precisam de atencao imediata
-7. Pode clicar em qualquer item para ir aos detalhes
+| Estado | Visual do Switch |
+|--------|------------------|
+| `is_enabled: true` | Toggle verde/ativo, bolinha à direita |
+| `is_enabled: false` | Toggle cinza/inativo, bolinha à esquerda |
+| Badge | "Ativo" (verde) ou "Oculto" (âmbar) |
+| Ícone do módulo | Colorido (ativo) ou cinza (inativo) |
 
+Após a correção, ao clicar no toggle:
+1. Mutação é enviada ao banco
+2. Query é invalidada
+3. Dados frescos são buscados
+4. Componente re-renderiza com novo estado
+5. Switch atualiza visualmente
