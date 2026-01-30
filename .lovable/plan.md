@@ -1,212 +1,288 @@
 
-# Plano: Automatizar Movimentações de Estoque
 
-## Contexto e Situação Atual
+# Plano: Ajustes Profissionais no Fluxo de Estoque
 
-Analisando o módulo de estoque, identifiquei que o sistema já possui uma **infraestrutura sólida** mas com **gaps de automação** em pontos críticos do fluxo:
+## Resumo dos Ajustes Solicitados
 
-### O que já funciona automaticamente
+Você identificou 5 pontos críticos para blindar o sistema de estoque:
 
-| Fluxo | Status | Detalhes |
-|-------|--------|----------|
-| Consumo de materiais (OS finalizada) | ✅ Automático | `consumeOSMaterials()` baixa estoque e cria `stock_movements` |
-| Cancelamento de OS | ✅ Automático | `cancelMaterialConsumption()` cancela reservas |
-| Reserva de materiais (aprovação orçamento) | ✅ Automático | `createStockReservation()` reserva materiais |
-| Venda no caixa com produtos | ✅ Automático | Deduz estoque dos componentes via fórmulas |
-| Cancelamento de venda | ✅ Automático | Restaura estoque dos componentes |
-
-### O que está FALTANDO automação
-
-| Fluxo | Status | Problema |
-|-------|--------|----------|
-| Recebimento de Pedido de Compra | ❌ Manual | Não cria entrada no estoque nem `stock_movements` |
-| Venda de item avulso (não-produto) | ❌ Manual | Não registra `stock_movements` |
-| Ativação de produto com composição | ⚠️ Parcial | Cria estoque mas não registra movimento |
-| Histórico de saída por produção | ⚠️ Parcial | Usa `company_item_id` mas alguns fluxos usam `item_template_id` |
+| # | Ajuste | Impacto |
+|---|--------|---------|
+| 1 | Lista de compra não pode reduzir abaixo da demanda | Evita furo no estoque |
+| 2 | Recebimento não altera quantity_calculated | Mantém rastreabilidade |
+| 3 | Baixa vem de material_consumption, não da compra | Lógica correta |
+| 4 | Regras claras de cancelamento por status | Evita inconsistências |
+| 5 | Relatório de diferença (Planejado vs Consumido) | Visibilidade de desperdício |
 
 ---
 
-## Solução Proposta
+## Estado Atual do Sistema
 
-### 1. Automatizar Entrada de Estoque ao Receber Pedido de Compra
+### O que JÁ está correto ✅
 
-**Arquivo:** `src/hooks/usePurchaseOrders.ts` → `useReceivePurchaseOrderItems`
+| Item | Status | Evidência |
+|------|--------|-----------|
+| Baixa vem de `material_consumption` | ✅ OK | `consumeOSMaterials()` processa `stock_reservations` vinculados ao `material_consumption` |
+| Recebimento não altera `quantity_calculated` | ✅ OK | `useReceivePurchaseOrderItems` só atualiza `status = 'available'`, não toca no cálculo |
+| Cancelamento chama `cancelMaterialConsumption()` | ✅ OK | Em `OrdensServico.tsx` linha 158-162 |
 
-Quando um item de pedido de compra é marcado como "recebido":
-1. Criar/atualizar registro em `company_stock` (entrada)
-2. Registrar `stock_movements` com categoria `compra_fornecedor`
-3. Vincular ao `purchase_order_item_id` para rastreabilidade
-4. Invalidar queries de estoque
+### O que PRECISA ser ajustado ⚠️
 
-```text
-Fluxo:
-Receber PO Item → Buscar company_stock pelo item_template_id
-                → Se não existe: criar com quantidade recebida
-                → Se existe: somar quantidade
-                → Inserir stock_movements (type: entrada, category: compra_fornecedor)
-                → Atualizar material_consumption (se vinculado a OS)
-```
+| Item | Problema | Solução |
+|------|----------|---------|
+| Validação de quantidade mínima na lista | Não existe | Adicionar validação no componente |
+| Cancelamento não verifica status `consumed` | Permite cancelar qualquer OS | Bloquear ou exigir estorno |
+| Reservas não são liberadas ao cancelar | Função RPC cancela mas não libera | Cancelar + liberar reservas |
+| Relatório de diferença | Não existe | Criar componente novo |
 
-### 2. Registrar Movimentos ao Vender Itens Avulsos
+---
 
-**Arquivo:** `src/pages/CaixaVendas.tsx` → `newSaleMutation`
+## Implementação Detalhada
 
-Quando uma venda inclui itens avulsos (não são produtos compostos):
-1. Já baixa o estoque ✅
-2. **FALTA:** Registrar `stock_movements` com categoria `venda`
-3. Vincular ao `sale_id` para rastreabilidade
+### 1️⃣ Lista de Compra: Validação de Quantidade Mínima
 
-### 3. Normalizar Referências de Item
+**Regra:** `quantityToPurchase ≥ (quantityNeeded - quantityAvailable)`
 
-**Problema:** O sistema tem dois identificadores:
-- `item_template_id` (referência global do catálogo)
-- `company_item_id` (item específico da empresa)
-
-Alguns fluxos usam um, outros usam outro, causando inconsistências no histórico.
-
-**Solução:**
-- Padronizar `stock_movements` para sempre incluir `item_template_id`
-- Adicionar coluna `company_item_id` à tabela `stock_movements` (opcional, para rastreabilidade extra)
-
-### 4. Criar Utility Centralizado para Movimentações
-
-**Novo arquivo:** `src/utils/stockMovements.ts`
-
-Centralizar toda lógica de movimentação para evitar duplicação e garantir consistência:
+**Onde implementar:** Novo componente `EditPurchaseListDialog.tsx` (a ser criado)
 
 ```typescript
-// Funções do utility:
-export async function registerStockEntry(params: {
-  companyId: string;
-  itemTemplateId: string;
-  quantity: number;
-  category: 'compra_fornecedor' | 'devolucao_cliente' | 'ajuste_inventario' | 'transferencia';
-  description?: string;
-  referenceId?: string;
-  referenceType?: 'purchase_order' | 'sale' | 'ordem_servico';
-  unitCost?: number;
-}): Promise<{ success: boolean; newQuantity: number }>;
+// Lógica de validação
+interface PurchaseListItem {
+  itemId: string;
+  itemName: string;
+  quantityNeeded: number;      // Do material_consumption
+  quantityAvailable: number;   // Estoque atual - reservas
+  quantityToPurchase: number;  // Editável pelo usuário
+}
 
-export async function registerStockExit(params: {
-  companyId: string;
-  itemTemplateId: string;
-  quantity: number;
-  category: 'venda' | 'uso_interno' | 'perda' | 'devolucao_fornecedor' | 'consumo_producao';
-  description?: string;
-  referenceId?: string;
-  referenceType?: 'sale' | 'ordem_servico' | 'expense';
-  unitCost?: number;
-}): Promise<{ success: boolean; newQuantity: number }>;
+// Mínimo obrigatório
+const minimumRequired = Math.max(0, item.quantityNeeded - item.quantityAvailable);
 
-export async function ensureStockExists(
-  companyId: string,
-  itemTemplateId: string,
-  initialQuantity?: number
-): Promise<string>; // Returns stock ID
+// Validação ao editar
+const validateQuantity = (newValue: number) => {
+  if (newValue < minimumRequired) {
+    toast.error(`Mínimo necessário: ${minimumRequired} ${item.unit}`);
+    return minimumRequired; // Força o mínimo
+  }
+  return newValue; // Permite comprar A MAIS
+};
 ```
 
-### 5. Dashboard de Movimentações Automáticas
+**UI:** Campo numérico com `min={minimumRequired}` e mensagem de ajuda mostrando o mínimo.
 
-**Melhoria no histórico:** Adicionar badges visuais para identificar origem:
+### 2️⃣ Cancelamento de OS: Regras por Status
 
-| Origem | Badge | Cor |
-|--------|-------|-----|
-| Manual | "Manual" | Cinza |
-| Venda | "Venda #0001" | Azul |
-| Produção/OS | "OS #0023" | Laranja |
-| Compra | "PC #0005" | Verde |
-| Ajuste | "Ajuste" | Amarelo |
+**Arquivo:** `src/pages/OrdensServico.tsx` - função `updateStatusMutation`
 
----
+**Regras a implementar:**
 
-## Arquivos a Criar/Modificar
+| Status Consumo | Ação ao Cancelar OS | Implementação |
+|----------------|---------------------|---------------|
+| `pending` | Cancelar consumo + liberar reservas | ✅ Já funciona |
+| `available` | Cancelar consumo, não mexe no estoque | ✅ Já funciona |
+| `consumed` | **BLOQUEAR** ou exigir estorno manual | ⚠️ A implementar |
 
-### Novos Arquivos
-```text
-src/utils/stockMovements.ts          ← Utility centralizado
+**Código a adicionar em `OrdensServico.tsx`:**
+
+```typescript
+// Antes de permitir cancelar
+const checkCanCancel = async (osId: string): Promise<{ canCancel: boolean; reason?: string }> => {
+  const { data: consumption } = await supabase
+    .from('material_consumption')
+    .select('status')
+    .eq('ordem_servico_id', osId);
+  
+  const hasConsumed = consumption?.some(c => c.status === 'consumed');
+  
+  if (hasConsumed) {
+    return {
+      canCancel: false,
+      reason: 'Esta OS já teve materiais consumidos do estoque. Para cancelar, é necessário fazer estorno manual dos materiais.'
+    };
+  }
+  
+  return { canCancel: true };
+};
 ```
 
-### Arquivos a Modificar
-```text
-src/hooks/usePurchaseOrders.ts       ← Adicionar entrada de estoque no recebimento
-src/pages/CaixaVendas.tsx            ← Registrar movements em vendas avulsas
-src/components/estoque/HistoricoMovimentosTab.tsx  ← Melhorar visualização com badges de origem
-src/utils/checkGlassStock.ts         ← Usar utility centralizado
-```
+**UI:** Dialog de confirmação mostrando aviso quando há materiais consumidos.
 
-### Migration (Schema)
+### 3️⃣ Melhorar Função de Cancelamento de Reservas
+
+**Arquivo:** `src/utils/checkGlassStock.ts` - função `cancelStockReservation`
+
+Atualmente só marca como `cancelled`. Precisa também:
+- Invalidar caches de estoque
+- Logar auditoria
+
+**Arquivo:** `src/utils/generateMaterialConsumption.ts` - função RPC `cancel_os_materials`
+
+A função RPC atual já faz o correto (cancela `material_consumption` com status `pending` ou `available`), mas precisamos garantir que as `stock_reservations` também sejam canceladas.
+
+**Ajuste na RPC (via migration):**
+
 ```sql
--- Adicionar campos de rastreabilidade
-ALTER TABLE public.stock_movements 
-ADD COLUMN IF NOT EXISTS company_item_id UUID REFERENCES public.company_items(id),
-ADD COLUMN IF NOT EXISTS reference_id UUID,
-ADD COLUMN IF NOT EXISTS reference_type TEXT;
+-- Adicionar cancelamento de reservas
+CREATE OR REPLACE FUNCTION public.cancel_os_materials(_ordem_servico_id uuid)
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+DECLARE
+  updated_count INTEGER;
+BEGIN
+  -- 1. Verificar se há materiais já consumidos
+  IF EXISTS (
+    SELECT 1 FROM material_consumption 
+    WHERE ordem_servico_id = _ordem_servico_id 
+    AND status = 'consumed'
+  ) THEN
+    RAISE EXCEPTION 'Não é possível cancelar: há materiais já consumidos';
+  END IF;
 
--- Índices
-CREATE INDEX IF NOT EXISTS idx_stock_movements_reference 
-ON public.stock_movements(reference_type, reference_id);
+  -- 2. Cancelar material_consumption
+  UPDATE public.material_consumption
+  SET 
+    status = 'cancelled',
+    updated_at = now()
+  WHERE ordem_servico_id = _ordem_servico_id
+    AND status IN ('pending', 'available');
+  
+  GET DIAGNOSTICS updated_count = ROW_COUNT;
+  
+  -- 3. Cancelar stock_reservations vinculadas
+  UPDATE public.stock_reservations
+  SET 
+    status = 'cancelled',
+    cancelled_at = now()
+  WHERE ordem_servico_id = _ordem_servico_id
+    AND status = 'reserved';
+  
+  RETURN updated_count;
+END;
+$function$;
 ```
+
+### 4️⃣ Garantir Baixa Apenas de Material Consumption
+
+**Status atual:** ✅ Já implementado corretamente
+
+A função `consumeOSMaterials()` em `checkGlassStock.ts`:
+1. Busca `stock_reservations` da OS (linha 311-316)
+2. Para cada reserva, baixa do `company_stock` (linha 337-349)
+3. Cria `stock_movements` (linha 353-367)
+4. Atualiza `material_consumption` (linha 379-388)
+
+Não precisa de alteração, apenas documentar.
+
+### 5️⃣ Relatório de Diferença (Planejado vs Consumido)
+
+**Novo componente:** `src/components/ordens-servico/OSMaterialDifferenceReport.tsx`
+
+**Dados a exibir:**
+
+| Material | Planejado | Consumido | Diferença | Status |
+|----------|-----------|-----------|-----------|--------|
+| Vidro 8mm | 5.00 m² | 5.20 m² | +0.20 m² | ⚠️ Sobra |
+| Perfil SU-007 | 12.00 m | 11.50 m | -0.50 m | ✅ Economia |
+| Parafuso M8 | 24 un | 24 un | 0 | ✅ Exato |
+
+**Query para o relatório:**
+
+```sql
+SELECT 
+  mc.item_name,
+  mc.unit,
+  mc.quantity_calculated as planejado,
+  COALESCE(sm.quantity, 0) as consumido,
+  COALESCE(sm.quantity, 0) - mc.quantity_calculated as diferenca
+FROM material_consumption mc
+LEFT JOIN stock_movements sm ON sm.id = mc.stock_movement_id
+WHERE mc.ordem_servico_id = $1
+  AND mc.status = 'consumed';
+```
+
+**Onde exibir:**
+- Aba "Materiais" nos detalhes da OS (quando status = 'completed')
+- Relatório gerencial de produção (futuro)
 
 ---
 
-## Fluxo Completo Após Implementação
+## Arquivos a Criar
 
-```text
-┌─────────────────────────────────────────────────────────────────────┐
-│                    FLUXO DE ESTOQUE AUTOMATIZADO                    │
-└─────────────────────────────────────────────────────────────────────┘
+| Arquivo | Descrição |
+|---------|-----------|
+| `src/components/ordens-servico/OSMaterialDifferenceReport.tsx` | Relatório de diferença |
+| `src/components/pedidos-compra/EditPurchaseListDialog.tsx` | Editor de lista com validação de mínimo |
 
-   ENTRADAS AUTOMÁTICAS                    SAÍDAS AUTOMÁTICAS
-   ───────────────────                     ─────────────────
-   
-   📦 Receber Pedido Compra ──┐       ┌── 🛒 Venda no Caixa
-                              │       │
-   ↩️ Devolução de Cliente ───┼──►    ├── 🏭 Produção (OS finalizada)
-                              │  │    │
-   ✏️ Ajuste Manual ──────────┘  │    ├── 📤 Devolução Fornecedor
-                                 │    │
-                                 ▼    ├── ❌ Perda/Quebra
-                              ┌──────┐│
-                              │STOCK ││── ✏️ Ajuste Manual
-                              │      ││
-                              │  →   │◄──────────────────────┘
-                              └──────┘
-                                 │
-                                 ▼
-                           ┌──────────┐
-                           │MOVEMENTS │ ← Histórico completo
-                           │          │   com rastreabilidade
-                           └──────────┘
+## Arquivos a Modificar
+
+| Arquivo | Modificação |
+|---------|-------------|
+| `src/pages/OrdensServico.tsx` | Adicionar verificação antes de cancelar |
+| `src/components/ordens-servico/OSConsumptionStatus.tsx` | Integrar relatório de diferença |
+
+## Migration (Schema)
+
+```sql
+-- Melhorar função de cancelamento
+CREATE OR REPLACE FUNCTION public.cancel_os_materials(_ordem_servico_id uuid)
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+DECLARE
+  updated_count INTEGER;
+  has_consumed BOOLEAN;
+BEGIN
+  -- Verificar se há materiais já consumidos
+  SELECT EXISTS (
+    SELECT 1 FROM material_consumption 
+    WHERE ordem_servico_id = _ordem_servico_id 
+    AND status = 'consumed'
+  ) INTO has_consumed;
+  
+  IF has_consumed THEN
+    RAISE EXCEPTION 'Cancelamento bloqueado: materiais já foram consumidos do estoque';
+  END IF;
+
+  -- Cancelar material_consumption
+  UPDATE public.material_consumption
+  SET status = 'cancelled', updated_at = now()
+  WHERE ordem_servico_id = _ordem_servico_id
+    AND status IN ('pending', 'available');
+  GET DIAGNOSTICS updated_count = ROW_COUNT;
+  
+  -- Cancelar reservas vinculadas
+  UPDATE public.stock_reservations
+  SET status = 'cancelled', cancelled_at = now()
+  WHERE ordem_servico_id = _ordem_servico_id
+    AND status = 'reserved';
+  
+  RETURN updated_count;
+END;
+$function$;
 ```
 
 ---
 
 ## Critérios de Aceite
 
-1. **Recebimento de Compra:** Ao receber itens de um pedido de compra, o estoque é atualizado automaticamente e movimento de entrada é registrado com referência ao pedido
-2. **Venda Avulsa:** Ao vender um item do estoque (não produto composto), movimento de saída é registrado com referência à venda
-3. **Histórico Completo:** Tab "Histórico" mostra todas as movimentações com badges indicando a origem (Compra, Venda, Produção, Manual)
-4. **Rastreabilidade:** É possível clicar em um movimento e ver detalhes do documento de origem (OS, Venda, Pedido de Compra)
-5. **Consistência:** Todas as movimentações usam o mesmo padrão de campos e categorias
-
----
-
-## Riscos e Mitigações
-
-| Risco | Mitigação |
-|-------|-----------|
-| Movimentos duplicados | Verificar se já existe movement com mesmo `reference_id` + `reference_type` |
-| Estoque negativo | Validar quantidade disponível antes de saídas (já implementado) |
-| Performance | Usar transações e batch inserts quando possível |
-| Dados históricos | Migração não afeta movimentos já registrados |
+1. **Lista de compra:** Não permite digitar quantidade menor que `(necessário - disponível)`
+2. **Cancelamento bloqueado:** Se OS tem status `consumed`, exibe erro ao tentar cancelar
+3. **Reservas liberadas:** Ao cancelar OS com status `pending/available`, reservas são canceladas
+4. **Relatório visível:** Na aba Materiais da OS concluída, mostra diferença planejado vs consumido
+5. **Consistência:** Baixa de estoque SEMPRE vem de `material_consumption`, nunca direto de compra
 
 ---
 
 ## Ordem de Implementação
 
-1. **Migration:** Adicionar campos de rastreabilidade ao schema
-2. **Utility:** Criar `stockMovements.ts` com funções centralizadas
-3. **Recebimento PO:** Integrar entrada de estoque no `usePurchaseOrders`
-4. **Vendas:** Registrar movements em `CaixaVendas`
-5. **Histórico:** Melhorar visualização com badges e links
-6. **Testes:** Verificar fluxo completo end-to-end
+1. **Migration:** Atualizar RPC `cancel_os_materials` com validação e cancelamento de reservas
+2. **Cancelamento:** Adicionar verificação em `OrdensServico.tsx` antes de permitir cancelar
+3. **Lista de compra:** Criar `EditPurchaseListDialog.tsx` com validação de mínimo
+4. **Relatório:** Criar `OSMaterialDifferenceReport.tsx`
+5. **Integração:** Adicionar relatório na aba de materiais da OS
+
