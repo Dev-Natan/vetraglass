@@ -5352,6 +5352,7 @@ export type Database = {
           cash_movement_id: string | null
           category: string
           company_id: string
+          company_item_id: string | null
           created_at: string
           created_by: string | null
           description: string | null
@@ -5359,6 +5360,8 @@ export type Database = {
           id: string
           item_template_id: string | null
           quantity: number
+          reference_id: string | null
+          reference_type: string | null
           sale_id: string | null
           type: string
           unit_cost: number | null
@@ -5368,6 +5371,7 @@ export type Database = {
           cash_movement_id?: string | null
           category: string
           company_id: string
+          company_item_id?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -5375,6 +5379,8 @@ export type Database = {
           id?: string
           item_template_id?: string | null
           quantity?: number
+          reference_id?: string | null
+          reference_type?: string | null
           sale_id?: string | null
           type: string
           unit_cost?: number | null
@@ -5384,6 +5390,7 @@ export type Database = {
           cash_movement_id?: string | null
           category?: string
           company_id?: string
+          company_item_id?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -5391,6 +5398,8 @@ export type Database = {
           id?: string
           item_template_id?: string | null
           quantity?: number
+          reference_id?: string | null
+          reference_type?: string | null
           sale_id?: string | null
           type?: string
           unit_cost?: number | null
@@ -5416,6 +5425,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_company_item_id_fkey"
+            columns: ["company_item_id"]
+            isOneToOne: false
+            referencedRelation: "company_items"
             referencedColumns: ["id"]
           },
           {

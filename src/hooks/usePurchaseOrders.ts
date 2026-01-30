@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { CACHE_TIMES } from '@/lib/queryConfig';
+import { registerStockEntry } from '@/utils/stockMovements';
 
 export interface PurchaseOrder {
   id: string;
@@ -205,8 +206,26 @@ export function useReceivePurchaseOrderItems() {
       items: Array<{ id: string; actualCost: number; receivedQuantity: number }>;
       totalActual: number;
     }) => {
-      // Update all items
+      // Buscar dados do pedido de compra para obter company_id
+      const { data: purchaseOrder } = await supabase
+        .from('purchase_orders')
+        .select('company_id')
+        .eq('id', purchaseOrderId)
+        .single();
+
+      if (!purchaseOrder) {
+        throw new Error('Pedido de compra não encontrado');
+      }
+
+      // Buscar detalhes completos dos itens sendo recebidos
+      const { data: itemDetails } = await supabase
+        .from('purchase_order_items')
+        .select('id, item_template_id, description, quantity, unit')
+        .in('id', items.map(i => i.id));
+
+      // Update all items e registrar entrada no estoque
       for (const item of items) {
+        // Atualizar status do item do pedido
         await supabase
           .from('purchase_order_items')
           .update({
@@ -216,6 +235,22 @@ export function useReceivePurchaseOrderItems() {
             received_at: new Date().toISOString(),
           })
           .eq('id', item.id);
+
+        // Buscar detalhes do item
+        const itemDetail = itemDetails?.find(d => d.id === item.id);
+        
+        // Se o item tem item_template_id, registrar entrada no estoque
+        if (itemDetail?.item_template_id) {
+          await registerStockEntry({
+            companyId: purchaseOrder.company_id,
+            itemTemplateId: itemDetail.item_template_id,
+            quantity: item.receivedQuantity,
+            category: 'compra_fornecedor',
+            description: `Recebimento PO: ${itemDetail.description}`,
+            referenceId: purchaseOrderId,
+            referenceType: 'purchase_order',
+          });
+        }
       }
       
       // Check if all items are received
@@ -252,6 +287,21 @@ export function useReceivePurchaseOrderItems() {
           .update({ procurement_status: 'received' })
           .in('id', glassIds);
       }
+
+      // Update material_consumption status if linked
+      const { data: itemsWithMaterial } = await supabase
+        .from('purchase_order_items')
+        .select('os_material_id')
+        .in('id', receivedItemIds)
+        .not('os_material_id', 'is', null);
+      
+      if (itemsWithMaterial && itemsWithMaterial.length > 0) {
+        const materialIds = itemsWithMaterial.map(i => i.os_material_id).filter(Boolean);
+        await supabase
+          .from('material_consumption')
+          .update({ status: 'available' })
+          .in('id', materialIds);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
@@ -259,7 +309,10 @@ export function useReceivePurchaseOrderItems() {
       queryClient.invalidateQueries({ queryKey: ['purchase-order-items'] });
       queryClient.invalidateQueries({ queryKey: ['pending-purchases-count'] });
       queryClient.invalidateQueries({ queryKey: ['os-glass-projects'] });
-      toast.success('Itens recebidos com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['company-stock'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['material-consumption'] });
+      toast.success('Itens recebidos e estoque atualizado!');
     },
     onError: (error: Error) => {
       toast.error('Erro ao receber itens: ' + error.message);

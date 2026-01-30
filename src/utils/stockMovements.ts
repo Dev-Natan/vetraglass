@@ -1,0 +1,389 @@
+import { supabase } from '@/integrations/supabase/client';
+
+export type StockEntryCategory = 
+  | 'compra_fornecedor' 
+  | 'devolucao_cliente' 
+  | 'ajuste_inventario' 
+  | 'transferencia'
+  | 'producao_sobra';
+
+export type StockExitCategory = 
+  | 'venda' 
+  | 'uso_interno' 
+  | 'perda' 
+  | 'devolucao_fornecedor' 
+  | 'consumo_producao'
+  | 'ajuste_inventario';
+
+export type ReferenceType = 'purchase_order' | 'sale' | 'ordem_servico' | 'manual' | 'expense';
+
+interface StockMovementParams {
+  companyId: string;
+  itemTemplateId: string;
+  companyItemId?: string;
+  quantity: number;
+  description?: string;
+  referenceId?: string;
+  referenceType?: ReferenceType;
+  unitCost?: number;
+}
+
+interface StockEntryParams extends StockMovementParams {
+  category: StockEntryCategory;
+}
+
+interface StockExitParams extends StockMovementParams {
+  category: StockExitCategory;
+}
+
+interface StockMovementResult {
+  success: boolean;
+  newQuantity: number;
+  stockId?: string;
+  movementId?: string;
+  error?: string;
+}
+
+/**
+ * Garante que existe um registro de estoque para o item
+ * Se não existir, cria com quantidade inicial (padrão 0)
+ */
+export async function ensureStockExists(
+  companyId: string,
+  itemTemplateId: string,
+  companyItemId?: string,
+  initialQuantity: number = 0
+): Promise<{ stockId: string; currentQuantity: number }> {
+  // Tentar encontrar estoque existente
+  const { data: existingStock } = await supabase
+    .from('company_stock')
+    .select('id, quantity')
+    .eq('company_id', companyId)
+    .eq('item_template_id', itemTemplateId)
+    .maybeSingle();
+
+  if (existingStock) {
+    return { 
+      stockId: existingStock.id, 
+      currentQuantity: existingStock.quantity 
+    };
+  }
+
+  // Criar novo registro de estoque
+  const { data: newStock, error } = await supabase
+    .from('company_stock')
+    .insert({
+      company_id: companyId,
+      item_template_id: itemTemplateId,
+      company_item_id: companyItemId || null,
+      quantity: initialQuantity,
+      min_quantity: 0,
+      is_active: true,
+      allow_fractional: false,
+    })
+    .select('id, quantity')
+    .single();
+
+  if (error) throw new Error(`Erro ao criar estoque: ${error.message}`);
+  
+  return { 
+    stockId: newStock.id, 
+    currentQuantity: newStock.quantity 
+  };
+}
+
+/**
+ * Busca o company_item_id correspondente ao item_template_id
+ */
+async function getCompanyItemId(
+  companyId: string, 
+  itemTemplateId: string
+): Promise<string | null> {
+  const { data } = await supabase
+    .from('company_items')
+    .select('id')
+    .eq('company_id', companyId)
+    .eq('item_template_id', itemTemplateId)
+    .maybeSingle();
+  
+  return data?.id || null;
+}
+
+/**
+ * Verifica se já existe um movimento com a mesma referência (evita duplicados)
+ */
+async function checkDuplicateMovement(
+  companyId: string,
+  itemTemplateId: string,
+  referenceId: string,
+  referenceType: string
+): Promise<boolean> {
+  const { data } = await supabase
+    .from('stock_movements')
+    .select('id')
+    .eq('company_id', companyId)
+    .eq('item_template_id', itemTemplateId)
+    .eq('reference_id', referenceId)
+    .eq('reference_type', referenceType)
+    .maybeSingle();
+  
+  return !!data;
+}
+
+/**
+ * Registra uma entrada de estoque (compra, devolução, ajuste positivo)
+ */
+export async function registerStockEntry(
+  params: StockEntryParams
+): Promise<StockMovementResult> {
+  const { 
+    companyId, 
+    itemTemplateId, 
+    companyItemId,
+    quantity, 
+    category, 
+    description, 
+    referenceId,
+    referenceType = 'manual'
+  } = params;
+
+  try {
+    // Verificar duplicatas se tiver referência
+    if (referenceId && referenceType) {
+      const isDuplicate = await checkDuplicateMovement(
+        companyId, 
+        itemTemplateId, 
+        referenceId, 
+        referenceType
+      );
+      if (isDuplicate) {
+        console.warn(`Movimento duplicado ignorado: ${referenceType}/${referenceId}`);
+        return { 
+          success: true, 
+          newQuantity: 0, 
+          error: 'Movimento já registrado anteriormente' 
+        };
+      }
+    }
+
+    // Garantir que estoque existe
+    const resolvedCompanyItemId = companyItemId || await getCompanyItemId(companyId, itemTemplateId);
+    const { stockId, currentQuantity } = await ensureStockExists(
+      companyId, 
+      itemTemplateId,
+      resolvedCompanyItemId || undefined
+    );
+
+    const newQuantity = currentQuantity + quantity;
+
+    // Atualizar quantidade no estoque
+    const { error: updateError } = await supabase
+      .from('company_stock')
+      .update({ 
+        quantity: newQuantity,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', stockId);
+
+    if (updateError) throw new Error(`Erro ao atualizar estoque: ${updateError.message}`);
+
+    // Registrar movimento
+    const { data: movement, error: movementError } = await supabase
+      .from('stock_movements')
+      .insert({
+        company_id: companyId,
+        item_template_id: itemTemplateId,
+        company_item_id: resolvedCompanyItemId,
+        type: 'entrada',
+        category,
+        quantity,
+        description: description || `Entrada: ${category}`,
+        reference_id: referenceId,
+        reference_type: referenceType,
+      })
+      .select('id')
+      .single();
+
+    if (movementError) {
+      console.error('Erro ao registrar movimento:', movementError);
+      // Não falha a operação, apenas loga
+    }
+
+    return {
+      success: true,
+      newQuantity,
+      stockId,
+      movementId: movement?.id,
+    };
+  } catch (error: any) {
+    console.error('Erro em registerStockEntry:', error);
+    return {
+      success: false,
+      newQuantity: 0,
+      error: error.message,
+    };
+  }
+}
+
+/**
+ * Registra uma saída de estoque (venda, consumo, perda, devolução)
+ */
+export async function registerStockExit(
+  params: StockExitParams
+): Promise<StockMovementResult> {
+  const { 
+    companyId, 
+    itemTemplateId,
+    companyItemId,
+    quantity, 
+    category, 
+    description, 
+    referenceId,
+    referenceType = 'manual'
+  } = params;
+
+  try {
+    // Verificar duplicatas se tiver referência
+    if (referenceId && referenceType) {
+      const isDuplicate = await checkDuplicateMovement(
+        companyId, 
+        itemTemplateId, 
+        referenceId, 
+        referenceType
+      );
+      if (isDuplicate) {
+        console.warn(`Movimento duplicado ignorado: ${referenceType}/${referenceId}`);
+        return { 
+          success: true, 
+          newQuantity: 0, 
+          error: 'Movimento já registrado anteriormente' 
+        };
+      }
+    }
+
+    // Buscar estoque atual
+    const resolvedCompanyItemId = companyItemId || await getCompanyItemId(companyId, itemTemplateId);
+    const { data: stock } = await supabase
+      .from('company_stock')
+      .select('id, quantity')
+      .eq('company_id', companyId)
+      .eq('item_template_id', itemTemplateId)
+      .maybeSingle();
+
+    if (!stock) {
+      return {
+        success: false,
+        newQuantity: 0,
+        error: 'Item não encontrado no estoque',
+      };
+    }
+
+    const newQuantity = Math.max(0, stock.quantity - quantity);
+
+    // Atualizar quantidade no estoque
+    const { error: updateError } = await supabase
+      .from('company_stock')
+      .update({ 
+        quantity: newQuantity,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', stock.id);
+
+    if (updateError) throw new Error(`Erro ao atualizar estoque: ${updateError.message}`);
+
+    // Registrar movimento
+    const { data: movement, error: movementError } = await supabase
+      .from('stock_movements')
+      .insert({
+        company_id: companyId,
+        item_template_id: itemTemplateId,
+        company_item_id: resolvedCompanyItemId,
+        type: 'saida',
+        category,
+        quantity,
+        description: description || `Saída: ${category}`,
+        reference_id: referenceId,
+        reference_type: referenceType,
+      })
+      .select('id')
+      .single();
+
+    if (movementError) {
+      console.error('Erro ao registrar movimento:', movementError);
+    }
+
+    return {
+      success: true,
+      newQuantity,
+      stockId: stock.id,
+      movementId: movement?.id,
+    };
+  } catch (error: any) {
+    console.error('Erro em registerStockExit:', error);
+    return {
+      success: false,
+      newQuantity: 0,
+      error: error.message,
+    };
+  }
+}
+
+/**
+ * Registra entrada de múltiplos itens em batch (ex: recebimento de pedido de compra)
+ */
+export async function registerBatchStockEntry(
+  companyId: string,
+  items: Array<{
+    itemTemplateId: string;
+    companyItemId?: string;
+    quantity: number;
+    description?: string;
+  }>,
+  category: StockEntryCategory,
+  referenceId: string,
+  referenceType: ReferenceType
+): Promise<{ success: boolean; results: StockMovementResult[] }> {
+  const results: StockMovementResult[] = [];
+  
+  for (const item of items) {
+    const result = await registerStockEntry({
+      companyId,
+      itemTemplateId: item.itemTemplateId,
+      companyItemId: item.companyItemId,
+      quantity: item.quantity,
+      category,
+      description: item.description,
+      referenceId,
+      referenceType,
+    });
+    results.push(result);
+  }
+  
+  const allSuccess = results.every(r => r.success);
+  return { success: allSuccess, results };
+}
+
+/**
+ * Formata referência para exibição no histórico
+ */
+export function formatMovementReference(
+  referenceType: string | null, 
+  referenceId: string | null
+): { label: string; badgeVariant: 'default' | 'secondary' | 'outline' } | null {
+  if (!referenceType || !referenceId) {
+    return { label: 'Manual', badgeVariant: 'outline' };
+  }
+
+  switch (referenceType) {
+    case 'purchase_order':
+      return { label: 'Compra', badgeVariant: 'default' };
+    case 'sale':
+      return { label: 'Venda', badgeVariant: 'secondary' };
+    case 'ordem_servico':
+      return { label: 'Produção', badgeVariant: 'default' };
+    case 'manual':
+      return { label: 'Manual', badgeVariant: 'outline' };
+    default:
+      return { label: referenceType, badgeVariant: 'outline' };
+  }
+}
