@@ -55,8 +55,6 @@ const features = [
 const plans = [
   {
     name: 'Inicial',
-    price: 'R$ 99',
-    period: '/mês',
     description: 'Para pequenas vidraçarias',
     features: [
       'Até 2 usuários',
@@ -68,8 +66,6 @@ const plans = [
   },
   {
     name: 'Profissional',
-    price: 'R$ 199',
-    period: '/mês',
     description: 'Para vidraçarias em crescimento',
     features: [
       'Até 5 usuários',
@@ -83,8 +79,6 @@ const plans = [
   },
   {
     name: 'Enterprise',
-    price: 'R$ 399',
-    period: '/mês',
     description: 'Para grandes operações',
     features: [
       'Usuários ilimitados',
@@ -334,10 +328,6 @@ export default function Landing() {
                 <CardHeader className="text-center pb-4">
                   <CardTitle className="text-xl">{plan.name}</CardTitle>
                   <CardDescription>{plan.description}</CardDescription>
-                  <div className="mt-4">
-                    <span className="text-4xl font-bold font-display text-foreground">{plan.price}</span>
-                    <span className="text-muted-foreground">{plan.period}</span>
-                  </div>
                 </CardHeader>
                 <CardContent className="pt-0">
                   <ul className="space-y-3 mb-6">
