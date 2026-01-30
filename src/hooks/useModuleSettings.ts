@@ -24,7 +24,7 @@ export function useModuleSettings() {
       if (error) throw error;
       return data as ModuleSetting[];
     },
-    ...CACHE_TIMES.STATIC,
+    ...CACHE_TIMES.DYNAMIC,
   });
 }
 

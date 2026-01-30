@@ -8,6 +8,7 @@ import { createQueryClient } from "@/lib/queryConfig";
 import { lazy, Suspense } from "react";
 import { LazyPageLoader } from "@/components/common/LazyPageLoader";
 import { Loader2 } from "lucide-react";
+import { ModuleGuard } from "@/components/ModuleGuard";
 
 // Core pages - loaded immediately (minimal bundle)
 import Landing from "./pages/Landing";
@@ -167,16 +168,16 @@ function AppRoutes() {
       
       {/* Dashboard - protected */}
       <Route path="/dashboard" element={<ProtectedRoute><IndexRedirect /></ProtectedRoute>} />
-      <Route path="/clientes" element={<ProtectedRoute><LazyRoute><Clientes /></LazyRoute></ProtectedRoute>} />
-      <Route path="/produtos" element={<ProtectedRoute><LazyRoute><Produtos /></LazyRoute></ProtectedRoute>} />
-      <Route path="/produtos/linha/:linha" element={<ProtectedRoute><LazyRoute><ProdutosLinha /></LazyRoute></ProtectedRoute>} />
-      <Route path="/orcamentos" element={<ProtectedRoute><LazyRoute><Orcamentos /></LazyRoute></ProtectedRoute>} />
-      <Route path="/ordens-servico" element={<ProtectedRoute><LazyRoute><OrdensServico /></LazyRoute></ProtectedRoute>} />
-      <Route path="/estoque" element={<ProtectedRoute><LazyRoute><Estoque /></LazyRoute></ProtectedRoute>} />
-      <Route path="/caixa-vendas" element={<ProtectedRoute><LazyRoute><CaixaVendas /></LazyRoute></ProtectedRoute>} />
+      <Route path="/clientes" element={<ProtectedRoute><ModuleGuard moduleKey="clientes"><LazyRoute><Clientes /></LazyRoute></ModuleGuard></ProtectedRoute>} />
+      <Route path="/produtos" element={<ProtectedRoute><ModuleGuard moduleKey="produtos"><LazyRoute><Produtos /></LazyRoute></ModuleGuard></ProtectedRoute>} />
+      <Route path="/produtos/linha/:linha" element={<ProtectedRoute><ModuleGuard moduleKey="produtos"><LazyRoute><ProdutosLinha /></LazyRoute></ModuleGuard></ProtectedRoute>} />
+      <Route path="/orcamentos" element={<ProtectedRoute><ModuleGuard moduleKey="orcamentos"><LazyRoute><Orcamentos /></LazyRoute></ModuleGuard></ProtectedRoute>} />
+      <Route path="/ordens-servico" element={<ProtectedRoute><ModuleGuard moduleKey="ordens_servico"><LazyRoute><OrdensServico /></LazyRoute></ModuleGuard></ProtectedRoute>} />
+      <Route path="/estoque" element={<ProtectedRoute><ModuleGuard moduleKey="estoque"><LazyRoute><Estoque /></LazyRoute></ModuleGuard></ProtectedRoute>} />
+      <Route path="/caixa-vendas" element={<ProtectedRoute><ModuleGuard moduleKey="caixa_vendas"><LazyRoute><CaixaVendas /></LazyRoute></ModuleGuard></ProtectedRoute>} />
       <Route path="/vendas" element={<Navigate to="/caixa-vendas" replace />} />
       <Route path="/plano-corte" element={<Navigate to="/producao" replace />} />
-      <Route path="/producao" element={<ProtectedRoute><LazyRoute><Producao /></LazyRoute></ProtectedRoute>} />
+      <Route path="/producao" element={<ProtectedRoute><ModuleGuard moduleKey="producao"><LazyRoute><Producao /></LazyRoute></ModuleGuard></ProtectedRoute>} />
       
       {/* Lazy loaded routes */}
       <Route path="/produtos/editar/:id" element={
@@ -189,27 +190,27 @@ function AppRoutes() {
         <ProtectedRoute><LazyRoute><OrdemServicoDetalhes /></LazyRoute></ProtectedRoute>
       } />
       <Route path="/financeiro" element={
-        <ProtectedRoute><LazyRoute><Financeiro /></LazyRoute></ProtectedRoute>
+        <ProtectedRoute><ModuleGuard moduleKey="financeiro"><LazyRoute><Financeiro /></LazyRoute></ModuleGuard></ProtectedRoute>
       } />
       <Route path="/funcionarios" element={
-        <ProtectedRoute><LazyRoute><Funcionarios /></LazyRoute></ProtectedRoute>
+        <ProtectedRoute><ModuleGuard moduleKey="funcionarios"><LazyRoute><Funcionarios /></LazyRoute></ModuleGuard></ProtectedRoute>
       } />
       <Route path="/projeto-vidro" element={<Navigate to="/producao?tab=vidros" replace />} />
       <Route path="/notas-fiscais" element={
-        <ProtectedRoute><LazyRoute><NotasFiscais /></LazyRoute></ProtectedRoute>
+        <ProtectedRoute><ModuleGuard moduleKey="notas_fiscais"><LazyRoute><NotasFiscais /></LazyRoute></ModuleGuard></ProtectedRoute>
       } />
       <Route path="/pedidos-compra" element={
-        <ProtectedRoute><LazyRoute><PedidosCompra /></LazyRoute></ProtectedRoute>
+        <ProtectedRoute><ModuleGuard moduleKey="pedidos_compra"><LazyRoute><PedidosCompra /></LazyRoute></ModuleGuard></ProtectedRoute>
       } />
       <Route path="/agenda" element={<Navigate to="/ordens-servico?tab=calendario" replace />} />
       <Route path="/medicoes" element={
-        <ProtectedRoute><LazyRoute><Medicoes /></LazyRoute></ProtectedRoute>
+        <ProtectedRoute><ModuleGuard moduleKey="medicoes"><LazyRoute><Medicoes /></LazyRoute></ModuleGuard></ProtectedRoute>
       } />
       <Route path="/relatorios" element={
-        <ProtectedRoute><LazyRoute><Relatorios /></LazyRoute></ProtectedRoute>
+        <ProtectedRoute><ModuleGuard moduleKey="relatorios"><LazyRoute><Relatorios /></LazyRoute></ModuleGuard></ProtectedRoute>
       } />
       <Route path="/feedbacks" element={
-        <ProtectedRoute><LazyRoute><Feedbacks /></LazyRoute></ProtectedRoute>
+        <ProtectedRoute><ModuleGuard moduleKey="feedbacks"><LazyRoute><Feedbacks /></LazyRoute></ModuleGuard></ProtectedRoute>
       } />
       
       {/* Settings routes - all lazy */}
