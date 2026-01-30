@@ -60,7 +60,23 @@ export function useModuleSettingsMutations() {
 
       if (error) throw error;
     },
-    onSuccess: () => {
+    onMutate: async ({ moduleKey, isEnabled }) => {
+      await queryClient.cancelQueries({ queryKey: ["system-module-settings"] });
+      const previous = queryClient.getQueryData<ModuleSetting[]>(["system-module-settings"]);
+
+      queryClient.setQueryData<ModuleSetting[]>(["system-module-settings"], (old) => {
+        if (!old) return old;
+        return old.map((m) => (m.module_key === moduleKey ? { ...m, is_enabled: isEnabled } : m));
+      });
+
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["system-module-settings"], context.previous);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["system-module-settings"] });
     },
   });
@@ -76,7 +92,24 @@ export function useModuleSettingsMutations() {
         if (error) throw error;
       }
     },
-    onSuccess: () => {
+    onMutate: async (updates) => {
+      await queryClient.cancelQueries({ queryKey: ["system-module-settings"] });
+      const previous = queryClient.getQueryData<ModuleSetting[]>(["system-module-settings"]);
+
+      queryClient.setQueryData<ModuleSetting[]>(["system-module-settings"], (old) => {
+        if (!old) return old;
+        const map = new Map(updates.map((u) => [u.moduleKey, u.isEnabled] as const));
+        return old.map((m) => (map.has(m.module_key) ? { ...m, is_enabled: map.get(m.module_key)! } : m));
+      });
+
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["system-module-settings"], context.previous);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["system-module-settings"] });
     },
   });
