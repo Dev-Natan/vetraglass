@@ -1,102 +1,88 @@
 
-# Plano: Corrigir Estado Visual dos Toggles de Módulos
-
-## Problema Identificado
-
-Através da análise do console, identifiquei dois problemas:
-
-1. **Warning de React**: "Function components cannot be given refs" no `ModuleRow`
-2. **React.memo impedindo re-render**: O componente está memoizado mas a comparação de props pode estar falhando
-
-O Switch está funcionando tecnicamente (o módulo é desativado no banco), mas a **UI não atualiza visualmente** após a mutação.
+## Objetivo
+Corrigir o problema em que você desativa um módulo no painel admin, mas ele “continua ativo” (não some do menu/continua acessível), e o toggle parece não refletir o estado real.
 
 ---
 
-## Causa Raiz
+## Diagnóstico (causa raiz)
+Hoje, o painel está tentando **atualizar a tabela `system_module_settings` diretamente pelo frontend**, mas a regra de segurança do backend (RLS) **não permite UPDATE para usuários logados** (mesmo você sendo SaaS Admin).
 
-O `React.memo` está usando comparação shallow por padrão. Quando os dados são invalidados e refetchados, o objeto `module` pode ter a mesma referência ou a comparação está falhando.
+Conferindo as políticas atuais da tabela:
+- Existe policy de **SELECT** para `authenticated` (todos logados conseguem ler).
+- Existe policy de **ALL** apenas para `service_role` (chave de servidor).
+- **Não existe policy de UPDATE para `authenticated`** baseada em “SaaS admin”.
 
-Além disso, o uso de `React.memo` com named function está causando warning de ref.
-
----
-
-## Solução
-
-### Arquivo: `src/components/admin/settings/ModulesTab.tsx`
-
-**1. Remover React.memo do ModuleRow**
-
-O React.memo está causando problemas de re-render. Como a lista de módulos é pequena (menos de 20 itens), o ganho de performance é negligível e está causando bugs.
-
-```typescript
-// ANTES
-const ModuleRow = React.memo(function ModuleRow({ ... }) {
-  ...
-});
-
-// DEPOIS
-function ModuleRow({ module, onToggle, isLoading }: ModuleRowProps) {
-  ...
-}
-```
-
-**2. Adicionar key única baseada no estado**
-
-Forçar re-render quando o estado muda usando uma key composta:
-
-```typescript
-// ANTES
-<ModuleRow
-  key={module.id}
-  module={module}
-  ...
-/>
-
-// DEPOIS  
-<ModuleRow
-  key={`${module.id}-${module.is_enabled}`}
-  module={module}
-  ...
-/>
-```
-
-**3. Garantir que o Switch receba prop checked corretamente**
-
-Adicionar conversão explícita para boolean:
-
-```typescript
-// ANTES
-checked={module.is_enabled === true}
-
-// DEPOIS
-checked={Boolean(module.is_enabled)}
-```
+Resultado:
+- O update é bloqueado pelo backend.
+- O toggle pode até “mexer” visualmente por um instante, mas volta (ou fica “parecendo estático”).
+- O módulo segue “ativo” porque no banco ele nunca foi desativado de verdade.
 
 ---
 
-## Mudanças Completas
+## O que vou implementar (solução)
+### 1) Backend: liberar UPDATE para SaaS Admin (com segurança)
+Criar uma nova policy na tabela `public.system_module_settings` permitindo que **apenas SaaS admins** consigam atualizar (ativar/desativar) módulos.
 
-```text
-src/components/admin/settings/ModulesTab.tsx
-├── Linha 64: Remover React.memo wrapper
-├── Linha 217: Adicionar key composta com estado
-└── Linha 93: Usar Boolean() para checked
-```
+- Criar policy `FOR UPDATE` (e opcionalmente `FOR INSERT/DELETE` se você quiser manter o painel capaz de cadastrar/remover módulos no futuro).
+- Condição: `public.is_saas_admin(auth.uid())`
+- Manter o SELECT para todos logados (necessário para renderização do menu).
+
+Isso fará o toggle “persistir” e o estado mudar de verdade para todos.
+
+### 2) Frontend: melhorar feedback quando a alteração falhar (para ficar óbvio)
+Mesmo após a policy, é bom deixar o painel “à prova de dúvida”:
+
+- Garantir que, caso algum erro aconteça, o toast mostre algo mais claro (ex.: “Sem permissão para alterar módulo” / “Falha ao salvar”).
+- (Opcional) Logar `error.message` no console para facilitar debug futuro.
+
+### 3) (Recomendado) Bloquear acesso por URL quando módulo estiver desativado
+Hoje vocês escondem do menu, mas as rotas continuam acessíveis (porque o `App.tsx` só protege autenticação, não “módulo habilitado”).
+
+Vou adicionar um “guard” de rota do tipo:
+- Se o módulo estiver `is_enabled = false`:
+  - redireciona para `/dashboard` (ou página “Módulo desativado”)
+  - mostra um aviso (“Este módulo foi desativado pelo administrador do sistema”)
+
+Isso resolve 100% o “continua ativo” mesmo se alguém abrir pelo link direto.
+
+### 4) (Opcional) Ajustar estratégia de cache para refletir mais rápido para todos
+Seu `useModuleSettings` hoje usa `CACHE_TIMES.STATIC` (5 min). Isso pode fazer alguns usuários demorarem para “ver” a mudança sem recarregar.
+
+Opções:
+- Trocar para `CACHE_TIMES.DYNAMIC` (30s) para refletir mais rápido.
+- Ou implementar atualização automática (subscription) para refletir em tempo real.
+
+Vou seguir com a opção **DYNAMIC** por ser simples e suficiente na maioria dos casos (e não criar complexidade).
 
 ---
 
-## Resultado Esperado
+## Passo a passo de implementação
+1. **Criar uma migration** adicionando policy de UPDATE (e WITH CHECK) em `system_module_settings` para `authenticated` quando `is_saas_admin(auth.uid()) = true`.
+2. Ajustar o frontend para:
+   - manter o toggle funcionando imediatamente (otimista)
+   - deixar erro explícito (mensagem melhor)
+3. Implementar guard de rota no `App.tsx` para os módulos principais (clientes, produtos, estoque, caixa, etc.) e também rotas de configurações.
+4. Ajustar o cache do `useModuleSettings` para `DYNAMIC` (ou remover o override de STATIC).
+5. Testes:
+   - Testar desativar um módulo no admin e confirmar que o toggle muda e permanece.
+   - Abrir como outro usuário (ou aba anônima) e confirmar que o módulo some do menu.
+   - Tentar acessar a rota direta do módulo desativado e confirmar redirecionamento/bloqueio.
 
-| Estado | Visual do Switch |
-|--------|------------------|
-| `is_enabled: true` | Toggle verde/ativo, bolinha à direita |
-| `is_enabled: false` | Toggle cinza/inativo, bolinha à esquerda |
-| Badge | "Ativo" (verde) ou "Oculto" (âmbar) |
-| Ícone do módulo | Colorido (ativo) ou cinza (inativo) |
+---
 
-Após a correção, ao clicar no toggle:
-1. Mutação é enviada ao banco
-2. Query é invalidada
-3. Dados frescos são buscados
-4. Componente re-renderiza com novo estado
-5. Switch atualiza visualmente
+## Critérios de aceite (como vamos saber que ficou certo)
+- Ao desativar um módulo no admin:
+  - o toggle muda e fica no estado correto
+  - ao atualizar a página, continua desativado
+- Em outra sessão/usuário:
+  - o item do menu some
+  - o acesso direto pela URL é bloqueado (redireciona / avisa)
+- Dashboard e Configurações continuam protegidos contra desativação.
+
+---
+
+## Risco/impacto
+- Mudança é segura porque a permissão de UPDATE ficará restrita a SaaS Admin.
+- Não afeta dados de clientes, apenas controla visibilidade/acesso de módulos.
+- Guard de rotas evita “bypass” por URL.
+
