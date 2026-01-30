@@ -61,7 +61,7 @@ interface ModuleRowProps {
   isLoading: boolean;
 }
 
-const ModuleRow = React.memo(function ModuleRow({ module, onToggle, isLoading }: ModuleRowProps) {
+function ModuleRow({ module, onToggle, isLoading }: ModuleRowProps) {
   const IconComponent = iconMap[module.icon || ""] || Puzzle;
   const isEssential = module.module_key === "dashboard" || module.module_key === "configuracoes";
 
@@ -90,13 +90,13 @@ const ModuleRow = React.memo(function ModuleRow({ module, onToggle, isLoading }:
         </div>
       </div>
       <Switch
-        checked={module.is_enabled === true}
+        checked={Boolean(module.is_enabled)}
         onCheckedChange={(checked) => onToggle(module.module_key, checked)}
         disabled={isLoading || isEssential}
       />
     </div>
   );
-});
+}
 
 export function ModulesTab() {
   const { data: modules, isLoading } = useModuleSettings();
@@ -216,7 +216,7 @@ export function ModulesTab() {
             ) : (
               modules?.map((module) => (
                 <ModuleRow
-                  key={module.id}
+                  key={`${module.id}-${module.is_enabled}`}
                   module={module}
                   onToggle={handleToggle}
                   isLoading={toggleModuleMutation.isPending}
