@@ -26,7 +26,11 @@ import {
   Search, 
   Package,
   Filter,
-  ArrowUpDown
+  ArrowUpDown,
+  ShoppingCart,
+  Factory,
+  Wrench,
+  FileText
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -35,14 +39,44 @@ import { startOfMonth, endOfMonth } from 'date-fns';
 
 const motivoLabels: Record<string, string> = {
   compra: 'Compra',
+  compra_fornecedor: 'Compra',
   venda: 'Venda',
   uso_interno: 'Uso Interno',
   perda: 'Perda/Quebra',
   devolucao_cliente: 'Dev. Cliente',
   devolucao_fornecedor: 'Dev. Fornecedor',
   ajuste_inventario: 'Ajuste',
+  consumo_producao: 'Produção',
   transferencia: 'Transferência',
   outro: 'Outro',
+};
+
+// Configuração de badges por tipo de referência
+const referenceConfig: Record<string, { 
+  label: string; 
+  icon: React.ComponentType<any>; 
+  className: string;
+}> = {
+  purchase_order: { 
+    label: 'Compra', 
+    icon: ShoppingCart, 
+    className: 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400' 
+  },
+  sale: { 
+    label: 'Venda', 
+    icon: FileText, 
+    className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400' 
+  },
+  ordem_servico: { 
+    label: 'Produção', 
+    icon: Factory, 
+    className: 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-400' 
+  },
+  manual: { 
+    label: 'Manual', 
+    icon: Wrench, 
+    className: 'bg-gray-100 text-gray-700 dark:bg-gray-800/50 dark:text-gray-400' 
+  },
 };
 
 interface HistoricoMovimentosTabProps {
@@ -80,6 +114,9 @@ export function HistoricoMovimentosTab({ itemTemplates }: HistoricoMovimentosTab
           category,
           description,
           item_template_id,
+          company_item_id,
+          reference_id,
+          reference_type,
           quantity,
           created_by,
           created_at,
@@ -232,6 +269,7 @@ export function HistoricoMovimentosTab({ itemTemplates }: HistoricoMovimentosTab
                   <TableRow>
                     <TableHead>Data/Hora</TableHead>
                     <TableHead>Tipo</TableHead>
+                    <TableHead>Origem</TableHead>
                     <TableHead>Item</TableHead>
                     <TableHead className="text-right">Quantidade</TableHead>
                     <TableHead>Motivo</TableHead>
@@ -264,6 +302,19 @@ export function HistoricoMovimentosTab({ itemTemplates }: HistoricoMovimentosTab
                             Saída
                           </Badge>
                         )}
+                      </TableCell>
+                      <TableCell>
+                        {(() => {
+                          const refType = (mov as any).reference_type || 'manual';
+                          const config = referenceConfig[refType] || referenceConfig.manual;
+                          const IconComponent = config.icon;
+                          return (
+                            <Badge className={`${config.className} gap-1`}>
+                              <IconComponent className="h-3 w-3" />
+                              {config.label}
+                            </Badge>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
