@@ -40,8 +40,9 @@ import { OSProductionBadge } from '@/components/ordens-servico/OSProductionBadge
 import { OSCalendarView } from '@/components/ordens-servico/OSCalendarView';
 import { OSTodayView } from '@/components/ordens-servico/OSTodayView';
 import { consumeOSMaterials } from '@/utils/checkGlassStock';
-import { releaseMaterialsForProduction, cancelMaterialConsumption } from '@/utils/generateMaterialConsumption';
+import { releaseMaterialsForProduction } from '@/utils/generateMaterialConsumption';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
+import { useOSCancellation } from '@/hooks/useOSCancellation';
 
 type OSStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
 type OSPriority = 'low' | 'normal' | 'high' | 'urgent';
@@ -156,9 +157,17 @@ export default function OrdensServico() {
           console.warn('Aviso ao consumir materiais:', consumeResult.error);
         }
       } else if (status === 'cancelled') {
-        const cancelResult = await cancelMaterialConsumption(id);
-        if (!cancelResult.success) {
-          console.warn('Aviso ao cancelar materiais:', cancelResult);
+        // Cancellation is now handled by the RPC which validates consumed status
+        // and cancels both material_consumption and stock_reservations
+        const { error: rpcError } = await supabase.rpc('cancel_os_materials', {
+          _ordem_servico_id: id,
+        });
+        
+        if (rpcError) {
+          if (rpcError.message.includes('materiais já foram consumidos')) {
+            throw new Error('Cancelamento bloqueado: materiais já foram consumidos do estoque');
+          }
+          console.warn('Aviso ao cancelar materiais:', rpcError);
         }
       }
       

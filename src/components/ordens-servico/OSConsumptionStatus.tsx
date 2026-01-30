@@ -3,6 +3,7 @@
  * 
  * Displays the calculated material consumption for an OS with status indicators.
  * Shows materials grouped by type with pending/available/consumed states.
+ * When OS is completed, shows the difference report (planned vs consumed).
  */
 
 import { useQuery } from '@tanstack/react-query';
@@ -20,6 +21,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { OSMaterialDifferenceReport } from './OSMaterialDifferenceReport';
 
 interface MaterialConsumption {
   id: string;
@@ -35,6 +37,7 @@ interface MaterialConsumption {
 
 interface OSConsumptionStatusProps {
   ordemServicoId: string;
+  osStatus?: string;
   className?: string;
 }
 
@@ -78,7 +81,7 @@ const typeConfig: Record<string, { label: string; icon: typeof Package }> = {
   other: { label: 'Outros', icon: Package },
 };
 
-export function OSConsumptionStatus({ ordemServicoId, className }: OSConsumptionStatusProps) {
+export function OSConsumptionStatus({ ordemServicoId, osStatus, className }: OSConsumptionStatusProps) {
   const { data: consumption, isLoading } = useQuery({
     queryKey: ['material-consumption', ordemServicoId],
     queryFn: async () => {
@@ -131,6 +134,10 @@ export function OSConsumptionStatus({ ordemServicoId, className }: OSConsumption
       </Card>
     );
   }
+
+  // If OS is completed, show the difference report
+  const isCompleted = osStatus === 'completed';
+  const hasConsumedItems = consumption.some(c => c.status === 'consumed');
 
   // Group by item_type
   const groupedByType = consumption.reduce((acc, item) => {
@@ -258,6 +265,13 @@ export function OSConsumptionStatus({ ordemServicoId, className }: OSConsumption
             )}
           </div>
         </div>
+
+        {/* Difference Report for completed OS */}
+        {isCompleted && hasConsumedItems && (
+          <div className="mt-4 pt-4 border-t">
+            <OSMaterialDifferenceReport ordemServicoId={ordemServicoId} />
+          </div>
+        )}
       </CardContent>
     </Card>
   );
