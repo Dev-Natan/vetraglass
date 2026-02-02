@@ -21,6 +21,7 @@ interface OSSalesFlowTimelineProps {
   paidAmount: number;
   pendingAmount: number;
   hasOverduePayments?: boolean;
+  hideFinancialValues?: boolean;
 }
 
 export function OSSalesFlowTimeline({
@@ -34,6 +35,7 @@ export function OSSalesFlowTimeline({
   paidAmount,
   pendingAmount,
   hasOverduePayments = false,
+  hideFinancialValues = false,
 }: OSSalesFlowTimelineProps) {
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -70,7 +72,7 @@ export function OSSalesFlowTimeline({
         id: 'entry',
         label: 'Entrada',
         status: !isApproved ? 'pending' : entryValue > 0 ? (entryPaid ? 'completed' : hasOverduePayments ? 'error' : 'current') : 'completed',
-        value: entryValue > 0 ? formatCurrency(entryValue) : 'Sem entrada',
+        value: hideFinancialValues ? undefined : (entryValue > 0 ? formatCurrency(entryValue) : 'Sem entrada'),
         icon: <DollarSign className="w-4 h-4" />,
       },
       {
@@ -90,7 +92,7 @@ export function OSSalesFlowTimeline({
         id: 'billing',
         label: 'Faturamento',
         status: isCancelled ? 'error' : isFullyPaid && isCompleted ? 'completed' : isCompleted && !isFullyPaid ? 'current' : 'pending',
-        value: isFullyPaid ? formatCurrency(totalAmount) : formatCurrency(pendingAmount) + ' pendente',
+        value: hideFinancialValues ? undefined : (isFullyPaid ? formatCurrency(totalAmount) : formatCurrency(pendingAmount) + ' pendente'),
         icon: <Receipt className="w-4 h-4" />,
       },
     ];
