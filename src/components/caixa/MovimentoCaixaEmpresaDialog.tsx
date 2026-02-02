@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -68,6 +68,13 @@ export function MovimentoCaixaEmpresaDialog({
   const [description, setDescription] = useState('');
   const [initialBalance, setInitialBalance] = useState('');
   const [newFixedFund, setNewFixedFund] = useState(fixedFund.toString());
+
+  // Sync state when dialog opens or prop changes
+  useEffect(() => {
+    if (open) {
+      setNewFixedFund(fixedFund.toString());
+    }
+  }, [open, fixedFund]);
 
   const handleConfirm = async () => {
     if (type === 'config') {
