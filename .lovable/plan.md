@@ -1,126 +1,137 @@
 
-# Plano: Clarificar Saldo Real vs Fundo Fixo
 
-## Entendimento do Problema
+# Plano: Permitir Alteração Direta do Saldo Real
 
-Você está certo! Existem dois conceitos distintos que precisam estar claros:
+## Problema Identificado
 
-| Conceito | Descrição | Quem define |
-|----------|-----------|-------------|
-| **Saldo da Empresa (current_balance)** | Valor REAL que a empresa tem em caixa/banco | Admin/Gerente (atualizado manualmente) |
-| **Fundo Fixo (fixed_fund)** | Valor DISPONIBILIZADO para abertura dos caixas do dia (troco, operações) | Admin/Gerente |
+Atualmente:
+1. O campo "Saldo Real" **só aparece na criação inicial** (quando `!isEditMode`)
+2. A mutation de configuração **só atualiza o `fixed_fund`**, ignorando o saldo
+3. Não existe forma de ajustar o saldo real sem gerar movimentação
 
-### Situação Atual
-A interface já separa esses dois valores, mas pode não estar claro para o usuário:
-- O **Saldo da Empresa** pode ser atualizado via Depósito/Retirada
-- O **Fundo Fixo** é configurado separadamente
+## Solução
 
-### O que vou melhorar
+Criar uma **opção separada** para o admin ajustar diretamente o saldo real da empresa sem gerar movimentações no histórico financeiro. Isso é útil para correções ou quando o usuário cadastra um valor inicial errado.
 
-1. **Melhorar labels e descrições** para deixar claro o que cada valor representa
-2. **Separar a configuração do saldo real** da configuração do fundo fixo
-3. **Adicionar explicações contextuais** em cada tela
+## Arquitetura da Solução
+
+```text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     FLUXO DE ALTERAÇÃO DO SALDO                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Método 1: Ajuste Direto (SEM movimentação)
+─────────────────────────────────────────
+Admin clica em "Ajustar Saldo" → Informa novo valor → Salvo diretamente
+
+Método 2: Entrada/Saída (COM movimentação) - já existe
+─────────────────────────────────────────
+Admin clica em "Depósito" ou "Retirada" → Gera registro no histórico
+```
 
 ## Mudanças na Interface
 
-### 1. Card do Caixa da Empresa (CaixaEmpresaCard.tsx)
+### 1. Adicionar Botão "Ajustar Saldo" no Card de Saldo Real
 
-**Antes:**
-```
-Saldo Disponível: R$ 450,00
-Fundo fixo: R$ 1.000,00
-```
-
-**Depois:**
-```
-📊 Saldo Real da Empresa: R$ 450,00
-   (Valor real que a empresa possui em caixa físico/banco)
-
-💵 Fundo Fixo para Abertura: R$ 1.000,00
-   (Valor disponibilizado para abertura dos caixas do dia)
+```text
+┌─────────────────────────────────────────────────────┐
+│ 💰 Saldo Real da Empresa          [Ajustar] [⚙️]   │
+│                                                     │
+│     R$ 450,00                                       │
+│     Valor que a empresa possui em caixa/banco       │
+└─────────────────────────────────────────────────────┘
 ```
 
-### 2. Dialog de Abertura do Caixa (AbrirCaixaDialog.tsx)
+### 2. Novo Dialog: Ajustar Saldo Diretamente
 
-Melhorar a explicação:
-```
+```text
 ┌────────────────────────────────────────────────────┐
-│ 🔓 Abrir Caixa do Dia                              │
+│ 💰 Ajustar Saldo da Empresa                        │
 │                                                    │
-│ O caixa será aberto com o fundo fixo:              │
+│ ⚠️ Esta ação NÃO gera movimentação no histórico    │
+│    financeiro. Use apenas para correções.          │
 │                                                    │
-│     ┌──────────────────────┐                       │
-│     │      R$ 1.000,00     │                       │
-│     └──────────────────────┘                       │
+│ Saldo atual:      R$ 450,00                        │
 │                                                    │
-│ ℹ️ Este valor será retirado do saldo da empresa    │
-│    e disponibilizado para operações do dia        │
-│    (troco, saídas, etc.)                          │
+│ Novo saldo (R$):                                   │
+│ ┌────────────────────────────────────┐             │
+│ │ 2.500,00                           │             │
+│ └────────────────────────────────────┘             │
 │                                                    │
-│ Saldo atual da empresa: R$ 2.500,00                │
-│ Saldo após abertura: R$ 1.500,00                   │
+│ Motivo da correção: (opcional)                     │
+│ ┌────────────────────────────────────┐             │
+│ │ Correção do saldo inicial          │             │
+│ └────────────────────────────────────┘             │
 │                                                    │
-│                    [Cancelar] [Confirmar]          │
+│             [Cancelar] [Confirmar Ajuste]          │
 └────────────────────────────────────────────────────┘
 ```
 
-### 3. Dialog de Configuração (MovimentoCaixaEmpresaDialog.tsx)
+## Mudanças Técnicas
 
-Melhorar as descrições:
+### Arquivo 1: `src/components/caixa/AjustarSaldoDialog.tsx` (NOVO)
 
-**Para Saldo Inicial:**
-```
-💰 Saldo Real da Empresa (R$)
-"Informe quanto a empresa possui REALMENTE em caixa 
-físico ou conta bancária no momento."
-```
+Criar novo componente de dialog para ajuste direto:
 
-**Para Fundo Fixo:**
-```
-💵 Fundo Fixo para Abertura de Caixa (R$)
-"Valor que será disponibilizado para abertura dos 
-caixas do dia. Este valor é usado como troco inicial 
-e para cobrir pequenas despesas durante as operações."
-```
+| Campo | Descrição |
+|-------|-----------|
+| `newBalance` | Input para o novo saldo |
+| `reason` | Textarea opcional para motivo |
+| Alerta visual | Explicando que não gera movimentação |
 
-### 4. Aba Financeiro (CaixaEmpresaTab.tsx)
+### Arquivo 2: `src/components/financeiro/CaixaEmpresaTab.tsx`
 
-Melhorar cards de resumo:
+Adicionar:
 
-```
-┌─────────────────────────┐  ┌─────────────────────────┐
-│ 💰 Saldo Real           │  │ 💵 Fundo Fixo           │
-│                         │  │                         │
-│ R$ 450,00               │  │ R$ 1.000,00             │
-│                         │  │                         │
-│ Valor que a empresa     │  │ Valor para abertura     │
-│ possui em caixa/banco   │  │ dos caixas do dia       │
-└─────────────────────────┘  └─────────────────────────┘
-
-⚠️ Atenção: O saldo está abaixo do fundo fixo. 
-   Não será possível abrir caixas do dia.
+1. Estado para controlar o novo dialog: `adjustBalanceOpen`
+2. Nova mutation para atualizar saldo diretamente:
+```typescript
+const adjustBalanceMutation = useMutation({
+  mutationFn: async (newBalance: number) => {
+    await supabase
+      .from('company_cash')
+      .update({ 
+        current_balance: newBalance,
+        updated_at: new Date().toISOString()
+      })
+      .eq('company_id', currentCompany.id);
+  },
+});
 ```
 
-## Arquivos a Modificar
+3. Botão "Ajustar" no card de Saldo Real
+4. Importar e renderizar o novo dialog
 
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/components/caixa/CaixaEmpresaCard.tsx` | Melhorar labels e adicionar descrições |
-| `src/components/caixa/AbrirCaixaDialog.tsx` | Adicionar explicação sobre a transferência |
-| `src/components/caixa/MovimentoCaixaEmpresaDialog.tsx` | Melhorar descrições dos campos |
-| `src/components/financeiro/CaixaEmpresaTab.tsx` | Adicionar descrições nos cards |
+### Arquivo 3: `src/components/caixa/MovimentoCaixaEmpresaDialog.tsx`
 
-## Lógica Preservada
+Remover a condição `{!isEditMode}` do campo de saldo inicial, permitindo que ele apareça sempre. Isso dá ao admin a opção de ajustar o saldo também via configuração.
 
-A lógica de negócio permanece a mesma:
-1. Admin define o **Saldo Real** (depósitos/retiradas)
-2. Admin define o **Fundo Fixo** (configuração)
-3. Ao abrir caixa: `Saldo Real -= Fundo Fixo` (transfere para caixa do dia)
-4. Ao fechar caixa: `Saldo Real += Valor Contado` (retorna para empresa)
+**OU** manter o dialog de config apenas para fundo fixo, e usar o novo dialog para saldo.
 
-## Resumo das Melhorias
+**Decisão:** Criar dialog separado para ajuste de saldo, mantendo config apenas para fundo fixo (mais claro para o usuário).
 
-1. **Labels mais claros**: "Saldo Real da Empresa" vs "Fundo Fixo para Abertura"
-2. **Descrições contextuais**: Explicando o que cada valor significa
-3. **Fluxo explicado**: Mostrando que o fundo fixo sai do saldo real ao abrir
-4. **Alertas inteligentes**: Quando saldo < fundo fixo, alerta fica mais claro
+## Resumo dos Arquivos
+
+| Arquivo | Ação |
+|---------|------|
+| `src/components/caixa/AjustarSaldoDialog.tsx` | **CRIAR** - Novo dialog para ajuste direto |
+| `src/components/financeiro/CaixaEmpresaTab.tsx` | Adicionar botão + mutation + dialog |
+
+## Fluxo Final para o Admin
+
+O admin terá 3 opções para gerenciar o saldo:
+
+| Opção | Quando usar | Gera movimentação? |
+|-------|-------------|-------------------|
+| **Ajustar Saldo** | Correção de valores errados, ajuste inicial | Não |
+| **Depósito** | Dinheiro físico entrou na empresa | Sim |
+| **Retirada** | Dinheiro saiu da empresa | Sim |
+
+## Critérios de Aceite
+
+1. Admin pode ajustar o saldo real da empresa a qualquer momento
+2. Ajuste direto NÃO gera movimentação no histórico
+3. Depósito e Retirada continuam gerando movimentações normalmente
+4. Alerta visual informa que o ajuste não gera histórico
+5. Campo opcional para motivo da correção (para referência interna)
+
