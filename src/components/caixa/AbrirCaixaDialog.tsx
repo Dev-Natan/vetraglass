@@ -50,6 +50,8 @@ export function AbrirCaixaDialog({
   const hasEnoughBalance = hasCompanyCash ? companyBalance >= fixedFund : false;
   const isValidAmount = fixedFund > 0;
 
+  const balanceAfterOpening = companyBalance - fixedFund;
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
@@ -59,7 +61,7 @@ export function AbrirCaixaDialog({
             Abrir Caixa do Dia
           </DialogTitle>
           <DialogDescription>
-            O caixa será aberto com o fundo fixo definido pela empresa.
+            O caixa será aberto utilizando o fundo fixo da empresa.
           </DialogDescription>
         </DialogHeader>
 
@@ -82,26 +84,47 @@ export function AbrirCaixaDialog({
             <>
               {/* Valor Fixo de Abertura */}
               <div className="rounded-lg border bg-primary/5 p-4 text-center">
-                <p className="text-sm text-muted-foreground mb-2">Valor de Abertura (Fundo Fixo)</p>
+                <p className="text-sm text-muted-foreground mb-2">💵 Fundo Fixo para Abertura</p>
                 <p className="text-3xl font-bold text-primary">
                   {formatCurrency(fixedFund)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Este valor é definido pelo administrador e não pode ser alterado.
+                  Este valor será disponibilizado para operações do dia (troco, saídas, etc.)
                 </p>
               </div>
 
-              {/* Saldo da Empresa */}
-              <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
+              {/* Explicação da transferência */}
+              <div className="rounded-lg border bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 p-3">
+                <p className="text-xs text-blue-700 dark:text-blue-400 flex items-start gap-2">
+                  <Wallet className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <span>
+                    Este valor será <strong>retirado</strong> do saldo real da empresa e 
+                    disponibilizado para o caixa do dia.
+                  </span>
+                </p>
+              </div>
+
+              {/* Saldo da Empresa - Antes e Depois */}
+              <div className="rounded-lg border bg-muted/50 p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm flex items-center gap-2">
                     <Wallet className="h-4 w-4 text-primary" />
-                    Saldo da Empresa
+                    💰 Saldo atual da empresa
                   </span>
                   <span className="font-semibold text-primary">
                     {formatCurrency(companyBalance)}
                   </span>
                 </div>
+                {hasEnoughBalance && (
+                  <div className="flex items-center justify-between pt-2 border-t border-dashed">
+                    <span className="text-sm text-muted-foreground">
+                      Saldo após abertura
+                    </span>
+                    <span className="font-semibold">
+                      {formatCurrency(balanceAfterOpening)}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Validação de saldo */}
@@ -122,16 +145,11 @@ export function AbrirCaixaDialog({
                     <>
                       <AlertCircle className="h-4 w-4 text-red-600" />
                       <span className="text-red-700 dark:text-red-400">
-                        Saldo insuficiente. Disponível: {formatCurrency(companyBalance)}
+                        Saldo real insuficiente. Disponível: {formatCurrency(companyBalance)}
                       </span>
                     </>
                   )}
                 </div>
-                {hasEnoughBalance && (
-                  <div className="mt-2 text-xs text-muted-foreground">
-                    Novo saldo da empresa: {formatCurrency(companyBalance - fixedFund)}
-                  </div>
-                )}
               </div>
             </>
           )}

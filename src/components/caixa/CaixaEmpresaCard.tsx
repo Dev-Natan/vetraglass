@@ -76,29 +76,47 @@ export function CaixaEmpresaCard({
   return (
     <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
       <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base font-medium flex items-center gap-2">
-            <Wallet className="h-5 w-5 text-primary" />
-            Caixa da Empresa
-          </CardTitle>
-          <div className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
-            Fundo fixo: {formatCurrency(companyCash.fixed_fund)}
-          </div>
-        </div>
+        <CardTitle className="text-base font-medium flex items-center gap-2">
+          <Wallet className="h-5 w-5 text-primary" />
+          Caixa da Empresa
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Saldo Real da Empresa */}
         <div>
-          <p className="text-xs text-muted-foreground mb-1">Saldo Disponível</p>
+          <div className="flex items-center gap-2 mb-1">
+            <p className="text-xs text-muted-foreground">💰 Saldo Real da Empresa</p>
+          </div>
           <p className={`text-3xl font-bold ${companyCash.current_balance >= 0 ? 'text-primary' : 'text-destructive'}`}>
             {formatCurrency(companyCash.current_balance)}
           </p>
-          {!hasEnoughForDailyCash && (
-            <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-1">
-              <AlertCircle className="h-3 w-3" />
-              Saldo insuficiente para abrir caixa do dia
-            </p>
-          )}
+          <p className="text-xs text-muted-foreground mt-1">
+            Valor real que a empresa possui em caixa físico/banco
+          </p>
         </div>
+
+        {/* Fundo Fixo */}
+        <div className="rounded-lg bg-muted/50 p-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground">💵 Fundo Fixo para Abertura</p>
+              <p className="text-lg font-semibold">{formatCurrency(companyCash.fixed_fund)}</p>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            Valor disponibilizado para abertura dos caixas do dia
+          </p>
+        </div>
+
+        {/* Alerta de saldo insuficiente */}
+        {!hasEnoughForDailyCash && (
+          <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-3">
+            <p className="text-xs text-amber-700 dark:text-amber-400 flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" />
+              Saldo insuficiente para abrir caixa do dia (necessário: {formatCurrency(companyCash.fixed_fund)})
+            </p>
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="outline" onClick={onDeposit}>

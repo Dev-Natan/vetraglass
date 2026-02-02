@@ -140,7 +140,9 @@ export function MovimentoCaixaEmpresaDialog({
           <div className="space-y-4 py-4">
             {!isEditMode && (
               <div className="space-y-2">
-                <Label htmlFor="initial-balance">Saldo Inicial da Empresa (R$)</Label>
+                <Label htmlFor="initial-balance" className="flex items-center gap-2">
+                  💰 Saldo Real da Empresa (R$)
+                </Label>
                 <Input
                   id="initial-balance"
                   type="text"
@@ -152,13 +154,15 @@ export function MovimentoCaixaEmpresaDialog({
                   className="text-lg"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Quanto a empresa tem disponível em caixa físico no momento.
+                  Informe quanto a empresa possui REALMENTE em caixa físico ou conta bancária no momento.
                 </p>
               </div>
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="fixed-fund">Fundo Fixo (R$)</Label>
+              <Label htmlFor="fixed-fund" className="flex items-center gap-2">
+                💵 Fundo Fixo para Abertura de Caixa (R$)
+              </Label>
               <Input
                 id="fixed-fund"
                 type="text"
@@ -170,7 +174,8 @@ export function MovimentoCaixaEmpresaDialog({
                 className="text-lg"
               />
               <p className="text-xs text-muted-foreground">
-                Valor de referência para abertura do caixa diário (troco).
+                Valor que será disponibilizado para abertura dos caixas do dia. 
+                Este valor é usado como troco inicial e para cobrir pequenas despesas durante as operações.
               </p>
             </div>
           </div>
