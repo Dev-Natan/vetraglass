@@ -450,12 +450,18 @@ export function AprovarOrcamentoDialog({
           if (saleError) throw saleError;
           saleId = sale.id;
 
-          // Vincular cash_movement à venda para rastreabilidade
-          if (cashMovement?.id) {
-            await supabase
+          // CORREÇÃO: Vincular cash_movement à venda para rastreabilidade COMPLETA
+          if (cashMovement?.id && sale?.id) {
+            const { error: linkError } = await supabase
               .from('cash_movements')
               .update({ sale_id: sale.id })
               .eq('id', cashMovement.id);
+            
+            if (linkError) {
+              console.error('ERRO ao vincular cash_movement à venda:', linkError);
+            } else {
+              console.log('✓ cash_movement vinculado à venda:', cashMovement.id, '→', sale.id);
+            }
           }
 
           // Create sale item
