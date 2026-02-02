@@ -64,19 +64,20 @@ export function QuoteFinancialDashboard({
     enabled: !!quoteId,
   });
 
-  // Fetch entry deposit info from quote_deposits
-  const { data: depositInfo } = useQuery({
-    queryKey: ['quote-deposit', quoteId],
+  // CORRIGIDO: Buscar TODAS as entradas do orçamento (pode haver múltiplas)
+  const { data: allDeposits } = useQuery({
+    queryKey: ['quote-all-deposits', quoteId],
     queryFn: async () => {
-      if (!quoteId) return null;
+      if (!quoteId) return [];
       const { data, error } = await supabase
         .from('quote_deposits')
         .select('*')
         .eq('quote_id', quoteId)
-        .maybeSingle();
+        .in('status', ['received', 'pending', 'billed'])
+        .order('created_at', { ascending: true });
       
       if (error) throw error;
-      return data;
+      return data || [];
     },
     enabled: !!quoteId,
   });
@@ -97,15 +98,28 @@ export function QuoteFinancialDashboard({
       }
       return null;
     },
-    enabled: !!ordemServicoId && !depositInfo,
+    enabled: !!ordemServicoId && (!allDeposits || allDeposits.length === 0),
   });
 
-  // Combine deposit info: prefer quote_deposits, fallback to sales
-  const effectiveDeposit = depositInfo || (entrySale ? {
-    amount: entrySale.total_amount,
-    payment_method: entrySale.payment_method,
-    status: entrySale.payment_status === 'paid' ? 'paid' : 'pending',
-  } : null);
+  // Calcular total das entradas
+  const totalDepositAmount = (allDeposits || []).reduce((sum, d) => sum + Number(d.amount), 0);
+  
+  // Combine deposit info: prefer quote_deposits sum, fallback to sales
+  const effectiveDeposit = totalDepositAmount > 0 
+    ? {
+        amount: totalDepositAmount,
+        payment_method: allDeposits?.[0]?.payment_method || null,
+        status: allDeposits?.some(d => d.status === 'billed') ? 'billed' 
+              : allDeposits?.every(d => d.status === 'received') ? 'paid' 
+              : 'pending',
+        deposits: allDeposits,
+      }
+    : (entrySale ? {
+        amount: entrySale.total_amount,
+        payment_method: entrySale.payment_method,
+        status: entrySale.payment_status === 'paid' ? 'paid' : 'pending',
+        deposits: null,
+      } : null);
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -243,27 +257,59 @@ export function QuoteFinancialDashboard({
         </CardContent>
       </Card>
 
-      {/* Entry Info */}
+      {/* Entry Info - Suporta múltiplas entradas */}
       {effectiveDeposit && (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
               <Banknote className="w-4 h-4" />
               Entrada / Sinal
+              {effectiveDeposit.deposits && effectiveDeposit.deposits.length > 1 && (
+                <Badge variant="secondary" className="text-[10px]">
+                  {effectiveDeposit.deposits.length} entradas
+                </Badge>
+              )}
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="font-bold text-lg">{formatCurrency(effectiveDeposit.amount)}</div>
-                <div className="text-xs text-muted-foreground">
-                  {getPaymentMethodLabel(effectiveDeposit.payment_method)}
+          <CardContent className="space-y-2">
+            {/* Exibir cada entrada individualmente se houver múltiplas */}
+            {effectiveDeposit.deposits && effectiveDeposit.deposits.length > 1 ? (
+              <>
+                {effectiveDeposit.deposits.map((deposit: any, index: number) => (
+                  <div key={deposit.id} className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                    <div>
+                      <div className="font-medium text-sm">{formatCurrency(deposit.amount)}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {getPaymentMethodLabel(deposit.payment_method)}
+                      </div>
+                    </div>
+                    <Badge 
+                      variant={deposit.status === 'received' ? 'default' : deposit.status === 'pending' ? 'secondary' : 'outline'}
+                      className="text-[10px]"
+                    >
+                      {deposit.status === 'received' ? 'Pago' : deposit.status === 'pending' ? 'Pendente' : 'Faturado'}
+                    </Badge>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between pt-2 border-t">
+                  <span className="font-bold">Total Entradas:</span>
+                  <span className="font-bold text-lg">{formatCurrency(effectiveDeposit.amount)}</span>
                 </div>
+              </>
+            ) : (
+              // Exibição simples para uma única entrada
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-bold text-lg">{formatCurrency(effectiveDeposit.amount)}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {getPaymentMethodLabel(effectiveDeposit.payment_method)}
+                  </div>
+                </div>
+                <Badge variant={effectiveDeposit.status === 'paid' ? 'default' : effectiveDeposit.status === 'pending' ? 'secondary' : 'outline'}>
+                  {effectiveDeposit.status === 'paid' ? 'Pago' : effectiveDeposit.status === 'pending' ? 'Pendente' : 'Faturado'}
+                </Badge>
               </div>
-              <Badge variant={effectiveDeposit.status === 'paid' ? 'default' : effectiveDeposit.status === 'pending' ? 'secondary' : 'outline'}>
-                {effectiveDeposit.status === 'paid' ? 'Pago' : effectiveDeposit.status === 'pending' ? 'Pendente' : 'Faturado'}
-              </Badge>
-            </div>
+            )}
           </CardContent>
         </Card>
       )}
