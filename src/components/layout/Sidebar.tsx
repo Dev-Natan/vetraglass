@@ -149,7 +149,7 @@ export function Sidebar() {
 
       {/* Sidebar */}
       <aside className={cn(
-        "fixed left-0 top-0 h-screen w-60 bg-sidebar flex flex-col z-50 transition-transform duration-300",
+        "fixed left-0 top-0 h-screen w-60 bg-sidebar flex flex-col z-40 transition-transform duration-300",
         "lg:translate-x-0",
         isMobileOpen ? "translate-x-0" : "-translate-x-full"
       )}>

@@ -33,9 +33,9 @@ export function MainLayout({ children }: MainLayoutProps) {
       <ModuleTutorialProvider>
         <div className="min-h-screen bg-background">
           <Sidebar />
-          <main className="lg:ml-60 min-h-screen">
+          <main className="lg:pl-60 min-h-screen">
             {/* Top Header */}
-            <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-sm border-b border-border">
+            <header className="fixed top-0 right-0 left-0 lg:left-60 z-30 bg-background/80 backdrop-blur-sm border-b border-border">
               <div className="flex items-center justify-between px-6 py-3">
                 <div className="pl-12 lg:pl-0" />
                 <div className="flex items-center gap-2">
@@ -46,6 +46,9 @@ export function MainLayout({ children }: MainLayoutProps) {
                 </div>
               </div>
             </header>
+
+            {/* Spacer for fixed header */}
+            <div className="h-[52px]" />
 
             {/* Company Header */}
             {currentCompany && (
