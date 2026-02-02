@@ -41,7 +41,6 @@ import {
 } from '@/components/ui/table';
 import { 
   CheckCircle, 
-  DollarSign, 
   CreditCard, 
   Calendar as CalendarIcon,
   AlertCircle,
@@ -50,7 +49,6 @@ import {
   ArrowRight,
   ArrowLeft,
   AlertTriangle,
-  Percent,
   Receipt,
   Wallet,
   Settings2,
@@ -59,7 +57,7 @@ import { cn } from '@/lib/utils';
 import { generateOSDocuments } from '@/utils/generateOSDocuments';
 import { generateMaterialConsumption, linkReservationsToConsumption } from '@/utils/generateMaterialConsumption';
 import { MaterialsAvailabilityPreview } from './MaterialsAvailabilityPreview';
-import { usePaymentOptions, CondicaoPagamento } from '@/hooks/usePaymentOptions';
+import { usePaymentOptions } from '@/hooks/usePaymentOptions';
 
 interface Quote {
   id: string;
@@ -116,7 +114,6 @@ export function AprovarOrcamentoDialog({
   
   // Payment state
   const [selectedFormaId, setSelectedFormaId] = useState<string | null>(null);
-  const [selectedCondicaoId, setSelectedCondicaoId] = useState<string | null>(null);
   
   // Entry payment state
   const [entryAmount, setEntryAmount] = useState('');
@@ -130,12 +127,9 @@ export function AprovarOrcamentoDialog({
   // Hooks
   const { 
     formasPagamento, 
-    condicoesPagamento, 
     isLoading: isLoadingPayment,
     hasPaymentOptions,
     initializeDefaults,
-    calculatePayment,
-    getCondicoesByForma,
   } = usePaymentOptions();
 
   const totalOriginal = items.reduce((sum, item) => sum + item.total_price, 0);
@@ -163,22 +157,15 @@ export function AprovarOrcamentoDialog({
     : 0;
   const isOldQuote = quoteAgeDays > 30;
 
-  // Desconto existente do orçamento
-  const quoteDiscountPercent = quote?.discount_percent || 0;
-  const hasExistingDiscount = quoteDiscountPercent > 0;
-
   // Calculate final values - usar final_amount (com desconto) como base
-  const valorBase = useMemo(() => {
-    // Usar final_amount que JÁ inclui o desconto aplicado na criação
+  // NÃO PERMITE DESCONTOS ADICIONAIS - valor do orçamento é final
+  const valorFinal = useMemo(() => {
     return quote?.final_amount || totalOriginal;
   }, [totalOriginal, quote]);
 
-  const selectedCondicao = condicoesPagamento.find(c => c.id === selectedCondicaoId) || null;
-  const paymentCalculation = calculatePayment(valorBase, selectedCondicao);
-  
   const entryValue = parseFloat(entryAmount.replace(',', '.')) || 0;
   const hasEntry = entryValue > 0;
-  const pendingAmount = paymentCalculation.valorFinal - entryValue;
+  const pendingAmount = valorFinal - entryValue;
   const isCaixaAberto = !!openCashRegister;
 
   // Reset form when dialog opens
@@ -186,7 +173,6 @@ export function AprovarOrcamentoDialog({
     if (open) {
       setCurrentStep('payment');
       setSelectedFormaId(null);
-      setSelectedCondicaoId(null);
       setEntryAmount('');
       setEntryPaymentMethod('pix');
       setEstimatedEnd(addDays(new Date(), 7));
@@ -202,22 +188,6 @@ export function AprovarOrcamentoDialog({
     }
   }, [formasPagamento, selectedFormaId]);
 
-  // Auto-select payment condition - CORRIGIDO: priorizar condições sem desconto se já existe desconto no orçamento
-  useEffect(() => {
-    const availableCondicoes = getCondicoesByForma(selectedFormaId);
-    if (availableCondicoes.length > 0 && !selectedCondicaoId) {
-      if (hasExistingDiscount) {
-        // Priorizar condição sem desconto adicional
-        const condicaoSemDesconto = availableCondicoes.find(c => c.desconto_percent === 0);
-        if (condicaoSemDesconto) {
-          setSelectedCondicaoId(condicaoSemDesconto.id);
-          return;
-        }
-      }
-      setSelectedCondicaoId(availableCondicoes[0].id);
-    }
-  }, [selectedFormaId, getCondicoesByForma, selectedCondicaoId, hasExistingDiscount]);
-
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   };
@@ -228,7 +198,7 @@ export function AprovarOrcamentoDialog({
         throw new Error('Dados incompletos');
       }
 
-      const finalValue = paymentCalculation.valorFinal;
+      const finalValue = valorFinal;
       
       // Calculate correct paid_amount for OS
       const osPaidAmount = hasEntry && isCaixaAberto ? entryValue : 0;
@@ -244,7 +214,7 @@ export function AprovarOrcamentoDialog({
         .update({
           status: 'approved',
           forma_pagamento_id: selectedFormaId,
-          condicao_pagamento_id: selectedCondicaoId,
+          condicao_pagamento_id: null,
           valor_original: totalOriginal,
           valor_final_aprovado: finalValue,
           approved_at: new Date().toISOString(),
@@ -422,33 +392,24 @@ export function AprovarOrcamentoDialog({
         }
       }
 
-      // 5. Create accounts_receivable for pending installments
-      if (pendingAmount > 0 && selectedCondicao) {
-        const parcelas = selectedCondicao.parcelas;
-        const valorParcela = Math.round((pendingAmount / parcelas) * 100) / 100;
-        const resto = Math.round((pendingAmount - valorParcela * parcelas) * 100) / 100;
-
-        const installmentsToInsert = Array.from({ length: parcelas }, (_, i) => {
-          const dueDate = addMonths(addDays(new Date(), selectedCondicao.dias_entre_parcelas), i);
-          return {
+      // 5. Create accounts_receivable for pending amount (single installment - "Na entrega")
+      if (pendingAmount > 0) {
+        const { error: receivablesError } = await supabase
+          .from('accounts_receivable')
+          .insert({
             company_id: currentCompany.id,
             ordem_servico_id: ordemServico.id,
             quote_id: quote.id,
             sale_id: saleId,
             customer_name: quote.customer_name,
-            description: `OS #${ordemServico.os_number} - Parcela ${i + 1}/${parcelas}`,
-            total_amount: i === 0 ? valorParcela + resto : valorParcela,
-            installment_number: i + 1,
-            total_installments: parcelas,
-            due_date: format(dueDate, 'yyyy-MM-dd'),
+            description: `OS #${ordemServico.os_number} - Saldo na entrega`,
+            total_amount: pendingAmount,
+            installment_number: 1,
+            total_installments: 1,
+            due_date: estimatedEnd ? format(estimatedEnd, 'yyyy-MM-dd') : format(addDays(new Date(), 30), 'yyyy-MM-dd'),
             status: 'pending',
             created_by: user.id,
-          };
-        });
-
-        const { error: receivablesError } = await supabase
-          .from('accounts_receivable')
-          .insert(installmentsToInsert);
+          });
         
         if (receivablesError) {
           console.error('Error creating receivables:', receivablesError);
@@ -540,7 +501,7 @@ export function AprovarOrcamentoDialog({
 
   if (!quote) return null;
 
-  const availableCondicoes = getCondicoesByForma(selectedFormaId);
+  
 
   const steps = [
     { key: 'payment' as const, label: 'Pagamento', fullLabel: 'Forma de Pagamento', icon: CreditCard },
@@ -695,54 +656,6 @@ export function AprovarOrcamentoDialog({
                     </Select>
                   </div>
 
-                  {/* Payment Condition */}
-                  <div className="p-4 border rounded-xl bg-card space-y-4">
-                    <div className="flex items-center gap-2">
-                      <Percent className="w-5 h-5 text-primary" />
-                      <Label className="text-base font-semibold">Condição de Pagamento</Label>
-                    </div>
-                    
-                    <Select value={selectedCondicaoId || ''} onValueChange={setSelectedCondicaoId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a condição" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableCondicoes.map(condicao => (
-                          <SelectItem key={condicao.id} value={condicao.id}>
-                            <div className="flex items-center justify-between gap-4 w-full">
-                              <span>{condicao.nome}</span>
-                              {condicao.desconto_percent > 0 && (
-                                <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
-                                  -{condicao.desconto_percent}%
-                                </Badge>
-                              )}
-                              {condicao.juros_percent > 0 && (
-                                <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300">
-                                  +{condicao.juros_percent}%
-                                </Badge>
-                              )}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    {selectedCondicao && (
-                      <div className="text-sm text-muted-foreground space-y-1 pt-2 border-t">
-                        <div className="flex justify-between">
-                          <span>Parcelas:</span>
-                          <span className="font-medium">{selectedCondicao.parcelas}x</span>
-                        </div>
-                        {selectedCondicao.dias_entre_parcelas > 0 && (
-                          <div className="flex justify-between">
-                            <span>Intervalo:</span>
-                            <span className="font-medium">{selectedCondicao.dias_entre_parcelas} dias</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
                   {/* Entry Payment */}
                   <div className="p-4 border rounded-xl bg-card space-y-4">
                     <div className="flex items-center gap-2">
@@ -803,36 +716,16 @@ export function AprovarOrcamentoDialog({
                     </h3>
 
                     <div className="space-y-3">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Valor base</span>
-                        <span>{formatCurrency(valorBase)}</span>
-                      </div>
-
-                      {paymentCalculation.desconto > 0 && (
-                        <div className="flex justify-between text-sm text-green-600">
-                          <span>Desconto ({selectedCondicao?.desconto_percent}%)</span>
-                          <span>-{formatCurrency(paymentCalculation.desconto)}</span>
-                        </div>
-                      )}
-
-                      {paymentCalculation.juros > 0 && (
-                        <div className="flex justify-between text-sm text-amber-600">
-                          <span>Juros ({selectedCondicao?.juros_percent}%)</span>
-                          <span>+{formatCurrency(paymentCalculation.juros)}</span>
-                        </div>
-                      )}
-
-                      <Separator />
-
                       <div className="flex justify-between items-center">
-                        <span className="font-medium">Valor Final</span>
+                        <span className="font-medium">Valor do Orçamento</span>
                         <span className="text-2xl font-bold text-primary">
-                          {formatCurrency(paymentCalculation.valorFinal)}
+                          {formatCurrency(valorFinal)}
                         </span>
                       </div>
 
                       {hasEntry && (
                         <>
+                          <Separator />
                           <div className="flex justify-between text-sm bg-green-50 dark:bg-green-950/30 p-2 rounded">
                             <span className="text-green-700 dark:text-green-300">Entrada</span>
                             <span className="text-green-700 dark:text-green-300 font-medium">
@@ -840,25 +733,10 @@ export function AprovarOrcamentoDialog({
                             </span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="font-medium">Saldo Restante</span>
+                            <span className="font-medium">Saldo na Entrega</span>
                             <span className="text-xl font-bold">{formatCurrency(pendingAmount)}</span>
                           </div>
                         </>
-                      )}
-
-                      {selectedCondicao && selectedCondicao.parcelas > 1 && (
-                        <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-                          <div className="flex justify-between text-sm font-medium">
-                            <span>Parcelamento</span>
-                            <span>{paymentCalculation.parcelas}x</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-muted-foreground">Valor da parcela</span>
-                            <span className="text-lg font-bold">
-                              {formatCurrency(hasEntry ? pendingAmount / paymentCalculation.parcelas : paymentCalculation.valorParcela)}
-                            </span>
-                          </div>
-                        </div>
                       )}
                     </div>
                   </div>
@@ -949,43 +827,16 @@ export function AprovarOrcamentoDialog({
                         <span className="font-medium">{quote.customer_name}</span>
                       </div>
                       
-                      {/* Breakdown completo de descontos */}
+                      {/* Breakdown de valores */}
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Subtotal (itens)</span>
                         <span>{formatCurrency(quote.total_amount)}</span>
                       </div>
                       
-                      {hasExistingDiscount && (
+                      {quote.discount_percent && quote.discount_percent > 0 && (
                         <div className="flex justify-between text-green-600 dark:text-green-400">
-                          <span>Desconto do orçamento ({quoteDiscountPercent}%)</span>
+                          <span>Desconto do orçamento ({quote.discount_percent}%)</span>
                           <span>-{formatCurrency(quote.discount_amount || 0)}</span>
-                        </div>
-                      )}
-                      
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Valor com desconto</span>
-                        <span>{formatCurrency(quote.final_amount)}</span>
-                      </div>
-
-                      
-                      <Separator />
-                      
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Condição de pagamento</span>
-                        <span>{selectedCondicao?.nome || '-'}</span>
-                      </div>
-                      
-                      {paymentCalculation.desconto > 0 && (
-                        <div className="flex justify-between text-green-600 dark:text-green-400">
-                          <span>Desconto condição ({selectedCondicao?.desconto_percent}%)</span>
-                          <span>-{formatCurrency(paymentCalculation.desconto)}</span>
-                        </div>
-                      )}
-                      
-                      {paymentCalculation.juros > 0 && (
-                        <div className="flex justify-between text-amber-600 dark:text-amber-400">
-                          <span>Juros condição ({selectedCondicao?.juros_percent}%)</span>
-                          <span>+{formatCurrency(paymentCalculation.juros)}</span>
                         </div>
                       )}
                       
@@ -993,7 +844,7 @@ export function AprovarOrcamentoDialog({
                       
                       <div className="flex justify-between font-bold text-lg">
                         <span>Valor Final</span>
-                        <span className="text-primary">{formatCurrency(paymentCalculation.valorFinal)}</span>
+                        <span className="text-primary">{formatCurrency(valorFinal)}</span>
                       </div>
                     </div>
                   </div>
@@ -1026,14 +877,9 @@ export function AprovarOrcamentoDialog({
                         </div>
                       )}
                       <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Saldo pendente</span>
+                        <span className="text-muted-foreground">Saldo na entrega</span>
                         <span className="text-xl font-bold">{formatCurrency(pendingAmount)}</span>
                       </div>
-                      {selectedCondicao && selectedCondicao.parcelas > 1 && (
-                        <div className="text-sm text-muted-foreground">
-                          Em {selectedCondicao.parcelas}x de {formatCurrency(pendingAmount / selectedCondicao.parcelas)}
-                        </div>
-                      )}
                     </div>
                   </div>
 
