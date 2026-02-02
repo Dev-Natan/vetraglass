@@ -29,7 +29,9 @@ import { MovimentoCaixaEmpresaDialog } from '@/components/caixa/MovimentoCaixaEm
 import { CaixaAdiantamentosCard } from '@/components/caixa/CaixaAdiantamentosCard';
 import { FecharCaixaDialog } from '@/components/caixa/FecharCaixaDialog';
 import { PendingAuditsCard } from '@/components/caixa/PendingAuditsCard';
+import { AjustarSaldoDialog } from '@/components/caixa/AjustarSaldoDialog';
 import { MonthSelector } from '@/components/common/MonthSelector';
+import { Edit2 } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -57,6 +59,7 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
   
   const [dialogType, setDialogType] = useState<'entrada' | 'saida' | 'config' | null>(null);
   const [fecharCaixaOpen, setFecharCaixaOpen] = useState(false);
+  const [ajustarSaldoOpen, setAjustarSaldoOpen] = useState(false);
 
   // Fetch company cash
   const { data: companyCash, isLoading: loadingCash } = useQuery({
@@ -212,6 +215,27 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
       queryClient.invalidateQueries({ queryKey: ['company-cash'] });
       queryClient.invalidateQueries({ queryKey: ['company-cash-movements'] });
       setDialogType(null);
+    },
+    onError: (error: Error) => toast.error(`Erro: ${error.message}`),
+  });
+
+  // Adjust balance directly (no movement)
+  const adjustBalanceMutation = useMutation({
+    mutationFn: async (newBalance: number) => {
+      if (!currentCompany?.id) throw new Error('Empresa não encontrada');
+      const { error } = await supabase
+        .from('company_cash')
+        .update({ 
+          current_balance: newBalance,
+          updated_at: new Date().toISOString()
+        })
+        .eq('company_id', currentCompany.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Saldo ajustado com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['company-cash'] });
+      setAjustarSaldoOpen(false);
     },
     onError: (error: Error) => toast.error(`Erro: ${error.message}`),
   });
@@ -408,12 +432,13 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
             <CardTitle className="text-sm font-medium">💰 Saldo Real da Empresa</CardTitle>
             <Button 
               variant="ghost" 
-              size="icon" 
-              className="h-8 w-8"
-              onClick={() => setDialogType('config')}
-              title="Configurar caixa da empresa"
+              size="sm" 
+              className="h-8 gap-1 text-xs"
+              onClick={() => setAjustarSaldoOpen(true)}
+              title="Ajustar saldo da empresa"
             >
-              <Settings className="h-4 w-4 text-muted-foreground" />
+              <Edit2 className="h-3.5 w-3.5" />
+              Ajustar
             </Button>
           </CardHeader>
           <CardContent>
@@ -580,6 +605,16 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
         companyCash={companyCash}
         cashRegisterId={openCashRegister?.id}
         isLoading={closeCashMutation.isPending}
+      />
+
+      <AjustarSaldoDialog
+        open={ajustarSaldoOpen}
+        onOpenChange={setAjustarSaldoOpen}
+        currentBalance={companyCash.current_balance}
+        onConfirm={async (newBalance) => {
+          await adjustBalanceMutation.mutateAsync(newBalance);
+        }}
+        isLoading={adjustBalanceMutation.isPending}
       />
     </div>
   );
