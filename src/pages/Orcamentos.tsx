@@ -243,6 +243,15 @@ export default function Orcamentos() {
   }, [searchParams, setSearchParams, quotes]);
 
   const handleEdit = (quote: Quote) => {
+    // Orçamentos aprovados ou convertidos não podem ser editados
+    if (quote.status === 'approved' || quote.status === 'converted') {
+      toast({ 
+        title: 'Não é possível editar', 
+        description: 'Orçamentos aprovados não podem ser editados. Reabra como pendente primeiro.',
+        variant: 'destructive' 
+      });
+      return;
+    }
     setSelectedQuote(quote);
     setIsNewDialogOpen(true);
   };
@@ -635,13 +644,25 @@ export default function Orcamentos() {
                         <Eye className="w-4 h-4 mr-2" />
                         Visualizar
                       </Button>
-                      <Button 
-                        className="flex-1"
-                        onClick={() => handleEdit(quote)}
-                      >
-                        <Edit className="w-4 h-4 mr-2" />
-                        Editar
-                      </Button>
+                      {quote.status === 'approved' || quote.status === 'converted' ? (
+                        <Button 
+                          variant="outline"
+                          className="flex-1"
+                          disabled
+                          title="Reabra como pendente para editar"
+                        >
+                          <Edit className="w-4 h-4 mr-2" />
+                          Bloqueado
+                        </Button>
+                      ) : (
+                        <Button 
+                          className="flex-1"
+                          onClick={() => handleEdit(quote)}
+                        >
+                          <Edit className="w-4 h-4 mr-2" />
+                          Editar
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>
