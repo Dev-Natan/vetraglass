@@ -1,181 +1,169 @@
 
 
-# Plano: Ocultar Informações Financeiras da OS para Não-Financeiros
+# Plano: Corrigir Rastreamento de Entrada do Orçamento na Venda Final
 
 ## Problema Identificado
 
-Atualmente, a página de detalhes da Ordem de Serviço exibe diversas informações financeiras para todos os usuários. Essas informações devem ser restritas apenas para usuários com perfil de **caixa** ou **financeiro**.
+Quando um orçamento é **aprovado com entrada** e posteriormente **faturado**, o valor da entrada não está sendo corretamente vinculado e exibido no histórico da venda. O fluxo atual cria registros separados que não estão sendo corretamente mesclados.
 
-### Informações que Serão Ocultadas para Outros Perfis
+### Diagnóstico Detalhado
 
-| Elemento | Localização | Ação |
-|----------|-------------|------|
-| Aba "Financeiro" completa | Tabs principais | Ocultar aba inteira |
-| Timeline com valores de entrada e faturamento | Card OSSalesFlowTimeline | Substituir valores por "•••" ou ocultar |
-| Card de Total/Pendente no resumo | Summary Card | Ocultar campos financeiros |
-| Valores no OSSalesFlowTimeline | Timeline de fluxo | Ocultar valores monetários |
+**Situação Atual:**
 
-## Arquitetura da Solução
+| Etapa | O que acontece | Problema |
+|-------|----------------|----------|
+| 1. Aprovação com Entrada | Cria `quote_deposit`, `cash_movement`, e `sales (partial)` | O `cash_movement` fica com `sale_id: null` |
+| 2. Faturamento Final | Busca `quote_deposits` mas não vincula corretamente | A venda final não reconhece a entrada anterior |
+
+**Dados no Banco (exemplo real):**
+
+```text
+quote_deposits:
+  - amount: R$ 1.000
+  - cash_movement_id: a9b21ae7 (vinculado)
+  - status: received
+
+cash_movements:
+  - amount: R$ 1.000
+  - origem: orcamento
+  - sale_id: NULL  ← PROBLEMA: deveria ter sale_id da venda parcial
+
+sales (partial):
+  - total_amount: R$ 1.000
+  - sale_type: partial
+  - pending_amount: R$ 764 ← Incorreto, deveria ser o restante do orçamento total
+```
+
+## Solução Proposta
+
+Corrigir **dois pontos** no fluxo:
+
+### 1. `AprovarOrcamentoDialog.tsx` - Vincular `cash_movement` à venda parcial
+
+Quando a entrada é registrada na aprovação, o `cash_movement` já está sendo vinculado à venda (linha ~454-458), mas o código está após a criação da venda. Verificar se está funcionando corretamente.
+
+**Mudança:** Garantir que ao criar o `cash_movement`, ele seja imediatamente vinculado à venda parcial:
+
+```typescript
+// Linha ~398-413: Já existe o update, mas precisa garantir execução
+if (cashMovement?.id) {
+  await supabase
+    .from('cash_movements')
+    .update({ sale_id: sale.id })
+    .eq('id', cashMovement.id);
+}
+```
+
+### 2. `FaturarSaldoDialog.tsx` - Reconhecer entrada da venda parcial existente
+
+O problema principal está aqui. O diálogo de faturamento:
+- Busca `quote_deposits` ✅
+- Busca `sales` com `sale_type: 'partial'` ✅
+- Mas quando cria a venda final, **não está vinculando** corretamente as entradas anteriores
+
+**Correção no fluxo de faturamento (linhas ~141-163):**
+
+Em vez de criar uma **nova venda** para substituir a parcial, o sistema deve:
+
+1. **Atualizar a venda parcial existente** para se tornar a venda completa, ou
+2. **Criar a venda final** e explicitamente marcar que as entradas anteriores fazem parte dela
+
+**Abordagem Recomendada - Atualizar a venda parcial:**
+
+```typescript
+// Se já existe uma venda parcial, atualizar ela em vez de criar nova
+if (existingPartialSale) {
+  // Atualizar a venda parcial para venda completa
+  await supabase
+    .from('sales')
+    .update({
+      total_amount: totalOrcamento,
+      paid_amount: entradaJaRecebida + saldoRestante,
+      pending_amount: 0,
+      payment_status: 'paid',
+      sale_type: 'full',
+      notes: `Faturamento completo - OS #${...}`,
+    })
+    .eq('id', existingPartialSale.id);
+    
+  // Usar o ID da venda existente
+  saleId = existingPartialSale.id;
+} else {
+  // Criar nova venda (caso não exista parcial)
+  // ... código atual
+}
+```
+
+### 3. `QuoteFinancialDashboard.tsx` - Melhorar exibição das entradas
+
+O componente atual busca apenas **um** `quote_deposit` com `.maybeSingle()`. Se houver múltiplas entradas (pagamentos parciais), elas não serão exibidas.
+
+**Correção (linha ~72-76):**
+
+```typescript
+// Antes: .maybeSingle()
+// Depois: buscar todas as entradas
+const { data, error } = await supabase
+  .from('quote_deposits')
+  .select('*')
+  .eq('quote_id', quoteId)
+  .in('status', ['received', 'billed'])  // Incluir faturadas também
+  .order('created_at', { ascending: true });
+
+// Retornar array em vez de objeto único
+return data || [];
+```
+
+E ajustar a exibição para mostrar **todas** as entradas:
+
+```typescript
+// Modificar effectiveDeposit para ser array
+const allDeposits = depositInfo || [];
+const totalDepositAmount = allDeposits.reduce((sum, d) => sum + d.amount, 0);
+```
+
+## Fluxo Corrigido
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                    VISIBILIDADE POR PERFIL                                   │
+│                    FLUXO FINANCEIRO CORRIGIDO                                │
 └─────────────────────────────────────────────────────────────────────────────┘
 
-                     Financeiro/Caixa/Admin          Produção/Instalador/Outros
-                     ─────────────────────          ─────────────────────────
+1. APROVAÇÃO COM ENTRADA (R$ 1.000)
+   │
+   ├── quote_deposits ─────────► amount: 1.000, status: received
+   ├── cash_movements ─────────► origem: orcamento, sale_id: 123 ✓
+   ├── accounts_receivable ────► entrada_orcamento: 1.000, status: paid
+   └── sales (partial) ────────► total: 1.000, paid: 1.000, sale_id: 123
 
-Timeline Fluxo       ✅ Valores visíveis            ❌ Valores ocultos
-Aba Financeiro       ✅ Visível                     ❌ Oculta
-Card Total/Pendente  ✅ Visível                     ❌ Oculto
-OSFinancialDashboard ✅ Acesso completo             ❌ Sem acesso
+2. FATURAMENTO FINAL (Saldo R$ 764)
+   │
+   ├── sales (atualizar) ──────► total: 1.764, paid: 1.764, type: full
+   ├── cash_movements (novo) ──► categoria: venda, amount: 764
+   ├── quote_deposits ─────────► status: billed
+   └── cash_movements (antigo)─► origem: venda, sale_id: 123 (transferido)
+
+3. RESULTADO FINAL
+   │
+   └── Uma única venda com:
+       ├── Total: R$ 1.764,00
+       ├── Recebido: R$ 1.764,00
+       ├── Histórico: Entrada R$ 1.000 + Saldo R$ 764
+       └── Status: PAGO
 ```
 
-## Mudanças Técnicas
+## Arquivos a Modificar
 
-### Arquivo 1: `src/pages/OrdemServicoDetalhes.tsx`
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/components/orcamentos/AprovarOrcamentoDialog.tsx` | Garantir vinculação do `sale_id` no `cash_movement` |
+| `src/components/caixa/FaturarSaldoDialog.tsx` | Atualizar venda parcial existente em vez de criar nova |
+| `src/components/orcamentos/QuoteFinancialDashboard.tsx` | Buscar múltiplas entradas e exibir histórico completo |
 
-Adicionar verificação de permissões usando o hook `usePermissionProfile`:
+## Benefícios
 
-1. Importar o hook de permissões
-2. Verificar se usuário pode ver dados financeiros
-3. Ocultar condicionalmente:
-   - Aba "Financeiro" das tabs
-   - Card com Total/Pendente no resumo
-   - Valores financeiros no OSSalesFlowTimeline
-
-```typescript
-// Adicionar import
-import { usePermissionProfile } from '@/hooks/usePermissionProfile';
-
-// No componente
-const { 
-  isAdmin, 
-  isGerente, 
-  isCaixa, 
-  isFinanceiro 
-} = usePermissionProfile();
-
-// Definir quem pode ver dados financeiros
-const canSeeFinancials = isAdmin || isGerente || isCaixa || isFinanceiro;
-```
-
-### Mudanças no JSX:
-
-**1. Aba Financeiro (linhas ~403-440):**
-```typescript
-// Ocultar aba das tabs
-<TabsList className={cn(
-  "grid w-full",
-  canSeeFinancials ? "grid-cols-6" : "grid-cols-5"
-)}>
-  {canSeeFinancials && (
-    <TabsTrigger value="financial">
-      <Wallet className="w-4 h-4" />
-      <span className="hidden sm:inline">Financeiro</span>
-    </TabsTrigger>
-  )}
-  {/* ... outras abas */}
-</TabsList>
-
-{canSeeFinancials && (
-  <TabsContent value="financial">
-    <OSFinancialDashboard {...props} />
-  </TabsContent>
-)}
-```
-
-**2. Card de Resumo (linhas ~320-365):**
-```typescript
-// Ocultar informações de Total e Pendente
-{canSeeFinancials && (
-  <div className="flex items-start gap-3">
-    <DollarSign className="w-5 h-5 text-muted-foreground mt-0.5" />
-    <div>
-      <div className="text-sm text-muted-foreground">Total</div>
-      <div className="font-medium">{formatCurrency(ordem.total_amount)}</div>
-      {ordem.pending_amount > 0 && (
-        <div className="text-xs text-destructive">
-          Pendente: {formatCurrency(ordem.pending_amount)}
-        </div>
-      )}
-    </div>
-  </div>
-)}
-```
-
-**3. Timeline de Fluxo (linhas ~293-309):**
-
-Passar prop para indicar se deve ocultar valores:
-
-```typescript
-<OSSalesFlowTimeline
-  // ... props existentes
-  hideFinancialValues={!canSeeFinancials}
-/>
-```
-
-### Arquivo 2: `src/components/ordens-servico/OSSalesFlowTimeline.tsx`
-
-Adicionar prop para ocultar valores financeiros:
-
-```typescript
-interface OSSalesFlowTimelineProps {
-  // ... props existentes
-  hideFinancialValues?: boolean;
-}
-
-export function OSSalesFlowTimeline({
-  // ... props existentes
-  hideFinancialValues = false,
-}: OSSalesFlowTimelineProps) {
-  
-  // No getSteps(), ocultar valores se necessário
-  {
-    id: 'entry',
-    label: 'Entrada',
-    value: hideFinancialValues 
-      ? undefined  // Não mostra valor
-      : entryValue > 0 ? formatCurrency(entryValue) : 'Sem entrada',
-  },
-  {
-    id: 'billing',
-    label: 'Faturamento',
-    value: hideFinancialValues 
-      ? undefined 
-      : isFullyPaid ? formatCurrency(totalAmount) : formatCurrency(pendingAmount) + ' pendente',
-  },
-}
-```
-
-## Tabela de Permissões
-
-| Perfil | Vê Aba Financeiro? | Vê Valores? | Vê Timeline Completa? |
-|--------|-------------------|-------------|----------------------|
-| Admin | ✅ | ✅ | ✅ |
-| Gerente | ✅ | ✅ | ✅ |
-| Financeiro | ✅ | ✅ | ✅ |
-| Caixa | ✅ | ✅ | ✅ |
-| Vendedor | ❌ | ❌ | ❌ (sem valores) |
-| Produção | ❌ | ❌ | ❌ (sem valores) |
-| Almoxarifado | ❌ | ❌ | ❌ (sem valores) |
-| Instalador | ❌ | ❌ | ❌ (sem valores) |
-
-## Resumo dos Arquivos
-
-| Arquivo | Ação |
-|---------|------|
-| `src/pages/OrdemServicoDetalhes.tsx` | Adicionar lógica de permissão para ocultar elementos |
-| `src/components/ordens-servico/OSSalesFlowTimeline.tsx` | Adicionar prop para ocultar valores financeiros |
-
-## Comportamento Final
-
-**Para Produção/Instalador/Vendedor:**
-- Vê timeline de fluxo SEM valores monetários
-- Não vê aba "Financeiro"
-- Não vê card de Total/Pendente no resumo
-- Pode ver todas as outras abas (Materiais, Corte, Vidros, Fotos, Detalhes)
-
-**Para Admin/Gerente/Financeiro/Caixa:**
-- Acesso completo como está hoje
+1. **Rastreabilidade completa**: Todas as entradas vinculadas à venda final
+2. **Histórico unificado**: Uma única venda com todo o histórico de pagamentos
+3. **Sem duplicação**: Evita criar múltiplas vendas para o mesmo orçamento
+4. **Visualização correta**: Dashboard financeiro mostra entrada + saldo
 
