@@ -45,6 +45,11 @@ interface Sale {
   payment_status: string;
   created_at: string;
   notes: string | null;
+  // Campos para suporte a vendas parciais
+  sale_type?: 'full' | 'partial' | string;
+  quote_id?: string | null;
+  paid_amount?: number;
+  pending_amount?: number;
 }
 
 export default function CaixaVendas() {
