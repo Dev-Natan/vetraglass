@@ -138,29 +138,55 @@ export function FaturarSaldoDialog({
         throw new Error('Não há saldo pendente para faturar');
       }
 
-      // 1. Criar venda COMPLETA (valor total do orçamento)
-      const { data: sale, error: saleError } = await supabase
-        .from('sales')
-        .insert({
-          company_id: currentCompany.id,
-          cash_register_id: openCashRegister.id,
-          customer_name: ordemServico.customer_name,
-          total_amount: totalOrcamento, // Valor TOTAL do orçamento
-          subtotal: totalOrcamento,
-          paid_amount: entradaJaRecebida + saldoRestante, // Tudo será pago
-          pending_amount: 0, // Sem pendência após faturamento
-          payment_method: paymentMethod,
-          sale_type: 'full',
-          payment_status: 'paid',
-          notes: `Faturamento completo - OS #${String(ordemServico.os_number).padStart(4, '0')}`,
-          sold_by: user.id,
-          ordem_servico_id: ordemServico.id,
-          quote_id: ordemServico.quote_id,
-        })
-        .select('id')
-        .single();
+      // Buscar venda parcial existente vinculada à OS
+      const partialSale = allDeposits?.partialSales?.[0];
+      
+      let saleId: string;
 
-      if (saleError) throw saleError;
+      // FLUXO CORRIGIDO: Atualizar venda parcial existente OU criar nova
+      if (partialSale) {
+        // 1A. ATUALIZAR venda parcial para venda completa
+        const { error: updateSaleError } = await supabase
+          .from('sales')
+          .update({
+            total_amount: totalOrcamento,
+            subtotal: totalOrcamento,
+            paid_amount: entradaJaRecebida + saldoRestante,
+            pending_amount: 0,
+            payment_status: 'paid',
+            sale_type: 'full',
+            notes: `Faturamento completo - OS #${String(ordemServico.os_number).padStart(4, '0')} (atualizado de venda parcial)`,
+          })
+          .eq('id', partialSale.id);
+
+        if (updateSaleError) throw updateSaleError;
+        saleId = partialSale.id;
+      } else {
+        // 1B. Criar venda nova (caso não exista venda parcial)
+        const { data: newSale, error: saleError } = await supabase
+          .from('sales')
+          .insert({
+            company_id: currentCompany.id,
+            cash_register_id: openCashRegister.id,
+            customer_name: ordemServico.customer_name,
+            total_amount: totalOrcamento,
+            subtotal: totalOrcamento,
+            paid_amount: entradaJaRecebida + saldoRestante,
+            pending_amount: 0,
+            payment_method: paymentMethod,
+            sale_type: 'full',
+            payment_status: 'paid',
+            notes: `Faturamento completo - OS #${String(ordemServico.os_number).padStart(4, '0')}`,
+            sold_by: user.id,
+            ordem_servico_id: ordemServico.id,
+            quote_id: ordemServico.quote_id,
+          })
+          .select('id')
+          .single();
+
+        if (saleError) throw saleError;
+        saleId = newSale.id;
+      }
 
       // 2. Criar movimento de caixa APENAS para o saldo restante (não duplicar entrada)
       if (saldoRestante > 0) {
@@ -174,7 +200,7 @@ export function FaturarSaldoDialog({
             amount: saldoRestante,
             description: `Saldo final - OS #${String(ordemServico.os_number).padStart(4, '0')} - ${ordemServico.customer_name}`,
             payment_method: paymentMethod,
-            sale_id: sale.id,
+            sale_id: saleId,
             created_by: user.id,
             origem: 'venda',
           });
@@ -198,7 +224,7 @@ export function FaturarSaldoDialog({
             .from('cash_movements')
             .update({
               origem: 'venda',
-              sale_id: sale.id,
+              sale_id: saleId,
             })
             .eq('id', depositData.cash_movement_id);
         }
@@ -220,7 +246,7 @@ export function FaturarSaldoDialog({
           .from('accounts_receivable')
           .update({
             status: 'paid',
-            sale_id: sale.id,
+            sale_id: saleId,
             paid_date: new Date().toISOString().split('T')[0],
           })
           .eq('quote_id', ordemServico.quote_id)
@@ -234,7 +260,7 @@ export function FaturarSaldoDialog({
             paid_date: new Date().toISOString().split('T')[0],
             paid_amount: saldoRestante,
             payment_method: paymentMethod,
-            sale_id: sale.id,
+            sale_id: saleId,
           })
           .eq('quote_id', ordemServico.quote_id)
           .or('receivable_type.eq.saldo_final,receivable_type.eq.installment')
@@ -252,7 +278,7 @@ export function FaturarSaldoDialog({
         .from('ordens_servico')
         .update({
           status: 'completed',
-          sale_id: sale.id,
+          sale_id: saleId,
           paid_amount: totalOrcamento,
           pending_amount: 0,
         })
@@ -272,7 +298,7 @@ export function FaturarSaldoDialog({
       }
 
       return { 
-        sale, 
+        saleId, 
         entradaJaRecebida, 
         saldoFaturado: saldoRestante,
         totalFaturado: totalOrcamento,
