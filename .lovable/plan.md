@@ -1,137 +1,181 @@
 
 
-# Plano: Permitir Alteração Direta do Saldo Real
+# Plano: Ocultar Informações Financeiras da OS para Não-Financeiros
 
 ## Problema Identificado
 
-Atualmente:
-1. O campo "Saldo Real" **só aparece na criação inicial** (quando `!isEditMode`)
-2. A mutation de configuração **só atualiza o `fixed_fund`**, ignorando o saldo
-3. Não existe forma de ajustar o saldo real sem gerar movimentação
+Atualmente, a página de detalhes da Ordem de Serviço exibe diversas informações financeiras para todos os usuários. Essas informações devem ser restritas apenas para usuários com perfil de **caixa** ou **financeiro**.
 
-## Solução
+### Informações que Serão Ocultadas para Outros Perfis
 
-Criar uma **opção separada** para o admin ajustar diretamente o saldo real da empresa sem gerar movimentações no histórico financeiro. Isso é útil para correções ou quando o usuário cadastra um valor inicial errado.
+| Elemento | Localização | Ação |
+|----------|-------------|------|
+| Aba "Financeiro" completa | Tabs principais | Ocultar aba inteira |
+| Timeline com valores de entrada e faturamento | Card OSSalesFlowTimeline | Substituir valores por "•••" ou ocultar |
+| Card de Total/Pendente no resumo | Summary Card | Ocultar campos financeiros |
+| Valores no OSSalesFlowTimeline | Timeline de fluxo | Ocultar valores monetários |
 
 ## Arquitetura da Solução
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                     FLUXO DE ALTERAÇÃO DO SALDO                             │
+│                    VISIBILIDADE POR PERFIL                                   │
 └─────────────────────────────────────────────────────────────────────────────┘
 
-Método 1: Ajuste Direto (SEM movimentação)
-─────────────────────────────────────────
-Admin clica em "Ajustar Saldo" → Informa novo valor → Salvo diretamente
+                     Financeiro/Caixa/Admin          Produção/Instalador/Outros
+                     ─────────────────────          ─────────────────────────
 
-Método 2: Entrada/Saída (COM movimentação) - já existe
-─────────────────────────────────────────
-Admin clica em "Depósito" ou "Retirada" → Gera registro no histórico
-```
-
-## Mudanças na Interface
-
-### 1. Adicionar Botão "Ajustar Saldo" no Card de Saldo Real
-
-```text
-┌─────────────────────────────────────────────────────┐
-│ 💰 Saldo Real da Empresa          [Ajustar] [⚙️]   │
-│                                                     │
-│     R$ 450,00                                       │
-│     Valor que a empresa possui em caixa/banco       │
-└─────────────────────────────────────────────────────┘
-```
-
-### 2. Novo Dialog: Ajustar Saldo Diretamente
-
-```text
-┌────────────────────────────────────────────────────┐
-│ 💰 Ajustar Saldo da Empresa                        │
-│                                                    │
-│ ⚠️ Esta ação NÃO gera movimentação no histórico    │
-│    financeiro. Use apenas para correções.          │
-│                                                    │
-│ Saldo atual:      R$ 450,00                        │
-│                                                    │
-│ Novo saldo (R$):                                   │
-│ ┌────────────────────────────────────┐             │
-│ │ 2.500,00                           │             │
-│ └────────────────────────────────────┘             │
-│                                                    │
-│ Motivo da correção: (opcional)                     │
-│ ┌────────────────────────────────────┐             │
-│ │ Correção do saldo inicial          │             │
-│ └────────────────────────────────────┘             │
-│                                                    │
-│             [Cancelar] [Confirmar Ajuste]          │
-└────────────────────────────────────────────────────┘
+Timeline Fluxo       ✅ Valores visíveis            ❌ Valores ocultos
+Aba Financeiro       ✅ Visível                     ❌ Oculta
+Card Total/Pendente  ✅ Visível                     ❌ Oculto
+OSFinancialDashboard ✅ Acesso completo             ❌ Sem acesso
 ```
 
 ## Mudanças Técnicas
 
-### Arquivo 1: `src/components/caixa/AjustarSaldoDialog.tsx` (NOVO)
+### Arquivo 1: `src/pages/OrdemServicoDetalhes.tsx`
 
-Criar novo componente de dialog para ajuste direto:
+Adicionar verificação de permissões usando o hook `usePermissionProfile`:
 
-| Campo | Descrição |
-|-------|-----------|
-| `newBalance` | Input para o novo saldo |
-| `reason` | Textarea opcional para motivo |
-| Alerta visual | Explicando que não gera movimentação |
+1. Importar o hook de permissões
+2. Verificar se usuário pode ver dados financeiros
+3. Ocultar condicionalmente:
+   - Aba "Financeiro" das tabs
+   - Card com Total/Pendente no resumo
+   - Valores financeiros no OSSalesFlowTimeline
 
-### Arquivo 2: `src/components/financeiro/CaixaEmpresaTab.tsx`
-
-Adicionar:
-
-1. Estado para controlar o novo dialog: `adjustBalanceOpen`
-2. Nova mutation para atualizar saldo diretamente:
 ```typescript
-const adjustBalanceMutation = useMutation({
-  mutationFn: async (newBalance: number) => {
-    await supabase
-      .from('company_cash')
-      .update({ 
-        current_balance: newBalance,
-        updated_at: new Date().toISOString()
-      })
-      .eq('company_id', currentCompany.id);
-  },
-});
+// Adicionar import
+import { usePermissionProfile } from '@/hooks/usePermissionProfile';
+
+// No componente
+const { 
+  isAdmin, 
+  isGerente, 
+  isCaixa, 
+  isFinanceiro 
+} = usePermissionProfile();
+
+// Definir quem pode ver dados financeiros
+const canSeeFinancials = isAdmin || isGerente || isCaixa || isFinanceiro;
 ```
 
-3. Botão "Ajustar" no card de Saldo Real
-4. Importar e renderizar o novo dialog
+### Mudanças no JSX:
 
-### Arquivo 3: `src/components/caixa/MovimentoCaixaEmpresaDialog.tsx`
+**1. Aba Financeiro (linhas ~403-440):**
+```typescript
+// Ocultar aba das tabs
+<TabsList className={cn(
+  "grid w-full",
+  canSeeFinancials ? "grid-cols-6" : "grid-cols-5"
+)}>
+  {canSeeFinancials && (
+    <TabsTrigger value="financial">
+      <Wallet className="w-4 h-4" />
+      <span className="hidden sm:inline">Financeiro</span>
+    </TabsTrigger>
+  )}
+  {/* ... outras abas */}
+</TabsList>
 
-Remover a condição `{!isEditMode}` do campo de saldo inicial, permitindo que ele apareça sempre. Isso dá ao admin a opção de ajustar o saldo também via configuração.
+{canSeeFinancials && (
+  <TabsContent value="financial">
+    <OSFinancialDashboard {...props} />
+  </TabsContent>
+)}
+```
 
-**OU** manter o dialog de config apenas para fundo fixo, e usar o novo dialog para saldo.
+**2. Card de Resumo (linhas ~320-365):**
+```typescript
+// Ocultar informações de Total e Pendente
+{canSeeFinancials && (
+  <div className="flex items-start gap-3">
+    <DollarSign className="w-5 h-5 text-muted-foreground mt-0.5" />
+    <div>
+      <div className="text-sm text-muted-foreground">Total</div>
+      <div className="font-medium">{formatCurrency(ordem.total_amount)}</div>
+      {ordem.pending_amount > 0 && (
+        <div className="text-xs text-destructive">
+          Pendente: {formatCurrency(ordem.pending_amount)}
+        </div>
+      )}
+    </div>
+  </div>
+)}
+```
 
-**Decisão:** Criar dialog separado para ajuste de saldo, mantendo config apenas para fundo fixo (mais claro para o usuário).
+**3. Timeline de Fluxo (linhas ~293-309):**
+
+Passar prop para indicar se deve ocultar valores:
+
+```typescript
+<OSSalesFlowTimeline
+  // ... props existentes
+  hideFinancialValues={!canSeeFinancials}
+/>
+```
+
+### Arquivo 2: `src/components/ordens-servico/OSSalesFlowTimeline.tsx`
+
+Adicionar prop para ocultar valores financeiros:
+
+```typescript
+interface OSSalesFlowTimelineProps {
+  // ... props existentes
+  hideFinancialValues?: boolean;
+}
+
+export function OSSalesFlowTimeline({
+  // ... props existentes
+  hideFinancialValues = false,
+}: OSSalesFlowTimelineProps) {
+  
+  // No getSteps(), ocultar valores se necessário
+  {
+    id: 'entry',
+    label: 'Entrada',
+    value: hideFinancialValues 
+      ? undefined  // Não mostra valor
+      : entryValue > 0 ? formatCurrency(entryValue) : 'Sem entrada',
+  },
+  {
+    id: 'billing',
+    label: 'Faturamento',
+    value: hideFinancialValues 
+      ? undefined 
+      : isFullyPaid ? formatCurrency(totalAmount) : formatCurrency(pendingAmount) + ' pendente',
+  },
+}
+```
+
+## Tabela de Permissões
+
+| Perfil | Vê Aba Financeiro? | Vê Valores? | Vê Timeline Completa? |
+|--------|-------------------|-------------|----------------------|
+| Admin | ✅ | ✅ | ✅ |
+| Gerente | ✅ | ✅ | ✅ |
+| Financeiro | ✅ | ✅ | ✅ |
+| Caixa | ✅ | ✅ | ✅ |
+| Vendedor | ❌ | ❌ | ❌ (sem valores) |
+| Produção | ❌ | ❌ | ❌ (sem valores) |
+| Almoxarifado | ❌ | ❌ | ❌ (sem valores) |
+| Instalador | ❌ | ❌ | ❌ (sem valores) |
 
 ## Resumo dos Arquivos
 
 | Arquivo | Ação |
 |---------|------|
-| `src/components/caixa/AjustarSaldoDialog.tsx` | **CRIAR** - Novo dialog para ajuste direto |
-| `src/components/financeiro/CaixaEmpresaTab.tsx` | Adicionar botão + mutation + dialog |
+| `src/pages/OrdemServicoDetalhes.tsx` | Adicionar lógica de permissão para ocultar elementos |
+| `src/components/ordens-servico/OSSalesFlowTimeline.tsx` | Adicionar prop para ocultar valores financeiros |
 
-## Fluxo Final para o Admin
+## Comportamento Final
 
-O admin terá 3 opções para gerenciar o saldo:
+**Para Produção/Instalador/Vendedor:**
+- Vê timeline de fluxo SEM valores monetários
+- Não vê aba "Financeiro"
+- Não vê card de Total/Pendente no resumo
+- Pode ver todas as outras abas (Materiais, Corte, Vidros, Fotos, Detalhes)
 
-| Opção | Quando usar | Gera movimentação? |
-|-------|-------------|-------------------|
-| **Ajustar Saldo** | Correção de valores errados, ajuste inicial | Não |
-| **Depósito** | Dinheiro físico entrou na empresa | Sim |
-| **Retirada** | Dinheiro saiu da empresa | Sim |
-
-## Critérios de Aceite
-
-1. Admin pode ajustar o saldo real da empresa a qualquer momento
-2. Ajuste direto NÃO gera movimentação no histórico
-3. Depósito e Retirada continuam gerando movimentações normalmente
-4. Alerta visual informa que o ajuste não gera histórico
-5. Campo opcional para motivo da correção (para referência interna)
+**Para Admin/Gerente/Financeiro/Caixa:**
+- Acesso completo como está hoje
 
