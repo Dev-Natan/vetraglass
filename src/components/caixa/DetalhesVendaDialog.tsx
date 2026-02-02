@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Printer, DollarSign, CreditCard, Smartphone, Package } from 'lucide-react';
+import { Printer, DollarSign, CreditCard, Smartphone, Package, History, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Sale {
@@ -26,6 +26,11 @@ interface Sale {
   payment_status: string;
   created_at: string;
   notes: string | null;
+  // Campos para suporte a vendas parciais
+  sale_type?: 'full' | 'partial' | string;
+  quote_id?: string | null;
+  paid_amount?: number;
+  pending_amount?: number;
 }
 
 interface SaleItem {
@@ -38,6 +43,16 @@ interface SaleItem {
   width: number | null;
   height: number | null;
   notes: string | null;
+}
+
+interface CashMovement {
+  id: string;
+  amount: number;
+  type: string;
+  category: string;
+  description: string;
+  created_at: string;
+  origem: string | null;
 }
 
 interface DetalhesVendaDialogProps {
@@ -72,6 +87,25 @@ export function DetalhesVendaDialog({ open, onOpenChange, sale, onPrint }: Detal
       
       if (error) throw error;
       return data as SaleItem[];
+    },
+    enabled: !!sale?.id && open,
+  });
+
+  // Buscar histórico de pagamentos vinculados à venda
+  const { data: paymentHistory = [] } = useQuery({
+    queryKey: ['sale-payments', sale?.id],
+    queryFn: async () => {
+      if (!sale?.id) return [];
+      
+      const { data, error } = await supabase
+        .from('cash_movements')
+        .select('*')
+        .eq('sale_id', sale.id)
+        .eq('type', 'entrada')
+        .order('created_at', { ascending: true });
+      
+      if (error) throw error;
+      return data as CashMovement[];
     },
     enabled: !!sale?.id && open,
   });
@@ -120,12 +154,22 @@ export function DetalhesVendaDialog({ open, onOpenChange, sale, onPrint }: Detal
             </div>
             <div>
               <span className="text-muted-foreground">Status:</span>
-              <div className="mt-1">
+              <div className="mt-1 flex flex-col gap-1">
                 {isCancelled ? (
                   <Badge variant="destructive">Cancelada</Badge>
+                ) : sale.sale_type === 'partial' && (sale.pending_amount ?? 0) > 0 ? (
+                  <Badge variant="outline" className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300">
+                    Parcial
+                  </Badge>
                 ) : (
                   <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
                     Paga
+                  </Badge>
+                )}
+                {sale.quote_id && (
+                  <Badge variant="outline" className="text-xs bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                    <FileText className="h-3 w-3 mr-1" />
+                    Orçamento
                   </Badge>
                 )}
               </div>
@@ -178,7 +222,7 @@ export function DetalhesVendaDialog({ open, onOpenChange, sale, onPrint }: Detal
               <span>{formatCurrency(sale.subtotal)}</span>
             </div>
             {sale.discount_amount && sale.discount_amount > 0 && (
-              <div className="flex justify-between text-red-600">
+              <div className="flex justify-between text-destructive">
                 <span>Desconto ({sale.discount_percent || 0}%):</span>
                 <span>-{formatCurrency(sale.discount_amount)}</span>
               </div>
@@ -190,7 +234,58 @@ export function DetalhesVendaDialog({ open, onOpenChange, sale, onPrint }: Detal
                 {formatCurrency(sale.total_amount)}
               </span>
             </div>
+            {/* Resumo de pagamentos para vendas parciais */}
+            {sale.sale_type === 'partial' && (
+              <div className="pt-2 space-y-1 border-t">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Valor Recebido:</span>
+                  <span className="text-green-600 dark:text-green-400 font-medium">
+                    {formatCurrency(sale.paid_amount ?? 0)}
+                  </span>
+                </div>
+                {(sale.pending_amount ?? 0) > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Saldo Pendente:</span>
+                    <span className="text-orange-600 dark:text-orange-400 font-medium">
+                      {formatCurrency(sale.pending_amount ?? 0)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
+
+          {/* Histórico de pagamentos */}
+          {paymentHistory.length > 0 && (
+            <>
+              <Separator />
+              <div>
+                <h4 className="font-medium mb-2 flex items-center gap-2">
+                  <History className="h-4 w-4" />
+                  Histórico de Pagamentos
+                </h4>
+                <div className="space-y-2">
+                  {paymentHistory.map((payment) => (
+                    <div key={payment.id} className="flex justify-between items-center text-sm p-2 rounded bg-muted/50">
+                      <div>
+                        <span className="text-muted-foreground">
+                          {format(new Date(payment.created_at), 'dd/MM HH:mm', { locale: ptBR })}
+                        </span>
+                        {payment.origem && (
+                          <Badge variant="outline" className="ml-2 text-xs">
+                            {payment.origem === 'orcamento' ? 'Entrada' : 'Faturamento'}
+                          </Badge>
+                        )}
+                      </div>
+                      <span className="text-green-600 dark:text-green-400 font-medium">
+                        +{formatCurrency(payment.amount)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Observações */}
           {sale.notes && (

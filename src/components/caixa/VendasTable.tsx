@@ -20,6 +20,11 @@ interface Sale {
   payment_method: string;
   payment_status: string;
   created_at: string;
+  // Campos para suporte a vendas parciais
+  sale_type?: 'full' | 'partial' | string;
+  quote_id?: string | null;
+  paid_amount?: number;
+  pending_amount?: number;
 }
 
 interface VendasTableProps {
@@ -89,16 +94,38 @@ export function VendasTable({ sales, onViewDetails, onCancelSale, onPrintReceipt
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  {isCancelled ? (
-                    <Badge variant="destructive">Cancelada</Badge>
-                  ) : (
-                    <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
-                      Paga
-                    </Badge>
-                  )}
+                  <div className="flex flex-col gap-1">
+                    {isCancelled ? (
+                      <Badge variant="destructive">Cancelada</Badge>
+                    ) : sale.sale_type === 'partial' && (sale.pending_amount ?? 0) > 0 ? (
+                      <Badge variant="outline" className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300">
+                        Parcial
+                      </Badge>
+                    ) : sale.payment_status === 'pending' ? (
+                      <Badge variant="outline" className="bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300">
+                        Pendente
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                        Paga
+                      </Badge>
+                    )}
+                    {sale.quote_id && (
+                      <Badge variant="outline" className="text-xs bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                        Orçamento
+                      </Badge>
+                    )}
+                  </div>
                 </TableCell>
-                <TableCell className={`text-right font-medium ${isCancelled ? 'line-through' : ''}`}>
-                  {formatCurrency(sale.total_amount)}
+                <TableCell className={`text-right ${isCancelled ? 'line-through' : ''}`}>
+                  <div className="flex flex-col items-end">
+                    <span className="font-medium">{formatCurrency(sale.total_amount)}</span>
+                    {sale.sale_type === 'partial' && (sale.pending_amount ?? 0) > 0 && (
+                      <span className="text-xs text-muted-foreground">
+                        Recebido: {formatCurrency(sale.paid_amount ?? 0)}
+                      </span>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-1">
