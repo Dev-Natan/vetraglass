@@ -402,10 +402,10 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
 
       {/* Cards de resumo da empresa */}
       <div className="grid gap-4 md:grid-cols-3">
-        {/* Saldo Atual */}
+        {/* Saldo Real da Empresa */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Saldo da Empresa</CardTitle>
+            <CardTitle className="text-sm font-medium">💰 Saldo Real da Empresa</CardTitle>
             <Button 
               variant="ghost" 
               size="icon" 
@@ -420,6 +420,9 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
             <div className={`text-2xl font-bold ${companyCash.current_balance < 0 ? 'text-destructive' : 'text-green-600'}`}>
               {formatCurrency(companyCash.current_balance)}
             </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Valor que a empresa possui em caixa/banco
+            </p>
             {isBalanceLow && (
               <div className="flex items-center gap-1 mt-2 text-amber-600 text-sm">
                 <AlertTriangle className="h-4 w-4" />
@@ -429,10 +432,10 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
           </CardContent>
         </Card>
 
-        {/* Fundo Fixo */}
+        {/* Fundo Fixo para Abertura */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Fundo Fixo</CardTitle>
+            <CardTitle className="text-sm font-medium">💵 Fundo Fixo para Abertura</CardTitle>
             <Button 
               variant="ghost" 
               size="icon" 
@@ -448,6 +451,7 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
               {formatCurrency(companyCash.fixed_fund)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
+              Valor para abertura dos caixas do dia
               Valor padrão para abertura do caixa do dia
             </p>
           </CardContent>
