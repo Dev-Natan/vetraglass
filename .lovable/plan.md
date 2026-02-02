@@ -1,204 +1,168 @@
 
-# Plano: Corrigir Fluxo Automático de Vendas de Orçamento com Entrada
+# Plano: Adaptar Página de Vendas (CaixaVendas) às Mudanças do Fluxo de Orçamentos
 
-## Resumo do Problema
+## Contexto das Mudanças Realizadas
 
-O sistema atual possui **falhas críticas** no fluxo financeiro de orçamentos:
+O fluxo de venda de orçamentos foi corrigido para:
+1. O botão "Concluir" na página de OS agora abre o `FaturarSaldoDialog`
+2. Vendas parciais são atualizadas para vendas completas (em vez de criar novas)
+3. Entradas (`cash_movements`) são vinculadas à venda final
 
-1. O botão "Concluir" na lista de OS **ignora o faturamento**, simplesmente mudando o status sem registrar a venda
-2. O componente `FaturarSaldoDialog` **existe mas nunca é usado**
-3. O `cash_movement` da entrada **não está sendo vinculado** à venda parcial (o `sale_id` permanece `NULL`)
-4. Não há validação para impedir conclusão de OS sem faturamento
+## Problemas Atuais na Página de Vendas
 
-## Arquitetura Proposta
+A página `CaixaVendas` e seus componentes não reconhecem adequadamente:
 
-```text
-┌────────────────────────────────────────────────────────────────────────────┐
-│                    FLUXO CORRETO DE ORÇAMENTO → VENDA                       │
-├────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  1. APROVAR ORÇAMENTO (com entrada R$ 1.000)                               │
-│     ├── quote_deposits ────► amount: 1.000, status: received               │
-│     ├── cash_movements ────► origem: orcamento, sale_id: VINCULADO ✓       │
-│     ├── sales (partial) ───► total: 1.000, paid: 1.000                     │
-│     └── ordens_servico ────► created, paid: 1.000, pending: 764            │
-│                                                                             │
-│  2. TRABALHAR NA OS                                                         │
-│     └── Produção, corte, instalação...                                      │
-│                                                                             │
-│  3. CONCLUIR OS (OBRIGATÓRIO via FaturarSaldoDialog)                       │
-│     ├── Valida que está em status 'in_progress'                            │
-│     ├── Abre FaturarSaldoDialog automaticamente                            │
-│     ├── Mostra entrada já recebida (R$ 1.000)                              │
-│     ├── Calcula saldo restante (R$ 764)                                    │
-│     └── Registra forma de pagamento do saldo                               │
-│                                                                             │
-│  4. FATURAMENTO                                                             │
-│     ├── sales: UPDATE → total: 1.764, paid: 1.764, type: full             │
-│     ├── cash_movements (entrada): UPDATE → origem: venda, sale_id: X       │
-│     ├── cash_movements (saldo): INSERT → venda, 764                        │
-│     ├── quote_deposits: UPDATE → status: billed                            │
-│     ├── ordens_servico: UPDATE → status: completed, sale_id: X             │
-│     └── accounts_receivable: UPDATE → status: paid                         │
-│                                                                             │
-└────────────────────────────────────────────────────────────────────────────┘
-```
+| Componente | Problema |
+|------------|----------|
+| `VendasTable` | Mostra apenas "Paga" ou "Cancelada", não diferencia vendas parciais |
+| `DetalhesVendaDialog` | Não exibe histórico de entradas vinculadas nem saldo pendente |
+| `CaixaVendas` | Não filtra/destaca vendas de orçamentos vs vendas diretas |
+| Resumo do caixa | Não considera entradas de orçamento nos cálculos |
 
 ## Alterações Necessárias
 
-### 1. `src/pages/OrdensServico.tsx` - Integrar FaturarSaldoDialog
+### 1. `src/components/caixa/VendasTable.tsx`
 
-**Problema**: O botão "Concluir" simplesmente muda o status sem faturar.
+Adicionar suporte a novos status de pagamento:
 
-**Solução**: Interceptar a conclusão e abrir o `FaturarSaldoDialog` antes.
+**Antes:**
+- `paid` → Badge verde "Paga"
+- `cancelled` → Badge vermelha "Cancelada"
 
-```typescript
-// Adicionar imports
-import { FaturarSaldoDialog } from '@/components/caixa/FaturarSaldoDialog';
+**Depois:**
+- `paid` → Badge verde "Paga"
+- `partial` → Badge amarela "Parcial" com indicador de valor recebido
+- `pending` → Badge laranja "Pendente"
+- `cancelled` → Badge vermelha "Cancelada"
 
-// Adicionar estado
-const [faturarDialogOpen, setFaturarDialogOpen] = useState(false);
-const [osToComplete, setOsToComplete] = useState<OrdemServico | null>(null);
+Também adicionar coluna para diferenciar vendas de orçamento:
+- Se `quote_id` existir → Badge "Orçamento"
+- Se `sale_type === 'partial'` → Badge "Entrada"
 
-// Modificar botão "Concluir"
-// ANTES:
-onClick={() => updateStatusMutation.mutate({ id: os.id, status: 'completed' })}
+### 2. `src/components/caixa/DetalhesVendaDialog.tsx`
 
-// DEPOIS:
-onClick={() => {
-  setOsToComplete(os);
-  setFaturarDialogOpen(true);
-}}
+Expandir para exibir informações financeiras completas:
 
-// Adicionar o dialog ao final do componente
-<FaturarSaldoDialog
-  open={faturarDialogOpen}
-  onOpenChange={setFaturarDialogOpen}
-  ordemServico={osToComplete}
-  onSuccess={() => {
-    setOsToComplete(null);
-    queryClient.invalidateQueries({ queryKey: ['ordens-servico'] });
-  }}
-/>
-```
+- Buscar `accounts_receivable` vinculados à venda
+- Exibir histórico de entradas pagas
+- Mostrar saldo pendente se houver
+- Exibir progressão de pagamentos (entrada → saldo)
 
-### 2. `src/components/orcamentos/AprovarOrcamentoDialog.tsx` - Corrigir Vinculação
+### 3. `src/pages/CaixaVendas.tsx`
 
-**Problema**: O código tenta vincular `cash_movement.sale_id` mas o banco mostra `NULL`.
+- Atualizar interface `Sale` para incluir `sale_type`, `quote_id`, `paid_amount`, `pending_amount`
+- Modificar a query de vendas para incluir esses novos campos
+- Atualizar `cashSummary` para considerar entradas de orçamento separadamente
 
-**Solução**: Verificar se o update está sendo executado corretamente e adicionar tratamento de erro.
+### 4. `src/components/caixa/VendasTable.tsx` - Interface
+
+Atualizar a interface `Sale` para receber campos adicionais:
 
 ```typescript
-// Linha ~454-458 - Adicionar verificação de erro
-if (cashMovement?.id && sale?.id) {
-  const { error: linkError } = await supabase
-    .from('cash_movements')
-    .update({ sale_id: sale.id })
-    .eq('id', cashMovement.id);
-  
-  if (linkError) {
-    console.error('ERRO ao vincular cash_movement à venda:', linkError);
-  } else {
-    console.log('✓ cash_movement vinculado à venda:', cashMovement.id, '→', sale.id);
-  }
+interface Sale {
+  id: string;
+  sale_number: number;
+  customer_name: string | null;
+  total_amount: number;
+  payment_method: string;
+  payment_status: string;
+  created_at: string;
+  // Novos campos
+  sale_type?: 'full' | 'partial';
+  quote_id?: string | null;
+  paid_amount?: number;
+  pending_amount?: number;
 }
 ```
 
-### 3. `src/components/caixa/FaturarSaldoDialog.tsx` - Ajustes Finais
+## Detalhes da Implementação
 
-O componente já está bem implementado, mas precisa de pequenos ajustes:
-
-- Garantir que o diálogo funcione mesmo quando `quote_id` é null
-- Melhorar mensagens de feedback
-- Adicionar fallback se não houver entradas registradas
-
-### 4. Adicionar Validação de Faturamento (Segurança)
-
-Impedir que uma OS seja marcada como `completed` diretamente via banco sem passar pelo fluxo:
+### VendasTable - Status Dinâmico
 
 ```typescript
-// No mutation de update de status, antes de permitir 'completed':
-if (status === 'completed') {
-  // Verificar se a OS tem valor pendente
-  const { data: os } = await supabase
-    .from('ordens_servico')
-    .select('pending_amount')
-    .eq('id', id)
-    .single();
+// Configuração de status expandida
+const paymentStatusConfig = {
+  paid: { label: 'Paga', color: 'bg-green-100 text-green-700' },
+  partial: { label: 'Parcial', color: 'bg-yellow-100 text-yellow-700' },
+  pending: { label: 'Pendente', color: 'bg-orange-100 text-orange-700' },
+  cancelled: { label: 'Cancelada', color: 'bg-red-100 text-red-700' },
+};
+
+// Renderização do status
+{sale.sale_type === 'partial' && sale.pending_amount > 0 ? (
+  <Badge variant="outline" className="bg-yellow-100 text-yellow-700">
+    Parcial ({formatCurrency(sale.paid_amount || 0)} / {formatCurrency(sale.total_amount)})
+  </Badge>
+) : isCancelled ? (
+  <Badge variant="destructive">Cancelada</Badge>
+) : (
+  <Badge className="bg-green-100 text-green-700">Paga</Badge>
+)}
+```
+
+### DetalhesVendaDialog - Histórico de Pagamentos
+
+```typescript
+// Nova query para buscar pagamentos
+const { data: paymentHistory } = useQuery({
+  queryKey: ['sale-payments', sale?.id],
+  queryFn: async () => {
+    if (!sale?.id) return [];
     
-  if (os && os.pending_amount > 0) {
-    throw new Error('OS possui saldo pendente. Use o faturamento para concluir.');
-  }
-}
+    const { data: movements } = await supabase
+      .from('cash_movements')
+      .select('*')
+      .eq('sale_id', sale.id)
+      .order('created_at', { ascending: true });
+    
+    return movements || [];
+  },
+  enabled: !!sale?.id && open,
+});
+
+// Renderizar timeline de pagamentos
+<div className="space-y-2">
+  <h4>Histórico de Pagamentos</h4>
+  {paymentHistory.map(payment => (
+    <div key={payment.id} className="flex justify-between text-sm">
+      <span>{format(new Date(payment.created_at), 'dd/MM HH:mm')}</span>
+      <span className="text-green-600">+{formatCurrency(payment.amount)}</span>
+    </div>
+  ))}
+</div>
+```
+
+### CaixaVendas - Query Atualizada
+
+```typescript
+// Query de vendas com campos adicionais
+const { data: todaySales = [] } = useQuery({
+  queryKey: ['sales-today', openCashRegister?.id],
+  queryFn: async () => {
+    if (!openCashRegister?.id) return [];
+    const { data, error } = await supabase
+      .from('sales')
+      .select('*, quote_id, sale_type, paid_amount, pending_amount')
+      .eq('cash_register_id', openCashRegister.id)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  },
+  enabled: !!openCashRegister?.id,
+});
 ```
 
 ## Arquivos a Modificar
 
-| Arquivo | Tipo | Descrição |
-|---------|------|-----------|
-| `src/pages/OrdensServico.tsx` | Modificar | Integrar FaturarSaldoDialog no fluxo de conclusão |
-| `src/components/orcamentos/AprovarOrcamentoDialog.tsx` | Modificar | Corrigir vinculação do cash_movement à venda |
-| `src/components/caixa/FaturarSaldoDialog.tsx` | Modificar | Ajustes de robustez e feedback |
-
-## Validação de Dados Existentes
-
-Para os dados já no banco que estão inconsistentes, um script de correção será necessário:
-
-```sql
--- Corrigir cash_movements sem sale_id mas com quote_deposit vinculado
-UPDATE cash_movements cm
-SET sale_id = s.id
-FROM quote_deposits qd
-JOIN sales s ON s.quote_id = qd.quote_id AND s.sale_type = 'partial'
-WHERE cm.id = qd.cash_movement_id
-  AND cm.sale_id IS NULL
-  AND cm.origem = 'orcamento';
-```
+| Arquivo | Alteração Principal |
+|---------|---------------------|
+| `src/components/caixa/VendasTable.tsx` | Adicionar status parcial, badges de origem, interface expandida |
+| `src/components/caixa/DetalhesVendaDialog.tsx` | Adicionar histórico de pagamentos e resumo financeiro |
+| `src/pages/CaixaVendas.tsx` | Expandir query de vendas para incluir novos campos |
 
 ## Benefícios
 
-1. **Fluxo obrigatório**: Impossível concluir OS sem faturar
-2. **Rastreabilidade**: Toda entrada vinculada à venda final
-3. **Histórico unificado**: Uma única venda com todo o histórico
-4. **Sem duplicação**: Entradas são transferidas, não recriadas
-5. **Auditoria**: Possível rastrear todo o ciclo financeiro
-
-## Seção Técnica
-
-### Diagrama de Sequência
-
-```text
-Usuário         OrdensServico.tsx       FaturarSaldoDialog        Supabase
-   │                   │                        │                     │
-   │  Click "Concluir" │                        │                     │
-   │──────────────────>│                        │                     │
-   │                   │ setState(osToComplete) │                     │
-   │                   │ setDialogOpen(true)    │                     │
-   │                   │───────────────────────>│                     │
-   │                   │                        │ Query: deposits     │
-   │                   │                        │────────────────────>│
-   │                   │                        │<────────────────────│
-   │                   │     Render Dialog      │                     │
-   │<───────────────────────────────────────────│                     │
-   │                   │                        │                     │
-   │  Confirma Faturar │                        │                     │
-   │──────────────────────────────────────────>│                     │
-   │                   │                        │ Update sales        │
-   │                   │                        │ Update cash_mov     │
-   │                   │                        │ Update OS→completed │
-   │                   │                        │────────────────────>│
-   │                   │                        │<────────────────────│
-   │                   │   onSuccess()          │                     │
-   │                   │<───────────────────────│                     │
-   │   Toast: "Faturado!"                       │                     │
-   │<──────────────────│                        │                     │
-```
-
-### Queries Críticas
-
-A integração irá usar estas queries chave:
-
-1. **Buscar entradas**: `quote_deposits` WHERE `status IN ('received', 'pending')`
-2. **Buscar venda parcial**: `sales` WHERE `ordem_servico_id = X AND sale_type = 'partial'`
-3. **Atualizar venda**: `UPDATE sales SET sale_type = 'full', paid_amount = total`
-4. **Transferir movimentos**: `UPDATE cash_movements SET origem = 'venda', sale_id = X`
+1. **Visibilidade completa**: Operador de caixa vê entradas de orçamento e saldos
+2. **Rastreabilidade**: Cada pagamento aparece no histórico da venda
+3. **Consistência**: Mesma informação na OS, Orçamento e Caixa
+4. **Operação simplificada**: Status visual claro de cada venda
