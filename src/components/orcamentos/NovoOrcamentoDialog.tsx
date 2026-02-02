@@ -36,6 +36,7 @@ import {
   Check, Trash2, FileText
 } from 'lucide-react';
 import { AddProductPanel } from './AddProductPanel';
+import { QuoteItemCard } from './QuoteItemCard';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import {
@@ -293,6 +294,39 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
 
   const removeItem = (index: number) => {
     setItems(items.filter((_, i) => i !== index));
+  };
+
+  // Função para atualizar item (edição inline)
+  const updateItem = (index: number, field: keyof QuoteItem, value: any) => {
+    setItems(prev => prev.map((item, i) => {
+      if (i !== index) return item;
+      
+      const updated = { ...item, [field]: value };
+      
+      // Recalcular preços quando dimensões ou quantidade mudam
+      if (field === 'width' || field === 'height' || field === 'quantity' || field === 'base_price_m2') {
+        const width = field === 'width' ? value : updated.width || 0;
+        const height = field === 'height' ? value : updated.height || 0;
+        const quantity = field === 'quantity' ? value : updated.quantity || 1;
+        const basePriceM2 = field === 'base_price_m2' ? value : updated.base_price_m2 || 0;
+        
+        const areaM2 = (width / 1000) * (height / 1000);
+        const unitPrice = areaM2 * basePriceM2;
+        const totalPrice = unitPrice * quantity;
+        
+        return {
+          ...updated,
+          width,
+          height,
+          quantity,
+          base_price_m2: basePriceM2,
+          unit_price: unitPrice,
+          total_price: totalPrice,
+        };
+      }
+      
+      return updated;
+    }));
   };
 
   const totalAmount = items.reduce((sum, item) => sum + item.total_price, 0);
@@ -750,50 +784,14 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
                   ) : (
                     <div className="space-y-3">
                       {items.map((item, index) => (
-                        <div 
-                          key={index}
-                          className="flex items-center gap-3 p-3 rounded-lg border bg-card"
-                        >
-                          <div className="w-12 h-12 rounded bg-muted flex items-center justify-center shrink-0">
-                            {item.image_url ? (
-                              <img 
-                                src={item.image_url.startsWith('http') ? item.image_url : `/products/${item.image_url}`} 
-                                alt={item.description}
-                                className="w-full h-full object-contain p-1"
-                              />
-                            ) : (
-                              <Package className="w-5 h-5 text-muted-foreground" />
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm truncate">{item.description}</p>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <span>{item.width}x{item.height}mm</span>
-                              <span>•</span>
-                              <span>Qtd: {item.quantity}</span>
-                              {item.has_glass && item.glass_color && (
-                                <>
-                                  <span>•</span>
-                                  <Badge variant="secondary" className="text-[10px] px-1.5">
-                                    {item.glass_color} {item.glass_thickness}
-                                  </Badge>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                          <p className="font-semibold text-sm shrink-0">
-                            {formatCurrency(item.total_price)}
-                          </p>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="shrink-0 text-destructive hover:text-destructive"
-                            onClick={() => removeItem(index)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
+                        <QuoteItemCard
+                          key={item.id || index}
+                          item={item}
+                          index={index}
+                          onUpdate={updateItem}
+                          onRemove={removeItem}
+                          formatCurrency={formatCurrency}
+                        />
                       ))}
                       
                       <Button
