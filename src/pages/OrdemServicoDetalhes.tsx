@@ -6,13 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Package, Scissors, Layers, FileText, User, Phone, MapPin, Calendar, DollarSign, RefreshCw, Loader2, Download, Camera, ExternalLink, CalendarDays, Wallet } from 'lucide-react';
+import { ArrowLeft, Package, Scissors, Layers, FileText, User, Phone, MapPin, Calendar, RefreshCw, Loader2, Download, Camera, ExternalLink, CalendarDays } from 'lucide-react';
 import { OSMaterialsList } from '@/components/ordens-servico/OSMaterialsList';
 import { OSCuttingPlan } from '@/components/ordens-servico/OSCuttingPlan';
 import { OSGlassProject } from '@/components/ordens-servico/OSGlassProject';
 import { OSPhotosGallery } from '@/components/ordens-servico/OSPhotosGallery';
 import { OSSalesFlowTimeline } from '@/components/ordens-servico/OSSalesFlowTimeline';
-import { OSFinancialDashboard } from '@/components/ordens-servico/OSFinancialDashboard';
+
 import { OSProductionProgress } from '@/components/ordens-servico/OSProductionProgress';
 import { OSMaterialsStatus } from '@/components/ordens-servico/OSMaterialsStatus';
 import { OSConsumptionStatus } from '@/components/ordens-servico/OSConsumptionStatus';
@@ -24,7 +24,7 @@ import { generateMaterialsListPdf } from '@/utils/generateMaterialsListPdf';
 import { generateGlassProductionPdf } from '@/utils/generateGlassProductionPdf';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
-import { usePermissionProfile } from '@/hooks/usePermissionProfile';
+
 
 const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   pending: { label: 'Pendente', variant: 'secondary' },
@@ -38,10 +38,6 @@ export default function OrdemServicoDetalhes() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { currentCompany } = useAuth();
-  const { isAdmin, isGerente, isCaixa, isFinanceiro } = usePermissionProfile();
-  
-  // Definir quem pode ver dados financeiros
-  const canSeeFinancials = isAdmin || isGerente || isCaixa || isFinanceiro;
 
   const { data: ordem, isLoading } = useQuery({
     queryKey: ['ordem-servico', id],
@@ -309,7 +305,7 @@ export default function OrdemServicoDetalhes() {
               paidAmount={ordem.paid_amount || 0}
               pendingAmount={ordem.pending_amount || 0}
               hasOverduePayments={(overduePayments?.length || 0) > 0}
-              hideFinancialValues={!canSeeFinancials}
+              hideFinancialValues={true}
             />
           </CardContent>
         </Card>
@@ -354,20 +350,6 @@ export default function OrdemServicoDetalhes() {
                   </div>
                 </div>
               )}
-              {canSeeFinancials && (
-                <div className="flex items-start gap-3">
-                  <DollarSign className="w-5 h-5 text-muted-foreground mt-0.5" />
-                  <div>
-                    <div className="text-sm text-muted-foreground">Total</div>
-                    <div className="font-medium">{formatCurrency(ordem.total_amount)}</div>
-                    {ordem.pending_amount > 0 && (
-                      <div className="text-xs text-destructive">
-                        Pendente: {formatCurrency(ordem.pending_amount)}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
           </CardContent>
         </Card>
@@ -409,14 +391,8 @@ export default function OrdemServicoDetalhes() {
         )}
 
         {/* Tabs */}
-        <Tabs defaultValue={canSeeFinancials ? "financial" : "materials"} className="w-full">
-          <TabsList className={`grid w-full ${canSeeFinancials ? 'grid-cols-6' : 'grid-cols-5'}`}>
-            {canSeeFinancials && (
-              <TabsTrigger value="financial" className="flex items-center gap-2">
-                <Wallet className="w-4 h-4" />
-                <span className="hidden sm:inline">Financeiro</span>
-              </TabsTrigger>
-            )}
+        <Tabs defaultValue="materials" className="w-full">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="materials" className="flex items-center gap-2">
               <Package className="w-4 h-4" />
               <span className="hidden sm:inline">Materiais</span>
@@ -439,17 +415,6 @@ export default function OrdemServicoDetalhes() {
             </TabsTrigger>
           </TabsList>
 
-          {canSeeFinancials && (
-            <TabsContent value="financial" className="mt-4">
-              <OSFinancialDashboard
-                ordemServicoId={ordem.id}
-                quoteId={ordem.quote_id}
-                totalAmount={ordem.total_amount}
-                paidAmount={ordem.paid_amount || 0}
-                pendingAmount={ordem.pending_amount || 0}
-              />
-            </TabsContent>
-          )}
 
           <TabsContent value="materials" className="mt-4 space-y-4">
             <div className="flex justify-end">

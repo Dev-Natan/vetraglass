@@ -4,10 +4,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePermissionProfile } from '@/hooks/usePermissionProfile';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { generateQuotePdf, PaymentSettings } from '@/utils/generateQuotePdf';
 import { PaymentMethod } from './FormasPagamentoDialog';
+import { QuoteFinancialDashboard } from './QuoteFinancialDashboard';
 import {
   Dialog,
   DialogContent,
@@ -16,6 +18,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import { 
   User, 
   Phone, 
@@ -30,7 +33,8 @@ import {
   FileSignature,
   ClipboardList,
   ExternalLink,
-  CalendarDays
+  CalendarDays,
+  Wallet
 } from 'lucide-react';
 import {
   Select,
@@ -106,6 +110,10 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
   const navigate = useNavigate();
   const [aprovarDialogOpen, setAprovarDialogOpen] = useState(false);
   const [contractDialogOpen, setContractDialogOpen] = useState(false);
+  
+  // Check if user can see financial data
+  const { isAdmin, isGerente, isCaixa, isFinanceiro } = usePermissionProfile();
+  const canSeeFinancials = isAdmin || isGerente || isCaixa || isFinanceiro;
 
   // Fetch fresh company data for PDF generation (includes updated logo)
   const { data: companyData } = useQuery({
@@ -599,6 +607,24 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
                 </div>
               )}
             </div>
+          )}
+
+          {/* Financial Dashboard - Only for approved/converted quotes and users with financial permissions */}
+          {(quote.status === 'approved' || quote.status === 'converted') && canSeeFinancials && (
+            <>
+              <Separator />
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium flex items-center gap-2">
+                  <Wallet className="w-4 h-4" />
+                  Informações Financeiras
+                </h4>
+                <QuoteFinancialDashboard
+                  quoteId={quote.id}
+                  ordemServicoId={existingOS?.id}
+                  totalAmount={quote.final_amount}
+                />
+              </div>
+            </>
           )}
 
           {/* Actions */}
