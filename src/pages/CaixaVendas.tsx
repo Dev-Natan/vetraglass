@@ -19,6 +19,7 @@ import { calculateFormulaQuantity } from '@/utils/safeFormulaEvaluator';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 
 import { FecharCaixaDialog } from '@/components/caixa/FecharCaixaDialog';
+import { AbrirCaixaDialog } from '@/components/caixa/AbrirCaixaDialog';
 import { NovaVendaDialog, VendaItem } from '@/components/caixa/NovaVendaDialog';
 import { CaixaResumo } from '@/components/caixa/CaixaResumo';
 import { VendasTable } from '@/components/caixa/VendasTable';
@@ -60,7 +61,7 @@ export default function CaixaVendas() {
   
   const [hasRequestedCashOpen, setHasRequestedCashOpen] = useState(false);
   
-  // Removido: abrirCaixaOpen - abertura agora é feita apenas no Financeiro
+  const [abrirCaixaOpen, setAbrirCaixaOpen] = useState(false);
   const [fecharCaixaOpen, setFecharCaixaOpen] = useState(false);
   const [novaVendaOpen, setNovaVendaOpen] = useState(false);
   const [cancelarVendaOpen, setCancelarVendaOpen] = useState(false);
@@ -278,7 +279,30 @@ export default function CaixaVendas() {
     return { openingAmount, totalDinheiro, totalCartao, totalPix, totalVendas, expectedAmount, totalEntradas, totalSaidas };
   }, [openCashRegister, todaySales, cashMovements]);
 
-  // REMOVIDO: openCashMutation - abertura agora é feita apenas no Financeiro
+  // Abrir caixa usando o fixed_fund
+  const openCashMutation = useMutation({
+    mutationFn: async (openingAmount: number) => {
+      if (!currentCompany?.id || !user?.id) throw new Error('Dados inválidos');
+      const { data, error } = await supabase.rpc('open_daily_cash', {
+        _company_id: currentCompany.id,
+        _opening_amount: openingAmount,
+        _user_id: user.id,
+      });
+      if (error) throw error;
+      const result = data as { success: boolean; error?: string; cash_register_id?: string };
+      if (!result.success) {
+        throw new Error(result.error || 'Erro ao abrir caixa');
+      }
+      return result;
+    },
+    onSuccess: () => {
+      toast.success('Caixa aberto com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['cash-register-open'] });
+      queryClient.invalidateQueries({ queryKey: ['company-cash'] });
+      setAbrirCaixaOpen(false);
+    },
+    onError: (error: Error) => toast.error(`Erro ao abrir caixa: ${error.message}`),
+  });
 
   // Submeter fechamento para auditoria (não fecha diretamente)
   const handleSubmitForAudit = async (counts: Array<{ payment_method: string; amount: number }>, notes: string) => {
@@ -622,43 +646,26 @@ export default function CaixaVendas() {
               </div>
               <h3 className="text-lg font-semibold mb-2">Caixa Fechado</h3>
               <p className="text-muted-foreground mb-4">
-                {isAdmin || isManager 
-                  ? 'Para abrir o caixa, acesse o módulo Financeiro.'
-                  : 'Somente Administradores e Gerentes podem abrir o caixa no módulo Financeiro.'}
+                Abra o caixa para começar a registrar vendas e movimentações.
               </p>
-              {(isAdmin || isManager) ? (
-                <Button onClick={() => navigate('/financeiro')}>
-                  <DollarSign className="mr-2 h-4 w-4" />
-                  Ir para Financeiro
-                </Button>
-              ) : (
-                <Button 
-                  variant="outline" 
-                  onClick={async () => {
-                    try {
-                      await requestCashOpen();
-                      setHasRequestedCashOpen(true);
-                      toast.success('Solicitação enviada!', {
-                        description: 'Um administrador ou gerente será notificado.',
-                      });
-                    } catch (error) {
-                      toast.error('Erro ao enviar solicitação');
-                    }
-                  }}
-                  disabled={isRequestingCashOpen || hasRequestedCashOpen}
-                >
-                  <Bell className="mr-2 h-4 w-4" />
-                  {hasRequestedCashOpen ? 'Solicitação Enviada' : 'Solicitar Abertura'}
-                </Button>
-              )}
+              <Button onClick={() => setAbrirCaixaOpen(true)}>
+                <Unlock className="mr-2 h-4 w-4" />
+                Abrir Caixa
+              </Button>
             </CardContent>
           </Card>
         )}
       </div>
 
-      {/* Dialogs - Removido AbrirCaixaDialog, abertura agora é feita no Financeiro */}
+      {/* Dialogs */}
+      <AbrirCaixaDialog 
+        open={abrirCaixaOpen} 
+        onOpenChange={setAbrirCaixaOpen} 
+        onConfirm={(amount) => openCashMutation.mutateAsync(amount)} 
+        companyCash={companyCash} 
+        isLoading={openCashMutation.isPending} 
+      />
       <FecharCaixaDialog open={fecharCaixaOpen} onOpenChange={setFecharCaixaOpen} onConfirm={handleSubmitForAudit} summary={cashSummary} companyCash={companyCash} cashRegisterId={openCashRegister?.id} isLoading={isSubmittingForAudit} />
-      <NovaVendaDialog open={novaVendaOpen} onOpenChange={setNovaVendaOpen} onConfirm={(data) => newSaleMutation.mutateAsync(data)} availableItems={availableItems} approvedQuotes={approvedQuotes} isLoading={newSaleMutation.isPending} />
       <NovaVendaDialog open={novaVendaOpen} onOpenChange={setNovaVendaOpen} onConfirm={(data) => newSaleMutation.mutateAsync(data)} availableItems={availableItems} approvedQuotes={approvedQuotes} isLoading={newSaleMutation.isPending} />
       <CancelarVendaDialog open={cancelarVendaOpen} onOpenChange={setCancelarVendaOpen} sale={selectedSale} onConfirm={(saleId, reason) => cancelSaleMutation.mutateAsync({ saleId, reason })} isLoading={cancelSaleMutation.isPending} />
       <DetalhesVendaDialog open={detalhesVendaOpen} onOpenChange={setDetalhesVendaOpen} sale={selectedSale} onPrint={handlePrintReceipt} />

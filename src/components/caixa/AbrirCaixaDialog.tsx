@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -8,10 +7,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Loader2, DollarSign, Wallet, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { usePermissions } from '@/hooks/usePermissions';
 
 interface CompanyCash {
   current_balance: number;
@@ -33,25 +29,13 @@ export function AbrirCaixaDialog({
   companyCash,
   isLoading = false,
 }: AbrirCaixaDialogProps) {
-  const { isAdmin, isManager } = usePermissions();
-  const [openingAmount, setOpeningAmount] = useState('');
-
-  // Pre-fill with fixed fund when dialog opens
-  useEffect(() => {
-    if (open && companyCash?.fixed_fund) {
-      setOpeningAmount(companyCash.fixed_fund.toString().replace('.', ','));
-    }
-  }, [open, companyCash?.fixed_fund]);
-
   const handleConfirm = async () => {
-    const amount = parseFloat(openingAmount.replace(',', '.')) || 0;
+    const amount = companyCash?.fixed_fund || 0;
     await onConfirm(amount);
-    setOpeningAmount('');
   };
 
   const handleClose = () => {
     if (!isLoading) {
-      setOpeningAmount('');
       onOpenChange(false);
     }
   };
@@ -60,12 +44,11 @@ export function AbrirCaixaDialog({
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
-  const parsedAmount = parseFloat(openingAmount.replace(',', '.')) || 0;
+  const fixedFund = companyCash?.fixed_fund || 0;
   const hasCompanyCash = !!companyCash;
   const companyBalance = companyCash?.current_balance || 0;
-  const fixedFund = companyCash?.fixed_fund || 500;
-  const hasEnoughBalance = hasCompanyCash ? companyBalance >= parsedAmount : true;
-  const isValidAmount = parsedAmount > 0;
+  const hasEnoughBalance = hasCompanyCash ? companyBalance >= fixedFund : false;
+  const isValidAmount = fixedFund > 0;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -76,31 +59,12 @@ export function AbrirCaixaDialog({
             Abrir Caixa do Dia
           </DialogTitle>
           <DialogDescription>
-            Informe o valor em dinheiro para iniciar o caixa operacional.
+            O caixa será aberto com o fundo fixo definido pela empresa.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {/* Saldo da Empresa - apenas para admin/manager */}
-          {(isAdmin || isManager) && hasCompanyCash && (
-            <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm flex items-center gap-2">
-                  <Wallet className="h-4 w-4 text-primary" />
-                  Caixa da Empresa
-                </span>
-                <span className="font-semibold text-primary">
-                  {formatCurrency(companyBalance)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>Fundo fixo sugerido:</span>
-                <span>{formatCurrency(fixedFund)}</span>
-              </div>
-            </div>
-          )}
-
-          {(isAdmin || isManager) && !hasCompanyCash && (
+          {!hasCompanyCash ? (
             <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-4">
               <div className="flex items-start gap-2">
                 <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5" />
@@ -109,61 +73,67 @@ export function AbrirCaixaDialog({
                     Caixa da empresa não configurado
                   </p>
                   <p className="text-amber-600 dark:text-amber-500 text-xs mt-1">
-                    O valor não será transferido automaticamente. Configure o caixa da empresa para ter controle patrimonial.
+                    Um administrador precisa configurar o caixa da empresa antes de abrir o caixa do dia.
                   </p>
                 </div>
               </div>
             </div>
-          )}
+          ) : (
+            <>
+              {/* Valor Fixo de Abertura */}
+              <div className="rounded-lg border bg-primary/5 p-4 text-center">
+                <p className="text-sm text-muted-foreground mb-2">Valor de Abertura (Fundo Fixo)</p>
+                <p className="text-3xl font-bold text-primary">
+                  {formatCurrency(fixedFund)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Este valor é definido pelo administrador e não pode ser alterado.
+                </p>
+              </div>
 
-          {/* Valor de Abertura */}
-          <div className="space-y-2">
-            <Label htmlFor="opening-amount">Valor de Abertura (R$)</Label>
-            <Input
-              id="opening-amount"
-              type="text"
-              inputMode="decimal"
-              placeholder="0,00"
-              value={openingAmount}
-              onChange={(e) => setOpeningAmount(e.target.value)}
-              disabled={isLoading}
-              className="text-lg"
-            />
-            <p className="text-xs text-muted-foreground">
-              Este valor será transferido do caixa da empresa para o caixa do dia.
-            </p>
-          </div>
+              {/* Saldo da Empresa */}
+              <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm flex items-center gap-2">
+                    <Wallet className="h-4 w-4 text-primary" />
+                    Saldo da Empresa
+                  </span>
+                  <span className="font-semibold text-primary">
+                    {formatCurrency(companyBalance)}
+                  </span>
+                </div>
+              </div>
 
-          {/* Validação de saldo */}
-          {isValidAmount && hasCompanyCash && (
-            <div className={`rounded-lg border p-3 ${
-              hasEnoughBalance 
-                ? 'bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800' 
-                : 'bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800'
-            }`}>
-              <div className="flex items-center gap-2 text-sm">
-                {hasEnoughBalance ? (
-                  <>
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
-                    <span className="text-green-700 dark:text-green-400">
-                      Saldo suficiente para abertura
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <AlertCircle className="h-4 w-4 text-red-600" />
-                    <span className="text-red-700 dark:text-red-400">
-                      Saldo insuficiente. Disponível: {formatCurrency(companyBalance)}
-                    </span>
-                  </>
+              {/* Validação de saldo */}
+              <div className={`rounded-lg border p-3 ${
+                hasEnoughBalance 
+                  ? 'bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800' 
+                  : 'bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800'
+              }`}>
+                <div className="flex items-center gap-2 text-sm">
+                  {hasEnoughBalance ? (
+                    <>
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      <span className="text-green-700 dark:text-green-400">
+                        Saldo suficiente para abertura
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="h-4 w-4 text-red-600" />
+                      <span className="text-red-700 dark:text-red-400">
+                        Saldo insuficiente. Disponível: {formatCurrency(companyBalance)}
+                      </span>
+                    </>
+                  )}
+                </div>
+                {hasEnoughBalance && (
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    Novo saldo da empresa: {formatCurrency(companyBalance - fixedFund)}
+                  </div>
                 )}
               </div>
-              {hasEnoughBalance && (
-                <div className="mt-2 text-xs text-muted-foreground">
-                  Novo saldo da empresa: {formatCurrency(companyBalance - parsedAmount)}
-                </div>
-              )}
-            </div>
+            </>
           )}
         </div>
 
@@ -173,7 +143,7 @@ export function AbrirCaixaDialog({
           </Button>
           <Button 
             onClick={handleConfirm} 
-            disabled={isLoading || !isValidAmount || (hasCompanyCash && !hasEnoughBalance)}
+            disabled={isLoading || !isValidAmount || !hasEnoughBalance}
           >
             {isLoading ? (
               <>
