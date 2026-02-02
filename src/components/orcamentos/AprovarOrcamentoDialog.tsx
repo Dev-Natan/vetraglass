@@ -24,7 +24,6 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -50,9 +49,6 @@ import {
   ClipboardList,
   ArrowRight,
   ArrowLeft,
-  RefreshCw,
-  TrendingUp,
-  TrendingDown,
   AlertTriangle,
   Percent,
   Receipt,
@@ -64,7 +60,6 @@ import { generateOSDocuments } from '@/utils/generateOSDocuments';
 import { generateMaterialConsumption, linkReservationsToConsumption } from '@/utils/generateMaterialConsumption';
 import { MaterialsAvailabilityPreview } from './MaterialsAvailabilityPreview';
 import { usePaymentOptions, CondicaoPagamento } from '@/hooks/usePaymentOptions';
-import { usePriceRevision, QuoteItemWithRevision } from '@/hooks/usePriceRevision';
 
 interface Quote {
   id: string;
@@ -103,7 +98,7 @@ interface AprovarOrcamentoDialogProps {
   onSuccess?: () => void;
 }
 
-type ApprovalStep = 'price-review' | 'payment' | 'confirm';
+type ApprovalStep = 'payment' | 'confirm';
 
 export function AprovarOrcamentoDialog({
   open,
@@ -117,11 +112,7 @@ export function AprovarOrcamentoDialog({
   const queryClient = useQueryClient();
 
   // Step management
-  const [currentStep, setCurrentStep] = useState<ApprovalStep>('price-review');
-  
-  // Price revision state
-  const [useCurrentPrices, setUseCurrentPrices] = useState(false);
-  const [itemPriceOverrides, setItemPriceOverrides] = useState<Record<string, boolean>>({});
+  const [currentStep, setCurrentStep] = useState<ApprovalStep>('payment');
   
   // Payment state
   const [selectedFormaId, setSelectedFormaId] = useState<string | null>(null);
@@ -147,13 +138,7 @@ export function AprovarOrcamentoDialog({
     getCondicoesByForma,
   } = usePaymentOptions();
 
-  const {
-    revisedItems,
-    hasAnyPriceChanges,
-    totalOriginal,
-    totalWithCurrentPrices,
-    totalDifference,
-  } = usePriceRevision({ items, companyId: currentCompany?.id });
+  const totalOriginal = items.reduce((sum, item) => sum + item.total_price, 0);
 
   // Check if cash register is open
   const { data: openCashRegister } = useQuery({
@@ -182,25 +167,11 @@ export function AprovarOrcamentoDialog({
   const quoteDiscountPercent = quote?.discount_percent || 0;
   const hasExistingDiscount = quoteDiscountPercent > 0;
 
-  // Calculate final values - CORRIGIDO: usar final_amount (com desconto) como base
+  // Calculate final values - usar final_amount (com desconto) como base
   const valorBase = useMemo(() => {
-    if (useCurrentPrices) {
-      // Recalcular com preços atuais
-      const revisedTotal = revisedItems.reduce((sum, item) => {
-        const useCurrentForItem = itemPriceOverrides[item.id] !== false;
-        return sum + (useCurrentForItem && item.currentCalculatedTotal 
-          ? item.currentCalculatedTotal 
-          : item.total_price);
-      }, 0);
-      // Reaplicar o desconto % do orçamento original aos preços atuais
-      if (hasExistingDiscount) {
-        return revisedTotal * (1 - quoteDiscountPercent / 100);
-      }
-      return revisedTotal;
-    }
-    // CORREÇÃO: usar final_amount que JÁ inclui o desconto aplicado na criação
+    // Usar final_amount que JÁ inclui o desconto aplicado na criação
     return quote?.final_amount || totalOriginal;
-  }, [useCurrentPrices, revisedItems, itemPriceOverrides, totalOriginal, quote, hasExistingDiscount, quoteDiscountPercent]);
+  }, [totalOriginal, quote]);
 
   const selectedCondicao = condicoesPagamento.find(c => c.id === selectedCondicaoId) || null;
   const paymentCalculation = calculatePayment(valorBase, selectedCondicao);
@@ -213,9 +184,7 @@ export function AprovarOrcamentoDialog({
   // Reset form when dialog opens
   useEffect(() => {
     if (open) {
-      setCurrentStep('price-review');
-      setUseCurrentPrices(false);
-      setItemPriceOverrides({});
+      setCurrentStep('payment');
       setSelectedFormaId(null);
       setSelectedCondicaoId(null);
       setEntryAmount('');
@@ -260,7 +229,6 @@ export function AprovarOrcamentoDialog({
       }
 
       const finalValue = paymentCalculation.valorFinal;
-      const reajusteAplicado = useCurrentPrices && hasAnyPriceChanges;
       
       // Calculate correct paid_amount for OS
       const osPaidAmount = hasEntry && isCaixaAberto ? entryValue : 0;
@@ -278,41 +246,13 @@ export function AprovarOrcamentoDialog({
           forma_pagamento_id: selectedFormaId,
           condicao_pagamento_id: selectedCondicaoId,
           valor_original: totalOriginal,
-          valor_reajustado: useCurrentPrices ? valorBase : null,
           valor_final_aprovado: finalValue,
-          reajuste_aplicado: reajusteAplicado,
           approved_at: new Date().toISOString(),
           approved_by: user.id,
         })
         .eq('id', quote.id);
 
       if (quoteUpdateError) throw quoteUpdateError;
-
-      // 2. Save price revision history if applicable
-      if (reajusteAplicado) {
-        const revisions = revisedItems
-          .filter(item => item.needsRevision)
-          .map(item => ({
-            quote_id: quote.id,
-            quote_item_id: item.id,
-            preco_original: item.total_price,
-            preco_tabela_atual: item.currentCalculatedTotal || item.total_price,
-            preco_usado: itemPriceOverrides[item.id] !== false 
-              ? (item.currentCalculatedTotal || item.total_price)
-              : item.total_price,
-            usou_preco_atual: itemPriceOverrides[item.id] !== false,
-          }));
-
-        if (revisions.length > 0) {
-          const { error: revisionError } = await supabase
-            .from('quote_price_revisions')
-            .insert(revisions);
-          
-          if (revisionError) {
-            console.warn('Error saving price revisions:', revisionError);
-          }
-        }
-      }
 
       // 3. Create order of service
       const { data: ordemServico, error: osError } = await supabase
@@ -587,26 +527,15 @@ export function AprovarOrcamentoDialog({
   });
 
   const handleNext = () => {
-    if (currentStep === 'price-review') {
-      setCurrentStep('payment');
-    } else if (currentStep === 'payment') {
+    if (currentStep === 'payment') {
       setCurrentStep('confirm');
     }
   };
 
   const handleBack = () => {
-    if (currentStep === 'payment') {
-      setCurrentStep('price-review');
-    } else if (currentStep === 'confirm') {
+    if (currentStep === 'confirm') {
       setCurrentStep('payment');
     }
-  };
-
-  const toggleItemPriceOverride = (itemId: string) => {
-    setItemPriceOverrides(prev => ({
-      ...prev,
-      [itemId]: prev[itemId] === false ? true : false,
-    }));
   };
 
   if (!quote) return null;
@@ -614,7 +543,6 @@ export function AprovarOrcamentoDialog({
   const availableCondicoes = getCondicoesByForma(selectedFormaId);
 
   const steps = [
-    { key: 'price-review' as const, label: 'Preços', fullLabel: 'Revisão de Preços', icon: RefreshCw },
     { key: 'payment' as const, label: 'Pagamento', fullLabel: 'Forma de Pagamento', icon: CreditCard },
     { key: 'confirm' as const, label: 'Confirmar', fullLabel: 'Confirmação', icon: CheckCircle },
   ];
@@ -719,172 +647,7 @@ export function AprovarOrcamentoDialog({
         </div>
 
         <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
-          {/* Step 1: Price Review */}
-          {currentStep === 'price-review' && (
-            <div className="space-y-6 px-1">
-              {/* Alert for old quotes */}
-              {isOldQuote && (
-                <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
-                  <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-amber-800 dark:text-amber-200">
-                      Orçamento com {quoteAgeDays} dias
-                    </p>
-                    <p className="text-sm text-amber-700 dark:text-amber-300">
-                      Recomendamos revisar os preços antes de aprovar para garantir que a margem esteja atualizada.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Indicador de desconto existente no orçamento */}
-              {hasExistingDiscount && (
-                <div className="flex items-start gap-3 p-4 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg">
-                  <Percent className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-green-800 dark:text-green-200">
-                      Desconto de {quoteDiscountPercent}% já aplicado no orçamento
-                    </p>
-                    <p className="text-sm text-green-700 dark:text-green-300">
-                      Valor original: {formatCurrency(quote.total_amount)} → Valor com desconto: {formatCurrency(quote.final_amount)}
-                    </p>
-                    <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                      Este desconto será preservado na aprovação. Condições de pagamento com desconto adicional serão cumulativas.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Global price update toggle */}
-              <div className="flex items-center justify-between p-4 border rounded-xl bg-card">
-                <div className="flex items-center gap-3">
-                  <RefreshCw className={cn("w-5 h-5", hasAnyPriceChanges ? "text-amber-500" : "text-muted-foreground")} />
-                  <div>
-                    <Label className="text-base font-medium">Atualizar para preços atuais da tabela</Label>
-                    <p className="text-sm text-muted-foreground">
-                      {hasAnyPriceChanges 
-                        ? `Diferença detectada: ${formatCurrency(totalDifference)} (${totalDifference > 0 ? '+' : ''}${((totalDifference / totalOriginal) * 100).toFixed(1)}%)`
-                        : 'Nenhuma alteração de preço detectada'}
-                    </p>
-                  </div>
-                </div>
-                <Switch
-                  checked={useCurrentPrices}
-                  onCheckedChange={setUseCurrentPrices}
-                  disabled={!hasAnyPriceChanges}
-                />
-              </div>
-
-              {/* Price comparison table */}
-              <div className="border rounded-xl overflow-hidden">
-                <div className="bg-muted/50 px-4 py-3 border-b">
-                  <h3 className="font-semibold flex items-center gap-2">
-                    <DollarSign className="w-4 h-4" />
-                    Comparação de Preços
-                  </h3>
-                </div>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[40%]">Item</TableHead>
-                      <TableHead className="text-right">Valor Original</TableHead>
-                      <TableHead className="text-right">Valor Tabela Atual</TableHead>
-                      <TableHead className="text-right">Diferença</TableHead>
-                      {useCurrentPrices && <TableHead className="text-center w-24">Usar Atual</TableHead>}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {revisedItems.map((item) => (
-                      <TableRow key={item.id} className={cn(item.needsRevision && "bg-amber-50/50 dark:bg-amber-950/20")}>
-                        <TableCell>
-                          <div className="font-medium">{item.description}</div>
-                          {item.width && item.height && (
-                            <div className="text-xs text-muted-foreground">
-                              {item.width}x{item.height}mm • Qtd: {item.quantity}
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {formatCurrency(item.total_price)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {item.currentCalculatedTotal !== null ? (
-                            <span className={cn(
-                              "font-medium",
-                              item.priceDifference > 0 && "text-green-600",
-                              item.priceDifference < 0 && "text-red-600"
-                            )}>
-                              {formatCurrency(item.currentCalculatedTotal)}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {item.needsRevision ? (
-                            <div className="flex items-center justify-end gap-1">
-                              {item.priceDifference > 0 ? (
-                                <TrendingUp className="w-4 h-4 text-green-600" />
-                              ) : (
-                                <TrendingDown className="w-4 h-4 text-red-600" />
-                              )}
-                              <span className={cn(
-                                "font-medium",
-                                item.priceDifference > 0 ? "text-green-600" : "text-red-600"
-                              )}>
-                                {item.priceDifference > 0 ? '+' : ''}{item.percentDifference.toFixed(1)}%
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        {useCurrentPrices && (
-                          <TableCell className="text-center">
-                            {item.needsRevision && (
-                              <Checkbox
-                                checked={itemPriceOverrides[item.id] !== false}
-                                onCheckedChange={() => toggleItemPriceOverride(item.id)}
-                              />
-                            )}
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-
-              {/* Summary */}
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="p-4 border rounded-xl bg-card">
-                  <div className="text-sm text-muted-foreground mb-1">Valor Original</div>
-                  <div className="text-2xl font-bold">{formatCurrency(totalOriginal)}</div>
-                </div>
-                <div className={cn(
-                  "p-4 border rounded-xl",
-                  useCurrentPrices ? "bg-primary/10 border-primary/30" : "bg-card"
-                )}>
-                  <div className="text-sm text-muted-foreground mb-1">
-                    {useCurrentPrices ? 'Valor Atualizado' : 'Valor a Usar'}
-                  </div>
-                  <div className="text-2xl font-bold text-primary">
-                    {formatCurrency(valorBase)}
-                  </div>
-                  {useCurrentPrices && totalDifference !== 0 && (
-                    <div className={cn(
-                      "text-sm font-medium",
-                      totalDifference > 0 ? "text-green-600" : "text-red-600"
-                    )}>
-                      {totalDifference > 0 ? '+' : ''}{formatCurrency(totalDifference)}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Step 2: Payment Configuration */}
+          {/* Step 1: Payment Configuration */}
           {currentStep === 'payment' && (
             <div className="space-y-6 px-1">
               {/* Initialize payment options if needed */}
@@ -1204,12 +967,6 @@ export function AprovarOrcamentoDialog({
                         <span>{formatCurrency(quote.final_amount)}</span>
                       </div>
 
-                      {useCurrentPrices && (
-                        <div className="flex justify-between text-primary">
-                          <span>Valor reajustado (preços atuais)</span>
-                          <span className="font-medium">{formatCurrency(valorBase)}</span>
-                        </div>
-                      )}
                       
                       <Separator />
                       
@@ -1302,7 +1059,7 @@ export function AprovarOrcamentoDialog({
           <div className="flex items-center justify-between">
             {/* Left: Back button or step info */}
             <div className="flex items-center gap-2">
-              {currentStep !== 'price-review' ? (
+              {currentStep !== 'payment' ? (
                 <Button 
                   variant="ghost" 
                   onClick={handleBack} 
