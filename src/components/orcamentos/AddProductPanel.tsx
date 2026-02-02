@@ -199,12 +199,17 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   const selectedGlassPrice = productGlassPrices?.find(p => p.id === selectedGlassPriceId);
   const glassPricePerSqm = selectedGlassPrice?.price_per_sqm || 0;
   
-  // Use price_per_sqm as the primary pricing method
-  const productPricePerSqm = Number((companyProduct as any)?.price_per_sqm) || Number(companyProduct?.base_price) || 0;
+  // Use price_per_sqm as the primary pricing method (fallback when no glass selected)
+  const productBasePricePerSqm = Number((companyProduct as any)?.price_per_sqm) || Number(companyProduct?.base_price) || 0;
   
-  // Total price per sqm = product price + glass price (if applicable)
-  const combinedPricePerSqm = productPricePerSqm + (hasGlass && productUsesGlass ? glassPricePerSqm : 0);
-  const basePrice = customPrice !== null ? customPrice : combinedPricePerSqm;
+  // Se produto usa vidro E tem vidro selecionado, usar preço do vidro (SUBSTITUI o base)
+  // Caso contrário, usar preço base do produto
+  const finalPricePerSqm = 
+    (hasGlass && productUsesGlass && glassPricePerSqm > 0) 
+      ? glassPricePerSqm  // Preço definido pelo vidro
+      : productBasePricePerSqm; // Preço base (quando não usa vidro ou não tem vidro configurado)
+  
+  const basePrice = customPrice !== null ? customPrice : finalPricePerSqm;
 
   // Calculate prices: area in m² × price per m²
   const area = width && height ? (width / 1000) * (height / 1000) : 0;
@@ -523,13 +528,12 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                 </div>
                 
                 {/* Glass Price Info */}
-                {glassPricePerSqm > 0 && (
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/20">
-                    <Info className="w-4 h-4 text-primary" />
+                {hasGlass && productUsesGlass && glassPricePerSqm > 0 && (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-accent border border-primary/20">
+                    <GlassWater className="w-4 h-4 text-primary" />
                     <span className="text-xs text-foreground">
-                      Produto: {formatCurrency(productPricePerSqm)}/m² + 
-                      Vidro: {formatCurrency(glassPricePerSqm)}/m² = 
-                      <strong className="ml-1">Total: {formatCurrency(combinedPricePerSqm)}/m²</strong>
+                      Preço definido pelo vidro {selectedGlassPrice?.glass_color} {selectedGlassPrice?.thickness_mm}mm: 
+                      <strong className="ml-1">{formatCurrency(glassPricePerSqm)}/m²</strong>
                     </span>
                   </div>
                 )}
@@ -573,26 +577,26 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
               <DollarSign className="w-3 h-3" />
               Preço/m²
               <Tooltip>
-                <TooltipTrigger>
-                  <Info className="w-3 h-3 text-muted-foreground" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p className="text-xs">
-                    {hasGlass && glassPricePerSqm > 0 
-                      ? `Produto (${formatCurrency(productPricePerSqm)}) + Vidro (${formatCurrency(glassPricePerSqm)})`
-                      : 'Preço base do produto'
-                    }
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </label>
-            <Input
-              type="number"
-              value={customPrice !== null ? customPrice : combinedPricePerSqm || ''}
-              onChange={(e) => setCustomPrice(e.target.value ? Number(e.target.value) : null)}
-              placeholder="0.00"
-              min={0}
-              step="0.01"
+                  <TooltipTrigger>
+                    <Info className="w-3 h-3 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="text-xs">
+                      {hasGlass && productUsesGlass && glassPricePerSqm > 0 
+                        ? `Preço do vidro: ${formatCurrency(glassPricePerSqm)}/m²`
+                        : `Preço base: ${formatCurrency(productBasePricePerSqm)}/m²`
+                      }
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </label>
+              <Input
+                type="number"
+                value={customPrice !== null ? customPrice : finalPricePerSqm || ''}
+                onChange={(e) => setCustomPrice(e.target.value ? Number(e.target.value) : null)}
+                placeholder="0.00"
+                min={0}
+                step="0.01"
               className="bg-background h-10"
             />
           </div>

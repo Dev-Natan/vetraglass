@@ -217,8 +217,8 @@ export function EditProductPricingDialog({
                       <Info className="w-4 h-4 text-muted-foreground cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Ative para configurar preços de vidro</p>
-                      <p>que serão somados ao preço base</p>
+                      <p>Ative para configurar preços por tipo de vidro</p>
+                      <p>O preço do vidro define o preço final do produto</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
