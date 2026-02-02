@@ -1,184 +1,176 @@
 
+# Plano: Corrigir Preservação do Desconto do Orçamento na Aprovação
 
-# Plano: Entrada de Estoque Mediante Compra + Dados Obrigatórios
+## Problemas Identificados
 
-## Contexto da Regra de Negócio
+Analisando o código e o banco de dados, identifiquei **dois problemas** no fluxo de desconto:
 
-Você definiu uma regra fundamental:
+### Problema 1: Desconto do Orçamento Ignorado
 
-> "Toda entrada de itens ao estoque deve ser mediante uma compra, pois itens não surgem do nada."
+| Etapa | O que acontece | O que deveria acontecer |
+|-------|----------------|-------------------------|
+| Criação | Orçamento com 10% desconto → `final_amount = 900` | OK |
+| Aprovação | Sistema usa `totalOriginal = SUM(items.total_price) = 1000` | Deveria usar `final_amount = 900` |
+| Resultado | Desconto de 10% **perdido** | Desconto deveria ser **preservado** |
 
-Isso significa que o fluxo atual de "Adicionar Item" livremente deve ser substituído por um fluxo de **Compra de Material**.
+**Causa Raiz:**
+```typescript
+// src/hooks/usePriceRevision.ts linha 136
+const totalOriginal = items.reduce((sum, item) => sum + item.total_price, 0);
+// ↑ Soma os preços dos ITENS, ignora o desconto do ORÇAMENTO
+```
+
+### Problema 2: Desconto Duplicado da Condição de Pagamento
+
+O banco de dados mostra que existe uma condição "À vista com 5% desconto":
+
+| Condição | desconto_percent |
+|----------|-----------------|
+| À vista com 5% desconto | 5% |
+| À vista sem desconto | 0% |
+| 2x sem juros | 0% |
+
+Quando o usuário já aplicou 10% de desconto no orçamento e depois seleciona "À vista com 5% desconto", o sistema aplica **5% adicional**, resultando em ~15% de desconto total.
 
 ---
 
-## Estado Atual vs. Novo Estado
+## Solução Proposta
 
-| Aspecto | Atual (Errado) | Novo (Correto) |
-|---------|----------------|----------------|
-| Adicionar item | Seleção livre + qty opcional | Requer compra |
-| Custo | Opcional | **Obrigatório** |
-| Preço venda | Opcional | **Obrigatório** |
-| Quantidade | Opcional (padrão 0) | **Obrigatório** |
-| Linha | Herdada do template | **Obrigatório** |
-| Categoria (tipo) | Herdada do template | **Obrigatório** |
-| Dados fiscais | Não existe | Opcional (obrigatório para NFe) |
-
----
-
-## Arquitetura da Solução
+### Arquitetura da Correção
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         ENTRADA DE ESTOQUE = COMPRA                         │
+│                    FLUXO CORRETO DE DESCONTOS                               │
 └─────────────────────────────────────────────────────────────────────────────┘
 
 ANTES (errado):                          DEPOIS (correto):
 ───────────────                          ─────────────────
 
-  "Adicionar Item"                         "Registrar Compra"
-        │                                        │
-        ▼                                        ▼
-  Seleciona template                     Seleciona template
-        │                                        │
-        ▼                                        ▼
-  Qty = 0 (opcional)                     Qty = ??? (OBRIGATÓRIO)
-  Custo = vazio                          Custo = R$ XX (OBRIGATÓRIO)
-  Preço = vazio                          Preço = R$ XX (OBRIGATÓRIO)
-        │                                Linha = ??? (OBRIGATÓRIO)
-        │                                Categoria = ??? (OBRIGATÓRIO)
-        │                                        │
-        ▼                                        ▼
-  Cria company_stock                     Cria/atualiza company_items
-  (item do nada)                         Cria/atualiza company_stock
-                                         Registra stock_movement (entrada)
-                                                 │
-                                                 ▼
-                                         Item tem ORIGEM rastreável ✓
+  valorBase = SUM(items.total_price)      valorBase = quote.final_amount
+       = R$ 1.000,00                           = R$ 900,00 (já com 10%)
+             │                                       │
+             ▼                                       ▼
+  Condição "À vista 5%"                   Condição "À vista SEM desconto"
+  aplica -5%                              (escolhida automaticamente se
+             │                             já há desconto no orçamento)
+             ▼                                       │
+  valorFinal = R$ 950,00                  valorFinal = R$ 900,00
+             │                                       │
+             ▼                                       ▼
+  ERRADO: perdeu 10%                      CORRETO: preservou 10%
+          e aplicou 5%
 ```
 
 ---
 
-## Implementação Detalhada
+## Mudanças Técnicas
 
-### 1. Modificar Conceito do Dialog
+### 1. Modificar Interface do Quote no AprovarOrcamentoDialog
 
-**De:** `AddStockDialog` (adicionar item)
-**Para:** `RegisterPurchaseDialog` (registrar compra)
+**Arquivo:** `src/components/orcamentos/AprovarOrcamentoDialog.tsx`
 
-O dialog atual será reformulado para representar uma **compra de material**.
+Adicionar campos de desconto à interface Quote:
 
-### 2. Campos Obrigatórios
-
-| Campo | Tipo | Validação | Origem |
-|-------|------|-----------|--------|
-| Item | Select | Obrigatório | `item_templates` |
-| Quantidade | Number | > 0, obrigatório | Input |
-| Preço de Custo | Number | >= 0, obrigatório | Input |
-| Preço de Venda | Number | >= 0, obrigatório | Input |
-| Linha | Select | Obrigatório | `item_templates.linha` ou customizado |
-| Categoria | Select | Obrigatório | `item_templates.type` (glass/profile/accessory/service) |
-
-### 3. Campos Fiscais (Opcionais)
-
-Seção expansível "Dados Fiscais" que aparece:
-- Sempre visível se `company.modo_fiscal_ativo = true`
-- Expandível se modo fiscal inativo
-
-| Campo | Descrição | Obrigatório para NFe |
-|-------|-----------|---------------------|
-| NCM | Código 8 dígitos | Sim |
-| CFOP Venda (UF) | Operação estadual | Sim |
-| CFOP Interestadual | Operação interestadual | Sim |
-| CEST | Substituição tributária | Não |
-| Origem | Procedência (nacional/importado) | Sim |
-
-### 4. Lógica de Salvamento
-
-Ao confirmar a compra:
-
-```text
-1. Criar/atualizar company_items
-   - Se não existe: INSERT com todos os campos
-   - Se existe: UPDATE custo, preço, linha, categoria, fiscal
-
-2. Criar/atualizar company_stock
-   - Se não existe: INSERT com quantidade
-   - Se existe: quantity += quantidade_comprada
-
-3. Registrar stock_movement (entrada)
-   - type = 'entrada'
-   - category = 'compra_fornecedor'
-   - quantity = quantidade_comprada
-   - unit_cost = preço de custo
-   - valor_financeiro = qty × custo
-
-4. Invalidar queries de estoque
+```typescript
+interface Quote {
+  id: string;
+  quote_number: number;
+  customer_name: string;
+  customer_phone: string | null;
+  customer_email: string | null;
+  customer_address?: string | null;
+  total_amount: number;          // Subtotal (sem desconto)
+  discount_percent?: number;     // NOVO: % de desconto
+  discount_amount?: number;      // NOVO: Valor do desconto
+  final_amount: number;          // Valor final (com desconto)
+  created_at?: string;
+}
 ```
 
-### 5. Validação de Campos Fiscais para NFe
+### 2. Usar `final_amount` como Base de Cálculo
 
-Se a empresa tiver `modo_fiscal_ativo = true`, exibir indicador de "pronto para NFe":
+**Arquivo:** `src/components/orcamentos/AprovarOrcamentoDialog.tsx`
 
-```text
-┌────────────────────────────────────────┐
-│ ✓ NCM: 70071900                       │
-│ ✓ CFOP: 5101                          │
-│ ✓ Origem: 0 - Nacional                 │
-│ ────────────────────────────────       │
-│ ✓ Item pronto para emissão de NFe     │
-└────────────────────────────────────────┘
+Modificar o cálculo do `valorBase` para usar `quote.final_amount` quando não houver reajuste de preços:
+
+```typescript
+// Valor base considera o desconto JÁ APLICADO no orçamento
+const valorBase = useMemo(() => {
+  if (useCurrentPrices) {
+    // Se usar preços atuais, recalcula com base nos itens revisados
+    return revisedItems.reduce((sum, item) => {
+      const useCurrentForItem = itemPriceOverrides[item.id] !== false;
+      return sum + (useCurrentForItem && item.currentCalculatedTotal 
+        ? item.currentCalculatedTotal 
+        : item.total_price);
+    }, 0);
+  }
+  // Se não usar preços atuais, usa o final_amount do orçamento
+  // que JÁ inclui o desconto aplicado na criação
+  return quote?.final_amount || totalOriginal;
+}, [useCurrentPrices, revisedItems, itemPriceOverrides, totalOriginal, quote]);
 ```
 
----
+### 3. Exibir Informação do Desconto Existente
 
-## Estrutura do Novo Dialog
+Mostrar ao usuário que já existe um desconto aplicado:
 
-### Layout Visual
+```typescript
+// Indicador de desconto existente
+const quoteDiscountPercent = quote?.discount_percent || 0;
+const hasExistingDiscount = quoteDiscountPercent > 0;
+
+// Na UI, mostrar aviso:
+{hasExistingDiscount && (
+  <div className="p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200">
+    <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
+      <Percent className="w-4 h-4" />
+      <span className="font-medium">
+        Desconto de {quoteDiscountPercent}% já aplicado no orçamento
+      </span>
+    </div>
+    <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+      Valor original: {formatCurrency(quote.total_amount)} → 
+      Valor com desconto: {formatCurrency(quote.final_amount)}
+    </p>
+  </div>
+)}
+```
+
+### 4. Inteligência na Seleção de Condição de Pagamento
+
+Quando já existe desconto no orçamento, sugerir condições SEM desconto adicional:
+
+```typescript
+// Auto-selecionar condição sem desconto se já houver desconto no orçamento
+useEffect(() => {
+  if (hasExistingDiscount && condicoesPagamento.length > 0) {
+    // Procurar condição sem desconto
+    const condicaoSemDesconto = condicoesPagamento.find(c => 
+      c.desconto_percent === 0 && c.parcelas === 1
+    );
+    if (condicaoSemDesconto) {
+      setSelectedCondicaoId(condicaoSemDesconto.id);
+    }
+  }
+}, [hasExistingDiscount, condicoesPagamento]);
+```
+
+### 5. Mostrar Resumo Completo de Descontos
+
+Na etapa de confirmação, mostrar breakdown completo:
 
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│ 📦 Registrar Compra de Material                                │
-│ Adicione itens ao estoque registrando a compra                  │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│ [Buscar item...] [Filtrar por linha ▼] [Categoria ▼]           │
-│                                                                 │
-│ ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐                               │
-│ │ img │ │ img │ │ img │ │ img │  ← Galeria de itens           │
-│ │     │ │     │ │     │ │     │                               │
-│ │ SU-1│ │ SU-2│ │ SU-3│ │ SU-4│                               │
-│ └──✓──┘ └─────┘ └─────┘ └─────┘                               │
-│                                                                 │
-├─────────────────────────────────────────────────────────────────┤
-│ Item selecionado: SU-007 • Perfil • Suprema                    │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│ DADOS DA COMPRA                                                │
-│ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐             │
-│ │ Quantidade * │ │ Custo (R$) * │ │ Venda (R$) * │             │
-│ │    [10]      │ │   [25.00]    │ │   [45.00]    │             │
-│ └──────────────┘ └──────────────┘ └──────────────┘             │
-│                                                                 │
-│ ┌──────────────┐ ┌──────────────┐                              │
-│ │ Linha *      │ │ Categoria *  │                              │
-│ │ [Suprema ▼]  │ │ [Perfil ▼]   │                              │
-│ └──────────────┘ └──────────────┘                              │
-│                                                                 │
-│ Margem: 80% • Lucro: R$ 20.00/un                               │
-│                                                                 │
-├─────────────────────────────────────────────────────────────────┤
-│ ▶ Dados Fiscais (opcional)                                     │
-│ ┌───────────────────────────────────────────────────────────┐   │
-│ │ NCM: [70071900] ✓   CEST: [_______]                       │   │
-│ │ CFOP UF: [5101 ▼]   CFOP Inter: [6101 ▼]                  │   │
-│ │ Origem: [0 - Nacional ▼]                                   │   │
-│ │                                                            │   │
-│ │ ✓ Item pronto para emissão de NFe                          │   │
-│ └───────────────────────────────────────────────────────────┘   │
-├─────────────────────────────────────────────────────────────────┤
-│                                    [Cancelar]  [Registrar Compra]│
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│ Resumo de Valores                               │
+├─────────────────────────────────────────────────┤
+│ Subtotal (itens)           R$ 1.000,00          │
+│ Desconto do orçamento (10%)   -R$ 100,00        │
+│ Valor com desconto          R$ 900,00           │
+│ Desconto condição pagto (0%)    R$ 0,00         │
+│ ────────────────────────────────────────        │
+│ VALOR FINAL                 R$ 900,00           │
+└─────────────────────────────────────────────────┘
 ```
 
 ---
@@ -187,186 +179,93 @@ Se a empresa tiver `modo_fiscal_ativo = true`, exibir indicador de "pronto para 
 
 | Arquivo | Modificação |
 |---------|-------------|
-| `src/components/estoque/AddStockDialog.tsx` | Renomear e reformular para compra |
-| `src/pages/Estoque.tsx` | Atualizar botão e nomenclatura |
-| `src/utils/stockMovements.ts` | Garantir entrada com custo |
-
-## Arquivos a Criar
-
-| Arquivo | Descrição |
-|---------|-----------|
-| (nenhum novo) | Reutilizaremos `FiscalFieldsCard.tsx` existente |
+| `src/components/orcamentos/AprovarOrcamentoDialog.tsx` | Usar `final_amount`, exibir desconto existente |
+| `src/pages/Orcamentos.tsx` | Passar `discount_percent`, `discount_amount` para o dialog |
 
 ---
 
-## Regras de Validação
-
-### Antes de Salvar
-
-```typescript
-// Campos obrigatórios
-if (!selectedItemId) error("Selecione um item");
-if (!quantity || quantity <= 0) error("Quantidade obrigatória");
-if (!cost || cost < 0) error("Preço de custo obrigatório");
-if (!salePrice || salePrice < 0) error("Preço de venda obrigatório");
-if (!linha) error("Linha obrigatória");
-if (!category) error("Categoria obrigatória");
-
-// Validação de margem (aviso, não bloqueio)
-if (salePrice < cost) {
-  warn("Preço de venda menor que custo - margem negativa!");
-}
-```
-
-### Para NFe (modo fiscal ativo)
-
-```typescript
-// Indicadores visuais de completude fiscal
-const fiscalReady = ncm && cfop_venda && cfop_interestadual && origem;
-
-// Não bloqueia cadastro, apenas mostra status
-```
-
----
-
-## Fluxo de Dados Final
+## Fluxo Correto Após Correção
 
 ```text
-1. Usuário clica "Registrar Compra"
-         │
-         ▼
-2. Seleciona item do catálogo (item_templates)
-         │
-         ▼
-3. Preenche dados obrigatórios:
-   - Quantidade
-   - Custo
-   - Preço de venda
-   - Linha (pré-preenchida do template, editável)
-   - Categoria (pré-preenchida do template, editável)
-         │
-         ▼
-4. (Opcional) Preenche dados fiscais
-         │
-         ▼
-5. Confirma compra
-         │
-         ▼
-6. Sistema:
-   a) Cria/atualiza company_items (custo, venda, linha, cat, fiscal)
-   b) Cria/atualiza company_stock (quantidade)
-   c) Registra stock_movement (entrada) com custo
-         │
-         ▼
-7. Item disponível no estoque com rastreabilidade total
+Cenário: Orçamento com 10% de desconto
+─────────────────────────────────────
+
+1. Criação do orçamento:
+   - Subtotal: R$ 1.000,00
+   - Desconto: 10%
+   - Final: R$ 900,00 ✓
+
+2. Aprovação:
+   - valorBase = quote.final_amount = R$ 900,00 ✓
+   - Exibe: "Desconto de 10% já aplicado"
+   - Auto-seleciona: "À vista sem desconto"
+
+3. Condição de pagamento:
+   - "À vista sem desconto": valor permanece R$ 900,00 ✓
+   - "2x sem juros": 2x de R$ 450,00 ✓
+
+4. Resultado final:
+   - Valor da OS: R$ 900,00 ✓
+   - Desconto preservado ✓
+```
+
+---
+
+## Caso Especial: Reajuste de Preços
+
+Se o usuário optar por "Usar preços atuais" (reajuste), o desconto original deve ser reaplicado:
+
+```typescript
+// Se usar preços atuais, reaplicar % de desconto do orçamento
+const valorBaseComReajuste = revisedItems.reduce(...); // soma dos itens atualizados
+const valorBaseAjustado = hasExistingDiscount 
+  ? valorBaseComReajuste * (1 - quoteDiscountPercent / 100)
+  : valorBaseComReajuste;
 ```
 
 ---
 
 ## Critérios de Aceite
 
-1. **Botão renomeado:** "Registrar Compra" em vez de "Adicionar Item"
-2. **Campos obrigatórios:** Quantidade, Custo, Venda, Linha, Categoria
-3. **Validação:** Não permite salvar sem preencher campos obrigatórios
-4. **Movimento registrado:** Toda entrada cria `stock_movements` com `unit_cost`
-5. **Dados fiscais:** Seção visível quando modo fiscal ativo
-6. **Indicador NFe:** Mostra se item está pronto para emissão quando fiscal preenchido
-7. **company_items atualizado:** Custo, preço e dados fiscais salvos no item da empresa
+1. **Desconto preservado:** Se orçamento tem 10% desconto, aprovação usa R$ 900 (não R$ 1.000)
+2. **Indicador visual:** Mostra "Desconto de 10% já aplicado" na aprovação
+3. **Seleção inteligente:** Se há desconto, pré-seleciona condição sem desconto adicional
+4. **Breakdown completo:** Resumo mostra subtotal, desconto orçamento, desconto condição, valor final
+5. **Reajuste correto:** Se usar preços atuais, reaplicar % de desconto aos novos valores
+6. **Sem duplicação:** Não aplicar desconto de condição sobre valor já descontado (a menos que intencionalmente selecionado)
 
 ---
 
 ## Seção Técnica
 
-### Mutation de Compra
+### Mudança Principal no valorBase
 
 ```typescript
-const registerPurchaseMutation = useMutation({
-  mutationFn: async ({
-    itemTemplateId,
-    quantity,
-    cost,
-    salePrice,
-    linha,
-    category,
-    fiscalData
-  }) => {
-    // 1. Upsert company_items
-    const { data: companyItem, error: itemError } = await supabase
-      .from('company_items')
-      .upsert({
-        company_id: companyId,
-        item_template_id: itemTemplateId,
-        name: itemTemplate.name,
-        type: category,
-        unit: itemTemplate.unit,
-        linha,
-        cost,
-        sale_price: salePrice,
-        // Fiscal fields (if provided)
-        ...fiscalData
-      }, {
-        onConflict: 'company_id,item_template_id'
-      })
-      .select()
-      .single();
-
-    if (itemError) throw itemError;
-
-    // 2. Upsert company_stock
-    const { data: existingStock } = await supabase
-      .from('company_stock')
-      .select('id, quantity')
-      .eq('company_id', companyId)
-      .eq('item_template_id', itemTemplateId)
-      .maybeSingle();
-
-    if (existingStock) {
-      // Update quantity
-      await supabase
-        .from('company_stock')
-        .update({ 
-          quantity: existingStock.quantity + quantity,
-          company_item_id: companyItem.id
-        })
-        .eq('id', existingStock.id);
-    } else {
-      // Create new stock record
-      await supabase
-        .from('company_stock')
-        .insert({
-          company_id: companyId,
-          item_template_id: itemTemplateId,
-          company_item_id: companyItem.id,
-          quantity,
-          min_quantity: 0,
-          is_active: true
-        });
-    }
-
-    // 3. Register stock movement (entrada)
-    await supabase
-      .from('stock_movements')
-      .insert({
-        company_id: companyId,
-        company_item_id: companyItem.id,
-        item_template_id: itemTemplateId,
-        type: 'entrada',
-        category: 'compra_fornecedor',
-        quantity,
-        unit_cost: cost,
-        valor_financeiro: quantity * cost,
-        created_by: userId
-      });
+// ANTES (errado):
+const valorBase = useMemo(() => {
+  if (useCurrentPrices) {
+    return revisedItems.reduce(...);
   }
-});
+  return totalOriginal; // ← Soma dos itens, ignora desconto
+}, ...);
+
+// DEPOIS (correto):
+const valorBase = useMemo(() => {
+  if (useCurrentPrices) {
+    // Recalcular com preços atuais E reaplicar desconto
+    const revisedTotal = revisedItems.reduce(...);
+    const quoteDiscountPercent = quote?.discount_percent || 0;
+    return revisedTotal * (1 - quoteDiscountPercent / 100);
+  }
+  // Usar final_amount que JÁ tem o desconto
+  return quote?.final_amount || totalOriginal;
+}, ...);
 ```
 
-### Campos Fiscais no company_items
+### Dados Passados ao Dialog
 
-A tabela `company_items` precisará dos campos fiscais. Vou verificar se já existem ou se precisa de migration:
-
-- NCM, CFOP, CEST, Origem → Verificar se existem na tabela
-- Se não existirem, criar migration para adicionar
-
-Nota: Os `item_templates` já têm campos fiscais (NCM, CFOP, etc.). Para empresas, os valores serão armazenados em `company_items` para permitir customização.
-
+```typescript
+// src/pages/Orcamentos.tsx - ao chamar AprovarOrcamentoDialog
+// O Quote já tem discount_percent e final_amount da query
+// Só precisamos garantir que esses campos estão na interface
+```
