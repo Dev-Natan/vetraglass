@@ -119,6 +119,7 @@ export function AprovarOrcamentoDialog({
   const [entryAmount, setEntryAmount] = useState('');
   const [entryPaymentMethod, setEntryPaymentMethod] = useState<'dinheiro' | 'cartao' | 'pix'>('pix');
   const [balanceDueDate, setBalanceDueDate] = useState<Date | undefined>(addDays(new Date(), 30));
+  const [receiveOnCompletion, setReceiveOnCompletion] = useState(true);
   
   // OS configuration
   const [estimatedEnd, setEstimatedEnd] = useState<Date | undefined>(addDays(new Date(), 7));
@@ -403,13 +404,18 @@ export function AprovarOrcamentoDialog({
             quote_id: quote.id,
             sale_id: saleId,
             customer_name: quote.customer_name,
-            description: `OS #${ordemServico.os_number} - Saldo na entrega`,
+            description: receiveOnCompletion 
+              ? `OS #${ordemServico.os_number} - Receber na conclusão`
+              : `OS #${ordemServico.os_number} - Saldo a receber`,
             total_amount: pendingAmount,
             installment_number: 1,
             total_installments: 1,
-            due_date: balanceDueDate ? format(balanceDueDate, 'yyyy-MM-dd') : format(addDays(new Date(), 30), 'yyyy-MM-dd'),
+            due_date: receiveOnCompletion 
+              ? (estimatedEnd ? format(estimatedEnd, 'yyyy-MM-dd') : format(addDays(new Date(), 30), 'yyyy-MM-dd'))
+              : (balanceDueDate ? format(balanceDueDate, 'yyyy-MM-dd') : format(addDays(new Date(), 30), 'yyyy-MM-dd')),
             status: 'pending',
             created_by: user.id,
+            receivable_type: receiveOnCompletion ? 'saldo_conclusao' : 'saldo_final',
           });
         
         if (receivablesError) {
@@ -706,26 +712,40 @@ export function AprovarOrcamentoDialog({
                           </RadioGroup>
                         </div>
 
-                        <div>
+                        <div className="space-y-3">
                           <Label>Vencimento do saldo restante</Label>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Button variant="outline" className="w-full justify-start mt-1">
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {balanceDueDate ? format(balanceDueDate, 'dd/MM/yyyy', { locale: ptBR }) : 'Selecionar data'}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={balanceDueDate}
-                                onSelect={setBalanceDueDate}
-                                initialFocus
-                                locale={ptBR}
-                                className="pointer-events-auto"
-                              />
-                            </PopoverContent>
-                          </Popover>
+                          
+                          <div className="flex items-center space-x-2 p-3 border rounded-lg bg-muted/50">
+                            <Checkbox
+                              id="receiveOnCompletion"
+                              checked={receiveOnCompletion}
+                              onCheckedChange={(checked) => setReceiveOnCompletion(checked === true)}
+                            />
+                            <Label htmlFor="receiveOnCompletion" className="cursor-pointer text-sm font-normal">
+                              Receber na conclusão do serviço
+                            </Label>
+                          </div>
+
+                          {!receiveOnCompletion && (
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button variant="outline" className="w-full justify-start">
+                                  <CalendarIcon className="mr-2 h-4 w-4" />
+                                  {balanceDueDate ? format(balanceDueDate, 'dd/MM/yyyy', { locale: ptBR }) : 'Selecionar data'}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={balanceDueDate}
+                                  onSelect={setBalanceDueDate}
+                                  initialFocus
+                                  locale={ptBR}
+                                  className="pointer-events-auto"
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          )}
                         </div>
                       </>
                     )}
