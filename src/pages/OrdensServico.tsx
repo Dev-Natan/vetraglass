@@ -43,7 +43,7 @@ import { consumeOSMaterials } from '@/utils/checkGlassStock';
 import { releaseMaterialsForProduction } from '@/utils/generateMaterialConsumption';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 import { useOSCancellation } from '@/hooks/useOSCancellation';
-import { usePermissionProfile } from '@/hooks/usePermissionProfile';
+
 
 type OSStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
 type OSPriority = 'low' | 'normal' | 'high' | 'urgent';
@@ -84,8 +84,6 @@ export default function OrdensServico() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { currentCompany } = useAuth();
   const queryClient = useQueryClient();
-  const { isAdmin, isGerente, isCaixa, isFinanceiro } = usePermissionProfile();
-  const canSeeFinancials = isAdmin || isGerente || isCaixa || isFinanceiro;
   
   // Module tutorial trigger
   useModuleTutorialTrigger('ordens-servico');
@@ -554,20 +552,6 @@ export default function OrdensServico() {
                           )}
                         </div>
 
-                        {/* Financial - Only visible for authorized users */}
-                        {canSeeFinancials && (
-                          <div className="pt-3 border-t flex items-center justify-between">
-                            <div className="text-sm">
-                              <span className="text-muted-foreground">Total:</span>{' '}
-                              <span className="font-semibold">{formatCurrency(os.total_amount)}</span>
-                            </div>
-                            {os.pending_amount > 0 && (
-                              <Badge variant="secondary" className="text-xs">
-                                Pendente: {formatCurrency(os.pending_amount)}
-                              </Badge>
-                            )}
-                          </div>
-                        )}
 
                         {/* Actions */}
                         <div className="pt-3 flex gap-2" onClick={(e) => e.stopPropagation()}>
