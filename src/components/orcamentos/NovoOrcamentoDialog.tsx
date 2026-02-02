@@ -220,7 +220,8 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
         valid_until: quote.valid_until || '',
         notes: quote.notes || '',
       });
-      setCurrentStep('client');
+      // Ao editar, iniciar na etapa de produtos (cliente já definido)
+      setCurrentStep('products');
       setShowAddProduct(false);
     } else if (open && !quote) {
       form.reset({
@@ -536,99 +537,130 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
               {/* Step 1: Client */}
               {currentStep === 'client' && (
                 <div className="space-y-4">
-                  {/* Client Selector */}
-                  {(clients?.length || 0) > 0 && (
-                    <div className="space-y-2">
-                      <FormLabel>Cliente Cadastrado</FormLabel>
-                      <Select value={selectedClientId} onValueChange={handleClientSelect}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione ou digite novo cliente..." />
-                        </SelectTrigger>
-                        <SelectContent className="bg-popover border shadow-lg z-50">
-                          <SelectItem value="new">
-                            <span className="text-primary">+ Novo Cliente</span>
-                          </SelectItem>
-                          {clients?.map((client) => (
-                            <SelectItem key={client.id} value={client.id}>
-                              {client.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                  {/* Se estiver editando, mostrar dados do cliente como resumo somente leitura */}
+                  {isEditing ? (
+                    <div className="p-4 bg-muted/50 rounded-lg border space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-muted-foreground">Cliente</span>
+                        <Badge variant="secondary">Dados preservados</Badge>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <User className="w-4 h-4 text-muted-foreground" />
+                          <span className="font-medium">{form.watch('customer_name')}</span>
+                        </div>
+                        {form.watch('customer_phone') && (
+                          <p className="text-sm text-muted-foreground pl-6">{form.watch('customer_phone')}</p>
+                        )}
+                        {form.watch('customer_email') && (
+                          <p className="text-sm text-muted-foreground pl-6">{form.watch('customer_email')}</p>
+                        )}
+                        {form.watch('customer_address') && (
+                          <p className="text-sm text-muted-foreground pl-6">{form.watch('customer_address')}</p>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Para alterar dados do cliente, acesse o cadastro de clientes.
+                      </p>
                     </div>
+                  ) : (
+                    <>
+                      {/* Client Selector - apenas para novos orçamentos */}
+                      {(clients?.length || 0) > 0 && (
+                        <div className="space-y-2">
+                          <FormLabel>Cliente Cadastrado</FormLabel>
+                          <Select value={selectedClientId} onValueChange={handleClientSelect}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione ou digite novo cliente..." />
+                            </SelectTrigger>
+                            <SelectContent className="bg-popover border shadow-lg z-50">
+                              <SelectItem value="new">
+                                <span className="text-primary">+ Novo Cliente</span>
+                              </SelectItem>
+                              {clients?.map((client) => (
+                                <SelectItem key={client.id} value={client.id}>
+                                  {client.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
+                      {/* Essential Fields */}
+                      <FormField
+                        control={form.control}
+                        name="customer_name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Nome do Cliente *</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Nome completo" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="customer_phone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Telefone</FormLabel>
+                              <FormControl>
+                                <Input placeholder="(00) 00000-0000" {...field} />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="customer_email"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Email</FormLabel>
+                              <FormControl>
+                                <Input placeholder="email@exemplo.com" {...field} />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <FormField
+                        control={form.control}
+                        name="customer_address"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Endereço</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Endereço completo" {...field} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </>
                   )}
 
-                  {/* Essential Fields */}
-                  <FormField
-                    control={form.control}
-                    name="customer_name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nome do Cliente *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Nome completo" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="customer_phone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Telefone</FormLabel>
-                          <FormControl>
-                            <Input placeholder="(00) 00000-0000" {...field} />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="customer_email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <Input placeholder="email@exemplo.com" {...field} />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <FormField
-                    control={form.control}
-                    name="customer_address"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Endereço</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Endereço completo" {...field} />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Collapsible Contract Fields */}
-                  <Collapsible open={showContractFields} onOpenChange={setShowContractFields}>
-                    <CollapsibleTrigger asChild>
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
-                        className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
-                      >
-                        <FileText className="w-4 h-4" />
-                        Dados para contrato (opcional)
-                        <ChevronRight className={cn(
-                          "w-4 h-4 ml-auto transition-transform",
-                          showContractFields && "rotate-90"
-                        )} />
-                      </Button>
-                    </CollapsibleTrigger>
+                  {/* Collapsible Contract Fields - apenas para novos orçamentos */}
+                  {!isEditing && (
+                    <Collapsible open={showContractFields} onOpenChange={setShowContractFields}>
+                      <CollapsibleTrigger asChild>
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
+                        >
+                          <FileText className="w-4 h-4" />
+                          Dados para contrato (opcional)
+                          <ChevronRight className={cn(
+                            "w-4 h-4 ml-auto transition-transform",
+                            showContractFields && "rotate-90"
+                          )} />
+                        </Button>
+                      </CollapsibleTrigger>
                     <CollapsibleContent className="space-y-4 pt-4">
                       <div className="grid grid-cols-2 gap-4">
                         <FormField
@@ -697,6 +729,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
                       </div>
                     </CollapsibleContent>
                   </Collapsible>
+                  )}
                 </div>
               )}
 
