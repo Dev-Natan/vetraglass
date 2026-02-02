@@ -27,7 +27,6 @@ import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { MovimentoCaixaEmpresaDialog } from '@/components/caixa/MovimentoCaixaEmpresaDialog';
 import { CaixaAdiantamentosCard } from '@/components/caixa/CaixaAdiantamentosCard';
-import { AbrirCaixaDialog } from '@/components/caixa/AbrirCaixaDialog';
 import { FecharCaixaDialog } from '@/components/caixa/FecharCaixaDialog';
 import { PendingAuditsCard } from '@/components/caixa/PendingAuditsCard';
 import { MonthSelector } from '@/components/common/MonthSelector';
@@ -57,7 +56,6 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
   const dateRange = { start: startOfMonth(selectedMonth), end: endOfMonth(selectedMonth) };
   
   const [dialogType, setDialogType] = useState<'entrada' | 'saida' | 'config' | null>(null);
-  const [abrirCaixaOpen, setAbrirCaixaOpen] = useState(false);
   const [fecharCaixaOpen, setFecharCaixaOpen] = useState(false);
 
   // Fetch company cash
@@ -217,32 +215,6 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
     },
     onError: (error: Error) => toast.error(`Erro: ${error.message}`),
   });
-
-  // Open cash register
-  const openCashMutation = useMutation({
-    mutationFn: async (openingAmount: number) => {
-      if (!currentCompany?.id || !user?.id) throw new Error('Dados inválidos');
-      const { data, error } = await supabase.rpc('open_daily_cash', {
-        _company_id: currentCompany.id,
-        _opening_amount: openingAmount,
-        _user_id: user.id,
-      });
-      if (error) throw error;
-      const result = data as { success: boolean; error?: string; cash_register_id?: string };
-      if (!result.success) {
-        throw new Error(result.error || 'Erro ao abrir caixa');
-      }
-      return result;
-    },
-    onSuccess: () => {
-      toast.success('Caixa aberto com sucesso!');
-      queryClient.invalidateQueries({ queryKey: ['cash-register-open'] });
-      queryClient.invalidateQueries({ queryKey: ['company-cash'] });
-      setAbrirCaixaOpen(false);
-    },
-    onError: (error: Error) => toast.error(`Erro ao abrir caixa: ${error.message}`),
-  });
-
   // Close cash register
   const closeCashMutation = useMutation({
     mutationFn: async ({ counts, notes }: { counts: { payment_method: string; amount: number }[]; notes: string }) => {
@@ -421,12 +393,8 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Nenhum caixa aberto no momento</p>
-                <p className="text-xs text-muted-foreground">Abra o caixa para registrar vendas e movimentações</p>
+                <p className="text-xs text-muted-foreground">A abertura do caixa é feita pelo operador no módulo Caixa e Vendas</p>
               </div>
-              <Button onClick={() => setAbrirCaixaOpen(true)}>
-                <Unlock className="mr-2 h-4 w-4" />
-                Abrir Caixa
-              </Button>
             </div>
           )}
         </CardContent>
@@ -598,14 +566,6 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
           }
         }}
         isLoading={configMutation.isPending || movementMutation.isPending}
-      />
-
-      <AbrirCaixaDialog
-        open={abrirCaixaOpen}
-        onOpenChange={setAbrirCaixaOpen}
-        onConfirm={openCashMutation.mutateAsync}
-        companyCash={companyCash}
-        isLoading={openCashMutation.isPending}
       />
 
       <FecharCaixaDialog
