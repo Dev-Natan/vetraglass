@@ -118,6 +118,7 @@ export function AprovarOrcamentoDialog({
   // Entry payment state
   const [entryAmount, setEntryAmount] = useState('');
   const [entryPaymentMethod, setEntryPaymentMethod] = useState<'dinheiro' | 'cartao' | 'pix'>('pix');
+  const [cardActualReceived, setCardActualReceived] = useState('');
   const [balanceDueDate, setBalanceDueDate] = useState<Date | undefined>(addDays(new Date(), 30));
   const [receiveOnCompletion, setReceiveOnCompletion] = useState(true);
   
@@ -307,6 +308,19 @@ export function AprovarOrcamentoDialog({
         if (openCashRegister) {
           // IMPORTANTE: Criar movimento de caixa vinculado ao ORÇAMENTO
           // Esse vínculo será transferido para a VENDA quando o orçamento for faturado
+          
+          // Para cartão, usar o valor líquido recebido (após taxas)
+          const cardNetAmount = entryPaymentMethod === 'cartao' && cardActualReceived
+            ? parseFloat(cardActualReceived.replace(',', '.'))
+            : entryValue;
+          const cardFee = entryPaymentMethod === 'cartao' && cardActualReceived
+            ? entryValue - cardNetAmount
+            : 0;
+          
+          const movementDescription = cardFee > 0
+            ? `Entrada - Orç. #${quote.quote_number.toString().padStart(4, '0')} - ${quote.customer_name} (Taxa cartão: R$ ${cardFee.toFixed(2)})`
+            : `Entrada - Orç. #${quote.quote_number.toString().padStart(4, '0')} - ${quote.customer_name}`;
+          
           const { data: cashMovement, error: cashMovementError } = await supabase
             .from('cash_movements')
             .insert({
@@ -314,8 +328,8 @@ export function AprovarOrcamentoDialog({
               company_id: currentCompany.id,
               type: 'entrada',
               category: 'entrada_orcamento',
-              amount: entryValue,
-              description: `Entrada - Orç. #${quote.quote_number.toString().padStart(4, '0')} - ${quote.customer_name}`,
+              amount: cardNetAmount, // Valor líquido recebido
+              description: movementDescription,
               payment_method: entryPaymentMethod,
               created_by: user.id,
               // Vínculo obrigatório: origem e referência
@@ -711,6 +725,34 @@ export function AprovarOrcamentoDialog({
                             ))}
                           </RadioGroup>
                         </div>
+
+                        {entryPaymentMethod === 'cartao' && (
+                          <div className="p-3 border rounded-lg bg-amber-50 dark:bg-amber-950/30 space-y-2">
+                            <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300 text-sm">
+                              <AlertCircle className="w-4 h-4" />
+                              <span>Taxa de cartão</span>
+                            </div>
+                            <div>
+                              <Label htmlFor="cardActualReceived" className="text-sm">Valor líquido recebido</Label>
+                              <div className="relative mt-1">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                                <Input
+                                  id="cardActualReceived"
+                                  value={cardActualReceived}
+                                  onChange={(e) => setCardActualReceived(e.target.value)}
+                                  placeholder={entryAmount || "0,00"}
+                                  className="pl-9"
+                                />
+                              </div>
+                              {cardActualReceived && entryAmount && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Taxa: {formatCurrency(entryValue - parseFloat(cardActualReceived.replace(',', '.') || '0'))} 
+                                  ({((1 - parseFloat(cardActualReceived.replace(',', '.') || '0') / entryValue) * 100).toFixed(2)}%)
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        )}
 
                         <div className="space-y-3">
                           <Label>Vencimento do saldo restante</Label>
