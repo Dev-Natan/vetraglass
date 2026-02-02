@@ -118,6 +118,7 @@ export function AprovarOrcamentoDialog({
   // Entry payment state
   const [entryAmount, setEntryAmount] = useState('');
   const [entryPaymentMethod, setEntryPaymentMethod] = useState<'dinheiro' | 'cartao' | 'pix'>('pix');
+  const [balanceDueDate, setBalanceDueDate] = useState<Date | undefined>(addDays(new Date(), 30));
   
   // OS configuration
   const [estimatedEnd, setEstimatedEnd] = useState<Date | undefined>(addDays(new Date(), 7));
@@ -406,7 +407,7 @@ export function AprovarOrcamentoDialog({
             total_amount: pendingAmount,
             installment_number: 1,
             total_installments: 1,
-            due_date: estimatedEnd ? format(estimatedEnd, 'yyyy-MM-dd') : format(addDays(new Date(), 30), 'yyyy-MM-dd'),
+            due_date: balanceDueDate ? format(balanceDueDate, 'yyyy-MM-dd') : format(addDays(new Date(), 30), 'yyyy-MM-dd'),
             status: 'pending',
             created_by: user.id,
           });
@@ -686,23 +687,47 @@ export function AprovarOrcamentoDialog({
                     </div>
 
                     {hasEntry && isCaixaAberto && (
-                      <div>
-                        <Label>Forma de pagamento da entrada</Label>
-                        <RadioGroup
-                          value={entryPaymentMethod}
-                          onValueChange={(v) => setEntryPaymentMethod(v as typeof entryPaymentMethod)}
-                          className="flex gap-3 mt-2"
-                        >
-                          {['dinheiro', 'cartao', 'pix'].map(method => (
-                            <div key={method} className="flex items-center space-x-2 p-2 border rounded-lg flex-1">
-                              <RadioGroupItem value={method} id={`entry-${method}`} />
-                              <Label htmlFor={`entry-${method}`} className="cursor-pointer capitalize">
-                                {method === 'cartao' ? 'Cartão' : method.charAt(0).toUpperCase() + method.slice(1)}
-                              </Label>
-                            </div>
-                          ))}
-                        </RadioGroup>
-                      </div>
+                      <>
+                        <div>
+                          <Label>Forma de pagamento da entrada</Label>
+                          <RadioGroup
+                            value={entryPaymentMethod}
+                            onValueChange={(v) => setEntryPaymentMethod(v as typeof entryPaymentMethod)}
+                            className="flex gap-3 mt-2"
+                          >
+                            {['dinheiro', 'cartao', 'pix'].map(method => (
+                              <div key={method} className="flex items-center space-x-2 p-2 border rounded-lg flex-1">
+                                <RadioGroupItem value={method} id={`entry-${method}`} />
+                                <Label htmlFor={`entry-${method}`} className="cursor-pointer capitalize">
+                                  {method === 'cartao' ? 'Cartão' : method.charAt(0).toUpperCase() + method.slice(1)}
+                                </Label>
+                              </div>
+                            ))}
+                          </RadioGroup>
+                        </div>
+
+                        <div>
+                          <Label>Vencimento do saldo restante</Label>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" className="w-full justify-start mt-1">
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {balanceDueDate ? format(balanceDueDate, 'dd/MM/yyyy', { locale: ptBR }) : 'Selecionar data'}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={balanceDueDate}
+                                onSelect={setBalanceDueDate}
+                                initialFocus
+                                locale={ptBR}
+                                className="pointer-events-auto"
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>
