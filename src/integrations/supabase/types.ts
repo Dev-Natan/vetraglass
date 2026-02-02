@@ -124,6 +124,13 @@ export type Database = {
             foreignKeyName: "accounts_receivable_quote_id_fkey"
             columns: ["quote_id"]
             isOneToOne: false
+            referencedRelation: "quote_financial_status"
+            referencedColumns: ["quote_id"]
+          },
+          {
+            foreignKeyName: "accounts_receivable_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
             referencedRelation: "quotes"
             referencedColumns: ["id"]
           },
@@ -3587,6 +3594,13 @@ export type Database = {
             foreignKeyName: "ordens_servico_quote_id_fkey"
             columns: ["quote_id"]
             isOneToOne: false
+            referencedRelation: "quote_financial_status"
+            referencedColumns: ["quote_id"]
+          },
+          {
+            foreignKeyName: "ordens_servico_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
             referencedRelation: "quotes"
             referencedColumns: ["id"]
           },
@@ -4530,6 +4544,13 @@ export type Database = {
             foreignKeyName: "quote_deposits_quote_id_fkey"
             columns: ["quote_id"]
             isOneToOne: false
+            referencedRelation: "quote_financial_status"
+            referencedColumns: ["quote_id"]
+          },
+          {
+            foreignKeyName: "quote_deposits_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
             referencedRelation: "quotes"
             referencedColumns: ["id"]
           },
@@ -4606,6 +4627,13 @@ export type Database = {
             foreignKeyName: "quote_items_quote_id_fkey"
             columns: ["quote_id"]
             isOneToOne: false
+            referencedRelation: "quote_financial_status"
+            referencedColumns: ["quote_id"]
+          },
+          {
+            foreignKeyName: "quote_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
             referencedRelation: "quotes"
             referencedColumns: ["id"]
           },
@@ -4643,6 +4671,13 @@ export type Database = {
           usou_preco_atual?: boolean
         }
         Relationships: [
+          {
+            foreignKeyName: "quote_price_revisions_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quote_financial_status"
+            referencedColumns: ["quote_id"]
+          },
           {
             foreignKeyName: "quote_price_revisions_quote_id_fkey"
             columns: ["quote_id"]
@@ -5132,6 +5167,13 @@ export type Database = {
             foreignKeyName: "sales_quote_id_fkey"
             columns: ["quote_id"]
             isOneToOne: false
+            referencedRelation: "quote_financial_status"
+            referencedColumns: ["quote_id"]
+          },
+          {
+            foreignKeyName: "sales_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
             referencedRelation: "quotes"
             referencedColumns: ["id"]
           },
@@ -5250,6 +5292,13 @@ export type Database = {
             foreignKeyName: "service_appointments_quote_id_fkey"
             columns: ["quote_id"]
             isOneToOne: false
+            referencedRelation: "quote_financial_status"
+            referencedColumns: ["quote_id"]
+          },
+          {
+            foreignKeyName: "service_appointments_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
             referencedRelation: "quotes"
             referencedColumns: ["id"]
           },
@@ -5358,6 +5407,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "ordens_servico"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_measurements_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quote_financial_status"
+            referencedColumns: ["quote_id"]
           },
           {
             foreignKeyName: "site_measurements_quote_id_fkey"
@@ -6053,6 +6109,63 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      quote_financial_status: {
+        Row: {
+          company_id: string | null
+          created_at: string | null
+          customer_name: string | null
+          financial_status: string | null
+          pending_amount: number | null
+          quote_id: string | null
+          quote_number: number | null
+          quote_status: string | null
+          quote_total: number | null
+          total_deposits: number | null
+          total_sold: number | null
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string | null
+          customer_name?: string | null
+          financial_status?: never
+          pending_amount?: never
+          quote_id?: string | null
+          quote_number?: number | null
+          quote_status?: string | null
+          quote_total?: number | null
+          total_deposits?: never
+          total_sold?: never
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string | null
+          customer_name?: string | null
+          financial_status?: never
+          pending_amount?: never
+          quote_id?: string | null
+          quote_number?: number | null
+          quote_status?: string | null
+          quote_total?: number | null
+          total_deposits?: never
+          total_sold?: never
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {

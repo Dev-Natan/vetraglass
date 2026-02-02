@@ -255,13 +255,46 @@ export default function CaixaVendas() {
     enabled: !!currentCompany?.id,
   });
 
-  const { data: approvedQuotes = [] } = useQuery({
-    queryKey: ['approved-quotes', currentCompany?.id],
+  // Buscar orçamentos aprovados com status financeiro (usando VIEW)
+  const { data: approvedQuotesWithFinancial = [] } = useQuery({
+    queryKey: ['approved-quotes-financial', currentCompany?.id],
     queryFn: async () => {
       if (!currentCompany?.id) return [];
-      const { data, error } = await supabase.from('quotes').select(`id, quote_number, customer_name, total_amount, final_amount, status, created_at, quote_items (id, description, quantity, unit_price, total_price, width, height, company_product_id, product_template_id)`).eq('company_id', currentCompany.id).eq('status', 'approved').order('created_at', { ascending: false });
-      if (error) throw error;
-      return data || [];
+      
+      // Buscar status financeiro da VIEW
+      const { data: financialData, error: financialError } = await supabase
+        .from('quote_financial_status')
+        .select('*')
+        .eq('company_id', currentCompany.id)
+        .gt('pending_amount', 0) // Apenas orçamentos com saldo pendente
+        .order('created_at', { ascending: false });
+      
+      if (financialError) throw financialError;
+      if (!financialData?.length) return [];
+      
+      // Buscar os itens dos orçamentos
+      const quoteIds = financialData.map(q => q.quote_id);
+      const { data: quotesWithItems, error: itemsError } = await supabase
+        .from('quotes')
+        .select(`
+          id, quote_number, customer_name, total_amount, final_amount, status, created_at,
+          quote_items (id, description, quantity, unit_price, total_price, width, height, company_product_id, product_template_id)
+        `)
+        .in('id', quoteIds);
+      
+      if (itemsError) throw itemsError;
+      
+      // Mesclar dados financeiros com itens
+      return (quotesWithItems || []).map(quote => {
+        const financial = financialData.find(f => f.quote_id === quote.id);
+        return {
+          ...quote,
+          total_deposits: financial?.total_deposits || 0,
+          total_sold: financial?.total_sold || 0,
+          pending_amount: financial?.pending_amount || quote.final_amount,
+          financial_status: financial?.financial_status || 'pending',
+        };
+      });
     },
     enabled: !!currentCompany?.id,
   });
@@ -671,7 +704,7 @@ export default function CaixaVendas() {
         isLoading={openCashMutation.isPending} 
       />
       <FecharCaixaDialog open={fecharCaixaOpen} onOpenChange={setFecharCaixaOpen} onConfirm={handleSubmitForAudit} summary={cashSummary} companyCash={companyCash} cashRegisterId={openCashRegister?.id} isLoading={isSubmittingForAudit} />
-      <NovaVendaDialog open={novaVendaOpen} onOpenChange={setNovaVendaOpen} onConfirm={(data) => newSaleMutation.mutateAsync(data)} availableItems={availableItems} approvedQuotes={approvedQuotes} isLoading={newSaleMutation.isPending} />
+      <NovaVendaDialog open={novaVendaOpen} onOpenChange={setNovaVendaOpen} onConfirm={(data) => newSaleMutation.mutateAsync(data)} availableItems={availableItems} approvedQuotes={approvedQuotesWithFinancial} isLoading={newSaleMutation.isPending} />
       <CancelarVendaDialog open={cancelarVendaOpen} onOpenChange={setCancelarVendaOpen} sale={selectedSale} onConfirm={(saleId, reason) => cancelSaleMutation.mutateAsync({ saleId, reason })} isLoading={cancelSaleMutation.isPending} />
       <DetalhesVendaDialog open={detalhesVendaOpen} onOpenChange={setDetalhesVendaOpen} sale={selectedSale} onPrint={handlePrintReceipt} />
 

@@ -59,6 +59,11 @@ interface Quote {
   status: string;
   created_at: string;
   quote_items?: QuoteItem[];
+  // Campos financeiros da VIEW
+  total_deposits?: number;
+  total_sold?: number;
+  pending_amount?: number;
+  financial_status?: 'pending' | 'partially_paid' | 'fully_paid' | string;
 }
 
 interface QuoteItem {
@@ -363,8 +368,40 @@ export function NovaVendaDialog({
 
   // Select quote and load items (orcamento mode)
   const selectQuote = (quote: Quote) => {
+    // Verificar se já está totalmente pago (não deveria chegar aqui, mas por segurança)
+    if (quote.financial_status === 'fully_paid') {
+      toast.error('Este orçamento já foi totalmente faturado. Não é possível faturar novamente.');
+      return;
+    }
+    
     setSelectedQuote(quote);
     setCustomerName(quote.customer_name);
+    
+    // Calcular saldo pendente real
+    const pendingAmount = quote.pending_amount ?? quote.final_amount;
+    const totalDeposits = quote.total_deposits ?? 0;
+    const totalSold = quote.total_sold ?? 0;
+    
+    // Alertar se já tem entrada/vendas anteriores
+    if (totalDeposits > 0 || totalSold > 0) {
+      const messages = [];
+      if (totalDeposits > 0) {
+        messages.push(`Entrada recebida: ${formatCurrency(totalDeposits)}`);
+      }
+      if (totalSold > 0) {
+        messages.push(`Já faturado: ${formatCurrency(totalSold)}`);
+      }
+      messages.push(`Saldo disponível: ${formatCurrency(pendingAmount)}`);
+      
+      toast.warning(
+        `⚠️ Este orçamento possui pagamentos anteriores.\n${messages.join('\n')}`,
+        { duration: 6000 }
+      );
+    }
+    
+    // Carregar itens ajustados proporcionalmente ao saldo pendente
+    const totalOriginal = quote.final_amount;
+    const ratio = pendingAmount / totalOriginal;
     
     const vendaItems: VendaItem[] = (quote.quote_items || []).map(qi => ({
       id: crypto.randomUUID(),
@@ -373,8 +410,8 @@ export function NovaVendaDialog({
       name: qi.description,
       unit: 'm²',
       quantity: qi.quantity,
-      unitPrice: qi.unit_price,
-      totalPrice: qi.total_price,
+      unitPrice: qi.unit_price * ratio, // Ajustar preço proporcionalmente
+      totalPrice: qi.total_price * ratio, // Ajustar total proporcionalmente
       width: qi.width || undefined,
       height: qi.height || undefined,
       isProduct: !!(qi.company_product_id || qi.product_template_id),
@@ -659,30 +696,72 @@ export function NovaVendaDialog({
                       ) : (
                         <ScrollArea className="h-[200px]">
                           <div className="space-y-2 pr-4">
-                            {approvedQuotes.map((quote) => (
-                              <div 
-                                key={quote.id} 
-                                className="p-4 rounded-lg border cursor-pointer hover:border-primary transition-colors"
-                                onClick={() => selectQuote(quote)}
-                              >
-                                <div className="flex items-center justify-between">
-                                  <div>
-                                    <p className="font-medium">
-                                      Orçamento #{String(quote.quote_number).padStart(4, '0')}
-                                    </p>
-                                    <p className="text-sm text-muted-foreground">
-                                      {quote.customer_name}
-                                    </p>
+                            {approvedQuotes.map((quote) => {
+                              const totalDeposits = quote.total_deposits ?? 0;
+                              const totalSold = quote.total_sold ?? 0;
+                              const pendingAmount = quote.pending_amount ?? quote.final_amount;
+                              const hasPayments = totalDeposits > 0 || totalSold > 0;
+                              
+                              return (
+                                <div 
+                                  key={quote.id} 
+                                  className={`p-4 rounded-lg border cursor-pointer hover:border-primary transition-colors ${
+                                    hasPayments ? 'border-amber-400 bg-amber-50/50 dark:bg-amber-950/20' : ''
+                                  }`}
+                                  onClick={() => selectQuote(quote)}
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div>
+                                      <p className="font-medium">
+                                        Orçamento #{String(quote.quote_number).padStart(4, '0')}
+                                      </p>
+                                      <p className="text-sm text-muted-foreground">
+                                        {quote.customer_name}
+                                      </p>
+                                    </div>
+                                    <div className="text-right">
+                                      {hasPayments ? (
+                                        <>
+                                          <p className="text-xs text-muted-foreground line-through">
+                                            {formatCurrency(quote.final_amount)}
+                                          </p>
+                                          <p className="font-semibold text-primary">
+                                            {formatCurrency(pendingAmount)}
+                                          </p>
+                                        </>
+                                      ) : (
+                                        <p className="font-semibold text-primary">
+                                          {formatCurrency(quote.final_amount)}
+                                        </p>
+                                      )}
+                                      <Badge variant="secondary">{quote.quote_items?.length || 0} itens</Badge>
+                                    </div>
                                   </div>
-                                  <div className="text-right">
-                                    <p className="font-semibold text-primary">
-                                      {formatCurrency(quote.final_amount)}
-                                    </p>
-                                    <Badge variant="secondary">{quote.quote_items?.length || 0} itens</Badge>
-                                  </div>
+                                  
+                                  {/* Alerta visual para orçamentos com pagamentos */}
+                                  {hasPayments && (
+                                    <div className="mt-3 p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 space-y-1">
+                                      {totalDeposits > 0 && (
+                                        <div className="flex items-center justify-between text-xs">
+                                          <span className="text-amber-800 dark:text-amber-200">🟡 Entrada recebida</span>
+                                          <span className="font-medium text-amber-900 dark:text-amber-100">{formatCurrency(totalDeposits)}</span>
+                                        </div>
+                                      )}
+                                      {totalSold > 0 && (
+                                        <div className="flex items-center justify-between text-xs">
+                                          <span className="text-blue-800 dark:text-blue-200">🔵 Já faturado</span>
+                                          <span className="font-medium text-blue-900 dark:text-blue-100">{formatCurrency(totalSold)}</span>
+                                        </div>
+                                      )}
+                                      <div className="flex items-center justify-between text-xs pt-1 border-t border-amber-300/50">
+                                        <span className="text-green-800 dark:text-green-200 font-medium">🟢 Saldo disponível</span>
+                                        <span className="font-bold text-green-900 dark:text-green-100">{formatCurrency(pendingAmount)}</span>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </ScrollArea>
                       )}
@@ -703,6 +782,47 @@ export function NovaVendaDialog({
                           Trocar
                         </Button>
                       </div>
+                      
+                      {/* Resumo financeiro do orçamento selecionado */}
+                      {(() => {
+                        const totalDeposits = selectedQuote.total_deposits ?? 0;
+                        const totalSold = selectedQuote.total_sold ?? 0;
+                        const pendingAmount = selectedQuote.pending_amount ?? selectedQuote.final_amount;
+                        const hasPayments = totalDeposits > 0 || totalSold > 0;
+                        
+                        if (!hasPayments) return null;
+                        
+                        return (
+                          <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 space-y-2">
+                            <p className="text-xs font-medium text-amber-700 dark:text-amber-300 flex items-center gap-1">
+                              <DollarSign className="w-3 h-3" />
+                              Resumo Financeiro
+                            </p>
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              <div>
+                                <p className="text-muted-foreground">Valor Original</p>
+                                <p className="font-medium">{formatCurrency(selectedQuote.final_amount)}</p>
+                              </div>
+                              {totalDeposits > 0 && (
+                                <div>
+                                  <p className="text-muted-foreground">Entrada Recebida</p>
+                                  <p className="font-medium text-amber-600">-{formatCurrency(totalDeposits)}</p>
+                                </div>
+                              )}
+                              {totalSold > 0 && (
+                                <div>
+                                  <p className="text-muted-foreground">Já Faturado</p>
+                                  <p className="font-medium text-blue-600">-{formatCurrency(totalSold)}</p>
+                                </div>
+                              )}
+                              <div className="col-span-2 pt-2 border-t border-amber-200 dark:border-amber-700">
+                                <p className="text-muted-foreground">Faturando agora</p>
+                                <p className="font-bold text-lg text-green-600">{formatCurrency(pendingAmount)}</p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
                       
                       <div className="space-y-2">
                         {items.map((item) => (
