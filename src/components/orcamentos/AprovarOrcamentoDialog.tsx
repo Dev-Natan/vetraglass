@@ -74,7 +74,9 @@ interface Quote {
   customer_email: string | null;
   customer_address?: string | null;
   total_amount: number;
-  final_amount: number;
+  discount_percent?: number | null;  // % de desconto aplicado no orçamento
+  discount_amount?: number | null;   // Valor absoluto do desconto
+  final_amount: number;              // Valor final (já com desconto)
   created_at?: string;
 }
 
@@ -176,18 +178,29 @@ export function AprovarOrcamentoDialog({
     : 0;
   const isOldQuote = quoteAgeDays > 30;
 
-  // Calculate final values
+  // Desconto existente do orçamento
+  const quoteDiscountPercent = quote?.discount_percent || 0;
+  const hasExistingDiscount = quoteDiscountPercent > 0;
+
+  // Calculate final values - CORRIGIDO: usar final_amount (com desconto) como base
   const valorBase = useMemo(() => {
     if (useCurrentPrices) {
-      return revisedItems.reduce((sum, item) => {
+      // Recalcular com preços atuais
+      const revisedTotal = revisedItems.reduce((sum, item) => {
         const useCurrentForItem = itemPriceOverrides[item.id] !== false;
         return sum + (useCurrentForItem && item.currentCalculatedTotal 
           ? item.currentCalculatedTotal 
           : item.total_price);
       }, 0);
+      // Reaplicar o desconto % do orçamento original aos preços atuais
+      if (hasExistingDiscount) {
+        return revisedTotal * (1 - quoteDiscountPercent / 100);
+      }
+      return revisedTotal;
     }
-    return totalOriginal;
-  }, [useCurrentPrices, revisedItems, itemPriceOverrides, totalOriginal]);
+    // CORREÇÃO: usar final_amount que JÁ inclui o desconto aplicado na criação
+    return quote?.final_amount || totalOriginal;
+  }, [useCurrentPrices, revisedItems, itemPriceOverrides, totalOriginal, quote, hasExistingDiscount, quoteDiscountPercent]);
 
   const selectedCondicao = condicoesPagamento.find(c => c.id === selectedCondicaoId) || null;
   const paymentCalculation = calculatePayment(valorBase, selectedCondicao);
@@ -220,12 +233,21 @@ export function AprovarOrcamentoDialog({
     }
   }, [formasPagamento, selectedFormaId]);
 
+  // Auto-select payment condition - CORRIGIDO: priorizar condições sem desconto se já existe desconto no orçamento
   useEffect(() => {
     const availableCondicoes = getCondicoesByForma(selectedFormaId);
     if (availableCondicoes.length > 0 && !selectedCondicaoId) {
+      if (hasExistingDiscount) {
+        // Priorizar condição sem desconto adicional
+        const condicaoSemDesconto = availableCondicoes.find(c => c.desconto_percent === 0);
+        if (condicaoSemDesconto) {
+          setSelectedCondicaoId(condicaoSemDesconto.id);
+          return;
+        }
+      }
       setSelectedCondicaoId(availableCondicoes[0].id);
     }
-  }, [selectedFormaId, getCondicoesByForma, selectedCondicaoId]);
+  }, [selectedFormaId, getCondicoesByForma, selectedCondicaoId, hasExistingDiscount]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -709,6 +731,24 @@ export function AprovarOrcamentoDialog({
                 </div>
               )}
 
+              {/* Indicador de desconto existente no orçamento */}
+              {hasExistingDiscount && (
+                <div className="flex items-start gap-3 p-4 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg">
+                  <Percent className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-green-800 dark:text-green-200">
+                      Desconto de {quoteDiscountPercent}% já aplicado no orçamento
+                    </p>
+                    <p className="text-sm text-green-700 dark:text-green-300">
+                      Valor original: {formatCurrency(quote.total_amount)} → Valor com desconto: {formatCurrency(quote.final_amount)}
+                    </p>
+                    <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                      Este desconto será preservado na aprovação. Condições de pagamento com desconto adicional serão cumulativas.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Global price update toggle */}
               <div className="flex items-center justify-between p-4 border rounded-xl bg-card">
                 <div className="flex items-center gap-3">
@@ -1133,27 +1173,61 @@ export function AprovarOrcamentoDialog({
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div className="p-4 border rounded-xl bg-card">
-                    <h3 className="font-semibold mb-4">Resumo do Orçamento</h3>
+                    <h3 className="font-semibold mb-4">Resumo de Valores</h3>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Cliente</span>
                         <span className="font-medium">{quote.customer_name}</span>
                       </div>
+                      
+                      {/* Breakdown completo de descontos */}
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Valor Original</span>
-                        <span>{formatCurrency(totalOriginal)}</span>
+                        <span className="text-muted-foreground">Subtotal (itens)</span>
+                        <span>{formatCurrency(quote.total_amount)}</span>
                       </div>
+                      
+                      {hasExistingDiscount && (
+                        <div className="flex justify-between text-green-600 dark:text-green-400">
+                          <span>Desconto do orçamento ({quoteDiscountPercent}%)</span>
+                          <span>-{formatCurrency(quote.discount_amount || 0)}</span>
+                        </div>
+                      )}
+                      
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Valor com desconto</span>
+                        <span>{formatCurrency(quote.final_amount)}</span>
+                      </div>
+
                       {useCurrentPrices && (
                         <div className="flex justify-between text-primary">
-                          <span>Valor Reajustado</span>
+                          <span>Valor reajustado (preços atuais)</span>
                           <span className="font-medium">{formatCurrency(valorBase)}</span>
                         </div>
                       )}
+                      
                       <Separator />
+                      
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Condição</span>
+                        <span className="text-muted-foreground">Condição de pagamento</span>
                         <span>{selectedCondicao?.nome || '-'}</span>
                       </div>
+                      
+                      {paymentCalculation.desconto > 0 && (
+                        <div className="flex justify-between text-green-600 dark:text-green-400">
+                          <span>Desconto condição ({selectedCondicao?.desconto_percent}%)</span>
+                          <span>-{formatCurrency(paymentCalculation.desconto)}</span>
+                        </div>
+                      )}
+                      
+                      {paymentCalculation.juros > 0 && (
+                        <div className="flex justify-between text-amber-600 dark:text-amber-400">
+                          <span>Juros condição ({selectedCondicao?.juros_percent}%)</span>
+                          <span>+{formatCurrency(paymentCalculation.juros)}</span>
+                        </div>
+                      )}
+                      
+                      <Separator />
+                      
                       <div className="flex justify-between font-bold text-lg">
                         <span>Valor Final</span>
                         <span className="text-primary">{formatCurrency(paymentCalculation.valorFinal)}</span>
