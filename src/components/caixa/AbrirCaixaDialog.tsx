@@ -93,38 +93,14 @@ export function AbrirCaixaDialog({
                 </p>
               </div>
 
-              {/* Explicação da transferência */}
+              {/* Explicação simples */}
               <div className="rounded-lg border bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 p-3">
                 <p className="text-xs text-blue-700 dark:text-blue-400 flex items-start gap-2">
                   <Wallet className="h-4 w-4 mt-0.5 flex-shrink-0" />
                   <span>
-                    Este valor será <strong>retirado</strong> do saldo real da empresa e 
-                    disponibilizado para o caixa do dia.
+                    O caixa será aberto com o valor do fundo fixo configurado.
                   </span>
                 </p>
-              </div>
-
-              {/* Saldo da Empresa - Antes e Depois */}
-              <div className="rounded-lg border bg-muted/50 p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm flex items-center gap-2">
-                    <Wallet className="h-4 w-4 text-primary" />
-                    💰 Saldo atual da empresa
-                  </span>
-                  <span className="font-semibold text-primary">
-                    {formatCurrency(companyBalance)}
-                  </span>
-                </div>
-                {hasEnoughBalance && (
-                  <div className="flex items-center justify-between pt-2 border-t border-dashed">
-                    <span className="text-sm text-muted-foreground">
-                      Saldo após abertura
-                    </span>
-                    <span className="font-semibold">
-                      {formatCurrency(balanceAfterOpening)}
-                    </span>
-                  </div>
-                )}
               </div>
 
               {/* Validação de saldo */}
