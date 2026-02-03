@@ -5,7 +5,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, Lock, Plus, Unlock, TrendingUp, TrendingDown, FileText, Bell, DollarSign, Clock } from 'lucide-react';
+import { ShoppingCart, Lock, Plus, Unlock, TrendingUp, TrendingDown, FileText, ClipboardList, DollarSign } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -32,6 +32,7 @@ import { PendingDepositsAlert } from '@/components/caixa/PendingDepositsAlert';
 import { ReceivePaymentDialog } from '@/components/caixa/ReceivePaymentDialog';
 import { generateSalePdf } from '@/utils/generateSalePdf';
 import { generateDailyCashPdf } from '@/utils/generateDailyCashPdf';
+import { FaturarSaldoDialog } from '@/components/caixa/FaturarSaldoDialog';
 
 interface Sale {
   id: string;
@@ -93,6 +94,19 @@ export default function CaixaVendas() {
     sale_id?: string | null;
     ordem_servico_id?: string | null;
     quote_id?: string | null;
+  } | null>(null);
+
+  // Dialog faturamento de OS concluídas
+  const [faturarDialogOpen, setFaturarDialogOpen] = useState(false);
+  const [osToFaturar, setOsToFaturar] = useState<{
+    id: string;
+    os_number: number;
+    customer_name: string;
+    total_amount: number;
+    paid_amount: number;
+    pending_amount: number;
+    quote_id: string | null;
+    status: string;
   } | null>(null);
 
   // Buscar caixa da empresa (usado para abrir/fechar caixa)
@@ -226,6 +240,25 @@ export default function CaixaVendas() {
     enabled: !!currentCompany?.id,
   });
 
+  // Buscar OS concluídas pendentes de faturamento
+  const { data: completedOSPendingBilling = [] } = useQuery({
+    queryKey: ['completed-os-pending-billing', currentCompany?.id],
+    queryFn: async () => {
+      if (!currentCompany?.id) return [];
+      const { data, error } = await supabase
+        .from('ordens_servico')
+        .select('id, os_number, customer_name, total_amount, paid_amount, pending_amount, quote_id, status, estimated_end, created_at')
+        .eq('company_id', currentCompany.id)
+        .eq('status', 'completed')
+        .is('sale_id', null) // Ainda não foi faturada
+        .gt('pending_amount', 0) // Tem saldo pendente
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!currentCompany?.id,
+  });
   // Removed getDateRange and filteredSales - CaixaVendas now shows only current cash register data
   // Historical sales reports are available in Financeiro > Relatórios
 
@@ -662,6 +695,70 @@ export default function CaixaVendas() {
               disabled={!isCashOpen}
             />
 
+            {/* Serviços Prontos para Faturamento */}
+            {completedOSPendingBilling.length > 0 && (
+              <Card className="border-green-200 dark:border-green-900 bg-green-50/50 dark:bg-green-950/20">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                    <ClipboardList className="h-5 w-5 text-green-600" />
+                    Serviços Prontos para Faturamento
+                    <Badge variant="secondary" className="ml-auto">{completedOSPendingBilling.length}</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                    {completedOSPendingBilling.map((os) => (
+                      <div
+                        key={os.id}
+                        className="p-4 rounded-lg border bg-card hover:shadow-md transition-all"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <p className="font-bold text-sm">
+                              OS #{String(os.os_number).padStart(4, '0')}
+                            </p>
+                            <p className="text-sm text-muted-foreground truncate max-w-[180px]">
+                              {os.customer_name}
+                            </p>
+                          </div>
+                          <Badge variant="outline" className="text-green-600 border-green-300 text-xs">
+                            Concluída
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-between mt-3">
+                          <div>
+                            <p className="text-xs text-muted-foreground">Saldo pendente</p>
+                            <p className="font-semibold text-primary">
+                              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(os.pending_amount)}
+                            </p>
+                          </div>
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              setOsToFaturar({
+                                id: os.id,
+                                os_number: os.os_number,
+                                customer_name: os.customer_name,
+                                total_amount: os.total_amount,
+                                paid_amount: os.paid_amount,
+                                pending_amount: os.pending_amount,
+                                quote_id: os.quote_id,
+                                status: os.status,
+                              });
+                              setFaturarDialogOpen(true);
+                            }}
+                          >
+                            <DollarSign className="w-4 h-4 mr-1" />
+                            Faturar
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Movimentações do Caixa do Dia */}
             <CaixaMovimentacoesTable movements={cashMovements} />
 
@@ -729,6 +826,26 @@ export default function CaixaVendas() {
           queryClient.invalidateQueries({ queryKey: ['cash-summary'] });
         }}
       />
+
+      {/* Dialog Faturar OS Concluída */}
+      {osToFaturar && (
+        <FaturarSaldoDialog
+          open={faturarDialogOpen}
+          onOpenChange={(open) => {
+            setFaturarDialogOpen(open);
+            if (!open) setOsToFaturar(null);
+          }}
+          ordemServico={osToFaturar}
+          onSuccess={() => {
+            setFaturarDialogOpen(false);
+            setOsToFaturar(null);
+            queryClient.invalidateQueries({ queryKey: ['completed-os-pending-billing'] });
+            queryClient.invalidateQueries({ queryKey: ['sales-today'] });
+            queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
+            queryClient.invalidateQueries({ queryKey: ['ordens-servico'] });
+          }}
+        />
+      )}
     </MainLayout>
   );
 }

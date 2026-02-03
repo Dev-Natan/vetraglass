@@ -3,8 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { 
   ClipboardList, Search, Clock, CheckCircle, AlertCircle, 
-  User, Calendar, DollarSign, ChevronRight, Play, XCircle,
-  MoreHorizontal, Eye, AlertTriangle, Trash2, Package, Wrench
+  User, Calendar, ChevronRight, Play, XCircle,
+  MoreHorizontal, Eye, AlertTriangle, Trash2, Wrench
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,7 +43,6 @@ import { consumeOSMaterials } from '@/utils/checkGlassStock';
 import { releaseMaterialsForProduction } from '@/utils/generateMaterialConsumption';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 import { useOSCancellation } from '@/hooks/useOSCancellation';
-import { FaturarSaldoDialog } from '@/components/caixa/FaturarSaldoDialog';
 
 
 type OSStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
@@ -99,10 +98,6 @@ export default function OrdensServico() {
   const [statusFilter, setStatusFilter] = useState<OSStatus | 'all' | 'overdue'>('in_progress');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [osToDelete, setOsToDelete] = useState<string | null>(null);
-  
-  // State para o diálogo de faturamento
-  const [faturarDialogOpen, setFaturarDialogOpen] = useState(false);
-  const [osToComplete, setOsToComplete] = useState<OrdemServico | null>(null);
 
   // Fetch ordens de serviço
   const { data: ordens, isLoading } = useQuery({
@@ -573,16 +568,12 @@ export default function OrdensServico() {
                           {os.status === 'in_progress' && (
                             <Button
                               size="sm"
-                              variant="outline"
+                              variant="default"
                               className="flex-1 gap-1"
-                              onClick={() => {
-                                // Abrir diálogo de faturamento em vez de concluir direto
-                                setOsToComplete(os);
-                                setFaturarDialogOpen(true);
-                              }}
+                              onClick={() => updateStatusMutation.mutate({ id: os.id, status: 'completed' })}
                             >
-                              <DollarSign className="w-3 h-3" />
-                              Faturar e Concluir
+                              <CheckCircle className="w-3 h-3" />
+                              Concluir Serviço
                             </Button>
                           )}
                           <Button
@@ -651,22 +642,6 @@ export default function OrdensServico() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Diálogo de Faturamento - INTEGRAÇÃO DO FLUXO AUTOMÁTICO */}
-      {osToComplete && (
-        <FaturarSaldoDialog
-          open={faturarDialogOpen}
-          onOpenChange={(open) => {
-            setFaturarDialogOpen(open);
-            if (!open) setOsToComplete(null);
-          }}
-          ordemServico={osToComplete}
-          onSuccess={() => {
-            setFaturarDialogOpen(false);
-            setOsToComplete(null);
-            queryClient.invalidateQueries({ queryKey: ['ordens-servico'] });
-          }}
-        />
-      )}
     </MainLayout>
   );
 }

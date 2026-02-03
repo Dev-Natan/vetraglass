@@ -3,8 +3,7 @@ import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { DollarSign, CreditCard, Smartphone, Receipt, User, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
-import { consumeOSMaterials } from '@/utils/checkGlassStock';
+import { DollarSign, CreditCard, Smartphone, Receipt, User, CheckCircle2, AlertCircle, ArrowRight, ClipboardList } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -18,6 +17,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 
 interface OrdemServico {
   id: string;
@@ -27,6 +27,7 @@ interface OrdemServico {
   paid_amount: number;
   pending_amount: number;
   quote_id: string | null;
+  status?: string;
 }
 
 interface FaturarSaldoDialogProps {
@@ -267,17 +268,10 @@ export function FaturarSaldoDialog({
           .eq('status', 'pending');
       }
 
-      // 6. Consumir materiais reservados do estoque
-      const consumeResult = await consumeOSMaterials(ordemServico.id);
-      if (!consumeResult.success) {
-        console.warn('Aviso ao consumir materiais:', consumeResult.error);
-      }
-
-      // 7. Atualizar ordens_servico como concluída
+      // 6. Atualizar ordens_servico (apenas campos financeiros - status já está 'completed')
       const { error: osError } = await supabase
         .from('ordens_servico')
         .update({
-          status: 'completed',
           sale_id: saleId,
           paid_amount: totalOrcamento,
           pending_amount: 0,
@@ -286,7 +280,7 @@ export function FaturarSaldoDialog({
 
       if (osError) throw osError;
 
-      // 8. Atualizar quotes como concluído
+      // 7. Atualizar quotes como concluído
       if (ordemServico.quote_id) {
         await supabase
           .from('quotes')
@@ -347,11 +341,18 @@ export function FaturarSaldoDialog({
             Faturar Saldo - OS #{String(ordemServico.os_number).padStart(4, '0')}
           </DialogTitle>
           <DialogDescription>
-            Finalize o faturamento para concluir a ordem de serviço
+            Finalize o faturamento do serviço concluído
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {/* Badge de OS Concluída */}
+          <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-900">
+            <ClipboardList className="h-4 w-4 text-green-600" />
+            <span className="text-sm text-green-700 dark:text-green-400 font-medium">Serviço Concluído</span>
+            <Badge variant="outline" className="ml-auto text-green-600 border-green-300">Pronto para Faturar</Badge>
+          </div>
+
           {/* Info do Cliente */}
           <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
             <User className="h-5 w-5 text-muted-foreground" />
@@ -443,7 +444,7 @@ export function FaturarSaldoDialog({
             <Alert className="border-green-200 bg-green-50 dark:bg-green-950/20">
               <CheckCircle2 className="h-4 w-4 text-green-600" />
               <AlertDescription className="text-green-700 dark:text-green-400">
-                O valor total já foi recebido via entradas. Clique em "Faturar e Concluir" para finalizar a OS.
+                O valor total já foi recebido via entradas. Clique em "Faturar" para finalizar.
               </AlertDescription>
             </Alert>
           )}
@@ -461,7 +462,7 @@ export function FaturarSaldoDialog({
             onClick={handleConfirm}
             disabled={faturarMutation.isPending || !isCaixaAberto || isLoadingDeposits}
           >
-            {faturarMutation.isPending ? 'Processando...' : 'Faturar e Concluir'}
+            {faturarMutation.isPending ? 'Processando...' : 'Faturar'}
           </Button>
         </DialogFooter>
       </DialogContent>
