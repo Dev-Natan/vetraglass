@@ -301,12 +301,14 @@ export async function cancelStockReservation(
 
 /**
  * Consume stock reservations when completing an OS
- * Also updates material_consumption records to 'consumed'
+ * Also updates material_consumption records to 'consumed' and deducts from physical stock
  */
 export async function consumeOSMaterials(
   ordemServicoId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    const { data: user } = await supabase.auth.getUser();
+
     // Get all active reservations for this OS
     const { data: reservations, error: fetchError } = await supabase
       .from('stock_reservations')
@@ -316,88 +318,166 @@ export async function consumeOSMaterials(
 
     if (fetchError) throw fetchError;
 
-    if (!reservations || reservations.length === 0) {
-      // Even without reservations, mark consumption as consumed
-      await supabase
-        .from('material_consumption')
-        .update({
-          status: 'consumed',
-          consumed_at: new Date().toISOString(),
-        })
-        .eq('ordem_servico_id', ordemServicoId)
-        .in('status', ['pending', 'available']);
-      
-      return { success: true };
-    }
-
-    const { data: user } = await supabase.auth.getUser();
-
-    for (const reservation of reservations) {
-      // 1. Update company_stock quantity
-      const { data: currentStock } = await supabase
-        .from('company_stock')
-        .select('quantity')
-        .eq('company_item_id', reservation.company_item_id)
-        .single();
-
-      if (currentStock) {
-        const newQty = Math.max(0, currentStock.quantity - reservation.quantity_reserved);
-        
-        await supabase
+    // Process reservations if they exist
+    if (reservations && reservations.length > 0) {
+      for (const reservation of reservations) {
+        // 1. Update company_stock quantity
+        const { data: currentStock } = await supabase
           .from('company_stock')
-          .update({ quantity: newQty, updated_at: new Date().toISOString() })
-          .eq('company_item_id', reservation.company_item_id);
-      }
+          .select('quantity')
+          .eq('company_item_id', reservation.company_item_id)
+          .single();
 
-      // 2. Create stock movement record
-      const { data: stockMovement } = await supabase
-        .from('stock_movements')
-        .insert({
-          company_id: reservation.company_id,
-          company_item_id: reservation.company_item_id,
-          type: 'saida',
-          category: 'consumo_producao',
-          quantity: reservation.quantity_reserved,
-          unit_cost: reservation.unit_cost,
-          description: `Consumo para OS`,
-          reference_id: ordemServicoId,
-          reference_type: 'ordem_servico',
-          created_by: user?.user?.id,
-        })
-        .select('id')
-        .single();
+        if (currentStock) {
+          const newQty = Math.max(0, currentStock.quantity - reservation.quantity_reserved);
+          
+          await supabase
+            .from('company_stock')
+            .update({ quantity: newQty, updated_at: new Date().toISOString() })
+            .eq('company_item_id', reservation.company_item_id);
+        }
 
-      // 3. Mark reservation as consumed
-      await supabase
-        .from('stock_reservations')
-        .update({
-          status: 'consumed',
-          consumed_at: new Date().toISOString(),
-        })
-        .eq('id', reservation.id);
+        // 2. Create stock movement record
+        const { data: stockMovement } = await supabase
+          .from('stock_movements')
+          .insert({
+            company_id: reservation.company_id,
+            company_item_id: reservation.company_item_id,
+            type: 'saida',
+            category: 'consumo_producao',
+            quantity: reservation.quantity_reserved,
+            unit_cost: reservation.unit_cost,
+            description: `Consumo para OS`,
+            reference_id: ordemServicoId,
+            reference_type: 'ordem_servico',
+            created_by: user?.user?.id,
+          })
+          .select('id')
+          .single();
 
-      // 4. Update material_consumption linked to this reservation
-      if (stockMovement?.id) {
+        // 3. Mark reservation as consumed
         await supabase
-          .from('material_consumption')
+          .from('stock_reservations')
           .update({
             status: 'consumed',
             consumed_at: new Date().toISOString(),
-            stock_movement_id: stockMovement.id,
           })
-          .eq('stock_reservation_id', reservation.id);
+          .eq('id', reservation.id);
+
+        // 4. Update material_consumption linked to this reservation
+        if (stockMovement?.id) {
+          await supabase
+            .from('material_consumption')
+            .update({
+              status: 'consumed',
+              consumed_at: new Date().toISOString(),
+              stock_movement_id: stockMovement.id,
+            })
+            .eq('stock_reservation_id', reservation.id);
+        }
       }
     }
 
-    // Mark any remaining consumption records as consumed
-    await supabase
+    // === NEW: Process material_consumption records that don't have reservations ===
+    // These are items that need to be deducted directly from stock
+    const { data: pendingConsumption, error: consumptionError } = await supabase
       .from('material_consumption')
-      .update({
-        status: 'consumed',
-        consumed_at: new Date().toISOString(),
-      })
+      .select('*')
       .eq('ordem_servico_id', ordemServicoId)
-      .in('status', ['pending', 'available']);
+      .in('status', ['pending', 'available'])
+      .is('stock_reservation_id', null);
+
+    if (consumptionError) {
+      console.error('Error fetching pending consumption:', consumptionError);
+    }
+
+    if (pendingConsumption && pendingConsumption.length > 0) {
+      for (const consumption of pendingConsumption) {
+        // Find the company_stock to deduct from
+        let stockRecord = null;
+        let companyItemId = consumption.company_item_id;
+
+        // If no company_item_id, try to find via item_template_id
+        if (!companyItemId && consumption.item_template_id) {
+          const { data: companyItem } = await supabase
+            .from('company_items')
+            .select('id')
+            .eq('company_id', consumption.company_id)
+            .eq('item_template_id', consumption.item_template_id)
+            .maybeSingle();
+          
+          if (companyItem) {
+            companyItemId = companyItem.id;
+          }
+        }
+
+        if (companyItemId) {
+          // Get current stock
+          const { data: stock } = await supabase
+            .from('company_stock')
+            .select('id, quantity, company_item_id')
+            .eq('company_item_id', companyItemId)
+            .single();
+
+          stockRecord = stock;
+        }
+
+        if (stockRecord) {
+          // Deduct from stock
+          const newQty = Math.max(0, stockRecord.quantity - consumption.quantity_calculated);
+          
+          await supabase
+            .from('company_stock')
+            .update({ quantity: newQty, updated_at: new Date().toISOString() })
+            .eq('id', stockRecord.id);
+
+          // Get unit cost from company_items
+          const { data: itemData } = await supabase
+            .from('company_items')
+            .select('cost')
+            .eq('id', stockRecord.company_item_id)
+            .single();
+
+          // Create stock movement
+          const { data: stockMovement } = await supabase
+            .from('stock_movements')
+            .insert({
+              company_id: consumption.company_id,
+              company_item_id: stockRecord.company_item_id,
+              type: 'saida',
+              category: 'consumo_producao',
+              quantity: consumption.quantity_calculated,
+              unit_cost: itemData?.cost || 0,
+              description: `Consumo para OS - ${consumption.item_name}`,
+              reference_id: ordemServicoId,
+              reference_type: 'ordem_servico',
+              created_by: user?.user?.id,
+            })
+            .select('id')
+            .single();
+
+          // Update consumption with stock_movement_id
+          await supabase
+            .from('material_consumption')
+            .update({
+              status: 'consumed',
+              consumed_at: new Date().toISOString(),
+              stock_movement_id: stockMovement?.id || null,
+              company_item_id: companyItemId, // Update if it was found via template
+            })
+            .eq('id', consumption.id);
+        } else {
+          // No stock found, just mark as consumed (item might not be in inventory)
+          await supabase
+            .from('material_consumption')
+            .update({
+              status: 'consumed',
+              consumed_at: new Date().toISOString(),
+            })
+            .eq('id', consumption.id);
+        }
+      }
+    }
 
     return { success: true };
   } catch (error) {
