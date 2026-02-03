@@ -163,6 +163,21 @@ export async function generateMaterialConsumption(
         const itemInfo = component.company_items || component.item_templates;
         if (!itemInfo) continue;
 
+        // Ensure company_item_id is populated when item_template_id exists
+        let resolvedCompanyItemId = component.company_item_id;
+        if (!resolvedCompanyItemId && component.item_template_id) {
+          const { data: companyItem } = await supabase
+            .from('company_items')
+            .select('id')
+            .eq('company_id', companyId)
+            .eq('item_template_id', component.item_template_id)
+            .maybeSingle();
+          
+          if (companyItem) {
+            resolvedCompanyItemId = companyItem.id;
+          }
+        }
+
         // Evaluate the quantity formula
         const piecesQty = component.pieces_quantity || 1;
         let calculatedQty = piecesQty * qty;
@@ -192,7 +207,7 @@ export async function generateMaterialConsumption(
           company_id: companyId,
           ordem_servico_id: ordemServicoId,
           quote_item_id: quoteItem.id,
-          company_item_id: component.company_item_id,
+          company_item_id: resolvedCompanyItemId,
           item_template_id: component.item_template_id,
           item_name: itemInfo.name,
           item_type: itemInfo.type,
