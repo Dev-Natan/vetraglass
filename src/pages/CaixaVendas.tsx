@@ -443,11 +443,21 @@ export default function CaixaVendas() {
         }
       }
       
-      // Stock deductions (simplified - kept same logic)
+      // Stock deductions - calcula área em m² para itens com unidade m² (vidros, chaparias)
       const stockDeductions: Map<string, number> = new Map();
       for (const item of data.items) {
         if (item.itemTemplateId && !item.isProduct) {
-          stockDeductions.set(item.itemTemplateId, (stockDeductions.get(item.itemTemplateId) || 0) + item.quantity);
+          // Verificar se é um item de área (m²) - vidro, chaparia, etc.
+          const template = availableItems.find(t => t.id === item.itemTemplateId);
+          let deductionQty = item.quantity;
+          
+          if ((template?.unit === 'm²' || template?.unit === 'm2') && item.width && item.height) {
+            // Calcular área em m²: (largura_mm × altura_mm) / 1.000.000
+            const areaM2 = (item.width / 1000) * (item.height / 1000) * item.quantity;
+            deductionQty = areaM2;
+          }
+          
+          stockDeductions.set(item.itemTemplateId, (stockDeductions.get(item.itemTemplateId) || 0) + deductionQty);
         }
         if (item.isProduct && item.width && item.height) {
           let productTemplateId = item.productTemplateId;
@@ -494,7 +504,19 @@ export default function CaixaVendas() {
       const { data: saleItems } = await supabase.from('sale_items').select('id, item_template_id, company_product_id, quantity, width, height').eq('sale_id', saleId);
       const stockRestorations: Map<string, number> = new Map();
       for (const item of saleItems || []) {
-        if (item.item_template_id && !item.company_product_id) stockRestorations.set(item.item_template_id, (stockRestorations.get(item.item_template_id) || 0) + item.quantity);
+        if (item.item_template_id && !item.company_product_id) {
+          // Verificar se é um item de área (m²) - recalcular área para restaurar corretamente
+          const template = availableItems.find(t => t.id === item.item_template_id);
+          let restoreQty = item.quantity;
+          
+          if ((template?.unit === 'm²' || template?.unit === 'm2') && item.width && item.height) {
+            // Restaurar área em m²: (largura_mm × altura_mm) / 1.000.000
+            const areaM2 = (item.width / 1000) * (item.height / 1000) * item.quantity;
+            restoreQty = areaM2;
+          }
+          
+          stockRestorations.set(item.item_template_id, (stockRestorations.get(item.item_template_id) || 0) + restoreQty);
+        }
         if (item.company_product_id && item.width && item.height) {
           const { data: cp } = await supabase.from('company_products').select('product_template_id').eq('id', item.company_product_id).single();
           if (cp?.product_template_id) {
