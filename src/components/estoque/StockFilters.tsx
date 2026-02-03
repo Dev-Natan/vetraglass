@@ -74,6 +74,7 @@ export const StockFilters = memo(function StockFilters({
             <SelectItem value="all">Todas categorias</SelectItem>
             <SelectItem value="profile">Perfis</SelectItem>
             <SelectItem value="glass">Vidros</SelectItem>
+            <SelectItem value="sheet">Chaparias</SelectItem>
             <SelectItem value="accessory">Acessórios</SelectItem>
             <SelectItem value="service">Serviços</SelectItem>
           </SelectContent>

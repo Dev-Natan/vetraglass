@@ -476,9 +476,28 @@ export default function CaixaVendas() {
           }
         }
       }
+      // Deduzir estoque e registrar movimentações
       for (const [itemTemplateId, deductionQty] of stockDeductions) {
-        const { data: stockItem } = await supabase.from('company_stock').select('id, quantity').eq('company_id', currentCompany.id).eq('item_template_id', itemTemplateId).maybeSingle();
-        if (stockItem) await supabase.from('company_stock').update({ quantity: Math.max(0, stockItem.quantity - deductionQty) }).eq('id', stockItem.id);
+        const { data: stockItem } = await supabase.from('company_stock').select('id, quantity, company_item_id').eq('company_id', currentCompany.id).eq('item_template_id', itemTemplateId).maybeSingle();
+        if (stockItem) {
+          // Atualizar estoque
+          await supabase.from('company_stock').update({ quantity: Math.max(0, stockItem.quantity - deductionQty) }).eq('id', stockItem.id);
+          
+          // Registrar movimento de saída para rastreabilidade
+          await supabase.from('stock_movements').insert({
+            company_id: currentCompany.id,
+            company_item_id: stockItem.company_item_id,
+            item_template_id: itemTemplateId,
+            type: 'saida',
+            category: 'venda_direta',
+            quantity: deductionQty,
+            unit_cost: 0,
+            description: `Venda #${String(sale.sale_number).padStart(4, '0')}`,
+            reference_id: sale.id,
+            reference_type: 'sale',
+            created_by: user.id,
+          });
+        }
       }
       if (data.quoteId) await supabase.from('quotes').update({ status: 'invoiced' }).eq('id', data.quoteId);
       const { data: sellerEmployee } = await supabase.from('employees').select('id, commission_enabled').eq('company_id', currentCompany.id).eq('user_id', user.id).eq('commission_enabled', true).maybeSingle();
@@ -530,9 +549,28 @@ export default function CaixaVendas() {
           }
         }
       }
+      // Restaurar estoque e registrar movimentações de entrada (cancelamento)
       for (const [itemTemplateId, restoreQty] of stockRestorations) {
-        const { data: stockItem } = await supabase.from('company_stock').select('id, quantity').eq('company_id', currentCompany.id).eq('item_template_id', itemTemplateId).maybeSingle();
-        if (stockItem) await supabase.from('company_stock').update({ quantity: stockItem.quantity + restoreQty }).eq('id', stockItem.id);
+        const { data: stockItem } = await supabase.from('company_stock').select('id, quantity, company_item_id').eq('company_id', currentCompany.id).eq('item_template_id', itemTemplateId).maybeSingle();
+        if (stockItem) {
+          // Atualizar estoque
+          await supabase.from('company_stock').update({ quantity: stockItem.quantity + restoreQty }).eq('id', stockItem.id);
+          
+          // Registrar movimento de entrada (estorno por cancelamento)
+          await supabase.from('stock_movements').insert({
+            company_id: currentCompany.id,
+            company_item_id: stockItem.company_item_id,
+            item_template_id: itemTemplateId,
+            type: 'entrada',
+            category: 'estorno_venda',
+            quantity: restoreQty,
+            unit_cost: 0,
+            description: `Cancelamento de venda`,
+            reference_id: saleId,
+            reference_type: 'sale_cancellation',
+            created_by: user?.id || null,
+          });
+        }
       }
       const { data: sale, error } = await supabase.from('sales').update({ payment_status: 'cancelled', notes: reason ? `Cancelado: ${reason}` : 'Venda cancelada' }).eq('id', saleId).select().single();
       if (error) throw error;
