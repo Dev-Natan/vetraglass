@@ -43,6 +43,7 @@ const itemTypeLabels: Record<string, string> = {
   profile: 'Perfil',
   accessory: 'Acessório',
   service: 'Serviço',
+  sheet: 'Chaparia',
 };
 
 export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {

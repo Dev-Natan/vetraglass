@@ -70,8 +70,8 @@ export function GlassTypesTab({
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <CardTitle>Tipos de Vidro</CardTitle>
-          <CardDescription>Vidro Comum, Temperado, Laminado, etc. Arraste para reordenar.</CardDescription>
+        <CardTitle>Tipos de Vidro e Chaparia</CardTitle>
+          <CardDescription>Vidros, espelhos, acrílicos e outros materiais por m². Arraste para reordenar.</CardDescription>
         </div>
         <Button onClick={() => onOpenDialog()}>
           <Plus className="h-4 w-4 mr-2" />
