@@ -1,79 +1,123 @@
 
-# Plano: Mover Faturamento para o Módulo de Caixa
 
-## Resumo da Alteração
+# Plano: Baixa Automática de Estoque ao Faturar/Concluir Serviço
 
-O fluxo atual exige que o faturamento de uma OS seja feito diretamente no módulo de "Ordens de Serviço" ao clicar em "Faturar e Concluir". A alteração proposta separa esses dois passos:
+## Problema Identificado
 
-1. **Concluir OS**: A OS é marcada como "concluída" (serviço finalizado), mas sem faturamento imediato
-2. **Faturar no Caixa**: O orçamento vinculado fica disponível no Caixa para faturamento quando conveniente
+O sistema atual tem uma lacuna no fluxo de baixa de estoque para OS (Ordens de Serviço):
 
-## Novo Fluxo de Trabalho
+1. **Quando OS é concluída** → `consumeOSMaterials()` é chamado
+2. **Se há `stock_reservations`** → Baixa funciona corretamente ✓
+3. **Se NÃO há `stock_reservations`** → Apenas marca `material_consumption` como "consumed", mas **NÃO deduz do estoque físico** ✗
+
+Isso ocorre porque a empresa pode não ter reservado materiais previamente (por falta de estoque no momento da aprovação, ou por ser um produto customizado).
+
+## Fluxo Proposto
 
 ```text
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           FLUXO ATUAL                                       │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  OS Em Andamento ──► Clica "Faturar e Concluir" ──► OS Concluída + Faturada │
-└─────────────────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           NOVO FLUXO                                        │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  OS Em Andamento ──► Clica "Concluir Serviço" ──► OS Concluída              │
-│                                                      │                      │
-│                                                      ▼                      │
-│                            Orçamento disponível no Caixa para Faturamento   │
-│                                                      │                      │
-│                                                      ▼                      │
-│                              Operador do Caixa ──► "Faturar Saldo"          │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    FLUXO DE BAIXA DE ESTOQUE                            │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  1. Orçamento Aprovado → OS Criada                                     │
+│     ↓                                                                   │
+│  2. material_consumption gerado com:                                   │
+│     • item_name, item_type, unit                                       │
+│     • quantity_calculated (via fórmulas)                               │
+│     • company_item_id (se disponível)                                  │
+│     • item_template_id (referência global)                             │
+│     ↓                                                                   │
+│  3. OS Concluída (status = 'completed')                                │
+│     ↓                                                                   │
+│  4. consumeOSMaterials() MELHORADO:                                    │
+│     • Se tem stock_reservations → usa fluxo atual                      │
+│     • Se NÃO tem → busca material_consumption                          │
+│       e deduz diretamente do company_stock                             │
+│       baseado em company_item_id ou item_template_id                   │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
-
----
 
 ## Alterações Técnicas
 
-### 1. Página de Ordens de Serviço (`src/pages/OrdensServico.tsx`)
+### 1. Modificar `consumeOSMaterials()` em `src/utils/checkGlassStock.ts`
 
-**Remover:**
-- Importação e uso do `FaturarSaldoDialog`
-- Estados `faturarDialogOpen` e `osToComplete`
-- O diálogo de faturamento no final do componente
+**Problema atual:** Quando não há reservas, a função apenas marca `material_consumption` como consumed sem deduzir do estoque.
 
-**Alterar:**
-- Botão "Faturar e Concluir" → "Concluir Serviço"
-- Ação do botão: chamar apenas `updateStatusMutation` com status `'completed'`
-- Ícone: trocar `DollarSign` por `CheckCircle`
+**Solução:** Usar os registros de `material_consumption` para calcular e executar a baixa real:
 
-### 2. Página de Caixa (`src/pages/CaixaVendas.tsx`)
+- Buscar todos os registros de `material_consumption` da OS
+- Para cada registro:
+  - Buscar o `company_stock` correspondente via `company_item_id` ou `item_template_id`
+  - Deduzir `quantity_calculated` do estoque
+  - Criar registro em `stock_movements` com categoria `consumo_producao`
+  - Atualizar `material_consumption` com `stock_movement_id`
 
-**Adicionar:**
-- Nova query para buscar **OS concluídas com saldo pendente**
-- Novo card/seção "Serviços Prontos para Faturamento"
-- Lista de OS concluídas que ainda têm saldo a receber
-- Botão "Faturar Saldo" que abre o `FaturarSaldoDialog`
-- Estados para controlar o diálogo de faturamento
+### 2. Garantir que `company_item_id` seja preenchido no `material_consumption`
 
-### 3. Componente FaturarSaldoDialog (`src/components/caixa/FaturarSaldoDialog.tsx`)
+**Problema:** A função `generateMaterialConsumption()` pode não preencher corretamente o `company_item_id`.
 
-**Alterar:**
-- Remover a lógica de mudança de status da OS (já estará concluída)
-- Manter apenas a lógica de criação de venda e movimentação de caixa
-- Atualizar apenas os campos financeiros da OS (`sale_id`, `paid_amount`, `pending_amount`)
+**Verificação necessária:** Garantir que ao gerar consumo:
+- Se `company_product_items` existe → usar `company_item_id` diretamente
+- Se não existe → buscar via `item_template_id` + `company_id`
 
-### 4. Nova Query no Caixa
+### 3. Atualizar `generateMaterialConsumption()` em `src/utils/generateMaterialConsumption.ts`
 
-Buscar ordens de serviço com:
-- `status = 'completed'`
-- `pending_amount > 0` (ainda há saldo a receber)
-- `sale_id IS NULL` (ainda não foi faturada)
+Garantir que o `company_item_id` seja buscado quando a composição vem do template:
 
----
+```typescript
+// Se veio de template sem company_item_id, buscar o item da empresa
+if (!component.company_item_id && component.item_template_id) {
+  const { data: companyItem } = await supabase
+    .from('company_items')
+    .select('id')
+    .eq('company_id', companyId)
+    .eq('item_template_id', component.item_template_id)
+    .maybeSingle();
+  
+  if (companyItem) {
+    component.company_item_id = companyItem.id;
+  }
+}
+```
 
-## Benefícios da Alteração
+## Exemplo Prático
 
-1. **Separação de responsabilidades**: Produção (OS) vs Financeiro (Caixa)
-2. **Flexibilidade**: Serviço pode ser concluído mesmo com caixa fechado
-3. **Controle centralizado**: Todas as operações financeiras passam pelo Caixa
-4. **Privacidade**: Equipe de produção não precisa acessar informações de valores
+**Cenário:** Janela de Correr 2 Folhas - Linha Gold (1000mm x 1000mm)
+- Item componente: LG-052 (perfil)
+- Fórmula: `Largura` → 1000mm = 1 metro
+
+**O que acontece:**
+1. Aprovação gera `material_consumption`:
+   - `item_name: "LG-052"`
+   - `quantity_calculated: 1` (metro)
+   - `company_item_id: "uuid-do-item-empresa"`
+   - `status: "pending"`
+
+2. Quando OS é concluída:
+   - Busca `company_stock` onde `company_item_id = "uuid-do-item-empresa"`
+   - Deduz 1 metro do estoque
+   - Cria `stock_movements` com `quantity: 1, type: "saida", category: "consumo_producao"`
+   - Atualiza `material_consumption.status = "consumed"`
+
+## Arquivos a Modificar
+
+1. **`src/utils/checkGlassStock.ts`**
+   - Expandir `consumeOSMaterials()` para deduzir estoque diretamente de `material_consumption`
+   - Adicionar fallback via `item_template_id` quando `company_item_id` não está presente
+
+2. **`src/utils/generateMaterialConsumption.ts`**
+   - Garantir que `company_item_id` seja preenchido quando o item da empresa existe
+
+## Considerações de Segurança
+
+- A baixa só ocorre quando a OS é marcada como "completed"
+- O cancelamento da OS continua bloqueado se materiais já foram consumidos
+- Movimentos são rastreáveis via `stock_movements` com `reference_type = 'ordem_servico'`
+
+## Impacto
+
+- **Produção**: Equipe pode concluir serviços sabendo que o estoque será atualizado automaticamente
+- **Financeiro**: Relatórios de custo de materiais refletirão consumo real
+- **Estoque**: Quantidades em tempo real, sem necessidade de ajustes manuais
+
