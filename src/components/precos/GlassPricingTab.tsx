@@ -190,9 +190,9 @@ export function GlassPricingTab() {
       {/* Header with save button */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold">Preços de Vidros</h2>
+          <h2 className="text-lg font-semibold">Preços de Vidros e Chaparias</h2>
           <p className="text-sm text-muted-foreground">
-            Configure preços por m² para cada combinação de tipo, cor e espessura
+            Configure preços por m² para cada combinação de tipo, cor e espessura (vidros, espelhos, acrílicos, etc.)
           </p>
         </div>
         {hasChanges && (
