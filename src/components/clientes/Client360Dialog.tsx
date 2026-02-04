@@ -127,7 +127,7 @@ export function Client360Dialog({ open, onOpenChange, client, onSave, isLoading 
 
   const isEditing = !!client?.id;
 
-  const FormFields = () => (
+  const formFields = (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div className="md:col-span-2">
         <Label htmlFor="name">Nome *</Label>
@@ -298,7 +298,7 @@ export function Client360Dialog({ open, onOpenChange, client, onSave, isLoading 
 
             <TabsContent value="dados" className="mt-4">
               <form onSubmit={handleSubmit} className="space-y-4">
-                <FormFields />
+                {formFields}
                 <div className="flex justify-end gap-2 pt-4">
                   <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                     Cancelar
@@ -313,7 +313,7 @@ export function Client360Dialog({ open, onOpenChange, client, onSave, isLoading 
           </Tabs>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
-            <FormFields />
+            {formFields}
             <div className="flex justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
