@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,12 +17,15 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { TrendingUp, TrendingDown, Package } from 'lucide-react';
+import { useItemTypeLabels } from '@/hooks/useItemTypes';
 
 interface StockItem {
   id: string;
@@ -33,6 +36,8 @@ interface StockItem {
     name: string;
     unit?: string;
     image_url?: string;
+    type?: string;
+    linha?: string;
   };
 }
 
@@ -68,6 +73,7 @@ export function RegistrarMovimentoDialog({
 }: RegistrarMovimentoDialogProps) {
   const { currentCompany, user } = useAuth();
   const queryClient = useQueryClient();
+  const itemTypeLabels = useItemTypeLabels();
   
   const [selectedItem, setSelectedItem] = useState<string>('');
   const [quantidade, setQuantidade] = useState<string>('');
@@ -78,6 +84,25 @@ export function RegistrarMovimentoDialog({
   const motivos = isEntrada ? motivosEntrada : motivosSaida;
 
   const selectedStockItem = stockItems.find(item => item.id === selectedItem);
+
+  // Agrupar itens por Linha → Tipo (Categoria) → Item
+  const itemsByLinhaAndType = useMemo(() => {
+    const grouped: Record<string, Record<string, StockItem[]>> = {};
+    
+    stockItems
+      .filter(item => item.item_template)
+      .forEach(item => {
+        const linhaKey = item.item_template?.linha || 'Sem Linha';
+        const typeKey = item.item_template?.type || 'other';
+        
+        if (!grouped[linhaKey]) grouped[linhaKey] = {};
+        if (!grouped[linhaKey][typeKey]) grouped[linhaKey][typeKey] = [];
+        
+        grouped[linhaKey][typeKey].push(item);
+      });
+    
+    return grouped;
+  }, [stockItems]);
 
   const movimentoMutation = useMutation({
     mutationFn: async () => {
@@ -181,32 +206,46 @@ export function RegistrarMovimentoDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Seleção de Item */}
+          {/* Seleção de Item com hierarquia Linha → Categoria → Item */}
           <div className="space-y-2">
             <Label htmlFor="item">Item *</Label>
             <Select value={selectedItem} onValueChange={setSelectedItem}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione um item" />
               </SelectTrigger>
-              <SelectContent>
-                {stockItems.filter(item => item.item_template).map((item) => (
-                  <SelectItem key={item.id} value={item.id}>
-                    <div className="flex items-center gap-2">
-                      {item.item_template?.image_url ? (
-                        <img 
-                          src={item.item_template.image_url} 
-                          alt="" 
-                          className="w-6 h-6 object-contain"
-                        />
-                      ) : (
-                        <Package className="w-4 h-4 text-muted-foreground" />
-                      )}
-                      <span>{item.item_template?.name}</span>
-                      <span className="text-muted-foreground">
-                        (Atual: {item.quantity} {item.item_template?.unit})
-                      </span>
-                    </div>
-                  </SelectItem>
+              <SelectContent className="max-h-[300px]">
+                {Object.keys(itemsByLinhaAndType).sort().map((linhaKey) => (
+                  <SelectGroup key={linhaKey}>
+                    <SelectLabel className="font-bold text-primary bg-muted/50 py-2">
+                      📁 {linhaKey}
+                    </SelectLabel>
+                    {Object.keys(itemsByLinhaAndType[linhaKey]).sort().map((typeKey) => (
+                      <SelectGroup key={`${linhaKey}-${typeKey}`}>
+                        <SelectLabel className="pl-4 text-xs text-muted-foreground font-medium">
+                          {itemTypeLabels[typeKey] || typeKey}
+                        </SelectLabel>
+                        {itemsByLinhaAndType[linhaKey][typeKey].map((item) => (
+                          <SelectItem key={item.id} value={item.id} className="pl-8">
+                            <div className="flex items-center gap-2">
+                              {item.item_template?.image_url ? (
+                                <img 
+                                  src={item.item_template.image_url} 
+                                  alt="" 
+                                  className="w-5 h-5 object-contain"
+                                />
+                              ) : (
+                                <Package className="w-4 h-4 text-muted-foreground" />
+                              )}
+                              <span>{item.item_template?.name}</span>
+                              <span className="text-xs text-muted-foreground">
+                                ({item.quantity} {item.item_template?.unit})
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    ))}
+                  </SelectGroup>
                 ))}
               </SelectContent>
             </Select>
