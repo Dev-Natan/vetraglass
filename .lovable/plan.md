@@ -1,119 +1,138 @@
 
-# Plano: Garantir que Linhas, Categorias e Itens Criados pelo Admin Fiquem Disponíveis em Todo o Sistema
 
-## Diagnóstico do Problema
+# Plano: Permitir que Usuários Criem Seus Próprios Itens
 
-Ao analisar o código, identifiquei a causa raiz:
+## Objetivo
 
-1. O modal **"Registrar Entrada/Saída"** (`RegistrarMovimentoDialog`) extrai as linhas disponíveis a partir do campo `item_template.linha` dos itens **já existentes no estoque**
-2. Se uma linha como "Forro PVC" ou "Chaparia" foi criada pelo admin mas **nenhum item ainda usa essa linha**, ela não aparece nos filtros
-3. Isso contrasta com o `AddStockDialog` que usa corretamente o hook `useProductLinhas()` para buscar **todas as linhas cadastradas oficialmente**
+Dar liberdade aos usuários para criar itens (materiais) personalizados para suas empresas, já que nem todos os itens serão adicionados pelo administrador do sistema. Isso permitirá que cada empresa gerencie os materiais específicos do seu negócio.
 
-**Dados do banco de dados:**
-- `product_linhas`: "Forro PVC", "Chaparia", "Gold", "Suprema", etc.
-- `item_templates.linha`: "Chaparia" (1 item), "Gold" (51 itens), mas "Forro PVC" NÃO existe em nenhum item ainda
+## Contexto Atual
 
-## Solução Proposta
+O sistema já possui a estrutura necessária:
+- A tabela `company_items` tem o campo `is_custom: boolean`
+- A tabela `company_stock` permite `item_template_id` como NULL (para itens sem template global)
+- As políticas RLS já permitem que usuários da empresa façam INSERT/UPDATE/DELETE em `company_items`
+- O padrão `CreateCustomProductDialog` já existe para produtos e pode ser replicado para itens
 
-Modificar o `RegistrarMovimentoDialog` para usar **as linhas oficiais da tabela** (`useProductLinhas`) em vez de extrair das propriedades dos itens. Isso garante que:
+Atualmente, o `AddStockDialog` só permite selecionar itens de templates globais criados pelo admin.
 
-- Toda linha criada pelo admin aparecerá imediatamente nos filtros
-- Consistência em todo o sistema
-- O mesmo padrão já usado em `AddStockDialog`
+## Solução
+
+Criar um componente `CreateCustomItemDialog` que permite aos usuários:
+1. Definir nome, descrição e unidade do item
+2. Selecionar categoria (Perfil, Vidro, Acessório, Serviço, Chaparia) ou criar nova
+3. Selecionar linha de produto ou criar nova
+4. Definir preço de custo e venda
+5. Registrar a compra inicial (entrada no estoque)
 
 ## Mudanças Técnicas
 
-### 1. `src/components/estoque/RegistrarMovimentoDialog.tsx`
+### 1. Criar `CreateCustomItemDialog.tsx`
 
-**Adicionar import do hook:**
-```typescript
-import { useProductLinhas } from '@/hooks/useProductLinhas';
+Novo componente em `src/components/estoque/CreateCustomItemDialog.tsx`:
+
+- Formulário com campos:
+  - Nome do item (obrigatório)
+  - Descrição (opcional)
+  - Categoria/Tipo: Select com opções do banco (`item_types`) + opção "Nova categoria"
+  - Linha: Select com linhas do banco (`product_linhas`) + opção "Nova linha"
+  - Unidade: Select (un, m, m², kg, etc.) - pré-preenchido baseado na categoria
+  - Quantidade inicial (obrigatório)
+  - Custo unitário (obrigatório)
+  - Preço de venda (obrigatório)
+  - Estoque mínimo (opcional)
+  - Dados fiscais (colapsável, opcional)
+
+- Fluxo de salvamento:
+  1. Criar registro em `company_items` com `is_custom: true`, `item_template_id: null`
+  2. Criar registro em `company_stock` com `item_template_id: null`, `company_item_id` vinculado
+  3. Registrar movimento de entrada em `stock_movements`
+
+### 2. Atualizar `AddStockDialog.tsx`
+
+- Adicionar botão "Criar Item Personalizado" no cabeçalho ou na área de filtros
+- Ao clicar, abrir o `CreateCustomItemDialog`
+- Após criar o item, fechar o dialog de criação e atualizar a lista
+
+### 3. Atualizar página `/estoque` (Estoque.tsx)
+
+- Adicionar botão "Novo Item" no header da página (ao lado de "Registrar Compra")
+- Itens customizados aparecem normalmente na listagem com um badge "Personalizado"
+
+### 4. Atualizar componentes de visualização
+
+- `StockItemCard.tsx` e `StockGridView.tsx`: Mostrar badge visual para itens customizados (`is_custom: true`)
+
+## Estrutura do CreateCustomItemDialog
+
+```
+┌─────────────────────────────────────────────────┐
+│  ✨ Criar Item Personalizado                    │
+│  ─────────────────────────────────────────────  │
+│  ⚠️ Itens personalizados são exclusivos        │
+│     da sua empresa.                             │
+│  ─────────────────────────────────────────────  │
+│                                                 │
+│  Nome do Item *                                 │
+│  ┌─────────────────────────────────────────┐   │
+│  │ Ex: Parafuso Especial 5mm                │   │
+│  └─────────────────────────────────────────┘   │
+│                                                 │
+│  ┌──────────────────┐ ┌──────────────────────┐ │
+│  │ Categoria *      │ │ Linha               │ │
+│  │ [Acessório    ▼] │ │ [Suprema         ▼] │ │
+│  │ + Nova categoria │ │ + Nova linha        │ │
+│  └──────────────────┘ └──────────────────────┘ │
+│                                                 │
+│  ┌──────────────────┐ ┌──────────────────────┐ │
+│  │ Unidade *        │ │ Qtd. Inicial *       │ │
+│  │ [un           ▼] │ │ [100              ]  │ │
+│  └──────────────────┘ └──────────────────────┘ │
+│                                                 │
+│  ┌──────────────────┐ ┌──────────────────────┐ │
+│  │ Custo (R$) *     │ │ Venda (R$) *         │ │
+│  │ [0,50          ] │ │ [1,00             ]  │ │
+│  └──────────────────┘ └──────────────────────┘ │
+│                                                 │
+│  ┌──────────────────────────────────────────┐  │
+│  │ Margem: 100% • R$ 0,50 lucro             │  │
+│  └──────────────────────────────────────────┘  │
+│                                                 │
+│  ▸ Dados Fiscais (Opcional)                    │
+│                                                 │
+│  ─────────────────────────────────────────────  │
+│           [Cancelar]  [Criar e Registrar Compra]│
+└─────────────────────────────────────────────────┘
 ```
 
-**Usar o hook para buscar linhas oficiais:**
-```typescript
-// No início do componente:
-const { data: productLinhas } = useProductLinhas();
-```
-
-**Substituir a lógica de extração de linhas:**
-
-ANTES (extrai apenas das propriedades dos itens existentes):
-```typescript
-const availableLinhas = useMemo(() => {
-  const linhas = new Set<string>();
-  stockItems.forEach(item => {
-    if (item.item_template?.linha) {
-      linhas.add(item.item_template.linha);
-    }
-  });
-  return Array.from(linhas).sort();
-}, [stockItems]);
-```
-
-DEPOIS (busca todas as linhas oficiais do banco):
-```typescript
-const availableLinhas = useMemo(() => {
-  // Linhas oficiais da tabela product_linhas
-  const oficialLinhas = productLinhas?.map(l => l.name) || [];
-  
-  // Também incluir linhas existentes nos itens (para compatibilidade com dados legados)
-  const linhasFromItems = new Set<string>();
-  stockItems.forEach(item => {
-    if (item.item_template?.linha) {
-      linhasFromItems.add(item.item_template.linha);
-    }
-  });
-  
-  // Merge: oficiais + legados (sem duplicatas)
-  const allLinhas = new Set([...oficialLinhas, ...linhasFromItems]);
-  return Array.from(allLinhas).sort();
-}, [productLinhas, stockItems]);
-```
-
-### 2. `src/pages/Estoque.tsx` (opcional mas recomendado)
-
-Aplicar o mesmo padrão nos filtros da página principal de Estoque:
-
-**Adicionar import:**
-```typescript
-import { useProductLinhas } from '@/hooks/useProductLinhas';
-```
-
-**Buscar linhas oficiais:**
-```typescript
-const { data: productLinhas } = useProductLinhas();
-
-// Merge linhas oficiais com as existentes em item_templates
-const linhas = useMemo(() => {
-  const oficialLinhas = productLinhas?.map(l => l.name) || [];
-  const uniqueLinhas = new Set<string>();
-  
-  // Adicionar oficiais
-  oficialLinhas.forEach(l => uniqueLinhas.add(l));
-  
-  // Adicionar dos templates (compatibilidade)
-  itemTemplates.forEach((t) => {
-    if (t.linha) uniqueLinhas.add(t.linha);
-  });
-  
-  return Array.from(uniqueLinhas).sort();
-}, [productLinhas, itemTemplates]);
-```
-
-## Resumo das Alterações
+## Arquivos Modificados
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `RegistrarMovimentoDialog.tsx` | Usar `useProductLinhas()` para popular seletor de linhas |
-| `Estoque.tsx` | Usar `useProductLinhas()` no filtro de linhas da página principal |
+| `src/components/estoque/CreateCustomItemDialog.tsx` | **NOVO** - Dialog para criar item personalizado |
+| `src/components/estoque/AddStockDialog.tsx` | Adicionar botão para abrir CreateCustomItemDialog |
+| `src/pages/Estoque.tsx` | Adicionar botão "Novo Item" no header |
+| `src/components/estoque/StockItemCard.tsx` | Badge "Personalizado" para itens customizados |
+| `src/components/estoque/StockGridView.tsx` | Badge "Personalizado" para itens customizados |
+| `src/hooks/useStockData.ts` | Incluir `is_custom` do company_items nos dados |
 
 ## Resultado Esperado
 
 Após as alterações:
-- Toda linha criada pelo admin em `/admin/categories` aparecerá imediatamente nos filtros de:
-  - Modal "Registrar Entrada"
-  - Modal "Registrar Saída"
-  - Filtros da página de Estoque
-- O mesmo padrão será usado em todo o sistema (consistência)
-- Compatibilidade mantida com dados legados (linhas existentes nos item_templates que não estão na tabela oficial)
+
+1. Usuários podem criar itens personalizados diretamente na página de Estoque
+2. Itens customizados aparecem com badge "Personalizado" na lista
+3. Cada empresa tem liberdade de adicionar materiais que usa, sem depender do admin
+4. Os itens customizados funcionam normalmente em:
+   - Registrar Entrada/Saída
+   - Composição de produtos (quando aplicável)
+   - Orçamentos e Ordens de Serviço
+   - Relatórios de estoque
+
+## Benefícios
+
+- **Autonomia**: Empresas não dependem do admin para adicionar materiais
+- **Flexibilidade**: Cada empresa pode ter seu catálogo único de itens
+- **Escalabilidade**: O sistema suporta milhares de itens customizados por empresa
+- **Compatibilidade**: Itens customizados seguem a mesma estrutura dos templates
+
