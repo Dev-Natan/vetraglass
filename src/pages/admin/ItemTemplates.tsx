@@ -46,6 +46,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useItemTypeLabels } from '@/hooks/useItemTypes';
+import { useProductLinhas } from '@/hooks/useProductLinhas';
 
 interface ItemTemplate {
   id: string;
@@ -173,19 +174,9 @@ export default function ItemTemplates() {
   const totalItems = itemsData?.total || 0;
   const totalPages = Math.ceil(totalItems / pageSize);
 
-  // Fetch available lines
-  const { data: availableLines } = useQuery({
-    queryKey: ['item-template-lines'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('item_templates')
-        .select('linha')
-        .not('linha', 'is', null);
-      if (error) throw error;
-      const lines = [...new Set(data.map((d) => d.linha).filter(Boolean))];
-      return lines as string[];
-    },
-  });
+  // Fetch available lines from product_linhas (admin-managed)
+  const { data: productLinhas } = useProductLinhas();
+  const availableLines = productLinhas?.map(l => l.name) || [];
 
   // Filter items is now done server-side, but we keep client-side filtering for immediate UI updates
   const filteredItems = items;
