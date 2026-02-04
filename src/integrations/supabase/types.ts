@@ -121,6 +121,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "accounts_receivable_ordem_servico_id_fkey"
+            columns: ["ordem_servico_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "accounts_receivable_quote_id_fkey"
             columns: ["quote_id"]
             isOneToOne: false
@@ -2937,6 +2944,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "material_consumption_ordem_servico_id_fkey"
+            columns: ["ordem_servico_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "material_consumption_purchase_order_item_id_fkey"
             columns: ["purchase_order_item_id"]
             isOneToOne: false
@@ -3414,6 +3428,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "notas_fiscais_ordem_servico_id_fkey"
+            columns: ["ordem_servico_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "notas_fiscais_sale_id_fkey"
             columns: ["sale_id"]
             isOneToOne: false
@@ -3674,6 +3695,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "os_cutting_plan_ordem_servico_id_fkey"
+            columns: ["ordem_servico_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "os_cutting_plan_product_template_id_fkey"
             columns: ["product_template_id"]
             isOneToOne: false
@@ -3765,6 +3793,13 @@ export type Database = {
             columns: ["ordem_servico_id"]
             isOneToOne: false
             referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_glass_projects_ordem_servico_id_fkey"
+            columns: ["ordem_servico_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico_safe"
             referencedColumns: ["id"]
           },
           {
@@ -3871,6 +3906,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "os_materials_ordem_servico_id_fkey"
+            columns: ["ordem_servico_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "os_materials_purchase_order_item_id_fkey"
             columns: ["purchase_order_item_id"]
             isOneToOne: false
@@ -3933,6 +3975,13 @@ export type Database = {
             columns: ["ordem_servico_id"]
             isOneToOne: false
             referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_photos_ordem_servico_id_fkey"
+            columns: ["ordem_servico_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -4450,6 +4499,13 @@ export type Database = {
             referencedRelation: "ordens_servico"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "purchase_orders_ordem_servico_id_fkey"
+            columns: ["ordem_servico_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       quote_deposits: {
@@ -4538,6 +4594,13 @@ export type Database = {
             columns: ["ordem_servico_id"]
             isOneToOne: false
             referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_deposits_ordem_servico_id_fkey"
+            columns: ["ordem_servico_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico_safe"
             referencedColumns: ["id"]
           },
           {
@@ -5157,6 +5220,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "sales_ordem_servico_id_fkey"
+            columns: ["ordem_servico_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "sales_parent_sale_id_fkey"
             columns: ["parent_sale_id"]
             isOneToOne: false
@@ -5289,6 +5359,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "service_appointments_ordem_servico_id_fkey"
+            columns: ["ordem_servico_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "service_appointments_quote_id_fkey"
             columns: ["quote_id"]
             isOneToOne: false
@@ -5406,6 +5483,13 @@ export type Database = {
             columns: ["ordem_servico_id"]
             isOneToOne: false
             referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_measurements_ordem_servico_id_fkey"
+            columns: ["ordem_servico_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico_safe"
             referencedColumns: ["id"]
           },
           {
@@ -5613,6 +5697,13 @@ export type Database = {
             columns: ["ordem_servico_id"]
             isOneToOne: false
             referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_reservations_ordem_servico_id_fkey"
+            columns: ["ordem_servico_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico_safe"
             referencedColumns: ["id"]
           },
           {
@@ -6085,6 +6176,123 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      ordens_servico_safe: {
+        Row: {
+          actual_end: string | null
+          actual_start: string | null
+          assigned_to: string | null
+          company_id: string | null
+          created_at: string | null
+          current_stage: string | null
+          customer_address: string | null
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          estimated_end: string | null
+          estimated_start: string | null
+          id: string | null
+          notes: string | null
+          os_number: number | null
+          paid_amount: number | null
+          pending_amount: number | null
+          priority: string | null
+          quote_id: string | null
+          sale_id: string | null
+          stages: Json | null
+          status: string | null
+          total_amount: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          actual_end?: string | null
+          actual_start?: string | null
+          assigned_to?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          current_stage?: string | null
+          customer_address?: never
+          customer_email?: never
+          customer_name?: never
+          customer_phone?: never
+          estimated_end?: string | null
+          estimated_start?: string | null
+          id?: string | null
+          notes?: string | null
+          os_number?: number | null
+          paid_amount?: number | null
+          pending_amount?: number | null
+          priority?: string | null
+          quote_id?: string | null
+          sale_id?: string | null
+          stages?: Json | null
+          status?: string | null
+          total_amount?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          actual_end?: string | null
+          actual_start?: string | null
+          assigned_to?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          current_stage?: string | null
+          customer_address?: never
+          customer_email?: never
+          customer_name?: never
+          customer_phone?: never
+          estimated_end?: string | null
+          estimated_start?: string | null
+          id?: string | null
+          notes?: string | null
+          os_number?: number | null
+          paid_amount?: number | null
+          pending_amount?: number | null
+          priority?: string | null
+          quote_id?: string | null
+          sale_id?: string | null
+          stages?: Json | null
+          status?: string | null
+          total_amount?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ordens_servico_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordens_servico_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordens_servico_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quote_financial_status"
+            referencedColumns: ["quote_id"]
+          },
+          {
+            foreignKeyName: "ordens_servico_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordens_servico_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles_safe: {
         Row: {
