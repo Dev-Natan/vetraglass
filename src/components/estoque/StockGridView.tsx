@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Package, AlertTriangle, Power } from 'lucide-react';
+import { Package, AlertTriangle, Power, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { StockItem } from '@/hooks/useStockData';
@@ -29,18 +29,25 @@ const StockGridCard = memo(function StockGridCard({
       }`}
       onClick={() => onEdit(item)}
     >
-      {/* Status Badge */}
-      {isZeroStock && (
-        <Badge variant="destructive" className="absolute top-2 right-2 text-xs">
-          Zerado
-        </Badge>
-      )}
-      {isLowStock && !isZeroStock && (
-        <Badge variant="outline" className="absolute top-2 right-2 text-xs border-amber-500 text-amber-600">
-          <AlertTriangle className="w-3 h-3 mr-1" />
-          Baixo
-        </Badge>
-      )}
+      {/* Status Badges */}
+      <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
+        {item.company_item?.is_custom && (
+          <Badge variant="outline" className="text-xs border-primary/50 text-primary gap-1">
+            <Sparkles className="w-3 h-3" />
+          </Badge>
+        )}
+        {isZeroStock && (
+          <Badge variant="destructive" className="text-xs">
+            Zerado
+          </Badge>
+        )}
+        {isLowStock && !isZeroStock && (
+          <Badge variant="outline" className="text-xs border-amber-500 text-amber-600">
+            <AlertTriangle className="w-3 h-3 mr-1" />
+            Baixo
+          </Badge>
+        )}
+      </div>
 
       {/* Image */}
       <div className="h-20 w-20 rounded-md border bg-white p-2 flex items-center justify-center mb-3">
@@ -58,7 +65,7 @@ const StockGridCard = memo(function StockGridCard({
 
       {/* Name */}
       <p className="font-medium text-sm text-center line-clamp-2 mb-1">
-        {item.item_template?.name ?? `Item`}
+        {item.item_template?.name ?? item.company_item?.name ?? 'Item'}
       </p>
 
       {/* Quantity */}

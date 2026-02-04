@@ -1,6 +1,7 @@
 import { memo } from 'react';
-import { Package, MapPin, DollarSign, Power, Scissors } from 'lucide-react';
+import { Package, MapPin, DollarSign, Power, Scissors, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import type { StockItem } from '@/hooks/useStockData';
 
 const itemTypeLabels: Record<string, string> = {
@@ -48,10 +49,16 @@ export const StockItemCard = memo(function StockItemCard({
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 min-w-0 flex-wrap">
-            <p className="font-medium truncate">{item.item_template?.name ?? `Item (${item.item_template_id})`}</p>
+            <p className="font-medium truncate">{item.item_template?.name ?? item.company_item?.name ?? 'Item'}</p>
             <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0">
-              {itemTypeLabels[item.item_template?.type || ''] || item.item_template?.type}
+              {itemTypeLabels[item.item_template?.type || item.company_item?.type || ''] || item.item_template?.type || item.company_item?.type}
             </span>
+            {item.company_item?.is_custom && (
+              <Badge variant="outline" className="text-xs border-primary/50 text-primary shrink-0 gap-1">
+                <Sparkles className="w-3 h-3" />
+                Personalizado
+              </Badge>
+            )}
             {item.allow_fractional && (
               <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary shrink-0 flex items-center gap-1" title="Venda fracionada habilitada">
                 <Scissors className="w-3 h-3" />

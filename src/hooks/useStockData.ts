@@ -4,7 +4,8 @@ import { useMemo } from 'react';
 
 export interface StockItem {
   id: string;
-  item_template_id: string;
+  item_template_id: string | null;
+  company_item_id: string | null;
   company_id: string;
   quantity: number;
   min_quantity: number | null;
@@ -18,6 +19,17 @@ export interface StockItem {
     unit: string;
     image_url: string | null;
     linha: string | null;
+  } | null;
+  company_item?: {
+    id: string;
+    name: string;
+    type: string;
+    unit: string;
+    image_url: string | null;
+    linha: string | null;
+    is_custom: boolean;
+    cost: number | null;
+    sale_price: number | null;
   } | null;
   priceInfo?: {
     id: string;
@@ -70,7 +82,7 @@ export function useStockData({ companyId }: UseStockDataOptions): StockDataResul
       
       const { data, error } = await supabase
         .from('company_stock')
-        .select('id, item_template_id, company_id, quantity, min_quantity, location, is_active, allow_fractional')
+        .select('id, item_template_id, company_item_id, company_id, quantity, min_quantity, location, is_active, allow_fractional')
         .eq('company_id', companyId)
         .order('created_at', { ascending: false });
 
@@ -79,6 +91,25 @@ export function useStockData({ companyId }: UseStockDataOptions): StockDataResul
     },
     enabled: !!companyId,
     staleTime: 30000, // 30 seconds
+  });
+
+  // Fetch company items (includes custom items)
+  const companyItemsQuery = useQuery({
+    queryKey: ['company-items', companyId],
+    queryFn: async () => {
+      if (!companyId) return [];
+      
+      const { data, error } = await supabase
+        .from('company_items')
+        .select('id, name, type, unit, image_url, linha, is_custom, cost, sale_price')
+        .eq('company_id', companyId)
+        .eq('is_active', true);
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!companyId,
+    staleTime: 30000,
   });
 
   const templatesQuery = useQuery({
@@ -112,19 +143,21 @@ export function useStockData({ companyId }: UseStockDataOptions): StockDataResul
     staleTime: 30000,
   });
 
-  // Combine and memoize stock items with templates and prices
+  // Combine and memoize stock items with templates, company items, and prices
   const stockItems = useMemo<StockItem[]>(() => {
-    if (!stockQuery.data || !templatesQuery.data) return [];
+    if (!stockQuery.data) return [];
     
-    const templatesMap = new Map(templatesQuery.data.map(t => [t.id, t]));
+    const templatesMap = new Map(templatesQuery.data?.map(t => [t.id, t]) || []);
+    const companyItemsMap = new Map(companyItemsQuery.data?.map(ci => [ci.id, ci]) || []);
     const pricesMap = new Map(pricesQuery.data?.map(p => [p.item_template_id, p]) || []);
     
     return stockQuery.data.map((stock) => ({
       ...stock,
-      item_template: templatesMap.get(stock.item_template_id) || null,
-      priceInfo: pricesMap.get(stock.item_template_id) || null,
+      item_template: stock.item_template_id ? templatesMap.get(stock.item_template_id) || null : null,
+      company_item: stock.company_item_id ? companyItemsMap.get(stock.company_item_id) || null : null,
+      priceInfo: stock.item_template_id ? pricesMap.get(stock.item_template_id) || null : null,
     }));
-  }, [stockQuery.data, templatesQuery.data, pricesQuery.data]);
+  }, [stockQuery.data, templatesQuery.data, companyItemsQuery.data, pricesQuery.data]);
 
   // Memoized filtered lists
   const activeItems = useMemo(
@@ -148,9 +181,9 @@ export function useStockData({ companyId }: UseStockDataOptions): StockDataResul
   const kpis = useMemo(() => {
     const totalItems = activeItems.length;
     
-    // Calculate total value (quantity × cost)
+    // Calculate total value (quantity × cost) - prefer company_item cost for custom items
     const totalValue = activeItems.reduce((acc, item) => {
-      const cost = item.priceInfo?.cost || 0;
+      const cost = item.company_item?.cost || item.priceInfo?.cost || 0;
       return acc + (item.quantity * cost);
     }, 0);
     
@@ -166,8 +199,8 @@ export function useStockData({ companyId }: UseStockDataOptions): StockDataResul
     };
   }, [activeItems, lowStockItems]);
 
-  const isLoading = stockQuery.isLoading || templatesQuery.isLoading || pricesQuery.isLoading;
-  const error = stockQuery.error || templatesQuery.error || pricesQuery.error;
+  const isLoading = stockQuery.isLoading || templatesQuery.isLoading || pricesQuery.isLoading || companyItemsQuery.isLoading;
+  const error = stockQuery.error || templatesQuery.error || pricesQuery.error || companyItemsQuery.error;
 
   return {
     stockItems,

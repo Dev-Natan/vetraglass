@@ -3,11 +3,12 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Boxes, TrendingDown, TrendingUp, ShoppingCart, History, Plus } from 'lucide-react';
+import { Boxes, TrendingDown, TrendingUp, ShoppingCart, History, Plus, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AddStockDialog } from '@/components/estoque/AddStockDialog';
 import { EditItemPriceDialog } from '@/components/estoque/EditItemPriceDialog';
 import { RegistrarMovimentoDialog } from '@/components/estoque/RegistrarMovimentoDialog';
+import { CreateCustomItemDialog } from '@/components/estoque/CreateCustomItemDialog';
 import { HistoricoMovimentosTab } from '@/components/estoque/HistoricoMovimentosTab';
 import { StockItemCard } from '@/components/estoque/StockItemCard';
 import { StockKPIs } from '@/components/estoque/StockKPIs';
@@ -45,6 +46,7 @@ export default function Estoque() {
   const [priceDialogOpen, setPriceDialogOpen] = useState(false);
   const [entradaDialogOpen, setEntradaDialogOpen] = useState(false);
   const [saidaDialogOpen, setSaidaDialogOpen] = useState(false);
+  const [createCustomItemDialogOpen, setCreateCustomItemDialogOpen] = useState(false);
   const [mainTab, setMainTab] = useState('estoque');
   const [selectedItem, setSelectedItem] = useState<{
     id: string;
@@ -226,18 +228,22 @@ export default function Estoque() {
             </h1>
             <p className="text-muted-foreground">Controle de entradas e saídas</p>
           </div>
-          <div data-tutorial="estoque-acoes" className="flex gap-2">
+          <div data-tutorial="estoque-acoes" className="flex flex-wrap gap-2">
+            <Button variant="outline" className="gap-2" onClick={() => setCreateCustomItemDialogOpen(true)}>
+              <Sparkles className="w-4 h-4" />
+              <span className="hidden sm:inline">Novo Item</span>
+            </Button>
             <Button variant="outline" className="gap-2" onClick={() => setSaidaDialogOpen(true)}>
               <TrendingDown className="w-4 h-4" />
-              Registrar Saída
+              <span className="hidden sm:inline">Registrar Saída</span>
             </Button>
             <Button variant="outline" className="gap-2" onClick={() => setEntradaDialogOpen(true)}>
               <TrendingUp className="w-4 h-4" />
-              Registrar Entrada
+              <span className="hidden sm:inline">Registrar Entrada</span>
             </Button>
             <Button className="gap-2" onClick={() => setAddDialogOpen(true)}>
               <ShoppingCart className="w-4 h-4" />
-              Registrar Compra
+              <span className="hidden sm:inline">Registrar Compra</span>
             </Button>
           </div>
         </div>
@@ -446,6 +452,11 @@ export default function Estoque() {
             linha: item.item_template.linha,
           } : undefined,
         }))}
+      />
+
+      <CreateCustomItemDialog
+        open={createCustomItemDialogOpen}
+        onOpenChange={setCreateCustomItemDialogOpen}
       />
     </MainLayout>
   );
