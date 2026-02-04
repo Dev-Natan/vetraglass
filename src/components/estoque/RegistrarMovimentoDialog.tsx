@@ -26,6 +26,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { TrendingUp, TrendingDown, Package, Search, FolderOpen, Check, Layers, ChevronDown, ChevronRight } from 'lucide-react';
 import { useItemTypeLabels } from '@/hooks/useItemTypes';
+import { useProductLinhas } from '@/hooks/useProductLinhas';
 import { cn } from '@/lib/utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
@@ -78,6 +79,7 @@ export function RegistrarMovimentoDialog({
   const { currentCompany, user } = useAuth();
   const queryClient = useQueryClient();
   const { labels: itemTypeLabels } = useItemTypeLabels();
+  const { data: productLinhas } = useProductLinhas();
   
   const [selectedItem, setSelectedItem] = useState<string>('');
   const [quantidade, setQuantidade] = useState<string>('');
@@ -105,16 +107,23 @@ export function RegistrarMovimentoDialog({
     });
   }, [stockItems, searchTerm, selectedLinha, selectedCategoria]);
 
-  // Extrair linhas únicas
+  // Buscar linhas oficiais da tabela + linhas existentes nos itens (compatibilidade)
   const availableLinhas = useMemo(() => {
-    const linhas = new Set<string>();
+    // Linhas oficiais da tabela product_linhas
+    const oficialLinhas = productLinhas?.map(l => l.name) || [];
+    
+    // Também incluir linhas existentes nos itens (para compatibilidade com dados legados)
+    const linhasFromItems = new Set<string>();
     stockItems.forEach(item => {
       if (item.item_template?.linha) {
-        linhas.add(item.item_template.linha);
+        linhasFromItems.add(item.item_template.linha);
       }
     });
-    return Array.from(linhas).sort();
-  }, [stockItems]);
+    
+    // Merge: oficiais + legados (sem duplicatas)
+    const allLinhas = new Set([...oficialLinhas, ...linhasFromItems]);
+    return Array.from(allLinhas).sort();
+  }, [productLinhas, stockItems]);
 
   // Extrair categorias únicas baseadas na linha selecionada
   const availableCategorias = useMemo(() => {
