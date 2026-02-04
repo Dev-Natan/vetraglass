@@ -10,6 +10,8 @@ export default defineConfig(({ mode }) => ({
     // react-leaflet + leaflet sometimes get stuck in Vite prebundle cache, causing
     // runtime Context errors after version changes. Excluding forces normal ESM loading.
     exclude: ['react-leaflet', '@react-leaflet/core', 'leaflet'],
+    // Ensure @tanstack/react-query is properly pre-bundled
+    include: ['@tanstack/react-query'],
   },
   server: {
     host: "::",
@@ -25,5 +27,7 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+    // Prevent duplicate React instances - fixes "Should have a queue" error
+    dedupe: ['react', 'react-dom', 'react/jsx-runtime'],
   },
 }));
