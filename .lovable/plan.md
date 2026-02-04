@@ -1,53 +1,173 @@
 
-# Adicionar Suporte a "Chaparia" (sheet) no Estoque
+# Corrigir Categorias do Admin e Hierarquia de Itens
 
-## Diagnóstico do Problema
+## Diagnóstico
 
-A linha "Chaparia" foi criada na interface, mas o sistema de estoque não permite cadastrar itens desse tipo porque:
+### Problema 1: Categorias criadas no Admin não refletem no sistema
 
-1. **A linha "Chaparia"** já existe na tabela `product_linhas` ✓
-2. **O tipo "sheet"** já existe na tabela dinâmica `item_types` ✓
-3. **O ENUM `item_type`** no banco de dados NÃO contém o valor `sheet` ✗
+O filtro de categorias no estoque (`StockFilters.tsx`) usa valores **hardcoded**:
 
-O ENUM atual só aceita: `glass`, `profile`, `accessory`, `service`
+```tsx
+// ATUAL - Valores fixos no código
+<SelectItem value="profile">Perfis</SelectItem>
+<SelectItem value="glass">Vidros</SelectItem>
+<SelectItem value="sheet">Chaparias</SelectItem>
+<SelectItem value="accessory">Acessórios</SelectItem>
+<SelectItem value="service">Serviços</SelectItem>
+```
+
+Ao invés de usar os tipos dinâmicos da tabela `item_types` que o admin gerencia.
+
+---
+
+### Problema 2: Hierarquia Linha → Categoria → Item
+
+Atualmente o `AddStockDialog.tsx` agrupa itens apenas por **Linha**:
+
+```
+Suprema/
+├── Perfil SU-001
+├── Perfil SU-007
+└── Vidro Incolor
+
+Temperados/
+├── Vidro Fumê
+└── Vidro Verde
+```
+
+O usuário quer a hierarquia completa:
+
+```
+Suprema/
+├── Perfis/
+│   ├── Perfil SU-001
+│   └── Perfil SU-007
+└── Vidros/
+    └── Vidro Incolor
+
+Temperados/
+├── Vidros/
+│   ├── Vidro Fumê
+│   └── Vidro Verde
+```
 
 ---
 
 ## Solução
 
-Adicionar o valor `sheet` ao ENUM `item_type` do PostgreSQL para permitir o cadastro de itens do tipo Chaparia.
+### 1. Tornar o filtro de categorias dinâmico no Estoque
+
+**Arquivo**: `src/components/estoque/StockFilters.tsx`
+
+Atualmente o componente recebe `linhas` como props mas não recebe `itemTypes`. Vamos:
+
+1. Adicionar nova prop `itemTypes` ao componente
+2. Renderizar dinamicamente as categorias a partir dos tipos do banco
+3. Usar as labels e cores dinâmicas
+
+### 2. Atualizar a página de Estoque para passar os tipos
+
+**Arquivo**: `src/pages/Estoque.tsx`
+
+1. Importar e usar o hook `useItemTypes`
+2. Passar os tipos dinâmicos para `StockFilters`
+
+### 3. Implementar hierarquia Linha → Tipo → Item no AddStockDialog
+
+**Arquivo**: `src/components/estoque/AddStockDialog.tsx`
+
+1. Modificar o agrupamento para usar dois níveis
+2. Primeiro agrupar por Linha
+3. Dentro de cada Linha, agrupar por Tipo (usando o hook `useItemTypes` para labels)
+4. Exibir os itens dentro de cada Tipo
 
 ---
-## Criar categorias chaparia para produtos
-## mover produtos do tipo espelho da linha temperado para a linha chaparia
-## Alteração no Banco de Dados
 
-Uma única migração SQL para adicionar o novo valor ao ENUM:
+## Detalhes Técnicos
 
-```sql
-ALTER TYPE item_type ADD VALUE IF NOT EXISTS 'sheet';
+### Modificação em StockFilters.tsx
+
+```tsx
+// ADICIONAR nova prop
+interface StockFiltersProps {
+  // ...props existentes
+  itemTypes?: Array<{ slug: string; name: string }>;
+}
+
+// RENDERIZAR dinamicamente
+<SelectContent>
+  <SelectItem value="all">Todas categorias</SelectItem>
+  {itemTypes?.map((type) => (
+    <SelectItem key={type.slug} value={type.slug}>
+      {type.name}
+    </SelectItem>
+  ))}
+</SelectContent>
 ```
 
-Isso permitirá que a tabela `item_templates` aceite itens com `type = 'sheet'`.
+### Modificação em Estoque.tsx
+
+```tsx
+import { useItemTypes } from '@/hooks/useItemTypes';
+
+// Dentro do componente
+const { data: itemTypes } = useItemTypes();
+
+// Passar para StockFilters
+<StockFilters
+  itemTypes={itemTypes?.map(t => ({ slug: t.slug, name: t.name }))}
+  // ...outras props
+/>
+```
+
+### Modificação em AddStockDialog.tsx - Hierarquia Dupla
+
+```tsx
+// Nova estrutura de agrupamento
+const itemsByLinhaAndType = useMemo(() => {
+  const grouped: Record<string, Record<string, typeof filteredItems>> = {};
+  
+  filteredItems.forEach(item => {
+    const linhaKey = item.linha || 'Sem Linha';
+    const typeKey = item.type;
+    
+    if (!grouped[linhaKey]) grouped[linhaKey] = {};
+    if (!grouped[linhaKey][typeKey]) grouped[linhaKey][typeKey] = [];
+    
+    grouped[linhaKey][typeKey].push(item);
+  });
+  
+  return grouped;
+}, [filteredItems]);
+
+// Renderização com hierarquia dupla
+{Object.keys(itemsByLinhaAndType).map(linhaKey => (
+  <div key={linhaKey}>
+    <h3>Linha: {linhaKey}</h3>
+    {Object.keys(itemsByLinhaAndType[linhaKey]).map(typeKey => (
+      <div key={typeKey}>
+        <h4>Categoria: {itemTypeLabels[typeKey]}</h4>
+        {/* Grid de itens */}
+      </div>
+    ))}
+  </div>
+))}
+```
 
 ---
 
-## Código Já Preparado
+## Arquivos a Modificar
 
-O código frontend já está pronto para suportar o tipo `sheet`:
-
-| Arquivo | Status |
-|---------|--------|
-| `AddStockDialog.tsx` | ✓ Já tem label "Chaparia" para `sheet` |
-| `useItemTypes.ts` | ✓ Hook dinâmico já busca `sheet` da tabela `item_types` |
-| `product_linhas` | ✓ Linha "Chaparia" já cadastrada |
-| `item_types` | ✓ Tipo "sheet" com slug, cor e unidade m² |
+| Arquivo | Modificação |
+|---------|-------------|
+| `src/components/estoque/StockFilters.tsx` | Adicionar prop `itemTypes` e renderizar dinamicamente |
+| `src/pages/Estoque.tsx` | Importar `useItemTypes` e passar para StockFilters |
+| `src/components/estoque/AddStockDialog.tsx` | Implementar agrupamento duplo Linha → Tipo → Item |
 
 ---
 
 ## Resultado Esperado
 
-Após a migração:
-- Novos itens poderão ser cadastrados com `type = 'sheet'`
-- A categoria "Chaparia" aparecerá no filtro do estoque
-- Compras de espelhos, acrílicos e chapas poderão ser registradas normalmente
+1. **Categorias dinâmicas**: Tipos criados no admin aparecerão automaticamente nos filtros do estoque
+2. **Hierarquia completa**: Itens organizados por Linha → Categoria → Nome do Item
+3. **Sincronização em tempo real**: Alterações no admin refletem imediatamente no sistema das empresas
