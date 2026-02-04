@@ -157,6 +157,8 @@ export function NovaVendaDialog({
       return data || [];
     },
     enabled: !!currentCompany?.id,
+    staleTime: 30 * 1000, // 30 seconds
+    refetchOnWindowFocus: false, // Prevent refetch on input focus
   });
   
   const linhas = useMemo(() => getLinhas(availableItems), [availableItems]);
