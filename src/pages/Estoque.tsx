@@ -15,6 +15,7 @@ import { StockFilters, type StockStatus, type StockSortBy, type ViewMode } from 
 import { StockGridView } from '@/components/estoque/StockGridView';
 import { useStockData, type StockItem } from '@/hooks/useStockData';
 import { useItemTypes } from '@/hooks/useItemTypes';
+import { useProductLinhas } from '@/hooks/useProductLinhas';
 
 interface RegistrarMovimentoStockItem {
   id: string;
@@ -74,15 +75,23 @@ export default function Estoque() {
 
   // Fetch dynamic item types for filters
   const { data: itemTypes } = useItemTypes();
+  
+  // Fetch official linhas from database
+  const { data: productLinhas } = useProductLinhas();
 
-  // Get unique linhas for filter
+  // Get unique linhas for filter - merge official + legacy from item_templates
   const linhas = useMemo(() => {
-    const uniqueLinhas = new Set<string>();
+    // Linhas oficiais da tabela product_linhas
+    const oficialLinhas = productLinhas?.map(l => l.name) || [];
+    
+    // Adicionar linhas dos templates (compatibilidade com dados legados)
+    const uniqueLinhas = new Set<string>(oficialLinhas);
     itemTemplates.forEach((t) => {
       if (t.linha) uniqueLinhas.add(t.linha);
     });
+    
     return Array.from(uniqueLinhas).sort();
-  }, [itemTemplates]);
+  }, [productLinhas, itemTemplates]);
 
   // Toggle active mutation
   const toggleActiveMutation = useMutation({
