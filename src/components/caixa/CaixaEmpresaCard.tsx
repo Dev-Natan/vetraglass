@@ -95,18 +95,6 @@ export function CaixaEmpresaCard({
           </p>
         </div>
 
-        {/* Fundo Fixo */}
-        <div className="rounded-lg bg-muted/50 p-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground">💵 Fundo Fixo para Abertura</p>
-              <p className="text-lg font-semibold">{formatCurrency(companyCash.fixed_fund)}</p>
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            Valor disponibilizado para abertura dos caixas do dia
-          </p>
-        </div>
 
         {/* Alerta de saldo insuficiente */}
         {!hasEnoughForDailyCash && (
