@@ -6592,7 +6592,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "manager" | "employee"
-      item_type: "glass" | "profile" | "accessory" | "service"
+      item_type: "glass" | "profile" | "accessory" | "service" | "sheet"
       permission_profile_type:
         | "admin"
         | "gerente"
@@ -6740,7 +6740,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "manager", "employee"],
-      item_type: ["glass", "profile", "accessory", "service"],
+      item_type: ["glass", "profile", "accessory", "service", "sheet"],
       permission_profile_type: [
         "admin",
         "gerente",
