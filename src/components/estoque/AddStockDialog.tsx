@@ -32,19 +32,12 @@ import { cn } from '@/lib/utils';
 import { FiscalFieldsCard, type FiscalFieldsData } from '@/components/produtos/FiscalFieldsCard';
 import { useProductCategories } from '@/hooks/useProductCategories';
 import { useProductLinhas } from '@/hooks/useProductLinhas';
+import { useItemTypeLabels } from '@/hooks/useItemTypes';
 
 interface AddStockDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
-
-const itemTypeLabels: Record<string, string> = {
-  glass: 'Vidro',
-  profile: 'Perfil',
-  accessory: 'Acessório',
-  service: 'Serviço',
-  sheet: 'Chaparia',
-};
 
 export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
   const { currentCompany, user } = useAuth();
@@ -79,6 +72,9 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
   // Fetch categories and linhas
   const { data: categories } = useProductCategories();
   const { data: linhas } = useProductLinhas();
+  
+  // Dynamic item type labels from database
+  const { labels: itemTypeLabels } = useItemTypeLabels();
 
   // Check if company has fiscal mode active
   const { data: companyData } = useQuery({
@@ -436,25 +432,30 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
     });
   }, [availableItems, selectedLinhaFilter, selectedTypeFilter, nameFilter]);
 
-  // Group items by linha
-  const itemsByLinha = useMemo(() => {
-    const grouped: Record<string, typeof filteredItems> = {};
+  // Group items by linha AND type (double hierarchy)
+  const itemsByLinhaAndType = useMemo(() => {
+    const grouped: Record<string, Record<string, typeof filteredItems>> = {};
     
     filteredItems.forEach(item => {
       const linhaKey = item.linha || 'Sem Linha';
+      const typeKey = item.type;
+      
       if (!grouped[linhaKey]) {
-        grouped[linhaKey] = [];
+        grouped[linhaKey] = {};
       }
-      grouped[linhaKey].push(item);
+      if (!grouped[linhaKey][typeKey]) {
+        grouped[linhaKey][typeKey] = [];
+      }
+      grouped[linhaKey][typeKey].push(item);
     });
 
-    const sortedKeys = Object.keys(grouped).sort((a, b) => {
+    const sortedLinhaKeys = Object.keys(grouped).sort((a, b) => {
       if (a === 'Sem Linha') return -1;
       if (b === 'Sem Linha') return 1;
       return a.localeCompare(b);
     });
 
-    return { grouped, sortedKeys };
+    return { grouped, sortedLinhaKeys };
   }, [filteredItems]);
 
   // Get weight from specifications if available
@@ -569,82 +570,94 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
                   </p>
                 </div>
               ) : (
-                itemsByLinha.sortedKeys.map((linhaKey) => (
-                  <div key={linhaKey}>
-                    <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                itemsByLinhaAndType.sortedLinhaKeys.map((linhaKey) => (
+                  <div key={linhaKey} className="space-y-4">
+                    {/* Linha Header */}
+                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 sticky top-0 bg-background py-2 z-10">
                       <span className="h-px flex-1 bg-border" />
-                      <span className="px-2">{linhaKey}</span>
+                      <span className="px-3 py-1 bg-primary/10 text-primary rounded-full">{linhaKey}</span>
                       <span className="h-px flex-1 bg-border" />
                     </h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                      {itemsByLinha.grouped[linhaKey].map((item) => {
-                        const isSelected = selectedItemId === item.id;
-                        const isInStock = existingStock?.includes(item.id);
-                        const weight = getItemWeight(item);
+                    
+                    {/* Types within Linha */}
+                    {Object.keys(itemsByLinhaAndType.grouped[linhaKey]).sort().map((typeKey) => (
+                      <div key={`${linhaKey}-${typeKey}`} className="ml-2">
+                        {/* Type Header */}
+                        <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-muted-foreground/40" />
+                          {itemTypeLabels[typeKey] || typeKey}
+                          <span className="text-[10px] text-muted-foreground/60">
+                            ({itemsByLinhaAndType.grouped[linhaKey][typeKey].length})
+                          </span>
+                        </h4>
                         
-                        return (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => handleItemSelect(item.id, item.type)}
-                            className={cn(
-                              "relative flex flex-col items-center p-3 rounded-lg border-2 transition-all duration-200",
-                              "hover:shadow-md hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20",
-                              isSelected 
-                                ? "border-primary bg-primary/5 shadow-md" 
-                                : isInStock
-                                ? "border-green-300 bg-green-50/50"
-                                : "border-border bg-card"
-                            )}
-                          >
-                            {/* Selection indicator */}
-                            {isSelected && (
-                              <div className="absolute top-2 left-2 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
-                                <Check className="h-3 w-3 text-primary-foreground" />
-                              </div>
-                            )}
+                        {/* Items Grid */}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 ml-4">
+                          {itemsByLinhaAndType.grouped[linhaKey][typeKey].map((item) => {
+                            const isSelected = selectedItemId === item.id;
+                            const isInStock = existingStock?.includes(item.id);
+                            const weight = getItemWeight(item);
                             
-                            {/* In stock badge */}
-                            {isInStock && !isSelected && (
-                              <Badge variant="outline" className="absolute top-2 left-2 text-[9px] bg-green-100 text-green-700 border-green-300">
-                                Em estoque
-                              </Badge>
-                            )}
-                            
-                            {/* Image */}
-                            <div className="w-16 h-16 rounded-lg border bg-background flex items-center justify-center mb-2 overflow-hidden">
-                              {item.image_url ? (
-                                <img
-                                  src={item.image_url}
-                                  alt={item.name}
-                                  loading="lazy"
-                                  className="max-h-full max-w-full object-contain"
-                                />
-                              ) : (
-                                <Package className="h-6 w-6 text-muted-foreground/50" />
-                              )}
-                            </div>
-                            
-                            {/* Name */}
-                            <p className="text-xs font-medium text-center line-clamp-2 leading-tight mb-1">
-                              {item.name}
-                            </p>
-                            
-                            {/* Weight */}
-                            {weight && (
-                              <p className="text-[10px] text-muted-foreground">
-                                {String(weight)} Kg/ML
-                              </p>
-                            )}
-                            
-                            {/* Type badge */}
-                            <span className="mt-1 text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                              {itemTypeLabels[item.type] || item.type}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
+                            return (
+                              <button
+                                key={item.id}
+                                type="button"
+                                onClick={() => handleItemSelect(item.id, item.type)}
+                                className={cn(
+                                  "relative flex flex-col items-center p-3 rounded-lg border-2 transition-all duration-200",
+                                  "hover:shadow-md hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20",
+                                  isSelected 
+                                    ? "border-primary bg-primary/5 shadow-md" 
+                                    : isInStock
+                                    ? "border-accent bg-accent/30"
+                                    : "border-border bg-card"
+                                )}
+                              >
+                                {/* Selection indicator */}
+                                {isSelected && (
+                                  <div className="absolute top-2 left-2 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
+                                    <Check className="h-3 w-3 text-primary-foreground" />
+                                  </div>
+                                )}
+                                
+                                {/* In stock badge */}
+                                {isInStock && !isSelected && (
+                                  <Badge variant="secondary" className="absolute top-2 left-2 text-[9px]">
+                                    Em estoque
+                                  </Badge>
+                                )}
+                                
+                                {/* Image */}
+                                <div className="w-16 h-16 rounded-lg border bg-background flex items-center justify-center mb-2 overflow-hidden">
+                                  {item.image_url ? (
+                                    <img
+                                      src={item.image_url}
+                                      alt={item.name}
+                                      loading="lazy"
+                                      className="max-h-full max-w-full object-contain"
+                                    />
+                                  ) : (
+                                    <Package className="h-6 w-6 text-muted-foreground/50" />
+                                  )}
+                                </div>
+                                
+                                {/* Name */}
+                                <p className="text-xs font-medium text-center line-clamp-2 leading-tight mb-1">
+                                  {item.name}
+                                </p>
+                                
+                                {/* Weight */}
+                                {weight && (
+                                  <p className="text-[10px] text-muted-foreground">
+                                    {String(weight)} Kg/ML
+                                  </p>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 ))
               )}
