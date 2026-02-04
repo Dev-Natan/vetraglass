@@ -230,8 +230,8 @@ export function RegistrarMovimentoDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[750px] max-h-[90vh] flex flex-col overflow-hidden">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             {isEntrada ? (
               <>
@@ -253,151 +253,143 @@ export function RegistrarMovimentoDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 gap-4 overflow-hidden">
-          {/* Busca e Filtros */}
-          <div className="space-y-3">
-            <div className="relative">
+          {/* Seção de Seleção de Item */}
+          <div className="flex flex-col gap-3 flex-1 min-h-0 border rounded-lg p-3 bg-muted/30">
+            {/* Busca */}
+            <div className="relative flex-shrink-0">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar item..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
+                className="pl-9 bg-background"
               />
             </div>
 
-            {/* Filtros de Linha */}
-            {availableLinhas.length > 0 && (
+            {/* Seletores de Linha e Categoria */}
+            <div className="grid grid-cols-2 gap-3 flex-shrink-0">
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground flex items-center gap-1">
                   <FolderOpen className="h-3 w-3" />
-                  Linhas
+                  Linha
                 </Label>
-                <div className="flex flex-wrap gap-1.5">
-                  {availableLinhas.map((linha) => (
-                    <Badge
-                      key={linha}
-                      variant={selectedLinha === linha ? "default" : "outline"}
-                      className="cursor-pointer hover:bg-primary/10 transition-colors"
-                      onClick={() => handleLinhaSelect(linha)}
-                    >
-                      {linha}
-                    </Badge>
-                  ))}
-                </div>
+                <Select value={selectedLinha} onValueChange={(value) => {
+                  setSelectedLinha(value === 'all' ? '' : value);
+                  setSelectedCategoria('');
+                }}>
+                  <SelectTrigger className="bg-background">
+                    <SelectValue placeholder="Todas as linhas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as linhas</SelectItem>
+                    {availableLinhas.map((linha) => (
+                      <SelectItem key={linha} value={linha}>
+                        {linha}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            )}
 
-            {/* Filtros de Categoria */}
-            {availableCategorias.length > 0 && (
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground flex items-center gap-1">
                   <Layers className="h-3 w-3" />
-                  Categorias
+                  Categoria
                 </Label>
-                <div className="flex flex-wrap gap-1.5">
-                  {availableCategorias.map((cat) => (
-                    <Badge
-                      key={cat}
-                      variant={selectedCategoria === cat ? "secondary" : "outline"}
-                      className="cursor-pointer hover:bg-secondary/50 transition-colors text-xs"
-                      onClick={() => handleCategoriaSelect(cat)}
-                    >
-                      {itemTypeLabels[cat] || cat}
-                    </Badge>
-                  ))}
-                </div>
+                <Select value={selectedCategoria} onValueChange={(value) => setSelectedCategoria(value === 'all' ? '' : value)}>
+                  <SelectTrigger className="bg-background">
+                    <SelectValue placeholder="Todas as categorias" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as categorias</SelectItem>
+                    {availableCategorias.map((cat) => (
+                      <SelectItem key={cat} value={cat}>
+                        {itemTypeLabels[cat] || cat}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Grid de Itens */}
+            <div className="flex-1 min-h-0">
+              <Label className="text-xs font-medium mb-2 block text-muted-foreground">
+                Selecione o Item * ({filteredItems.length} itens)
+              </Label>
+              <ScrollArea className="h-[200px] rounded-md border bg-background p-2">
+                {filteredItems.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                    <Package className="h-10 w-10 mb-2 opacity-30" />
+                    <p className="text-sm">Nenhum item encontrado</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+                    {filteredItems.map((item) => (
+                      <div
+                        key={item.id}
+                        onClick={() => setSelectedItem(item.id)}
+                        className={cn(
+                          "relative flex flex-col items-center p-2 rounded-lg border cursor-pointer transition-all hover:border-primary/50 hover:bg-accent/50",
+                          selectedItem === item.id 
+                            ? "border-primary bg-primary/5 ring-2 ring-primary shadow-sm" 
+                            : "border-border bg-card"
+                        )}
+                      >
+                        {selectedItem === item.id && (
+                          <div className="absolute top-1 right-1 bg-primary rounded-full p-0.5">
+                            <Check className="h-3 w-3 text-primary-foreground" />
+                          </div>
+                        )}
+                        
+                        {/* Imagem */}
+                        <div className="w-10 h-10 rounded bg-muted flex items-center justify-center mb-1 overflow-hidden">
+                          {item.item_template?.image_url ? (
+                            <img 
+                              src={item.item_template.image_url} 
+                              alt={item.item_template.name}
+                              className="w-full h-full object-contain"
+                            />
+                          ) : (
+                            <Package className="h-5 w-5 text-muted-foreground/50" />
+                          )}
+                        </div>
+                        
+                        {/* Nome */}
+                        <span className="text-[10px] font-medium text-center line-clamp-2 leading-tight">
+                          {item.item_template?.name}
+                        </span>
+                        
+                        {/* Estoque */}
+                        <span className={cn(
+                          "text-[9px] mt-0.5 px-1.5 py-0.5 rounded-full",
+                          item.quantity <= 0 
+                            ? "bg-destructive/10 text-destructive" 
+                            : "bg-muted text-muted-foreground"
+                        )}>
+                          {item.quantity} {item.item_template?.unit}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
+            </div>
+
+            {/* Item selecionado */}
+            {selectedStockItem && (
+              <div className="flex items-center gap-2 p-2 rounded-md bg-primary/5 border border-primary/20 flex-shrink-0">
+                <Check className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium">{selectedStockItem.item_template?.name}</span>
+                <Badge variant="outline" className="ml-auto text-xs">
+                  Estoque: {selectedStockItem.quantity} {selectedStockItem.item_template?.unit}
+                </Badge>
               </div>
             )}
           </div>
 
-          {/* Grid de Itens */}
-          <div className="flex-1 min-h-0">
-            <Label className="text-sm font-medium mb-2 block">
-              Selecione o Item *
-            </Label>
-            <ScrollArea className="h-[280px] rounded-md border p-2">
-              {Object.keys(itemsByLinhaAndType).length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                  <Package className="h-10 w-10 mb-2 opacity-30" />
-                  <p className="text-sm">Nenhum item encontrado</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {Object.keys(itemsByLinhaAndType).sort().map((linhaKey) => (
-                    <div key={linhaKey} className="space-y-2">
-                      {/* Header da Linha */}
-                      <div className="flex items-center gap-2 sticky top-0 bg-background/95 backdrop-blur py-1 z-10">
-                        <FolderOpen className="h-4 w-4 text-primary" />
-                        <span className="font-semibold text-sm text-primary">{linhaKey}</span>
-                      </div>
-                      
-                      {Object.keys(itemsByLinhaAndType[linhaKey]).sort().map((typeKey) => (
-                        <div key={`${linhaKey}-${typeKey}`} className="pl-4 space-y-2">
-                          {/* Header da Categoria */}
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <ChevronRight className="h-3 w-3" />
-                            <span className="font-medium">{itemTypeLabels[typeKey] || typeKey}</span>
-                            <span className="text-xs">({itemsByLinhaAndType[linhaKey][typeKey].length})</span>
-                          </div>
-                          
-                          {/* Grid de Itens */}
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pl-4">
-                            {itemsByLinhaAndType[linhaKey][typeKey].map((item) => (
-                              <div
-                                key={item.id}
-                                onClick={() => setSelectedItem(item.id)}
-                                className={cn(
-                                  "relative flex flex-col items-center p-2 rounded-lg border cursor-pointer transition-all hover:border-primary/50 hover:bg-accent/50",
-                                  selectedItem === item.id 
-                                    ? "border-primary bg-primary/5 ring-1 ring-primary" 
-                                    : "border-border"
-                                )}
-                              >
-                                {selectedItem === item.id && (
-                                  <div className="absolute top-1 right-1">
-                                    <Check className="h-4 w-4 text-primary" />
-                                  </div>
-                                )}
-                                
-                                {/* Imagem */}
-                                <div className="w-12 h-12 rounded bg-muted flex items-center justify-center mb-1.5 overflow-hidden">
-                                  {item.item_template?.image_url ? (
-                                    <img 
-                                      src={item.item_template.image_url} 
-                                      alt={item.item_template.name}
-                                      className="w-full h-full object-contain"
-                                    />
-                                  ) : (
-                                    <Package className="h-6 w-6 text-muted-foreground/50" />
-                                  )}
-                                </div>
-                                
-                                {/* Nome */}
-                                <span className="text-xs font-medium text-center line-clamp-2 leading-tight">
-                                  {item.item_template?.name}
-                                </span>
-                                
-                                {/* Estoque */}
-                                <span className={cn(
-                                  "text-[10px] mt-1",
-                                  item.quantity <= 0 ? "text-destructive" : "text-muted-foreground"
-                                )}>
-                                  {item.quantity} {item.item_template?.unit}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </ScrollArea>
-          </div>
-
           {/* Campos de Quantidade, Motivo e Observação */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4 flex-shrink-0">
             <div className="space-y-2">
               <Label htmlFor="quantidade">
                 Quantidade * 
@@ -441,7 +433,7 @@ export function RegistrarMovimentoDialog({
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 flex-shrink-0">
             <Label htmlFor="observacao">Observação</Label>
             <Textarea
               id="observacao"
@@ -452,16 +444,16 @@ export function RegistrarMovimentoDialog({
             />
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="flex-shrink-0">
             <Button type="button" variant="outline" onClick={handleClose}>
               Cancelar
             </Button>
             <Button 
               type="submit" 
-              disabled={movimentoMutation.isPending || !selectedItem || !quantidade || !motivo}
-              className={isEntrada ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}
+              disabled={!selectedItem || !quantidade || !motivo || movimentoMutation.isPending}
+              className={isEntrada ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}
             >
-              {movimentoMutation.isPending ? 'Salvando...' : 'Confirmar'}
+              {movimentoMutation.isPending ? 'Processando...' : 'Confirmar'}
             </Button>
           </DialogFooter>
         </form>
