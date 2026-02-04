@@ -331,15 +331,11 @@ export function ActivateWithCompositionDialog({
     const itemTemplate = availableItems?.find(i => i.id === selectedItemTemplateId);
     if (!itemTemplate) return;
 
-    // Check if item already exists
-    const exists = localItems.some(i => i.item_template_id === selectedItemTemplateId);
-    if (exists) {
-      toast.error('Este item já está na composição');
-      return;
-    }
+    // Allow duplicate items with different formulas - no restriction needed
+    // Each item can be added multiple times with different configurations
 
     const newItem: ComponentItem = {
-      id: `new-${Date.now()}`,
+      id: `new-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       item_template_id: selectedItemTemplateId,
       quantity_formula: activeTab === 'glass' ? '1' : quantityFormula,
       pieces_quantity: piecesQuantity,
