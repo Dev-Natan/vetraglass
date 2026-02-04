@@ -14,6 +14,7 @@ import { StockKPIs } from '@/components/estoque/StockKPIs';
 import { StockFilters, type StockStatus, type StockSortBy, type ViewMode } from '@/components/estoque/StockFilters';
 import { StockGridView } from '@/components/estoque/StockGridView';
 import { useStockData, type StockItem } from '@/hooks/useStockData';
+import { useItemTypes } from '@/hooks/useItemTypes';
 
 interface RegistrarMovimentoStockItem {
   id: string;
@@ -70,6 +71,9 @@ export default function Estoque() {
     error: loadError,
     kpis,
   } = useStockData({ companyId: currentCompany?.id });
+
+  // Fetch dynamic item types for filters
+  const { data: itemTypes } = useItemTypes();
 
   // Get unique linhas for filter
   const linhas = useMemo(() => {
@@ -281,6 +285,7 @@ export default function Estoque() {
                 linhas={linhas}
                 linhaFilter={linhaFilter}
                 onLinhaChange={setLinhaFilter}
+                itemTypes={itemTypes?.map(t => ({ slug: t.slug, name: t.name })) || []}
               />
             </div>
 

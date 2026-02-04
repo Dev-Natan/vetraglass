@@ -16,6 +16,11 @@ export type StockStatus = 'all' | 'low' | 'zero' | 'normal';
 export type StockSortBy = 'name' | 'quantity' | 'value';
 export type ViewMode = 'list' | 'grid';
 
+export interface ItemTypeOption {
+  slug: string;
+  name: string;
+}
+
 interface StockFiltersProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
@@ -32,6 +37,7 @@ interface StockFiltersProps {
   linhas?: string[];
   linhaFilter?: string;
   onLinhaChange?: (value: string) => void;
+  itemTypes?: ItemTypeOption[];
 }
 
 export const StockFilters = memo(function StockFilters({
@@ -50,6 +56,7 @@ export const StockFilters = memo(function StockFilters({
   linhas = [],
   linhaFilter = 'all',
   onLinhaChange,
+  itemTypes = [],
 }: StockFiltersProps) {
   return (
     <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
@@ -65,18 +72,18 @@ export const StockFilters = memo(function StockFilters({
           />
         </div>
 
-        {/* Category Filter */}
+        {/* Category Filter - Dynamic from item_types */}
         <Select value={categoryFilter} onValueChange={onCategoryChange}>
           <SelectTrigger className="w-full sm:w-[150px]">
             <SelectValue placeholder="Categoria" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas categorias</SelectItem>
-            <SelectItem value="profile">Perfis</SelectItem>
-            <SelectItem value="glass">Vidros</SelectItem>
-            <SelectItem value="sheet">Chaparias</SelectItem>
-            <SelectItem value="accessory">Acessórios</SelectItem>
-            <SelectItem value="service">Serviços</SelectItem>
+            {itemTypes.map((type) => (
+              <SelectItem key={type.slug} value={type.slug}>
+                {type.name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
