@@ -414,6 +414,8 @@ export default function Estoque() {
             name: item.item_template.name,
             unit: item.item_template.unit,
             image_url: item.item_template.image_url || undefined,
+            type: item.item_template.type,
+            linha: item.item_template.linha,
           } : undefined,
         }))}
       />
@@ -431,6 +433,8 @@ export default function Estoque() {
             name: item.item_template.name,
             unit: item.item_template.unit,
             image_url: item.item_template.image_url || undefined,
+            type: item.item_template.type,
+            linha: item.item_template.linha,
           } : undefined,
         }))}
       />
