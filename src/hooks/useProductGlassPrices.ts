@@ -24,7 +24,8 @@ export interface ProductGlassPriceInput {
   cost_per_sqm: number;
 }
 
-export const DEFAULT_GLASS_COLORS = ['Incolor', 'Verde', 'Fumê', 'Bronze', 'Jateado'];
+// Legacy fallback - now using dynamic colors from glass_colors table
+export const DEFAULT_GLASS_COLORS = ['Incolor', 'Verde', 'Fumê', 'Bronze', 'Prata', 'Jateado', 'Preto', 'Branco'];
 
 export function useProductGlassPrices(companyProductId: string | null) {
   const queryClient = useQueryClient();
