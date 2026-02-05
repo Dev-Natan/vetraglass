@@ -33,9 +33,10 @@ import {
 } from '@/components/ui/select';
 import { 
   Plus, Package, ShoppingCart, User, ChevronRight, ChevronLeft, 
-  Check, Trash2, FileText
+  Check, Trash2, FileText, Layers
 } from 'lucide-react';
 import { AddProductPanel } from './AddProductPanel';
+import { AddItemPanel } from './AddItemPanel';
 import { QuoteItemCard } from './QuoteItemCard';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -44,6 +45,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const quoteSchema = z.object({
   customer_name: z.string().min(2, 'Nome é obrigatório'),
@@ -65,6 +67,8 @@ interface QuoteItem {
   id?: string;
   company_product_id?: string;
   product_template_id?: string;
+  company_item_id?: string;
+  item_type?: 'product' | 'item';
   description: string;
   width?: number;
   height?: number;
@@ -75,6 +79,7 @@ interface QuoteItem {
   image_url?: string | null;
   linha?: string | null;
   category?: string;
+  unit?: string;
   has_glass?: boolean;
   glass_color?: string;
   glass_thickness?: string;
@@ -113,6 +118,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
   const [currentStep, setCurrentStep] = useState<Step>('client');
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [showAddProduct, setShowAddProduct] = useState(false);
+  const [showAddItem, setShowAddItem] = useState(false);
   const [showContractFields, setShowContractFields] = useState(false);
 
   const isEditing = !!quote;
@@ -200,6 +206,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
         base_price_m2: item.width && item.height 
           ? item.unit_price / ((item.width / 1000) * (item.height / 1000)) 
           : item.unit_price,
+        item_type: item.company_item_id ? 'item' : 'product',
       })) as QuoteItem[];
     },
     enabled: !!quote?.id && open
@@ -244,6 +251,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
       setShowAddProduct(false);
       setSelectedClientId('');
       setShowContractFields(false);
+      setShowAddItem(false);
     }
   }, [open, quote, form]);
 
@@ -290,6 +298,35 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
     setItems([...items, newItem]);
     setShowAddProduct(false);
     toast({ title: 'Produto adicionado!' });
+  };
+
+  const handleAddItem = (item: {
+    company_item_id: string;
+    name: string;
+    unit: string;
+    unit_price: number;
+    quantity: number;
+    total_price: number;
+    image_url?: string | null;
+    linha?: string | null;
+    type?: string;
+  }) => {
+    const newItem: QuoteItem = {
+      company_item_id: item.company_item_id,
+      item_type: 'item',
+      description: item.name,
+      quantity: item.quantity,
+      base_price_m2: item.unit_price,
+      unit_price: item.unit_price,
+      total_price: item.total_price,
+      image_url: item.image_url,
+      linha: item.linha,
+      category: item.type,
+      unit: item.unit,
+    };
+    setItems([...items, newItem]);
+    setShowAddItem(false);
+    toast({ title: 'Item adicionado!' });
   };
 
   const removeItem = (index: number) => {
@@ -373,12 +410,15 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
             quote_id: newQuote.id,
             company_product_id: item.company_product_id || null,
             product_template_id: item.product_template_id || null,
+            company_item_id: item.company_item_id || null,
+            item_type: item.item_type || 'product',
             description: item.description,
             width: item.width || null,
             height: item.height || null,
             quantity: item.quantity,
             unit_price: item.unit_price,
             total_price: item.total_price,
+            unit: item.unit || null,
             has_glass: item.has_glass ?? false,
             glass_color: item.glass_color || null,
             glass_thickness: item.glass_thickness || null,
@@ -435,12 +475,15 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
             quote_id: quote.id,
             company_product_id: item.company_product_id || null,
             product_template_id: item.product_template_id || null,
+            company_item_id: item.company_item_id || null,
+            item_type: item.item_type || 'product',
             description: item.description,
             width: item.width || null,
             height: item.height || null,
             quantity: item.quantity,
             unit_price: item.unit_price,
             total_price: item.total_price,
+            unit: item.unit || null,
             has_glass: item.has_glass ?? false,
             glass_color: item.glass_color || null,
             glass_thickness: item.glass_thickness || null,
@@ -511,6 +554,30 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
             <AddProductPanel
               onAdd={handleAddProduct}
               onCancel={() => setShowAddProduct(false)}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  if (showAddItem) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
+          <DialogHeader className="p-6 pb-4 shrink-0">
+            <DialogTitle className="flex items-center gap-2">
+              <Layers className="w-5 h-5" />
+              Adicionar Item Avulso
+            </DialogTitle>
+            <DialogDescription>
+              Selecione o item (perfil, acessório, vidro avulso, etc).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto px-6 pb-6">
+            <AddItemPanel
+              onAdd={handleAddItem}
+              onCancel={() => setShowAddItem(false)}
             />
           </div>
         </DialogContent>
@@ -770,17 +837,32 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
               {/* Step 2: Products */}
               {currentStep === 'products' && (
                 <div className="space-y-4">
-                  {/* Products List */}
                   {items.length === 0 ? (
-                    <button
-                      type="button"
-                      onClick={() => setShowAddProduct(true)}
-                      className="w-full border-2 border-dashed rounded-xl p-8 text-center text-muted-foreground hover:border-primary hover:text-primary transition-colors"
-                    >
-                      <Package className="w-10 h-10 mx-auto mb-3 opacity-50" />
-                      <p className="font-medium">Nenhum produto adicionado</p>
-                      <p className="text-sm mt-1">Clique para adicionar</p>
-                    </button>
+                    <div className="space-y-4">
+                      <p className="text-center text-muted-foreground text-sm">
+                        Adicione produtos completos ou itens avulsos ao orçamento
+                      </p>
+                      <div className="grid grid-cols-2 gap-4">
+                        <button
+                          type="button"
+                          onClick={() => setShowAddProduct(true)}
+                          className="border-2 border-dashed rounded-xl p-6 text-center text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+                        >
+                          <Package className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                          <p className="font-medium text-sm">Produto</p>
+                          <p className="text-xs mt-1">Janelas, portas, etc</p>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowAddItem(true)}
+                          className="border-2 border-dashed rounded-xl p-6 text-center text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+                        >
+                          <Layers className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                          <p className="font-medium text-sm">Item Avulso</p>
+                          <p className="text-xs mt-1">Perfis, vidros, acessórios</p>
+                        </button>
+                      </div>
+                    </div>
                   ) : (
                     <div className="space-y-3">
                       {items.map((item, index) => (
@@ -794,15 +876,26 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
                         />
                       ))}
                       
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="w-full gap-2"
-                        onClick={() => setShowAddProduct(true)}
-                      >
-                        <Plus className="w-4 h-4" />
-                        Adicionar Produto
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="flex-1 gap-2"
+                          onClick={() => setShowAddProduct(true)}
+                        >
+                          <Package className="w-4 h-4" />
+                          Produto
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="flex-1 gap-2"
+                          onClick={() => setShowAddItem(true)}
+                        >
+                          <Layers className="w-4 h-4" />
+                          Item Avulso
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>

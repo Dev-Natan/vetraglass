@@ -4621,6 +4621,7 @@ export type Database = {
       }
       quote_items: {
         Row: {
+          company_item_id: string | null
           company_product_id: string | null
           created_at: string
           description: string
@@ -4629,15 +4630,18 @@ export type Database = {
           has_glass: boolean | null
           height: number | null
           id: string
+          item_type: string | null
           notes: string | null
           product_template_id: string | null
           quantity: number
           quote_id: string
           total_price: number
+          unit: string | null
           unit_price: number
           width: number | null
         }
         Insert: {
+          company_item_id?: string | null
           company_product_id?: string | null
           created_at?: string
           description: string
@@ -4646,15 +4650,18 @@ export type Database = {
           has_glass?: boolean | null
           height?: number | null
           id?: string
+          item_type?: string | null
           notes?: string | null
           product_template_id?: string | null
           quantity?: number
           quote_id: string
           total_price?: number
+          unit?: string | null
           unit_price?: number
           width?: number | null
         }
         Update: {
+          company_item_id?: string | null
           company_product_id?: string | null
           created_at?: string
           description?: string
@@ -4663,15 +4670,24 @@ export type Database = {
           has_glass?: boolean | null
           height?: number | null
           id?: string
+          item_type?: string | null
           notes?: string | null
           product_template_id?: string | null
           quantity?: number
           quote_id?: string
           total_price?: number
+          unit?: string | null
           unit_price?: number
           width?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "quote_items_company_item_id_fkey"
+            columns: ["company_item_id"]
+            isOneToOne: false
+            referencedRelation: "company_items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "quote_items_company_product_id_fkey"
             columns: ["company_product_id"]
