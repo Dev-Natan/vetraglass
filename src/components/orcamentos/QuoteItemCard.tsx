@@ -2,12 +2,16 @@ import { memo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Package, Edit2 } from 'lucide-react';
+import { Trash2, Package, Layers } from 'lucide-react';
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
+import { useItemTypes } from '@/hooks/useItemTypes';
+
 interface QuoteItem {
   id?: string;
   company_product_id?: string;
   product_template_id?: string;
+  company_item_id?: string;
+  item_type?: 'product' | 'item';
   description: string;
   width?: number;
   height?: number;
@@ -18,6 +22,7 @@ interface QuoteItem {
   image_url?: string | null;
   linha?: string | null;
   category?: string;
+  unit?: string;
   has_glass?: boolean;
   glass_color?: string;
   glass_thickness?: string;
@@ -39,15 +44,24 @@ interface QuoteItemCardProps {
 
 export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate, onRemove, formatCurrency }: QuoteItemCardProps) {
   const { labels: categoryLabels } = useProductCategoryLabels();
+  const { data: itemTypes } = useItemTypes();
   
   const getProductImage = (imageUrl: string | null | undefined) => {
     if (!imageUrl) return null;
     if (imageUrl.startsWith('http')) return imageUrl;
+    // Check if it's an item (profile) image
+    if (item.item_type === 'item') return `/profiles/${imageUrl}`;
     return `/products/${imageUrl}`;
+  };
+  
+  const getItemTypeLabel = (type: string) => {
+    const found = itemTypes?.find(t => t.slug === type);
+    return found?.name || type;
   };
 
   const imageUrl = getProductImage(item.image_url);
   const area = item.width && item.height ? ((item.width / 1000) * (item.height / 1000)).toFixed(2) : null;
+  const isItem = item.item_type === 'item';
 
   return (
     <div className="border rounded-xl p-4 bg-card hover:shadow-md transition-shadow">
@@ -62,7 +76,11 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
-              <Package className="w-8 h-8 text-muted-foreground/30" />
+              {isItem ? (
+                <Layers className="w-8 h-8 text-muted-foreground/30" />
+              ) : (
+                <Package className="w-8 h-8 text-muted-foreground/30" />
+              )}
             </div>
           )}
         </div>
@@ -74,15 +92,20 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
             <div className="flex-1 min-w-0">
               <h4 className="font-medium text-sm truncate">{item.description || 'Produto não selecionado'}</h4>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
+                {isItem && (
+                  <Badge variant="secondary" className="text-xs bg-warning/20 text-warning-foreground dark:bg-warning/20">
+                    Item Avulso
+                  </Badge>
+                )}
                 {item.linha && (
                   <Badge variant="secondary" className="text-xs">{item.linha}</Badge>
                 )}
                 {item.category && (
                   <Badge variant="outline" className="text-xs">
-                    {categoryLabels[item.category] || item.category}
+                    {isItem ? getItemTypeLabel(item.category) : (categoryLabels[item.category] || item.category)}
                   </Badge>
                 )}
-                {item.has_glass !== undefined && (
+                {!isItem && item.has_glass !== undefined && (
                   <Badge 
                     variant={item.has_glass ? 'default' : 'outline'} 
                     className="text-xs"
@@ -91,12 +114,12 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
                   </Badge>
                 )}
                 {item.has_glass && item.glass_color && (
-                  <Badge variant="outline" className="text-xs bg-blue-50 border-blue-200 text-blue-700">
+                  <Badge variant="outline" className="text-xs bg-primary/10 border-primary/30 text-primary">
                     {glassColorLabels[item.glass_color] || item.glass_color}
                   </Badge>
                 )}
                 {item.has_glass && item.glass_thickness && (
-                  <Badge variant="outline" className="text-xs bg-green-50 border-green-200 text-green-700">
+                  <Badge variant="outline" className="text-xs bg-success/10 border-success/30 text-success">
                     {item.glass_thickness}
                   </Badge>
                 )}
@@ -113,57 +136,92 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
             </Button>
           </div>
 
-          {/* Dimensions & Quantity */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div>
-              <label className="text-xs text-muted-foreground">Largura (mm)</label>
-              <Input
-                type="number"
-                value={item.width || ''}
-                onChange={(e) => onUpdate(index, 'width', Number(e.target.value))}
-                placeholder="1200"
-                min={0}
-                className="h-9"
-              />
+          {/* Dimensions & Quantity - Different layout for items vs products */}
+          {isItem ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="text-xs text-muted-foreground">Quantidade ({item.unit || 'un'})</label>
+                <Input
+                  type="number"
+                  value={item.quantity}
+                  onChange={(e) => onUpdate(index, 'quantity', Number(e.target.value))}
+                  min={1}
+                  className="h-9"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Preço Unit.</label>
+                <Input
+                  type="number"
+                  value={item.unit_price || ''}
+                  onChange={(e) => {
+                    const newPrice = Number(e.target.value);
+                    onUpdate(index, 'unit_price', newPrice);
+                    onUpdate(index, 'base_price_m2', newPrice);
+                    onUpdate(index, 'total_price', newPrice * item.quantity);
+                  }}
+                  min={0}
+                  step={0.01}
+                  className="h-9"
+                />
+              </div>
+              <div className="hidden sm:block" />
             </div>
-            <div>
-              <label className="text-xs text-muted-foreground">Altura (mm)</label>
-              <Input
-                type="number"
-                value={item.height || ''}
-                onChange={(e) => onUpdate(index, 'height', Number(e.target.value))}
-                placeholder="1500"
-                min={0}
-                className="h-9"
-              />
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div>
+                <label className="text-xs text-muted-foreground">Largura (mm)</label>
+                <Input
+                  type="number"
+                  value={item.width || ''}
+                  onChange={(e) => onUpdate(index, 'width', Number(e.target.value))}
+                  placeholder="1200"
+                  min={0}
+                  className="h-9"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Altura (mm)</label>
+                <Input
+                  type="number"
+                  value={item.height || ''}
+                  onChange={(e) => onUpdate(index, 'height', Number(e.target.value))}
+                  placeholder="1500"
+                  min={0}
+                  className="h-9"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Qtd</label>
+                <Input
+                  type="number"
+                  value={item.quantity}
+                  onChange={(e) => onUpdate(index, 'quantity', Number(e.target.value))}
+                  min={1}
+                  className="h-9"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Preço/m²</label>
+                <Input
+                  type="number"
+                  value={item.base_price_m2 || ''}
+                  onChange={(e) => onUpdate(index, 'base_price_m2', Number(e.target.value))}
+                  min={0}
+                  step={0.01}
+                  className="h-9"
+                />
+              </div>
             </div>
-            <div>
-              <label className="text-xs text-muted-foreground">Qtd</label>
-              <Input
-                type="number"
-                value={item.quantity}
-                onChange={(e) => onUpdate(index, 'quantity', Number(e.target.value))}
-                min={1}
-                className="h-9"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground">Preço/m²</label>
-              <Input
-                type="number"
-                value={item.base_price_m2 || ''}
-                onChange={(e) => onUpdate(index, 'base_price_m2', Number(e.target.value))}
-                min={0}
-                step={0.01}
-                className="h-9"
-              />
-            </div>
-          </div>
+          )}
 
           {/* Price Summary */}
           <div className="flex items-center justify-between pt-2 border-t">
             <div className="text-xs text-muted-foreground">
-              {area && `${area} m² × ${item.quantity} un`}
+              {isItem 
+                ? `${item.quantity} ${item.unit || 'un'} × ${formatCurrency(item.unit_price)}`
+                : area && `${area} m² × ${item.quantity} un`
+              }
             </div>
             <div className="text-right">
               <div className="text-xs text-muted-foreground">Total</div>
@@ -174,4 +232,9 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
       </div>
     </div>
   );
-}, (prev, next) => prev.item.id === next.item.id && prev.item.total_price === next.item.total_price);
+}, (prev, next) => 
+  prev.item.id === next.item.id && 
+  prev.item.total_price === next.item.total_price &&
+  prev.item.quantity === next.item.quantity &&
+  prev.item.unit_price === next.item.unit_price
+);
