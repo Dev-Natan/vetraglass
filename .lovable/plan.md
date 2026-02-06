@@ -1,117 +1,134 @@
 
-## Plano: Upload de Imagens para Produtos e Itens da Empresa
+## Plano: Incluir Imagens Personalizadas nos PDFs
 
-### Contexto
-O usuário deseja que os usuários do sistema possam adicionar imagens personalizadas aos **produtos** e **itens/materiais** criados para sua empresa.
+### Problema Identificado
+As imagens adicionadas pelos usuários a **produtos** (`company_products`) e **itens/materiais** (`company_items`) não estão sendo exibidas nos PDFs gerados porque:
 
-### Situação Atual
-| Entidade | Suporte a Imagem | Upload Funcional |
-|----------|------------------|------------------|
-| `company_products` | Sim (`image_url`) | Parcial - apenas em `EditarProdutoEmpresa` |
-| `company_items` | Sim (`image_url`) | Não implementado |
+1. **Fonte de dados incompleta**: A query em `VisualizarOrcamentoDialog.tsx` busca imagens **apenas** de `product_templates`, ignorando:
+   - `company_products.image_url` (produtos personalizados da empresa)
+   - `company_items.image_url` (itens/materiais da empresa)
+
+2. **Hierarquia de prioridade ausente**: Quando um produto da empresa tem imagem personalizada, ela deveria ter prioridade sobre a imagem do template.
+
+### Análise Técnica
+
+A tabela `quote_items` tem três referências de imagem:
+
+| Coluna | Tabela de Origem | Descrição |
+|--------|------------------|-----------|
+| `company_product_id` | `company_products` | Produtos personalizados com `image_url` |
+| `product_template_id` | `product_templates` | Templates de produtos com `image_url` |
+| `company_item_id` | `company_items` | Itens/materiais com `image_url` |
+
+**Query atual (incompleta):**
+```sql
+SELECT *, product_templates(image_url, linha, category)
+FROM quote_items WHERE quote_id = ?
+```
+
+**Query corrigida:**
+```sql
+SELECT *,
+  product_templates(image_url, linha, category),
+  company_products(image_url, linha),
+  company_items(image_url)
+FROM quote_items WHERE quote_id = ?
+```
 
 ### Mudanças Necessárias
 
-#### 1. Criar Bucket de Storage para Itens
-Criar um bucket `company-item-images` no storage para armazenar as imagens dos itens personalizados das empresas.
+#### 1. Atualizar `VisualizarOrcamentoDialog.tsx`
+Modificar a query de itens para incluir imagens de todas as fontes:
 
-```sql
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('company-item-images', 'company-item-images', true);
-
--- RLS policy para permitir upload por usuários autenticados
-CREATE POLICY "Authenticated users can upload company item images"
-ON storage.objects FOR INSERT TO authenticated
-WITH CHECK (bucket_id = 'company-item-images');
-
-CREATE POLICY "Anyone can view company item images"
-ON storage.objects FOR SELECT TO public
-USING (bucket_id = 'company-item-images');
+```typescript
+const { data, error } = await supabase
+  .from('quote_items')
+  .select(`
+    *,
+    product_templates (image_url, linha, category),
+    company_products (image_url, linha),
+    company_items (image_url)
+  `)
+  .eq('quote_id', quote.id);
 ```
 
-#### 2. Adicionar Upload de Imagem no Diálogo de Criação de Item Personalizado
-**Arquivo:** `src/components/estoque/CreateCustomItemDialog.tsx`
-
-- Adicionar campo de upload de imagem
-- Processar imagem com fundo branco usando `processFileWithWhiteBackground`
-- Fazer upload para bucket `company-item-images`
-- Salvar path no campo `image_url` da tabela `company_items`
-
-#### 3. Adicionar Upload de Imagem no Diálogo de Edição de Item
-**Arquivo:** `src/components/estoque/EditItemPriceDialog.tsx`
-
-- Adicionar botão de upload/troca de imagem na seção do item
-- Permitir remover imagem existente
-- Suportar tanto itens do template quanto itens personalizados
-- Para itens personalizados (`company_items`), atualizar `image_url`
-
-#### 4. Melhorar Upload no Diálogo de Criação de Produto Personalizado
-**Arquivo:** `src/components/produtos/CreateCustomProductDialog.tsx`
-
-- Adicionar campo de upload de imagem no formulário
-- Seguir mesmo padrão de `EditarProdutoEmpresa.tsx`
-- Upload para bucket `company-product-images` já existente
-
-#### 5. Adicionar Upload no Diálogo de Edição de Produto Personalizado
-**Arquivo:** `src/components/produtos/EditCustomProductDialog.tsx`
-
-- Adicionar seção de imagem similar ao `CreateCustomProductDialog`
-- Permitir trocar ou remover imagem
-
----
-
-### Detalhes Técnicos
-
-#### Componente Reutilizável de Upload de Imagem
-Criar um componente genérico `ImageUploadField` que encapsule:
-- Preview da imagem atual
-- Botão de upload
-- Indicador de loading
-- Processamento de fundo branco
-- Validação de tipo de arquivo
+#### 2. Atualizar a Lógica de Seleção de Imagem
+Criar hierarquia de prioridade para imagens:
 
 ```text
-┌─────────────────────────────────────┐
-│  ┌───────────┐  Imagem do Produto  │
-│  │  Preview  │  [Alterar] [Remover] │
-│  │   128x128 │                      │
-│  └───────────┘                      │
-└─────────────────────────────────────┘
+Prioridade de Imagem:
+1. company_products.image_url (se existir)
+2. product_templates.image_url (fallback para templates)
+3. company_items.image_url (para itens avulsos)
 ```
 
-#### Estrutura de Arquivos no Storage
-```text
-company-item-images/
-  └── {company_id}/
-      └── {item_id}.png
+#### 3. Atualizar Interface `QuoteItem`
+Adicionar tipos para as novas relações:
 
-company-product-images/
-  └── {company_id}/
-      └── {product_id}.png
+```typescript
+interface QuoteItem {
+  // ... campos existentes
+  product_templates?: { image_url: string | null; linha: string | null; category: string | null } | null;
+  company_products?: { image_url: string | null; linha: string | null } | null;
+  company_items?: { image_url: string | null } | null;
+}
 ```
 
-#### Fluxo de Upload
-1. Usuário seleciona arquivo (PNG, JPEG, JPG)
-2. Validar tipo e tamanho (máx 5MB)
-3. Processar imagem (fundo branco)
-4. Upload para Supabase Storage
-5. Atualizar `image_url` na tabela correspondente
-6. Invalidar queries para atualizar UI
+#### 4. Atualizar a Preparação de Dados para PDF
+Modificar a função que prepara itens para o PDF:
 
-### Arquivos a Criar
-| Arquivo | Descrição |
-|---------|-----------|
-| `src/components/common/ImageUploadField.tsx` | Componente reutilizável de upload |
+```typescript
+const itemsForPdf = items.map(item => ({
+  // ... outros campos
+  image_url: 
+    item.company_products?.image_url ||    // Prioridade 1: Produto personalizado
+    item.product_templates?.image_url ||   // Prioridade 2: Template
+    item.company_items?.image_url ||       // Prioridade 3: Item avulso
+    null,
+  linha: 
+    item.company_products?.linha ||
+    item.product_templates?.linha || 
+    null,
+}));
+```
 
 ### Arquivos a Modificar
+
 | Arquivo | Mudança |
 |---------|---------|
-| `src/components/estoque/CreateCustomItemDialog.tsx` | Adicionar upload de imagem |
-| `src/components/estoque/EditItemPriceDialog.tsx` | Adicionar upload/edição de imagem |
-| `src/components/produtos/CreateCustomProductDialog.tsx` | Adicionar upload de imagem |
-| `src/components/produtos/EditCustomProductDialog.tsx` | Adicionar upload/edição de imagem |
+| `src/components/orcamentos/VisualizarOrcamentoDialog.tsx` | Expandir query para incluir `company_products` e `company_items` |
 
-### Migrations
-| Migration | Descrição |
-|-----------|-----------|
-| `create_company_item_images_bucket.sql` | Criar bucket e políticas RLS |
+### Fluxo Visual
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                     quote_items                             │
+│  ┌──────────────────┬──────────────────┬─────────────────┐ │
+│  │ company_product  │ product_template │  company_item   │ │
+│  │     _id          │      _id         │     _id         │ │
+│  └────────┬─────────┴────────┬─────────┴────────┬────────┘ │
+│           │                  │                   │          │
+│           ▼                  ▼                   ▼          │
+│   ┌───────────────┐  ┌───────────────┐  ┌───────────────┐  │
+│   │ company_      │  │ product_      │  │ company_      │  │
+│   │ products      │  │ templates     │  │ items         │  │
+│   │               │  │               │  │               │  │
+│   │ image_url ◄───┼──┼── PRIORIDADE ─┼──┼──► image_url  │  │
+│   └───────────────┘  └───────────────┘  └───────────────┘  │
+│                             │                               │
+│                             ▼                               │
+│                     ┌───────────────┐                       │
+│                     │ PDF Generator │                       │
+│                     │               │                       │
+│                     │ Usa a imagem  │                       │
+│                     │ disponível    │                       │
+│                     │ com maior     │                       │
+│                     │ prioridade    │                       │
+│                     └───────────────┘                       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Observações
+- A função `generateQuotePdf` já suporta `image_url` nos itens, então **não precisa de alteração**
+- O problema está exclusivamente na **fonte de dados** que não busca imagens de produtos/itens personalizados
+- Após a correção, todas as imagens (templates ou personalizadas) serão exibidas corretamente no PDF
