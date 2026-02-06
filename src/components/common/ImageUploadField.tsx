@@ -82,14 +82,14 @@ export function ImageUploadField({
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
+      // Get public URL (clean, without cache buster for storage in DB)
       const { data: urlData } = supabase.storage
         .from(bucket)
         .getPublicUrl(fileName);
 
-      // Add cache buster to force refresh
-      const newUrl = `${urlData.publicUrl}?t=${Date.now()}`;
-      onImageChange(newUrl);
+      // Store clean URL in database - cache buster only for preview
+      const cleanUrl = urlData.publicUrl;
+      onImageChange(cleanUrl);
       toast.success('Imagem enviada com sucesso!');
     } catch (error: any) {
       console.error('Upload error:', error);

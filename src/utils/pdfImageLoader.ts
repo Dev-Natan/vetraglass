@@ -10,33 +10,54 @@ const imageCache = new Map<string, string>();
 const pendingRequests = new Map<string, Promise<string | null>>();
 
 /**
- * Load a single image as base64 with caching
+ * Normalize URL by removing cache-buster params for consistent caching
  */
+function normalizeUrl(url: string): string {
+  try {
+    const urlObj = new URL(url);
+    // Remove common cache-buster params
+    urlObj.searchParams.delete('t');
+    urlObj.searchParams.delete('_');
+    urlObj.searchParams.delete('cache');
+    return urlObj.toString();
+  } catch {
+    return url;
+  }
+}
+
 async function loadSingleImage(url: string): Promise<string | null> {
+  // Normalize URL for consistent caching
+  const normalizedUrl = normalizeUrl(url);
+  
   // Return cached version if available
-  if (imageCache.has(url)) {
-    return imageCache.get(url)!;
+  if (imageCache.has(normalizedUrl)) {
+    return imageCache.get(normalizedUrl)!;
   }
 
   // Return pending request if already in flight
-  if (pendingRequests.has(url)) {
-    return pendingRequests.get(url)!;
+  if (pendingRequests.has(normalizedUrl)) {
+    return pendingRequests.get(normalizedUrl)!;
   }
 
   // Create new request
   const request = (async (): Promise<string | null> => {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout for slower connections
 
-      const response = await fetch(url, { 
+      // Use normalized URL for fetch (without cache buster)
+      const response = await fetch(normalizedUrl, { 
         signal: controller.signal,
-        cache: 'force-cache' // Use browser cache when available
+        cache: 'no-store', // Always fetch fresh from storage
+        mode: 'cors',
       });
       
       clearTimeout(timeoutId);
 
-      if (!response.ok) return null;
+      if (!response.ok) {
+        console.warn(`Failed to load image: ${normalizedUrl} - Status: ${response.status}`);
+        return null;
+      }
 
       const blob = await response.blob();
       
@@ -44,23 +65,25 @@ async function loadSingleImage(url: string): Promise<string | null> {
         const reader = new FileReader();
         reader.onloadend = () => {
           const result = reader.result as string;
-          imageCache.set(url, result); // Cache the result
-          pendingRequests.delete(url);
+          imageCache.set(normalizedUrl, result); // Cache with normalized URL
+          pendingRequests.delete(normalizedUrl);
           resolve(result);
         };
         reader.onerror = () => {
-          pendingRequests.delete(url);
+          console.warn(`Failed to read image blob: ${normalizedUrl}`);
+          pendingRequests.delete(normalizedUrl);
           resolve(null);
         };
         reader.readAsDataURL(blob);
       });
-    } catch {
-      pendingRequests.delete(url);
+    } catch (error) {
+      console.warn(`Error loading image: ${normalizedUrl}`, error);
+      pendingRequests.delete(normalizedUrl);
       return null;
     }
   })();
 
-  pendingRequests.set(url, request);
+  pendingRequests.set(normalizedUrl, request);
   return request;
 }
 
@@ -107,7 +130,8 @@ export async function getImageBase64(url: string | null | undefined): Promise<st
  */
 export function getCachedImage(url: string | null | undefined): string | null {
   if (!url) return null;
-  return imageCache.get(url) || null;
+  const normalizedUrl = normalizeUrl(url);
+  return imageCache.get(normalizedUrl) || null;
 }
 
 /**
