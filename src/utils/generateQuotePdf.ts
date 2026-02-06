@@ -2,6 +2,12 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { 
+  preloadImages, 
+  getCachedImage, 
+  getProductImageUrl,
+  collectQuoteImageUrls 
+} from './pdfImageLoader';
 
 interface QuoteItem {
   description: string;
@@ -72,28 +78,6 @@ export interface PaymentSettings {
   showInstallments: boolean;
 }
 
-// Helper to load image as base64
-async function loadImageAsBase64(url: string): Promise<string | null> {
-  try {
-    const response = await fetch(url);
-    const blob = await response.blob();
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(blob);
-    });
-  } catch {
-    return null;
-  }
-}
-
-function getProductImageUrl(imageUrl: string | null | undefined): string | null {
-  if (!imageUrl) return null;
-  if (imageUrl.startsWith('http')) return imageUrl;
-  return `${window.location.origin}/products/${imageUrl}`;
-}
-
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 }
@@ -115,6 +99,10 @@ export async function generateQuotePdf(
   mode: 'download' | 'print' = 'download',
   paymentSettings?: PaymentSettings | null
 ) {
+  // Preload all images in parallel before generating PDF
+  const imageUrls = collectQuoteImageUrls(items, company?.logo_url);
+  await preloadImages(imageUrls);
+
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -136,16 +124,12 @@ export async function generateQuotePdf(
   let logoLoaded = false;
   let logoWidth = 0;
   if (company?.logo_url) {
-    try {
-      const logoBase64 = await loadImageAsBase64(company.logo_url);
-      if (logoBase64) {
-        logoWidth = company.logo_size || 40;
-        const logoHeight = logoWidth * 0.625;
-        doc.addImage(logoBase64, 'PNG', marginLeft, y, logoWidth, logoHeight);
-        logoLoaded = true;
-      }
-    } catch {
-      // Logo failed to load
+    const logoBase64 = getCachedImage(company.logo_url);
+    if (logoBase64) {
+      logoWidth = company.logo_size || 40;
+      const logoHeight = logoWidth * 0.625;
+      doc.addImage(logoBase64, 'PNG', marginLeft, y, logoWidth, logoHeight);
+      logoLoaded = true;
     }
   }
   
@@ -249,13 +233,9 @@ export async function generateQuotePdf(
     
     const imageUrl = getProductImageUrl(item.image_url);
     if (imageUrl) {
-      try {
-        const base64 = await loadImageAsBase64(imageUrl);
-        if (base64) {
-          doc.addImage(base64, 'PNG', imgX + 1, imgY + 1, imgSize - 2, imgSize - 2);
-        }
-      } catch {
-        // Image failed to load
+      const base64 = getCachedImage(imageUrl);
+      if (base64) {
+        doc.addImage(base64, 'PNG', imgX + 1, imgY + 1, imgSize - 2, imgSize - 2);
       }
     }
     

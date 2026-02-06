@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { preloadImages, getCachedImage } from './pdfImageLoader';
 
 interface QuoteItem {
   description: string;
@@ -45,22 +46,6 @@ interface Company {
   logo_url?: string | null;
 }
 
-// Helper to load image as base64
-async function loadImageAsBase64(url: string): Promise<string | null> {
-  try {
-    const response = await fetch(url);
-    const blob = await response.blob();
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(blob);
-    });
-  } catch {
-    return null;
-  }
-}
-
 const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 };
@@ -92,6 +77,11 @@ export async function generateContractPdf(
   items: QuoteItem[],
   company: Company | null
 ): Promise<void> {
+  // Preload logo in parallel
+  if (company?.logo_url) {
+    await preloadImages([company.logo_url]);
+  }
+
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -116,15 +106,11 @@ export async function generateContractPdf(
   // Try to load company logo
   let logoLoaded = false;
   if (company?.logo_url) {
-    try {
-      const logoBase64 = await loadImageAsBase64(company.logo_url);
-      if (logoBase64) {
-        doc.addImage(logoBase64, 'PNG', pageWidth / 2 - 20, yPos, 40, 25);
-        logoLoaded = true;
-        yPos += 30;
-      }
-    } catch {
-      // Logo failed to load
+    const logoBase64 = getCachedImage(company.logo_url);
+    if (logoBase64) {
+      doc.addImage(logoBase64, 'PNG', pageWidth / 2 - 20, yPos, 40, 25);
+      logoLoaded = true;
+      yPos += 30;
     }
   }
 
