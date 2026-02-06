@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -26,11 +26,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Sparkles, ChevronDown, Info, AlertTriangle } from 'lucide-react';
+import { Loader2, Sparkles, ChevronDown, Info } from 'lucide-react';
 import { FiscalFieldsCard, type FiscalFieldsData } from '@/components/produtos/FiscalFieldsCard';
 import { useItemTypes } from '@/hooks/useItemTypes';
+import { ImageUploadField } from '@/components/common/ImageUploadField';
 import { useProductLinhas } from '@/hooks/useProductLinhas';
 
 interface CreateCustomItemDialogProps {
@@ -70,6 +70,8 @@ export function CreateCustomItemDialog({
   const [cost, setCost] = useState('');
   const [salePrice, setSalePrice] = useState('');
   const [minQuantity, setMinQuantity] = useState('');
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [tempItemId] = useState(() => crypto.randomUUID());
   const [fiscalExpanded, setFiscalExpanded] = useState(false);
   const [fiscalData, setFiscalData] = useState<FiscalFieldsData>({
     ncm: '',
@@ -146,6 +148,7 @@ export function CreateCustomItemDialog({
           linha,
           cost: costValue,
           sale_price: salePriceValue,
+          image_url: imageUrl,
           is_custom: true,
           is_active: true,
           // Fiscal fields
@@ -232,6 +235,7 @@ export function CreateCustomItemDialog({
     setCost('');
     setSalePrice('');
     setMinQuantity('');
+    setImageUrl(null);
     setFiscalExpanded(false);
     setFiscalData({
       ncm: '',
@@ -271,6 +275,16 @@ export function CreateCustomItemDialog({
                 Itens personalizados são exclusivos da sua empresa e não aparecem no catálogo global.
               </AlertDescription>
             </Alert>
+
+            {/* Image Upload */}
+            <ImageUploadField
+              label="Imagem do Item"
+              imageUrl={imageUrl}
+              onImageChange={setImageUrl}
+              bucket="company-item-images"
+              path={`${currentCompany?.id}/${tempItemId}`}
+              size="md"
+            />
 
             {/* Name */}
             <div className="space-y-2">

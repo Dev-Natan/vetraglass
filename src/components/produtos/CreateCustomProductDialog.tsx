@@ -13,6 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useProductCategories } from '@/hooks/useProductCategories';
 import { useProductLinhas } from '@/hooks/useProductLinhas';
+import { ImageUploadField } from '@/components/common/ImageUploadField';
 
 interface CreateCustomProductDialogProps {
   open: boolean;
@@ -37,6 +38,8 @@ export function CreateCustomProductDialog({ open, onOpenChange, defaultLinha }: 
   const [showCustomLinha, setShowCustomLinha] = useState(false);
   const [basePrice, setBasePrice] = useState<number>(0);
   const [description, setDescription] = useState('');
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [tempProductId] = useState(() => crypto.randomUUID());
 
   // Fetch existing linhas from company products
   const { data: existingLinhas = [] } = useQuery({
@@ -112,7 +115,7 @@ export function CreateCustomProductDialog({ open, onOpenChange, defaultLinha }: 
         _base_price: basePrice,
         _linha: finalLinha,
         _description: description.trim() || null,
-        _image_url: null,
+        _image_url: imageUrl,
       });
       
       if (error) throw error;
@@ -140,6 +143,7 @@ export function CreateCustomProductDialog({ open, onOpenChange, defaultLinha }: 
     setShowCustomLinha(false);
     setBasePrice(0);
     setDescription('');
+    setImageUrl(null);
   };
 
   // Set default linha when dialog opens
@@ -179,6 +183,16 @@ export function CreateCustomProductDialog({ open, onOpenChange, defaultLinha }: 
         </div>
 
         <div className="space-y-4 py-2">
+          {/* Image Upload */}
+          <ImageUploadField
+            label="Imagem do Produto"
+            imageUrl={imageUrl}
+            onImageChange={setImageUrl}
+            bucket="company-product-images"
+            path={`${currentCompany?.id}/${tempProductId}`}
+            size="md"
+          />
+
           {/* Name */}
           <div className="space-y-2">
             <Label htmlFor="name">Nome do Produto *</Label>
@@ -325,8 +339,12 @@ export function CreateCustomProductDialog({ open, onOpenChange, defaultLinha }: 
         {/* Preview Card */}
         {name && (
           <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border">
-            <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center">
-              <Package className="w-6 h-6 text-muted-foreground" />
+            <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
+              {imageUrl ? (
+                <img src={imageUrl} alt="Preview" className="w-full h-full object-contain" />
+              ) : (
+                <Package className="w-6 h-6 text-muted-foreground" />
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-medium text-sm truncate">{name}</p>
