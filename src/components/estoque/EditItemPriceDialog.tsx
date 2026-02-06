@@ -13,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Package, Trash2, FileText, ChevronDown, ChevronUp, Tags } from 'lucide-react';
+import { Loader2, Package, Trash2, FileText, ChevronDown, ChevronUp, Tags, ImagePlus } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   AlertDialog,
@@ -34,6 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ImageUploadField } from '@/components/common/ImageUploadField';
 
 interface TaxCategory {
   id: string;
@@ -48,24 +49,30 @@ interface EditItemPriceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   itemTemplateId: string | null;
+  companyItemId?: string | null;
   itemName: string;
   itemImageUrl?: string | null;
   itemUnit?: string;
   stockId?: string;
+  isCustomItem?: boolean;
 }
 
 export function EditItemPriceDialog({
   open,
   onOpenChange,
   itemTemplateId,
+  companyItemId,
   itemName,
   itemImageUrl,
   itemUnit = 'un',
   stockId,
+  isCustomItem = false,
 }: EditItemPriceDialogProps) {
   const { currentCompany } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(itemImageUrl || null);
 
   const [cost, setCost] = useState('');
   const [price, setPrice] = useState('');
@@ -235,7 +242,8 @@ export function EditItemPriceDialog({
       setAliquotaIs('');
     }
     setSelectedTaxCategory('');
-  }, [itemTemplate]);
+    setCurrentImageUrl(itemImageUrl || null);
+  }, [itemTemplate, itemImageUrl]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -285,24 +293,36 @@ export function EditItemPriceDialog({
         if (error) throw error;
       }
 
-      // Save fiscal fields on item template
-      const { error: fiscalError } = await supabase
-        .from('item_templates')
-        .update({
-          ncm: ncm || null,
-          cest: cest || null,
-          cfop_venda: cfopVenda || null,
-          cfop_venda_interestadual: cfopVendaInterestadual || null,
-          origem: origem || null,
-          codigo_servico: codigoServico || null,
-          aliquota_iss: parseFloat(aliquotaIss) || null,
-          aliquota_ibs: parseFloat(aliquotaIbs) || null,
-          aliquota_cbs: parseFloat(aliquotaCbs) || null,
-          aliquota_is: parseFloat(aliquotaIs) || null,
-        })
-        .eq('id', itemTemplateId);
+      // Save fiscal fields on item template (only for template-based items)
+      if (itemTemplateId) {
+        const { error: fiscalError } = await supabase
+          .from('item_templates')
+          .update({
+            ncm: ncm || null,
+            cest: cest || null,
+            cfop_venda: cfopVenda || null,
+            cfop_venda_interestadual: cfopVendaInterestadual || null,
+            origem: origem || null,
+            codigo_servico: codigoServico || null,
+            aliquota_iss: parseFloat(aliquotaIss) || null,
+            aliquota_ibs: parseFloat(aliquotaIbs) || null,
+            aliquota_cbs: parseFloat(aliquotaCbs) || null,
+            aliquota_is: parseFloat(aliquotaIs) || null,
+          })
+          .eq('id', itemTemplateId);
 
-      if (fiscalError) throw fiscalError;
+        if (fiscalError) throw fiscalError;
+      }
+
+      // Update image_url for custom items (company_items)
+      if (isCustomItem && companyItemId && currentImageUrl !== itemImageUrl) {
+        const { error: imageError } = await supabase
+          .from('company_items')
+          .update({ image_url: currentImageUrl })
+          .eq('id', companyItemId);
+
+        if (imageError) throw imageError;
+      }
     },
     onSuccess: () => {
       toast({
@@ -314,6 +334,7 @@ export function EditItemPriceDialog({
       queryClient.invalidateQueries({ queryKey: ['company-stock'] });
       queryClient.invalidateQueries({ queryKey: ['company-stock-item'] });
       queryClient.invalidateQueries({ queryKey: ['item-template-fiscal'] });
+      queryClient.invalidateQueries({ queryKey: ['company-items'] });
       onOpenChange(false);
     },
     onError: (error: Error) => {
@@ -391,12 +412,20 @@ export function EditItemPriceDialog({
         </DialogHeader>
 
         {/* Item Info */}
-        <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-muted/50 border">
-          <div className="flex items-center gap-3">
-            {itemImageUrl ? (
+        <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 border">
+          <div className="flex flex-col items-center gap-2">
+            {isCustomItem && companyItemId ? (
+              <ImageUploadField
+                imageUrl={currentImageUrl}
+                onImageChange={setCurrentImageUrl}
+                bucket="company-item-images"
+                path={`${currentCompany?.id}/${companyItemId}`}
+                size="sm"
+              />
+            ) : currentImageUrl ? (
               <div className="h-14 w-14 rounded-md border bg-white p-1 flex items-center justify-center shrink-0">
                 <img
-                  src={itemImageUrl}
+                  src={currentImageUrl}
                   alt={itemName}
                   loading="lazy"
                   className="max-h-full max-w-full object-contain"
@@ -407,14 +436,14 @@ export function EditItemPriceDialog({
                 <Package className="h-7 w-7 text-muted-foreground" />
               </div>
             )}
-            <div>
-              <p className="font-semibold text-lg">{itemName}</p>
-              <p className="text-xs text-muted-foreground">
-                Barra padrão: 6000mm | Unidade: {itemUnit}
-              </p>
-            </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-lg">{itemName}</p>
+            <p className="text-xs text-muted-foreground">
+              Barra padrão: 6000mm | Unidade: {itemUnit}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
             <Label htmlFor="isActive" className="text-sm">
               {isActive ? 'Ativo' : 'Inativo'}
             </Label>

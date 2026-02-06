@@ -10,6 +10,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { useProductCategories } from '@/hooks/useProductCategories';
+import { ImageUploadField } from '@/components/common/ImageUploadField';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface EditCustomProductDialogProps {
   open: boolean;
@@ -27,6 +29,7 @@ interface EditCustomProductDialogProps {
 
 export function EditCustomProductDialog({ open, onOpenChange, product }: EditCustomProductDialogProps) {
   const queryClient = useQueryClient();
+  const { currentCompany } = useAuth();
   const { data: productCategories } = useProductCategories();
   
   const [name, setName] = useState('');
@@ -34,6 +37,7 @@ export function EditCustomProductDialog({ open, onOpenChange, product }: EditCus
   const [category, setCategory] = useState('other');
   const [linha, setLinha] = useState('');
   const [basePrice, setBasePrice] = useState('');
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (product) {
@@ -42,6 +46,7 @@ export function EditCustomProductDialog({ open, onOpenChange, product }: EditCus
       setCategory(product.category || 'other');
       setLinha(product.linha || '');
       setBasePrice(product.base_price?.toString() || '');
+      setImageUrl(product.image_url || null);
     }
   }, [product]);
 
@@ -57,6 +62,7 @@ export function EditCustomProductDialog({ open, onOpenChange, product }: EditCus
           category,
           linha: linha.trim() || null,
           base_price: basePrice ? parseFloat(basePrice) : null,
+          image_url: imageUrl,
         })
         .eq('id', product.id);
 
@@ -93,6 +99,18 @@ export function EditCustomProductDialog({ open, onOpenChange, product }: EditCus
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Image Upload */}
+          {product && (
+            <ImageUploadField
+              label="Imagem do Produto"
+              imageUrl={imageUrl}
+              onImageChange={setImageUrl}
+              bucket="company-product-images"
+              path={`${currentCompany?.id}/${product.id}`}
+              size="md"
+            />
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="name">Nome do Produto *</Label>
             <Input
