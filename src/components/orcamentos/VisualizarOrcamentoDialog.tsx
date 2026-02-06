@@ -82,10 +82,19 @@ interface QuoteItem {
   glass_color?: string | null;
   glass_thickness?: string | null;
   product_template_id?: string | null;
+  company_product_id?: string | null;
+  company_item_id?: string | null;
   product_templates?: {
     image_url: string | null;
     linha: string | null;
     category: string | null;
+  } | null;
+  company_products?: {
+    image_url: string | null;
+    linha: string | null;
+  } | null;
+  company_items?: {
+    image_url: string | null;
   } | null;
 }
 
@@ -147,7 +156,7 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
     enabled: !!currentCompany?.id && open
   });
 
-  // Fetch quote items with product template info for images
+  // Fetch quote items with product template, company product and company item info for images
   const { data: items } = useQuery({
     queryKey: ['quote-items', quote?.id],
     queryFn: async () => {
@@ -160,6 +169,13 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
             image_url,
             linha,
             category
+          ),
+          company_products (
+            image_url,
+            linha
+          ),
+          company_items (
+            image_url
           )
         `)
         .eq('quote_id', quote.id);
@@ -305,8 +321,9 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
       has_glass: item.has_glass,
       glass_color: item.glass_color,
       glass_thickness: item.glass_thickness,
-      image_url: item.product_templates?.image_url || null,
-      linha: item.product_templates?.linha || null,
+      // Priority: company_products > product_templates > company_items
+      image_url: item.company_products?.image_url || item.product_templates?.image_url || item.company_items?.image_url || null,
+      linha: item.company_products?.linha || item.product_templates?.linha || null,
       category: item.product_templates?.category || null,
     }));
     
@@ -337,8 +354,9 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
       has_glass: item.has_glass,
       glass_color: item.glass_color,
       glass_thickness: item.glass_thickness,
-      image_url: item.product_templates?.image_url || null,
-      linha: item.product_templates?.linha || null,
+      // Priority: company_products > product_templates > company_items
+      image_url: item.company_products?.image_url || item.product_templates?.image_url || item.company_items?.image_url || null,
+      linha: item.company_products?.linha || item.product_templates?.linha || null,
       category: item.product_templates?.category || null,
     }));
     
