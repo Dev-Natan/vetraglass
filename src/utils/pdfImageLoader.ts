@@ -1,13 +1,23 @@
 /**
  * Optimized image loading utility for PDF generation
- * Uses caching and parallel loading to improve performance
+ * Uses caching, parallel loading, and compression to improve performance
  */
+
+import { compressImage, CompressionOptions, getCompressionOptions } from './imageCompression';
 
 // In-memory cache for loaded images (session-based)
 const imageCache = new Map<string, string>();
 
 // Track in-flight requests to avoid duplicate fetches
 const pendingRequests = new Map<string, Promise<string | null>>();
+
+// Default compression options for PDF images
+const DEFAULT_PDF_COMPRESSION: CompressionOptions = {
+  maxWidth: 300,
+  maxHeight: 300,
+  quality: 0.7,
+  format: 'image/jpeg'
+};
 
 /**
  * Normalize URL by removing cache-buster params for consistent caching
@@ -25,18 +35,19 @@ function normalizeUrl(url: string): string {
   }
 }
 
-async function loadSingleImage(url: string): Promise<string | null> {
+async function loadSingleImage(url: string, compress: boolean = true): Promise<string | null> {
   // Normalize URL for consistent caching
   const normalizedUrl = normalizeUrl(url);
+  const cacheKey = compress ? `${normalizedUrl}:compressed` : normalizedUrl;
   
   // Return cached version if available
-  if (imageCache.has(normalizedUrl)) {
-    return imageCache.get(normalizedUrl)!;
+  if (imageCache.has(cacheKey)) {
+    return imageCache.get(cacheKey)!;
   }
 
   // Return pending request if already in flight
-  if (pendingRequests.has(normalizedUrl)) {
-    return pendingRequests.get(normalizedUrl)!;
+  if (pendingRequests.has(cacheKey)) {
+    return pendingRequests.get(cacheKey)!;
   }
 
   // Create new request
@@ -63,35 +74,53 @@ async function loadSingleImage(url: string): Promise<string | null> {
       
       return new Promise((resolve) => {
         const reader = new FileReader();
-        reader.onloadend = () => {
-          const result = reader.result as string;
-          imageCache.set(normalizedUrl, result); // Cache with normalized URL
-          pendingRequests.delete(normalizedUrl);
+        reader.onloadend = async () => {
+          let result = reader.result as string;
+          
+          // Compress image if enabled
+          if (compress && result) {
+            try {
+              result = await compressImage(result, DEFAULT_PDF_COMPRESSION);
+            } catch (err) {
+              console.warn('Compression failed, using original:', err);
+            }
+          }
+          
+          imageCache.set(cacheKey, result); // Cache with normalized URL
+          pendingRequests.delete(cacheKey);
           resolve(result);
         };
         reader.onerror = () => {
           console.warn(`Failed to read image blob: ${normalizedUrl}`);
-          pendingRequests.delete(normalizedUrl);
+          pendingRequests.delete(cacheKey);
           resolve(null);
         };
         reader.readAsDataURL(blob);
       });
     } catch (error) {
       console.warn(`Error loading image: ${normalizedUrl}`, error);
-      pendingRequests.delete(normalizedUrl);
+      pendingRequests.delete(cacheKey);
       return null;
     }
   })();
 
-  pendingRequests.set(normalizedUrl, request);
+  pendingRequests.set(cacheKey, request);
   return request;
 }
 
+export interface PreloadOptions {
+  compress?: boolean;
+  compressionType?: 'thumbnail' | 'product' | 'logo' | 'full';
+}
+
 /**
- * Preload multiple images in parallel
+ * Preload multiple images in parallel with compression
  * Call this before generating PDF to warm up the cache
  */
-export async function preloadImages(urls: (string | null | undefined)[]): Promise<Map<string, string>> {
+export async function preloadImages(
+  urls: (string | null | undefined)[],
+  options: PreloadOptions = { compress: true }
+): Promise<Map<string, string>> {
   const validUrls = urls.filter((url): url is string => !!url);
   const uniqueUrls = [...new Set(validUrls)];
   
@@ -103,7 +132,7 @@ export async function preloadImages(urls: (string | null | undefined)[]): Promis
     const batch = uniqueUrls.slice(i, i + BATCH_SIZE);
     const batchResults = await Promise.all(
       batch.map(async (url) => {
-        const base64 = await loadSingleImage(url);
+        const base64 = await loadSingleImage(url, options.compress !== false);
         return { url, base64 };
       })
     );
@@ -119,9 +148,9 @@ export async function preloadImages(urls: (string | null | undefined)[]): Promis
 /**
  * Get a cached image or load it
  */
-export async function getImageBase64(url: string | null | undefined): Promise<string | null> {
+export async function getImageBase64(url: string | null | undefined, compress: boolean = true): Promise<string | null> {
   if (!url) return null;
-  return loadSingleImage(url);
+  return loadSingleImage(url, compress);
 }
 
 /**
@@ -131,7 +160,8 @@ export async function getImageBase64(url: string | null | undefined): Promise<st
 export function getCachedImage(url: string | null | undefined): string | null {
   if (!url) return null;
   const normalizedUrl = normalizeUrl(url);
-  return imageCache.get(normalizedUrl) || null;
+  // Check compressed version first, then uncompressed
+  return imageCache.get(`${normalizedUrl}:compressed`) || imageCache.get(normalizedUrl) || null;
 }
 
 /**
