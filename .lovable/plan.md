@@ -1,138 +1,117 @@
 
+## Plano: Upload de Imagens para Produtos e Itens da Empresa
 
-# Plano: Permitir que Usuários Criem Seus Próprios Itens
+### Contexto
+O usuário deseja que os usuários do sistema possam adicionar imagens personalizadas aos **produtos** e **itens/materiais** criados para sua empresa.
 
-## Objetivo
+### Situação Atual
+| Entidade | Suporte a Imagem | Upload Funcional |
+|----------|------------------|------------------|
+| `company_products` | Sim (`image_url`) | Parcial - apenas em `EditarProdutoEmpresa` |
+| `company_items` | Sim (`image_url`) | Não implementado |
 
-Dar liberdade aos usuários para criar itens (materiais) personalizados para suas empresas, já que nem todos os itens serão adicionados pelo administrador do sistema. Isso permitirá que cada empresa gerencie os materiais específicos do seu negócio.
+### Mudanças Necessárias
 
-## Contexto Atual
+#### 1. Criar Bucket de Storage para Itens
+Criar um bucket `company-item-images` no storage para armazenar as imagens dos itens personalizados das empresas.
 
-O sistema já possui a estrutura necessária:
-- A tabela `company_items` tem o campo `is_custom: boolean`
-- A tabela `company_stock` permite `item_template_id` como NULL (para itens sem template global)
-- As políticas RLS já permitem que usuários da empresa façam INSERT/UPDATE/DELETE em `company_items`
-- O padrão `CreateCustomProductDialog` já existe para produtos e pode ser replicado para itens
+```sql
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('company-item-images', 'company-item-images', true);
 
-Atualmente, o `AddStockDialog` só permite selecionar itens de templates globais criados pelo admin.
+-- RLS policy para permitir upload por usuários autenticados
+CREATE POLICY "Authenticated users can upload company item images"
+ON storage.objects FOR INSERT TO authenticated
+WITH CHECK (bucket_id = 'company-item-images');
 
-## Solução
-
-Criar um componente `CreateCustomItemDialog` que permite aos usuários:
-1. Definir nome, descrição e unidade do item
-2. Selecionar categoria (Perfil, Vidro, Acessório, Serviço, Chaparia) ou criar nova
-3. Selecionar linha de produto ou criar nova
-4. Definir preço de custo e venda
-5. Registrar a compra inicial (entrada no estoque)
-
-## Mudanças Técnicas
-
-### 1. Criar `CreateCustomItemDialog.tsx`
-
-Novo componente em `src/components/estoque/CreateCustomItemDialog.tsx`:
-
-- Formulário com campos:
-  - Nome do item (obrigatório)
-  - Descrição (opcional)
-  - Categoria/Tipo: Select com opções do banco (`item_types`) + opção "Nova categoria"
-  - Linha: Select com linhas do banco (`product_linhas`) + opção "Nova linha"
-  - Unidade: Select (un, m, m², kg, etc.) - pré-preenchido baseado na categoria
-  - Quantidade inicial (obrigatório)
-  - Custo unitário (obrigatório)
-  - Preço de venda (obrigatório)
-  - Estoque mínimo (opcional)
-  - Dados fiscais (colapsável, opcional)
-
-- Fluxo de salvamento:
-  1. Criar registro em `company_items` com `is_custom: true`, `item_template_id: null`
-  2. Criar registro em `company_stock` com `item_template_id: null`, `company_item_id` vinculado
-  3. Registrar movimento de entrada em `stock_movements`
-
-### 2. Atualizar `AddStockDialog.tsx`
-
-- Adicionar botão "Criar Item Personalizado" no cabeçalho ou na área de filtros
-- Ao clicar, abrir o `CreateCustomItemDialog`
-- Após criar o item, fechar o dialog de criação e atualizar a lista
-
-### 3. Atualizar página `/estoque` (Estoque.tsx)
-
-- Adicionar botão "Novo Item" no header da página (ao lado de "Registrar Compra")
-- Itens customizados aparecem normalmente na listagem com um badge "Personalizado"
-
-### 4. Atualizar componentes de visualização
-
-- `StockItemCard.tsx` e `StockGridView.tsx`: Mostrar badge visual para itens customizados (`is_custom: true`)
-
-## Estrutura do CreateCustomItemDialog
-
-```
-┌─────────────────────────────────────────────────┐
-│  ✨ Criar Item Personalizado                    │
-│  ─────────────────────────────────────────────  │
-│  ⚠️ Itens personalizados são exclusivos        │
-│     da sua empresa.                             │
-│  ─────────────────────────────────────────────  │
-│                                                 │
-│  Nome do Item *                                 │
-│  ┌─────────────────────────────────────────┐   │
-│  │ Ex: Parafuso Especial 5mm                │   │
-│  └─────────────────────────────────────────┘   │
-│                                                 │
-│  ┌──────────────────┐ ┌──────────────────────┐ │
-│  │ Categoria *      │ │ Linha               │ │
-│  │ [Acessório    ▼] │ │ [Suprema         ▼] │ │
-│  │ + Nova categoria │ │ + Nova linha        │ │
-│  └──────────────────┘ └──────────────────────┘ │
-│                                                 │
-│  ┌──────────────────┐ ┌──────────────────────┐ │
-│  │ Unidade *        │ │ Qtd. Inicial *       │ │
-│  │ [un           ▼] │ │ [100              ]  │ │
-│  └──────────────────┘ └──────────────────────┘ │
-│                                                 │
-│  ┌──────────────────┐ ┌──────────────────────┐ │
-│  │ Custo (R$) *     │ │ Venda (R$) *         │ │
-│  │ [0,50          ] │ │ [1,00             ]  │ │
-│  └──────────────────┘ └──────────────────────┘ │
-│                                                 │
-│  ┌──────────────────────────────────────────┐  │
-│  │ Margem: 100% • R$ 0,50 lucro             │  │
-│  └──────────────────────────────────────────┘  │
-│                                                 │
-│  ▸ Dados Fiscais (Opcional)                    │
-│                                                 │
-│  ─────────────────────────────────────────────  │
-│           [Cancelar]  [Criar e Registrar Compra]│
-└─────────────────────────────────────────────────┘
+CREATE POLICY "Anyone can view company item images"
+ON storage.objects FOR SELECT TO public
+USING (bucket_id = 'company-item-images');
 ```
 
-## Arquivos Modificados
+#### 2. Adicionar Upload de Imagem no Diálogo de Criação de Item Personalizado
+**Arquivo:** `src/components/estoque/CreateCustomItemDialog.tsx`
 
-| Arquivo | Alteração |
+- Adicionar campo de upload de imagem
+- Processar imagem com fundo branco usando `processFileWithWhiteBackground`
+- Fazer upload para bucket `company-item-images`
+- Salvar path no campo `image_url` da tabela `company_items`
+
+#### 3. Adicionar Upload de Imagem no Diálogo de Edição de Item
+**Arquivo:** `src/components/estoque/EditItemPriceDialog.tsx`
+
+- Adicionar botão de upload/troca de imagem na seção do item
+- Permitir remover imagem existente
+- Suportar tanto itens do template quanto itens personalizados
+- Para itens personalizados (`company_items`), atualizar `image_url`
+
+#### 4. Melhorar Upload no Diálogo de Criação de Produto Personalizado
+**Arquivo:** `src/components/produtos/CreateCustomProductDialog.tsx`
+
+- Adicionar campo de upload de imagem no formulário
+- Seguir mesmo padrão de `EditarProdutoEmpresa.tsx`
+- Upload para bucket `company-product-images` já existente
+
+#### 5. Adicionar Upload no Diálogo de Edição de Produto Personalizado
+**Arquivo:** `src/components/produtos/EditCustomProductDialog.tsx`
+
+- Adicionar seção de imagem similar ao `CreateCustomProductDialog`
+- Permitir trocar ou remover imagem
+
+---
+
+### Detalhes Técnicos
+
+#### Componente Reutilizável de Upload de Imagem
+Criar um componente genérico `ImageUploadField` que encapsule:
+- Preview da imagem atual
+- Botão de upload
+- Indicador de loading
+- Processamento de fundo branco
+- Validação de tipo de arquivo
+
+```text
+┌─────────────────────────────────────┐
+│  ┌───────────┐  Imagem do Produto  │
+│  │  Preview  │  [Alterar] [Remover] │
+│  │   128x128 │                      │
+│  └───────────┘                      │
+└─────────────────────────────────────┘
+```
+
+#### Estrutura de Arquivos no Storage
+```text
+company-item-images/
+  └── {company_id}/
+      └── {item_id}.png
+
+company-product-images/
+  └── {company_id}/
+      └── {product_id}.png
+```
+
+#### Fluxo de Upload
+1. Usuário seleciona arquivo (PNG, JPEG, JPG)
+2. Validar tipo e tamanho (máx 5MB)
+3. Processar imagem (fundo branco)
+4. Upload para Supabase Storage
+5. Atualizar `image_url` na tabela correspondente
+6. Invalidar queries para atualizar UI
+
+### Arquivos a Criar
+| Arquivo | Descrição |
 |---------|-----------|
-| `src/components/estoque/CreateCustomItemDialog.tsx` | **NOVO** - Dialog para criar item personalizado |
-| `src/components/estoque/AddStockDialog.tsx` | Adicionar botão para abrir CreateCustomItemDialog |
-| `src/pages/Estoque.tsx` | Adicionar botão "Novo Item" no header |
-| `src/components/estoque/StockItemCard.tsx` | Badge "Personalizado" para itens customizados |
-| `src/components/estoque/StockGridView.tsx` | Badge "Personalizado" para itens customizados |
-| `src/hooks/useStockData.ts` | Incluir `is_custom` do company_items nos dados |
+| `src/components/common/ImageUploadField.tsx` | Componente reutilizável de upload |
 
-## Resultado Esperado
+### Arquivos a Modificar
+| Arquivo | Mudança |
+|---------|---------|
+| `src/components/estoque/CreateCustomItemDialog.tsx` | Adicionar upload de imagem |
+| `src/components/estoque/EditItemPriceDialog.tsx` | Adicionar upload/edição de imagem |
+| `src/components/produtos/CreateCustomProductDialog.tsx` | Adicionar upload de imagem |
+| `src/components/produtos/EditCustomProductDialog.tsx` | Adicionar upload/edição de imagem |
 
-Após as alterações:
-
-1. Usuários podem criar itens personalizados diretamente na página de Estoque
-2. Itens customizados aparecem com badge "Personalizado" na lista
-3. Cada empresa tem liberdade de adicionar materiais que usa, sem depender do admin
-4. Os itens customizados funcionam normalmente em:
-   - Registrar Entrada/Saída
-   - Composição de produtos (quando aplicável)
-   - Orçamentos e Ordens de Serviço
-   - Relatórios de estoque
-
-## Benefícios
-
-- **Autonomia**: Empresas não dependem do admin para adicionar materiais
-- **Flexibilidade**: Cada empresa pode ter seu catálogo único de itens
-- **Escalabilidade**: O sistema suporta milhares de itens customizados por empresa
-- **Compatibilidade**: Itens customizados seguem a mesma estrutura dos templates
-
+### Migrations
+| Migration | Descrição |
+|-----------|-----------|
+| `create_company_item_images_bucket.sql` | Criar bucket e políticas RLS |
