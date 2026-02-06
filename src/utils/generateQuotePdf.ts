@@ -92,6 +92,16 @@ function calculateInstallmentValue(baseValue: number, installments: number, feeP
   return totalWithFee / installments;
 }
 
+type JsPdfImageFormat = 'PNG' | 'JPEG';
+
+function inferJsPdfImageFormat(dataUrl: string): JsPdfImageFormat {
+  const head = dataUrl.slice(0, 32).toLowerCase();
+  if (head.startsWith('data:image/png')) return 'PNG';
+  if (head.startsWith('data:image/jpg') || head.startsWith('data:image/jpeg')) return 'JPEG';
+  // Our PDF pipeline compresses to JPEG by default.
+  return 'JPEG';
+}
+
 export async function generateQuotePdf(
   quote: Quote, 
   items: QuoteItem[], 
@@ -128,7 +138,7 @@ export async function generateQuotePdf(
     if (logoBase64) {
       logoWidth = company.logo_size || 40;
       const logoHeight = logoWidth * 0.625;
-      doc.addImage(logoBase64, 'PNG', marginLeft, y, logoWidth, logoHeight);
+      doc.addImage(logoBase64, inferJsPdfImageFormat(logoBase64), marginLeft, y, logoWidth, logoHeight);
       logoLoaded = true;
     }
   }
@@ -235,7 +245,7 @@ export async function generateQuotePdf(
     if (imageUrl) {
       const base64 = getCachedImage(imageUrl);
       if (base64) {
-        doc.addImage(base64, 'PNG', imgX + 1, imgY + 1, imgSize - 2, imgSize - 2);
+        doc.addImage(base64, inferJsPdfImageFormat(base64), imgX + 1, imgY + 1, imgSize - 2, imgSize - 2);
       }
     }
     

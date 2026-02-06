@@ -177,7 +177,17 @@ export function clearImageCache(): void {
  */
 export function getProductImageUrl(imageUrl: string | null | undefined): string | null {
   if (!imageUrl) return null;
+
+  // Full URL already
   if (imageUrl.startsWith('http')) return imageUrl;
+
+  // Absolute path (e.g. /products/foo.png)
+  if (imageUrl.startsWith('/')) return `${window.location.origin}${imageUrl}`;
+
+  // Path already includes products folder
+  if (imageUrl.startsWith('products/')) return `${window.location.origin}/${imageUrl}`;
+
+  // Stored as filename only
   return `${window.location.origin}/products/${imageUrl}`;
 }
 
