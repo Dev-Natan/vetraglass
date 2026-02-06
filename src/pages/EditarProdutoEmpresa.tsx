@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { ArrowLeft, Upload, MoreHorizontal, Plus, ChevronRight, Home, Package, CheckCircle2, Circle, CircleDot, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Upload, MoreHorizontal, Plus, ChevronRight, Home, Package, CheckCircle2, Circle, CircleDot, RotateCcw, Copy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { processFileWithWhiteBackground } from '@/utils/imageBackgroundProcessor';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FormulaEditor } from '@/components/produtos/FormulaEditor';
 import { GlassFormulaEditor } from '@/components/produtos/GlassFormulaEditor';
+import { CopyTemplateCompositionDialog } from '@/components/produtos/CopyTemplateCompositionDialog';
 import {
   Select,
   SelectContent,
@@ -133,6 +134,7 @@ export default function EditarProdutoEmpresa() {
   const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
   const [isEditItemDialogOpen, setIsEditItemDialogOpen] = useState(false);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<CompanyProductItem | null>(null);
   const [selectedItemToAdd, setSelectedItemToAdd] = useState('');
   const [quantityFormula, setQuantityFormula] = useState('1');
@@ -296,9 +298,56 @@ export default function EditarProdutoEmpresa() {
   // Add item mutation
   const addItemMutation = useMutation({
     mutationFn: async () => {
+      if (!currentCompany?.id) throw new Error('Empresa não selecionada');
+      
+      // 1. Ensure company_item exists for the item_template
+      const { data: existingCompanyItem } = await supabase
+        .from('company_items')
+        .select('id')
+        .eq('company_id', currentCompany.id)
+        .eq('item_template_id', selectedItemToAdd)
+        .maybeSingle();
+
+      let companyItemId = existingCompanyItem?.id || null;
+
+      // If no company_item exists, create one from the template
+      if (!companyItemId) {
+        const { data: itemTemplate } = await supabase
+          .from('item_templates')
+          .select('name, description, type, unit, specifications, image_url, linha, default_price')
+          .eq('id', selectedItemToAdd)
+          .single();
+
+        if (itemTemplate) {
+          const { data: newCompanyItem, error: createError } = await supabase
+            .from('company_items')
+            .insert({
+              company_id: currentCompany.id,
+              item_template_id: selectedItemToAdd,
+              name: itemTemplate.name,
+              description: itemTemplate.description,
+              type: itemTemplate.type,
+              unit: itemTemplate.unit,
+              specifications: itemTemplate.specifications,
+              image_url: itemTemplate.image_url,
+              linha: itemTemplate.linha,
+              cost: 0,
+              sale_price: itemTemplate.default_price || 0,
+              is_custom: false,
+              is_active: true,
+            })
+            .select('id')
+            .single();
+
+          if (createError) throw createError;
+          companyItemId = newCompanyItem?.id || null;
+        }
+      }
+
       const insertData = {
         company_product_id: id,
         item_template_id: selectedItemToAdd,
+        company_item_id: companyItemId,
         quantity_formula: quantityFormula,
         pieces_quantity: piecesQuantity,
         is_optional: false,
@@ -537,7 +586,17 @@ export default function EditarProdutoEmpresa() {
           </div>
           
           {/* Actions */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="gap-2"
+              onClick={() => setIsCopyDialogOpen(true)}
+            >
+              <Copy className="w-4 h-4" />
+              <span className="hidden sm:inline">Copiar de Template</span>
+              <span className="sm:hidden">Copiar</span>
+            </Button>
             {canReset && (
               <Button 
                 variant="outline" 
@@ -914,6 +973,14 @@ export default function EditarProdutoEmpresa() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Copy Template Composition Dialog */}
+      <CopyTemplateCompositionDialog
+        open={isCopyDialogOpen}
+        onOpenChange={setIsCopyDialogOpen}
+        companyProductId={id || ''}
+        currentLinha={product?.linha || product?.product_template?.linha}
+      />
     </MainLayout>
   );
 }
