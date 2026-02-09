@@ -23,7 +23,7 @@ interface Props {
   productName: string;
 }
 
-const SUGGESTED_COLORS = ['Branco', 'Preto', 'Bronze', 'Champagne', 'Fosco'];
+const SUGGESTED_COLORS = ['Branco', 'Preto', 'Bronze', 'Champagne', 'Fosco', 'Amadeirado', 'Amadeirado Ipê', 'Amadeirado Mogno', 'Amadeirado Carvalho', 'Amadeirado Cedro', 'Corten', 'Grafite', 'Natural'];
 
 export function ProductAluminumPricesSection({ companyProductId, productName }: Props) {
   const { aluminumPrices, isLoading, addPrice, updatePrice, deletePrice } = useProductAluminumPrices(companyProductId);
