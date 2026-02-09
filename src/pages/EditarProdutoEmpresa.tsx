@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { ArrowLeft, Upload, MoreHorizontal, Plus, ChevronRight, Home, Package, CheckCircle2, Circle, CircleDot, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Upload, MoreHorizontal, Plus, ChevronRight, Home, Package, CheckCircle2, Circle, CircleDot, RotateCcw, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { processFileWithWhiteBackground } from '@/utils/imageBackgroundProcessor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -132,6 +133,7 @@ export default function EditarProdutoEmpresa() {
   
   const [activeTab, setActiveTab] = useState('glass');
   const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
+  const [itemSearchQuery, setItemSearchQuery] = useState('');
   const [isEditItemDialogOpen, setIsEditItemDialogOpen] = useState(false);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   
@@ -466,7 +468,17 @@ export default function EditarProdutoEmpresa() {
     setWidthFormula('');
     setHeightFormula('');
     setGlassName('');
+    setItemSearchQuery('');
   };
+
+  const filteredAvailableItems = useMemo(() => {
+    if (!availableItems) return [];
+    if (!itemSearchQuery) return availableItems;
+    const q = itemSearchQuery.toLowerCase();
+    return availableItems.filter(
+      item => item.name.toLowerCase().includes(q) || item.linha?.toLowerCase().includes(q)
+    );
+  }, [availableItems, itemSearchQuery]);
 
   const handleEditItem = (item: CompanyProductItem) => {
     setEditingItem(item);
@@ -890,26 +902,40 @@ export default function EditarProdutoEmpresa() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Item:</Label>
-              <Select value={selectedItemToAdd} onValueChange={setSelectedItemToAdd}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um item" />
-                </SelectTrigger>
-                <SelectContent className="max-h-[400px]">
-                  {availableItems?.map((item) => (
-                    <SelectItem key={item.id} value={item.id}>
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded border bg-muted flex-shrink-0 flex items-center justify-center overflow-hidden">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Pesquisar por nome ou linha..."
+                  value={itemSearchQuery}
+                  onChange={(e) => setItemSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <ScrollArea className="h-[220px] rounded-lg border bg-muted/20 p-2">
+                <div className="space-y-1">
+                  {filteredAvailableItems.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-6">Nenhum item encontrado</p>
+                  ) : (
+                    filteredAvailableItems.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setSelectedItemToAdd(item.id)}
+                        className={cn(
+                          "w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-colors",
+                          selectedItemToAdd === item.id
+                            ? "bg-primary/10 border border-primary/30"
+                            : "hover:bg-muted"
+                        )}
+                      >
+                        <div className="w-8 h-8 rounded border bg-background flex-shrink-0 flex items-center justify-center overflow-hidden">
                           {item.image_url ? (
-                            <img
-                              src={getStorageUrl(item.image_url)}
-                              alt={item.name}
-                              className="w-full h-full object-contain"
-                            />
+                            <img src={getStorageUrl(item.image_url)} alt={item.name} className="w-full h-full object-contain" />
                           ) : (
                             <span className="text-xs text-muted-foreground/50">📦</span>
                           )}
                         </div>
-                        <span className="truncate">{item.name}</span>
+                        <span className="text-sm truncate flex-1">{item.name}</span>
                         {item.type && (
                           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium flex-shrink-0">
                             {item.type === 'profile' ? 'Perfil' : item.type === 'glass' ? 'Vidro' : item.type === 'accessory' ? 'Acessório' : item.type}
@@ -920,11 +946,11 @@ export default function EditarProdutoEmpresa() {
                             {item.linha}
                           </span>
                         )}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
             </div>
 
             {activeTab === 'glass' ? (

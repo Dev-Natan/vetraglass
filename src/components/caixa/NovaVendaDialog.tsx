@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Plus, Package, ShoppingCart, FileText, Trash2, Minus,
-  DollarSign, CreditCard, Smartphone, Loader2, ArrowLeft, Layers, Box, User, Calculator
+  DollarSign, CreditCard, Smartphone, Loader2, ArrowLeft, Layers, Box, User, Calculator, Search
 } from 'lucide-react';
 import { AddProductPanel } from '@/components/orcamentos/AddProductPanel';
 import { AddToStockDialog } from './AddToStockDialog';
@@ -135,6 +135,7 @@ export function NovaVendaDialog({
   const [materialWidth, setMaterialWidth] = useState('');
   const [materialHeight, setMaterialHeight] = useState('');
   const [materialQuantity, setMaterialQuantity] = useState('1');
+  const [materialSearchQuery, setMaterialSearchQuery] = useState('');
   
   // Stock check dialog state
   const [showStockDialog, setShowStockDialog] = useState(false);
@@ -472,6 +473,7 @@ export function NovaVendaDialog({
     setMaterialWidth('');
     setMaterialHeight('');
     setMaterialQuantity('1');
+    setMaterialSearchQuery('');
     setViewMode('main');
     setMode('avulsa');
     setPendingItem(null);
@@ -491,11 +493,16 @@ export function NovaVendaDialog({
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
-  // Get items filtered by linha
+  // Get items filtered by linha and search
   const filteredItems = useMemo(() => {
     if (!selectedLinha) return [];
-    return availableItems.filter(item => item.linha === selectedLinha);
-  }, [availableItems, selectedLinha]);
+    let items = availableItems.filter(item => item.linha === selectedLinha);
+    if (materialSearchQuery) {
+      const q = materialSearchQuery.toLowerCase();
+      items = items.filter(item => item.name.toLowerCase().includes(q));
+    }
+    return items;
+  }, [availableItems, selectedLinha, materialSearchQuery]);
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -1025,6 +1032,16 @@ export function NovaVendaDialog({
                     <Button variant="ghost" size="sm" onClick={() => setSelectedLinha(null)}>
                       Trocar Linha
                     </Button>
+                  </div>
+
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Pesquisar material..."
+                      value={materialSearchQuery}
+                      onChange={(e) => setMaterialSearchQuery(e.target.value)}
+                      className="pl-9"
+                    />
                   </div>
                   
                   <ScrollArea className="h-[300px] rounded-xl border bg-muted/20 p-3">
