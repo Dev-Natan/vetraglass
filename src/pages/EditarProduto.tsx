@@ -504,7 +504,7 @@ export default function EditarProduto() {
 
   return (
     <MainLayout>
-      <div className="space-y-6 animate-fade-in pb-8">
+      <div className="space-y-6 animate-fade-in pb-24">
         {/* Breadcrumb Navigation */}
         <nav className="flex items-center gap-2 text-sm text-muted-foreground">
           <button 
@@ -868,8 +868,8 @@ export default function EditarProduto() {
         </div>
 
         {/* Sticky bottom save bar */}
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-t shadow-lg">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+        <div className="fixed bottom-0 left-0 lg:left-60 right-0 z-40 bg-background/95 backdrop-blur-sm border-t shadow-[0_-2px_10px_rgba(0,0,0,0.1)]">
+          <div className="px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
             <Button variant="outline" onClick={() => navigate(-1)} className="gap-2">
               <ArrowLeft className="w-4 h-4" />
               Voltar
@@ -882,8 +882,6 @@ export default function EditarProduto() {
             </div>
           </div>
         </div>
-        {/* Spacer for sticky bar */}
-        <div className="h-16" />
 
         {/* Add Item Dialog */}
         <Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen}>
