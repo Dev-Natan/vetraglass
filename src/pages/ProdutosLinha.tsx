@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 import { ActivateProductDialog } from '@/components/produtos/ActivateProductDialog';
 import { TipologiasSheet } from '@/components/produtos/TipologiasSheet';
 import { CreateCustomProductDialog } from '@/components/produtos/CreateCustomProductDialog';
-import { EditCustomProductDialog } from '@/components/produtos/EditCustomProductDialog';
+
 import { EditProductPricingDialog } from '@/components/produtos/EditProductPricingDialog';
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
 
@@ -65,8 +65,6 @@ export default function ProdutosLinha() {
   const [selectedProductForActivation, setSelectedProductForActivation] = useState<{ id: string; name: string } | null>(null);
   const [tipologiasSheetOpen, setTipologiasSheetOpen] = useState(false);
   const [createCustomDialogOpen, setCreateCustomDialogOpen] = useState(false);
-  const [editCustomDialogOpen, setEditCustomDialogOpen] = useState(false);
-  const [selectedProductForEdit, setSelectedProductForEdit] = useState<DisplayProduct | null>(null);
   const [editPricingDialogOpen, setEditPricingDialogOpen] = useState(false);
   const [selectedProductForPricing, setSelectedProductForPricing] = useState<{ id: string; name: string; image_url?: string | null } | null>(null);
 
@@ -486,12 +484,7 @@ export default function ProdutosLinha() {
                       size="sm"
                       className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-medium text-xs h-9"
                       onClick={() => {
-                        if (product.is_custom) {
-                          setSelectedProductForEdit(product);
-                          setEditCustomDialogOpen(true);
-                        } else {
-                          navigate(`/produtos/editar/${product.id}`);
-                        }
+                        navigate(`/produtos/empresa/editar/${product.id}`);
                       }}
                     >
                       Editar
@@ -637,12 +630,7 @@ export default function ProdutosLinha() {
                       size="sm"
                       className="bg-orange-500 hover:bg-orange-600 text-white font-medium"
                       onClick={() => {
-                        if (product.is_custom) {
-                          setSelectedProductForEdit(product);
-                          setEditCustomDialogOpen(true);
-                        } else {
-                          navigate(`/produtos/editar/${product.id}`);
-                        }
+                        navigate(`/produtos/empresa/editar/${product.id}`);
                       }}
                     >
                       Editar produto
@@ -738,12 +726,6 @@ export default function ProdutosLinha() {
           defaultLinha={currentLinha}
         />
 
-        {/* Edit Custom Product Dialog */}
-        <EditCustomProductDialog
-          open={editCustomDialogOpen}
-          onOpenChange={setEditCustomDialogOpen}
-          product={selectedProductForEdit}
-        />
 
         {/* Edit Product Pricing Dialog */}
         {selectedProductForPricing && (
