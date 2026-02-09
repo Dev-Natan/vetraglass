@@ -313,6 +313,14 @@ export default function ProdutosLinha() {
     return [...templateFiltered, ...customFiltered];
   }, [products, customProducts, searchTerm, selectedCategory, companyProducts, showActive]);
 
+  const getImageUrl = (path: string | null, isCustom: boolean) => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    if (path.startsWith('/')) return path;
+    const bucket = isCustom ? 'company-product-images' : 'product-templates';
+    return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
+  };
+
   const getCategoryIcon = (category: string) => {
     // Simple placeholder icons based on category
     const icons: Record<string, string> = {
@@ -400,7 +408,7 @@ export default function ProdutosLinha() {
                     <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center shrink-0 p-1">
                       {product.image_url ? (
                         <img 
-                          src={product.image_url} 
+                          src={getImageUrl(product.image_url, product.is_custom) || ''} 
                           alt={product.name}
                           className="w-full h-full object-contain"
                         />
@@ -530,7 +538,7 @@ export default function ProdutosLinha() {
                     <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center shrink-0 p-1">
                       {product.image_url ? (
                         <img 
-                          src={product.image_url} 
+                          src={getImageUrl(product.image_url, product.is_custom) || ''} 
                           alt={product.name}
                           className="w-full h-full object-contain"
                         />
