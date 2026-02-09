@@ -1513,6 +1513,7 @@ export type Database = {
           min_height: number | null
           min_width: number | null
           price_per_sqm: number | null
+          pricing_type: string
           product_template_id: string | null
           updated_at: string
           uses_glass: boolean | null
@@ -1536,6 +1537,7 @@ export type Database = {
           min_height?: number | null
           min_width?: number | null
           price_per_sqm?: number | null
+          pricing_type?: string
           product_template_id?: string | null
           updated_at?: string
           uses_glass?: boolean | null
@@ -1559,6 +1561,7 @@ export type Database = {
           min_height?: number | null
           min_width?: number | null
           price_per_sqm?: number | null
+          pricing_type?: string
           product_template_id?: string | null
           updated_at?: string
           uses_glass?: boolean | null
@@ -4057,6 +4060,47 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_aluminum_prices: {
+        Row: {
+          color_name: string
+          company_product_id: string
+          cost_per_sqm: number
+          created_at: string
+          id: string
+          is_active: boolean
+          price_per_sqm: number
+          updated_at: string
+        }
+        Insert: {
+          color_name: string
+          company_product_id: string
+          cost_per_sqm?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          price_per_sqm?: number
+          updated_at?: string
+        }
+        Update: {
+          color_name?: string
+          company_product_id?: string
+          cost_per_sqm?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          price_per_sqm?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_aluminum_prices_company_product_id_fkey"
+            columns: ["company_product_id"]
+            isOneToOne: false
+            referencedRelation: "company_products"
             referencedColumns: ["id"]
           },
         ]
