@@ -183,7 +183,11 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   });
 
   // Common aluminum finish colors (informational, for non-aluminum-priced products)
-  const defaultAluminumColors = ['Branco', 'Preto', 'Bronze', 'Champagne', 'Amadeirado', 'Natural'];
+  const defaultAluminumColors = [
+    'Branco', 'Preto', 'Bronze', 'Champagne', 'Natural',
+    'Amadeirado Ipê', 'Amadeirado Mogno', 'Amadeirado Carvalho', 'Amadeirado Cedro',
+    'Corten', 'Grafite', 'Marrom', 'Brilhante', 'Fosco',
+  ];
 
   // Get pricing type for the product
   const pricingType = (companyProduct as any)?.pricing_type || (companyProduct?.uses_glass ? 'glass' : 'none');
