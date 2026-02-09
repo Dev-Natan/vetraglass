@@ -3,7 +3,7 @@ import { resolveImageUrl } from '@/utils/imageUrl';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Package, Layers } from 'lucide-react';
+import { Trash2, Package, Layers, Palette } from 'lucide-react';
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
 import { useItemTypes } from '@/hooks/useItemTypes';
 
@@ -27,6 +27,7 @@ interface QuoteItem {
   has_glass?: boolean;
   glass_color?: string;
   glass_thickness?: string;
+  aluminum_color?: string;
 }
 
 const glassColorLabels: Record<string, string> = {
@@ -119,6 +120,12 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
                 {item.has_glass && item.glass_thickness && (
                   <Badge variant="outline" className="text-xs bg-success/10 border-success/30 text-success">
                     {item.glass_thickness}
+                  </Badge>
+                )}
+                {item.aluminum_color && (
+                  <Badge variant="outline" className="text-xs bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400">
+                    <Palette className="w-3 h-3 mr-1" />
+                    {item.aluminum_color}
                   </Badge>
                 )}
               </div>
@@ -234,5 +241,6 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
   prev.item.id === next.item.id && 
   prev.item.total_price === next.item.total_price &&
   prev.item.quantity === next.item.quantity &&
-  prev.item.unit_price === next.item.unit_price
+  prev.item.unit_price === next.item.unit_price &&
+  prev.item.aluminum_color === next.item.aluminum_color
 );
