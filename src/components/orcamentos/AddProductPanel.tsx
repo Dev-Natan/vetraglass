@@ -84,6 +84,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
           category,
           is_custom,
           uses_glass,
+          pricing_type,
           product_template_id,
           product_template:product_templates (
             id, name, description, category, linha, image_url
@@ -190,7 +191,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   ];
 
   // Get pricing type for the product
-  const pricingType = (companyProduct as any)?.pricing_type || (companyProduct?.uses_glass ? 'glass' : 'none');
+  const pricingType = companyProduct?.pricing_type || (companyProduct?.uses_glass ? 'glass' : 'none');
   const productUsesGlass = pricingType === 'glass';
   const productUsesAluminum = pricingType === 'aluminum';
   const hasGlassPrices = (productGlassPrices?.length || 0) > 0;
