@@ -270,25 +270,26 @@ export async function generateQuotePdf(
     
     detailsY += 5;
     
-    doc.setFont('helvetica', 'bold');
-    doc.text('Cor:', detailsX, detailsY);
-    doc.setFont('helvetica', 'normal');
-    doc.text(item.glass_color || '-', detailsX + 20, detailsY);
-    
-    detailsY += 5;
-    
-    doc.setFont('helvetica', 'bold');
-    doc.text('Vidro(s):', detailsX, detailsY);
-    doc.setFont('helvetica', 'normal');
-    let glassInfo = '-';
-    if (item.has_glass && item.glass_thickness) {
-      const glassColor = item.glass_color || 'Vidro';
-      glassInfo = `${glassColor} ${item.glass_thickness}`;
-    } else if (item.has_glass === false) {
-      glassInfo = 'Sem vidro';
+    // Only show glass-related fields when the product uses glass
+    if (item.has_glass !== false) {
+      doc.setFont('helvetica', 'bold');
+      doc.text('Cor:', detailsX, detailsY);
+      doc.setFont('helvetica', 'normal');
+      doc.text(item.glass_color || '-', detailsX + 20, detailsY);
+      
+      detailsY += 5;
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Vidro(s):', detailsX, detailsY);
+      doc.setFont('helvetica', 'normal');
+      let glassInfo = '-';
+      if (item.has_glass && item.glass_thickness) {
+        const glassColor = item.glass_color || 'Vidro';
+        glassInfo = `${glassColor} ${item.glass_thickness}`;
+      }
+      const glassText = glassInfo.length > 45 ? glassInfo.substring(0, 45) + '...' : glassInfo;
+      doc.text(glassText, detailsX + 20, detailsY);
     }
-    const glassText = glassInfo.length > 45 ? glassInfo.substring(0, 45) + '...' : glassInfo;
-    doc.text(glassText, detailsX + 20, detailsY);
     
     detailsY += 5;
     
