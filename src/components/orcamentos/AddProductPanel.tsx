@@ -13,7 +13,6 @@ import { cn } from '@/lib/utils';
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
 import { useProductLinhas } from '@/hooks/useProductLinhas';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { useProductAluminumPriceOptions } from '@/hooks/useProductAluminumPrices';
 
 interface ProductGlassPrice {
   id: string;
@@ -64,7 +63,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   const [customPrice, setCustomPrice] = useState<number | null>(null);
   const [hasGlass, setHasGlass] = useState<boolean>(true);
   const [selectedGlassPriceId, setSelectedGlassPriceId] = useState<string>('');
-  const [selectedAluminumColorId, setSelectedAluminumColorId] = useState<string>('');
+  const [selectedAluminumColor, setSelectedAluminumColor] = useState<string>('');
 
   // Fetch active company products with template data
   const { data: companyProducts, isLoading } = useQuery({
@@ -182,15 +181,12 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     enabled: !!companyProduct?.id
   });
 
-  // Fetch aluminum color prices for selected product
-  const { data: aluminumColorOptions } = useProductAluminumPriceOptions(companyProduct?.id || null);
+  // Common aluminum finish colors (informational only, no price impact)
+  const aluminumColorOptions = ['Branco', 'Preto', 'Bronze', 'Champagne', 'Amadeirado', 'Natural'];
 
   // Get pricing type for the product
-  const pricingType = (companyProduct as any)?.pricing_type || ((companyProduct as any)?.uses_glass ? 'glass' : 'none');
-  const productUsesGlass = pricingType === 'glass';
-  const productUsesAluminum = pricingType === 'aluminum';
+  const productUsesGlass = companyProduct?.uses_glass ?? false;
   const hasGlassPrices = (productGlassPrices?.length || 0) > 0;
-  const hasAluminumPrices = (aluminumColorOptions?.length || 0) > 0;
 
   // Set default glass price when product changes
   useEffect(() => {
@@ -199,40 +195,26 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     }
   }, [productGlassPrices, selectedGlassPriceId]);
 
-  // Set default aluminum color when product changes
-  useEffect(() => {
-    if (aluminumColorOptions?.length && !selectedAluminumColorId) {
-      setSelectedAluminumColorId(aluminumColorOptions[0].value);
-    }
-  }, [aluminumColorOptions, selectedAluminumColorId]);
-
   // Reset selections when product changes
   useEffect(() => {
     setSelectedGlassPriceId('');
-    setSelectedAluminumColorId('');
+    setSelectedAluminumColor('');
     setHasGlass(productUsesGlass);
   }, [companyProduct?.id, productUsesGlass]);
 
   // Get selected glass price details
   const selectedGlassPrice = productGlassPrices?.find(p => p.id === selectedGlassPriceId);
   const glassPricePerSqm = selectedGlassPrice?.price_per_sqm || 0;
-  
-  // Get selected aluminum color price
-  const selectedAluminumColor = aluminumColorOptions?.find(p => p.value === selectedAluminumColorId);
-  const aluminumPricePerSqm = selectedAluminumColor?.pricePerSqm || 0;
 
-  // Use price_per_sqm as the primary pricing method (fallback when no glass/aluminum selected)
+  // Use price_per_sqm as the primary pricing method
   const productBasePricePerSqm = Number((companyProduct as any)?.price_per_sqm) || Number(companyProduct?.base_price) || 0;
   
-  // Determine final price based on pricing type
+  // Determine final price — glass pricing or base price (aluminum color does NOT affect price)
   const finalPricePerSqm = (() => {
     if (productUsesGlass && hasGlass && glassPricePerSqm > 0) {
-      return glassPricePerSqm; // Glass pricing
+      return glassPricePerSqm;
     }
-    if (productUsesAluminum && aluminumPricePerSqm > 0) {
-      return aluminumPricePerSqm; // Aluminum color pricing
-    }
-    return productBasePricePerSqm; // Base price
+    return productBasePricePerSqm;
   })();
   
   const basePrice = customPrice !== null ? customPrice : finalPricePerSqm;
@@ -250,7 +232,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     setSelectedProductId(productId);
     setCustomPrice(null);
     setSelectedGlassPriceId('');
-    setSelectedAluminumColorId('');
+    setSelectedAluminumColor('');
     
     // Auto-enable glass for Temperado line products
     const product = filteredProducts?.find(p => p.id === productId);
@@ -282,7 +264,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
       glass_color: hasGlass && selectedGlassPrice ? selectedGlassPrice.glass_color : undefined,
       glass_thickness: hasGlass && selectedGlassPrice ? `${selectedGlassPrice.thickness_mm}mm` : undefined,
       glass_price_per_sqm: hasGlass ? glassPricePerSqm : undefined,
-      aluminum_color: productUsesAluminum && selectedAluminumColor ? selectedAluminumColor.colorName : undefined,
+      aluminum_color: selectedAluminumColor || undefined,
       is_custom: selectedProduct.is_custom,
     });
   };
@@ -573,51 +555,25 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
           </div>
         )}
 
-        {/* Aluminum Color Options - Only show if product uses aluminum pricing */}
-        {productUsesAluminum && (
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                <Palette className="w-3 h-3" />
-                Cor do Acabamento
-              </label>
-              {hasAluminumPrices ? (
-                <Select value={selectedAluminumColorId} onValueChange={setSelectedAluminumColorId}>
-                  <SelectTrigger className="bg-background h-10">
-                    <SelectValue placeholder="Selecione a cor..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover border shadow-lg z-50">
-                    {aluminumColorOptions?.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        <div className="flex items-center justify-between gap-4 w-full">
-                          <span>{opt.label}</span>
-                          <span className="text-muted-foreground text-xs">
-                            {formatCurrency(opt.pricePerSqm)}/m²
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-warning/10 border border-warning/30">
-                  <Info className="w-4 h-4 text-warning shrink-0" />
-                  <span className="text-xs text-foreground">
-                    Nenhum preço por cor cadastrado para este produto. Configure em Produtos → Preços.
-                  </span>
-                </div>
-              )}
-            </div>
-            
-            {selectedAluminumColor && aluminumPricePerSqm > 0 && (
-              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-accent border border-primary/20">
-                <Palette className="w-4 h-4 text-primary" />
-                <span className="text-xs text-foreground">
-                  Preço para acabamento {selectedAluminumColor.colorName}: 
-                  <strong className="ml-1">{formatCurrency(aluminumPricePerSqm)}/m²</strong>
-                </span>
-              </div>
-            )}
+        {/* Aluminum Finish Color - Informational only, no price impact */}
+        {selectedProduct && (
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+              <Palette className="w-3 h-3" />
+              Cor do Acabamento (opcional)
+            </label>
+            <Select value={selectedAluminumColor} onValueChange={setSelectedAluminumColor}>
+              <SelectTrigger className="bg-background h-10">
+                <SelectValue placeholder="Selecione a cor do acabamento..." />
+              </SelectTrigger>
+              <SelectContent className="bg-popover border shadow-lg z-50">
+                {aluminumColorOptions.map((color) => (
+                  <SelectItem key={color} value={color}>
+                    {color}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         )}
 
