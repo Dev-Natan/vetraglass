@@ -33,7 +33,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       <ModuleTutorialProvider>
         <div className="min-h-screen bg-background">
           <Sidebar />
-          <main className="lg:pl-60 min-h-screen">
+          <main className="lg:pl-60 min-h-screen overflow-y-auto">
             {/* Top Header */}
             <header className="fixed top-0 right-0 left-0 lg:left-60 z-30 bg-background/80 backdrop-blur-sm border-b border-border">
               <div className="flex items-center justify-between px-6 py-3">
