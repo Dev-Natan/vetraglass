@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { ArrowLeft, Upload, MoreHorizontal, Plus, ChevronRight, Home, Package, CheckCircle2, Circle, CircleDot, RotateCcw, Copy } from 'lucide-react';
+import { ArrowLeft, Upload, MoreHorizontal, Plus, ChevronRight, Home, Package, CheckCircle2, Circle, CircleDot, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { processFileWithWhiteBackground } from '@/utils/imageBackgroundProcessor';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FormulaEditor } from '@/components/produtos/FormulaEditor';
 import { GlassFormulaEditor } from '@/components/produtos/GlassFormulaEditor';
-import { CopyTemplateCompositionDialog } from '@/components/produtos/CopyTemplateCompositionDialog';
+
 import {
   Select,
   SelectContent,
@@ -134,7 +134,7 @@ export default function EditarProdutoEmpresa() {
   const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
   const [isEditItemDialogOpen, setIsEditItemDialogOpen] = useState(false);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
-  const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
+  
   const [editingItem, setEditingItem] = useState<CompanyProductItem | null>(null);
   const [selectedItemToAdd, setSelectedItemToAdd] = useState('');
   const [quantityFormula, setQuantityFormula] = useState('1');
@@ -1033,15 +1033,6 @@ export default function EditarProdutoEmpresa() {
             Voltar
           </Button>
           <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              size="sm"
-              className="gap-2 hidden sm:inline-flex"
-              onClick={() => setIsCopyDialogOpen(true)}
-            >
-              <Copy className="w-4 h-4" />
-              Copiar
-            </Button>
             {canReset && (
               <Button 
                 variant="outline" 
@@ -1060,13 +1051,6 @@ export default function EditarProdutoEmpresa() {
         </div>
       </div>
 
-      {/* Copy Template Composition Dialog */}
-      <CopyTemplateCompositionDialog
-        open={isCopyDialogOpen}
-        onOpenChange={setIsCopyDialogOpen}
-        companyProductId={id || ''}
-        currentLinha={product?.linha || product?.product_template?.linha}
-      />
     </MainLayout>
   );
 }
