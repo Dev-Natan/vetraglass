@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { ArrowLeft, Search, Trash2, Download, Percent, Plus, Filter, Check, ShoppingCart, Sparkles, Copy, DollarSign } from 'lucide-react';
+import { ArrowLeft, Search, Trash2, Download, Percent, Plus, Filter, Check, ShoppingCart, Sparkles, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -621,19 +621,8 @@ export default function ProdutosLinha() {
                         Habilitar
                       </Button>
                     )}
-                    
-                    {!product.is_custom && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-muted-foreground hover:text-foreground"
-                        onClick={() => toast.info('Funcionalidade em desenvolvimento')}
-                      >
-                        Fazer cópia
-                        <Copy className="w-4 h-4 ml-1" />
-                      </Button>
-                    )}
-                    
+
+
                     <Button
                       size="sm"
                       className="bg-orange-500 hover:bg-orange-600 text-white font-medium"
