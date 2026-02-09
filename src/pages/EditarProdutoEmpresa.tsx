@@ -894,13 +894,31 @@ export default function EditarProdutoEmpresa() {
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione um item" />
                 </SelectTrigger>
-                <SelectContent className="max-h-[300px]">
+                <SelectContent className="max-h-[400px]">
                   {availableItems?.map((item) => (
                     <SelectItem key={item.id} value={item.id}>
-                      <div className="flex items-center gap-2">
-                        <span>{item.name}</span>
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded border bg-muted flex-shrink-0 flex items-center justify-center overflow-hidden">
+                          {item.image_url ? (
+                            <img
+                              src={getStorageUrl(item.image_url)}
+                              alt={item.name}
+                              className="w-full h-full object-contain"
+                            />
+                          ) : (
+                            <span className="text-xs text-muted-foreground/50">📦</span>
+                          )}
+                        </div>
+                        <span className="truncate">{item.name}</span>
+                        {item.type && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium flex-shrink-0">
+                            {item.type === 'profile' ? 'Perfil' : item.type === 'glass' ? 'Vidro' : item.type === 'accessory' ? 'Acessório' : item.type}
+                          </span>
+                        )}
                         {item.linha && (
-                          <span className="text-xs text-muted-foreground">({item.linha})</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground font-medium flex-shrink-0">
+                            {item.linha}
+                          </span>
                         )}
                       </div>
                     </SelectItem>
