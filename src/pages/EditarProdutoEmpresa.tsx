@@ -577,40 +577,35 @@ export default function EditarProdutoEmpresa() {
             </Button>
             <div>
               <h1 className="font-display font-bold text-xl text-foreground">
-                Editar Composição do Produto
+                Editar Produto
               </h1>
               <p className="text-sm text-muted-foreground">
-                Configure os componentes e fórmulas do produto
+                Configure os componentes e informações do produto
               </p>
             </div>
           </div>
           
-          {/* Actions */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button 
-              variant="outline" 
-              size="sm"
-              className="gap-2"
-              onClick={() => setIsCopyDialogOpen(true)}
-            >
-              <Copy className="w-4 h-4" />
-              <span className="hidden sm:inline">Copiar de Template</span>
-              <span className="sm:hidden">Copiar</span>
-            </Button>
-            {canReset && (
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="gap-2"
-                onClick={() => setIsResetDialogOpen(true)}
-              >
-                <RotateCcw className="w-4 h-4" />
-                Re-sincronizar
-              </Button>
-            )}
-            <Button onClick={() => saveProductMutation.mutate()} disabled={saveProductMutation.isPending}>
-              {saveProductMutation.isPending ? 'Salvando...' : 'Salvar Alterações'}
-            </Button>
+          {/* Quick status */}
+          <div className="hidden md:flex items-center gap-4">
+            {itemTypeTabs.map((tab) => {
+              const count = getItemsByType(tab.value).length;
+              return (
+                <div 
+                  key={tab.value}
+                  className={`flex items-center gap-1.5 text-xs ${
+                    count > 0 ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'
+                  }`}
+                >
+                  {count > 0 ? (
+                    <CheckCircle2 className="w-4 h-4" />
+                  ) : (
+                    <Circle className="w-4 h-4" />
+                  )}
+                  <span>{tab.label.split(' ')[0]}</span>
+                  <span className="font-medium">({count})</span>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -643,26 +638,34 @@ export default function EditarProdutoEmpresa() {
               </div>
             </label>
             <p className="text-xs text-muted-foreground text-center">
-              Imagem personalizada da empresa<br />
-              {product.product_template_id && '(sobrescreve imagem do template)'}
+              Arquivos permitidos: PNG, JPEG ou JPG<br />
+              Obs: Essa imagem será usada na folha de orçamento
             </p>
           </div>
 
           {/* Product Form */}
           <div className="lg:col-span-2 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2 sm:col-span-2">
-                <Label>Nome comercial:</Label>
+              <div className="space-y-2">
+                <Label>Nome do produto:</Label>
                 <Input
                   value={formData.commercial_name}
                   onChange={(e) => setFormData({ ...formData, commercial_name: e.target.value })}
                   placeholder="Nome comercial do produto"
                 />
               </div>
+              {product.product_template_id && (
+                <div className="space-y-2">
+                  <Label>Template base:</Label>
+                  <div className="bg-muted/50 rounded-lg px-3 py-2 text-sm text-muted-foreground h-10 flex items-center">
+                    {product.product_template?.name}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
-              <Label>Descrição: (opcional)</Label>
+              <Label>Descritivo do produto: (opcional)</Label>
               <Textarea
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -670,14 +673,6 @@ export default function EditarProdutoEmpresa() {
                 rows={3}
               />
             </div>
-
-            {product.product_template_id && (
-              <div className="bg-muted/50 rounded-lg p-3 text-sm">
-                <p className="text-muted-foreground">
-                  <strong>Template base:</strong> {product.product_template?.name}
-                </p>
-              </div>
-            )}
           </div>
         </div>
 
@@ -796,11 +791,12 @@ export default function EditarProdutoEmpresa() {
                           </DropdownMenuContent>
                         </DropdownMenu>
 
+                        {/* Item image */}
                         <div className="aspect-square rounded-lg mb-3 flex items-center justify-center overflow-hidden">
                           {itemData?.image_url ? (
                             <img
                               src={getStorageUrl(itemData.image_url)}
-                              alt={itemData.name}
+                              alt={itemData?.name}
                               className="w-full h-full object-contain"
                             />
                           ) : (
@@ -808,24 +804,75 @@ export default function EditarProdutoEmpresa() {
                           )}
                         </div>
 
+                        {/* Item info */}
                         {tab.value === 'glass' && item.notes && (
                           <h4 className="font-bold text-sm text-foreground truncate text-center mb-1">
                             {item.notes}
                           </h4>
                         )}
-                        
-                        <h4 className="font-medium text-xs text-muted-foreground truncate text-center">
+                        <h4 className={`font-medium text-xs truncate text-center ${tab.value === 'glass' && item.notes ? 'text-muted-foreground' : 'text-primary'}`}>
                           {itemData?.name}
                         </h4>
                         
-                        {tab.value !== 'glass' && item.quantity_formula && (
-                          <p className="text-[10px] text-muted-foreground truncate text-center mt-1">
-                            Fórmula: {item.quantity_formula}
+                        {/* Glass formulas display */}
+                        {tab.value === 'glass' && (item.width_formula || item.height_formula) && (
+                          <div className="mt-2 space-y-1">
+                            {item.width_formula && (
+                              <div className="flex items-center justify-center gap-1">
+                                <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                                  L: {item.width_formula}
+                                </span>
+                              </div>
+                            )}
+                            {item.height_formula && (
+                              <div className="flex items-center justify-center gap-1">
+                                <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                                  A: {item.height_formula}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        
+                        {/* Formula type indicator for non-glass items */}
+                        {tab.value !== 'glass' && getFormulaType(item.quantity_formula) && (
+                          <div className="flex justify-center mt-1">
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                              getFormulaType(item.quantity_formula) === 'Altura' 
+                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' 
+                                : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                            }`}>
+                              {getFormulaType(item.quantity_formula)}
+                            </span>
+                          </div>
+                        )}
+                        
+                        {tab.value !== 'glass' && (
+                          <p className="text-xs text-muted-foreground text-center mt-1">
+                            {item.quantity_formula}
                           </p>
+                        )}
+
+                        {/* Pieces quantity and Angle indicators (for profiles) */}
+                        {tab.value === 'profile' && (
+                          <div className="flex justify-center gap-2 mt-3">
+                            <span className="text-xs font-medium text-foreground bg-primary/10 px-2 py-1 rounded">
+                              {item.pieces_quantity || 1}x peças
+                            </span>
+                            <span className="text-xs font-medium text-foreground bg-muted px-2 py-1 rounded">
+                              {item.cut_angle || 90}°
+                            </span>
+                          </div>
                         )}
                       </div>
                     );
                   })}
+
+                  {getItemsByType(tab.value).length === 0 && (
+                    <div className="col-span-full text-center py-12 text-muted-foreground">
+                      Nenhum item vinculado. Clique em "Adicionar item" para vincular.
+                    </div>
+                  )}
                 </div>
               </TabsContent>
             ))}
