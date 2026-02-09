@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { resolveImageUrl, resolveProductImageUrl } from '@/utils/imageUrl';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -506,24 +507,11 @@ export default function EditarProdutoEmpresa() {
     }) || [];
   };
 
-  const getStorageUrl = (path: string | null, bucket: string = 'item-templates') => {
-    if (!path) return null;
-    if (path.startsWith('http')) return path;
-    if (path.startsWith('/')) return path;
-    return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
-  };
+  const getStorageUrl = (path: string | null, bucket: string = 'item-templates') => resolveImageUrl(path, bucket as any);
 
   const getProductImageUrl = () => {
-    if (product?.image_url) {
-      const url = product.image_url;
-      if (url.startsWith('http') || url.startsWith('/')) return url;
-      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-/i;
-      const bucket = uuidPattern.test(url) ? 'company-product-images' : 'product-templates';
-      return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/${bucket}/${url}`;
-    }
-    if (product?.product_template?.image_url) {
-      return getStorageUrl(product.product_template.image_url, 'product-templates');
-    }
+    if (product?.image_url) return resolveProductImageUrl(product.image_url);
+    if (product?.product_template?.image_url) return resolveImageUrl(product.product_template.image_url, 'product-templates');
     return null;
   };
 

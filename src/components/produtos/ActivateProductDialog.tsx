@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { resolveItemImageUrl } from '@/utils/imageUrl';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -240,12 +241,7 @@ export function ActivateProductDialog({
     setSelectedComponents(new Set());
   };
 
-  const getItemImage = (imageUrl: string | null) => {
-    if (!imageUrl) return null;
-    if (imageUrl.startsWith('http')) return imageUrl;
-    if (imageUrl.startsWith('/')) return imageUrl;
-    return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/item-templates/${imageUrl}`;
-  };
+  const getItemImage = resolveItemImageUrl;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
