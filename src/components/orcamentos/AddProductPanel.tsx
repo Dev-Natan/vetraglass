@@ -410,10 +410,17 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                           src={imageUrl}
                           alt={product.name}
                           className="w-full h-full object-contain"
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            target.style.display = 'none';
+                            const fallback = target.nextElementSibling;
+                            if (fallback) (fallback as HTMLElement).style.display = 'flex';
+                          }}
                         />
-                      ) : (
+                      ) : null}
+                      <div className={cn("items-center justify-center", imageUrl ? "hidden" : "flex")}>
                         <Package className="w-10 h-10 text-muted-foreground/30" />
-                      )}
+                      </div>
                     </div>
 
                     {/* Name */}

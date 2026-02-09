@@ -422,12 +422,17 @@ export function ProductSelectionSheet({ open, onOpenChange, onSelectProduct }: P
                                     src={imageUrl}
                                     alt={product.name}
                                     className="w-full h-full object-contain p-3 group-hover:scale-105 transition-transform"
+                                    onError={(e) => {
+                                      const target = e.currentTarget;
+                                      target.style.display = 'none';
+                                      const fallback = target.nextElementSibling;
+                                      if (fallback) (fallback as HTMLElement).style.display = 'flex';
+                                    }}
                                   />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center">
-                                    <Package className="w-12 h-12 text-muted-foreground/30" />
-                                  </div>
-                                )}
+                                ) : null}
+                                <div className={cn("w-full h-full items-center justify-center", imageUrl ? "hidden" : "flex")}>
+                                  <Package className="w-12 h-12 text-muted-foreground/30" />
+                                </div>
                                 
                                 <div className="absolute top-2 right-2 flex gap-1">
                                   {isCustomProduct && (
