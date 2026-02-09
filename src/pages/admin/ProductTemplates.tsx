@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { resolveImageUrl } from '@/utils/imageUrl';
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -322,12 +323,7 @@ export default function ProductTemplates() {
   };
 
   // Helper to get storage URL
-  const getStorageUrl = (path: string | null, bucket: 'item-templates' | 'product-templates' = 'item-templates') => {
-    if (!path) return null;
-    if (path.startsWith('http')) return path;
-    if (path.startsWith('/')) return path;
-    return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
-  };
+  const getStorageUrl = (path: string | null, bucket: 'item-templates' | 'product-templates' = 'item-templates') => resolveImageUrl(path, bucket);
 
   // Reset composition form
   const resetCompositionForm = () => {

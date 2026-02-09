@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { resolveProductImageUrl } from '@/utils/imageUrl';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -232,15 +233,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     }
   };
 
-  const getProductImage = (imageUrl: string | null) => {
-    if (!imageUrl) return null;
-    if (imageUrl.startsWith('http')) return imageUrl;
-    if (imageUrl.startsWith('/')) return imageUrl;
-    // Paths with UUID pattern (company uploads) go to company-product-images bucket
-    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-/i;
-    const bucket = uuidPattern.test(imageUrl) ? 'company-product-images' : 'product-templates';
-    return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/${bucket}/${imageUrl}`;
-  };
+  const getProductImage = resolveProductImageUrl;
 
   const handleAdd = () => {
     if (!selectedProduct) return;

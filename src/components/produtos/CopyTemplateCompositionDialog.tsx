@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { resolveImageUrl } from '@/utils/imageUrl';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Dialog,
@@ -196,12 +197,7 @@ export function CopyTemplateCompositionDialog({
     },
   });
 
-  const getStorageUrl = (path: string | null) => {
-    if (!path) return null;
-    if (path.startsWith('http')) return path;
-    if (path.startsWith('/')) return path;
-    return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/product-templates/${path}`;
-  };
+  const getStorageUrl = (path: string | null) => resolveImageUrl(path, 'product-templates');
 
   const selectedTemplate = templates?.find(t => t.id === selectedTemplateId);
 

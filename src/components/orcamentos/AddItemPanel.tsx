@@ -1,4 +1,5 @@
  import { useState, useMemo } from 'react';
+ import { resolveItemImageUrl } from '@/utils/imageUrl';
  import { useQuery } from '@tanstack/react-query';
  import { supabase } from '@/integrations/supabase/client';
  import { useAuth } from '@/contexts/AuthContext';
@@ -121,12 +122,7 @@
      return found?.name || type;
    };
  
-   const getItemImage = (imageUrl: string | null) => {
-     if (!imageUrl) return null;
-     if (imageUrl.startsWith('http')) return imageUrl;
-     if (imageUrl.startsWith('/')) return imageUrl;
-     return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/item-templates/${imageUrl}`;
-   };
+   const getItemImage = resolveItemImageUrl;
  
    const handleLinhaChange = (value: string) => {
      setSelectedLinha(value);

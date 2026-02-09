@@ -181,14 +181,14 @@ export function getProductImageUrl(imageUrl: string | null | undefined): string 
   // Full URL already
   if (imageUrl.startsWith('http')) return imageUrl;
 
-  // Absolute path (e.g. /products/foo.png)
-  if (imageUrl.startsWith('/')) return `${window.location.origin}${imageUrl}`;
+  // Root-relative path
+  if (imageUrl.startsWith('/')) return imageUrl;
 
-  // Path already includes products folder
-  if (imageUrl.startsWith('products/')) return `${window.location.origin}/${imageUrl}`;
-
-  // Stored as filename only
-  return `${window.location.origin}/products/${imageUrl}`;
+  // Storage key — detect bucket
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-/i;
+  const bucket = uuidPattern.test(imageUrl) ? 'company-product-images' : 'product-templates';
+  const supabaseUrl = typeof import.meta !== 'undefined' ? import.meta.env.VITE_SUPABASE_URL : '';
+  return `${supabaseUrl}/storage/v1/object/public/${bucket}/${imageUrl}`;
 }
 
 /**

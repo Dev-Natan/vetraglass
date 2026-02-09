@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { resolveImageUrl } from '@/utils/imageUrl';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -472,15 +473,7 @@ export default function EditarProduto() {
     return productItems?.filter((item) => item.item_template?.type === dbType) || [];
   };
 
-  const getStorageUrl = (path: string | null, bucket: 'item-templates' | 'product-templates' = 'item-templates') => {
-    if (!path) return null;
-    // Se começa com http, já é URL completa
-    if (path.startsWith('http')) return path;
-    // Se começa com /, é arquivo local na pasta public
-    if (path.startsWith('/')) return path;
-    // Caso contrário, é do storage do Supabase
-    return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
-  };
+  const getStorageUrl = (path: string | null, bucket: 'item-templates' | 'product-templates' = 'item-templates') => resolveImageUrl(path, bucket);
 
   if (productLoading) {
     return (

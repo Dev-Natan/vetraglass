@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { resolveProductImageUrl } from '@/utils/imageUrl';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -112,14 +113,7 @@ export function EditProductPricingDialog({
     saveMutation.mutate();
   };
 
-  const getProductImage = (imageUrl: string | null | undefined) => {
-    if (!imageUrl) return null;
-    if (imageUrl.startsWith('http')) return imageUrl;
-    if (imageUrl.startsWith('/')) return imageUrl;
-    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-/i;
-    const bucket = uuidPattern.test(imageUrl) ? 'company-product-images' : 'product-templates';
-    return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/${bucket}/${imageUrl}`;
-  };
+  const getProductImage = resolveProductImageUrl;
 
   const margin = (() => {
     const price = parseFloat(pricePerSqm) || 0;

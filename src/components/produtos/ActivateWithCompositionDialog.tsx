@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { resolveItemImageUrl, resolveProductImageUrl } from '@/utils/imageUrl';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -540,21 +541,8 @@ export function ActivateWithCompositionDialog({
     },
   });
 
-  const getItemImage = (imageUrl: string | null) => {
-    if (!imageUrl) return null;
-    if (imageUrl.startsWith('http')) return imageUrl;
-    if (imageUrl.startsWith('/')) return imageUrl;
-    return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/item-templates/${imageUrl}`;
-  };
-
-  const getProductImage = (imageUrl: string | null | undefined) => {
-    if (!imageUrl) return null;
-    if (imageUrl.startsWith('http')) return imageUrl;
-    if (imageUrl.startsWith('/')) return imageUrl;
-    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-/i;
-    const bucket = uuidPattern.test(imageUrl) ? 'company-product-images' : 'product-templates';
-    return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/${bucket}/${imageUrl}`;
-  };
+  const getItemImage = resolveItemImageUrl;
+  const getProductImage = resolveProductImageUrl;
 
   // Handle dialog close - save any pending edit
   const handleDialogClose = (newOpen: boolean) => {

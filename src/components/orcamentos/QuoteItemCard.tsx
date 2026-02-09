@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { resolveImageUrl } from '@/utils/imageUrl';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -47,11 +48,8 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
   const { data: itemTypes } = useItemTypes();
   
   const getProductImage = (imageUrl: string | null | undefined) => {
-    if (!imageUrl) return null;
-    if (imageUrl.startsWith('http')) return imageUrl;
-    if (imageUrl.startsWith('/')) return imageUrl;
     const bucket = item.item_type === 'item' ? 'item-templates' : 'product-templates';
-    return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/${bucket}/${imageUrl}`;
+    return resolveImageUrl(imageUrl ?? null, bucket as any);
   };
   
   const getItemTypeLabel = (type: string) => {
