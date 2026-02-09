@@ -257,7 +257,8 @@ export function UniversalProductSearch({
   const getImageUrl = (url: string | null | undefined) => {
     if (!url) return null;
     if (url.startsWith('http')) return url;
-    return `/products/${url}`;
+    if (url.startsWith('/')) return url;
+    return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/product-templates/${url}`;
   };
 
   const formatCurrency = (value: number) => {

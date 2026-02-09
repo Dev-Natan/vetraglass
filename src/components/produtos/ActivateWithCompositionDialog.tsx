@@ -543,13 +543,15 @@ export function ActivateWithCompositionDialog({
   const getItemImage = (imageUrl: string | null) => {
     if (!imageUrl) return null;
     if (imageUrl.startsWith('http')) return imageUrl;
-    return `/profiles/${imageUrl}`;
+    if (imageUrl.startsWith('/')) return imageUrl;
+    return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/item-templates/${imageUrl}`;
   };
 
   const getProductImage = (imageUrl: string | null | undefined) => {
     if (!imageUrl) return null;
     if (imageUrl.startsWith('http')) return imageUrl;
-    return `/products/${imageUrl}`;
+    if (imageUrl.startsWith('/')) return imageUrl;
+    return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/product-templates/${imageUrl}`;
   };
 
   // Handle dialog close - save any pending edit

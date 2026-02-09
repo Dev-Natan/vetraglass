@@ -235,7 +235,8 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   const getProductImage = (imageUrl: string | null) => {
     if (!imageUrl) return null;
     if (imageUrl.startsWith('http')) return imageUrl;
-    return `/products/${imageUrl}`;
+    if (imageUrl.startsWith('/')) return imageUrl;
+    return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/product-templates/${imageUrl}`;
   };
 
   const handleAdd = () => {

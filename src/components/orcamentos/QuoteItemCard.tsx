@@ -49,9 +49,9 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
   const getProductImage = (imageUrl: string | null | undefined) => {
     if (!imageUrl) return null;
     if (imageUrl.startsWith('http')) return imageUrl;
-    // Check if it's an item (profile) image
-    if (item.item_type === 'item') return `/profiles/${imageUrl}`;
-    return `/products/${imageUrl}`;
+    if (imageUrl.startsWith('/')) return imageUrl;
+    const bucket = item.item_type === 'item' ? 'item-templates' : 'product-templates';
+    return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/${bucket}/${imageUrl}`;
   };
   
   const getItemTypeLabel = (type: string) => {

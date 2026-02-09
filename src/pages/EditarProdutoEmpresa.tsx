@@ -801,15 +801,19 @@ export default function EditarProdutoEmpresa() {
                         </DropdownMenu>
 
                         {/* Item image */}
-                        <div className="aspect-square rounded-lg mb-3 flex items-center justify-center overflow-hidden">
+                        <div className="aspect-square rounded-lg mb-3 flex items-center justify-center overflow-hidden bg-muted">
                           {itemData?.image_url ? (
                             <img
                               src={getStorageUrl(itemData.image_url)}
                               alt={itemData?.name}
                               className="w-full h-full object-contain"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.parentElement!.innerHTML = '<div class="text-3xl text-muted-foreground/30 w-full h-full flex items-center justify-center">📦</div>';
+                              }}
                             />
                           ) : (
-                            <div className="text-3xl text-muted-foreground/30 bg-muted w-full h-full flex items-center justify-center">📦</div>
+                            <div className="text-3xl text-muted-foreground/30 w-full h-full flex items-center justify-center">📦</div>
                           )}
                         </div>
 
@@ -928,9 +932,17 @@ export default function EditarProdutoEmpresa() {
                             : "hover:bg-muted"
                         )}
                       >
-                        <div className="w-8 h-8 rounded border bg-background flex-shrink-0 flex items-center justify-center overflow-hidden">
+                        <div className="w-8 h-8 rounded border bg-muted flex-shrink-0 flex items-center justify-center overflow-hidden">
                           {item.image_url ? (
-                            <img src={getStorageUrl(item.image_url)} alt={item.name} className="w-full h-full object-contain" />
+                            <img
+                              src={getStorageUrl(item.image_url)}
+                              alt={item.name}
+                              className="w-full h-full object-contain"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.parentElement!.innerHTML = '<span class="text-xs text-muted-foreground/50">📦</span>';
+                              }}
+                            />
                           ) : (
                             <span className="text-xs text-muted-foreground/50">📦</span>
                           )}
