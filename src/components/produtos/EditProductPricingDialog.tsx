@@ -9,15 +9,16 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, DollarSign, Package, GlassWater, Info } from 'lucide-react';
+import { Loader2, DollarSign, Package, GlassWater, Info, Palette } from 'lucide-react';
 import { toast } from 'sonner';
 import { ProductGlassPricesSection } from './ProductGlassPricesSection';
+import { ProductAluminumPricesSection } from './ProductAluminumPricesSection';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Switch } from '@/components/ui/switch';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 interface EditProductPricingDialogProps {
   open: boolean;
@@ -35,7 +36,7 @@ export function EditProductPricingDialog({
   const queryClient = useQueryClient();
   const [costPerSqm, setCostPerSqm] = useState<string>('');
   const [pricePerSqm, setPricePerSqm] = useState<string>('');
-  const [usesGlass, setUsesGlass] = useState<boolean>(false);
+  const [pricingType, setPricingType] = useState<string>('none');
 
   const { data: companyProduct, isLoading: loadingProduct } = useQuery({
     queryKey: ['company-product-pricing', companyProductId],
@@ -55,7 +56,14 @@ export function EditProductPricingDialog({
     if (companyProduct && open) {
       setCostPerSqm(String(companyProduct.cost_per_sqm || ''));
       setPricePerSqm(String(companyProduct.price_per_sqm || ''));
-      setUsesGlass(companyProduct.uses_glass ?? false);
+      const pt = (companyProduct as any).pricing_type;
+      if (pt && pt !== 'none') {
+        setPricingType(pt);
+      } else if (companyProduct.uses_glass) {
+        setPricingType('glass');
+      } else {
+        setPricingType('none');
+      }
     }
   }, [companyProduct, open]);
 
@@ -67,9 +75,10 @@ export function EditProductPricingDialog({
         .update({
           cost_per_sqm: parseFloat(costPerSqm) || 0,
           price_per_sqm: parseFloat(pricePerSqm) || 0,
-          uses_glass: usesGlass,
+          uses_glass: pricingType === 'glass',
+          pricing_type: pricingType,
           updated_at: new Date().toISOString(),
-        })
+        } as any)
         .eq('id', companyProductId);
       if (error) throw error;
       return true;
@@ -155,33 +164,70 @@ export function EditProductPricingDialog({
 
             <Separator />
 
-            {/* Glass Toggle */}
+            {/* Pricing Type Selector */}
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <GlassWater className="w-4 h-4 text-blue-500" />
-                  <Label className="text-sm font-medium">Preço varia por vidro</Label>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="w-4 h-4 text-muted-foreground cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-xs">
-                        <p>Ative se o preço final deste produto varia conforme a cor/espessura do vidro.</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                <Switch checked={usesGlass} onCheckedChange={setUsesGlass} />
+              <div className="flex items-center gap-2">
+                <Label className="text-sm font-medium">Tipo de precificação variável</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>Escolha como o preço final deste produto é definido: fixo, pela cor do vidro, ou pela cor do alumínio.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
+
+              <RadioGroup value={pricingType} onValueChange={setPricingType} className="grid grid-cols-3 gap-3">
+                <label
+                  className={`flex flex-col items-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${
+                    pricingType === 'none' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+                  }`}
+                >
+                  <RadioGroupItem value="none" className="sr-only" />
+                  <Package className="w-5 h-5 text-muted-foreground" />
+                  <span className="text-xs font-medium text-center">Preço Fixo</span>
+                  <span className="text-[10px] text-muted-foreground text-center">Sem variação por cor</span>
+                </label>
+                <label
+                  className={`flex flex-col items-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${
+                    pricingType === 'glass' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+                  }`}
+                >
+                  <RadioGroupItem value="glass" className="sr-only" />
+                  <GlassWater className="w-5 h-5 text-muted-foreground" />
+                  <span className="text-xs font-medium text-center">Por Vidro</span>
+                  <span className="text-[10px] text-muted-foreground text-center">Varia por cor/espessura do vidro</span>
+                </label>
+                <label
+                  className={`flex flex-col items-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${
+                    pricingType === 'aluminum' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+                  }`}
+                >
+                  <RadioGroupItem value="aluminum" className="sr-only" />
+                  <Palette className="w-5 h-5 text-muted-foreground" />
+                  <span className="text-xs font-medium text-center">Por Cor do Alumínio</span>
+                  <span className="text-[10px] text-muted-foreground text-center">Porta branca vs preta vs amadeirada</span>
+                </label>
+              </RadioGroup>
             </div>
 
             {/* Glass Prices Section */}
-            {usesGlass && companyProductId && (
+            {pricingType === 'glass' && companyProductId && (
               <ProductGlassPricesSection
                 companyProductId={companyProductId}
                 productName={productName}
                 usesGlass={true}
+              />
+            )}
+
+            {/* Aluminum Prices Section */}
+            {pricingType === 'aluminum' && companyProductId && (
+              <ProductAluminumPricesSection
+                companyProductId={companyProductId}
+                productName={productName}
               />
             )}
           </div>
