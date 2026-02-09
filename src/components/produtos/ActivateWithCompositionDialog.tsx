@@ -551,7 +551,9 @@ export function ActivateWithCompositionDialog({
     if (!imageUrl) return null;
     if (imageUrl.startsWith('http')) return imageUrl;
     if (imageUrl.startsWith('/')) return imageUrl;
-    return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/product-templates/${imageUrl}`;
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-/i;
+    const bucket = uuidPattern.test(imageUrl) ? 'company-product-images' : 'product-templates';
+    return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/${bucket}/${imageUrl}`;
   };
 
   // Handle dialog close - save any pending edit

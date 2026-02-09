@@ -515,7 +515,11 @@ export default function EditarProdutoEmpresa() {
 
   const getProductImageUrl = () => {
     if (product?.image_url) {
-      return getStorageUrl(product.image_url, 'company-product-images');
+      const url = product.image_url;
+      if (url.startsWith('http') || url.startsWith('/')) return url;
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-/i;
+      const bucket = uuidPattern.test(url) ? 'company-product-images' : 'product-templates';
+      return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/${bucket}/${url}`;
     }
     if (product?.product_template?.image_url) {
       return getStorageUrl(product.product_template.image_url, 'product-templates');
