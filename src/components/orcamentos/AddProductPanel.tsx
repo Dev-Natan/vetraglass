@@ -222,8 +222,9 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     setSelectedGlassPriceId('');
     setSelectedAluminumColor('');
     setHasGlass(productUsesGlass);
-    setHasAcabamento(false);
-  }, [companyProduct?.id, productUsesGlass]);
+    // Aluminum-priced products always have acabamento (it's the aluminum color itself)
+    setHasAcabamento(productUsesAluminum);
+  }, [companyProduct?.id, productUsesGlass, productUsesAluminum]);
 
   // Get selected glass price details
   const selectedGlassPrice = productGlassPrices?.find(p => p.id === selectedGlassPriceId);
@@ -243,7 +244,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     if (productUsesGlass && hasGlass && glassPricePerSqm > 0) {
       return glassPricePerSqm;
     }
-    if (productUsesAluminum && hasAcabamento && aluminumPricePerSqm > 0) {
+    if (productUsesAluminum && aluminumPricePerSqm > 0) {
       return aluminumPricePerSqm;
     }
     return productBasePricePerSqm;
@@ -265,7 +266,6 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     setCustomPrice(null);
     setSelectedGlassPriceId('');
     setSelectedAluminumColor('');
-    setHasAcabamento(false);
     // Auto-enable glass for Temperado line products
     const product = filteredProducts?.find(p => p.id === productId);
     if (product?.linha?.toLowerCase().includes('temperado')) {
@@ -596,36 +596,42 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
         {/* Acabamento (Finishing) Toggle + Color Selector */}
         {selectedProduct && (
           <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                <Palette className="w-3 h-3" />
-                Acabamento:
-              </label>
-              <div className="flex gap-2">
-                <Badge
-                  variant={hasAcabamento ? 'default' : 'outline'}
-                  className="cursor-pointer h-8 px-4"
-                  onClick={() => setHasAcabamento(true)}
-                >
-                  Com Acabamento
-                </Badge>
-                <Badge
-                  variant={!hasAcabamento ? 'default' : 'outline'}
-                  className="cursor-pointer h-8 px-4"
-                  onClick={() => {
-                    setHasAcabamento(false);
-                    setSelectedAluminumColor('');
-                  }}
-                >
-                  Sem Acabamento
-                </Badge>
+            {/* For aluminum-priced products, acabamento is mandatory (it's the aluminum color itself) */}
+            {!productUsesAluminum && (
+              <div className="flex items-center gap-3">
+                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <Palette className="w-3 h-3" />
+                  Acabamento:
+                </label>
+                <div className="flex gap-2">
+                  <Badge
+                    variant={hasAcabamento ? 'default' : 'outline'}
+                    className="cursor-pointer h-8 px-4"
+                    onClick={() => setHasAcabamento(true)}
+                  >
+                    Com Acabamento
+                  </Badge>
+                  <Badge
+                    variant={!hasAcabamento ? 'default' : 'outline'}
+                    className="cursor-pointer h-8 px-4"
+                    onClick={() => {
+                      setHasAcabamento(false);
+                      setSelectedAluminumColor('');
+                    }}
+                  >
+                    Sem Acabamento
+                  </Badge>
+                </div>
               </div>
-            </div>
+            )}
 
-            {hasAcabamento && (
+            {(hasAcabamento || productUsesAluminum) && (
               <div className="space-y-3">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Cor do Acabamento</label>
+                  <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                    <Palette className="w-3 h-3" />
+                    {productUsesAluminum ? 'Cor do Alumínio' : 'Cor do Acabamento'}
+                  </label>
                   {productUsesAluminum && hasAluminumPrices ? (
                     <Select value={selectedAluminumColor} onValueChange={setSelectedAluminumColor}>
                       <SelectTrigger className="bg-background h-10">

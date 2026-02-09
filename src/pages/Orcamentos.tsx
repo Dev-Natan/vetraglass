@@ -273,6 +273,7 @@ export default function Orcamentos() {
       has_glass: item.has_glass,
       glass_color: item.glass_color,
       glass_thickness: item.glass_thickness,
+      aluminum_color: item.aluminum_color,
     }));
 
     setContractItems(itemsForContract);

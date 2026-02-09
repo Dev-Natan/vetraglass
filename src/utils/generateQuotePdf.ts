@@ -22,6 +22,7 @@ interface QuoteItem {
   has_glass?: boolean;
   glass_color?: string;
   glass_thickness?: string;
+  aluminum_color?: string | null;
   notes?: string | null;
   location?: string | null;
 }
@@ -289,6 +290,18 @@ export async function generateQuotePdf(
       }
       const glassText = glassInfo.length > 45 ? glassInfo.substring(0, 45) + '...' : glassInfo;
       doc.text(glassText, detailsX + 20, detailsY);
+      
+      detailsY += 5;
+    }
+    
+    // Show aluminum/finish color
+    if (item.aluminum_color) {
+      doc.setFont('helvetica', 'bold');
+      doc.text('Acabamento:', detailsX, detailsY);
+      doc.setFont('helvetica', 'normal');
+      doc.text(item.aluminum_color, detailsX + 28, detailsY);
+      
+      detailsY += 5;
     }
     
     detailsY += 5;
