@@ -81,6 +81,7 @@ interface QuoteItem {
   has_glass?: boolean;
   glass_color?: string | null;
   glass_thickness?: string | null;
+  aluminum_color?: string | null;
   product_template_id?: string | null;
   company_product_id?: string | null;
   company_item_id?: string | null;
@@ -321,6 +322,7 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
       has_glass: item.has_glass,
       glass_color: item.glass_color,
       glass_thickness: item.glass_thickness,
+      aluminum_color: item.aluminum_color,
       // Priority: company_products > product_templates > company_items
       image_url: item.company_products?.image_url || item.product_templates?.image_url || item.company_items?.image_url || null,
       linha: item.company_products?.linha || item.product_templates?.linha || null,
@@ -354,6 +356,7 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
       has_glass: item.has_glass,
       glass_color: item.glass_color,
       glass_thickness: item.glass_thickness,
+      aluminum_color: item.aluminum_color,
       // Priority: company_products > product_templates > company_items
       image_url: item.company_products?.image_url || item.product_templates?.image_url || item.company_items?.image_url || null,
       linha: item.company_products?.linha || item.product_templates?.linha || null,

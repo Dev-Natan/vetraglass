@@ -13,6 +13,7 @@ interface QuoteItem {
   has_glass?: boolean;
   glass_color?: string | null;
   glass_thickness?: string | null;
+  aluminum_color?: string | null;
 }
 
 interface Quote {
@@ -194,6 +195,10 @@ export async function generateContractPdf(
     
     if (item.has_glass && item.glass_color && item.glass_thickness) {
       itemDescription += ` - Vidro: ${item.glass_color} ${item.glass_thickness}`;
+    }
+    
+    if (item.aluminum_color) {
+      itemDescription += ` - Acabamento: ${item.aluminum_color}`;
     }
     
     itemDescription += ` - ${formatCurrency(item.total_price)}`;
