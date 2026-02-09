@@ -4621,6 +4621,7 @@ export type Database = {
       }
       quote_items: {
         Row: {
+          aluminum_color: string | null
           company_item_id: string | null
           company_product_id: string | null
           created_at: string
@@ -4641,6 +4642,7 @@ export type Database = {
           width: number | null
         }
         Insert: {
+          aluminum_color?: string | null
           company_item_id?: string | null
           company_product_id?: string | null
           created_at?: string
@@ -4661,6 +4663,7 @@ export type Database = {
           width?: number | null
         }
         Update: {
+          aluminum_color?: string | null
           company_item_id?: string | null
           company_product_id?: string | null
           created_at?: string

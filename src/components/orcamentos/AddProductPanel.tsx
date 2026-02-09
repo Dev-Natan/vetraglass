@@ -8,11 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Package, Check, ArrowLeft, Ruler, DollarSign, Sparkles, Info, GlassWater, Layers } from 'lucide-react';
+import { Search, Package, Check, ArrowLeft, Ruler, DollarSign, Sparkles, Info, GlassWater, Layers, Palette } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
 import { useProductLinhas } from '@/hooks/useProductLinhas';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useProductAluminumPriceOptions } from '@/hooks/useProductAluminumPrices';
 
 interface ProductGlassPrice {
   id: string;
@@ -42,6 +43,7 @@ interface AddProductPanelProps {
     glass_color?: string;
     glass_thickness?: string;
     glass_price_per_sqm?: number;
+    aluminum_color?: string;
     is_custom?: boolean;
   }) => void;
   onCancel: () => void;
@@ -62,6 +64,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   const [customPrice, setCustomPrice] = useState<number | null>(null);
   const [hasGlass, setHasGlass] = useState<boolean>(true);
   const [selectedGlassPriceId, setSelectedGlassPriceId] = useState<string>('');
+  const [selectedAluminumColorId, setSelectedAluminumColorId] = useState<string>('');
 
   // Fetch active company products with template data
   const { data: companyProducts, isLoading } = useQuery({
@@ -179,9 +182,15 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     enabled: !!companyProduct?.id
   });
 
-  // Check if product uses glass
-  const productUsesGlass = (companyProduct as any)?.uses_glass ?? true;
+  // Fetch aluminum color prices for selected product
+  const { data: aluminumColorOptions } = useProductAluminumPriceOptions(companyProduct?.id || null);
+
+  // Get pricing type for the product
+  const pricingType = (companyProduct as any)?.pricing_type || ((companyProduct as any)?.uses_glass ? 'glass' : 'none');
+  const productUsesGlass = pricingType === 'glass';
+  const productUsesAluminum = pricingType === 'aluminum';
   const hasGlassPrices = (productGlassPrices?.length || 0) > 0;
+  const hasAluminumPrices = (aluminumColorOptions?.length || 0) > 0;
 
   // Set default glass price when product changes
   useEffect(() => {
@@ -190,9 +199,17 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     }
   }, [productGlassPrices, selectedGlassPriceId]);
 
-  // Reset glass selection when product changes
+  // Set default aluminum color when product changes
+  useEffect(() => {
+    if (aluminumColorOptions?.length && !selectedAluminumColorId) {
+      setSelectedAluminumColorId(aluminumColorOptions[0].value);
+    }
+  }, [aluminumColorOptions, selectedAluminumColorId]);
+
+  // Reset selections when product changes
   useEffect(() => {
     setSelectedGlassPriceId('');
+    setSelectedAluminumColorId('');
     setHasGlass(productUsesGlass);
   }, [companyProduct?.id, productUsesGlass]);
 
@@ -200,15 +217,23 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   const selectedGlassPrice = productGlassPrices?.find(p => p.id === selectedGlassPriceId);
   const glassPricePerSqm = selectedGlassPrice?.price_per_sqm || 0;
   
-  // Use price_per_sqm as the primary pricing method (fallback when no glass selected)
+  // Get selected aluminum color price
+  const selectedAluminumColor = aluminumColorOptions?.find(p => p.value === selectedAluminumColorId);
+  const aluminumPricePerSqm = selectedAluminumColor?.pricePerSqm || 0;
+
+  // Use price_per_sqm as the primary pricing method (fallback when no glass/aluminum selected)
   const productBasePricePerSqm = Number((companyProduct as any)?.price_per_sqm) || Number(companyProduct?.base_price) || 0;
   
-  // Se produto usa vidro E tem vidro selecionado, usar preço do vidro (SUBSTITUI o base)
-  // Caso contrário, usar preço base do produto
-  const finalPricePerSqm = 
-    (hasGlass && productUsesGlass && glassPricePerSqm > 0) 
-      ? glassPricePerSqm  // Preço definido pelo vidro
-      : productBasePricePerSqm; // Preço base (quando não usa vidro ou não tem vidro configurado)
+  // Determine final price based on pricing type
+  const finalPricePerSqm = (() => {
+    if (productUsesGlass && hasGlass && glassPricePerSqm > 0) {
+      return glassPricePerSqm; // Glass pricing
+    }
+    if (productUsesAluminum && aluminumPricePerSqm > 0) {
+      return aluminumPricePerSqm; // Aluminum color pricing
+    }
+    return productBasePricePerSqm; // Base price
+  })();
   
   const basePrice = customPrice !== null ? customPrice : finalPricePerSqm;
 
@@ -225,6 +250,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     setSelectedProductId(productId);
     setCustomPrice(null);
     setSelectedGlassPriceId('');
+    setSelectedAluminumColorId('');
     
     // Auto-enable glass for Temperado line products
     const product = filteredProducts?.find(p => p.id === productId);
@@ -256,6 +282,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
       glass_color: hasGlass && selectedGlassPrice ? selectedGlassPrice.glass_color : undefined,
       glass_thickness: hasGlass && selectedGlassPrice ? `${selectedGlassPrice.thickness_mm}mm` : undefined,
       glass_price_per_sqm: hasGlass ? glassPricePerSqm : undefined,
+      aluminum_color: productUsesAluminum && selectedAluminumColor ? selectedAluminumColor.colorName : undefined,
       is_custom: selectedProduct.is_custom,
     });
   };
@@ -541,6 +568,54 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                     </span>
                   </div>
                 )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Aluminum Color Options - Only show if product uses aluminum pricing */}
+        {productUsesAluminum && (
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                <Palette className="w-3 h-3" />
+                Cor do Acabamento
+              </label>
+              {hasAluminumPrices ? (
+                <Select value={selectedAluminumColorId} onValueChange={setSelectedAluminumColorId}>
+                  <SelectTrigger className="bg-background h-10">
+                    <SelectValue placeholder="Selecione a cor..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border shadow-lg z-50">
+                    {aluminumColorOptions?.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        <div className="flex items-center justify-between gap-4 w-full">
+                          <span>{opt.label}</span>
+                          <span className="text-muted-foreground text-xs">
+                            {formatCurrency(opt.pricePerSqm)}/m²
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-warning/10 border border-warning/30">
+                  <Info className="w-4 h-4 text-warning shrink-0" />
+                  <span className="text-xs text-foreground">
+                    Nenhum preço por cor cadastrado para este produto. Configure em Produtos → Preços.
+                  </span>
+                </div>
+              )}
+            </div>
+            
+            {selectedAluminumColor && aluminumPricePerSqm > 0 && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-accent border border-primary/20">
+                <Palette className="w-4 h-4 text-primary" />
+                <span className="text-xs text-foreground">
+                  Preço para acabamento {selectedAluminumColor.colorName}: 
+                  <strong className="ml-1">{formatCurrency(aluminumPricePerSqm)}/m²</strong>
+                </span>
               </div>
             )}
           </div>
