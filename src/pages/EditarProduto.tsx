@@ -961,7 +961,7 @@ export default function EditarProduto() {
                               <div className="w-10 h-10 rounded bg-muted flex-shrink-0 overflow-hidden">
                                 {item.image_url ? (
                                   <img 
-                                    src={item.image_url.startsWith('http') ? item.image_url : `/profiles/${item.image_url}`}
+                                    src={item.image_url.startsWith('http') ? item.image_url : item.image_url.startsWith('/') ? item.image_url : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/item-templates/${item.image_url}`}
                                     alt={item.name}
                                     className="w-full h-full object-cover"
                                     onError={(e) => {

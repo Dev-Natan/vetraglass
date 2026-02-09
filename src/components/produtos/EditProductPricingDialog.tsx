@@ -115,7 +115,8 @@ export function EditProductPricingDialog({
   const getProductImage = (imageUrl: string | null | undefined) => {
     if (!imageUrl) return null;
     if (imageUrl.startsWith('http')) return imageUrl;
-    return `/products/${imageUrl}`;
+    if (imageUrl.startsWith('/')) return imageUrl;
+    return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/product-templates/${imageUrl}`;
   };
 
   const margin = (() => {

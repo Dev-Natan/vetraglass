@@ -124,7 +124,8 @@
    const getItemImage = (imageUrl: string | null) => {
      if (!imageUrl) return null;
      if (imageUrl.startsWith('http')) return imageUrl;
-     return `/profiles/${imageUrl}`;
+     if (imageUrl.startsWith('/')) return imageUrl;
+     return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/item-templates/${imageUrl}`;
    };
  
    const handleLinhaChange = (value: string) => {
