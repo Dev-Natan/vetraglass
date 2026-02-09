@@ -974,6 +974,43 @@ export default function EditarProdutoEmpresa() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Sticky bottom save bar */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-t shadow-lg">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+          <Button variant="outline" onClick={() => navigate(-1)} className="gap-2">
+            <ArrowLeft className="w-4 h-4" />
+            Voltar
+          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="gap-2 hidden sm:inline-flex"
+              onClick={() => setIsCopyDialogOpen(true)}
+            >
+              <Copy className="w-4 h-4" />
+              Copiar
+            </Button>
+            {canReset && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="gap-2 hidden sm:inline-flex"
+                onClick={() => setIsResetDialogOpen(true)}
+              >
+                <RotateCcw className="w-4 h-4" />
+                Re-sincronizar
+              </Button>
+            )}
+            <Button onClick={() => saveProductMutation.mutate()} disabled={saveProductMutation.isPending}>
+              {saveProductMutation.isPending ? 'Salvando...' : 'Salvar Alterações'}
+            </Button>
+          </div>
+        </div>
+      </div>
+      {/* Spacer for sticky bar */}
+      <div className="h-16" />
+
       {/* Copy Template Composition Dialog */}
       <CopyTemplateCompositionDialog
         open={isCopyDialogOpen}
