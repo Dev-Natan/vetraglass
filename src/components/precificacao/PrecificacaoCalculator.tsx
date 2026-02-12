@@ -17,11 +17,14 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import {
   usePricingProducts,
   usePricingComponents,
   useCalculatePricing,
 } from '@/hooks/usePricingCalculator';
+import { useProductCategories } from '@/hooks/useProductCategories';
 import { generatePricingReportPdf } from '@/utils/generatePricingReportPdf';
 import { toast } from 'sonner';
 
@@ -62,6 +65,40 @@ export function PrecificacaoCalculator() {
   const { data: products, isLoading: loadingProducts } = usePricingProducts();
   const { data: components, isLoading: loadingComponents } = usePricingComponents(selectedProduct || null);
   const summary = useCalculatePricing(components, width, height, quantity, costOverrides);
+  const { data: productCategories } = useProductCategories();
+
+  // Fetch ALL linhas from system (templates + company products + company_linhas)
+  const { data: allSystemLinhas = [] } = useQuery({
+    queryKey: ['all-system-linhas', currentCompany?.id],
+    queryFn: async () => {
+      const set = new Set<string>();
+      // From product templates
+      const { data: tpl } = await supabase
+        .from('product_templates')
+        .select('linha')
+        .eq('is_active', true)
+        .not('linha', 'is', null);
+      tpl?.forEach(p => p.linha && set.add(p.linha));
+      // From company products
+      if (currentCompany?.id) {
+        const { data: cp } = await supabase
+          .from('company_products')
+          .select('linha')
+          .eq('company_id', currentCompany.id)
+          .not('linha', 'is', null);
+        cp?.forEach(p => p.linha && set.add(p.linha));
+        // From company_linhas
+        const { data: cl } = await supabase
+          .from('company_linhas')
+          .select('name')
+          .eq('company_id', currentCompany.id)
+          .eq('is_active', true);
+        cl?.forEach(l => set.add(l.name));
+      }
+      return Array.from(set).sort();
+    },
+    enabled: !!currentCompany?.id,
+  });
 
   const handleCostChange = (componentId: string, value: string) => {
     const num = parseFloat(value);
@@ -77,21 +114,15 @@ export function PrecificacaoCalculator() {
     });
   };
 
-  const linhas = useMemo(() => {
-    if (!products) return [];
+  // All categories from system
+  const allCategories = useMemo(() => {
     const set = new Set<string>();
-    products.forEach(p => { if (p.linha) set.add(p.linha); });
+    // From product categories table
+    productCategories?.forEach(c => set.add(c.slug));
+    // From products
+    products?.forEach(p => { if (p.category) set.add(p.category); });
     return Array.from(set).sort();
-  }, [products]);
-
-  const categories = useMemo(() => {
-    if (!products) return [];
-    const set = new Set<string>();
-    products
-      .filter(p => !selectedLinha || p.linha === selectedLinha)
-      .forEach(p => { if (p.category) set.add(p.category); });
-    return Array.from(set).sort();
-  }, [products, selectedLinha]);
+  }, [productCategories, products]);
 
   const filteredProducts = useMemo(() => {
     if (!products) return [];
@@ -166,7 +197,7 @@ export function PrecificacaoCalculator() {
                 <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__all__">Todas as linhas</SelectItem>
-                  {linhas.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+                  {allSystemLinhas.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -180,7 +211,7 @@ export function PrecificacaoCalculator() {
                 <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__all__">Todas as categorias</SelectItem>
-                  {categories.map(c => (
+                  {allCategories.map(c => (
                     <SelectItem key={c} value={c}>{categoryLabels[c] || c}</SelectItem>
                   ))}
                 </SelectContent>
