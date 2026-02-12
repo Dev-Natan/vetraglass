@@ -97,9 +97,9 @@
 ```
 Prompt  │ Tarefas              │ Prioridade │ Status
 ────────┼──────────────────────┼────────────┼────────
-  1     │ 1.1 + 1.2 Segurança  │ 🔴 Crítica │ ⬜ Pendente
+  1     │ 1.1 + 1.2 Segurança  │ 🔴 Crítica │ ✅ Concluído
   2     │ 1.3 SW Cleanup       │ 🔴 Crítica │ ⬜ Pendente
-  3     │ 2.1 Imagens PDF      │ 🔴 Alta    │ ⬜ Pendente
+  3     │ 2.1 Imagens PDF      │ 🔴 Alta    │ ✅ Já implementado (corrigido duplicação)
   4     │ 2.2 Fluxo Alumínio   │ 🟡 Alta    │ ⬜ Pendente
   5     │ 2.3 Validações       │ 🟡 Alta    │ ⬜ Pendente
   6     │ 3.1 + 3.3 Routing    │ 🟡 Média   │ ⬜ Pendente
