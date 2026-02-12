@@ -102,7 +102,7 @@ Prompt  │ Tarefas              │ Prioridade │ Status
   3     │ 2.1 Imagens PDF      │ 🔴 Alta    │ ✅ Concluído
   4     │ 2.2 Fluxo Alumínio   │ 🟡 Alta    │ ✅ Concluído
   5     │ 2.3 Validações       │ 🟡 Alta    │ ✅ Concluído
-  6     │ 3.1 + 3.3 Routing    │ 🟡 Média   │ ⬜ Pendente
+  6     │ 3.1 + 3.3 Routing    │ 🟡 Média   │ ✅ Concluído
   7     │ 3.2 Teste PDFs       │ 🟡 Média   │ ⬜ Pendente
   8     │ 4.1 SEO              │ 🟢 Baixa   │ ⬜ Pendente
   9     │ 4.2 Mobile           │ 🟢 Baixa   │ ⬜ Pendente
