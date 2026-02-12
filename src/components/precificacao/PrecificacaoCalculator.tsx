@@ -13,10 +13,9 @@ import {
 } from '@/components/ui/table';
 import {
   Package, FileDown, TrendingUp, TrendingDown, Minus,
-  Layers, Search, DollarSign, Ruler, BarChart3,
+  Layers, Search, DollarSign, Ruler, BarChart3, Plus, Trash2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-// No auth required - uses templates directly
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -26,6 +25,7 @@ import {
 } from '@/hooks/usePricingCalculator';
 import { useProductCategories } from '@/hooks/useProductCategories';
 import { generatePricingReportPdf } from '@/utils/generatePricingReportPdf';
+import { evaluateFormula } from '@/utils/safeFormulaEvaluator';
 import { toast } from 'sonner';
 
 const categoryLabels: Record<string, string> = {
@@ -48,8 +48,29 @@ const typeIcons: Record<string, string> = {
   service: '🔧',
 };
 
+const shortTypeLabels: Record<string, string> = {
+  profile: 'Perfil',
+  glass: 'Vidro',
+  accessory: 'Acessório',
+  service: 'Serviço',
+  component: 'Componente',
+};
+
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+
+interface ManualItem {
+  id: string;
+  templateItemId: string;
+  itemName: string;
+  itemType: string;
+  unit: string;
+  widthFormula: string;
+  heightFormula: string;
+  piecesQuantity: number;
+  unitCost: number;
+  unitPrice: number;
+}
 
 export function PrecificacaoCalculator() {
   const [selectedProduct, setSelectedProduct] = useState<string>('');
@@ -61,10 +82,31 @@ export function PrecificacaoCalculator() {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [costOverrides, setCostOverrides] = useState<Record<string, number>>({});
 
+  // Manual items added by user
+  const [manualItems, setManualItems] = useState<ManualItem[]>([]);
+  const [addItemId, setAddItemId] = useState('');
+  const [addItemFilter, setAddItemFilter] = useState('all');
+  const [addItemSearch, setAddItemSearch] = useState('');
+
   const { data: products, isLoading: loadingProducts } = usePricingProducts();
   const { data: components, isLoading: loadingComponents } = usePricingComponents(selectedProduct || null);
   const summary = useCalculatePricing(components, width, height, quantity, costOverrides);
   const { data: productCategories } = useProductCategories();
+
+  // Fetch item_templates for manual adding
+  const { data: itemTemplates = [] } = useQuery({
+    queryKey: ['item-templates-for-calculator'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('item_templates')
+        .select('id, name, type, unit, default_price, linha')
+        .eq('is_active', true)
+        .order('type')
+        .order('name');
+      if (error) throw error;
+      return data || [];
+    },
+  });
 
   // Fetch ALL linhas from templates
   const { data: allSystemLinhas = [] } = useQuery({
@@ -95,12 +137,107 @@ export function PrecificacaoCalculator() {
     });
   };
 
+  // Filtered item templates for the add dropdown
+  const filteredTemplateItems = useMemo(() => {
+    return itemTemplates.filter(item => {
+      if (addItemFilter !== 'all' && item.type !== addItemFilter) return false;
+      if (addItemSearch) {
+        if (!item.name.toLowerCase().includes(addItemSearch.toLowerCase())) return false;
+      }
+      return true;
+    });
+  }, [itemTemplates, addItemFilter, addItemSearch]);
+
+  const addManualItem = () => {
+    const item = itemTemplates.find(i => i.id === addItemId);
+    if (!item) return;
+    setManualItems(prev => [...prev, {
+      id: crypto.randomUUID(),
+      templateItemId: item.id,
+      itemName: item.name,
+      itemType: item.type,
+      unit: item.unit,
+      widthFormula: item.type === 'profile' || item.type === 'glass' ? 'Largura' : '',
+      heightFormula: item.type === 'glass' ? 'Altura' : '',
+      piecesQuantity: 1,
+      unitCost: 0,
+      unitPrice: item.default_price || 0,
+    }]);
+    setAddItemId('');
+  };
+
+  const updateManualItem = (id: string, field: keyof ManualItem, value: any) => {
+    setManualItems(prev => prev.map(i => i.id === id ? { ...i, [field]: value } : i));
+  };
+
+  const removeManualItem = (id: string) => {
+    setManualItems(prev => prev.filter(i => i.id !== id));
+  };
+
+  // Calculate manual items pricing
+  const calculatedManualItems = useMemo(() => {
+    return manualItems.map(comp => {
+      const piecesQty = comp.piecesQuantity || 1;
+      const calculatedQuantity = piecesQty * quantity;
+
+      if (comp.itemType === 'glass') {
+        const calcW = evaluateFormula(comp.widthFormula || 'Largura', width, height);
+        const calcH = evaluateFormula(comp.heightFormula || 'Altura', width, height);
+        const glassAreaM2 = (calcW * calcH) / 1_000_000;
+        return {
+          ...comp,
+          calculatedQuantity,
+          calculatedLength: glassAreaM2,
+          displayMeasure: `${glassAreaM2.toFixed(4)} m²`,
+          totalCost: comp.unitCost * glassAreaM2 * calculatedQuantity,
+          totalPrice: comp.unitPrice * glassAreaM2 * calculatedQuantity,
+        };
+      } else if (comp.itemType === 'profile') {
+        const length = comp.heightFormula
+          ? evaluateFormula(comp.heightFormula, width, height)
+          : comp.widthFormula
+            ? evaluateFormula(comp.widthFormula, width, height)
+            : width;
+        const lengthM = length / 1000;
+        const costPerMeter = comp.unitCost / 6;
+        const pricePerMeter = comp.unitPrice / 6;
+        return {
+          ...comp,
+          calculatedQuantity,
+          calculatedLength: length,
+          displayMeasure: `${length} mm`,
+          totalCost: costPerMeter * lengthM * calculatedQuantity,
+          totalPrice: pricePerMeter * lengthM * calculatedQuantity,
+        };
+      } else {
+        return {
+          ...comp,
+          calculatedQuantity,
+          calculatedLength: 0,
+          displayMeasure: '-',
+          totalCost: comp.unitCost * calculatedQuantity,
+          totalPrice: comp.unitPrice * calculatedQuantity,
+        };
+      }
+    });
+  }, [manualItems, width, height, quantity]);
+
+  const manualTotalCost = calculatedManualItems.reduce((s, c) => s + c.totalCost, 0);
+  const manualTotalPrice = calculatedManualItems.reduce((s, c) => s + c.totalPrice, 0);
+
+  // Combined totals (template components + manual items)
+  const combinedTotalCost = summary.totalComponentCost + manualTotalCost;
+  const combinedTotalPrice = summary.totalComponentPrice + manualTotalPrice;
+  const combinedMargin = combinedTotalPrice - combinedTotalCost;
+  const combinedMarginPercent = combinedTotalCost > 0 ? (combinedMargin / combinedTotalCost) * 100 : 0;
+  const areaM2 = (width * height) / 1_000_000;
+  const combinedCostPerSqm = areaM2 > 0 ? combinedTotalCost / (areaM2 * quantity) : 0;
+  const combinedPricePerSqm = areaM2 > 0 ? combinedTotalPrice / (areaM2 * quantity) : 0;
+
   // All categories from system
   const allCategories = useMemo(() => {
     const set = new Set<string>();
-    // From product categories table
     productCategories?.forEach(c => set.add(c.slug));
-    // From products
     products?.forEach(p => { if (p.category) set.add(p.category); });
     return Array.from(set).sort();
   }, [productCategories, products]);
@@ -138,17 +275,27 @@ export function PrecificacaoCalculator() {
       width,
       height,
       quantity,
-      summary,
+      summary: {
+        ...summary,
+        totalComponentCost: combinedTotalCost,
+        totalComponentPrice: combinedTotalPrice,
+        costPerSqm: combinedCostPerSqm,
+        pricePerSqm: combinedPricePerSqm,
+        margin: combinedMargin,
+        marginPercent: combinedMarginPercent,
+      },
       companyName: 'Precificação',
       generatedAt: new Date().toLocaleString('pt-BR'),
     });
     toast.success('Relatório PDF gerado!');
   };
 
+  const hasAnyComponents = summary.components.length > 0 || manualItems.length > 0;
+
   return (
     <div className="space-y-6">
       {/* Export button */}
-      {selectedProduct && summary.components.length > 0 && (
+      {selectedProduct && hasAnyComponents && (
         <div className="flex justify-end">
           <Button onClick={handleExportPdf} variant="outline">
             <FileDown className="h-4 w-4 mr-2" />
@@ -174,6 +321,7 @@ export function PrecificacaoCalculator() {
                 setSelectedCategory('');
                 setSelectedProduct('');
                 setCostOverrides({});
+                setManualItems([]);
               }}>
                 <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
                 <SelectContent>
@@ -218,7 +366,11 @@ export function PrecificacaoCalculator() {
             {loadingProducts ? (
               <Skeleton className="h-10 w-full" />
             ) : (
-              <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+              <Select value={selectedProduct} onValueChange={v => {
+                setSelectedProduct(v);
+                setManualItems([]);
+                setCostOverrides({});
+              }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione um produto para precificar" />
                 </SelectTrigger>
@@ -292,7 +444,7 @@ export function PrecificacaoCalculator() {
       )}
 
       {/* Results */}
-      {selectedProduct && !loadingComponents && summary.components.length > 0 && (
+      {selectedProduct && !loadingComponents && hasAnyComponents && (
         <>
           {/* KPI Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -302,8 +454,8 @@ export function PrecificacaoCalculator() {
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                   <span className="text-xs text-muted-foreground">Custo Total</span>
                 </div>
-                <p className="text-lg font-bold">{formatCurrency(summary.totalComponentCost)}</p>
-                <p className="text-xs text-muted-foreground">{formatCurrency(summary.costPerSqm)}/m²</p>
+                <p className="text-lg font-bold">{formatCurrency(combinedTotalCost)}</p>
+                <p className="text-xs text-muted-foreground">{formatCurrency(combinedCostPerSqm)}/m²</p>
               </CardContent>
             </Card>
             <Card>
@@ -312,16 +464,16 @@ export function PrecificacaoCalculator() {
                   <BarChart3 className="h-4 w-4 text-primary" />
                   <span className="text-xs text-muted-foreground">Preço Total</span>
                 </div>
-                <p className="text-lg font-bold text-primary">{formatCurrency(summary.totalComponentPrice)}</p>
-                <p className="text-xs text-muted-foreground">{formatCurrency(summary.pricePerSqm)}/m²</p>
+                <p className="text-lg font-bold text-primary">{formatCurrency(combinedTotalPrice)}</p>
+                <p className="text-xs text-muted-foreground">{formatCurrency(combinedPricePerSqm)}/m²</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-4 pb-3">
                 <div className="flex items-center gap-2 mb-1">
-                  {summary.marginPercent >= 15 ? (
+                  {combinedMarginPercent >= 15 ? (
                     <TrendingUp className="h-4 w-4 text-success" />
-                  ) : summary.marginPercent >= 0 ? (
+                  ) : combinedMarginPercent >= 0 ? (
                     <Minus className="h-4 w-4 text-warning" />
                   ) : (
                     <TrendingDown className="h-4 w-4 text-destructive" />
@@ -330,14 +482,14 @@ export function PrecificacaoCalculator() {
                 </div>
                 <p className={cn(
                   "text-lg font-bold",
-                  summary.marginPercent >= 30 && "text-success",
-                  summary.marginPercent >= 15 && summary.marginPercent < 30 && "text-primary",
-                  summary.marginPercent >= 0 && summary.marginPercent < 15 && "text-warning",
-                  summary.marginPercent < 0 && "text-destructive",
+                  combinedMarginPercent >= 30 && "text-success",
+                  combinedMarginPercent >= 15 && combinedMarginPercent < 30 && "text-primary",
+                  combinedMarginPercent >= 0 && combinedMarginPercent < 15 && "text-warning",
+                  combinedMarginPercent < 0 && "text-destructive",
                 )}>
-                  {summary.marginPercent.toFixed(1)}%
+                  {combinedMarginPercent.toFixed(1)}%
                 </p>
-                <p className="text-xs text-muted-foreground">{formatCurrency(summary.margin)}</p>
+                <p className="text-xs text-muted-foreground">{formatCurrency(combinedMargin)}</p>
               </CardContent>
             </Card>
             <Card>
@@ -346,21 +498,21 @@ export function PrecificacaoCalculator() {
                   <Layers className="h-4 w-4 text-muted-foreground" />
                   <span className="text-xs text-muted-foreground">Área / Qtd</span>
                 </div>
-                <p className="text-lg font-bold">{summary.areaM2.toFixed(4)} m²</p>
+                <p className="text-lg font-bold">{areaM2.toFixed(4)} m²</p>
                 <p className="text-xs text-muted-foreground">{quantity} unidade(s)</p>
               </CardContent>
             </Card>
           </div>
 
-          {/* Component Breakdown */}
-          {['profile', 'glass', 'accessory', 'service'].map(type => {
+          {/* Template Component Breakdown */}
+          {summary.components.length > 0 && ['profile', 'glass', 'accessory', 'service'].map(type => {
             const items = groupedComponents[type];
             if (!items || items.length === 0) return null;
 
             const typeCost = items.reduce((s, c) => s + c.totalCost, 0);
             const typePrice = items.reduce((s, c) => s + c.totalPrice, 0);
-            const costPercent = summary.totalComponentCost > 0
-              ? (typeCost / summary.totalComponentCost * 100).toFixed(0)
+            const costPercent = combinedTotalCost > 0
+              ? (typeCost / combinedTotalCost * 100).toFixed(0)
               : '0';
 
             return (
@@ -458,25 +610,195 @@ export function PrecificacaoCalculator() {
               </Card>
             );
           })}
+
+          {/* Manual Items Section */}
+          {manualItems.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <Plus className="h-4 w-4" />
+                    Itens Adicionados Manualmente
+                    <Badge variant="secondary" className="text-xs">{manualItems.length}</Badge>
+                  </span>
+                  <span className="flex items-center gap-3 text-xs font-normal text-muted-foreground">
+                    <span>Custo: {formatCurrency(manualTotalCost)}</span>
+                    <span className="text-primary font-medium">Preço: {formatCurrency(manualTotalPrice)}</span>
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Item</TableHead>
+                        <TableHead className="w-20">Tipo</TableHead>
+                        <TableHead className="w-16">Peças</TableHead>
+                        <TableHead className="w-28">Fórmula Larg.</TableHead>
+                        <TableHead className="w-28">Fórmula Alt.</TableHead>
+                        <TableHead className="w-24 text-right">Custo</TableHead>
+                        <TableHead className="w-24 text-right">Preço</TableHead>
+                        <TableHead className="text-center">Medida</TableHead>
+                        <TableHead className="text-right">Total</TableHead>
+                        <TableHead className="w-10"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {calculatedManualItems.map(item => (
+                        <TableRow key={item.id}>
+                          <TableCell className="font-medium text-sm">{item.itemName}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className="text-[10px]">
+                              {shortTypeLabels[item.itemType] || item.itemType}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number" min={1}
+                              value={item.piecesQuantity}
+                              onChange={e => updateManualItem(item.id, 'piecesQuantity', parseInt(e.target.value) || 1)}
+                              className="h-7 w-16 text-xs"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              value={item.widthFormula}
+                              onChange={e => updateManualItem(item.id, 'widthFormula', e.target.value)}
+                              placeholder="Largura"
+                              className="h-7 text-xs"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              value={item.heightFormula}
+                              onChange={e => updateManualItem(item.id, 'heightFormula', e.target.value)}
+                              placeholder="Altura"
+                              className="h-7 text-xs"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number" min={0} step={0.01}
+                              value={item.unitCost || ''}
+                              onChange={e => updateManualItem(item.id, 'unitCost', parseFloat(e.target.value) || 0)}
+                              className="h-7 w-24 text-xs text-right"
+                            />
+                            <span className="text-[9px] text-muted-foreground block text-right">
+                              {item.itemType === 'profile' ? '/barra 6m' : item.itemType === 'glass' ? '/m²' : '/un'}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number" min={0} step={0.01}
+                              value={item.unitPrice || ''}
+                              onChange={e => updateManualItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
+                              className="h-7 w-24 text-xs text-right"
+                            />
+                            <span className="text-[9px] text-muted-foreground block text-right">
+                              {item.itemType === 'profile' ? '/barra 6m' : item.itemType === 'glass' ? '/m²' : '/un'}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-center text-xs text-muted-foreground">
+                            {item.displayMeasure}
+                          </TableCell>
+                          <TableCell className="text-right text-sm font-medium text-primary">
+                            {formatCurrency(item.totalPrice)}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost" size="icon"
+                              className="h-7 w-7 text-destructive hover:text-destructive"
+                              onClick={() => removeManualItem(item.id)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </>
       )}
 
-      {/* Empty state */}
-      {selectedProduct && !loadingComponents && summary.components.length === 0 && (
+      {/* Add Items Section - always visible when product is selected */}
+      {selectedProduct && !loadingComponents && (
         <Card>
-          <CardContent className="py-12 text-center">
-            <Package className="h-12 w-12 mx-auto mb-3 text-muted-foreground/30" />
-            <p className="text-muted-foreground">
-              Este produto não possui componentes cadastrados.
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Plus className="h-4 w-4 text-primary" />
+              Adicionar Itens ao Produto
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Adicione perfis, vidros e acessórios livremente para compor ou complementar a precificação
             </p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Adicione componentes na página de edição do produto para calcular preços.
-            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Select value={addItemFilter} onValueChange={setAddItemFilter}>
+                <SelectTrigger className="w-full sm:w-[140px]">
+                  <SelectValue placeholder="Tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="profile">Perfis</SelectItem>
+                  <SelectItem value="glass">Vidros</SelectItem>
+                  <SelectItem value="accessory">Acessórios</SelectItem>
+                  <SelectItem value="service">Serviços</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar item..."
+                  value={addItemSearch}
+                  onChange={e => setAddItemSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Select value={addItemId} onValueChange={setAddItemId}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Selecione um item para adicionar..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredTemplateItems.map(item => (
+                    <SelectItem key={item.id} value={item.id}>
+                      <span className="flex items-center gap-2">
+                        <span>{typeIcons[item.type] || '📦'}</span>
+                        <Badge variant="outline" className="text-[9px] px-1 py-0">
+                          {shortTypeLabels[item.type] || item.type}
+                        </Badge>
+                        {item.name}
+                        {item.default_price ? ` — ${formatCurrency(item.default_price)}/${item.unit}` : ''}
+                      </span>
+                    </SelectItem>
+                  ))}
+                  {filteredTemplateItems.length === 0 && (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">
+                      Nenhum item encontrado
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+
+              <Button onClick={addManualItem} disabled={!addItemId}>
+                <Plus className="h-4 w-4 mr-1" />
+                Adicionar
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Initial state */}
+      {/* Empty state - no product selected */}
       {!selectedProduct && (
         <Card>
           <CardContent className="py-12 text-center">
