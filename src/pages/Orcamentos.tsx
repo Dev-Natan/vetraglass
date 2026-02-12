@@ -116,6 +116,7 @@ export default function Orcamentos() {
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
   const [approveQuoteItems, setApproveQuoteItems] = useState<any[]>([]);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [quoteToCancelApproved, setQuoteToCancelApproved] = useState<Quote | null>(null);
 
   // Open new dialog if ?novo=true in URL
   useEffect(() => {
@@ -164,7 +165,7 @@ export default function Orcamentos() {
     }
   });
 
-  // Reject mutation
+  // Reject mutation (for pending quotes - simple status change)
   const rejectMutation = useMutation({
     mutationFn: async (quoteId: string) => {
       const { error } = await supabase
@@ -179,6 +180,36 @@ export default function Orcamentos() {
     },
     onError: () => {
       toast({ title: 'Erro ao rejeitar orçamento', variant: 'destructive' });
+    }
+  });
+
+  // Cancel approved/converted quote mutation (cancels all financial data)
+  const cancelApprovedMutation = useMutation({
+    mutationFn: async (quoteId: string) => {
+      const { data, error } = await supabase.rpc('cancel_approved_quote', { _quote_id: quoteId });
+      if (error) throw error;
+      const result = data as any;
+      if (result && !result.success) throw new Error(result.error);
+      return result;
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      queryClient.invalidateQueries({ queryKey: ['ordens'] });
+      queryClient.invalidateQueries({ queryKey: ['sales'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts_receivable'] });
+      const details: string[] = [];
+      if (data?.cancelled_os > 0) details.push(`${data.cancelled_os} OS`);
+      if (data?.cancelled_sales > 0) details.push(`${data.cancelled_sales} venda(s)`);
+      if (data?.cancelled_receivables > 0) details.push(`${data.cancelled_receivables} parcela(s)`);
+      if (data?.cancelled_deposits > 0) details.push(`${data.cancelled_deposits} depósito(s)`);
+      toast({ 
+        title: 'Orçamento cancelado com sucesso',
+        description: details.length > 0 ? `Cancelados: ${details.join(', ')}` : undefined
+      });
+      setQuoteToCancelApproved(null);
+    },
+    onError: (err: any) => {
+      toast({ title: 'Erro ao cancelar orçamento', description: err.message, variant: 'destructive' });
     }
   });
 
@@ -622,16 +653,33 @@ export default function Orcamentos() {
                                 <RotateCcw className="w-4 h-4" />
                                 Voltar p/ Pendente
                               </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => setQuoteToCancelApproved(quote)}
+                                className="gap-2 text-destructive focus:text-destructive"
+                              >
+                                <XCircle className="w-4 h-4" />
+                                Cancelar Orçamento
+                              </DropdownMenuItem>
                             </>
                           )}
                           {quote.status === 'converted' && (
-                            <DropdownMenuItem 
-                              onClick={() => handleView(quote)}
-                              className="gap-2"
-                            >
-                              <Eye className="w-4 h-4" />
-                              Ver Detalhes
-                            </DropdownMenuItem>
+                            <>
+                              <DropdownMenuItem 
+                                onClick={() => handleView(quote)}
+                                className="gap-2"
+                              >
+                                <Eye className="w-4 h-4" />
+                                Ver Detalhes
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                onClick={() => setQuoteToCancelApproved(quote)}
+                                className="gap-2 text-destructive focus:text-destructive"
+                              >
+                                <XCircle className="w-4 h-4" />
+                                Cancelar Orçamento
+                              </DropdownMenuItem>
+                            </>
                           )}
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -804,6 +852,26 @@ export default function Orcamentos() {
         open={isPaymentDialogOpen}
         onOpenChange={setIsPaymentDialogOpen}
       />
+      {/* Cancel Approved Quote Confirmation */}
+      <AlertDialog open={!!quoteToCancelApproved} onOpenChange={() => setQuoteToCancelApproved(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar orçamento aprovado?</AlertDialogTitle>
+            <AlertDialogDescription>
+              O orçamento #{quoteToCancelApproved?.quote_number.toString().padStart(4, '0')} será cancelado junto com <strong>todos os dados financeiros vinculados</strong>: ordens de serviço, vendas, parcelas a receber e depósitos serão cancelados. Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Manter</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => quoteToCancelApproved && cancelApprovedMutation.mutate(quoteToCancelApproved.id)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Cancelar Orçamento
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 }
