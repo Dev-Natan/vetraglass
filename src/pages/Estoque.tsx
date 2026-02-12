@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Boxes, TrendingDown, TrendingUp, ShoppingCart, History, Plus, Sparkles } from 'lucide-react';
+import { Boxes, TrendingDown, TrendingUp, ShoppingCart, History, Plus, Sparkles, PackageCheck, PackageX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AddStockDialog } from '@/components/estoque/AddStockDialog';
 import { EditItemPriceDialog } from '@/components/estoque/EditItemPriceDialog';
@@ -114,8 +114,8 @@ export default function Estoque() {
     },
   });
 
-  // Filtered and sorted items
-  const filteredItems = useMemo(() => {
+  // Split active items into in-stock and out-of-stock
+  const { inStockItems, outOfStockItems } = useMemo(() => {
     let items = [...activeItems];
 
     // Search filter
@@ -136,13 +136,11 @@ export default function Estoque() {
       items = items.filter((item) => item.item_template?.linha === linhaFilter);
     }
 
-    // Status filter
+    // Status filter (applied only within each tab contextually, but low/normal still filter)
     if (statusFilter === 'low') {
       items = items.filter(
         (item) => item.quantity <= (item.min_quantity || 0) && (item.min_quantity || 0) > 0
       );
-    } else if (statusFilter === 'zero') {
-      items = items.filter((item) => item.quantity === 0);
     } else if (statusFilter === 'normal') {
       items = items.filter(
         (item) => item.quantity > (item.min_quantity || 0) || (item.min_quantity || 0) === 0
@@ -163,26 +161,15 @@ export default function Estoque() {
       return 0;
     });
 
-    return items;
+    return {
+      inStockItems: items.filter(item => item.quantity > 0),
+      outOfStockItems: items.filter(item => item.quantity === 0),
+    };
   }, [activeItems, searchTerm, categoryFilter, linhaFilter, statusFilter, sortBy]);
 
-  // Inactive items with same filters
-  const filteredInactiveItems = useMemo(() => {
-    let items = [...inactiveItems];
+  // For export and other references
+  const filteredItems = useMemo(() => [...inStockItems, ...outOfStockItems], [inStockItems, outOfStockItems]);
 
-    if (searchTerm) {
-      const search = searchTerm.toLowerCase();
-      items = items.filter((item) =>
-        item.item_template?.name?.toLowerCase().includes(search)
-      );
-    }
-
-    if (categoryFilter !== 'all') {
-      items = items.filter((item) => item.item_template?.type === categoryFilter);
-    }
-
-    return items;
-  }, [inactiveItems, searchTerm, categoryFilter]);
 
   const handleOpenPriceDialog = useCallback((item: StockItem) => {
     setSelectedItem({
@@ -304,38 +291,33 @@ export default function Estoque() {
               />
             </div>
 
-            {/* Stock List/Grid */}
             <div className="section-card">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="font-display font-semibold text-lg text-foreground">
-                  Itens em Estoque ({filteredItems.length})
-                </h2>
-              </div>
-
-              <Tabs defaultValue="active" className="w-full">
+              <Tabs defaultValue="in-stock" className="w-full">
                 <TabsList className="mb-4">
-                  <TabsTrigger value="active">
-                    Ativos ({filteredItems.length})
+                  <TabsTrigger value="in-stock" className="gap-2">
+                    <PackageCheck className="w-4 h-4" />
+                    Em Estoque ({inStockItems.length})
                   </TabsTrigger>
-                  <TabsTrigger value="inactive">
-                    Desativados ({filteredInactiveItems.length})
+                  <TabsTrigger value="out-of-stock" className="gap-2">
+                    <PackageX className="w-4 h-4" />
+                    Fora de Estoque ({outOfStockItems.length})
                   </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="active">
+                <TabsContent value="in-stock">
                   {isLoading ? (
                     <div className="flex items-center justify-center py-12">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                     </div>
                   ) : viewMode === 'grid' ? (
                     <StockGridView
-                      items={filteredItems}
+                      items={inStockItems}
                       onEdit={handleOpenPriceDialog}
                       onToggleActive={handleToggleActive}
                     />
-                  ) : filteredItems.length > 0 ? (
+                  ) : inStockItems.length > 0 ? (
                     <div className="space-y-2">
-                      {filteredItems.map((item) => (
+                      {inStockItems.map((item) => (
                         <StockItemCard
                           key={item.id}
                           item={item}
@@ -346,8 +328,8 @@ export default function Estoque() {
                     </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
-                      <Boxes className="w-12 h-12 text-muted-foreground/50 mb-4" />
-                      <h3 className="font-medium text-foreground mb-1">Nenhum item encontrado</h3>
+                      <PackageCheck className="w-12 h-12 text-muted-foreground/50 mb-4" />
+                      <h3 className="font-medium text-foreground mb-1">Nenhum item em estoque</h3>
                       <p className="text-sm text-muted-foreground mb-4">
                         {searchTerm || categoryFilter !== 'all' || statusFilter !== 'all'
                           ? 'Tente ajustar os filtros.'
@@ -363,16 +345,20 @@ export default function Estoque() {
                   )}
                 </TabsContent>
 
-                <TabsContent value="inactive">
-                  {viewMode === 'grid' ? (
+                <TabsContent value="out-of-stock">
+                  {isLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    </div>
+                  ) : viewMode === 'grid' ? (
                     <StockGridView
-                      items={filteredInactiveItems}
+                      items={outOfStockItems}
                       onEdit={handleOpenPriceDialog}
                       onToggleActive={handleToggleActive}
                     />
-                  ) : filteredInactiveItems.length > 0 ? (
+                  ) : outOfStockItems.length > 0 ? (
                     <div className="space-y-2">
-                      {filteredInactiveItems.map((item) => (
+                      {outOfStockItems.map((item) => (
                         <StockItemCard
                           key={item.id}
                           item={item}
@@ -383,10 +369,10 @@ export default function Estoque() {
                     </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
-                      <Boxes className="w-12 h-12 text-muted-foreground/50 mb-4" />
-                      <h3 className="font-medium text-foreground mb-1">Nenhum item desativado</h3>
+                      <PackageX className="w-12 h-12 text-muted-foreground/50 mb-4" />
+                      <h3 className="font-medium text-foreground mb-1">Nenhum item fora de estoque</h3>
                       <p className="text-sm text-muted-foreground">
-                        Itens desativados aparecerão aqui.
+                        Todos os itens possuem quantidade disponível.
                       </p>
                     </div>
                   )}
