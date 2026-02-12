@@ -395,26 +395,103 @@ export default function CaixaVendas() {
       if (!openCashRegister?.id || !currentCompany?.id || !user?.id) throw new Error('Caixa não está aberto');
       
       const { paymentConfig } = data;
-      const isPaidInFull = paymentConfig.type === 'full';
+
+      // CORREÇÃO: Quando a venda vem de um orçamento, verificar entradas já recebidas
+      let depositsTotalReceived = 0;
+      let existingDeposits: Array<{ id: string; amount: number; cash_movement_id: string | null }> = [];
+      let existingPartialSale: { id: string } | null = null;
+
+      if (data.quoteId) {
+        // Buscar depósitos já recebidos do orçamento
+        const { data: deposits } = await supabase
+          .from('quote_deposits')
+          .select('id, amount, cash_movement_id')
+          .eq('quote_id', data.quoteId)
+          .eq('status', 'received');
+
+        existingDeposits = deposits || [];
+        depositsTotalReceived = existingDeposits.reduce((sum, d) => sum + Number(d.amount), 0);
+
+        // Buscar venda parcial existente
+        const { data: partialSale } = await supabase
+          .from('sales')
+          .select('id')
+          .eq('quote_id', data.quoteId)
+          .eq('sale_type', 'partial')
+          .maybeSingle();
+
+        existingPartialSale = partialSale;
+      }
+
+      // Calcular valor real a cobrar (total - entradas já recebidas)
+      const saldoRestante = Math.max(0, data.total - depositsTotalReceived);
+      const totalPaidNow = paymentConfig.paidAmount;
+      // O paid_amount total inclui as entradas anteriores + o que está sendo pago agora
+      const totalPaidAmount = depositsTotalReceived + Math.min(totalPaidNow, saldoRestante);
+      const pendingAfterSale = Math.max(0, data.total - totalPaidAmount);
+      const isPaidInFull = pendingAfterSale <= 0;
       const paymentStatus = isPaidInFull ? 'paid' : 'partial';
       
-      // Create sale
-      const { data: sale, error: saleError } = await supabase.from('sales').insert({ 
-        company_id: currentCompany.id, 
-        cash_register_id: openCashRegister.id, 
-        customer_name: data.customerName || null, 
-        subtotal: data.subtotal, 
-        discount_percent: data.discountPercent, 
-        discount_amount: data.discountAmount, 
-        total_amount: data.total, 
-        payment_method: paymentConfig.method, 
-        payment_status: paymentStatus,
-        paid_amount: paymentConfig.paidAmount,
-        pending_amount: data.total - paymentConfig.paidAmount,
-        sold_by: user.id 
-      }).select().single();
-      
-      if (saleError) throw saleError;
+      let sale: any;
+
+      if (data.quoteId && existingPartialSale) {
+        // Atualizar venda parcial existente para venda completa
+        const { data: updatedSale, error: updateError } = await supabase.from('sales')
+          .update({
+            total_amount: data.total,
+            subtotal: data.subtotal,
+            discount_percent: data.discountPercent,
+            discount_amount: data.discountAmount,
+            paid_amount: totalPaidAmount,
+            pending_amount: pendingAfterSale,
+            payment_method: paymentConfig.method,
+            payment_status: paymentStatus,
+            sale_type: isPaidInFull ? 'full' : 'partial',
+          })
+          .eq('id', existingPartialSale.id)
+          .select()
+          .single();
+        if (updateError) throw updateError;
+        sale = updatedSale;
+      } else {
+        // Criar nova venda
+        const { data: newSale, error: saleError } = await supabase.from('sales').insert({ 
+          company_id: currentCompany.id, 
+          cash_register_id: openCashRegister.id, 
+          customer_name: data.customerName || null, 
+          subtotal: data.subtotal, 
+          discount_percent: data.discountPercent, 
+          discount_amount: data.discountAmount, 
+          total_amount: data.total, 
+          payment_method: paymentConfig.method, 
+          payment_status: paymentStatus,
+          paid_amount: totalPaidAmount,
+          pending_amount: pendingAfterSale,
+          sold_by: user.id,
+          quote_id: data.quoteId || null,
+          sale_type: data.quoteId ? (isPaidInFull ? 'full' : 'partial') : undefined,
+        }).select().single();
+        
+        if (saleError) throw saleError;
+        sale = newSale;
+      }
+
+      // Se houve entradas de orçamento, transferir vínculos e marcar como faturadas
+      if (data.quoteId && existingDeposits.length > 0) {
+        // Transferir cash_movements das entradas para a venda
+        for (const deposit of existingDeposits) {
+          if (deposit.cash_movement_id) {
+            await supabase.from('cash_movements')
+              .update({ origem: 'venda', sale_id: sale.id })
+              .eq('id', deposit.cash_movement_id);
+          }
+        }
+        // Marcar depósitos como faturados
+        await supabase.from('quote_deposits')
+          .update({ status: 'billed' })
+          .eq('quote_id', data.quoteId)
+          .eq('status', 'received');
+      }
       
       // Create sale items
       const saleItems = data.items.map((item) => ({ sale_id: sale.id, item_template_id: item.itemTemplateId || null, company_product_id: item.companyProductId || null, item_name: item.name, item_unit: item.unit, quantity: item.quantity, unit_price: item.unitPrice, total_price: item.totalPrice, width: item.width || null, height: item.height || null }));
@@ -511,6 +588,8 @@ export default function CaixaVendas() {
       queryClient.invalidateQueries({ queryKey: ['approved-quotes'] }); 
       queryClient.invalidateQueries({ queryKey: ['accounts-receivable'] });
       queryClient.invalidateQueries({ queryKey: ['receivables-due-today'] });
+      queryClient.invalidateQueries({ queryKey: ['pending-deposits'] });
+      queryClient.invalidateQueries({ queryKey: ['quote-deposits'] });
       setNovaVendaOpen(false); 
     },
     onError: (error: Error) => toast.error(`Erro ao registrar venda: ${error.message}`),

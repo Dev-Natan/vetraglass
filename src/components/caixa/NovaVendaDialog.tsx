@@ -381,7 +381,6 @@ export function NovaVendaDialog({
     setCustomerName(quote.customer_name);
     
     // Calcular saldo pendente real
-    const pendingAmount = quote.pending_amount ?? quote.final_amount;
     const totalDeposits = quote.total_deposits ?? 0;
     const totalSold = quote.total_sold ?? 0;
     
@@ -389,23 +388,21 @@ export function NovaVendaDialog({
     if (totalDeposits > 0 || totalSold > 0) {
       const messages = [];
       if (totalDeposits > 0) {
-        messages.push(`Entrada recebida: ${formatCurrency(totalDeposits)}`);
+        messages.push(`Entrada já recebida: ${formatCurrency(totalDeposits)}`);
       }
       if (totalSold > 0) {
         messages.push(`Já faturado: ${formatCurrency(totalSold)}`);
       }
-      messages.push(`Saldo disponível: ${formatCurrency(pendingAmount)}`);
+      const pendingAmount = Math.max(0, quote.final_amount - totalDeposits - totalSold);
+      messages.push(`Saldo restante a cobrar: ${formatCurrency(pendingAmount)}`);
       
-      toast.warning(
-        `⚠️ Este orçamento possui pagamentos anteriores.\n${messages.join('\n')}`,
+      toast.info(
+        `Este orçamento possui entradas anteriores.\n${messages.join('\n')}`,
         { duration: 6000 }
       );
     }
     
-    // Carregar itens ajustados proporcionalmente ao saldo pendente
-    const totalOriginal = quote.final_amount;
-    const ratio = pendingAmount / totalOriginal;
-    
+    // CORREÇÃO: Manter preços originais dos itens — entradas são tratadas no pagamento
     const vendaItems: VendaItem[] = (quote.quote_items || []).map(qi => ({
       id: crypto.randomUUID(),
       companyProductId: qi.company_product_id || undefined,
@@ -413,8 +410,8 @@ export function NovaVendaDialog({
       name: qi.description,
       unit: 'm²',
       quantity: qi.quantity,
-      unitPrice: qi.unit_price * ratio, // Ajustar preço proporcionalmente
-      totalPrice: qi.total_price * ratio, // Ajustar total proporcionalmente
+      unitPrice: qi.unit_price,
+      totalPrice: qi.total_price,
       width: qi.width || undefined,
       height: qi.height || undefined,
       isProduct: !!(qi.company_product_id || qi.product_template_id),
