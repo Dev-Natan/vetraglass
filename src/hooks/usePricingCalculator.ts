@@ -98,11 +98,13 @@ export function usePricingComponents(companyProductId: string | null) {
   });
 }
 
+/** costOverrides: Record<componentId, overriddenUnitCost> */
 export function useCalculatePricing(
   components: any[] | undefined,
   width: number,
   height: number,
-  quantity: number
+  quantity: number,
+  costOverrides?: Record<string, number>
 ): PricingSummary {
   return useMemo(() => {
     if (!components || components.length === 0) {
@@ -125,7 +127,12 @@ export function useCalculatePricing(
       const itemName = item?.name || 'Item desconhecido';
       const itemType = item?.type || 'accessory';
       const unit = item?.unit || 'un';
-      const unitCost = comp.company_item?.cost ?? 0;
+      
+      // Use override if provided, otherwise use original cost
+      const originalCost = comp.company_item?.cost ?? 0;
+      const unitCost = costOverrides && costOverrides[comp.id] !== undefined
+        ? costOverrides[comp.id]
+        : originalCost;
       const unitPrice = comp.company_item?.sale_price ?? comp.item_template?.default_price ?? 0;
 
       const piecesQty = comp.pieces_quantity || 1;
@@ -137,11 +144,10 @@ export function useCalculatePricing(
       let calculatedQuantity = piecesQty * quantity;
 
       if (itemType === 'glass') {
-        // Glass: calculate area
         const calcW = evaluateFormula(widthF || 'Largura', width, height);
         const calcH = evaluateFormula(heightF || 'Altura', width, height);
         const glassAreaM2 = (calcW * calcH) / 1_000_000;
-        calculatedLength = calcW; // store width for display
+        calculatedLength = calcW;
         const totalCost = unitCost * glassAreaM2 * calculatedQuantity;
         const totalPrice = unitPrice * glassAreaM2 * calculatedQuantity;
 
@@ -164,7 +170,6 @@ export function useCalculatePricing(
           totalPrice,
         };
       } else if (itemType === 'profile') {
-        // Profile: calculate linear length
         if (heightF) {
           calculatedLength = evaluateFormula(heightF, width, height);
         } else if (widthF) {
@@ -196,7 +201,6 @@ export function useCalculatePricing(
           totalPrice,
         };
       } else {
-        // Accessories: fixed quantity
         const totalCost = unitCost * calculatedQuantity;
         const totalPrice = unitPrice * calculatedQuantity;
 
@@ -238,5 +242,5 @@ export function useCalculatePricing(
       margin,
       marginPercent,
     };
-  }, [components, width, height, quantity]);
+  }, [components, width, height, quantity, costOverrides]);
 }
