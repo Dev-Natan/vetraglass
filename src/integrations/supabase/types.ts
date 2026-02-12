@@ -6460,6 +6460,7 @@ export type Database = {
         Args: { _company_id: string; _user_id: string }
         Returns: Json
       }
+      cancel_approved_quote: { Args: { _quote_id: string }; Returns: Json }
       cancel_os_materials: {
         Args: { _ordem_servico_id: string }
         Returns: number
