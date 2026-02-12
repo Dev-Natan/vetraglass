@@ -95,19 +95,15 @@ export function FaturarSaldoDialog({
         .filter(d => d.status === 'received')
         .reduce((sum, d) => sum + Number(d.amount), 0);
 
-      // Calcular total recebido via vendas parciais
-      const salesReceived = (partialSales || [])
-        .reduce((sum, s) => sum + Number(s.paid_amount || s.total_amount), 0);
-
-      // Total efetivamente recebido
-      const totalReceived = Math.max(depositsReceived, salesReceived, ordemServico.paid_amount || 0);
+      // Total efetivamente recebido: depósitos são a fonte canônica
+      // Não usar Math.max pois pode ignorar entradas adicionais
+      const totalReceived = depositsReceived;
       
       return {
         deposits: deposits || [],
         partialSales: partialSales || [],
         totalReceived,
         depositsReceived,
-        salesReceived,
       };
     },
     enabled: !!ordemServico.quote_id && open,
@@ -231,13 +227,14 @@ export function FaturarSaldoDialog({
         }
       }
 
-      // 4. Atualizar quote_deposits para 'billed'
+      // 4. Atualizar APENAS quote_deposits já recebidos para 'billed'
+      // CORREÇÃO: Não marcar depósitos 'pending' como 'billed' — eles não foram recebidos
       if (ordemServico.quote_id) {
         await supabase
           .from('quote_deposits')
           .update({ status: 'billed' })
           .eq('quote_id', ordemServico.quote_id)
-          .in('status', ['received', 'pending']);
+          .eq('status', 'received');
       }
 
       // 5. Atualizar accounts_receivable - vincular à venda e marcar como pago
