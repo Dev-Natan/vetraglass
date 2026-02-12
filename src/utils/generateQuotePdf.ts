@@ -598,7 +598,7 @@ export async function generateQuotePdf(
     if (hasDiscount) {
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...mutedColor);
-      doc.text(`Desconto de ${quote.discount_percent}%: -${formatCurrency(quote.discount_amount || 0)}`, marginLeft + 5, y + 14);
+      doc.text(`Desconto: -${formatCurrency(quote.discount_amount || 0)}`, marginLeft + 5, y + 14);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(0, 128, 0);
       doc.text(formatCurrency(quote.final_amount), marginRight - 5, y + 14, { align: 'right' });
@@ -643,7 +643,7 @@ export async function generateQuotePdf(
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   doc.setTextColor(...textColor);
-  doc.text('VALOR A VISTA COM DESCONTO', marginLeft + 5, y + 8);
+  doc.text('VALOR FINAL', marginLeft + 5, y + 8);
   doc.text(formatCurrency(quote.final_amount), marginRight - 5, y + 8, { align: 'right' });
   
   // Save or Print PDF
