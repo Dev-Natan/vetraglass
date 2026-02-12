@@ -101,7 +101,7 @@ Prompt  │ Tarefas              │ Prioridade │ Status
   2     │ 1.3 SW Cleanup       │ 🔴 Crítica │ ✅ Concluído
   3     │ 2.1 Imagens PDF      │ 🔴 Alta    │ ✅ Concluído
   4     │ 2.2 Fluxo Alumínio   │ 🟡 Alta    │ ✅ Concluído
-  5     │ 2.3 Validações       │ 🟡 Alta    │ ⬜ Pendente
+  5     │ 2.3 Validações       │ 🟡 Alta    │ ✅ Concluído
   6     │ 3.1 + 3.3 Routing    │ 🟡 Média   │ ⬜ Pendente
   7     │ 3.2 Teste PDFs       │ 🟡 Média   │ ⬜ Pendente
   8     │ 4.1 SEO              │ 🟢 Baixa   │ ⬜ Pendente
