@@ -122,7 +122,7 @@ export default function Auth() {
     if (error) {
       setErrors({ password: 'Usuário ou senha incorretos' });
     } else {
-      navigate('/');
+      navigate('/dashboard');
     }
   };
 
