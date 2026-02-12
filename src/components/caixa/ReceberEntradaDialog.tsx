@@ -64,6 +64,20 @@ export function ReceberEntradaDialog({
         throw new Error('Empresa ou usuário não encontrado');
       }
 
+      // CORREÇÃO: Verificar estado atual do depósito no banco antes de processar
+      // Previne duplicação por clique duplo ou estado desatualizado
+      const { data: currentDeposit, error: checkError } = await supabase
+        .from('quote_deposits')
+        .select('id, status')
+        .eq('id', deposit.id)
+        .single();
+
+      if (checkError) throw checkError;
+
+      if (currentDeposit.status !== 'pending') {
+        throw new Error('Esta entrada já foi processada anteriormente');
+      }
+
       const amount = Number(deposit.amount);
       const osNumber = deposit.ordens_servico?.os_number;
       const quoteNumber = deposit.quotes?.quote_number;
@@ -72,7 +86,6 @@ export function ReceberEntradaDialog({
         : `Entrada - Orçamento #${String(quoteNumber || 0).padStart(4, '0')} - ${deposit.customer_name}`;
 
       // 1. Criar movimento de caixa (ENTRADA vinculada ao ORÇAMENTO)
-      // IMPORTANTE: origem='orcamento' para rastreabilidade
       const { data: cashMovement, error: movementError } = await supabase
         .from('cash_movements')
         .insert({
@@ -84,7 +97,6 @@ export function ReceberEntradaDialog({
           description: description,
           payment_method: paymentMethod,
           created_by: user.id,
-          // Vínculo obrigatório ao orçamento (será transferido para venda ao faturar)
           origem: 'orcamento',
         })
         .select('id')
