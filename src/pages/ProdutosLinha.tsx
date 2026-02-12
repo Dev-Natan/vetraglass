@@ -649,7 +649,7 @@ export default function ProdutosLinha() {
         </div>
 
         {/* Bottom action bar */}
-        <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t p-3 sm:p-4 z-40">
+        <div className="fixed bottom-0 left-0 lg:left-60 right-0 bg-background/95 backdrop-blur border-t p-3 sm:p-4 z-40">
           <div className="container mx-auto flex justify-center gap-4 sm:gap-12">
             <button 
               onClick={() => toast.info('Funcionalidade em desenvolvimento')}

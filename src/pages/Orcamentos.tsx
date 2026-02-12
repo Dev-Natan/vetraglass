@@ -738,7 +738,7 @@ export default function Orcamentos() {
         )}
 
         {/* Bottom Navigation Bar */}
-        <div className="fixed bottom-0 left-0 right-0 bg-background border-t shadow-lg z-40">
+        <div className="fixed bottom-0 left-0 lg:left-60 right-0 bg-background border-t shadow-lg z-40">
           <div className="max-w-screen-xl mx-auto px-4">
             <div className="flex items-center justify-around py-3">
               <button className="flex flex-col items-center gap-1 text-muted-foreground hover:text-primary transition-colors">
