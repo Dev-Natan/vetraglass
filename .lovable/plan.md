@@ -104,8 +104,8 @@ Prompt  │ Tarefas              │ Prioridade │ Status
   5     │ 2.3 Validações       │ 🟡 Alta    │ ✅ Concluído
   6     │ 3.1 + 3.3 Routing    │ 🟡 Média   │ ✅ Concluído
   7     │ 3.2 Teste PDFs       │ 🟡 Média   │ ✅ Concluído
-  8     │ 4.1 SEO              │ 🟢 Baixa   │ ⬜ Pendente
-  9     │ 4.2 Mobile           │ 🟢 Baixa   │ ⬜ Pendente
+  8     │ 4.1 SEO              │ 🟢 Baixa   │ ✅ Concluído
+  9     │ 4.2 Mobile           │ 🟢 Baixa   │ ✅ Concluído
 ```
 
 ---
