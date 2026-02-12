@@ -114,8 +114,32 @@ const testimonials = [
 ];
 
 export default function Landing() {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Vetra",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web",
+    "description": "Sistema completo de gestão para vidraçarias: orçamentos, ordens de serviço, estoque, financeiro, agenda e muito mais.",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "BRL",
+      "description": "Teste 14 dias grátis"
+    },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "5",
+      "reviewCount": "3"
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center justify-between">
@@ -153,7 +177,8 @@ export default function Landing() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden py-20 md:py-32">
+      <main>
+      <section className="relative overflow-hidden py-20 md:py-32" aria-label="Apresentação">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/10" />
         <div className="container relative">
           <div className="mx-auto max-w-3xl text-center animate-fade-in">
@@ -183,17 +208,17 @@ export default function Landing() {
               </Button>
             </div>
             
-            <div className="mt-12 flex items-center justify-center gap-8 text-sm text-muted-foreground">
+            <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-success" />
+                <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0" />
                 <span>Sem cartão de crédito</span>
               </div>
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-success" />
+                <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0" />
                 <span>Suporte incluso</span>
               </div>
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-success" />
+                <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0" />
                 <span>Cancele quando quiser</span>
               </div>
             </div>
@@ -226,7 +251,7 @@ export default function Landing() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 md:py-32">
+      <section id="features" className="py-20 md:py-32" aria-label="Funcionalidades">
         <div className="container">
           <div className="text-center mb-16 animate-fade-in">
             <Badge variant="secondary" className="mb-4">Funcionalidades</Badge>
@@ -392,8 +417,10 @@ export default function Landing() {
         </div>
       </section>
 
+      </main>
+
       {/* CTA Section */}
-      <section className="py-20 md:py-32 bg-primary text-primary-foreground">
+      <section className="py-20 md:py-32 bg-primary text-primary-foreground" aria-label="Chamada para ação">
         <div className="container text-center animate-fade-in">
           <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">
             Pronto para transformar sua vidraçaria?
