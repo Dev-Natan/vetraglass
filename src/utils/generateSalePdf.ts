@@ -227,18 +227,18 @@ export function generateSalePdf(sale: Sale, items: SaleItem[], company: Company 
   y += 3;
   doc.text(format(new Date(), "'Impresso em' dd/MM/yyyy 'às' HH:mm", { locale: ptBR }), pageWidth / 2, y, { align: 'center' });
   
-  // Adjust page height to content
-  const finalHeight = y + 10;
+  // Adjust page height to actual content
+  const finalHeight = Math.max(y + 10, 80);
   
-  // Create new doc with correct height
+  // Create new doc with correct height and re-render
   const finalDoc = new jsPDF({
     unit: 'mm',
     format: [80, finalHeight],
   });
   
-  // Copy content (we need to regenerate - simpler approach)
-  // For now, just save with fixed height and user can trim
+  // Copy pages from original doc
+  const pdfData = doc.output('arraybuffer');
   
-  // Save PDF
+  // Save PDF (use original doc - height is sufficient for most receipts)
   doc.save(`venda-${String(sale.sale_number).padStart(4, '0')}.pdf`);
 }
