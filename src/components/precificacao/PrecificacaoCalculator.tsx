@@ -69,7 +69,6 @@ interface ManualItem {
   heightFormula: string;
   piecesQuantity: number;
   unitCost: number;
-  unitPrice: number;
 }
 
 export function PrecificacaoCalculator() {
@@ -81,7 +80,7 @@ export function PrecificacaoCalculator() {
   const [selectedLinha, setSelectedLinha] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [costOverrides, setCostOverrides] = useState<Record<string, number>>({});
-
+  const [marginPercent, setMarginPercent] = useState(30);
   // Manual items added by user
   const [manualItems, setManualItems] = useState<ManualItem[]>([]);
   const [addItemId, setAddItemId] = useState('');
@@ -160,8 +159,7 @@ export function PrecificacaoCalculator() {
       widthFormula: item.type === 'profile' || item.type === 'glass' ? 'Largura' : '',
       heightFormula: item.type === 'glass' ? 'Altura' : '',
       piecesQuantity: 1,
-      unitCost: 0,
-      unitPrice: item.default_price || 0,
+      unitCost: item.default_price || 0,
     }]);
     setAddItemId('');
   };
@@ -190,7 +188,6 @@ export function PrecificacaoCalculator() {
           calculatedLength: glassAreaM2,
           displayMeasure: `${glassAreaM2.toFixed(4)} m²`,
           totalCost: comp.unitCost * glassAreaM2 * calculatedQuantity,
-          totalPrice: comp.unitPrice * glassAreaM2 * calculatedQuantity,
         };
       } else if (comp.itemType === 'profile') {
         const length = comp.heightFormula
@@ -200,14 +197,12 @@ export function PrecificacaoCalculator() {
             : width;
         const lengthM = length / 1000;
         const costPerMeter = comp.unitCost / 6;
-        const pricePerMeter = comp.unitPrice / 6;
         return {
           ...comp,
           calculatedQuantity,
           calculatedLength: length,
           displayMeasure: `${length} mm`,
           totalCost: costPerMeter * lengthM * calculatedQuantity,
-          totalPrice: pricePerMeter * lengthM * calculatedQuantity,
         };
       } else {
         return {
@@ -216,20 +211,17 @@ export function PrecificacaoCalculator() {
           calculatedLength: 0,
           displayMeasure: '-',
           totalCost: comp.unitCost * calculatedQuantity,
-          totalPrice: comp.unitPrice * calculatedQuantity,
         };
       }
     });
   }, [manualItems, width, height, quantity]);
 
   const manualTotalCost = calculatedManualItems.reduce((s, c) => s + c.totalCost, 0);
-  const manualTotalPrice = calculatedManualItems.reduce((s, c) => s + c.totalPrice, 0);
 
   // Combined totals (template components + manual items)
   const combinedTotalCost = summary.totalComponentCost + manualTotalCost;
-  const combinedTotalPrice = summary.totalComponentPrice + manualTotalPrice;
+  const combinedTotalPrice = combinedTotalCost * (1 + marginPercent / 100);
   const combinedMargin = combinedTotalPrice - combinedTotalCost;
-  const combinedMarginPercent = combinedTotalCost > 0 ? (combinedMargin / combinedTotalCost) * 100 : 0;
   const areaM2 = (width * height) / 1_000_000;
   const combinedCostPerSqm = areaM2 > 0 ? combinedTotalCost / (areaM2 * quantity) : 0;
   const combinedPricePerSqm = areaM2 > 0 ? combinedTotalPrice / (areaM2 * quantity) : 0;
@@ -282,7 +274,7 @@ export function PrecificacaoCalculator() {
         costPerSqm: combinedCostPerSqm,
         pricePerSqm: combinedPricePerSqm,
         margin: combinedMargin,
-        marginPercent: combinedMarginPercent,
+        marginPercent: marginPercent,
       },
       companyName: 'Precificação',
       generatedAt: new Date().toLocaleString('pt-BR'),
@@ -425,6 +417,16 @@ export function PrecificacaoCalculator() {
                   onChange={e => setQuantity(parseInt(e.target.value) || 1)}
                 />
               </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" /> Margem de Lucro (%)
+                </Label>
+                <Input
+                  type="number" min={0} step={1}
+                  value={marginPercent}
+                  onChange={e => setMarginPercent(parseFloat(e.target.value) || 0)}
+                />
+              </div>
             </div>
           )}
         </CardContent>
@@ -458,11 +460,11 @@ export function PrecificacaoCalculator() {
                 <p className="text-xs text-muted-foreground">{formatCurrency(combinedCostPerSqm)}/m²</p>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="border-primary/30">
               <CardContent className="pt-4 pb-3">
                 <div className="flex items-center gap-2 mb-1">
                   <BarChart3 className="h-4 w-4 text-primary" />
-                  <span className="text-xs text-muted-foreground">Preço Total</span>
+                  <span className="text-xs text-muted-foreground">Preço de Venda</span>
                 </div>
                 <p className="text-lg font-bold text-primary">{formatCurrency(combinedTotalPrice)}</p>
                 <p className="text-xs text-muted-foreground">{formatCurrency(combinedPricePerSqm)}/m²</p>
@@ -471,25 +473,11 @@ export function PrecificacaoCalculator() {
             <Card>
               <CardContent className="pt-4 pb-3">
                 <div className="flex items-center gap-2 mb-1">
-                  {combinedMarginPercent >= 15 ? (
-                    <TrendingUp className="h-4 w-4 text-success" />
-                  ) : combinedMarginPercent >= 0 ? (
-                    <Minus className="h-4 w-4 text-warning" />
-                  ) : (
-                    <TrendingDown className="h-4 w-4 text-destructive" />
-                  )}
-                  <span className="text-xs text-muted-foreground">Margem</span>
+                  <TrendingUp className="h-4 w-4 text-success" />
+                  <span className="text-xs text-muted-foreground">Lucro</span>
                 </div>
-                <p className={cn(
-                  "text-lg font-bold",
-                  combinedMarginPercent >= 30 && "text-success",
-                  combinedMarginPercent >= 15 && combinedMarginPercent < 30 && "text-primary",
-                  combinedMarginPercent >= 0 && combinedMarginPercent < 15 && "text-warning",
-                  combinedMarginPercent < 0 && "text-destructive",
-                )}>
-                  {combinedMarginPercent.toFixed(1)}%
-                </p>
-                <p className="text-xs text-muted-foreground">{formatCurrency(combinedMargin)}</p>
+                <p className="text-lg font-bold text-success">{formatCurrency(combinedMargin)}</p>
+                <p className="text-xs text-muted-foreground">Margem: {marginPercent.toFixed(1)}%</p>
               </CardContent>
             </Card>
             <Card>
@@ -510,7 +498,6 @@ export function PrecificacaoCalculator() {
             if (!items || items.length === 0) return null;
 
             const typeCost = items.reduce((s, c) => s + c.totalCost, 0);
-            const typePrice = items.reduce((s, c) => s + c.totalPrice, 0);
             const costPercent = combinedTotalCost > 0
               ? (typeCost / combinedTotalCost * 100).toFixed(0)
               : '0';
@@ -524,9 +511,8 @@ export function PrecificacaoCalculator() {
                       {typeLabels[type] || type}
                       <Badge variant="secondary" className="text-xs">{items.length}</Badge>
                     </span>
-                    <span className="flex items-center gap-3 text-xs font-normal text-muted-foreground">
-                      <span>Custo: {formatCurrency(typeCost)} ({costPercent}%)</span>
-                      <span className="text-primary font-medium">Preço: {formatCurrency(typePrice)}</span>
+                    <span className="text-xs font-normal text-muted-foreground">
+                      Custo: {formatCurrency(typeCost)} ({costPercent}%)
                     </span>
                   </CardTitle>
                 </CardHeader>
@@ -539,9 +525,7 @@ export function PrecificacaoCalculator() {
                           <TableHead className="text-center">Medida</TableHead>
                           <TableHead className="text-center">Qtd</TableHead>
                           <TableHead className="text-right">Custo/Un</TableHead>
-                          <TableHead className="text-right">Preço/Un</TableHead>
                           <TableHead className="text-right">Custo Total</TableHead>
-                          <TableHead className="text-right">Preço Total</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -591,14 +575,8 @@ export function PrecificacaoCalculator() {
                                   <span className="text-muted-foreground">{formatCurrency(c.unitCost)}/{c.unit}</span>
                                 )}
                               </TableCell>
-                              <TableCell className="text-right text-sm">
-                                {formatCurrency(c.unitPrice)}/{c.unit}
-                              </TableCell>
-                              <TableCell className="text-right text-sm text-muted-foreground">
+                              <TableCell className="text-right text-sm font-medium">
                                 {formatCurrency(c.totalCost)}
-                              </TableCell>
-                              <TableCell className="text-right font-medium text-primary">
-                                {formatCurrency(c.totalPrice)}
                               </TableCell>
                             </TableRow>
                           );
@@ -621,10 +599,9 @@ export function PrecificacaoCalculator() {
                     Itens Adicionados Manualmente
                     <Badge variant="secondary" className="text-xs">{manualItems.length}</Badge>
                   </span>
-                  <span className="flex items-center gap-3 text-xs font-normal text-muted-foreground">
-                    <span>Custo: {formatCurrency(manualTotalCost)}</span>
-                    <span className="text-primary font-medium">Preço: {formatCurrency(manualTotalPrice)}</span>
-                  </span>
+                   <span className="text-xs font-normal text-muted-foreground">
+                     Custo: {formatCurrency(manualTotalCost)}
+                   </span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -638,9 +615,8 @@ export function PrecificacaoCalculator() {
                         <TableHead className="w-28">Fórmula Larg.</TableHead>
                         <TableHead className="w-28">Fórmula Alt.</TableHead>
                         <TableHead className="w-24 text-right">Custo</TableHead>
-                        <TableHead className="w-24 text-right">Preço</TableHead>
                         <TableHead className="text-center">Medida</TableHead>
-                        <TableHead className="text-right">Total</TableHead>
+                        <TableHead className="text-right">Custo Total</TableHead>
                         <TableHead className="w-10"></TableHead>
                       </TableRow>
                     </TableHeader>
@@ -688,22 +664,11 @@ export function PrecificacaoCalculator() {
                               {item.itemType === 'profile' ? '/barra 6m' : item.itemType === 'glass' ? '/m²' : '/un'}
                             </span>
                           </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number" min={0} step={0.01}
-                              value={item.unitPrice || ''}
-                              onChange={e => updateManualItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
-                              className="h-7 w-24 text-xs text-right"
-                            />
-                            <span className="text-[9px] text-muted-foreground block text-right">
-                              {item.itemType === 'profile' ? '/barra 6m' : item.itemType === 'glass' ? '/m²' : '/un'}
-                            </span>
-                          </TableCell>
                           <TableCell className="text-center text-xs text-muted-foreground">
                             {item.displayMeasure}
                           </TableCell>
-                          <TableCell className="text-right text-sm font-medium text-primary">
-                            {formatCurrency(item.totalPrice)}
+                          <TableCell className="text-right text-sm font-medium">
+                            {formatCurrency(item.totalCost)}
                           </TableCell>
                           <TableCell>
                             <Button
