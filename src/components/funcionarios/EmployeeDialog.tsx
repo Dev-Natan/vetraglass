@@ -84,6 +84,8 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
   const [showPassword, setShowPassword] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [copiedLogin, setCopiedLogin] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   const isNewEmployee = !employee;
   const hasExistingAccess = !!employee?.user_id;
@@ -145,7 +147,36 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
     setPasswordError('');
     setShowPassword(false);
     setCopiedLogin(false);
+    setFieldErrors({});
+    setTouched({});
   }, [employee, open]);
+
+  const validateFieldValue = (field: string, value: string): string | undefined => {
+    switch (field) {
+      case 'name':
+        if (!value.trim()) return 'Nome é obrigatório';
+        if (value.trim().length < 2) return 'Nome deve ter pelo menos 2 caracteres';
+        return undefined;
+      case 'email':
+        if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return 'E-mail inválido (ex: nome@email.com)';
+        return undefined;
+      case 'phone':
+        if (value) {
+          const digits = value.replace(/\D/g, '');
+          if (digits.length > 0 && digits.length < 10) return 'Telefone deve ter 10 ou 11 dígitos';
+        }
+        return undefined;
+      default:
+        return undefined;
+    }
+  };
+
+  const handleFieldBlur = (field: string) => {
+    setTouched(prev => ({ ...prev, [field]: true }));
+    const value = (formData as any)[field] as string || '';
+    const error = validateFieldValue(field, value);
+    setFieldErrors(prev => ({ ...prev, [field]: error || '' }));
+  };
 
   const validatePassword = () => {
     if (formData.createSystemAccess) {
@@ -174,9 +205,23 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
     return true;
   };
 
+  const validateAllFields = (): boolean => {
+    const nameError = validateFieldValue('name', formData.name);
+    const emailError = validateFieldValue('email', formData.email);
+    const phoneError = validateFieldValue('phone', formData.phone);
+    const newErrors: Record<string, string> = {};
+    if (nameError) newErrors.name = nameError;
+    if (emailError) newErrors.email = emailError;
+    if (phoneError) newErrors.phone = phoneError;
+    setFieldErrors(newErrors);
+    setTouched({ name: true, email: true, phone: true });
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!validateAllFields()) return;
     if (!validatePassword()) return;
 
     await onSave({
@@ -244,10 +289,21 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
             <Input
               id="name"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, name: e.target.value });
+                if (touched.name) {
+                  const err = validateFieldValue('name', e.target.value);
+                  setFieldErrors(prev => ({ ...prev, name: err || '' }));
+                }
+              }}
+              onBlur={() => handleFieldBlur('name')}
               placeholder="Nome completo"
-              required
+              className={fieldErrors.name && touched.name ? 'border-destructive' : ''}
+              maxLength={100}
             />
+            {touched.name && fieldErrors.name && (
+              <p className="text-sm text-destructive">{fieldErrors.name}</p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -257,19 +313,42 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
                 id="email"
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, email: e.target.value });
+                  if (touched.email) {
+                    const err = validateFieldValue('email', e.target.value);
+                    setFieldErrors(prev => ({ ...prev, email: err || '' }));
+                  }
+                }}
+                onBlur={() => handleFieldBlur('email')}
                 placeholder="email@exemplo.com"
+                className={fieldErrors.email && touched.email ? 'border-destructive' : ''}
               />
+              {touched.email && fieldErrors.email && (
+                <p className="text-sm text-destructive">{fieldErrors.email}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">Telefone</Label>
               <Input
                 id="phone"
                 value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: formatPhone(e.target.value) })}
+                onChange={(e) => {
+                  const formatted = formatPhone(e.target.value);
+                  setFormData({ ...formData, phone: formatted });
+                  if (touched.phone) {
+                    const err = validateFieldValue('phone', formatted);
+                    setFieldErrors(prev => ({ ...prev, phone: err || '' }));
+                  }
+                }}
+                onBlur={() => handleFieldBlur('phone')}
                 placeholder="(00) 00000-0000"
                 maxLength={15}
+                className={fieldErrors.phone && touched.phone ? 'border-destructive' : ''}
               />
+              {touched.phone && fieldErrors.phone && (
+                <p className="text-sm text-destructive">{fieldErrors.phone}</p>
+              )}
             </div>
           </div>
 
