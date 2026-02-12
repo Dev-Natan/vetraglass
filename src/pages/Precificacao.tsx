@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calculator, Plus, Layers } from 'lucide-react';
+import { Calculator, Plus } from 'lucide-react';
 import { PrecificacaoCalculator } from '@/components/precificacao/PrecificacaoCalculator';
 import { PrecificacaoCreateProduct } from '@/components/precificacao/PrecificacaoCreateProduct';
-import { PrecificacaoLinhas } from '@/components/precificacao/PrecificacaoLinhas';
 
 export default function Precificacao() {
   const [activeTab, setActiveTab] = useState('calcular');
@@ -19,36 +18,25 @@ export default function Precificacao() {
             Precificação
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Gerencie linhas, produtos e calcule preços detalhados
+            Calcule preços detalhados e crie novos produtos
           </p>
         </div>
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3 max-w-lg">
+          <TabsList className="grid w-full grid-cols-2 max-w-sm">
             <TabsTrigger value="calcular" className="flex items-center gap-1.5">
               <Calculator className="h-4 w-4" />
-              <span className="hidden sm:inline">Calcular Preço</span>
-              <span className="sm:hidden">Calcular</span>
-            </TabsTrigger>
-            <TabsTrigger value="linhas" className="flex items-center gap-1.5">
-              <Layers className="h-4 w-4" />
-              <span className="hidden sm:inline">Linhas de Produtos</span>
-              <span className="sm:hidden">Linhas</span>
+              Calcular Preço
             </TabsTrigger>
             <TabsTrigger value="criar" className="flex items-center gap-1.5">
               <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">Criar Produto</span>
-              <span className="sm:hidden">Criar</span>
+              Criar Produto
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="calcular">
             <PrecificacaoCalculator />
-          </TabsContent>
-
-          <TabsContent value="linhas">
-            <PrecificacaoLinhas />
           </TabsContent>
 
           <TabsContent value="criar">
