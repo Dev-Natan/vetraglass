@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
-import { Sparkles, Package, Plus, Save, ImageIcon, DollarSign, Tag, Truck } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Sparkles, Package, Plus, Save, ImageIcon, DollarSign, Tag, Truck, Trash2, GripVertical, Layers } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -18,6 +19,22 @@ import { ImageUploadField } from '@/components/common/ImageUploadField';
 
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+
+interface CompositionItem {
+  id: string;
+  companyItemId: string;
+  itemName: string;
+  itemType: string;
+  unit: string;
+  quantityFormula: string;
+  widthFormula: string;
+  heightFormula: string;
+  piecesQuantity: number;
+  cutAngle: number | null;
+  notes: string;
+  unitCost: number;
+  unitPrice: number;
+}
 
 export function PrecificacaoCreateProduct() {
   const { currentCompany } = useAuth();
@@ -31,12 +48,33 @@ export function PrecificacaoCreateProduct() {
   const [linha, setLinha] = useState('');
   const [customLinha, setCustomLinha] = useState('');
   const [showCustomLinha, setShowCustomLinha] = useState(false);
-  const [basePrice, setBasePrice] = useState<number>(0);
-  const [costPrice, setCostPrice] = useState<number>(0);
   const [description, setDescription] = useState('');
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [supplier, setSupplier] = useState('');
   const [tempProductId] = useState(() => crypto.randomUUID());
+
+  // Composition
+  const [compositionItems, setCompositionItems] = useState<CompositionItem[]>([]);
+  const [selectedItemId, setSelectedItemId] = useState('');
+  const [filterType, setFilterType] = useState('all');
+
+  // Fetch company items for composition
+  const { data: companyItems = [] } = useQuery({
+    queryKey: ['company-items-for-composition', currentCompany?.id],
+    queryFn: async () => {
+      if (!currentCompany?.id) return [];
+      const { data, error } = await supabase
+        .from('company_items')
+        .select('id, name, type, unit, cost, sale_price, linha, image_url')
+        .eq('company_id', currentCompany.id)
+        .eq('is_active', true)
+        .order('type')
+        .order('name');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!currentCompany?.id,
+  });
 
   // Fetch existing linhas
   const { data: existingLinhas = [] } = useQuery({
@@ -88,9 +126,56 @@ export function PrecificacaoCreateProduct() {
     ...existingCategories.map(c => ({ value: c, label: c })),
   ];
 
-  const margin = basePrice > 0 && costPrice > 0 
-    ? ((basePrice - costPrice) / costPrice * 100) 
-    : 0;
+  const filteredItems = companyItems.filter(item => {
+    if (filterType === 'all') return true;
+    return item.type === filterType;
+  });
+
+  const typeLabels: Record<string, string> = {
+    profile: 'Perfil',
+    glass: 'Vidro',
+    accessory: 'Acessório',
+    service: 'Serviço',
+    component: 'Componente',
+  };
+
+  const addCompositionItem = () => {
+    const item = companyItems.find(i => i.id === selectedItemId);
+    if (!item) return;
+
+    const newItem: CompositionItem = {
+      id: crypto.randomUUID(),
+      companyItemId: item.id,
+      itemName: item.name,
+      itemType: item.type,
+      unit: item.unit,
+      quantityFormula: '1',
+      widthFormula: item.type === 'profile' || item.type === 'glass' ? 'Largura' : '',
+      heightFormula: item.type === 'glass' ? 'Altura' : '',
+      piecesQuantity: 1,
+      cutAngle: null,
+      notes: '',
+      unitCost: item.cost || 0,
+      unitPrice: item.sale_price || 0,
+    };
+
+    setCompositionItems(prev => [...prev, newItem]);
+    setSelectedItemId('');
+  };
+
+  const updateCompositionItem = (id: string, field: keyof CompositionItem, value: any) => {
+    setCompositionItems(prev =>
+      prev.map(item => item.id === id ? { ...item, [field]: value } : item)
+    );
+  };
+
+  const removeCompositionItem = (id: string) => {
+    setCompositionItems(prev => prev.filter(item => item.id !== id));
+  };
+
+  const totalCost = compositionItems.reduce((sum, item) => sum + (item.unitCost * item.piecesQuantity), 0);
+  const totalPrice = compositionItems.reduce((sum, item) => sum + (item.unitPrice * item.piecesQuantity), 0);
+  const margin = totalCost > 0 ? ((totalPrice - totalCost) / totalCost * 100) : 0;
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -98,34 +183,56 @@ export function PrecificacaoCreateProduct() {
       const finalCategory = showCustomCategory ? customCategory.trim() : category;
       const finalLinha = showCustomLinha ? customLinha.trim() : (linha || 'Personalizado');
 
-      const { data, error } = await supabase.rpc('create_custom_product', {
+      // Create the product
+      const { data: productId, error } = await supabase.rpc('create_custom_product', {
         _company_id: currentCompany.id,
         _name: name.trim(),
         _category: finalCategory,
-        _base_price: basePrice,
+        _base_price: totalPrice > 0 ? totalPrice : 0,
         _linha: finalLinha,
         _description: description.trim() || null,
         _image_url: imageUrl,
       });
 
       if (error) throw error;
+      if (!productId) throw new Error('Falha ao criar produto');
 
-      // Update cost_per_sqm if cost was provided
-      if (costPrice > 0 && data) {
+      // Update cost
+      if (totalCost > 0) {
         await supabase
           .from('company_products')
-          .update({ cost_per_sqm: costPrice })
-          .eq('id', data);
+          .update({ cost_per_sqm: totalCost, price_per_sqm: totalPrice })
+          .eq('id', productId);
       }
 
-      return data;
+      // Add composition items
+      if (compositionItems.length > 0) {
+        const itemsToInsert = compositionItems.map((item, index) => ({
+          company_product_id: productId,
+          company_item_id: item.companyItemId,
+          quantity_formula: item.quantityFormula,
+          width_formula: item.widthFormula || null,
+          height_formula: item.heightFormula || null,
+          pieces_quantity: item.piecesQuantity,
+          cut_angle: item.cutAngle,
+          notes: item.notes || null,
+          sort_order: index + 1,
+        }));
+
+        const { error: itemsError } = await supabase
+          .from('company_product_items')
+          .insert(itemsToInsert);
+
+        if (itemsError) throw itemsError;
+      }
+
+      return productId;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company-products'] });
       queryClient.invalidateQueries({ queryKey: ['custom-products'] });
       queryClient.invalidateQueries({ queryKey: ['pricing-products'] });
-      queryClient.invalidateQueries({ queryKey: ['precificacao-linhas-products'] });
-      toast.success('Produto criado com sucesso!');
+      toast.success('Produto criado e adicionado à sua grade!');
       resetForm();
     },
     onError: (error) => {
@@ -141,11 +248,12 @@ export function PrecificacaoCreateProduct() {
     setLinha('');
     setCustomLinha('');
     setShowCustomLinha(false);
-    setBasePrice(0);
-    setCostPrice(0);
     setDescription('');
     setImageUrl(null);
     setSupplier('');
+    setCompositionItems([]);
+    setSelectedItemId('');
+    setFilterType('all');
   };
 
   const finalCategory = showCustomCategory ? customCategory.trim() : category;
@@ -166,7 +274,6 @@ export function PrecificacaoCreateProduct() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Image */}
               <ImageUploadField
                 label="Imagem do Produto"
                 imageUrl={imageUrl}
@@ -176,7 +283,6 @@ export function PrecificacaoCreateProduct() {
                 size="md"
               />
 
-              {/* Name */}
               <div className="space-y-2">
                 <Label htmlFor="product-name">Nome do Produto *</Label>
                 <Input
@@ -187,7 +293,6 @@ export function PrecificacaoCreateProduct() {
                 />
               </div>
 
-              {/* Category & Linha */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="flex items-center gap-1.5">
@@ -201,12 +306,8 @@ export function PrecificacaoCreateProduct() {
                         onChange={e => setCustomCategory(e.target.value)}
                         className="flex-1"
                       />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => { setShowCustomCategory(false); setCustomCategory(''); }}
-                      >
+                      <Button type="button" variant="ghost" size="sm"
+                        onClick={() => { setShowCustomCategory(false); setCustomCategory(''); }}>
                         Cancelar
                       </Button>
                     </div>
@@ -242,12 +343,8 @@ export function PrecificacaoCreateProduct() {
                         onChange={e => setCustomLinha(e.target.value)}
                         className="flex-1"
                       />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => { setShowCustomLinha(false); setCustomLinha(''); }}
-                      >
+                      <Button type="button" variant="ghost" size="sm"
+                        onClick={() => { setShowCustomLinha(false); setCustomLinha(''); }}>
                         Cancelar
                       </Button>
                     </div>
@@ -272,7 +369,6 @@ export function PrecificacaoCreateProduct() {
                 </div>
               </div>
 
-              {/* Supplier */}
               <div className="space-y-2">
                 <Label className="flex items-center gap-1.5">
                   <Truck className="h-3.5 w-3.5" /> Fornecedor (opcional)
@@ -284,7 +380,6 @@ export function PrecificacaoCreateProduct() {
                 />
               </div>
 
-              {/* Description */}
               <div className="space-y-2">
                 <Label htmlFor="product-desc">Descrição (opcional)</Label>
                 <Textarea
@@ -298,90 +393,196 @@ export function PrecificacaoCreateProduct() {
             </CardContent>
           </Card>
 
-          {/* Pricing */}
+          {/* Composition Section */}
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-primary" />
-                Precificação
+                <Layers className="h-4 w-4 text-primary" />
+                Composição do Produto
               </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Adicione vidros, perfis e acessórios que compõem este produto
+              </p>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="cost-price" className="text-sm font-medium">
-                    Custo (R$/m²)
-                  </Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">R$</span>
-                    <Input
-                      id="cost-price"
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      placeholder="0,00"
-                      value={costPrice || ''}
-                      onChange={e => setCostPrice(parseFloat(e.target.value) || 0)}
-                      className="pl-9"
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Valor de custo por metro quadrado (perfis + vidro + acessórios)
-                  </p>
-                </div>
+              {/* Add item controls */}
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Select value={filterType} onValueChange={setFilterType}>
+                  <SelectTrigger className="w-full sm:w-[140px]">
+                    <SelectValue placeholder="Tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="profile">Perfis</SelectItem>
+                    <SelectItem value="glass">Vidros</SelectItem>
+                    <SelectItem value="accessory">Acessórios</SelectItem>
+                    <SelectItem value="component">Componentes</SelectItem>
+                    <SelectItem value="service">Serviços</SelectItem>
+                  </SelectContent>
+                </Select>
 
-                <div className="space-y-2">
-                  <Label htmlFor="sale-price" className="text-sm font-medium">
-                    Preço de Venda (R$/m²)
-                  </Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">R$</span>
-                    <Input
-                      id="sale-price"
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      placeholder="0,00"
-                      value={basePrice || ''}
-                      onChange={e => setBasePrice(parseFloat(e.target.value) || 0)}
-                      className="pl-9"
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Preço de venda por metro quadrado para o cliente
-                  </p>
-                </div>
+                <Select value={selectedItemId} onValueChange={setSelectedItemId}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Selecione um item para adicionar..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredItems.map(item => (
+                      <SelectItem key={item.id} value={item.id}>
+                        <span className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-[9px] px-1 py-0">
+                            {typeLabels[item.type] || item.type}
+                          </Badge>
+                          {item.name}
+                          {item.cost ? ` — ${formatCurrency(item.cost)}/${item.unit}` : ''}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Button
+                  onClick={addCompositionItem}
+                  disabled={!selectedItemId}
+                  size="default"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Adicionar
+                </Button>
               </div>
 
-              {/* Margin indicator */}
-              {costPrice > 0 && basePrice > 0 && (
-                <div className="p-3 rounded-lg bg-muted/50 border">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Margem de lucro:</span>
-                    <span className={`text-sm font-bold ${margin >= 30 ? 'text-success' : margin >= 15 ? 'text-primary' : margin >= 0 ? 'text-warning' : 'text-destructive'}`}>
-                      {margin.toFixed(1)}%
-                    </span>
+              {/* Composition Table */}
+              {compositionItems.length > 0 ? (
+                <div className="border rounded-lg overflow-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-8">#</TableHead>
+                        <TableHead>Item</TableHead>
+                        <TableHead className="w-20">Tipo</TableHead>
+                        <TableHead className="w-16">Qtd</TableHead>
+                        <TableHead className="w-28">Fórmula Larg.</TableHead>
+                        <TableHead className="w-28">Fórmula Alt.</TableHead>
+                        <TableHead className="w-24 text-right">Custo Un.</TableHead>
+                        <TableHead className="w-24 text-right">Preço Un.</TableHead>
+                        <TableHead className="w-10"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {compositionItems.map((item, idx) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="text-muted-foreground text-xs">
+                            <GripVertical className="h-3.5 w-3.5" />
+                          </TableCell>
+                          <TableCell className="font-medium text-sm">{item.itemName}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className="text-[10px]">
+                              {typeLabels[item.itemType] || item.itemType}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              min={1}
+                              value={item.piecesQuantity}
+                              onChange={e => updateCompositionItem(item.id, 'piecesQuantity', parseInt(e.target.value) || 1)}
+                              className="h-8 w-16 text-xs"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              value={item.widthFormula}
+                              onChange={e => updateCompositionItem(item.id, 'widthFormula', e.target.value)}
+                              placeholder="Largura"
+                              className="h-8 text-xs"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              value={item.heightFormula}
+                              onChange={e => updateCompositionItem(item.id, 'heightFormula', e.target.value)}
+                              placeholder="Altura"
+                              className="h-8 text-xs"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              min={0}
+                              step={0.01}
+                              value={item.unitCost || ''}
+                              onChange={e => updateCompositionItem(item.id, 'unitCost', parseFloat(e.target.value) || 0)}
+                              className="h-8 w-24 text-xs text-right"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              min={0}
+                              step={0.01}
+                              value={item.unitPrice || ''}
+                              onChange={e => updateCompositionItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
+                              className="h-8 w-24 text-xs text-right"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-destructive hover:text-destructive"
+                              onClick={() => removeCompositionItem(item.id)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="border border-dashed rounded-lg p-8 text-center text-muted-foreground">
+                  <Layers className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                  <p className="text-sm">Nenhum item adicionado à composição</p>
+                  <p className="text-xs mt-1">Selecione vidros, perfis e acessórios acima para montar seu produto</p>
+                </div>
+              )}
+
+              {/* Composition Summary */}
+              {compositionItems.length > 0 && (
+                <div className="p-3 rounded-lg bg-muted/50 border space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Itens na composição:</span>
+                    <span className="font-medium">{compositionItems.length}</span>
                   </div>
-                  <div className="flex items-center justify-between mt-1">
-                    <span className="text-xs text-muted-foreground">Lucro por m²:</span>
-                    <span className="text-xs font-medium">
-                      {formatCurrency(basePrice - costPrice)}
-                    </span>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Custo total estimado:</span>
+                    <span className="font-medium">{formatCurrency(totalCost)}</span>
                   </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Preço total estimado:</span>
+                    <span className="font-bold text-primary">{formatCurrency(totalPrice)}</span>
+                  </div>
+                  {totalCost > 0 && totalPrice > 0 && (
+                    <div className="flex items-center justify-between text-sm border-t pt-2">
+                      <span className="text-muted-foreground">Margem:</span>
+                      <span className={`font-bold ${margin >= 30 ? 'text-green-600' : margin >= 15 ? 'text-primary' : margin >= 0 ? 'text-yellow-600' : 'text-destructive'}`}>
+                        {margin.toFixed(1)}%
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
           </Card>
         </div>
 
-        {/* Sidebar - Preview */}
+        {/* Sidebar - Preview & Save */}
         <div className="space-y-6">
           <Card className="sticky top-4">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Pré-visualização</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Product Preview */}
               <div className="rounded-lg border p-4 space-y-3">
                 <div className="w-full aspect-square rounded-lg bg-muted flex items-center justify-center overflow-hidden">
                   {imageUrl ? (
@@ -392,44 +593,49 @@ export function PrecificacaoCreateProduct() {
                 </div>
 
                 <div>
-                  <p className="font-semibold text-sm">
-                    {name || 'Nome do produto'}
-                  </p>
+                  <p className="font-semibold text-sm">{name || 'Nome do produto'}</p>
                   <div className="flex flex-wrap gap-1 mt-2">
                     <Badge variant="secondary" className="text-[10px]">
-                      {showCustomCategory 
+                      {showCustomCategory
                         ? (customCategory || 'Categoria')
                         : (allCategories.find(c => c.value === category)?.label || category)}
                     </Badge>
-                    <Badge variant="outline" className="text-[10px]">
-                      {finalLinha}
-                    </Badge>
+                    <Badge variant="outline" className="text-[10px]">{finalLinha}</Badge>
                   </div>
                 </div>
 
+                {compositionItems.length > 0 && (
+                  <div className="border-t pt-3 space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground">Composição ({compositionItems.length} itens)</p>
+                    {compositionItems.slice(0, 5).map(item => (
+                      <div key={item.id} className="flex items-center justify-between text-xs">
+                        <span className="truncate flex-1">{item.itemName}</span>
+                        <span className="text-muted-foreground ml-2">x{item.piecesQuantity}</span>
+                      </div>
+                    ))}
+                    {compositionItems.length > 5 && (
+                      <p className="text-[10px] text-muted-foreground">+{compositionItems.length - 5} itens...</p>
+                    )}
+                  </div>
+                )}
+
                 <div className="border-t pt-3 space-y-2">
-                  {costPrice > 0 && (
+                  {totalCost > 0 && (
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">Custo:</span>
-                      <span>{formatCurrency(costPrice)}/m²</span>
+                      <span>{formatCurrency(totalCost)}</span>
                     </div>
                   )}
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Preço:</span>
                     <span className="font-bold text-primary">
-                      {basePrice > 0 ? `${formatCurrency(basePrice)}/m²` : '-'}
+                      {totalPrice > 0 ? formatCurrency(totalPrice) : '-'}
                     </span>
                   </div>
-                  {supplier && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Fornecedor:</span>
-                      <span className="text-xs">{supplier}</span>
-                    </div>
-                  )}
                 </div>
               </div>
 
-              {/* Create button */}
+              {/* Add to product grid button */}
               <Button
                 onClick={() => createMutation.mutate()}
                 disabled={!canCreate || createMutation.isPending}
@@ -437,7 +643,7 @@ export function PrecificacaoCreateProduct() {
                 size="lg"
               >
                 <Save className="h-4 w-4 mr-2" />
-                {createMutation.isPending ? 'Criando...' : 'Criar Produto'}
+                {createMutation.isPending ? 'Adicionando...' : 'Adicionar à Grade de Produtos'}
               </Button>
 
               {!canCreate && (
