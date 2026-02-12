@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Scissors, Maximize2, Layers, Square, CheckCircle, Clock } from 'lucide-react';
+import { Scissors, Maximize2, Layers, Square, CheckCircle, Clock, Palette } from 'lucide-react';
 import { OSGlassUnifiedView } from './OSGlassUnifiedView';
 import { toast } from 'sonner';
 
@@ -46,6 +46,9 @@ interface CuttingPlan {
   glass_cuts_data: GlassCutData[];
   status: string;
   item_status: Record<string, boolean>;
+  quote_items?: {
+    aluminum_color: string | null;
+  } | null;
 }
 
 export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
@@ -56,7 +59,7 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('os_cutting_plan')
-        .select('*')
+        .select('*, quote_items(aluminum_color)')
         .eq('ordem_servico_id', ordemServicoId)
         .order('created_at');
 
@@ -230,6 +233,12 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
                     <Maximize2 className="w-4 h-4" />
                     <span>Vão: {plan.vao_width} x {plan.vao_height} mm</span>
                     <Badge variant="secondary">{plan.quantity}x</Badge>
+                    {plan.quote_items?.aluminum_color && (
+                      <Badge variant="outline" className="gap-1 text-amber-700 dark:text-amber-400 border-amber-500/30 bg-amber-500/10">
+                        <Palette className="w-3 h-3" />
+                        {plan.quote_items.aluminum_color}
+                      </Badge>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-3">

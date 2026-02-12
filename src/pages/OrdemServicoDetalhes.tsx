@@ -143,7 +143,7 @@ export default function OrdemServicoDetalhes() {
       if (!id) return [];
       const { data, error } = await supabase
         .from('os_cutting_plan')
-        .select('*')
+        .select('*, quote_items(aluminum_color)')
         .eq('ordem_servico_id', id)
         .order('created_at');
       if (error) throw error;
@@ -217,7 +217,11 @@ export default function OrdemServicoDetalhes() {
       return;
     }
     toast.info('Gerando PDF...');
-    generateCuttingPlanPdf(cuttingPlans as any, getOsInfo(), getCompanyInfo());
+    const plansForPdf = (cuttingPlans || []).map((p: any) => ({
+      ...p,
+      aluminum_color: p.quote_items?.aluminum_color || null,
+    }));
+    generateCuttingPlanPdf(plansForPdf, getOsInfo(), getCompanyInfo());
     toast.success('PDF gerado com sucesso!');
   };
 

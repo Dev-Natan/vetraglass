@@ -30,6 +30,7 @@ interface CuttingPlan {
   quantity: number;
   cuts_data: CutData[];
   glass_cuts_data: GlassCutData[];
+  aluminum_color?: string | null;
 }
 
 interface OSInfo {
@@ -127,8 +128,17 @@ export function generateCuttingPlanPdf(
     
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
-    doc.text(`Vão: ${plan.vao_width} x ${plan.vao_height} mm`, pageWidth - margin - 60, y + 6);
-    doc.text(`Qtd: ${plan.quantity}x`, pageWidth - margin - 4, y + 6, { align: 'right' });
+    const rightInfoY = y + 6;
+    doc.text(`Vão: ${plan.vao_width} x ${plan.vao_height} mm`, pageWidth - margin - 60, rightInfoY);
+    doc.text(`Qtd: ${plan.quantity}x`, pageWidth - margin - 4, rightInfoY, { align: 'right' });
+    
+    // Show aluminum finish if present
+    if (plan.aluminum_color) {
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Acabamento: ${plan.aluminum_color}`, margin + 4, y + 13);
+      y += 4;
+    }
     
     y += 18;
     
