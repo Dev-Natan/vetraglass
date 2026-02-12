@@ -189,8 +189,11 @@ export function useCalculatePricing(
         }
         
         const lengthM = calculatedLength / 1000;
-        const totalCost = unitCost * lengthM * calculatedQuantity;
-        const totalPrice = unitPrice * lengthM * calculatedQuantity;
+        // Profile prices are per 6m bar — convert to price per meter
+        const costPerMeter = unitCost / 6;
+        const pricePerMeter = unitPrice / 6;
+        const totalCost = costPerMeter * lengthM * calculatedQuantity;
+        const totalPrice = pricePerMeter * lengthM * calculatedQuantity;
 
         return {
           id: comp.id,
