@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -58,10 +58,25 @@ export default function Precificacao() {
   const [quantity, setQuantity] = useState(1);
   const [selectedLinha, setSelectedLinha] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [costOverrides, setCostOverrides] = useState<Record<string, number>>({});
 
   const { data: products, isLoading: loadingProducts } = usePricingProducts();
   const { data: components, isLoading: loadingComponents } = usePricingComponents(selectedProduct || null);
-  const summary = useCalculatePricing(components, width, height, quantity);
+  const summary = useCalculatePricing(components, width, height, quantity, costOverrides);
+
+  const handleCostChange = (componentId: string, value: string) => {
+    const num = parseFloat(value);
+    if (isNaN(num) || num < 0) return;
+    setCostOverrides(prev => ({ ...prev, [componentId]: num }));
+  };
+
+  const resetCostOverride = (componentId: string) => {
+    setCostOverrides(prev => {
+      const next = { ...prev };
+      delete next[componentId];
+      return next;
+    });
+  };
 
   // Available linhas
   const linhas = useMemo(() => {
@@ -162,6 +177,7 @@ export default function Precificacao() {
                   setSelectedLinha(v === '__all__' ? '' : v);
                   setSelectedCategory('');
                   setSelectedProduct('');
+                  setCostOverrides({});
                 }}>
                   <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
                   <SelectContent>
@@ -385,8 +401,11 @@ export default function Precificacao() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {items.map(c => (
-                            <TableRow key={c.id}>
+                          {items.map(c => {
+                            const isEditable = c.itemType === 'profile' || c.itemType === 'glass';
+                            const hasOverride = costOverrides[c.id] !== undefined;
+                            return (
+                            <TableRow key={c.id} className={hasOverride ? 'bg-accent/30' : ''}>
                               <TableCell className="font-medium">
                                 {c.itemName}
                                 {c.notes && <span className="text-xs text-muted-foreground ml-1">({c.notes})</span>}
@@ -399,8 +418,34 @@ export default function Precificacao() {
                                     : '-'}
                               </TableCell>
                               <TableCell className="text-center">{c.calculatedQuantity}</TableCell>
-                              <TableCell className="text-right text-sm text-muted-foreground">
-                                {formatCurrency(c.unitCost)}/{c.unit}
+                              <TableCell className="text-right text-sm">
+                                {isEditable ? (
+                                  <div className="flex items-center justify-end gap-1">
+                                    <span className="text-xs text-muted-foreground">R$</span>
+                                    <Input
+                                      type="number"
+                                      min={0}
+                                      step={0.01}
+                                      value={costOverrides[c.id] !== undefined ? costOverrides[c.id] : (c.unitCost || '')}
+                                      onChange={e => handleCostChange(c.id, e.target.value)}
+                                      className={cn(
+                                        "w-24 h-7 text-right text-xs",
+                                        hasOverride && "border-primary ring-1 ring-primary/20"
+                                      )}
+                                    />
+                                    {hasOverride && (
+                                      <button
+                                        onClick={() => resetCostOverride(c.id)}
+                                        className="text-xs text-muted-foreground hover:text-destructive"
+                                        title="Restaurar valor original"
+                                      >
+                                        ✕
+                                      </button>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground">{formatCurrency(c.unitCost)}/{c.unit}</span>
+                                )}
                               </TableCell>
                               <TableCell className="text-right text-sm">
                                 {formatCurrency(c.unitPrice)}/{c.unit}
@@ -412,7 +457,8 @@ export default function Precificacao() {
                                 {formatCurrency(c.totalPrice)}
                               </TableCell>
                             </TableRow>
-                          ))}
+                            );
+                          })}
                         </TableBody>
                       </Table>
                     </div>
