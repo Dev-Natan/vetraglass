@@ -574,6 +574,11 @@ export function PrecificacaoCalculator() {
                                 ) : (
                                   <span className="text-muted-foreground">{formatCurrency(c.unitCost)}/{c.unit}</span>
                                 )}
+                                {c.itemType === 'profile' && (
+                                  <span className="text-[9px] text-muted-foreground block text-right mt-0.5">
+                                    {formatCurrency((costOverrides[c.id] !== undefined ? costOverrides[c.id] : c.unitCost) / 6)}/m
+                                  </span>
+                                )}
                               </TableCell>
                               <TableCell className="text-right text-sm font-medium">
                                 {formatCurrency(c.totalCost)}
@@ -663,6 +668,11 @@ export function PrecificacaoCalculator() {
                             <span className="text-[9px] text-muted-foreground block text-right">
                               {item.itemType === 'profile' ? '/barra 6m' : item.itemType === 'glass' ? '/m²' : '/un'}
                             </span>
+                            {item.itemType === 'profile' && item.unitCost > 0 && (
+                              <span className="text-[9px] text-primary block text-right">
+                                = {formatCurrency(item.unitCost / 6)}/m
+                              </span>
+                            )}
                           </TableCell>
                           <TableCell className="text-center text-xs text-muted-foreground">
                             {item.displayMeasure}

@@ -470,6 +470,11 @@ export function PrecificacaoCreateProduct() {
                             <span className="text-[9px] text-muted-foreground block text-right mt-0.5">
                               {item.itemType === 'profile' ? '/barra 6m' : item.itemType === 'glass' ? '/m²' : '/un'}
                             </span>
+                            {item.itemType === 'profile' && item.unitCost > 0 && (
+                              <span className="text-[9px] text-primary block text-right">
+                                = {formatCurrency(item.unitCost / 6)}/m
+                              </span>
+                            )}
                           </TableCell>
                           <TableCell className="text-center text-xs text-muted-foreground">
                             {item.displayMeasure}
