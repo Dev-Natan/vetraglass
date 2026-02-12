@@ -64,18 +64,24 @@ export function QuoteFinancialDashboard({
     enabled: !!quoteId,
   });
 
-  // CORRIGIDO: Buscar TODAS as entradas do orçamento (pode haver múltiplas)
+  // Buscar entradas: se temos ordem_servico_id, filtrar por ela para não misturar OSes
   const { data: allDeposits } = useQuery({
-    queryKey: ['quote-all-deposits', quoteId],
+    queryKey: ['quote-all-deposits', quoteId, ordemServicoId],
     queryFn: async () => {
       if (!quoteId) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from('quote_deposits')
         .select('*')
         .eq('quote_id', quoteId)
         .in('status', ['received', 'pending', 'billed'])
         .order('created_at', { ascending: true });
       
+      // Se temos OS específica, filtrar depósitos apenas dessa OS
+      if (ordemServicoId) {
+        query = query.eq('ordem_servico_id', ordemServicoId);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data || [];
     },
@@ -124,8 +130,9 @@ export function QuoteFinancialDashboard({
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
-  // Calculate paid and pending
-  const paidAmount = receivables?.filter(r => r.status === 'paid').reduce((sum, r) => sum + r.total_amount, 0) || 0;
+  // Calcular total pago: excluir entrada_orcamento dos receivables pois já contabilizado nos deposits
+  const paidReceivables = receivables?.filter(r => r.status === 'paid' && r.receivable_type !== 'entrada_orcamento') || [];
+  const paidAmount = paidReceivables.reduce((sum, r) => sum + r.total_amount, 0);
   const depositPaidAmount = effectiveDeposit?.status === 'paid' ? (effectiveDeposit.amount || 0) : 0;
   const totalPaid = paidAmount + depositPaidAmount;
   const pendingAmount = totalAmount - totalPaid;
