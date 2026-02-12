@@ -1,7 +1,9 @@
 import { memo } from 'react';
-import { Package, MapPin, DollarSign, Power, Scissors, Sparkles } from 'lucide-react';
+import { Package, MapPin, DollarSign, Power, Scissors, Sparkles, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import type { StockItem } from '@/hooks/useStockData';
 
 const itemTypeLabels: Record<string, string> = {
@@ -72,25 +74,33 @@ export const StockItemCard = memo(function StockItemCard({
               {item.location}
             </p>
           )}
-          {item.priceInfo && ((item.priceInfo.cost ?? 0) > 0 || item.priceInfo.price > 0) ? (
-            <div className="flex items-center gap-3 mt-1 text-xs">
-              {(item.priceInfo.cost ?? 0) > 0 && (
-                <span className="text-muted-foreground">
-                  Custo: R$ {Number(item.priceInfo.cost).toFixed(2)}
-                </span>
-              )}
-              {item.priceInfo.price > 0 && (
-                <span className="text-green-600 font-medium">
-                  Venda: R$ {Number(item.priceInfo.price).toFixed(2)}
-                </span>
-              )}
-            </div>
-          ) : (
-            <p className="text-xs text-muted-foreground/70 flex items-center gap-1 mt-1">
-              <DollarSign className="w-3 h-3" />
-              Clique para definir preços
-            </p>
-          )}
+          <div className="flex items-center gap-3 mt-1 text-xs flex-wrap">
+            {item.priceInfo && ((item.priceInfo.cost ?? 0) > 0 || item.priceInfo.price > 0) ? (
+              <>
+                {(item.priceInfo.cost ?? 0) > 0 && (
+                  <span className="text-muted-foreground">
+                    Custo: R$ {Number(item.priceInfo.cost).toFixed(2)}
+                  </span>
+                )}
+                {item.priceInfo.price > 0 && (
+                  <span className="text-green-600 font-medium">
+                    Venda: R$ {Number(item.priceInfo.price).toFixed(2)}
+                  </span>
+                )}
+              </>
+            ) : (
+              <span className="text-muted-foreground/70 flex items-center gap-1">
+                <DollarSign className="w-3 h-3" />
+                Clique para definir preços
+              </span>
+            )}
+            {item.updated_at && (
+              <span className="text-muted-foreground flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                Atualizado: {format(new Date(item.updated_at), "dd/MM/yy 'às' HH:mm", { locale: ptBR })}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 

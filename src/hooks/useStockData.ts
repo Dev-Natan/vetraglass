@@ -12,6 +12,7 @@ export interface StockItem {
   location: string | null;
   is_active: boolean;
   allow_fractional: boolean;
+  updated_at: string;
   item_template?: {
     id: string;
     name: string;
@@ -82,7 +83,7 @@ export function useStockData({ companyId }: UseStockDataOptions): StockDataResul
       
       const { data, error } = await supabase
         .from('company_stock')
-        .select('id, item_template_id, company_item_id, company_id, quantity, min_quantity, location, is_active, allow_fractional')
+        .select('id, item_template_id, company_item_id, company_id, quantity, min_quantity, location, is_active, allow_fractional, updated_at')
         .eq('company_id', companyId)
         .order('created_at', { ascending: false });
 
