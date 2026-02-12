@@ -71,6 +71,7 @@ export function PrecificacaoCreateProduct() {
   const [width, setWidth] = useState(1000);
   const [height, setHeight] = useState(1200);
   const [quantity, setQuantity] = useState(1);
+  const [marginPercent, setMarginPercent] = useState(30);
 
   // Composition
   const [compositionItems, setCompositionItems] = useState<CompositionItem[]>([]);
@@ -134,9 +135,8 @@ export function PrecificacaoCreateProduct() {
       piecesQuantity: 1,
       cutAngle: null,
       notes: '',
-      unitCost: 0,
-      // Profiles: price per 6m bar; Glass: price per m²; Others: price per unit
-      unitPrice: item.default_price || 0,
+      unitCost: item.default_price || 0,
+      unitPrice: 0, // calculated from margin
     };
 
     setCompositionItems(prev => [...prev, newItem]);
@@ -204,9 +204,8 @@ export function PrecificacaoCreateProduct() {
 
   const areaM2 = (width * height) / 1_000_000;
   const totalCost = calculatedComponents.reduce((s, c) => s + c.totalCost, 0);
-  const totalPrice = calculatedComponents.reduce((s, c) => s + c.totalPrice, 0);
+  const totalPrice = totalCost * (1 + marginPercent / 100);
   const margin = totalPrice - totalCost;
-  const marginPercent = totalCost > 0 ? (margin / totalCost) * 100 : 0;
   const costPerSqm = areaM2 > 0 ? totalCost / (areaM2 * quantity) : 0;
   const pricePerSqm = areaM2 > 0 ? totalPrice / (areaM2 * quantity) : 0;
 
@@ -287,7 +286,7 @@ export function PrecificacaoCreateProduct() {
               </div>
 
               {/* Dimensions - always visible */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-3 border-t">
                 <div className="space-y-1.5">
                   <Label className="text-xs flex items-center gap-1">
                     <Ruler className="h-3 w-3" /> Largura (mm)
@@ -314,6 +313,16 @@ export function PrecificacaoCreateProduct() {
                     type="number" min={1}
                     value={quantity}
                     onChange={e => setQuantity(parseInt(e.target.value) || 1)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs flex items-center gap-1">
+                    <TrendingUp className="h-3 w-3" /> Margem de Lucro (%)
+                  </Label>
+                  <Input
+                    type="number" min={0} step={1}
+                    value={marginPercent}
+                    onChange={e => setMarginPercent(parseFloat(e.target.value) || 0)}
                   />
                 </div>
               </div>
@@ -409,9 +418,8 @@ export function PrecificacaoCreateProduct() {
                         <TableHead className="w-28">Fórmula Larg.</TableHead>
                         <TableHead className="w-28">Fórmula Alt.</TableHead>
                         <TableHead className="w-24 text-right">Custo/Un</TableHead>
-                        <TableHead className="w-24 text-right">Preço/Un</TableHead>
                         <TableHead className="text-center">Medida</TableHead>
-                        <TableHead className="text-right">Total</TableHead>
+                        <TableHead className="text-right">Custo Total</TableHead>
                         <TableHead className="w-10"></TableHead>
                       </TableRow>
                     </TableHeader>
@@ -463,23 +471,11 @@ export function PrecificacaoCreateProduct() {
                               {item.itemType === 'profile' ? '/barra 6m' : item.itemType === 'glass' ? '/m²' : '/un'}
                             </span>
                           </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number" min={0} step={0.01}
-                              value={item.unitPrice || ''}
-                              onChange={e => updateCompositionItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
-                              className="h-8 w-24 text-xs text-right"
-                              placeholder="0,00"
-                            />
-                            <span className="text-[9px] text-muted-foreground block text-right mt-0.5">
-                              {item.itemType === 'profile' ? '/barra 6m' : item.itemType === 'glass' ? '/m²' : '/un'}
-                            </span>
-                          </TableCell>
                           <TableCell className="text-center text-xs text-muted-foreground">
                             {item.displayMeasure}
                           </TableCell>
-                          <TableCell className="text-right text-sm font-medium text-primary">
-                            {formatCurrency(item.totalPrice)}
+                          <TableCell className="text-right text-sm font-medium">
+                            {formatCurrency(item.totalCost)}
                           </TableCell>
                           <TableCell>
                             <Button
@@ -521,11 +517,11 @@ export function PrecificacaoCreateProduct() {
                   <p className="text-xs text-muted-foreground">{formatCurrency(costPerSqm)}/m²</p>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="border-primary/30">
                 <CardContent className="pt-4 pb-3">
                   <div className="flex items-center gap-2 mb-1">
                     <BarChart3 className="h-4 w-4 text-primary" />
-                    <span className="text-xs text-muted-foreground">Preço Total</span>
+                    <span className="text-xs text-muted-foreground">Preço de Venda</span>
                   </div>
                   <p className="text-lg font-bold text-primary">{formatCurrency(totalPrice)}</p>
                   <p className="text-xs text-muted-foreground">{formatCurrency(pricePerSqm)}/m²</p>
@@ -534,25 +530,11 @@ export function PrecificacaoCreateProduct() {
               <Card>
                 <CardContent className="pt-4 pb-3">
                   <div className="flex items-center gap-2 mb-1">
-                    {marginPercent >= 15 ? (
-                      <TrendingUp className="h-4 w-4 text-success" />
-                    ) : marginPercent >= 0 ? (
-                      <Minus className="h-4 w-4 text-warning" />
-                    ) : (
-                      <TrendingDown className="h-4 w-4 text-destructive" />
-                    )}
-                    <span className="text-xs text-muted-foreground">Margem</span>
+                    <TrendingUp className="h-4 w-4 text-success" />
+                    <span className="text-xs text-muted-foreground">Lucro</span>
                   </div>
-                  <p className={cn(
-                    "text-lg font-bold",
-                    marginPercent >= 30 && "text-success",
-                    marginPercent >= 15 && marginPercent < 30 && "text-primary",
-                    marginPercent >= 0 && marginPercent < 15 && "text-warning",
-                    marginPercent < 0 && "text-destructive",
-                  )}>
-                    {marginPercent.toFixed(1)}%
-                  </p>
-                  <p className="text-xs text-muted-foreground">{formatCurrency(margin)}</p>
+                  <p className="text-lg font-bold text-success">{formatCurrency(margin)}</p>
+                  <p className="text-xs text-muted-foreground">Margem: {marginPercent.toFixed(1)}%</p>
                 </CardContent>
               </Card>
               <Card>
@@ -601,7 +583,6 @@ export function PrecificacaoCreateProduct() {
                     <p className="text-xs font-medium text-muted-foreground">
                       Composição ({compositionItems.length} itens)
                     </p>
-                    {/* Group by type */}
                     {Object.entries(groupedComponents).map(([type, items]) => (
                       <div key={type} className="mt-1">
                         <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
@@ -610,7 +591,7 @@ export function PrecificacaoCreateProduct() {
                         {items.map(item => (
                           <div key={item.id} className="flex items-center justify-between text-xs pl-3">
                             <span className="truncate flex-1">{item.itemName}</span>
-                            <span className="text-primary font-medium ml-2">{formatCurrency(item.totalPrice)}</span>
+                            <span className="font-medium ml-2">{formatCurrency(item.totalCost)}</span>
                           </div>
                         ))}
                       </div>
@@ -620,30 +601,24 @@ export function PrecificacaoCreateProduct() {
 
                 <div className="border-t pt-3 space-y-2">
                   {totalCost > 0 && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Custo:</span>
-                      <span>{formatCurrency(totalCost)}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Preço:</span>
-                    <span className="font-bold text-primary">
-                      {totalPrice > 0 ? formatCurrency(totalPrice) : '-'}
-                    </span>
-                  </div>
-                  {totalCost > 0 && totalPrice > 0 && (
-                    <div className="flex items-center justify-between text-sm border-t pt-2">
-                      <span className="text-muted-foreground">Margem:</span>
-                      <span className={cn(
-                        "font-bold",
-                        marginPercent >= 30 && "text-success",
-                        marginPercent >= 15 && marginPercent < 30 && "text-primary",
-                        marginPercent >= 0 && marginPercent < 15 && "text-warning",
-                        marginPercent < 0 && "text-destructive",
-                      )}>
-                        {marginPercent.toFixed(1)}%
-                      </span>
-                    </div>
+                    <>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Custo Total:</span>
+                        <span>{formatCurrency(totalCost)}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Margem:</span>
+                        <span className="font-medium">{marginPercent.toFixed(1)}%</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm border-t pt-2">
+                        <span className="text-muted-foreground font-medium">Preço de Venda:</span>
+                        <span className="font-bold text-primary">{formatCurrency(totalPrice)}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">Lucro:</span>
+                        <span className="text-success font-medium">{formatCurrency(margin)}</span>
+                      </div>
+                    </>
                   )}
                 </div>
               </div>
