@@ -144,67 +144,113 @@ export async function generateQuotePdf(
     }
   }
   
-  const companyInfoX = logoLoaded ? marginLeft + logoWidth + 5 : marginLeft;
+  // Quote code on the top right
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.setTextColor(...textColor);
+  doc.text(`ORC${quote.quote_number.toString().padStart(2, '0')}`, marginRight, y + 8, { align: 'right' });
   
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(...mutedColor);
+  doc.text(format(new Date(quote.created_at), "dd/MM/yyyy", { locale: ptBR }), marginRight, y + 14, { align: 'right' });
+  
+  y += (logoLoaded ? Math.max(logoWidth * 0.625, 20) : 5) + 8;
+  
+  // ========== INFO BAR: EMPRESA + CLIENTE ==========
+  doc.setFillColor(...lightBlue);
+  doc.rect(marginLeft, y, contentWidth, 7, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(...textColor);
+  doc.text('DADOS DA EMPRESA', marginLeft + 3, y + 5);
+  y += 7;
+  
+  // Company info box
+  doc.setDrawColor(...cardBorder);
+  doc.setLineWidth(0.3);
+  const companyBoxH = 22;
+  doc.rect(marginLeft, y, contentWidth, companyBoxH, 'S');
+  
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(...mutedColor);
+  
+  const col1X = marginLeft + 3;
+  const col2X = marginLeft + contentWidth / 2 + 3;
+  
+  doc.text('Razão Social:', col1X, y + 5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...textColor);
+  doc.text(company?.name || '-', col1X + 26, y + 5);
+  
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...mutedColor);
+  doc.text('CNPJ:', col1X, y + 11);
+  doc.setTextColor(...textColor);
+  doc.text(company?.cnpj || '-', col1X + 26, y + 11);
+  
+  doc.setTextColor(...mutedColor);
+  doc.text('Telefone:', col2X, y + 5);
+  doc.setTextColor(...textColor);
+  doc.text(company?.phone || '-', col2X + 20, y + 5);
+  
+  doc.setTextColor(...mutedColor);
+  doc.text('Email:', col2X, y + 11);
+  doc.setTextColor(...textColor);
+  doc.text(company?.email || '-', col2X + 20, y + 11);
+  
+  if (company?.address) {
+    doc.setTextColor(...mutedColor);
+    doc.text('Endereço:', col1X, y + 17);
+    doc.setTextColor(...textColor);
+    const addrText = company.address.length > 80 ? company.address.substring(0, 80) + '...' : company.address;
+    doc.text(addrText, col1X + 26, y + 17);
+  }
+  
+  y += companyBoxH + 4;
+  
+  // Client section header
+  doc.setFillColor(...lightBlue);
+  doc.rect(marginLeft, y, contentWidth, 7, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(...textColor);
+  doc.text('DADOS DO CLIENTE', marginLeft + 3, y + 5);
+  y += 7;
+  
+  // Client info box
+  const hasClientDetails = quote.customer_phone || quote.customer_email || quote.customer_address;
+  const clientBoxH = hasClientDetails ? 16 : 10;
+  doc.setDrawColor(...cardBorder);
+  doc.rect(marginLeft, y, contentWidth, clientBoxH, 'S');
+  
+  doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
   doc.setTextColor(...mutedColor);
-  
-  doc.text('Empresa:', companyInfoX, y + 5);
+  doc.text('Nome:', col1X, y + 5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...textColor);
-  doc.text(company?.name || '-', companyInfoX + 22, y + 5);
+  doc.text(quote.customer_name.toUpperCase(), col1X + 14, y + 5);
   
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...mutedColor);
-  doc.text('CNPJ:', companyInfoX, y + 11);
-  doc.setTextColor(...textColor);
-  doc.text(company?.cnpj ? company.cnpj : '-', companyInfoX + 22, y + 11);
+  if (hasClientDetails) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    if (quote.customer_phone) {
+      doc.setTextColor(...mutedColor);
+      doc.text('Telefone:', col1X, y + 11);
+      doc.setTextColor(...textColor);
+      doc.text(quote.customer_phone, col1X + 20, y + 11);
+    }
+    if (quote.customer_email) {
+      doc.setTextColor(...mutedColor);
+      doc.text('Email:', col2X, y + 11);
+      doc.setTextColor(...textColor);
+      doc.text(quote.customer_email, col2X + 14, y + 11);
+    }
+  }
   
-  doc.setTextColor(...mutedColor);
-  doc.text('Telefone:', companyInfoX, y + 17);
-  doc.setTextColor(...textColor);
-  doc.text(company?.phone || '-', companyInfoX + 22, y + 17);
-  
-  doc.setTextColor(...mutedColor);
-  doc.text('Email:', companyInfoX, y + 23);
-  doc.setTextColor(...textColor);
-  doc.text(company?.email || '-', companyInfoX + 22, y + 23);
-  
-  // Quote code on the right
-  doc.setTextColor(...mutedColor);
-  doc.setFontSize(9);
-  doc.text('Código:', marginRight - 35, y + 5);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...textColor);
-  doc.setFontSize(11);
-  doc.text(`ORC${quote.quote_number.toString().padStart(2, '0')}`, marginRight - 35, y + 12);
-  
-  y += 35;
-  
-  // ========== CLIENT SECTION ==========
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.setTextColor(...textColor);
-  doc.text('Cliente:', marginLeft, y);
-  
-  y += 5;
-  
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.text(quote.customer_name.toUpperCase(), marginLeft, y);
-  
-  y += 6;
-  
-  doc.setFont('helvetica', 'bold');
-  doc.text('Data de elaboração do orçamento:', marginLeft, y);
-  
-  y += 5;
-  
-  doc.setFont('helvetica', 'normal');
-  doc.text(format(new Date(quote.created_at), "dd/MM/yyyy", { locale: ptBR }), marginLeft, y);
-  
-  y += 12;
+  y += clientBoxH + 8;
   
   // ========== ITEMS SECTION ==========
   for (let i = 0; i < items.length; i++) {
