@@ -1941,6 +1941,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "employee_commissions_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "employee_commissions_sale_id_fkey"
             columns: ["sale_id"]
             isOneToOne: false
@@ -2008,6 +2015,13 @@ export type Database = {
             referencedRelation: "employees"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "employee_invites_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       employee_permission_profiles: {
@@ -2038,6 +2052,13 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_permission_profiles_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
             referencedColumns: ["id"]
           },
           {
@@ -2218,6 +2239,13 @@ export type Database = {
             columns: ["employee_id"]
             isOneToOne: false
             referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_safe"
             referencedColumns: ["id"]
           },
           {
@@ -6239,6 +6267,88 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      employees_safe: {
+        Row: {
+          commission_enabled: boolean | null
+          commission_percent: number | null
+          commission_type: string | null
+          company_id: string | null
+          created_at: string | null
+          email: string | null
+          hourly_rate: number | null
+          id: string | null
+          is_active: boolean | null
+          name: string | null
+          permission_profile_id: string | null
+          phone: string | null
+          photo_url: string | null
+          role: string | null
+          updated_at: string | null
+          user_id: string | null
+          username: string | null
+        }
+        Insert: {
+          commission_enabled?: never
+          commission_percent?: never
+          commission_type?: never
+          company_id?: string | null
+          created_at?: string | null
+          email?: string | null
+          hourly_rate?: never
+          id?: string | null
+          is_active?: boolean | null
+          name?: string | null
+          permission_profile_id?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          role?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          username?: string | null
+        }
+        Update: {
+          commission_enabled?: never
+          commission_percent?: never
+          commission_type?: never
+          company_id?: string | null
+          created_at?: string | null
+          email?: string | null
+          hourly_rate?: never
+          id?: string | null
+          is_active?: boolean | null
+          name?: string | null
+          permission_profile_id?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          role?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employees_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employees_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employees_permission_profile_id_fkey"
+            columns: ["permission_profile_id"]
+            isOneToOne: false
+            referencedRelation: "permission_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ordens_servico_safe: {
         Row: {
