@@ -344,6 +344,7 @@ export default function Orcamentos() {
           quote_id: newQuote.id,
           company_product_id: item.company_product_id,
           product_template_id: item.product_template_id,
+          company_item_id: item.company_item_id,
           description: item.description,
           width: item.width,
           height: item.height,
@@ -353,6 +354,7 @@ export default function Orcamentos() {
           has_glass: item.has_glass,
           glass_color: item.glass_color,
           glass_thickness: item.glass_thickness,
+          aluminum_color: item.aluminum_color,
         })));
     }
 
