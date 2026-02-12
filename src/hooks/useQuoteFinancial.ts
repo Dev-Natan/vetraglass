@@ -239,29 +239,61 @@ export function useQuoteFinancial() {
         return 'pending';
       };
 
-      // PASSO 3: Criar a VENDA
-      const { data: sale, error: saleError } = await supabase
+      // PASSO 3: Criar ou ATUALIZAR a VENDA
+      // CORREÇÃO: Se já existe venda parcial, atualizar em vez de criar duplicata
+      const { data: existingPartialSale } = await supabase
         .from('sales')
-        .insert({
-          company_id: currentCompany.id,
-          cash_register_id: cashRegisterId,
-          customer_name: customerName,
-          total_amount: totalAmount,
-          subtotal: totalAmount,
-          paid_amount: totalEntryAmount, // Entradas já recebidas
-          pending_amount: billedAmount,
-          payment_method: paymentMethod,
-          payment_status: getPaymentStatus(),
-          sale_type: billedAmount > 0 ? 'partial' : 'full',
-          sold_by: user.id,
-          ordem_servico_id: ordemServicoId,
-          quote_id: quoteId,
-          notes: `Faturamento - Orçamento`,
-        })
         .select('id')
-        .single();
+        .eq('quote_id', quoteId)
+        .eq('sale_type', 'partial')
+        .maybeSingle();
 
-      if (saleError) throw saleError;
+      let sale: { id: string };
+
+      if (existingPartialSale) {
+        // Atualizar venda parcial existente → venda completa
+        const { error: updateError } = await supabase
+          .from('sales')
+          .update({
+            total_amount: totalAmount,
+            subtotal: totalAmount,
+            paid_amount: totalAmount,
+            pending_amount: 0,
+            payment_method: paymentMethod,
+            payment_status: 'paid',
+            sale_type: 'full',
+            notes: `Faturamento completo - Orçamento (atualizado de venda parcial)`,
+          })
+          .eq('id', existingPartialSale.id);
+
+        if (updateError) throw updateError;
+        sale = existingPartialSale;
+      } else {
+        // Criar nova venda
+        const { data: newSale, error: saleError } = await supabase
+          .from('sales')
+          .insert({
+            company_id: currentCompany.id,
+            cash_register_id: cashRegisterId,
+            customer_name: customerName,
+            total_amount: totalAmount,
+            subtotal: totalAmount,
+            paid_amount: totalEntryAmount,
+            pending_amount: billedAmount,
+            payment_method: paymentMethod,
+            payment_status: getPaymentStatus(),
+            sale_type: billedAmount > 0 ? 'partial' : 'full',
+            sold_by: user.id,
+            ordem_servico_id: ordemServicoId,
+            quote_id: quoteId,
+            notes: `Faturamento - Orçamento`,
+          })
+          .select('id')
+          .single();
+
+        if (saleError) throw saleError;
+        sale = newSale;
+      }
 
       // PASSO 4: Se há saldo a faturar, criar movimento de caixa para o restante
       if (billedAmount > 0) {
