@@ -47,6 +47,8 @@ interface InstallmentPaymentSheetProps {
   onOpenChange: (open: boolean) => void;
   totalAmount: number;
   onConfirm: (config: PaymentConfig) => void;
+  /** Valor de entrada já recebida (depósitos de orçamento) — preenchido automaticamente e não editável */
+  quoteDepositAmount?: number;
 }
 
 const paymentMethodConfig = {
@@ -62,7 +64,11 @@ export function InstallmentPaymentSheet({
   onOpenChange,
   totalAmount,
   onConfirm,
+  quoteDepositAmount = 0,
 }: InstallmentPaymentSheetProps) {
+  const hasQuoteDeposit = quoteDepositAmount > 0;
+  const effectiveTotal = hasQuoteDeposit ? Math.max(0, totalAmount - quoteDepositAmount) : totalAmount;
+  
   const [paymentType, setPaymentType] = useState<PaymentType>('full');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('dinheiro');
   const [paidAmountStr, setPaidAmountStr] = useState('');
@@ -70,11 +76,11 @@ export function InstallmentPaymentSheet({
   const [firstDueDays, setFirstDueDays] = useState(30);
 
   const paidAmount = useMemo(() => {
-    if (paymentType === 'full') return totalAmount;
+    if (paymentType === 'full') return effectiveTotal;
     return parseFloat(paidAmountStr.replace(',', '.')) || 0;
-  }, [paymentType, paidAmountStr, totalAmount]);
+  }, [paymentType, paidAmountStr, effectiveTotal]);
 
-  const remainingAmount = totalAmount - paidAmount;
+  const remainingAmount = effectiveTotal - paidAmount;
 
   // Generate installments preview
   const installments = useMemo((): InstallmentData[] => {
@@ -112,10 +118,10 @@ export function InstallmentPaymentSheet({
   const isValid = useMemo(() => {
     if (paymentType === 'full') return true;
     if (paidAmount < 0) return false;
-    if (paidAmount >= totalAmount) return false;
+    if (paidAmount >= effectiveTotal) return false;
     if (remainingAmount <= 0) return false;
     return true;
-  }, [paymentType, paidAmount, totalAmount, remainingAmount]);
+  }, [paymentType, paidAmount, effectiveTotal, remainingAmount]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -127,6 +133,14 @@ export function InstallmentPaymentSheet({
           </SheetTitle>
           <SheetDescription>
             Valor total: <strong className="text-foreground">{formatCurrency(totalAmount)}</strong>
+            {hasQuoteDeposit && (
+              <>
+                <br />
+                <span className="text-amber-600">Entrada já recebida: {formatCurrency(quoteDepositAmount)}</span>
+                <br />
+                <span className="font-semibold">Restante a cobrar: <strong className="text-foreground">{formatCurrency(effectiveTotal)}</strong></span>
+              </>
+            )}
           </SheetDescription>
         </SheetHeader>
 
@@ -298,11 +312,23 @@ export function InstallmentPaymentSheet({
             {/* Summary */}
             <div className="rounded-xl border bg-gradient-to-br from-primary/5 to-primary/10 p-4 space-y-3">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Total da Venda</span>
+                <span className="text-muted-foreground">Valor do Orçamento</span>
                 <span className="font-medium">{formatCurrency(totalAmount)}</span>
               </div>
+              {hasQuoteDeposit && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Entrada já recebida</span>
+                  <span className="font-medium text-amber-600">-{formatCurrency(quoteDepositAmount)}</span>
+                </div>
+              )}
+              {hasQuoteDeposit && (
+                <div className="flex justify-between text-sm border-t pt-2">
+                  <span className="text-muted-foreground font-medium">Restante a cobrar</span>
+                  <span className="font-bold">{formatCurrency(effectiveTotal)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Entrada (hoje)</span>
+                <span className="text-muted-foreground">Pagamento agora</span>
                 <span className="font-medium text-green-600">{formatCurrency(paidAmount)}</span>
               </div>
               {remainingAmount > 0 && (
