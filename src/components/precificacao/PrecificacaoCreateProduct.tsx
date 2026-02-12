@@ -135,6 +135,7 @@ export function PrecificacaoCreateProduct() {
       cutAngle: null,
       notes: '',
       unitCost: 0,
+      // Profiles: price per 6m bar; Glass: price per m²; Others: price per unit
       unitPrice: item.default_price || 0,
     };
 
@@ -177,13 +178,16 @@ export function PrecificacaoCreateProduct() {
             ? evaluateFormula(comp.widthFormula, width, height)
             : evaluateFormula(comp.quantityFormula, width, height);
         const lengthM = length / 1000;
+        // Profile prices are per 6m bar — convert to price per meter
+        const costPerMeter = comp.unitCost / 6;
+        const pricePerMeter = comp.unitPrice / 6;
         return {
           ...comp,
           calculatedQuantity,
           calculatedLength: length,
-          displayMeasure: `${length} mm`,
-          totalCost: comp.unitCost * lengthM * calculatedQuantity,
-          totalPrice: comp.unitPrice * lengthM * calculatedQuantity,
+          displayMeasure: `${length} mm (${lengthM.toFixed(3)} m)`,
+          totalCost: costPerMeter * lengthM * calculatedQuantity,
+          totalPrice: pricePerMeter * lengthM * calculatedQuantity,
         };
       } else {
         return {
@@ -455,6 +459,9 @@ export function PrecificacaoCreateProduct() {
                               className="h-8 w-24 text-xs text-right"
                               placeholder="0,00"
                             />
+                            <span className="text-[9px] text-muted-foreground block text-right mt-0.5">
+                              {item.itemType === 'profile' ? '/barra 6m' : item.itemType === 'glass' ? '/m²' : '/un'}
+                            </span>
                           </TableCell>
                           <TableCell>
                             <Input
@@ -464,6 +471,9 @@ export function PrecificacaoCreateProduct() {
                               className="h-8 w-24 text-xs text-right"
                               placeholder="0,00"
                             />
+                            <span className="text-[9px] text-muted-foreground block text-right mt-0.5">
+                              {item.itemType === 'profile' ? '/barra 6m' : item.itemType === 'glass' ? '/m²' : '/un'}
+                            </span>
                           </TableCell>
                           <TableCell className="text-center text-xs text-muted-foreground">
                             {item.displayMeasure}
