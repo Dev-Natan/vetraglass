@@ -161,30 +161,10 @@ export function ReceberEntradaDialog({
         }
       }
 
-      // 5. Atualizar venda parcial existente (se houver) para refletir o novo pagamento
-      // CORREÇÃO: Sincronizar sales.paid_amount com os depósitos reais
-      if (deposit.quote_id) {
-        const { data: existingSale } = await supabase
-          .from('sales')
-          .select('id, paid_amount, total_amount, pending_amount')
-          .eq('quote_id', deposit.quote_id)
-          .eq('sale_type', 'partial')
-          .maybeSingle();
-
-        if (existingSale) {
-          const newPaidAmount = (existingSale.paid_amount || 0) + amount;
-          const newPendingAmount = Math.max(0, (existingSale.total_amount || 0) - newPaidAmount);
-
-          await supabase
-            .from('sales')
-            .update({
-              paid_amount: newPaidAmount,
-              pending_amount: newPendingAmount,
-              payment_status: newPendingAmount <= 0 ? 'paid' : 'partial',
-            })
-            .eq('id', existingSale.id);
-        }
-      }
+      // 5. NÃO criar/atualizar vendas parciais aqui.
+      // Depósitos são apenas recebimentos de entrada — a venda será criada
+      // apenas no momento do faturamento (FaturarSaldoDialog ou NovaVendaDialog).
+      // Isso evita dupla contagem entre quote_deposits e sales.
 
       // 6. Atualizar quotes deposit_status
       const { error: quoteError } = await supabase
