@@ -474,22 +474,24 @@ export function useOSFinancialSummary(ordemServicoId: string | undefined) {
       const statusFinanceiro = calculateFinancialStatus(valorRecebido, valorTotal);
 
       // Separar entradas e parcelas
-      const entradas = [
-        ...(deposits || []).filter(d => d.status === 'received').map(d => ({
-          id: d.id,
-          tipo: 'deposit' as const,
-          amount: d.amount,
-          paymentMethod: d.payment_method || 'pix',
-          receivedAt: d.received_at || d.created_at,
-        })),
-        ...(partialSales || []).map(s => ({
-          id: s.id,
-          tipo: 'partial_sale' as const,
-          amount: s.total_amount,
-          paymentMethod: s.payment_method || 'pix',
-          receivedAt: s.created_at,
-        })),
-      ];
+      // IMPORTANTE: quote_deposits e partialSales representam o MESMO pagamento de entrada.
+      // Usar quote_deposits como fonte primária; só usar partialSales como fallback.
+      const receivedDeposits = (deposits || []).filter(d => d.status === 'received');
+      const entradas = receivedDeposits.length > 0
+        ? receivedDeposits.map(d => ({
+            id: d.id,
+            tipo: 'deposit' as const,
+            amount: d.amount,
+            paymentMethod: d.payment_method || 'pix',
+            receivedAt: d.received_at || d.created_at,
+          }))
+        : (partialSales || []).map(s => ({
+            id: s.id,
+            tipo: 'partial_sale' as const,
+            amount: s.total_amount,
+            paymentMethod: s.payment_method || 'pix',
+            receivedAt: s.created_at,
+          }));
 
       const parcelas = (receivables || [])
         .filter(r => r.receivable_type !== 'entrada_orcamento' && r.installment_number > 0)
