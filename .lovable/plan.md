@@ -1,134 +1,151 @@
+# Plano de Lançamento — VetraGlass
 
-## Plano: Incluir Imagens Personalizadas nos PDFs
+> **Data de criação:** 2026-02-12  
+> **Objetivo:** Concluir todas as tarefas pendentes para lançamento do sistema  
+> **Estimativa total:** ~8-10 prompts (sessões de trabalho)
 
-### Problema Identificado
-As imagens adicionadas pelos usuários a **produtos** (`company_products`) e **itens/materiais** (`company_items`) não estão sendo exibidas nos PDFs gerados porque:
+---
 
-1. **Fonte de dados incompleta**: A query em `VisualizarOrcamentoDialog.tsx` busca imagens **apenas** de `product_templates`, ignorando:
-   - `company_products.image_url` (produtos personalizados da empresa)
-   - `company_items.image_url` (itens/materiais da empresa)
+## 📋 Lista Completa de Tarefas
 
-2. **Hierarquia de prioridade ausente**: Quando um produto da empresa tem imagem personalizada, ela deveria ter prioridade sobre a imagem do template.
+### Sprint 1 — Segurança & Infraestrutura (Prioridade Crítica)
 
-### Análise Técnica
+#### Tarefa 1.1: Auditoria de Segurança (RLS)
+- **Descrição:** Rodar scan de segurança, revisar todas as políticas RLS, garantir isolamento de dados entre empresas
+- **Estimativa:** 1 prompt
+- **Recursos:** Ferramenta `supabase--linter`, `security--run_security_scan`
+- **Critério de conclusão:** Zero vulnerabilidades críticas, todas as tabelas com RLS ativo
+- **Risco:** Pode revelar problemas que exijam migrations adicionais
 
-A tabela `quote_items` tem três referências de imagem:
+#### Tarefa 1.2: Edge Functions — Revisão de JWT
+- **Descrição:** Revisar funções com `verify_jwt = false` (`focusnfe`, `admin-delete-item-template`, `create-employee-user`, `send-employee-invite`, `generate-system-reminders`). Validar se é intencional e documentar justificativa
+- **Estimativa:** 0.5 prompt (junto com 1.1)
+- **Recursos:** Leitura de edge functions, `supabase/config.toml`
+- **Critério de conclusão:** Cada função sem JWT tem justificativa documentada ou é corrigida
 
-| Coluna | Tabela de Origem | Descrição |
-|--------|------------------|-----------|
-| `company_product_id` | `company_products` | Produtos personalizados com `image_url` |
-| `product_template_id` | `product_templates` | Templates de produtos com `image_url` |
-| `company_item_id` | `company_items` | Itens/materiais com `image_url` |
+#### Tarefa 1.3: Limpeza do Service Worker / PWA
+- **Descrição:** Remover código agressivo de limpeza de SW/cache em `main.tsx` que é apenas debug. Decidir se PWA será mantida no lançamento
+- **Estimativa:** 0.5 prompt
+- **Recursos:** `src/main.tsx`, `vite.config.ts`
+- **Critério de conclusão:** `main.tsx` limpo, sem console.logs de debug em produção
 
-**Query atual (incompleta):**
-```sql
-SELECT *, product_templates(image_url, linha, category)
-FROM quote_items WHERE quote_id = ?
+---
+
+### Sprint 2 — Funcionalidades Core (Prioridade Alta)
+
+#### Tarefa 2.1: Imagens Personalizadas nos PDFs
+- **Descrição:** Corrigir query em `VisualizarOrcamentoDialog.tsx` para buscar imagens de `company_products` e `company_items`, não apenas `product_templates`. Implementar hierarquia de prioridade de imagens
+- **Estimativa:** 1 prompt
+- **Recursos:** `VisualizarOrcamentoDialog.tsx`, `generateQuotePdf.ts`, `Orcamentos.tsx`
+- **Critério de conclusão:** PDFs exibem imagens de produtos personalizados corretamente
+- **Plano detalhado:** Já documentado anteriormente (ver seção "Plano Técnico" abaixo)
+
+#### Tarefa 2.2: Validação do Fluxo Alumínio Completo
+- **Descrição:** Testar e validar que `aluminum_color` propaga corretamente em: Orçamento → Aprovação → OS → Produção → Plano de Corte → PDF
+- **Estimativa:** 1 prompt
+- **Recursos:** `AddProductPanel.tsx`, `Orcamentos.tsx`, `OrdemServicoDetalhes.tsx`, `generateCuttingPlanPdf.ts`
+- **Critério de conclusão:** Acabamento visível em todas as etapas do fluxo
+
+#### Tarefa 2.3: Validação de Formulários Críticos
+- **Descrição:** Revisar formulários de: cadastro de cliente, novo orçamento, nova venda, nova OS. Garantir validações com mensagens em PT-BR
+- **Estimativa:** 1 prompt
+- **Recursos:** Componentes de dialog/form em `src/components/`
+- **Critério de conclusão:** Nenhum formulário permite submit com dados inválidos
+
+---
+
+### Sprint 3 — Experiência do Usuário (Prioridade Média)
+
+#### Tarefa 3.1: Routing e Landing Page
+- **Descrição:** Validar que `/` serve Landing para não-autenticados e redireciona para Dashboard para logados. Garantir redirects corretos após login/logout
+- **Estimativa:** 0.5 prompt
+- **Recursos:** `App.tsx`, `Landing.tsx`, `Index.tsx`, `AuthContext.tsx`
+- **Critério de conclusão:** Fluxo de navegação limpo sem flash de conteúdo errado
+
+#### Tarefa 3.2: Teste de Geração de PDFs
+- **Descrição:** Testar todos os geradores de PDF com dados representativos: orçamento, contrato, OS, plano de corte, relatório de caixa
+- **Estimativa:** 1 prompt
+- **Recursos:** Todos os arquivos em `src/utils/generate*.ts`
+- **Critério de conclusão:** PDFs gerados sem erros, com layout correto
+
+#### Tarefa 3.3: Onboarding e Tutorial
+- **Descrição:** Validar checklist de onboarding, tutorial overlay, e que novos usuários têm experiência guiada
+- **Estimativa:** 0.5 prompt
+- **Recursos:** `OnboardingChecklist.tsx`, `TutorialOverlay.tsx`, `useOnboardingStatus.ts`
+- **Critério de conclusão:** Novo usuário consegue completar onboarding sem confusão
+
+---
+
+### Sprint 4 — Polimento Final (Prioridade Baixa)
+
+#### Tarefa 4.1: SEO e Meta Tags
+- **Descrição:** Verificar/adicionar title, meta description, OG image na Landing. Garantir robots.txt correto
+- **Estimativa:** 0.5 prompt
+- **Recursos:** `index.html`, `Landing.tsx`, `robots.txt`, `og-image.png`
+- **Critério de conclusão:** Preview correto ao compartilhar link em redes sociais
+
+#### Tarefa 4.2: Responsividade Mobile
+- **Descrição:** Testar fluxos críticos (login, dashboard, novo orçamento, caixa) em viewport mobile (375px)
+- **Estimativa:** 1 prompt
+- **Recursos:** Browser tools com viewport mobile
+- **Critério de conclusão:** Fluxos principais usáveis em mobile sem overflow ou elementos cortados
+
+---
+
+## 📊 Cronograma de Execução
+
+```
+Prompt  │ Tarefas              │ Prioridade │ Status
+────────┼──────────────────────┼────────────┼────────
+  1     │ 1.1 + 1.2 Segurança  │ 🔴 Crítica │ ⬜ Pendente
+  2     │ 1.3 SW Cleanup       │ 🔴 Crítica │ ⬜ Pendente
+  3     │ 2.1 Imagens PDF      │ 🔴 Alta    │ ⬜ Pendente
+  4     │ 2.2 Fluxo Alumínio   │ 🟡 Alta    │ ⬜ Pendente
+  5     │ 2.3 Validações       │ 🟡 Alta    │ ⬜ Pendente
+  6     │ 3.1 + 3.3 Routing    │ 🟡 Média   │ ⬜ Pendente
+  7     │ 3.2 Teste PDFs       │ 🟡 Média   │ ⬜ Pendente
+  8     │ 4.1 SEO              │ 🟢 Baixa   │ ⬜ Pendente
+  9     │ 4.2 Mobile           │ 🟢 Baixa   │ ⬜ Pendente
 ```
 
-**Query corrigida:**
-```sql
-SELECT *,
-  product_templates(image_url, linha, category),
-  company_products(image_url, linha),
-  company_items(image_url)
-FROM quote_items WHERE quote_id = ?
-```
+---
 
-### Mudanças Necessárias
+## 🛡️ Estratégias de Execução
 
-#### 1. Atualizar `VisualizarOrcamentoDialog.tsx`
-Modificar a query de itens para incluir imagens de todas as fontes:
+1. **Uma tarefa por prompt** — Evita mudanças conflitantes e facilita rollback
+2. **Sempre verificar antes de implementar** — Ler arquivos, rodar scans, checar logs antes de editar
+3. **Testar após cada mudança** — Usar browser tools ou console para validar
+4. **Não expandir escopo** — Resolver exatamente o que está no plano, anotar melhorias futuras separadamente
+5. **Commits atômicos** — Cada prompt = uma unidade de trabalho completa e funcional
 
+---
+
+## 🔧 Plano Técnico — Tarefa 2.1: Imagens nos PDFs
+
+### Problema
+A query em `VisualizarOrcamentoDialog.tsx` busca imagens apenas de `product_templates`, ignorando `company_products.image_url` e `company_items.image_url`.
+
+### Solução
+
+**1. Expandir query:**
 ```typescript
-const { data, error } = await supabase
+const { data } = await supabase
   .from('quote_items')
-  .select(`
-    *,
-    product_templates (image_url, linha, category),
-    company_products (image_url, linha),
-    company_items (image_url)
-  `)
+  .select(`*, product_templates(image_url, linha, category), company_products(image_url, linha), company_items(image_url)`)
   .eq('quote_id', quote.id);
 ```
 
-#### 2. Atualizar a Lógica de Seleção de Imagem
-Criar hierarquia de prioridade para imagens:
-
-```text
-Prioridade de Imagem:
-1. company_products.image_url (se existir)
-2. product_templates.image_url (fallback para templates)
-3. company_items.image_url (para itens avulsos)
+**2. Hierarquia de prioridade:**
+```
+company_products.image_url → product_templates.image_url → company_items.image_url → null
 ```
 
-#### 3. Atualizar Interface `QuoteItem`
-Adicionar tipos para as novas relações:
+**3. Arquivo a modificar:** `src/components/orcamentos/VisualizarOrcamentoDialog.tsx`
 
-```typescript
-interface QuoteItem {
-  // ... campos existentes
-  product_templates?: { image_url: string | null; linha: string | null; category: string | null } | null;
-  company_products?: { image_url: string | null; linha: string | null } | null;
-  company_items?: { image_url: string | null } | null;
-}
-```
+---
 
-#### 4. Atualizar a Preparação de Dados para PDF
-Modificar a função que prepara itens para o PDF:
+## 📝 Notas Adicionais
 
-```typescript
-const itemsForPdf = items.map(item => ({
-  // ... outros campos
-  image_url: 
-    item.company_products?.image_url ||    // Prioridade 1: Produto personalizado
-    item.product_templates?.image_url ||   // Prioridade 2: Template
-    item.company_items?.image_url ||       // Prioridade 3: Item avulso
-    null,
-  linha: 
-    item.company_products?.linha ||
-    item.product_templates?.linha || 
-    null,
-}));
-```
-
-### Arquivos a Modificar
-
-| Arquivo | Mudança |
-|---------|---------|
-| `src/components/orcamentos/VisualizarOrcamentoDialog.tsx` | Expandir query para incluir `company_products` e `company_items` |
-
-### Fluxo Visual
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│                     quote_items                             │
-│  ┌──────────────────┬──────────────────┬─────────────────┐ │
-│  │ company_product  │ product_template │  company_item   │ │
-│  │     _id          │      _id         │     _id         │ │
-│  └────────┬─────────┴────────┬─────────┴────────┬────────┘ │
-│           │                  │                   │          │
-│           ▼                  ▼                   ▼          │
-│   ┌───────────────┐  ┌───────────────┐  ┌───────────────┐  │
-│   │ company_      │  │ product_      │  │ company_      │  │
-│   │ products      │  │ templates     │  │ items         │  │
-│   │               │  │               │  │               │  │
-│   │ image_url ◄───┼──┼── PRIORIDADE ─┼──┼──► image_url  │  │
-│   └───────────────┘  └───────────────┘  └───────────────┘  │
-│                             │                               │
-│                             ▼                               │
-│                     ┌───────────────┐                       │
-│                     │ PDF Generator │                       │
-│                     │               │                       │
-│                     │ Usa a imagem  │                       │
-│                     │ disponível    │                       │
-│                     │ com maior     │                       │
-│                     │ prioridade    │                       │
-│                     └───────────────┘                       │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Observações
-- A função `generateQuotePdf` já suporta `image_url` nos itens, então **não precisa de alteração**
-- O problema está exclusivamente na **fonte de dados** que não busca imagens de produtos/itens personalizados
-- Após a correção, todas as imagens (templates ou personalizadas) serão exibidas corretamente no PDF
+- O `generateQuotePdf.ts` já suporta `image_url` nos itens — o problema é apenas na fonte de dados
+- Algumas edge functions sem JWT (`focusnfe`, `generate-system-reminders`) são intencionais (webhooks/cron)
+- O PWA foi desabilitado via código mas o plugin ainda está instalado — considerar remover `vite-plugin-pwa`
