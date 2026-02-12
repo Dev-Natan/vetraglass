@@ -112,7 +112,11 @@ export function generateDailyCashPdf(
     doc.setTextColor(100);
     
     if (company.cnpj) {
-      const cnpjFormatted = company.cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+      // Handle both formatted and unformatted CNPJs
+      const digits = company.cnpj.replace(/\D/g, '');
+      const cnpjFormatted = digits.length === 14
+        ? digits.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')
+        : company.cnpj;
       doc.text(`CNPJ: ${cnpjFormatted}`, pageWidth / 2, currentY, { align: 'center' });
       currentY += 4;
     }

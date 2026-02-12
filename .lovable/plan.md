@@ -103,7 +103,7 @@ Prompt  │ Tarefas              │ Prioridade │ Status
   4     │ 2.2 Fluxo Alumínio   │ 🟡 Alta    │ ✅ Concluído
   5     │ 2.3 Validações       │ 🟡 Alta    │ ✅ Concluído
   6     │ 3.1 + 3.3 Routing    │ 🟡 Média   │ ✅ Concluído
-  7     │ 3.2 Teste PDFs       │ 🟡 Média   │ ⬜ Pendente
+  7     │ 3.2 Teste PDFs       │ 🟡 Média   │ ✅ Concluído
   8     │ 4.1 SEO              │ 🟢 Baixa   │ ⬜ Pendente
   9     │ 4.2 Mobile           │ 🟢 Baixa   │ ⬜ Pendente
 ```
