@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+// Templates-based pricing - no auth required
 import { evaluateFormula } from '@/utils/safeFormulaEvaluator';
 
 export interface PricingProduct {
@@ -50,33 +50,40 @@ export interface PricingSummary {
 }
 
 export function usePricingProducts() {
-  const { currentCompany } = useAuth();
-
   return useQuery({
-    queryKey: ['pricing-products', currentCompany?.id],
+    queryKey: ['pricing-template-products'],
     queryFn: async () => {
-      if (!currentCompany?.id) return [];
       const { data, error } = await supabase
-        .from('company_products')
-        .select('id, commercial_name, category, linha, image_url, price_per_sqm, cost_per_sqm, base_price, pricing_type, uses_glass, product_template_id')
-        .eq('company_id', currentCompany.id)
+        .from('product_templates')
+        .select('id, name, category, linha, image_url, base_price, is_active')
         .eq('is_active', true)
         .order('linha')
-        .order('commercial_name');
+        .order('name');
       if (error) throw error;
-      return data as PricingProduct[];
+      return (data || []).map(t => ({
+        id: t.id,
+        commercial_name: t.name,
+        category: t.category,
+        linha: t.linha,
+        image_url: t.image_url,
+        price_per_sqm: null,
+        cost_per_sqm: null,
+        base_price: t.base_price,
+        pricing_type: 'sqm',
+        uses_glass: true,
+        product_template_id: t.id,
+      })) as PricingProduct[];
     },
-    enabled: !!currentCompany?.id,
   });
 }
 
-export function usePricingComponents(companyProductId: string | null) {
+export function usePricingComponents(templateProductId: string | null) {
   return useQuery({
-    queryKey: ['pricing-components', companyProductId],
+    queryKey: ['pricing-template-components', templateProductId],
     queryFn: async () => {
-      if (!companyProductId) return [];
+      if (!templateProductId) return [];
       const { data, error } = await supabase
-        .from('company_product_items')
+        .from('product_template_items')
         .select(`
           id,
           quantity_formula,
@@ -85,16 +92,19 @@ export function usePricingComponents(companyProductId: string | null) {
           pieces_quantity,
           cut_angle,
           notes,
-          sort_order,
-          company_item:company_items(id, name, type, unit, cost, sale_price),
           item_template:item_templates(id, name, type, unit, default_price)
         `)
-        .eq('company_product_id', companyProductId)
-        .order('sort_order', { ascending: true });
+        .eq('product_template_id', templateProductId)
+        .is('company_id', null);
       if (error) throw error;
-      return data;
+      // Map to expected format for useCalculatePricing
+      return (data || []).map(d => ({
+        ...d,
+        sort_order: 0,
+        company_item: null,
+      }));
     },
-    enabled: !!companyProductId,
+    enabled: !!templateProductId,
   });
 }
 

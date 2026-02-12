@@ -16,7 +16,7 @@ import {
   Layers, Search, DollarSign, Ruler, BarChart3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/contexts/AuthContext';
+// No auth required - uses templates directly
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -52,7 +52,6 @@ const formatCurrency = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
 
 export function PrecificacaoCalculator() {
-  const { currentCompany } = useAuth();
   const [selectedProduct, setSelectedProduct] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [width, setWidth] = useState(1000);
@@ -67,37 +66,19 @@ export function PrecificacaoCalculator() {
   const summary = useCalculatePricing(components, width, height, quantity, costOverrides);
   const { data: productCategories } = useProductCategories();
 
-  // Fetch ALL linhas from system (templates + company products + company_linhas)
+  // Fetch ALL linhas from templates
   const { data: allSystemLinhas = [] } = useQuery({
-    queryKey: ['all-system-linhas', currentCompany?.id],
+    queryKey: ['all-template-linhas'],
     queryFn: async () => {
       const set = new Set<string>();
-      // From product templates
       const { data: tpl } = await supabase
         .from('product_templates')
         .select('linha')
         .eq('is_active', true)
         .not('linha', 'is', null);
       tpl?.forEach(p => p.linha && set.add(p.linha));
-      // From company products
-      if (currentCompany?.id) {
-        const { data: cp } = await supabase
-          .from('company_products')
-          .select('linha')
-          .eq('company_id', currentCompany.id)
-          .not('linha', 'is', null);
-        cp?.forEach(p => p.linha && set.add(p.linha));
-        // From company_linhas
-        const { data: cl } = await supabase
-          .from('company_linhas')
-          .select('name')
-          .eq('company_id', currentCompany.id)
-          .eq('is_active', true);
-        cl?.forEach(l => set.add(l.name));
-      }
       return Array.from(set).sort();
     },
-    enabled: !!currentCompany?.id,
   });
 
   const handleCostChange = (componentId: string, value: string) => {
@@ -158,7 +139,7 @@ export function PrecificacaoCalculator() {
       height,
       quantity,
       summary,
-      companyName: currentCompany?.name || '',
+      companyName: 'Precificação',
       generatedAt: new Date().toLocaleString('pt-BR'),
     });
     toast.success('Relatório PDF gerado!');
