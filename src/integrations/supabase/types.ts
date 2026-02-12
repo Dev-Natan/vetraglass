@@ -142,6 +142,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "accounts_receivable_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "accounts_receivable_sale_id_fkey"
             columns: ["sale_id"]
             isOneToOne: false
@@ -3657,6 +3664,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "ordens_servico_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "ordens_servico_sale_id_fkey"
             columns: ["sale_id"]
             isOneToOne: false
@@ -4689,6 +4703,13 @@ export type Database = {
             referencedRelation: "quotes"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "quote_deposits_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       quote_items: {
@@ -4791,6 +4812,13 @@ export type Database = {
             referencedRelation: "quotes"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "quote_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       quote_price_revisions: {
@@ -4837,6 +4865,13 @@ export type Database = {
             columns: ["quote_id"]
             isOneToOne: false
             referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_price_revisions_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes_safe"
             referencedColumns: ["id"]
           },
           {
@@ -5338,6 +5373,13 @@ export type Database = {
             referencedRelation: "quotes"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "sales_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       service_appointments: {
@@ -5470,6 +5512,13 @@ export type Database = {
             referencedRelation: "quotes"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "service_appointments_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       site_measurements: {
@@ -5595,6 +5644,13 @@ export type Database = {
             columns: ["quote_id"]
             isOneToOne: false
             referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_measurements_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes_safe"
             referencedColumns: ["id"]
           },
         ]
@@ -6459,6 +6515,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "ordens_servico_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes_safe"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "ordens_servico_sale_id_fkey"
             columns: ["sale_id"]
             isOneToOne: false
@@ -6544,6 +6607,137 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quotes_safe: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          company_id: string | null
+          condicao_pagamento_id: string | null
+          created_at: string | null
+          customer_address: string | null
+          customer_document: string | null
+          customer_document_type: string | null
+          customer_email: string | null
+          customer_marital_status: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          customer_profession: string | null
+          deposit_amount: number | null
+          deposit_status: string | null
+          discount_amount: number | null
+          discount_percent: number | null
+          final_amount: number | null
+          forma_pagamento_id: string | null
+          id: string | null
+          notes: string | null
+          payment_terms: string | null
+          quote_number: number | null
+          reajuste_aplicado: boolean | null
+          status: string | null
+          total_amount: number | null
+          updated_at: string | null
+          valid_until: string | null
+          valor_final_aprovado: number | null
+          valor_original: number | null
+          valor_reajustado: number | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          company_id?: string | null
+          condicao_pagamento_id?: string | null
+          created_at?: string | null
+          customer_address?: never
+          customer_document?: never
+          customer_document_type?: never
+          customer_email?: never
+          customer_marital_status?: never
+          customer_name?: string | null
+          customer_phone?: never
+          customer_profession?: never
+          deposit_amount?: number | null
+          deposit_status?: string | null
+          discount_amount?: number | null
+          discount_percent?: number | null
+          final_amount?: number | null
+          forma_pagamento_id?: string | null
+          id?: string | null
+          notes?: string | null
+          payment_terms?: never
+          quote_number?: number | null
+          reajuste_aplicado?: boolean | null
+          status?: string | null
+          total_amount?: number | null
+          updated_at?: string | null
+          valid_until?: string | null
+          valor_final_aprovado?: number | null
+          valor_original?: number | null
+          valor_reajustado?: number | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          company_id?: string | null
+          condicao_pagamento_id?: string | null
+          created_at?: string | null
+          customer_address?: never
+          customer_document?: never
+          customer_document_type?: never
+          customer_email?: never
+          customer_marital_status?: never
+          customer_name?: string | null
+          customer_phone?: never
+          customer_profession?: never
+          deposit_amount?: number | null
+          deposit_status?: string | null
+          discount_amount?: number | null
+          discount_percent?: number | null
+          final_amount?: number | null
+          forma_pagamento_id?: string | null
+          id?: string | null
+          notes?: string | null
+          payment_terms?: never
+          quote_number?: number | null
+          reajuste_aplicado?: boolean | null
+          status?: string | null
+          total_amount?: number | null
+          updated_at?: string | null
+          valid_until?: string | null
+          valor_final_aprovado?: number | null
+          valor_original?: number | null
+          valor_reajustado?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_condicao_pagamento_id_fkey"
+            columns: ["condicao_pagamento_id"]
+            isOneToOne: false
+            referencedRelation: "condicoes_pagamento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_forma_pagamento_id_fkey"
+            columns: ["forma_pagamento_id"]
+            isOneToOne: false
+            referencedRelation: "formas_pagamento"
             referencedColumns: ["id"]
           },
         ]
