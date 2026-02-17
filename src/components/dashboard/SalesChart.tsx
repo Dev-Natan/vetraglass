@@ -6,7 +6,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { subDays, format, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { TrendingUp } from 'lucide-react';
-import { CACHE_TIMES } from '@/lib/queryConfig';
+
 
 export function SalesChart() {
   const { currentCompany } = useAuth();
@@ -45,7 +45,7 @@ export function SalesChart() {
       return days;
     },
     enabled: !!currentCompany?.id,
-    ...CACHE_TIMES.DYNAMIC,
+    
   });
 
   const formatCurrency = (value: number) => {

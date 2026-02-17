@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { format, addDays, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CACHE_TIMES } from '@/lib/queryConfig';
+
 
 export function CashFlowProjection() {
   const { currentCompany } = useAuth();
@@ -44,7 +44,7 @@ export function CashFlowProjection() {
       return data || [];
     },
     enabled: !!currentCompany?.id,
-    ...CACHE_TIMES.DYNAMIC,
+    
   });
 
   // Fetch expenses due in next 7 days
@@ -69,7 +69,7 @@ export function CashFlowProjection() {
       return data || [];
     },
     enabled: !!currentCompany?.id,
-    ...CACHE_TIMES.DYNAMIC,
+    
   });
 
   // Fetch current company cash balance
@@ -88,7 +88,7 @@ export function CashFlowProjection() {
       return data;
     },
     enabled: !!currentCompany?.id,
-    ...CACHE_TIMES.DYNAMIC,
+    
   });
 
   const isLoading = loadingReceivables || loadingExpenses || loadingCash;

@@ -16,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { startOfMonth, endOfMonth, startOfDay, subMonths, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CACHE_TIMES } from '@/lib/queryConfig';
+
 
 export const DashboardKPIs = memo(function DashboardKPIs() {
   const { currentCompany } = useAuth();
@@ -67,7 +67,7 @@ export const DashboardKPIs = memo(function DashboardKPIs() {
       };
     },
     enabled: !!currentCompany?.id,
-    ...CACHE_TIMES.DYNAMIC,
+    
   });
 
   // Orçamentos pendentes
@@ -100,7 +100,7 @@ export const DashboardKPIs = memo(function DashboardKPIs() {
       };
     },
     enabled: !!currentCompany?.id,
-    ...CACHE_TIMES.DYNAMIC,
+    
   });
 
   // OS em andamento e atrasadas
@@ -129,7 +129,7 @@ export const DashboardKPIs = memo(function DashboardKPIs() {
       };
     },
     enabled: !!currentCompany?.id,
-    ...CACHE_TIMES.DYNAMIC,
+    
   });
 
   // Alertas de estoque baixo
@@ -151,7 +151,7 @@ export const DashboardKPIs = memo(function DashboardKPIs() {
       return { lowStock: lowStock.length };
     },
     enabled: !!currentCompany?.id,
-    ...CACHE_TIMES.DYNAMIC,
+    
   });
 
   const formatCurrency = (value: number) => {

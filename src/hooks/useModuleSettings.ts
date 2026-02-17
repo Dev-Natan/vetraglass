@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { CACHE_TIMES } from "@/lib/queryConfig";
+
 
 export interface ModuleSetting {
   id: string;
@@ -24,7 +24,7 @@ export function useModuleSettings() {
       if (error) throw error;
       return data as ModuleSetting[];
     },
-    ...CACHE_TIMES.DYNAMIC,
+    
   });
 }
 

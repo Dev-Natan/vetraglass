@@ -60,7 +60,7 @@ import { AprovarOrcamentoDialog } from '@/components/orcamentos/AprovarOrcamento
 import { FormasPagamentoDialog } from '@/components/orcamentos/FormasPagamentoDialog';
 import { usePagination } from '@/hooks/usePagination';
 import { PaginationControls } from '@/components/common/PaginationControls';
-import { CACHE_TIMES, queryKeys } from '@/lib/queryConfig';
+import { queryKeys } from '@/lib/queryConfig';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 
@@ -143,7 +143,7 @@ export default function Orcamentos() {
       return data as Quote[];
     },
     enabled: !!currentCompany?.id,
-    ...CACHE_TIMES.SEMI_STATIC,
+    // Zero cache - sempre dados frescos
   });
 
   // Delete mutation
