@@ -256,9 +256,20 @@ export async function generateQuotePdf(
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
     
-    const itemCardHeight = 75;
+    // Calculate dynamic detail lines count
+    let detailLinesCount = 2; // Linha + Modelo (always shown)
+    if (item.has_glass !== false) detailLinesCount += 2; // Cor + Vidro
+    if (item.aluminum_color) detailLinesCount += 1; // Acabamento
+    detailLinesCount += 1; // Observação
     
-    if (y + itemCardHeight > pageHeight - 60) {
+    const detailsHeight = 7 + (detailLinesCount * 5) + 3; // top padding + lines + gap before table
+    const tableHeight = 18; // approximate height of the mini table (header + 1 row)
+    const imgSize = 45;
+    const minContentHeight = Math.max(imgSize + 14, detailsHeight + tableHeight); // image or details, whichever is taller
+    const cardBodyHeight = minContentHeight;
+    const itemCardHeight = 8 + cardBodyHeight + 8; // header + body + gap
+    
+    if (y + itemCardHeight > pageHeight - 30) {
       doc.addPage();
       y = 15;
     }
@@ -275,13 +286,11 @@ export async function generateQuotePdf(
     y += 8;
     
     const cardBodyStartY = y;
-    const cardBodyHeight = 60;
     
     doc.setDrawColor(...cardBorder);
     doc.setLineWidth(0.5);
     doc.rect(marginLeft, y, contentWidth, cardBodyHeight, 'S');
     
-    const imgSize = 45;
     const imgX = marginLeft + 5;
     const imgY = y + 7;
     
@@ -350,7 +359,7 @@ export async function generateQuotePdf(
       detailsY += 5;
     }
     
-    detailsY += 5;
+    detailsY += 3;
     
     doc.setFont('helvetica', 'bold');
     doc.text('Observação:', detailsX, detailsY);
@@ -358,7 +367,8 @@ export async function generateQuotePdf(
     const obsText = item.notes || '';
     doc.text(obsText.length > 40 ? obsText.substring(0, 40) + '...' : obsText, detailsX + 28, detailsY);
     
-    const tableY = cardBodyStartY + 32;
+    // Place the table after the details text
+    const tableY = detailsY + 4;
     const tableWidth = contentWidth - imgSize - 18;
     
     const width = item.width || 0;
