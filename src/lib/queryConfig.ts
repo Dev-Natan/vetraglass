@@ -1,31 +1,7 @@
 import { QueryClient } from '@tanstack/react-query';
 
-// Optimized cache configuration for scalability
-export const CACHE_TIMES = {
-  // Data that rarely changes (5 minutes stale, 10 minutes cache)
-  STATIC: {
-    staleTime: 5 * 60 * 1000,      // 5 minutes
-    gcTime: 10 * 60 * 1000,         // 10 minutes (garbage collection)
-  },
-  
-  // Data that changes occasionally (2 minutes stale, 5 minutes cache)
-  SEMI_STATIC: {
-    staleTime: 2 * 60 * 1000,      // 2 minutes
-    gcTime: 5 * 60 * 1000,          // 5 minutes
-  },
-  
-  // Data that changes frequently (30 seconds stale, 2 minutes cache)
-  DYNAMIC: {
-    staleTime: 30 * 1000,          // 30 seconds
-    gcTime: 2 * 60 * 1000,          // 2 minutes
-  },
-  
-  // Real-time data (no stale time, short cache)
-  REALTIME: {
-    staleTime: 0,
-    gcTime: 60 * 1000,              // 1 minute
-  },
-} as const;
+// ZERO CACHE POLICY: All queries always fetch fresh data from the server.
+// No local cache times are used anywhere in the application.
 
 // Query key factories for consistent cache management
 export const queryKeys = {
