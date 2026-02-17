@@ -411,7 +411,7 @@ export async function generateQuotePdf(
   }
   
   // ========== TOTALS AND PAYMENT SECTION ==========
-  if (y + 100 > pageHeight - 20) {
+  if (y + 50 > pageHeight - 15) {
     doc.addPage();
     y = 15;
   }
