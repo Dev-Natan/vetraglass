@@ -37,6 +37,13 @@ export default function EditarDadosFiscaisDialog({
   const [email, setEmail] = useState("");
   const [telefone, setTelefone] = useState("");
   const [endereco, setEndereco] = useState("");
+  const [street, setStreet] = useState("");
+  const [addressNumber, setAddressNumber] = useState("");
+  const [neighborhood, setNeighborhood] = useState("");
+  const [complement, setComplement] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [zipCode, setZipCode] = useState("");
   const [inscricaoMunicipal, setInscricaoMunicipal] = useState("");
   const [inscricaoEstadual, setInscricaoEstadual] = useState("");
   const [codigoMunicipioIbge, setCodigoMunicipioIbge] = useState("");
@@ -65,6 +72,13 @@ export default function EditarDadosFiscaisDialog({
       setEmail(company.email || "");
       setTelefone(company.phone || "");
       setEndereco(company.address || "");
+      setStreet((company as any).street || "");
+      setAddressNumber((company as any).address_number || "");
+      setNeighborhood((company as any).neighborhood || "");
+      setComplement((company as any).complement || "");
+      setCity((company as any).city || "");
+      setState((company as any).state || "");
+      setZipCode((company as any).zip_code || "");
       setInscricaoMunicipal((company as any).inscricao_municipal || "");
       setInscricaoEstadual((company as any).inscricao_estadual || "");
       setCodigoMunicipioIbge((company as any).codigo_municipio_ibge || "");
@@ -85,6 +99,13 @@ export default function EditarDadosFiscaisDialog({
           email: email,
           phone: telefone,
           address: endereco,
+          street: street || null,
+          address_number: addressNumber || null,
+          neighborhood: neighborhood || null,
+          complement: complement || null,
+          city: city || null,
+          state: state || null,
+          zip_code: zipCode || null,
           inscricao_municipal: inscricaoMunicipal || null,
           inscricao_estadual: inscricaoEstadual || null,
           codigo_municipio_ibge: codigoMunicipioIbge || null,
@@ -166,11 +187,61 @@ export default function EditarDadosFiscaisDialog({
                     />
                   </div>
                   <div className="col-span-2 space-y-2">
-                    <Label>Endereço</Label>
+                    <Label>CEP</Label>
                     <Input
-                      value={endereco}
-                      onChange={(e) => setEndereco(e.target.value)}
-                      placeholder="Rua, número, bairro, cidade - UF"
+                      value={zipCode}
+                      onChange={(e) => setZipCode(e.target.value)}
+                      placeholder="00000-000"
+                      maxLength={9}
+                    />
+                  </div>
+                  <div className="col-span-2 space-y-2">
+                    <Label>Rua / Logradouro</Label>
+                    <Input
+                      value={street}
+                      onChange={(e) => setStreet(e.target.value)}
+                      placeholder="Rua Principal"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Número</Label>
+                    <Input
+                      value={addressNumber}
+                      onChange={(e) => setAddressNumber(e.target.value)}
+                      placeholder="123"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Complemento</Label>
+                    <Input
+                      value={complement}
+                      onChange={(e) => setComplement(e.target.value)}
+                      placeholder="Sala 01, Bloco A"
+                    />
+                  </div>
+                  <div className="col-span-2 space-y-2">
+                    <Label>Bairro</Label>
+                    <Input
+                      value={neighborhood}
+                      onChange={(e) => setNeighborhood(e.target.value)}
+                      placeholder="Centro"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Cidade</Label>
+                    <Input
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      placeholder="São Paulo"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Estado (UF)</Label>
+                    <Input
+                      value={state}
+                      onChange={(e) => setState(e.target.value.toUpperCase())}
+                      placeholder="SP"
+                      maxLength={2}
                     />
                   </div>
                 </div>

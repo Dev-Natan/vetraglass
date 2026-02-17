@@ -821,6 +821,7 @@ export type Database = {
       companies: {
         Row: {
           address: string | null
+          address_number: string | null
           ambiente_fiscal: string | null
           certificado_cnpj: string | null
           certificado_digital_nome: string | null
@@ -830,8 +831,10 @@ export type Database = {
           certificado_serial: string | null
           certificado_status: string | null
           certificado_ultima_verificacao: string | null
+          city: string | null
           cnpj: string | null
           codigo_municipio_ibge: string | null
+          complement: string | null
           created_at: string
           email: string | null
           id: string
@@ -842,14 +845,19 @@ export type Database = {
           logo_url: string | null
           modo_fiscal_ativo: boolean
           name: string
+          neighborhood: string | null
           phone: string | null
           primary_color: string | null
           regime_tributario: string | null
           secondary_color: string | null
+          state: string | null
+          street: string | null
           updated_at: string
+          zip_code: string | null
         }
         Insert: {
           address?: string | null
+          address_number?: string | null
           ambiente_fiscal?: string | null
           certificado_cnpj?: string | null
           certificado_digital_nome?: string | null
@@ -859,8 +867,10 @@ export type Database = {
           certificado_serial?: string | null
           certificado_status?: string | null
           certificado_ultima_verificacao?: string | null
+          city?: string | null
           cnpj?: string | null
           codigo_municipio_ibge?: string | null
+          complement?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -871,14 +881,19 @@ export type Database = {
           logo_url?: string | null
           modo_fiscal_ativo?: boolean
           name: string
+          neighborhood?: string | null
           phone?: string | null
           primary_color?: string | null
           regime_tributario?: string | null
           secondary_color?: string | null
+          state?: string | null
+          street?: string | null
           updated_at?: string
+          zip_code?: string | null
         }
         Update: {
           address?: string | null
+          address_number?: string | null
           ambiente_fiscal?: string | null
           certificado_cnpj?: string | null
           certificado_digital_nome?: string | null
@@ -888,8 +903,10 @@ export type Database = {
           certificado_serial?: string | null
           certificado_status?: string | null
           certificado_ultima_verificacao?: string | null
+          city?: string | null
           cnpj?: string | null
           codigo_municipio_ibge?: string | null
+          complement?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -900,11 +917,15 @@ export type Database = {
           logo_url?: string | null
           modo_fiscal_ativo?: boolean
           name?: string
+          neighborhood?: string | null
           phone?: string | null
           primary_color?: string | null
           regime_tributario?: string | null
           secondary_color?: string | null
+          state?: string | null
+          street?: string | null
           updated_at?: string
+          zip_code?: string | null
         }
         Relationships: []
       }
@@ -6823,6 +6844,7 @@ export type Database = {
         }
         Returns: {
           address: string | null
+          address_number: string | null
           ambiente_fiscal: string | null
           certificado_cnpj: string | null
           certificado_digital_nome: string | null
@@ -6832,8 +6854,10 @@ export type Database = {
           certificado_serial: string | null
           certificado_status: string | null
           certificado_ultima_verificacao: string | null
+          city: string | null
           cnpj: string | null
           codigo_municipio_ibge: string | null
+          complement: string | null
           created_at: string
           email: string | null
           id: string
@@ -6844,11 +6868,15 @@ export type Database = {
           logo_url: string | null
           modo_fiscal_ativo: boolean
           name: string
+          neighborhood: string | null
           phone: string | null
           primary_color: string | null
           regime_tributario: string | null
           secondary_color: string | null
+          state: string | null
+          street: string | null
           updated_at: string
+          zip_code: string | null
         }
         SetofOptions: {
           from: "*"
