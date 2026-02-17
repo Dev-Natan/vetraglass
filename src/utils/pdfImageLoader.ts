@@ -4,6 +4,7 @@
  */
 
 import { compressImage, CompressionOptions, getCompressionOptions } from './imageCompression';
+import { resolveProductImageUrl } from './imageUrl';
 
 // In-memory cache for loaded images (session-based)
 const imageCache = new Map<string, string>();
@@ -176,19 +177,7 @@ export function clearImageCache(): void {
  * Get product image URL with proper path handling
  */
 export function getProductImageUrl(imageUrl: string | null | undefined): string | null {
-  if (!imageUrl) return null;
-
-  // Full URL already
-  if (imageUrl.startsWith('http')) return imageUrl;
-
-  // Root-relative path
-  if (imageUrl.startsWith('/')) return imageUrl;
-
-  // Storage key — detect bucket
-  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-/i;
-  const bucket = uuidPattern.test(imageUrl) ? 'company-product-images' : 'product-templates';
-  const supabaseUrl = typeof import.meta !== 'undefined' ? import.meta.env.VITE_SUPABASE_URL : '';
-  return `${supabaseUrl}/storage/v1/object/public/${bucket}/${imageUrl}`;
+  return resolveProductImageUrl(imageUrl);
 }
 
 /**
