@@ -340,9 +340,33 @@ export default function Configuracoes() {
               <label className="text-sm font-medium text-muted-foreground">Telefone</label>
               <p className="text-foreground mt-1">{company?.phone || "-"}</p>
             </div>
-            <div className="md:col-span-2">
-              <label className="text-sm font-medium text-muted-foreground">Endereço</label>
-              <p className="text-foreground mt-1">{company?.address || "-"}</p>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">CEP</label>
+              <p className="text-foreground mt-1">{(company as any)?.zip_code || "-"}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Rua</label>
+              <p className="text-foreground mt-1">{(company as any)?.street || "-"}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Número</label>
+              <p className="text-foreground mt-1">{(company as any)?.address_number || "-"}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Bairro</label>
+              <p className="text-foreground mt-1">{(company as any)?.neighborhood || "-"}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Complemento</label>
+              <p className="text-foreground mt-1">{(company as any)?.complement || "-"}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Cidade</label>
+              <p className="text-foreground mt-1">{(company as any)?.city || "-"}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-muted-foreground">Estado</label>
+              <p className="text-foreground mt-1">{(company as any)?.state || "-"}</p>
             </div>
           </div>
         </div>

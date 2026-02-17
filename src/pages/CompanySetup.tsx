@@ -23,15 +23,19 @@ interface CNPJData {
 const companySchema = z.object({
   name: z.string().min(2, 'Nome deve ter no mínimo 2 caracteres'),
   document: z.string().optional().refine((val) => {
-    // Se vazio, é válido (campo opcional)
     if (!val || val.trim() === '') return true;
-    // Se preenchido, deve ser CPF ou CNPJ válido
     const result = validateCPFOrCNPJ(val);
     return result.valid;
   }, 'CPF ou CNPJ inválido'),
   phone: z.string().optional(),
   email: z.string().email('Email inválido').optional().or(z.literal('')),
-  address: z.string().optional(),
+  zipCode: z.string().optional(),
+  street: z.string().optional(),
+  addressNumber: z.string().optional(),
+  complement: z.string().optional(),
+  neighborhood: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().max(2, 'Use a sigla do estado (ex: SP)').optional(),
 });
 
 export default function CompanySetup() {
@@ -53,7 +57,13 @@ export default function CompanySetup() {
   const [document, setDocument] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-  const [address, setAddress] = useState('');
+  const [zipCode, setZipCode] = useState('');
+  const [street, setStreet] = useState('');
+  const [addressNumber, setAddressNumber] = useState('');
+  const [complement, setComplement] = useState('');
+  const [neighborhood, setNeighborhood] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
 
   const handleDocumentChange = (value: string) => {
     const formatted = formatCPFOrCNPJ(value);
@@ -90,12 +100,12 @@ export default function CompanySetup() {
         setCnpjValidated(true);
         setCnpjData(data.data);
         
-        // Auto-fill fields with data from Receita Federal
         if (data.data.nomeFantasia || data.data.razaoSocial) {
           setName(data.data.nomeFantasia || data.data.razaoSocial);
         }
         if (data.data.endereco) {
-          setAddress(data.data.endereco);
+          // Try to parse address into parts
+          setStreet(data.data.endereco);
         }
         if (data.data.telefone) {
           setPhone(data.data.telefone);
@@ -141,7 +151,13 @@ export default function CompanySetup() {
       document: cleanDocument,
       phone,
       email,
-      address,
+      zipCode,
+      street,
+      addressNumber,
+      complement,
+      neighborhood,
+      city,
+      state,
     });
     
     if (!validation.success) {
@@ -167,7 +183,7 @@ export default function CompanySetup() {
           _cnpj: cleanDocument || null, // Envia null se vazio
           _phone: phone || null,
           _email: email || null,
-          _address: address || null,
+          _address: [street, addressNumber, complement, neighborhood, city, state, zipCode].filter(Boolean).join(', ') || null,
         });
       
       if (companyError) {
@@ -332,14 +348,84 @@ export default function CompanySetup() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="address">Endereço</Label>
+                <Label htmlFor="zipCode">CEP</Label>
                 <Input
-                  id="address"
-                  placeholder="Rua Principal, 123 - Centro"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
+                  id="zipCode"
+                  placeholder="00000-000"
+                  value={zipCode}
+                  onChange={(e) => setZipCode(e.target.value)}
+                  disabled={isLoading}
+                  maxLength={9}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="street">Rua / Logradouro</Label>
+                <Input
+                  id="street"
+                  placeholder="Rua Principal"
+                  value={street}
+                  onChange={(e) => setStreet(e.target.value)}
                   disabled={isLoading}
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="addressNumber">Número</Label>
+                  <Input
+                    id="addressNumber"
+                    placeholder="123"
+                    value={addressNumber}
+                    onChange={(e) => setAddressNumber(e.target.value)}
+                    disabled={isLoading}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="complement">Complemento</Label>
+                  <Input
+                    id="complement"
+                    placeholder="Sala 01"
+                    value={complement}
+                    onChange={(e) => setComplement(e.target.value)}
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="neighborhood">Bairro</Label>
+                <Input
+                  id="neighborhood"
+                  placeholder="Centro"
+                  value={neighborhood}
+                  onChange={(e) => setNeighborhood(e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="city">Cidade</Label>
+                  <Input
+                    id="city"
+                    placeholder="São Paulo"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    disabled={isLoading}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="state">Estado (UF)</Label>
+                  <Input
+                    id="state"
+                    placeholder="SP"
+                    value={state}
+                    onChange={(e) => setState(e.target.value.toUpperCase())}
+                    disabled={isLoading}
+                    maxLength={2}
+                  />
+                </div>
               </div>
               
               <Button type="submit" className="w-full" disabled={isLoading}>
