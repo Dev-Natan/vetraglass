@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { CACHE_TIMES } from "@/lib/queryConfig";
+
 
 export interface ProductLinha {
   id: string;
@@ -31,7 +31,7 @@ export function useProductLinhas(includeInactive = false) {
       if (error) throw error;
       return data as ProductLinha[];
     },
-    ...CACHE_TIMES.STATIC,
+    // Zero cache - sempre dados frescos
   });
 }
 

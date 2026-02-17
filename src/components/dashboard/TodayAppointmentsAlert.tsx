@@ -8,7 +8,7 @@ import { Calendar, Clock, MapPin, User, Wrench, Ruler, Eye, ChevronRight } from 
 import { format, isToday, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
-import { CACHE_TIMES } from '@/lib/queryConfig';
+
 
 interface Appointment {
   id: string;
@@ -54,7 +54,7 @@ export function TodayAppointmentsAlert() {
       return data as Appointment[];
     },
     enabled: !!currentCompany?.id,
-    ...CACHE_TIMES.DYNAMIC,
+    
   });
 
   if (todayAppointments.length === 0) {

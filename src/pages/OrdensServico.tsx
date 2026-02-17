@@ -35,7 +35,7 @@ import {
 import { toast } from 'sonner';
 import { usePagination } from '@/hooks/usePagination';
 import { PaginationControls } from '@/components/common/PaginationControls';
-import { CACHE_TIMES } from '@/lib/queryConfig';
+
 import { OSProductionBadge } from '@/components/ordens-servico/OSProductionBadge';
 import { OSCalendarView } from '@/components/ordens-servico/OSCalendarView';
 import { OSTodayView } from '@/components/ordens-servico/OSTodayView';
@@ -114,7 +114,7 @@ export default function OrdensServico() {
       return data as OrdemServico[];
     },
     enabled: !!currentCompany?.id,
-    ...CACHE_TIMES.SEMI_STATIC,
+    // Zero cache - sempre dados frescos
   });
 
   // Fetch today's appointments count

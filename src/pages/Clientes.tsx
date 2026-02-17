@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { usePagination } from '@/hooks/usePagination';
 import { PaginationControls } from '@/components/common/PaginationControls';
-import { CACHE_TIMES, queryKeys } from '@/lib/queryConfig';
+import { queryKeys } from '@/lib/queryConfig';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 
@@ -105,7 +105,7 @@ export default function Clientes() {
       return data as Client[];
     },
     enabled: !!currentCompany?.id,
-    ...CACHE_TIMES.SEMI_STATIC,
+    // Zero cache - sempre dados frescos
   });
 
   const createMutation = useMutation({

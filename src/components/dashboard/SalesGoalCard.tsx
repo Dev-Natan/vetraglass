@@ -19,7 +19,7 @@ import { Target, TrendingUp, Settings, Trophy, Flame } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
-import { CACHE_TIMES } from '@/lib/queryConfig';
+
 
 interface SalesGoal {
   id: string;
@@ -58,7 +58,7 @@ export function SalesGoalCard() {
       return data as SalesGoal | null;
     },
     enabled: !!currentCompany?.id,
-    ...CACHE_TIMES.DYNAMIC,
+    
   });
 
   // Fetch current month sales
@@ -79,7 +79,7 @@ export function SalesGoalCard() {
       return (data || []).reduce((sum, s) => sum + (s.total_amount || 0), 0);
     },
     enabled: !!currentCompany?.id,
-    ...CACHE_TIMES.DYNAMIC,
+    
   });
 
   // Save goal mutation
