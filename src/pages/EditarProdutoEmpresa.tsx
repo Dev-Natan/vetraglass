@@ -533,8 +533,12 @@ export default function EditarProdutoEmpresa() {
   if (!product) {
     return (
       <MainLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-muted-foreground">Produto não encontrado</div>
+        <div className="flex flex-col items-center justify-center h-64 gap-4">
+          <div className="text-muted-foreground">Produto não encontrado (ID: {id})</div>
+          {productError && <div className="text-destructive text-sm">Erro: {productError.message}</div>}
+          <Button variant="outline" onClick={() => navigate(-1)}>
+            Voltar
+          </Button>
         </div>
       </MainLayout>
     );
