@@ -492,7 +492,7 @@ export default function ProdutosLinha() {
                       size="sm"
                       className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-medium text-xs h-9"
                       onClick={() => {
-                        navigate(`/produtos/empresa/editar/${product.id}`);
+                        navigate(`/produtos/empresa/editar/${product.companyProductId || product.id}`);
                       }}
                     >
                       Editar
@@ -627,7 +627,7 @@ export default function ProdutosLinha() {
                       size="sm"
                       className="bg-orange-500 hover:bg-orange-600 text-white font-medium"
                       onClick={() => {
-                        navigate(`/produtos/empresa/editar/${product.id}`);
+                        navigate(`/produtos/empresa/editar/${product.companyProductId || product.id}`);
                       }}
                     >
                       Editar produto
