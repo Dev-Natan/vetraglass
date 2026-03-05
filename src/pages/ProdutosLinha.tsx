@@ -492,7 +492,9 @@ export default function ProdutosLinha() {
                       size="sm"
                       className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-medium text-xs h-9"
                       onClick={() => {
-                        navigate(`/produtos/empresa/editar/${product.companyProductId || product.id}`);
+                        const editId = product.companyProductId || product.id;
+                        console.log('[ProdutosLinha] Navigating to edit. companyProductId:', product.companyProductId, 'product.id:', product.id, 'using:', editId, 'is_custom:', product.is_custom);
+                        navigate(`/produtos/empresa/editar/${editId}`);
                       }}
                     >
                       Editar

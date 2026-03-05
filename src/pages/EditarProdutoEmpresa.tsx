@@ -154,17 +154,20 @@ export default function EditarProdutoEmpresa() {
   });
 
   // Fetch company product
-  const { data: product, isLoading: productLoading } = useQuery({
+  const { data: product, isLoading: productLoading, error: productError } = useQuery({
     queryKey: ['company-product', id],
     queryFn: async () => {
+      console.log('[EditarProdutoEmpresa] Fetching company product with id:', id);
       const { data, error } = await supabase
         .from('company_products')
         .select(`
           *,
           product_template:product_templates(id, name, image_url, linha)
         `)
-        .eq('id', id)
+        .eq('id', id!)
         .maybeSingle();
+      
+      console.log('[EditarProdutoEmpresa] Query result:', { data, error });
       if (error) throw error;
       return data as CompanyProduct | null;
     },
@@ -530,8 +533,12 @@ export default function EditarProdutoEmpresa() {
   if (!product) {
     return (
       <MainLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-muted-foreground">Produto não encontrado</div>
+        <div className="flex flex-col items-center justify-center h-64 gap-4">
+          <div className="text-muted-foreground">Produto não encontrado (ID: {id})</div>
+          {productError && <div className="text-destructive text-sm">Erro: {productError.message}</div>}
+          <Button variant="outline" onClick={() => navigate(-1)}>
+            Voltar
+          </Button>
         </div>
       </MainLayout>
     );
