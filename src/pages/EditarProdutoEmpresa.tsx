@@ -154,17 +154,20 @@ export default function EditarProdutoEmpresa() {
   });
 
   // Fetch company product
-  const { data: product, isLoading: productLoading } = useQuery({
+  const { data: product, isLoading: productLoading, error: productError } = useQuery({
     queryKey: ['company-product', id],
     queryFn: async () => {
+      console.log('[EditarProdutoEmpresa] Fetching company product with id:', id);
       const { data, error } = await supabase
         .from('company_products')
         .select(`
           *,
           product_template:product_templates(id, name, image_url, linha)
         `)
-        .eq('id', id)
+        .eq('id', id!)
         .maybeSingle();
+      
+      console.log('[EditarProdutoEmpresa] Query result:', { data, error });
       if (error) throw error;
       return data as CompanyProduct | null;
     },
