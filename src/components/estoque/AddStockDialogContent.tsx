@@ -30,6 +30,18 @@ interface AddStockDialogContentProps {
   onClose: () => void;
 }
 
+function parseInputNumber(value: string): number {
+  if (!value) return 0;
+
+  const normalized = value.trim().replace(/\s/g, '');
+  const safeValue = normalized.includes(',') && normalized.includes('.')
+    ? normalized.replace(/\./g, '').replace(',', '.')
+    : normalized.replace(',', '.');
+
+  const parsed = Number.parseFloat(safeValue);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
   const { currentCompany, user } = useAuth();
   const { toast } = useToast();
@@ -41,8 +53,6 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
   const [selectedItemId, setSelectedItemId] = useState('');
   const [quantity, setQuantity] = useState('');
   const [minQuantity, setMinQuantity] = useState('');
-  const [cost, setCost] = useState('');
-  const [salePrice, setSalePrice] = useState('');
   const [pricingData, setPricingData] = useState<ItemPricingData>(defaultPricingData);
   const [linha, setLinha] = useState('');
   const [category, setCategory] = useState('');
@@ -109,14 +119,23 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
   const registerPurchaseMutation = useMutation({
     mutationFn: async () => {
       if (!currentCompany?.id || !selectedItem) throw new Error('Dados incompletos');
-      const quantityNum = parseFloat(quantity);
-      const costNum = parseFloat(pricingData.costPerBar) || parseFloat(cost) || 0;
-      const salePriceNum = parseFloat(pricingData.salePricePerBar) || parseFloat(salePrice) || 0;
+      const quantityNum = parseInputNumber(quantity);
+      const costNum =
+        parseInputNumber(pricingData.costPerBar) ||
+        parseInputNumber(pricingData.costPerKg) ||
+        parseInputNumber(pricingData.costPerMeter);
+      const salePriceNum =
+        parseInputNumber(pricingData.salePricePerBar) ||
+        parseInputNumber(pricingData.salePricePerKg) ||
+        parseInputNumber(pricingData.salePricePerMeter);
       if (!quantityNum || quantityNum <= 0) throw new Error('Quantidade é obrigatória e deve ser maior que zero');
       if (!linha) throw new Error('Linha é obrigatória');
       if (!category) throw new Error('Categoria é obrigatória');
 
-      const pNum = (v: string) => parseFloat(v) || null;
+      const pNum = (v: string) => {
+        const parsed = parseInputNumber(v);
+        return parsed > 0 ? parsed : null;
+      };
 
       const { data: companyItem, error: itemError } = await supabase
         .from('company_items')
@@ -150,14 +169,14 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
       if (existingStockRecord) {
         const { error: updateError } = await supabase.from('company_stock').update({
           quantity: existingStockRecord.quantity + quantityNum, company_item_id: companyItem.id,
-          min_quantity: parseFloat(minQuantity) || 0, allow_fractional: allowFractional,
+          min_quantity: parseInputNumber(minQuantity) || 0, allow_fractional: allowFractional,
           updated_at: new Date().toISOString()
         }).eq('id', existingStockRecord.id);
         if (updateError) throw new Error(`Erro ao atualizar estoque: ${updateError.message}`);
       } else {
         const { error: insertError } = await supabase.from('company_stock').insert({
           company_id: currentCompany.id, item_template_id: selectedItemId, company_item_id: companyItem.id,
-          quantity: quantityNum, min_quantity: parseFloat(minQuantity) || 0,
+          quantity: quantityNum, min_quantity: parseInputNumber(minQuantity) || 0,
           allow_fractional: allowFractional, is_active: true,
         });
         if (insertError) throw new Error(`Erro ao criar estoque: ${insertError.message}`);
@@ -198,12 +217,21 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
       toast({ title: 'Selecione um item', description: 'Você precisa selecionar um item para registrar a compra.', variant: 'destructive' });
       return;
     }
-    if (!quantity || parseFloat(quantity) <= 0) {
+    if (!quantity || parseInputNumber(quantity) <= 0) {
       toast({ title: 'Quantidade obrigatória', description: 'Informe a quantidade comprada.', variant: 'destructive' });
       return;
     }
-    if (!cost) { toast({ title: 'Custo obrigatório', description: 'Informe o preço de custo do item.', variant: 'destructive' }); return; }
-    if (!salePrice) { toast({ title: 'Preço de venda obrigatório', description: 'Informe o preço de venda do item.', variant: 'destructive' }); return; }
+    const costValue =
+      parseInputNumber(pricingData.costPerBar) ||
+      parseInputNumber(pricingData.costPerKg) ||
+      parseInputNumber(pricingData.costPerMeter);
+    const salePriceValue =
+      parseInputNumber(pricingData.salePricePerBar) ||
+      parseInputNumber(pricingData.salePricePerKg) ||
+      parseInputNumber(pricingData.salePricePerMeter);
+
+    if (costValue <= 0) { toast({ title: 'Custo obrigatório', description: 'Informe o preço de custo do item.', variant: 'destructive' }); return; }
+    if (salePriceValue <= 0) { toast({ title: 'Preço de venda obrigatório', description: 'Informe o preço de venda do item.', variant: 'destructive' }); return; }
     registerPurchaseMutation.mutate();
   };
 
