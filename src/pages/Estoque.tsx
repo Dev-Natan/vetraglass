@@ -45,7 +45,7 @@ export default function Estoque() {
   const [priceDialogOpen, setPriceDialogOpen] = useState(false);
   const [entradaDialogOpen, setEntradaDialogOpen] = useState(false);
   const [saidaDialogOpen, setSaidaDialogOpen] = useState(false);
-  const [createCustomItemDialogOpen, setCreateCustomItemDialogOpen] = useState(false);
+  const [mainTab, setMainTab] = useState('estoque');
   const [mainTab, setMainTab] = useState('estoque');
   const [selectedItem, setSelectedItem] = useState<{
     id: string;
