@@ -1,16 +1,16 @@
 project_id = "ozghdguhibqssyfbgomh"
 
 [functions.validate-cnpj]
-verify_jwt = true
+verify_jwt = false
 
 [functions.validate-ncm]
-verify_jwt = true
+verify_jwt = false
 
 [functions.validate-certificate]
-verify_jwt = true
+verify_jwt = false
 
 [functions.geocode-address]
-verify_jwt = true
+verify_jwt = false
 
 [functions.admin-delete-item-template]
 verify_jwt = false
@@ -19,7 +19,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.import-municipios-ibge]
-verify_jwt = true
+verify_jwt = false
 
 [functions.send-employee-invite]
 verify_jwt = false
