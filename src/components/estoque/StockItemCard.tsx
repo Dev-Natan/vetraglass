@@ -6,6 +6,19 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { StockItem } from '@/hooks/useStockData';
 
+const unitLabels: Record<string, string> = {
+  un: 'un',
+  m: 'm',
+  ml: 'm',
+  m2: 'm²',
+  'metro linear': 'm',
+  'metro quadrado': 'm²',
+  kg: 'kg',
+  barra: 'barras',
+  pç: 'pç',
+  pc: 'pç',
+};
+
 const itemTypeLabels: Record<string, string> = {
   glass: 'Vidro',
   profile: 'Perfil',
