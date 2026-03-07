@@ -379,52 +379,13 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
           </div>
         </div>
 
-        {/* Peso e Tamanho */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="space-y-1.5">
-            <Label className="text-xs flex items-center gap-1"><Weight className="h-3 w-3 text-muted-foreground" /> Peso (Kg)</Label>
-            <Input type="number" min="0" step="0.001" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="0,000" className="h-9" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs flex items-center gap-1"><Ruler className="h-3 w-3 text-muted-foreground" /> Tamanho (mm)</Label>
-            <Input type="number" min="0" step="1" value={itemSize} onChange={(e) => setItemSize(e.target.value)} placeholder="Ex: 6000" className="h-9" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Preço/Kg (R$)</Label>
-            <Input type="number" min="0" step="0.01" value={pricePerKg} onChange={(e) => setPricePerKg(e.target.value)} placeholder="0,00" className="h-9" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Preço/Barra (R$)</Label>
-            <Input type="number" min="0" step="0.01" value={pricePerBar} onChange={(e) => setPricePerBar(e.target.value)} placeholder="0,00" className="h-9" />
-          </div>
-        </div>
-
-        {/* Preços adicionais */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="space-y-1.5">
-            <Label className="text-xs">Preço/Unidade (R$)</Label>
-            <Input type="number" min="0" step="0.01" value={pricePerUnit} onChange={(e) => setPricePerUnit(e.target.value)} placeholder="0,00" className="h-9" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Preço/m² (R$)</Label>
-            <Input type="number" min="0" step="0.01" value={pricePerSqm} onChange={(e) => setPricePerSqm(e.target.value)} placeholder="0,00" className="h-9" />
-          </div>
-        </div>
+        {/* Pricing Fields */}
+        <ItemPricingFields data={pricingData} onChange={setPricingData} itemType={category} />
 
         <div className="flex items-center justify-between p-2.5 rounded-lg bg-background border h-9">
           <Label htmlFor="allowFractionalSys" className="text-xs cursor-pointer">Venda Fracionada</Label>
           <Switch id="allowFractionalSys" checked={allowFractional} onCheckedChange={setAllowFractional} className="scale-75" />
         </div>
-        {costNum > 0 && salePriceNum > 0 && (
-          <div className={cn("p-2 rounded border text-xs flex items-center justify-between", profit >= 0 ? "bg-accent/50 border-accent" : "bg-destructive/10 border-destructive/20")}>
-            <span className="text-muted-foreground flex items-center gap-1">
-              {profit < 0 && <AlertCircle className="h-3 w-3 text-destructive" />} Margem:
-            </span>
-            <span className={cn("font-medium", profit >= 0 ? 'text-accent-foreground' : 'text-destructive')}>
-              {margin.toFixed(1)}% • R$ {profit.toFixed(2)} {profit >= 0 ? 'lucro' : 'prejuízo'}
-            </span>
-          </div>
-        )}
       </div>
 
       {/* Fiscal */}
