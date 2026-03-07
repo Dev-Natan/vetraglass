@@ -31,6 +31,9 @@ export interface StockItem {
     is_custom: boolean;
     cost: number | null;
     sale_price: number | null;
+    bar_length_mm: number | null;
+    weight_per_meter: number | null;
+    weight_kg: number | null;
   } | null;
   priceInfo?: {
     id: string;
@@ -102,7 +105,7 @@ export function useStockData({ companyId }: UseStockDataOptions): StockDataResul
       
       const { data, error } = await supabase
         .from('company_items')
-        .select('id, name, type, unit, image_url, linha, is_custom, cost, sale_price')
+        .select('id, name, type, unit, image_url, linha, is_custom, cost, sale_price, bar_length_mm, weight_per_meter, weight_kg')
         .eq('company_id', companyId)
         .eq('is_active', true);
 
