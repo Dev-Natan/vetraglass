@@ -36,8 +36,15 @@ export const defaultPricingData: ItemPricingData = {
 };
 
 function safeNum(v: string): number {
-  const n = parseFloat(v);
-  return isNaN(n) ? 0 : n;
+  if (!v) return 0;
+
+  const normalized = v.trim().replace(/\s/g, '');
+  const safeValue = normalized.includes(',') && normalized.includes('.')
+    ? normalized.replace(/\./g, '').replace(',', '.')
+    : normalized.replace(',', '.');
+
+  const n = Number.parseFloat(safeValue);
+  return Number.isFinite(n) ? n : 0;
 }
 
 export function ItemPricingFields({ data, onChange }: ItemPricingFieldsProps) {
@@ -83,7 +90,11 @@ export function ItemPricingFields({ data, onChange }: ItemPricingFieldsProps) {
       if (cMeter > 0) updates.salePricePerMeter = (cMeter * mult).toFixed(2);
     }
 
-    if (Object.keys(updates).length > 0) {
+    const hasChanges = Object.entries(updates).some(([key, value]) => {
+      return data[key as keyof ItemPricingData] !== value;
+    });
+
+    if (hasChanges) {
       onChange({ ...data, ...updates });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
