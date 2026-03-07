@@ -119,9 +119,15 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
   const registerPurchaseMutation = useMutation({
     mutationFn: async () => {
       if (!currentCompany?.id || !selectedItem) throw new Error('Dados incompletos');
-      const quantityNum = parseFloat(quantity);
-      const costNum = parseFloat(pricingData.costPerBar) || parseFloat(cost) || 0;
-      const salePriceNum = parseFloat(pricingData.salePricePerBar) || parseFloat(salePrice) || 0;
+      const quantityNum = parseInputNumber(quantity);
+      const costNum =
+        parseInputNumber(pricingData.costPerBar) ||
+        parseInputNumber(pricingData.costPerKg) ||
+        parseInputNumber(pricingData.costPerMeter);
+      const salePriceNum =
+        parseInputNumber(pricingData.salePricePerBar) ||
+        parseInputNumber(pricingData.salePricePerKg) ||
+        parseInputNumber(pricingData.salePricePerMeter);
       if (!quantityNum || quantityNum <= 0) throw new Error('Quantidade é obrigatória e deve ser maior que zero');
       if (!linha) throw new Error('Linha é obrigatória');
       if (!category) throw new Error('Categoria é obrigatória');
