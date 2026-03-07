@@ -218,8 +218,17 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
       toast({ title: 'Quantidade obrigatória', description: 'Informe a quantidade comprada.', variant: 'destructive' });
       return;
     }
-    if (!cost) { toast({ title: 'Custo obrigatório', description: 'Informe o preço de custo do item.', variant: 'destructive' }); return; }
-    if (!salePrice) { toast({ title: 'Preço de venda obrigatório', description: 'Informe o preço de venda do item.', variant: 'destructive' }); return; }
+    const costValue =
+      parseInputNumber(pricingData.costPerBar) ||
+      parseInputNumber(pricingData.costPerKg) ||
+      parseInputNumber(pricingData.costPerMeter);
+    const salePriceValue =
+      parseInputNumber(pricingData.salePricePerBar) ||
+      parseInputNumber(pricingData.salePricePerKg) ||
+      parseInputNumber(pricingData.salePricePerMeter);
+
+    if (costValue <= 0) { toast({ title: 'Custo obrigatório', description: 'Informe o preço de custo do item.', variant: 'destructive' }); return; }
+    if (salePriceValue <= 0) { toast({ title: 'Preço de venda obrigatório', description: 'Informe o preço de venda do item.', variant: 'destructive' }); return; }
     registerPurchaseMutation.mutate();
   };
 
