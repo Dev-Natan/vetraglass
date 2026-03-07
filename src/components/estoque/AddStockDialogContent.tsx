@@ -169,14 +169,14 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
       if (existingStockRecord) {
         const { error: updateError } = await supabase.from('company_stock').update({
           quantity: existingStockRecord.quantity + quantityNum, company_item_id: companyItem.id,
-          min_quantity: parseFloat(minQuantity) || 0, allow_fractional: allowFractional,
+          min_quantity: parseInputNumber(minQuantity) || 0, allow_fractional: allowFractional,
           updated_at: new Date().toISOString()
         }).eq('id', existingStockRecord.id);
         if (updateError) throw new Error(`Erro ao atualizar estoque: ${updateError.message}`);
       } else {
         const { error: insertError } = await supabase.from('company_stock').insert({
           company_id: currentCompany.id, item_template_id: selectedItemId, company_item_id: companyItem.id,
-          quantity: quantityNum, min_quantity: parseFloat(minQuantity) || 0,
+          quantity: quantityNum, min_quantity: parseInputNumber(minQuantity) || 0,
           allow_fractional: allowFractional, is_active: true,
         });
         if (insertError) throw new Error(`Erro ao criar estoque: ${insertError.message}`);
@@ -217,7 +217,7 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
       toast({ title: 'Selecione um item', description: 'Você precisa selecionar um item para registrar a compra.', variant: 'destructive' });
       return;
     }
-    if (!quantity || parseFloat(quantity) <= 0) {
+    if (!quantity || parseInputNumber(quantity) <= 0) {
       toast({ title: 'Quantidade obrigatória', description: 'Informe a quantidade comprada.', variant: 'destructive' });
       return;
     }
