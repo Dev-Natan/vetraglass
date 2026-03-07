@@ -171,35 +171,43 @@ export function PrecificacaoCreateProduct() {
       const piecesQty = comp.piecesQuantity || 1;
       const calculatedQuantity = piecesQty * quantity;
 
-      if (comp.itemType === 'glass') {
+      if (comp.itemType === 'glass' || comp.pricingUnit === 'm2') {
         const calcW = evaluateFormula(comp.widthFormula || 'Largura', width, height);
         const calcH = evaluateFormula(comp.heightFormula || 'Altura', width, height);
         const glassAreaM2 = (calcW * calcH) / 1_000_000;
+        const totalCost = calculateComponentCost(comp.unitCost, comp.pricingUnit, comp.itemType, 0, glassAreaM2, calculatedQuantity, comp.weightPerMeter);
+        const totalPrice = calculateComponentCost(comp.unitPrice, comp.pricingUnit, comp.itemType, 0, glassAreaM2, calculatedQuantity, comp.weightPerMeter);
         return {
           ...comp,
           calculatedQuantity,
           calculatedLength: glassAreaM2,
           displayMeasure: `${glassAreaM2.toFixed(4)} m²`,
-          totalCost: comp.unitCost * glassAreaM2 * calculatedQuantity,
-          totalPrice: comp.unitPrice * glassAreaM2 * calculatedQuantity,
+          totalCost,
+          totalPrice,
         };
-      } else if (comp.itemType === 'profile') {
+      } else if (comp.itemType === 'profile' || comp.pricingUnit === 'barra' || comp.pricingUnit === 'kg' || comp.pricingUnit === 'ml') {
         const length = comp.heightFormula
           ? evaluateFormula(comp.heightFormula, width, height)
           : comp.widthFormula
             ? evaluateFormula(comp.widthFormula, width, height)
             : evaluateFormula(comp.quantityFormula, width, height);
         const lengthM = length / 1000;
-        // Profile prices are per 6m bar — convert to price per meter
-        const costPerMeter = comp.unitCost / 6;
-        const pricePerMeter = comp.unitPrice / 6;
+        const totalCost = calculateComponentCost(comp.unitCost, comp.pricingUnit, comp.itemType, length, 0, calculatedQuantity, comp.weightPerMeter);
+        const totalPrice = calculateComponentCost(comp.unitPrice, comp.pricingUnit, comp.itemType, length, 0, calculatedQuantity, comp.weightPerMeter);
+        
+        let displayMeasure = `${length} mm (${lengthM.toFixed(3)} m)`;
+        if (comp.pricingUnit === 'kg' && comp.weightPerMeter > 0) {
+          const weightKg = comp.weightPerMeter * lengthM;
+          displayMeasure = `${length} mm (${weightKg.toFixed(3)} kg)`;
+        }
+        
         return {
           ...comp,
           calculatedQuantity,
           calculatedLength: length,
-          displayMeasure: `${length} mm (${lengthM.toFixed(3)} m)`,
-          totalCost: costPerMeter * lengthM * calculatedQuantity,
-          totalPrice: pricePerMeter * lengthM * calculatedQuantity,
+          displayMeasure,
+          totalCost,
+          totalPrice,
         };
       } else {
         return {
