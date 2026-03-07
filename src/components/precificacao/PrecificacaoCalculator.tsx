@@ -633,15 +633,16 @@ export function PrecificacaoCalculator() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Item</TableHead>
-                        <TableHead className="w-20">Tipo</TableHead>
-                        <TableHead className="w-16">Peças</TableHead>
-                        <TableHead className="w-28">Fórmula Larg.</TableHead>
-                        <TableHead className="w-28">Fórmula Alt.</TableHead>
-                        <TableHead className="w-24 text-right">Custo</TableHead>
-                        <TableHead className="text-center">Medida</TableHead>
-                        <TableHead className="text-right">Custo Total</TableHead>
-                        <TableHead className="w-10"></TableHead>
+                         <TableHead>Item</TableHead>
+                         <TableHead className="w-20">Tipo</TableHead>
+                         <TableHead className="w-16">Peças</TableHead>
+                         <TableHead className="w-28">Fórmula Larg.</TableHead>
+                         <TableHead className="w-28">Fórmula Alt.</TableHead>
+                         <TableHead className="w-28">Unidade Preço</TableHead>
+                         <TableHead className="w-24 text-right">Custo</TableHead>
+                         <TableHead className="text-center">Medida</TableHead>
+                         <TableHead className="text-right">Custo Total</TableHead>
+                         <TableHead className="w-10"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
