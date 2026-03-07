@@ -115,7 +115,7 @@ export const StockItemCard = memo(function StockItemCard({
         <div className="text-right">
           <p className="font-semibold text-lg">
             {item.quantity}{' '}
-            <span className="text-sm text-muted-foreground">{item.item_template?.unit}</span>
+            <span className="text-sm text-muted-foreground">{item.item_template?.unit || item.company_item?.unit}</span>
           </p>
           {(item.min_quantity ?? 0) > 0 && (
             <p className="text-xs text-muted-foreground">Mín: {item.min_quantity}</p>
