@@ -252,7 +252,6 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
   };
 
   const isFiscalReady = fiscalData.ncm && fiscalData.cfop_venda && fiscalData.origem;
-  const isFiscalReady = fiscalData.ncm && fiscalData.cfop_venda && fiscalData.origem;
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
