@@ -196,8 +196,6 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
     }
     if (!cost) { toast({ title: 'Custo obrigatório', description: 'Informe o preço de custo do item.', variant: 'destructive' }); return; }
     if (!salePrice) { toast({ title: 'Preço de venda obrigatório', description: 'Informe o preço de venda do item.', variant: 'destructive' }); return; }
-    if (!linha) { toast({ title: 'Linha obrigatória', description: 'Selecione a linha do produto.', variant: 'destructive' }); return; }
-    if (!category) { toast({ title: 'Categoria obrigatória', description: 'Selecione a categoria do produto.', variant: 'destructive' }); return; }
     registerPurchaseMutation.mutate();
   };
 
