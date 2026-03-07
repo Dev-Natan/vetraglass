@@ -20,7 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Package, Check, Search, X, ShoppingCart, ChevronDown, Receipt, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Loader2, Package, Check, Search, X, ShoppingCart, ChevronDown, Receipt, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { FiscalFieldsCard, type FiscalFieldsData } from '@/components/produtos/FiscalFieldsCard';
 import { useItemTypeLabels } from '@/hooks/useItemTypes';
