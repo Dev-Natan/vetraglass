@@ -38,6 +38,11 @@ interface ItemTemplate {
   unit: string;
   linha: string | null;
   default_price: number;
+  weight_per_meter: number | null;
+  weight_per_bar: number | null;
+  default_cost: number | null;
+  default_sale_price: number | null;
+  bar_length_mm: number | null;
   specifications: unknown;
   image_url: string | null;
   is_active: boolean;
@@ -78,6 +83,11 @@ export default function ItemTemplates() {
     unit: 'barra',
     linha: '',
     default_price: '',
+    weight_per_meter: '',
+    weight_per_bar: '',
+    default_cost: '',
+    default_sale_price: '',
+    bar_length_mm: '6000',
     specifications: '{}',
     is_active: true,
   });
