@@ -81,8 +81,8 @@ export function CreateCustomItemContent({ onClose }: CreateCustomItemContentProp
     mutationFn: async () => {
       if (!currentCompany?.id) throw new Error('Empresa não selecionada');
       const quantityNum = parseFloat(quantity);
-      const costValue = parseFloat(cost);
-      const salePriceValue = parseFloat(salePrice);
+      const costValue = parseFloat(pricingData.costPerBar) || parseFloat(cost) || 0;
+      const salePriceValue = parseFloat(pricingData.salePricePerBar) || parseFloat(salePrice) || 0;
       const minQty = parseFloat(minQuantity) || 0;
 
       if (!name.trim()) throw new Error('Nome do item é obrigatório');
