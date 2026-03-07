@@ -24,7 +24,6 @@ import { Loader2, Package, Check, Search, X, ShoppingCart, ChevronDown, Receipt,
 import { cn } from '@/lib/utils';
 import { FiscalFieldsCard, type FiscalFieldsData } from '@/components/produtos/FiscalFieldsCard';
 import { useItemTypeLabels } from '@/hooks/useItemTypes';
-import { useItemTypeLabels } from '@/hooks/useItemTypes';
 
 interface AddStockDialogContentProps {
   onClose: () => void;
@@ -51,8 +50,6 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
     ncm: '', cfop_venda: '', cfop_venda_interestadual: '', cest: '', origem: '', codigo_servico: '', aliquota_iss: '',
   });
 
-  const { data: categories } = useProductCategories();
-  const { data: linhas } = useProductLinhas();
   const { labels: itemTypeLabels } = useItemTypeLabels();
 
   const { data: companyData } = useQuery({
