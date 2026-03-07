@@ -120,7 +120,7 @@ export default function ItemTemplates() {
       
       let query = supabase
         .from('item_templates')
-        .select('id, name, description, type, unit, linha, default_price, specifications, image_url, is_active, created_at', { count: 'exact' });
+        .select('id, name, description, type, unit, linha, default_price, weight_per_meter, weight_per_bar, default_cost, default_sale_price, bar_length_mm, specifications, image_url, is_active, created_at', { count: 'exact' });
       
       if (searchTerm) {
         query = query.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
@@ -215,7 +215,7 @@ export default function ItemTemplates() {
         const { data: urlData } = supabase.storage.from('item-templates').getPublicUrl(filePath);
         imageUrl = urlData.publicUrl;
       }
-      const itemData = {
+      const itemData: any = {
         name: data.name,
         description: data.description || null,
         type: data.type,
@@ -226,6 +226,13 @@ export default function ItemTemplates() {
         image_url: imageUrl,
         is_active: data.is_active,
       };
+      if (data.type === 'profile') {
+        itemData.weight_per_meter = parseFloat(data.weight_per_meter) || null;
+        itemData.weight_per_bar = parseFloat(data.weight_per_bar) || null;
+        itemData.default_cost = parseFloat(data.default_cost) || null;
+        itemData.default_sale_price = parseFloat(data.default_sale_price) || null;
+        itemData.bar_length_mm = parseInt(data.bar_length_mm) || 6000;
+      }
       if (data.id) {
         const { error } = await supabase.from('item_templates').update(itemData).eq('id', data.id);
         if (error) throw error;
@@ -388,7 +395,7 @@ export default function ItemTemplates() {
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setEditingItem(null);
-    setFormData({ name: '', description: '', type: 'profile', unit: 'barra', linha: '', default_price: '', specifications: '{}', is_active: true });
+    setFormData({ name: '', description: '', type: 'profile', unit: 'barra', linha: '', default_price: '', weight_per_meter: '', weight_per_bar: '', default_cost: '', default_sale_price: '', bar_length_mm: '6000', specifications: '{}', is_active: true });
     setImageFile(null);
     setImagePreview(null);
   };
@@ -402,6 +409,11 @@ export default function ItemTemplates() {
       unit: item.unit,
       linha: item.linha || '',
       default_price: item.default_price.toString(),
+      weight_per_meter: item.weight_per_meter?.toString() || '',
+      weight_per_bar: item.weight_per_bar?.toString() || '',
+      default_cost: item.default_cost?.toString() || '',
+      default_sale_price: item.default_sale_price?.toString() || '',
+      bar_length_mm: item.bar_length_mm?.toString() || '6000',
       specifications: JSON.stringify(item.specifications, null, 2),
       is_active: item.is_active,
     });
