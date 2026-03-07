@@ -511,6 +511,28 @@ export default function ItemTemplates() {
             {item.default_price > 0 ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.default_price) : '—'}
           </span>
         </div>
+        {item.type === 'profile' && (item.weight_per_meter || item.default_cost || item.default_sale_price) && (
+          <div className="space-y-1 pt-1 border-t text-xs">
+            {item.weight_per_meter && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Peso</span>
+                <span>{item.weight_per_meter} kg/m</span>
+              </div>
+            )}
+            {item.default_cost && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Custo sug.</span>
+                <span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.default_cost)}</span>
+              </div>
+            )}
+            {item.default_sale_price && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Venda sug.</span>
+                <span className="text-green-600 font-medium">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.default_sale_price)}</span>
+              </div>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
