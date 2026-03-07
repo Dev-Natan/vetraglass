@@ -2788,7 +2788,9 @@ export type Database = {
           cfop_venda_interestadual: string | null
           codigo_servico: string | null
           created_at: string
+          default_cost: number | null
           default_price: number | null
+          default_sale_price: number | null
           default_supplier: string | null
           description: string | null
           id: string
@@ -2803,6 +2805,8 @@ export type Database = {
           type: Database["public"]["Enums"]["item_type"]
           unit: string
           updated_at: string
+          weight_per_bar: number | null
+          weight_per_meter: number | null
         }
         Insert: {
           aliquota_cbs?: number | null
@@ -2815,7 +2819,9 @@ export type Database = {
           cfop_venda_interestadual?: string | null
           codigo_servico?: string | null
           created_at?: string
+          default_cost?: number | null
           default_price?: number | null
+          default_sale_price?: number | null
           default_supplier?: string | null
           description?: string | null
           id?: string
@@ -2830,6 +2836,8 @@ export type Database = {
           type: Database["public"]["Enums"]["item_type"]
           unit?: string
           updated_at?: string
+          weight_per_bar?: number | null
+          weight_per_meter?: number | null
         }
         Update: {
           aliquota_cbs?: number | null
@@ -2842,7 +2850,9 @@ export type Database = {
           cfop_venda_interestadual?: string | null
           codigo_servico?: string | null
           created_at?: string
+          default_cost?: number | null
           default_price?: number | null
+          default_sale_price?: number | null
           default_supplier?: string | null
           description?: string | null
           id?: string
@@ -2857,6 +2867,8 @@ export type Database = {
           type?: Database["public"]["Enums"]["item_type"]
           unit?: string
           updated_at?: string
+          weight_per_bar?: number | null
+          weight_per_meter?: number | null
         }
         Relationships: []
       }
