@@ -30,6 +30,18 @@ interface AddStockDialogContentProps {
   onClose: () => void;
 }
 
+function parseInputNumber(value: string): number {
+  if (!value) return 0;
+
+  const normalized = value.trim().replace(/\s/g, '');
+  const safeValue = normalized.includes(',') && normalized.includes('.')
+    ? normalized.replace(/\./g, '').replace(',', '.')
+    : normalized.replace(',', '.');
+
+  const parsed = Number.parseFloat(safeValue);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
   const { currentCompany, user } = useAuth();
   const { toast } = useToast();
@@ -41,8 +53,6 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
   const [selectedItemId, setSelectedItemId] = useState('');
   const [quantity, setQuantity] = useState('');
   const [minQuantity, setMinQuantity] = useState('');
-  const [cost, setCost] = useState('');
-  const [salePrice, setSalePrice] = useState('');
   const [pricingData, setPricingData] = useState<ItemPricingData>(defaultPricingData);
   const [linha, setLinha] = useState('');
   const [category, setCategory] = useState('');
