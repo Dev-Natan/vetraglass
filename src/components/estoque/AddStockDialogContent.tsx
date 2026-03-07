@@ -110,11 +110,9 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
     mutationFn: async () => {
       if (!currentCompany?.id || !selectedItem) throw new Error('Dados incompletos');
       const quantityNum = parseFloat(quantity);
-      const costNum = parseFloat(cost);
-      const salePriceNum = parseFloat(salePrice);
+      const costNum = parseFloat(pricingData.costPerBar) || parseFloat(cost) || 0;
+      const salePriceNum = parseFloat(pricingData.salePricePerBar) || parseFloat(salePrice) || 0;
       if (!quantityNum || quantityNum <= 0) throw new Error('Quantidade é obrigatória e deve ser maior que zero');
-      if (costNum < 0) throw new Error('Preço de custo não pode ser negativo');
-      if (salePriceNum < 0) throw new Error('Preço de venda não pode ser negativo');
       if (!linha) throw new Error('Linha é obrigatória');
       if (!category) throw new Error('Categoria é obrigatória');
 
@@ -372,14 +370,6 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
           <div className="space-y-1.5">
             <Label htmlFor="sys-quantity" className="text-xs">Quantidade <span className="text-destructive">*</span></Label>
             <Input id="sys-quantity" type="number" min="0.01" step="0.01" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="0" className="h-9" required />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="sys-cost" className="text-xs">Custo (R$) <span className="text-destructive">*</span></Label>
-            <Input id="sys-cost" type="number" min="0" step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="0,00" className="h-9" required />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="sys-salePrice" className="text-xs">Venda (R$) <span className="text-destructive">*</span></Label>
-            <Input id="sys-salePrice" type="number" min="0" step="0.01" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} placeholder="0,00" className="h-9" required />
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Qtd. Mínima</Label>

@@ -81,8 +81,8 @@ export function CreateCustomItemContent({ onClose }: CreateCustomItemContentProp
     mutationFn: async () => {
       if (!currentCompany?.id) throw new Error('Empresa não selecionada');
       const quantityNum = parseFloat(quantity);
-      const costValue = parseFloat(cost);
-      const salePriceValue = parseFloat(salePrice);
+      const costValue = parseFloat(pricingData.costPerBar) || parseFloat(cost) || 0;
+      const salePriceValue = parseFloat(pricingData.salePricePerBar) || parseFloat(salePrice) || 0;
       const minQty = parseFloat(minQuantity) || 0;
 
       if (!name.trim()) throw new Error('Nome do item é obrigatório');
@@ -211,16 +211,6 @@ export function CreateCustomItemContent({ onClose }: CreateCustomItemContentProp
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="custom-cost">Custo Unitário (R$) *</Label>
-            <Input id="custom-cost" type="number" step="0.01" min="0" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="0,00" required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="custom-salePrice">Preço de Venda (R$) *</Label>
-            <Input id="custom-salePrice" type="number" step="0.01" min="0" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} placeholder="0,00" required />
-          </div>
-        </div>
 
         {/* Pricing Fields */}
         <ItemPricingFields data={pricingData} onChange={setPricingData} itemType={category} />
