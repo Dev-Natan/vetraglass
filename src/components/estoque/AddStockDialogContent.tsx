@@ -132,7 +132,10 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
       if (!linha) throw new Error('Linha é obrigatória');
       if (!category) throw new Error('Categoria é obrigatória');
 
-      const pNum = (v: string) => parseFloat(v) || null;
+      const pNum = (v: string) => {
+        const parsed = parseInputNumber(v);
+        return parsed > 0 ? parsed : null;
+      };
 
       const { data: companyItem, error: itemError } = await supabase
         .from('company_items')
