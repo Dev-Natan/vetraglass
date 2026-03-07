@@ -25,6 +25,7 @@ import { FiscalFieldsCard, type FiscalFieldsData } from '@/components/produtos/F
 import { useItemTypes } from '@/hooks/useItemTypes';
 import { ImageUploadField } from '@/components/common/ImageUploadField';
 import { useProductLinhas } from '@/hooks/useProductLinhas';
+import { ItemPricingFields, defaultPricingData, type ItemPricingData } from './ItemPricingFields';
 
 interface CreateCustomItemContentProps {
   onClose: () => void;
@@ -58,6 +59,7 @@ export function CreateCustomItemContent({ onClose }: CreateCustomItemContentProp
   const [minQuantity, setMinQuantity] = useState('');
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [tempItemId] = useState(() => crypto.randomUUID());
+  const [pricingData, setPricingData] = useState<ItemPricingData>(defaultPricingData);
   const [fiscalExpanded, setFiscalExpanded] = useState(false);
   const [fiscalData, setFiscalData] = useState<FiscalFieldsData>({
     ncm: '', cfop_venda: '', cfop_venda_interestadual: '', cest: '', origem: '', codigo_servico: '', aliquota_iss: '',
@@ -90,6 +92,8 @@ export function CreateCustomItemContent({ onClose }: CreateCustomItemContentProp
       if (!linha) throw new Error('Linha é obrigatória');
       if (!quantityNum || quantityNum <= 0) throw new Error('Quantidade é obrigatória e deve ser maior que zero');
 
+      const pNum = (v: string) => parseFloat(v) || null;
+
       const { data: companyItem, error: itemError } = await supabase
         .from('company_items')
         .insert({
@@ -97,6 +101,16 @@ export function CreateCustomItemContent({ onClose }: CreateCustomItemContentProp
           description: description.trim() || null, type: category, unit, linha,
           cost: costValue, sale_price: salePriceValue, image_url: imageUrl,
           is_custom: true, is_active: true,
+          bar_length_mm: pNum(pricingData.barLengthMm),
+          weight_kg: pNum(pricingData.weightKg),
+          weight_per_meter: pNum(pricingData.weightPerMeter),
+          cost_per_bar: pNum(pricingData.costPerBar),
+          cost_per_kg: pNum(pricingData.costPerKg),
+          cost_per_meter: pNum(pricingData.costPerMeter),
+          sale_price_per_bar: pNum(pricingData.salePricePerBar),
+          sale_price_per_kg: pNum(pricingData.salePricePerKg),
+          sale_price_per_meter: pNum(pricingData.salePricePerMeter),
+          sale_margin_percent: pNum(pricingData.saleMarginPercent) ?? 0,
           ncm: fiscalData.ncm || null, cfop_venda: fiscalData.cfop_venda || null,
           cfop_venda_interestadual: fiscalData.cfop_venda_interestadual || null,
           cest: fiscalData.cest || null, origem: fiscalData.origem || null,
