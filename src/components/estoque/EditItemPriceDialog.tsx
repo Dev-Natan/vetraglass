@@ -297,7 +297,8 @@ export function EditItemPriceDialog({
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (!currentCompany?.id || !itemTemplateId) throw new Error('Dados incompletos');
+      if (!currentCompany?.id) throw new Error('Dados incompletos');
+      if (!itemTemplateId && !companyItem) throw new Error('Dados incompletos');
 
       const costNum = pNum(pricingData.costPerBar) ?? pNum(pricingData.costPerKg) ?? pNum(pricingData.costPerMeter) ?? 0;
       const salePriceNum = pNum(pricingData.salePricePerBar) ?? pNum(pricingData.salePricePerKg) ?? pNum(pricingData.salePricePerMeter) ?? 0;
