@@ -75,25 +75,32 @@ export const StockItemCard = memo(function StockItemCard({
             </p>
           )}
           <div className="flex items-center gap-3 mt-1 text-xs flex-wrap">
-            {item.priceInfo && ((item.priceInfo.cost ?? 0) > 0 || item.priceInfo.price > 0) ? (
-              <>
-                {(item.priceInfo.cost ?? 0) > 0 && (
-                  <span className="text-muted-foreground">
-                    Custo: R$ {Number(item.priceInfo.cost).toFixed(2)}
-                  </span>
-                )}
-                {item.priceInfo.price > 0 && (
-                  <span className="text-green-600 font-medium">
-                    Venda: R$ {Number(item.priceInfo.price).toFixed(2)}
-                  </span>
-                )}
-              </>
-            ) : (
-              <span className="text-muted-foreground/70 flex items-center gap-1">
-                <DollarSign className="w-3 h-3" />
-                Clique para definir preços
-              </span>
-            )}
+            {(() => {
+              const cost = item.priceInfo?.cost ?? item.company_item?.cost ?? 0;
+              const price = item.priceInfo?.price ?? item.company_item?.sale_price ?? 0;
+              if (cost > 0 || price > 0) {
+                return (
+                  <>
+                    {cost > 0 && (
+                      <span className="text-muted-foreground">
+                        Custo: R$ {Number(cost).toFixed(2)}
+                      </span>
+                    )}
+                    {price > 0 && (
+                      <span className="text-green-600 font-medium">
+                        Venda: R$ {Number(price).toFixed(2)}
+                      </span>
+                    )}
+                  </>
+                );
+              }
+              return (
+                <span className="text-muted-foreground/70 flex items-center gap-1">
+                  <DollarSign className="w-3 h-3" />
+                  Clique para definir preços
+                </span>
+              );
+            })()}
             {item.updated_at && (
               <span className="text-muted-foreground flex items-center gap-1">
                 <Clock className="w-3 h-3" />
