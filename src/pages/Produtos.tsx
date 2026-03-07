@@ -268,13 +268,13 @@ export default function Produtos() {
         {/* Products Grid */}
         <div className="section-card p-3 sm:p-4">
           {isLoading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
               {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
                 <div key={i} className="h-28 sm:h-36 rounded-lg bg-muted animate-pulse" />
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
               {/* Add Card - First Position */}
               <AddLinhaCard onClick={() => setCreateLinhaDialogOpen(true)} />
 
