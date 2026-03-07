@@ -6,25 +6,56 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { StockItem } from '@/hooks/useStockData';
 
-const unitLabels: Record<string, string> = {
-  un: 'un',
-  m: 'm',
-  ml: 'm',
-  m2: 'm²',
-  'metro linear': 'm',
-  'metro quadrado': 'm²',
-  kg: 'kg',
-  barra: 'barras',
-  pç: 'pç',
-  pc: 'pç',
-};
-
 const itemTypeLabels: Record<string, string> = {
   glass: 'Vidro',
   profile: 'Perfil',
   accessory: 'Acessório',
   service: 'Serviço',
 };
+
+function formatQuantityDisplay(item: StockItem) {
+  const rawUnit = (item.item_template?.unit || item.company_item?.unit || 'un').toLowerCase().trim();
+  const qty = item.quantity;
+  const barLengthMm = item.company_item?.bar_length_mm;
+  const type = item.item_template?.type || item.company_item?.type || '';
+
+  // Profiles with bar_length_mm: show "X barras de Y m = Z m"
+  if (barLengthMm && barLengthMm > 0 && (type === 'profile' || rawUnit === 'barra' || rawUnit === 'barras')) {
+    const barLengthM = barLengthMm / 1000;
+    const totalMeters = qty * barLengthM;
+    const fmtQty = Number.isInteger(qty) ? qty : qty.toFixed(2);
+    const fmtTotal = Number.isInteger(totalMeters) ? totalMeters : totalMeters.toFixed(2);
+    const fmtBar = Number.isInteger(barLengthM) ? barLengthM : barLengthM.toFixed(2);
+    return {
+      primary: `${fmtQty} ${qty === 1 ? 'barra' : 'barras'}`,
+      detail: `de ${fmtBar} m = ${fmtTotal} m`,
+    };
+  }
+
+  // Glass (m²)
+  if (rawUnit === 'm2' || rawUnit === 'metro quadrado') {
+    const fmtQty = Number.isInteger(qty) ? qty : qty.toFixed(2);
+    return { primary: `${fmtQty} m²`, detail: null };
+  }
+
+  // Linear meter
+  if (rawUnit === 'm' || rawUnit === 'ml' || rawUnit === 'metro linear') {
+    const fmtQty = Number.isInteger(qty) ? qty : qty.toFixed(2);
+    return { primary: `${fmtQty} m`, detail: null };
+  }
+
+  // Kg
+  if (rawUnit === 'kg') {
+    const fmtQty = Number.isInteger(qty) ? qty : qty.toFixed(2);
+    return { primary: `${fmtQty} kg`, detail: null };
+  }
+
+  // Default (un, pç, etc.)
+  const unitMap: Record<string, string> = { un: 'un', pç: 'pç', pc: 'pç' };
+  const displayUnit = unitMap[rawUnit] || rawUnit;
+  const fmtQty = Number.isInteger(qty) ? qty : qty.toFixed(2);
+  return { primary: `${fmtQty} ${displayUnit}`, detail: null };
+}
 
 interface StockItemCardProps {
   item: StockItem;
@@ -39,6 +70,8 @@ export const StockItemCard = memo(function StockItemCard({
   onToggleActive,
   showActivateBtn = true,
 }: StockItemCardProps) {
+  const qtyDisplay = formatQuantityDisplay(item);
+
   return (
     <div
       className={`flex items-center justify-between gap-3 p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer ${
@@ -126,18 +159,14 @@ export const StockItemCard = memo(function StockItemCard({
 
       <div className="flex items-center gap-3">
         <div className="text-right">
-          {(() => {
-            const rawUnit = (item.item_template?.unit || item.company_item?.unit || 'un').toLowerCase().trim();
-            const displayUnit = unitLabels[rawUnit] || rawUnit;
-            const qty = item.quantity;
-            const formattedQty = Number.isInteger(qty) ? qty : qty.toFixed(2);
-            return (
-              <p className="font-semibold text-lg">
-                {formattedQty}{' '}
-                <span className="text-sm text-muted-foreground">{displayUnit}</span>
-              </p>
-            );
-          })()}
+          <p className="font-semibold text-lg whitespace-nowrap">
+            {qtyDisplay.primary}
+          </p>
+          {qtyDisplay.detail && (
+            <p className="text-xs text-muted-foreground whitespace-nowrap">
+              {qtyDisplay.detail}
+            </p>
+          )}
           {(item.min_quantity ?? 0) > 0 && (
             <p className="text-xs text-muted-foreground">Mín: {item.min_quantity}</p>
           )}
@@ -158,7 +187,6 @@ export const StockItemCard = memo(function StockItemCard({
     </div>
   );
 }, (prevProps, nextProps) => {
-  // Custom comparison for better performance
   return (
     prevProps.item.id === nextProps.item.id &&
     prevProps.item.quantity === nextProps.item.quantity &&
@@ -168,6 +196,7 @@ export const StockItemCard = memo(function StockItemCard({
     prevProps.item.priceInfo?.price === nextProps.item.priceInfo?.price &&
     prevProps.item.company_item?.cost === nextProps.item.company_item?.cost &&
     prevProps.item.company_item?.sale_price === nextProps.item.company_item?.sale_price &&
+    prevProps.item.company_item?.bar_length_mm === nextProps.item.company_item?.bar_length_mm &&
     prevProps.showActivateBtn === nextProps.showActivateBtn
   );
 });
