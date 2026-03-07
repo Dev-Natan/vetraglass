@@ -139,6 +139,8 @@ export function PrecificacaoCreateProduct() {
       itemName: item.name,
       itemType: item.type,
       unit: item.unit,
+      pricingUnit: getDefaultPricingUnit(item.type),
+      weightPerMeter: 0,
       quantityFormula: '1',
       widthFormula: item.type === 'profile' || item.type === 'glass' ? 'Largura' : '',
       heightFormula: item.type === 'glass' ? 'Altura' : '',
@@ -146,7 +148,7 @@ export function PrecificacaoCreateProduct() {
       cutAngle: null,
       notes: '',
       unitCost: item.default_price || 0,
-      unitPrice: 0, // calculated from margin
+      unitPrice: 0,
     };
 
     setCompositionItems(prev => [...prev, newItem]);
