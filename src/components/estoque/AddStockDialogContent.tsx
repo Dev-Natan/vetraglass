@@ -284,8 +284,8 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
         </div>
       </div>
 
-      {/* Items Grid */}
-      <div className="min-h-[260px]">
+      {/* Items Grid - limited height with scroll */}
+      <div className="max-h-[35vh] overflow-y-auto border-b">
         <div className="px-6 py-4 space-y-4">
           {loadingItems ? (
             <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
