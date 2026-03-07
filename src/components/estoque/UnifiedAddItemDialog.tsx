@@ -28,7 +28,7 @@ export function UnifiedAddItemDialog({ open, onOpenChange }: UnifiedAddItemDialo
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-4xl h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
+      <DialogContent className="w-[calc(100vw-1rem)] sm:max-w-4xl h-[95dvh] sm:h-[90dvh] max-h-[95dvh] flex flex-col p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-6 pt-6 pb-3 border-b">
           <div className="flex items-center gap-2">
             <Plus className="h-5 w-5 text-primary" />
