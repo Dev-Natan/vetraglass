@@ -50,27 +50,34 @@ export function ItemPricingFields({ data, onChange }: ItemPricingFieldsProps) {
   useEffect(() => {
     const updates: Partial<ItemPricingData> = {};
 
+    // Weight per meter
     if (weightKg > 0 && barLengthM > 0) {
       updates.weightPerMeter = (weightKg / barLengthM).toFixed(3);
     }
 
-    if (costPerBar > 0 && barLengthM > 0) {
-      updates.costPerMeter = (costPerBar / barLengthM).toFixed(2);
-    } else if (costPerKg > 0 && weightKg > 0 && barLengthM > 0) {
-      const totalCost = costPerKg * weightKg;
-      updates.costPerMeter = (totalCost / barLengthM).toFixed(2);
-      if (!costPerBar) updates.costPerBar = totalCost.toFixed(2);
+    // Derive cost per kg from cost per bar
+    let derivedCostPerKg = costPerKg;
+    let derivedCostPerBar = costPerBar;
+
+    if (costPerBar > 0 && weightKg > 0) {
+      derivedCostPerKg = costPerBar / weightKg;
+      updates.costPerKg = derivedCostPerKg.toFixed(2);
+    } else if (costPerKg > 0 && weightKg > 0) {
+      derivedCostPerBar = costPerKg * weightKg;
+      updates.costPerBar = derivedCostPerBar.toFixed(2);
     }
 
-    if (costPerBar > 0 && weightKg > 0 && !costPerKg) {
-      updates.costPerKg = (costPerBar / weightKg).toFixed(2);
+    // Cost per meter
+    if (derivedCostPerBar > 0 && barLengthM > 0) {
+      updates.costPerMeter = (derivedCostPerBar / barLengthM).toFixed(2);
     }
 
+    // Sale prices = cost * (1 + margin%)
     if (margin > 0) {
       const mult = 1 + margin / 100;
-      const cBar = safeNum(updates.costPerBar || data.costPerBar);
-      const cKg = safeNum(updates.costPerKg || data.costPerKg);
-      const cMeter = safeNum(updates.costPerMeter || data.costPerMeter);
+      const cBar = safeNum(updates.costPerBar ?? data.costPerBar);
+      const cKg = safeNum(updates.costPerKg ?? data.costPerKg);
+      const cMeter = safeNum(updates.costPerMeter ?? data.costPerMeter);
       if (cBar > 0) updates.salePricePerBar = (cBar * mult).toFixed(2);
       if (cKg > 0) updates.salePricePerKg = (cKg * mult).toFixed(2);
       if (cMeter > 0) updates.salePricePerMeter = (cMeter * mult).toFixed(2);
