@@ -679,6 +679,35 @@ export function PrecificacaoCalculator() {
                             />
                           </TableCell>
                           <TableCell>
+                            <Select 
+                              value={item.pricingUnit} 
+                              onValueChange={v => updateManualItem(item.id, 'pricingUnit', v as PricingUnit)}
+                            >
+                              <SelectTrigger className="h-7 text-xs w-28">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {getAllowedPricingUnits(item.itemType).map(pu => (
+                                  <SelectItem key={pu} value={pu} className="text-xs">
+                                    {pricingUnitLabels[pu]}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {item.pricingUnit === 'kg' && (
+                              <div className="mt-1">
+                                <Input
+                                  type="number" min={0} step={0.001}
+                                  value={item.weightPerMeter || ''}
+                                  onChange={e => updateManualItem(item.id, 'weightPerMeter', parseFloat(e.target.value) || 0)}
+                                  className="h-6 w-28 text-[10px]"
+                                  placeholder="kg/m"
+                                />
+                                <span className="text-[9px] text-muted-foreground">Peso por metro (kg/m)</span>
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell>
                             <Input
                               type="number" min={0} step={0.01}
                               value={item.unitCost || ''}
@@ -686,9 +715,9 @@ export function PrecificacaoCalculator() {
                               className="h-7 w-24 text-xs text-right"
                             />
                             <span className="text-[9px] text-muted-foreground block text-right">
-                              {item.itemType === 'profile' ? '/barra 6m' : item.itemType === 'glass' ? '/m²' : '/un'}
+                              {pricingUnitShort[item.pricingUnit]}
                             </span>
-                            {item.itemType === 'profile' && item.unitCost > 0 && (
+                            {item.pricingUnit === 'barra' && item.unitCost > 0 && (
                               <span className="text-[9px] text-primary block text-right">
                                 = {formatCurrency(item.unitCost / 6)}/m
                               </span>
