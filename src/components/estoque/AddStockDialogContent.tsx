@@ -42,6 +42,12 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
   const [minQuantity, setMinQuantity] = useState('');
   const [cost, setCost] = useState('');
   const [salePrice, setSalePrice] = useState('');
+  const [weight, setWeight] = useState('');
+  const [itemSize, setItemSize] = useState('');
+  const [pricePerKg, setPricePerKg] = useState('');
+  const [pricePerBar, setPricePerBar] = useState('');
+  const [pricePerUnit, setPricePerUnit] = useState('');
+  const [pricePerSqm, setPricePerSqm] = useState('');
   const [linha, setLinha] = useState('');
   const [category, setCategory] = useState('');
   const [allowFractional, setAllowFractional] = useState(false);
