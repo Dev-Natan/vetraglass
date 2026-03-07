@@ -284,7 +284,7 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
       </div>
 
       {/* Items Grid */}
-      <div className="flex-1 min-h-0 overflow-y-auto" style={{ maxHeight: '300px' }}>
+      <div className="flex-1 min-h-0 overflow-y-auto" style={{ maxHeight: '450px' }}>
         <div className="px-6 py-4 space-y-4">
           {loadingItems ? (
             <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
@@ -294,7 +294,7 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
               <p className="text-sm text-muted-foreground">Nenhum item encontrado com os filtros aplicados.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
               {filteredItems.map((item) => {
                 const isSelected = selectedItemId === item.id;
                 const isInStock = existingStock?.includes(item.id);
@@ -312,8 +312,8 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
                       </div>
                     )}
                     {isInStock && !isSelected && <Badge variant="secondary" className="absolute top-2 left-2 text-[9px]">Em estoque</Badge>}
-                    <div className="w-14 h-14 rounded-lg border bg-background flex items-center justify-center mb-2 overflow-hidden">
-                      {item.image_url ? <img src={item.image_url} alt={item.name} loading="lazy" className="max-h-full max-w-full object-contain" /> : <Package className="h-6 w-6 text-muted-foreground/50" />}
+                    <div className="w-20 h-20 rounded-lg border bg-background flex items-center justify-center mb-2 overflow-hidden">
+                      {item.image_url ? <img src={item.image_url} alt={item.name} loading="lazy" className="max-h-full max-w-full object-contain" /> : <Package className="h-8 w-8 text-muted-foreground/50" />}
                     </div>
                     <p className="text-xs font-medium text-center line-clamp-2 leading-tight mb-0.5">{item.name}</p>
                     <p className="text-[10px] text-muted-foreground">
