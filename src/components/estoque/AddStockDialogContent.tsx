@@ -290,8 +290,8 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
       </div>
 
       {/* Items Grid */}
-      <div className="flex-1 min-h-0 overflow-y-auto" style={{ maxHeight: '250px' }}>
-        <div className="px-6 py-4 space-y-6">
+      <div className="flex-1 min-h-0 overflow-y-auto" style={{ maxHeight: '300px' }}>
+        <div className="px-6 py-4 space-y-4">
           {loadingItems ? (
             <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
           ) : filteredItems.length === 0 ? (
@@ -300,51 +300,37 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
               <p className="text-sm text-muted-foreground">Nenhum item encontrado com os filtros aplicados.</p>
             </div>
           ) : (
-            itemsByLinhaAndType.sortedLinhaKeys.map((linhaKey) => (
-              <div key={linhaKey} className="space-y-4">
-                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 sticky top-0 bg-background py-2 z-10">
-                  <span className="h-px flex-1 bg-border" />
-                  <span className="px-3 py-1 bg-primary/10 text-primary rounded-full">{linhaKey}</span>
-                  <span className="h-px flex-1 bg-border" />
-                </h3>
-                {Object.keys(itemsByLinhaAndType.grouped[linhaKey]).sort().map((typeKey) => (
-                  <div key={`${linhaKey}-${typeKey}`} className="ml-2">
-                    <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-muted-foreground/40" />
-                      {itemTypeLabels[typeKey] || typeKey}
-                      <span className="text-[10px] text-muted-foreground/60">({itemsByLinhaAndType.grouped[linhaKey][typeKey].length})</span>
-                    </h4>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 ml-4">
-                      {itemsByLinhaAndType.grouped[linhaKey][typeKey].map((item) => {
-                        const isSelected = selectedItemId === item.id;
-                        const isInStock = existingStock?.includes(item.id);
-                        const weight = getItemWeight(item);
-                        return (
-                          <button key={item.id} type="button" onClick={() => handleItemSelect(item.id)}
-                            className={cn(
-                              "relative flex flex-col items-center p-3 rounded-lg border-2 transition-all duration-200",
-                              "hover:shadow-md hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20",
-                              isSelected ? "border-primary bg-primary/5 shadow-md" : isInStock ? "border-accent bg-accent/30" : "border-border bg-card"
-                            )}>
-                            {isSelected && (
-                              <div className="absolute top-2 left-2 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
-                                <Check className="h-3 w-3 text-primary-foreground" />
-                              </div>
-                            )}
-                            {isInStock && !isSelected && <Badge variant="secondary" className="absolute top-2 left-2 text-[9px]">Em estoque</Badge>}
-                            <div className="w-16 h-16 rounded-lg border bg-background flex items-center justify-center mb-2 overflow-hidden">
-                              {item.image_url ? <img src={item.image_url} alt={item.name} loading="lazy" className="max-h-full max-w-full object-contain" /> : <Package className="h-6 w-6 text-muted-foreground/50" />}
-                            </div>
-                            <p className="text-xs font-medium text-center line-clamp-2 leading-tight mb-1">{item.name}</p>
-                            {weight && <p className="text-[10px] text-muted-foreground">{String(weight)} Kg/ML</p>}
-                          </button>
-                        );
-                      })}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+              {filteredItems.map((item) => {
+                const isSelected = selectedItemId === item.id;
+                const isInStock = existingStock?.includes(item.id);
+                const weight = getItemWeight(item);
+                return (
+                  <button key={item.id} type="button" onClick={() => handleItemSelect(item.id)}
+                    className={cn(
+                      "relative flex flex-col items-center p-3 rounded-lg border-2 transition-all duration-200",
+                      "hover:shadow-md hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20",
+                      isSelected ? "border-primary bg-primary/5 shadow-md" : isInStock ? "border-accent bg-accent/30" : "border-border bg-card"
+                    )}>
+                    {isSelected && (
+                      <div className="absolute top-2 left-2 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
+                        <Check className="h-3 w-3 text-primary-foreground" />
+                      </div>
+                    )}
+                    {isInStock && !isSelected && <Badge variant="secondary" className="absolute top-2 left-2 text-[9px]">Em estoque</Badge>}
+                    <div className="w-14 h-14 rounded-lg border bg-background flex items-center justify-center mb-2 overflow-hidden">
+                      {item.image_url ? <img src={item.image_url} alt={item.name} loading="lazy" className="max-h-full max-w-full object-contain" /> : <Package className="h-6 w-6 text-muted-foreground/50" />}
                     </div>
-                  </div>
-                ))}
-              </div>
-            ))
+                    <p className="text-xs font-medium text-center line-clamp-2 leading-tight mb-0.5">{item.name}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {itemTypeLabels[item.type] || item.type}
+                      {item.linha && ` • ${item.linha}`}
+                    </p>
+                    {weight && <p className="text-[10px] text-muted-foreground">{String(weight)} Kg/ML</p>}
+                  </button>
+                );
+              })}
+            </div>
           )}
         </div>
       </div>
@@ -370,14 +356,14 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
         </div>
       )}
 
-      {/* Purchase Data */}
+      {/* Purchase Data - simplified, no duplicate linha/category */}
       <div className="px-6 py-4 border-t space-y-4 bg-muted/20">
         <div className="flex items-center gap-2 mb-2">
           <ShoppingCart className="h-4 w-4 text-primary" />
           <span className="text-sm font-medium">Dados da Compra</span>
           <span className="text-xs text-muted-foreground">(Campos obrigatórios *)</span>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="space-y-1.5">
             <Label htmlFor="sys-quantity" className="text-xs">Quantidade <span className="text-destructive">*</span></Label>
             <Input id="sys-quantity" type="number" min="0.01" step="0.01" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="0" className="h-9" required />
@@ -390,25 +376,6 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
             <Label htmlFor="sys-salePrice" className="text-xs">Venda (R$) <span className="text-destructive">*</span></Label>
             <Input id="sys-salePrice" type="number" min="0" step="0.01" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} placeholder="0,00" className="h-9" required />
           </div>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <div className="space-y-1.5">
-            <Label className="text-xs">Linha <span className="text-destructive">*</span></Label>
-            <Select value={linha} onValueChange={setLinha}>
-              <SelectTrigger className="h-9"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-              <SelectContent>
-                {linhas?.map((l) => <SelectItem key={l.id} value={l.name}>{l.name}</SelectItem>)}
-                {selectedItem?.linha && !linhas?.find(l => l.name === selectedItem.linha) && <SelectItem value={selectedItem.linha}>{selectedItem.linha}</SelectItem>}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Categoria <span className="text-destructive">*</span></Label>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className="h-9"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-              <SelectContent>{categories?.map((cat) => <SelectItem key={cat.id} value={cat.slug}>{cat.name}</SelectItem>)}</SelectContent>
-            </Select>
-          </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Qtd. Mínima</Label>
             <Input type="number" min="0" step="0.01" value={minQuantity} onChange={(e) => setMinQuantity(e.target.value)} placeholder="0" className="h-9" />
@@ -419,11 +386,11 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
           <Switch id="allowFractionalSys" checked={allowFractional} onCheckedChange={setAllowFractional} className="scale-75" />
         </div>
         {costNum > 0 && salePriceNum > 0 && (
-          <div className={cn("p-2 rounded border text-xs flex items-center justify-between", profit >= 0 ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200")}>
+          <div className={cn("p-2 rounded border text-xs flex items-center justify-between", profit >= 0 ? "bg-accent/50 border-accent" : "bg-destructive/10 border-destructive/20")}>
             <span className="text-muted-foreground flex items-center gap-1">
               {profit < 0 && <AlertCircle className="h-3 w-3 text-destructive" />} Margem:
             </span>
-            <span className={cn("font-medium", profit >= 0 ? 'text-green-700' : 'text-destructive')}>
+            <span className={cn("font-medium", profit >= 0 ? 'text-accent-foreground' : 'text-destructive')}>
               {margin.toFixed(1)}% • R$ {profit.toFixed(2)} {profit >= 0 ? 'lucro' : 'prejuízo'}
             </span>
           </div>
