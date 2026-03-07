@@ -226,8 +226,10 @@ export function EditItemPriceDialog({
     }
   };
 
-  // Load pricing data from company_item
+  // Load pricing data from company_item - only when data has finished loading
   useEffect(() => {
+    if (loadingCompanyItem || loadingPrice) return; // Wait for queries to finish
+    
     if (companyItem) {
       setPricingData({
         barLengthMm: companyItem.bar_length_mm?.toString() ?? '',
@@ -248,10 +250,15 @@ export function EditItemPriceDialog({
         costPerBar: existingPrice.cost?.toString() ?? '',
         salePricePerBar: existingPrice.price?.toString() ?? '',
       }));
-    } else {
+    }
+    // Only reset to defaults when dialog first opens with no data
+  }, [companyItem, existingPrice, loadingCompanyItem, loadingPrice]);
+  // Reset pricing data when dialog opens with a new item
+  useEffect(() => {
+    if (!open) {
       setPricingData(defaultPricingData);
     }
-  }, [companyItem, existingPrice]);
+  }, [open]);
 
   useEffect(() => {
     if (existingStock) {
