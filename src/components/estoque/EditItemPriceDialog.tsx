@@ -132,19 +132,35 @@ export function EditItemPriceDialog({
 
   // Fetch company_item for pricing fields
   const { data: companyItem, isLoading: loadingCompanyItem } = useQuery({
-    queryKey: ['company-item-details', currentCompany?.id, itemTemplateId],
+    queryKey: ['company-item-details', currentCompany?.id, itemTemplateId, companyItemId],
     queryFn: async () => {
-      if (!currentCompany?.id || !itemTemplateId) return null;
-      const { data, error } = await supabase
-        .from('company_items')
-        .select('*')
-        .eq('company_id', currentCompany.id)
-        .eq('item_template_id', itemTemplateId)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
+      if (!currentCompany?.id) return null;
+      
+      // Try by companyItemId first (works for custom items)
+      if (companyItemId) {
+        const { data, error } = await supabase
+          .from('company_items')
+          .select('*')
+          .eq('id', companyItemId)
+          .maybeSingle();
+        if (!error && data) return data;
+      }
+      
+      // Fallback: query by item_template_id
+      if (itemTemplateId) {
+        const { data, error } = await supabase
+          .from('company_items')
+          .select('*')
+          .eq('company_id', currentCompany.id)
+          .eq('item_template_id', itemTemplateId)
+          .maybeSingle();
+        if (error) throw error;
+        return data;
+      }
+      
+      return null;
     },
-    enabled: !!currentCompany?.id && !!itemTemplateId && open,
+    enabled: !!currentCompany?.id && (!!itemTemplateId || !!companyItemId) && open,
   });
 
   // Fetch item template for fiscal fields
