@@ -20,10 +20,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Package, Check, Search, X, ShoppingCart, ChevronDown, Receipt, AlertCircle, CheckCircle2, Weight, Ruler } from 'lucide-react';
+import { Loader2, Package, Check, Search, X, ShoppingCart, ChevronDown, Receipt, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { FiscalFieldsCard, type FiscalFieldsData } from '@/components/produtos/FiscalFieldsCard';
 import { useItemTypeLabels } from '@/hooks/useItemTypes';
+import { ItemPricingFields, defaultPricingData, type ItemPricingData } from './ItemPricingFields';
 
 interface AddStockDialogContentProps {
   onClose: () => void;
@@ -42,12 +43,7 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
   const [minQuantity, setMinQuantity] = useState('');
   const [cost, setCost] = useState('');
   const [salePrice, setSalePrice] = useState('');
-  const [weight, setWeight] = useState('');
-  const [itemSize, setItemSize] = useState('');
-  const [pricePerKg, setPricePerKg] = useState('');
-  const [pricePerBar, setPricePerBar] = useState('');
-  const [pricePerUnit, setPricePerUnit] = useState('');
-  const [pricePerSqm, setPricePerSqm] = useState('');
+  const [pricingData, setPricingData] = useState<ItemPricingData>(defaultPricingData);
   const [linha, setLinha] = useState('');
   const [category, setCategory] = useState('');
   const [allowFractional, setAllowFractional] = useState(false);
