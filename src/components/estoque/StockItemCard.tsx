@@ -145,6 +145,8 @@ export const StockItemCard = memo(function StockItemCard({
     prevProps.item.min_quantity === nextProps.item.min_quantity &&
     prevProps.item.priceInfo?.cost === nextProps.item.priceInfo?.cost &&
     prevProps.item.priceInfo?.price === nextProps.item.priceInfo?.price &&
+    prevProps.item.company_item?.cost === nextProps.item.company_item?.cost &&
+    prevProps.item.company_item?.sale_price === nextProps.item.company_item?.sale_price &&
     prevProps.showActivateBtn === nextProps.showActivateBtn
   );
 });
