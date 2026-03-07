@@ -118,6 +118,8 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
       if (!linha) throw new Error('Linha é obrigatória');
       if (!category) throw new Error('Categoria é obrigatória');
 
+      const pNum = (v: string) => parseFloat(v) || null;
+
       const { data: companyItem, error: itemError } = await supabase
         .from('company_items')
         .upsert({
@@ -125,6 +127,16 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
           description: selectedItem.description, type: category, unit: selectedItem.unit || 'un', linha,
           cost: costNum, sale_price: salePriceNum, image_url: selectedItem.image_url,
           is_custom: false, is_active: true,
+          bar_length_mm: pNum(pricingData.barLengthMm),
+          weight_kg: pNum(pricingData.weightKg),
+          weight_per_meter: pNum(pricingData.weightPerMeter),
+          cost_per_bar: pNum(pricingData.costPerBar),
+          cost_per_kg: pNum(pricingData.costPerKg),
+          cost_per_meter: pNum(pricingData.costPerMeter),
+          sale_price_per_bar: pNum(pricingData.salePricePerBar),
+          sale_price_per_kg: pNum(pricingData.salePricePerKg),
+          sale_price_per_meter: pNum(pricingData.salePricePerMeter),
+          sale_margin_percent: pNum(pricingData.saleMarginPercent) ?? 0,
           ncm: fiscalData.ncm || null, cfop_venda: fiscalData.cfop_venda || null,
           cfop_venda_interestadual: fiscalData.cfop_venda_interestadual || null,
           cest: fiscalData.cest || null, origem: fiscalData.origem || null,
@@ -239,10 +251,7 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
     return specs.peso_kg_ml || specs.weight_kg_ml || specs.peso;
   };
 
-  const costNum = parseFloat(cost) || 0;
-  const salePriceNum = parseFloat(salePrice) || 0;
-  const margin = costNum > 0 ? ((salePriceNum - costNum) / costNum) * 100 : 0;
-  const profit = salePriceNum - costNum;
+  const isFiscalReady = fiscalData.ncm && fiscalData.cfop_venda && fiscalData.origem;
   const isFiscalReady = fiscalData.ncm && fiscalData.cfop_venda && fiscalData.origem;
 
   return (
