@@ -224,16 +224,8 @@ export function CreateCustomItemContent({ onClose }: CreateCustomItemContentProp
           </div>
         </div>
 
-        {costNum > 0 && salePriceNum > 0 && (
-          <div className="rounded-lg border p-3 bg-muted/30">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Margem de Lucro:</span>
-              <span className={`font-medium ${margin < 0 ? 'text-destructive' : 'text-green-600'}`}>
-                {margin.toFixed(1)}% • R$ {profit.toFixed(2)} por {unit}
-              </span>
-            </div>
-          </div>
-        )}
+        {/* Pricing Fields */}
+        <ItemPricingFields data={pricingData} onChange={setPricingData} itemType={category} />
 
         <div className="space-y-2">
           <Label htmlFor="custom-minQuantity">Estoque Mínimo (opcional)</Label>
