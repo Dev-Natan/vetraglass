@@ -76,8 +76,6 @@ export function CreateCustomItemContent({ onClose }: CreateCustomItemContentProp
 
   const costNum = parseFloat(cost) || 0;
   const salePriceNum = parseFloat(salePrice) || 0;
-  const margin = costNum > 0 ? ((salePriceNum - costNum) / costNum) * 100 : 0;
-  const profit = salePriceNum - costNum;
 
   const createItemMutation = useMutation({
     mutationFn: async () => {
