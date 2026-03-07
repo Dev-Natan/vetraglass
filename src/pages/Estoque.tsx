@@ -123,11 +123,15 @@ export default function Estoque() {
   const filteredItems = useMemo(() => [...inStockItems, ...outOfStockItems], [inStockItems, outOfStockItems]);
 
   const handleOpenPriceDialog = useCallback((item: StockItem) => {
+    const isCustom = item.company_item?.is_custom ?? false;
     setSelectedItem({
       id: item.item_template_id,
-      name: item.item_template?.name ?? 'Item',
-      imageUrl: item.item_template?.image_url,
-      unit: item.item_template?.unit,
+      name: item.company_item?.name ?? item.item_template?.name ?? 'Item',
+      imageUrl: item.company_item?.image_url ?? item.item_template?.image_url,
+      unit: item.item_template?.unit ?? item.company_item?.unit,
+      companyItemId: item.company_item_id,
+      isCustomItem: isCustom,
+      stockId: item.id,
     });
     setPriceDialogOpen(true);
   }, []);
