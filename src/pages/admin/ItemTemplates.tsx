@@ -38,6 +38,11 @@ interface ItemTemplate {
   unit: string;
   linha: string | null;
   default_price: number;
+  weight_per_meter: number | null;
+  weight_per_bar: number | null;
+  default_cost: number | null;
+  default_sale_price: number | null;
+  bar_length_mm: number | null;
   specifications: unknown;
   image_url: string | null;
   is_active: boolean;
@@ -78,6 +83,11 @@ export default function ItemTemplates() {
     unit: 'barra',
     linha: '',
     default_price: '',
+    weight_per_meter: '',
+    weight_per_bar: '',
+    default_cost: '',
+    default_sale_price: '',
+    bar_length_mm: '6000',
     specifications: '{}',
     is_active: true,
   });
@@ -110,7 +120,7 @@ export default function ItemTemplates() {
       
       let query = supabase
         .from('item_templates')
-        .select('id, name, description, type, unit, linha, default_price, specifications, image_url, is_active, created_at', { count: 'exact' });
+        .select('id, name, description, type, unit, linha, default_price, weight_per_meter, weight_per_bar, default_cost, default_sale_price, bar_length_mm, specifications, image_url, is_active, created_at', { count: 'exact' });
       
       if (searchTerm) {
         query = query.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
@@ -205,7 +215,7 @@ export default function ItemTemplates() {
         const { data: urlData } = supabase.storage.from('item-templates').getPublicUrl(filePath);
         imageUrl = urlData.publicUrl;
       }
-      const itemData = {
+      const itemData: any = {
         name: data.name,
         description: data.description || null,
         type: data.type,
@@ -216,6 +226,13 @@ export default function ItemTemplates() {
         image_url: imageUrl,
         is_active: data.is_active,
       };
+      if (data.type === 'profile') {
+        itemData.weight_per_meter = parseFloat(data.weight_per_meter) || null;
+        itemData.weight_per_bar = parseFloat(data.weight_per_bar) || null;
+        itemData.default_cost = parseFloat(data.default_cost) || null;
+        itemData.default_sale_price = parseFloat(data.default_sale_price) || null;
+        itemData.bar_length_mm = parseInt(data.bar_length_mm) || 6000;
+      }
       if (data.id) {
         const { error } = await supabase.from('item_templates').update(itemData).eq('id', data.id);
         if (error) throw error;
@@ -378,7 +395,7 @@ export default function ItemTemplates() {
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setEditingItem(null);
-    setFormData({ name: '', description: '', type: 'profile', unit: 'barra', linha: '', default_price: '', specifications: '{}', is_active: true });
+    setFormData({ name: '', description: '', type: 'profile', unit: 'barra', linha: '', default_price: '', weight_per_meter: '', weight_per_bar: '', default_cost: '', default_sale_price: '', bar_length_mm: '6000', specifications: '{}', is_active: true });
     setImageFile(null);
     setImagePreview(null);
   };
@@ -392,6 +409,11 @@ export default function ItemTemplates() {
       unit: item.unit,
       linha: item.linha || '',
       default_price: item.default_price.toString(),
+      weight_per_meter: item.weight_per_meter?.toString() || '',
+      weight_per_bar: item.weight_per_bar?.toString() || '',
+      default_cost: item.default_cost?.toString() || '',
+      default_sale_price: item.default_sale_price?.toString() || '',
+      bar_length_mm: item.bar_length_mm?.toString() || '6000',
       specifications: JSON.stringify(item.specifications, null, 2),
       is_active: item.is_active,
     });
@@ -489,6 +511,28 @@ export default function ItemTemplates() {
             {item.default_price > 0 ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.default_price) : '—'}
           </span>
         </div>
+        {item.type === 'profile' && (item.weight_per_meter || item.default_cost || item.default_sale_price) && (
+          <div className="space-y-1 pt-1 border-t text-xs">
+            {item.weight_per_meter && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Peso</span>
+                <span>{item.weight_per_meter} kg/m</span>
+              </div>
+            )}
+            {item.default_cost && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Custo sug.</span>
+                <span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.default_cost)}</span>
+              </div>
+            )}
+            {item.default_sale_price && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Venda sug.</span>
+                <span className="text-green-600 font-medium">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.default_sale_price)}</span>
+              </div>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -661,6 +705,47 @@ export default function ItemTemplates() {
                     </div>
                   </div>
                 </div>
+                {/* Profile-specific fields: Weight & Pricing */}
+                {formData.type === 'profile' && (
+                  <div className="space-y-4 p-4 rounded-lg border border-amber-500/20 bg-amber-500/5">
+                    <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <Ruler className="w-4 h-4" />
+                      Peso e Preços Sugestivos (Perfil)
+                    </h4>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="bar_length_mm">Comprimento da Barra (mm)</Label>
+                        <Input id="bar_length_mm" type="number" value={formData.bar_length_mm} onChange={(e) => setFormData({ ...formData, bar_length_mm: e.target.value })} placeholder="6000" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="weight_per_meter">Peso por Metro (kg/m)</Label>
+                        <Input id="weight_per_meter" type="number" step="0.001" value={formData.weight_per_meter} onChange={(e) => {
+                          const wpm = parseFloat(e.target.value) || 0;
+                          const barLen = (parseInt(formData.bar_length_mm) || 6000) / 1000;
+                          setFormData({ ...formData, weight_per_meter: e.target.value, weight_per_bar: wpm > 0 ? (wpm * barLen).toFixed(3) : '' });
+                        }} placeholder="0.000" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="weight_per_bar">Peso por Barra (kg)</Label>
+                        <Input id="weight_per_bar" type="number" step="0.001" value={formData.weight_per_bar} onChange={(e) => {
+                          const wpb = parseFloat(e.target.value) || 0;
+                          const barLen = (parseInt(formData.bar_length_mm) || 6000) / 1000;
+                          setFormData({ ...formData, weight_per_bar: e.target.value, weight_per_meter: wpb > 0 ? (wpb / barLen).toFixed(3) : '' });
+                        }} placeholder="0.000" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="default_cost">Custo Sugestivo (R$/barra)</Label>
+                        <Input id="default_cost" type="number" step="0.01" value={formData.default_cost} onChange={(e) => setFormData({ ...formData, default_cost: e.target.value })} placeholder="0.00" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="default_sale_price">Preço Venda Sugestivo (R$/barra)</Label>
+                        <Input id="default_sale_price" type="number" step="0.01" value={formData.default_sale_price} onChange={(e) => setFormData({ ...formData, default_sale_price: e.target.value })} placeholder="0.00" />
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="description">Descrição</Label>
                   <Textarea id="description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={2} placeholder="Descrição do item..." />
