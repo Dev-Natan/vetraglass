@@ -253,6 +253,12 @@ export function EditItemPriceDialog({
     }
     // Only reset to defaults when dialog first opens with no data
   }, [companyItem, existingPrice, loadingCompanyItem, loadingPrice]);
+  // Reset pricing data when dialog opens with a new item
+  useEffect(() => {
+    if (!open) {
+      setPricingData(defaultPricingData);
+    }
+  }, [open]);
 
   useEffect(() => {
     if (existingStock) {
