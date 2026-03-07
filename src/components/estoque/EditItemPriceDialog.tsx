@@ -115,19 +115,35 @@ export function EditItemPriceDialog({
 
   // Fetch existing stock
   const { data: existingStock, isLoading: loadingStock } = useQuery({
-    queryKey: ['company-stock-item', currentCompany?.id, itemTemplateId],
+    queryKey: ['company-stock-item', currentCompany?.id, itemTemplateId, stockId],
     queryFn: async () => {
-      if (!currentCompany?.id || !itemTemplateId) return null;
-      const { data, error } = await supabase
-        .from('company_stock')
-        .select('*')
-        .eq('company_id', currentCompany.id)
-        .eq('item_template_id', itemTemplateId)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
+      if (!currentCompany?.id) return null;
+      
+      // Use stockId directly if available
+      if (stockId) {
+        const { data, error } = await supabase
+          .from('company_stock')
+          .select('*')
+          .eq('id', stockId)
+          .maybeSingle();
+        if (!error && data) return data;
+      }
+      
+      // Fallback by item_template_id
+      if (itemTemplateId) {
+        const { data, error } = await supabase
+          .from('company_stock')
+          .select('*')
+          .eq('company_id', currentCompany.id)
+          .eq('item_template_id', itemTemplateId)
+          .maybeSingle();
+        if (error) throw error;
+        return data;
+      }
+      
+      return null;
     },
-    enabled: !!currentCompany?.id && !!itemTemplateId && open,
+    enabled: !!currentCompany?.id && (!!itemTemplateId || !!stockId) && open,
   });
 
   // Fetch company_item for pricing fields
