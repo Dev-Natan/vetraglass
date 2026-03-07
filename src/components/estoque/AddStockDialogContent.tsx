@@ -294,7 +294,7 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
               <p className="text-sm text-muted-foreground">Nenhum item encontrado com os filtros aplicados.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
               {filteredItems.map((item) => {
                 const isSelected = selectedItemId === item.id;
                 const isInStock = existingStock?.includes(item.id);
@@ -302,25 +302,25 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
                 return (
                   <button key={item.id} type="button" onClick={() => handleItemSelect(item.id)}
                     className={cn(
-                      "relative flex flex-col items-center p-4 rounded-xl border-2 transition-all duration-200",
+                      "relative flex flex-col items-center p-2.5 rounded-lg border-2 transition-all duration-200",
                       "hover:shadow-md hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20",
                       isSelected ? "border-primary bg-primary/5 shadow-md" : isInStock ? "border-accent bg-accent/30" : "border-border bg-card"
                     )}>
                     {isSelected && (
-                      <div className="absolute top-2 left-2 h-6 w-6 rounded-full bg-primary flex items-center justify-center">
-                        <Check className="h-3.5 w-3.5 text-primary-foreground" />
+                      <div className="absolute top-1.5 left-1.5 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
+                        <Check className="h-3 w-3 text-primary-foreground" />
                       </div>
                     )}
-                    {isInStock && !isSelected && <Badge variant="secondary" className="absolute top-2 left-2 text-[10px]">Em estoque</Badge>}
-                    <div className="w-28 h-28 rounded-lg border bg-background flex items-center justify-center mb-3 overflow-hidden">
-                      {item.image_url ? <img src={item.image_url} alt={item.name} loading="lazy" className="max-h-full max-w-full object-contain" /> : <Package className="h-10 w-10 text-muted-foreground/50" />}
+                    {isInStock && !isSelected && <Badge variant="secondary" className="absolute top-1.5 left-1.5 text-[9px] px-1 py-0">Em estoque</Badge>}
+                    <div className="w-full aspect-square max-w-[80px] rounded-md border bg-background flex items-center justify-center mb-2 overflow-hidden">
+                      {item.image_url ? <img src={item.image_url} alt={item.name} loading="lazy" className="max-h-full max-w-full object-contain" /> : <Package className="h-8 w-8 text-muted-foreground/50" />}
                     </div>
-                    <p className="text-sm font-medium text-center line-clamp-2 leading-tight mb-1">{item.name}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs font-medium text-center line-clamp-1 leading-tight mb-0.5 w-full">{item.name}</p>
+                    <p className="text-[10px] text-muted-foreground text-center line-clamp-1 w-full">
                       {itemTypeLabels[item.type] || item.type}
                       {item.linha && ` • ${item.linha}`}
                     </p>
-                    {weight && <p className="text-xs text-muted-foreground">{String(weight)} Kg/ML</p>}
+                    {weight && <p className="text-[10px] text-muted-foreground">{String(weight)} Kg/ML</p>}
                   </button>
                 );
               })}
