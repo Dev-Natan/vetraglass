@@ -523,8 +523,8 @@ export default function ItemTemplates() {
       </td>
       <td className="p-3">
         <div className="flex items-center gap-1 justify-end">
-          {!item.image_url && <AlertCircle className="w-4 h-4 text-amber-500" title="Sem imagem" />}
-          {!item.is_active && <EyeOff className="w-4 h-4 text-muted-foreground" title="Inativo" />}
+          {!item.image_url && <span title="Sem imagem"><AlertCircle className="w-4 h-4 text-amber-500" /></span>}
+          {!item.is_active && <span title="Inativo"><EyeOff className="w-4 h-4 text-muted-foreground" /></span>}
         </div>
       </td>
       <td className="p-3">
