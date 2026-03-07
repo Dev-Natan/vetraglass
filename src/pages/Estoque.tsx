@@ -316,9 +316,12 @@ export default function Estoque() {
         open={priceDialogOpen}
         onOpenChange={setPriceDialogOpen}
         itemTemplateId={selectedItem?.id ?? null}
+        companyItemId={selectedItem?.companyItemId}
         itemName={selectedItem?.name ?? ''}
         itemImageUrl={selectedItem?.imageUrl}
         itemUnit={selectedItem?.unit}
+        stockId={selectedItem?.stockId}
+        isCustomItem={selectedItem?.isCustomItem}
       />
 
       <RegistrarMovimentoDialog
