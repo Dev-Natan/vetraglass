@@ -430,8 +430,6 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
           </div>
         )}
       </div>
-        )}
-      </div>
 
       {/* Fiscal */}
       <div className="px-6 py-3 border-t bg-background">
