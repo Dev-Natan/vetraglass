@@ -20,10 +20,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Package, Check, Search, X, ShoppingCart, ChevronDown, Receipt, AlertCircle, CheckCircle2, Weight, Ruler } from 'lucide-react';
+import { Loader2, Package, Check, Search, X, ShoppingCart, ChevronDown, Receipt, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { FiscalFieldsCard, type FiscalFieldsData } from '@/components/produtos/FiscalFieldsCard';
 import { useItemTypeLabels } from '@/hooks/useItemTypes';
+import { ItemPricingFields, defaultPricingData, type ItemPricingData } from './ItemPricingFields';
 
 interface AddStockDialogContentProps {
   onClose: () => void;
@@ -42,12 +43,7 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
   const [minQuantity, setMinQuantity] = useState('');
   const [cost, setCost] = useState('');
   const [salePrice, setSalePrice] = useState('');
-  const [weight, setWeight] = useState('');
-  const [itemSize, setItemSize] = useState('');
-  const [pricePerKg, setPricePerKg] = useState('');
-  const [pricePerBar, setPricePerBar] = useState('');
-  const [pricePerUnit, setPricePerUnit] = useState('');
-  const [pricePerSqm, setPricePerSqm] = useState('');
+  const [pricingData, setPricingData] = useState<ItemPricingData>(defaultPricingData);
   const [linha, setLinha] = useState('');
   const [category, setCategory] = useState('');
   const [allowFractional, setAllowFractional] = useState(false);
@@ -122,6 +118,8 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
       if (!linha) throw new Error('Linha é obrigatória');
       if (!category) throw new Error('Categoria é obrigatória');
 
+      const pNum = (v: string) => parseFloat(v) || null;
+
       const { data: companyItem, error: itemError } = await supabase
         .from('company_items')
         .upsert({
@@ -129,6 +127,16 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
           description: selectedItem.description, type: category, unit: selectedItem.unit || 'un', linha,
           cost: costNum, sale_price: salePriceNum, image_url: selectedItem.image_url,
           is_custom: false, is_active: true,
+          bar_length_mm: pNum(pricingData.barLengthMm),
+          weight_kg: pNum(pricingData.weightKg),
+          weight_per_meter: pNum(pricingData.weightPerMeter),
+          cost_per_bar: pNum(pricingData.costPerBar),
+          cost_per_kg: pNum(pricingData.costPerKg),
+          cost_per_meter: pNum(pricingData.costPerMeter),
+          sale_price_per_bar: pNum(pricingData.salePricePerBar),
+          sale_price_per_kg: pNum(pricingData.salePricePerKg),
+          sale_price_per_meter: pNum(pricingData.salePricePerMeter),
+          sale_margin_percent: pNum(pricingData.saleMarginPercent) ?? 0,
           ncm: fiscalData.ncm || null, cfop_venda: fiscalData.cfop_venda || null,
           cfop_venda_interestadual: fiscalData.cfop_venda_interestadual || null,
           cest: fiscalData.cest || null, origem: fiscalData.origem || null,
@@ -243,10 +251,6 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
     return specs.peso_kg_ml || specs.weight_kg_ml || specs.peso;
   };
 
-  const costNum = parseFloat(cost) || 0;
-  const salePriceNum = parseFloat(salePrice) || 0;
-  const margin = costNum > 0 ? ((salePriceNum - costNum) / costNum) * 100 : 0;
-  const profit = salePriceNum - costNum;
   const isFiscalReady = fiscalData.ncm && fiscalData.cfop_venda && fiscalData.origem;
 
   return (
@@ -383,52 +387,13 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
           </div>
         </div>
 
-        {/* Peso e Tamanho */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="space-y-1.5">
-            <Label className="text-xs flex items-center gap-1"><Weight className="h-3 w-3 text-muted-foreground" /> Peso (Kg)</Label>
-            <Input type="number" min="0" step="0.001" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="0,000" className="h-9" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs flex items-center gap-1"><Ruler className="h-3 w-3 text-muted-foreground" /> Tamanho (mm)</Label>
-            <Input type="number" min="0" step="1" value={itemSize} onChange={(e) => setItemSize(e.target.value)} placeholder="Ex: 6000" className="h-9" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Preço/Kg (R$)</Label>
-            <Input type="number" min="0" step="0.01" value={pricePerKg} onChange={(e) => setPricePerKg(e.target.value)} placeholder="0,00" className="h-9" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Preço/Barra (R$)</Label>
-            <Input type="number" min="0" step="0.01" value={pricePerBar} onChange={(e) => setPricePerBar(e.target.value)} placeholder="0,00" className="h-9" />
-          </div>
-        </div>
-
-        {/* Preços adicionais */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="space-y-1.5">
-            <Label className="text-xs">Preço/Unidade (R$)</Label>
-            <Input type="number" min="0" step="0.01" value={pricePerUnit} onChange={(e) => setPricePerUnit(e.target.value)} placeholder="0,00" className="h-9" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Preço/m² (R$)</Label>
-            <Input type="number" min="0" step="0.01" value={pricePerSqm} onChange={(e) => setPricePerSqm(e.target.value)} placeholder="0,00" className="h-9" />
-          </div>
-        </div>
+        {/* Pricing Fields */}
+        <ItemPricingFields data={pricingData} onChange={setPricingData} itemType={category} />
 
         <div className="flex items-center justify-between p-2.5 rounded-lg bg-background border h-9">
           <Label htmlFor="allowFractionalSys" className="text-xs cursor-pointer">Venda Fracionada</Label>
           <Switch id="allowFractionalSys" checked={allowFractional} onCheckedChange={setAllowFractional} className="scale-75" />
         </div>
-        {costNum > 0 && salePriceNum > 0 && (
-          <div className={cn("p-2 rounded border text-xs flex items-center justify-between", profit >= 0 ? "bg-accent/50 border-accent" : "bg-destructive/10 border-destructive/20")}>
-            <span className="text-muted-foreground flex items-center gap-1">
-              {profit < 0 && <AlertCircle className="h-3 w-3 text-destructive" />} Margem:
-            </span>
-            <span className={cn("font-medium", profit >= 0 ? 'text-accent-foreground' : 'text-destructive')}>
-              {margin.toFixed(1)}% • R$ {profit.toFixed(2)} {profit >= 0 ? 'lucro' : 'prejuízo'}
-            </span>
-          </div>
-        )}
       </div>
 
       {/* Fiscal */}

@@ -1099,12 +1099,16 @@ export type Database = {
       company_items: {
         Row: {
           aliquota_iss: number | null
+          bar_length_mm: number | null
           cest: string | null
           cfop_venda: string | null
           cfop_venda_interestadual: string | null
           codigo_servico: string | null
           company_id: string
           cost: number | null
+          cost_per_bar: number | null
+          cost_per_kg: number | null
+          cost_per_meter: number | null
           created_at: string
           description: string | null
           glass_color: string | null
@@ -1119,20 +1123,30 @@ export type Database = {
           name: string
           ncm: string | null
           origem: string | null
+          sale_margin_percent: number | null
           sale_price: number | null
+          sale_price_per_bar: number | null
+          sale_price_per_kg: number | null
+          sale_price_per_meter: number | null
           specifications: Json | null
           type: string
           unit: string
           updated_at: string
+          weight_kg: number | null
+          weight_per_meter: number | null
         }
         Insert: {
           aliquota_iss?: number | null
+          bar_length_mm?: number | null
           cest?: string | null
           cfop_venda?: string | null
           cfop_venda_interestadual?: string | null
           codigo_servico?: string | null
           company_id: string
           cost?: number | null
+          cost_per_bar?: number | null
+          cost_per_kg?: number | null
+          cost_per_meter?: number | null
           created_at?: string
           description?: string | null
           glass_color?: string | null
@@ -1147,20 +1161,30 @@ export type Database = {
           name: string
           ncm?: string | null
           origem?: string | null
+          sale_margin_percent?: number | null
           sale_price?: number | null
+          sale_price_per_bar?: number | null
+          sale_price_per_kg?: number | null
+          sale_price_per_meter?: number | null
           specifications?: Json | null
           type?: string
           unit?: string
           updated_at?: string
+          weight_kg?: number | null
+          weight_per_meter?: number | null
         }
         Update: {
           aliquota_iss?: number | null
+          bar_length_mm?: number | null
           cest?: string | null
           cfop_venda?: string | null
           cfop_venda_interestadual?: string | null
           codigo_servico?: string | null
           company_id?: string
           cost?: number | null
+          cost_per_bar?: number | null
+          cost_per_kg?: number | null
+          cost_per_meter?: number | null
           created_at?: string
           description?: string | null
           glass_color?: string | null
@@ -1175,11 +1199,17 @@ export type Database = {
           name?: string
           ncm?: string | null
           origem?: string | null
+          sale_margin_percent?: number | null
           sale_price?: number | null
+          sale_price_per_bar?: number | null
+          sale_price_per_kg?: number | null
+          sale_price_per_meter?: number | null
           specifications?: Json | null
           type?: string
           unit?: string
           updated_at?: string
+          weight_kg?: number | null
+          weight_per_meter?: number | null
         }
         Relationships: [
           {
