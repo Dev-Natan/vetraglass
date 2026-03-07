@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Package, Sparkles, Plus } from 'lucide-react';
-import { AddStockDialog } from './AddStockDialogContent';
+import { AddStockDialogContent } from './AddStockDialogContent';
 import { CreateCustomItemContent } from './CreateCustomItemContent';
 
 interface UnifiedAddItemDialogProps {
