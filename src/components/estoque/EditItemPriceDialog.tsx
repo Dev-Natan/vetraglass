@@ -303,25 +303,27 @@ export function EditItemPriceDialog({
       const costNum = pNum(pricingData.costPerBar) ?? pNum(pricingData.costPerKg) ?? pNum(pricingData.costPerMeter) ?? 0;
       const salePriceNum = pNum(pricingData.salePricePerBar) ?? pNum(pricingData.salePricePerKg) ?? pNum(pricingData.salePricePerMeter) ?? 0;
 
-      // Save prices to company_item_prices
-      const priceData = {
-        company_id: currentCompany.id,
-        item_template_id: itemTemplateId,
-        cost: costNum,
-        price: salePriceNum,
-      };
+      // Save prices to company_item_prices (only for template-based items)
+      if (itemTemplateId) {
+        const priceData = {
+          company_id: currentCompany.id,
+          item_template_id: itemTemplateId,
+          cost: costNum,
+          price: salePriceNum,
+        };
 
-      if (existingPrice) {
-        const { error } = await supabase
-          .from('company_item_prices')
-          .update({ cost: priceData.cost, price: priceData.price })
-          .eq('id', existingPrice.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('company_item_prices')
-          .insert(priceData);
-        if (error) throw error;
+        if (existingPrice) {
+          const { error } = await supabase
+            .from('company_item_prices')
+            .update({ cost: priceData.cost, price: priceData.price })
+            .eq('id', existingPrice.id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from('company_item_prices')
+            .insert(priceData);
+          if (error) throw error;
+        }
       }
 
       // Save pricing fields to company_items
