@@ -11,12 +11,20 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   Package, Plus, Trash2, GripVertical, Layers, Ruler,
-  DollarSign, TrendingUp, TrendingDown, Minus, BarChart3, Search, Eye,
+  DollarSign, TrendingUp, TrendingDown, Minus, BarChart3, Search, Eye, Weight,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useProductCategories } from '@/hooks/useProductCategories';
 import { evaluateFormula } from '@/utils/safeFormulaEvaluator';
 import { cn } from '@/lib/utils';
+import {
+  type PricingUnit,
+  pricingUnitLabels,
+  pricingUnitShort,
+  getDefaultPricingUnit,
+  getAllowedPricingUnits,
+  calculateComponentCost,
+} from '@/hooks/usePricingCalculator';
 
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
@@ -27,6 +35,8 @@ interface CompositionItem {
   itemName: string;
   itemType: string;
   unit: string;
+  pricingUnit: PricingUnit;
+  weightPerMeter: number;
   quantityFormula: string;
   widthFormula: string;
   heightFormula: string;
@@ -129,6 +139,8 @@ export function PrecificacaoCreateProduct() {
       itemName: item.name,
       itemType: item.type,
       unit: item.unit,
+      pricingUnit: getDefaultPricingUnit(item.type),
+      weightPerMeter: 0,
       quantityFormula: '1',
       widthFormula: item.type === 'profile' || item.type === 'glass' ? 'Largura' : '',
       heightFormula: item.type === 'glass' ? 'Altura' : '',
@@ -136,7 +148,7 @@ export function PrecificacaoCreateProduct() {
       cutAngle: null,
       notes: '',
       unitCost: item.default_price || 0,
-      unitPrice: 0, // calculated from margin
+      unitPrice: 0,
     };
 
     setCompositionItems(prev => [...prev, newItem]);
@@ -159,35 +171,43 @@ export function PrecificacaoCreateProduct() {
       const piecesQty = comp.piecesQuantity || 1;
       const calculatedQuantity = piecesQty * quantity;
 
-      if (comp.itemType === 'glass') {
+      if (comp.itemType === 'glass' || comp.pricingUnit === 'm2') {
         const calcW = evaluateFormula(comp.widthFormula || 'Largura', width, height);
         const calcH = evaluateFormula(comp.heightFormula || 'Altura', width, height);
         const glassAreaM2 = (calcW * calcH) / 1_000_000;
+        const totalCost = calculateComponentCost(comp.unitCost, comp.pricingUnit, comp.itemType, 0, glassAreaM2, calculatedQuantity, comp.weightPerMeter);
+        const totalPrice = calculateComponentCost(comp.unitPrice, comp.pricingUnit, comp.itemType, 0, glassAreaM2, calculatedQuantity, comp.weightPerMeter);
         return {
           ...comp,
           calculatedQuantity,
           calculatedLength: glassAreaM2,
           displayMeasure: `${glassAreaM2.toFixed(4)} m²`,
-          totalCost: comp.unitCost * glassAreaM2 * calculatedQuantity,
-          totalPrice: comp.unitPrice * glassAreaM2 * calculatedQuantity,
+          totalCost,
+          totalPrice,
         };
-      } else if (comp.itemType === 'profile') {
+      } else if (comp.itemType === 'profile' || comp.pricingUnit === 'barra' || comp.pricingUnit === 'kg' || comp.pricingUnit === 'ml') {
         const length = comp.heightFormula
           ? evaluateFormula(comp.heightFormula, width, height)
           : comp.widthFormula
             ? evaluateFormula(comp.widthFormula, width, height)
             : evaluateFormula(comp.quantityFormula, width, height);
         const lengthM = length / 1000;
-        // Profile prices are per 6m bar — convert to price per meter
-        const costPerMeter = comp.unitCost / 6;
-        const pricePerMeter = comp.unitPrice / 6;
+        const totalCost = calculateComponentCost(comp.unitCost, comp.pricingUnit, comp.itemType, length, 0, calculatedQuantity, comp.weightPerMeter);
+        const totalPrice = calculateComponentCost(comp.unitPrice, comp.pricingUnit, comp.itemType, length, 0, calculatedQuantity, comp.weightPerMeter);
+        
+        let displayMeasure = `${length} mm (${lengthM.toFixed(3)} m)`;
+        if (comp.pricingUnit === 'kg' && comp.weightPerMeter > 0) {
+          const weightKg = comp.weightPerMeter * lengthM;
+          displayMeasure = `${length} mm (${weightKg.toFixed(3)} kg)`;
+        }
+        
         return {
           ...comp,
           calculatedQuantity,
           calculatedLength: length,
-          displayMeasure: `${length} mm (${lengthM.toFixed(3)} m)`,
-          totalCost: costPerMeter * lengthM * calculatedQuantity,
-          totalPrice: pricePerMeter * lengthM * calculatedQuantity,
+          displayMeasure,
+          totalCost,
+          totalPrice,
         };
       } else {
         return {
@@ -411,70 +431,100 @@ export function PrecificacaoCreateProduct() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-8">#</TableHead>
-                        <TableHead>Item</TableHead>
-                        <TableHead className="w-20">Tipo</TableHead>
-                        <TableHead className="w-16">Peças</TableHead>
-                        <TableHead className="w-28">Fórmula Larg.</TableHead>
-                        <TableHead className="w-28">Fórmula Alt.</TableHead>
-                        <TableHead className="w-24 text-right">Custo/Un</TableHead>
-                        <TableHead className="text-center">Medida</TableHead>
-                        <TableHead className="text-right">Custo Total</TableHead>
-                        <TableHead className="w-10"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {calculatedComponents.map((item, idx) => (
-                        <TableRow key={item.id}>
-                          <TableCell className="text-muted-foreground text-xs">
-                            <GripVertical className="h-3.5 w-3.5" />
-                          </TableCell>
-                          <TableCell className="font-medium text-sm">{item.itemName}</TableCell>
-                          <TableCell>
-                            <Badge variant="secondary" className="text-[10px]">
-                              {typeLabels[item.itemType] || item.itemType}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number" min={1}
-                              value={item.piecesQuantity}
-                              onChange={e => updateCompositionItem(item.id, 'piecesQuantity', parseInt(e.target.value) || 1)}
-                              className="h-8 w-16 text-xs"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              value={item.widthFormula}
-                              onChange={e => updateCompositionItem(item.id, 'widthFormula', e.target.value)}
-                              placeholder="Largura"
-                              className="h-8 text-xs"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              value={item.heightFormula}
-                              onChange={e => updateCompositionItem(item.id, 'heightFormula', e.target.value)}
-                              placeholder="Altura"
-                              className="h-8 text-xs"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number" min={0} step={0.01}
-                              value={item.unitCost || ''}
-                              onChange={e => updateCompositionItem(item.id, 'unitCost', parseFloat(e.target.value) || 0)}
-                              className="h-8 w-24 text-xs text-right"
-                              placeholder="0,00"
-                            />
-                            <span className="text-[9px] text-muted-foreground block text-right mt-0.5">
-                              {item.itemType === 'profile' ? '/barra 6m' : item.itemType === 'glass' ? '/m²' : '/un'}
-                            </span>
-                            {item.itemType === 'profile' && item.unitCost > 0 && (
-                              <span className="text-[9px] text-primary block text-right">
-                                = {formatCurrency(item.unitCost / 6)}/m
-                              </span>
-                            )}
+                         <TableHead className="w-8">#</TableHead>
+                         <TableHead>Item</TableHead>
+                         <TableHead className="w-20">Tipo</TableHead>
+                         <TableHead className="w-16">Peças</TableHead>
+                         <TableHead className="w-28">Fórmula Larg.</TableHead>
+                         <TableHead className="w-28">Fórmula Alt.</TableHead>
+                         <TableHead className="w-28">Unidade Preço</TableHead>
+                         <TableHead className="w-24 text-right">Custo/Un</TableHead>
+                         <TableHead className="text-center">Medida</TableHead>
+                         <TableHead className="text-right">Custo Total</TableHead>
+                         <TableHead className="w-10"></TableHead>
+                       </TableRow>
+                     </TableHeader>
+                     <TableBody>
+                       {calculatedComponents.map((item, idx) => (
+                         <TableRow key={item.id}>
+                           <TableCell className="text-muted-foreground text-xs">
+                             <GripVertical className="h-3.5 w-3.5" />
+                           </TableCell>
+                           <TableCell className="font-medium text-sm">{item.itemName}</TableCell>
+                           <TableCell>
+                             <Badge variant="secondary" className="text-[10px]">
+                               {typeLabels[item.itemType] || item.itemType}
+                             </Badge>
+                           </TableCell>
+                           <TableCell>
+                             <Input
+                               type="number" min={1}
+                               value={item.piecesQuantity}
+                               onChange={e => updateCompositionItem(item.id, 'piecesQuantity', parseInt(e.target.value) || 1)}
+                               className="h-8 w-16 text-xs"
+                             />
+                           </TableCell>
+                           <TableCell>
+                             <Input
+                               value={item.widthFormula}
+                               onChange={e => updateCompositionItem(item.id, 'widthFormula', e.target.value)}
+                               placeholder="Largura"
+                               className="h-8 text-xs"
+                             />
+                           </TableCell>
+                           <TableCell>
+                             <Input
+                               value={item.heightFormula}
+                               onChange={e => updateCompositionItem(item.id, 'heightFormula', e.target.value)}
+                               placeholder="Altura"
+                               className="h-8 text-xs"
+                             />
+                           </TableCell>
+                           <TableCell>
+                             <Select 
+                               value={item.pricingUnit} 
+                               onValueChange={v => updateCompositionItem(item.id, 'pricingUnit', v as PricingUnit)}
+                             >
+                               <SelectTrigger className="h-8 text-xs w-28">
+                                 <SelectValue />
+                               </SelectTrigger>
+                               <SelectContent>
+                                 {getAllowedPricingUnits(item.itemType).map(pu => (
+                                   <SelectItem key={pu} value={pu} className="text-xs">
+                                     {pricingUnitLabels[pu]}
+                                   </SelectItem>
+                                 ))}
+                               </SelectContent>
+                             </Select>
+                             {item.pricingUnit === 'kg' && (
+                               <div className="mt-1">
+                                 <Input
+                                   type="number" min={0} step={0.001}
+                                   value={item.weightPerMeter || ''}
+                                   onChange={e => updateCompositionItem(item.id, 'weightPerMeter', parseFloat(e.target.value) || 0)}
+                                   className="h-6 w-28 text-[10px]"
+                                   placeholder="kg/m"
+                                 />
+                                 <span className="text-[9px] text-muted-foreground">Peso por metro</span>
+                               </div>
+                             )}
+                           </TableCell>
+                           <TableCell>
+                             <Input
+                               type="number" min={0} step={0.01}
+                               value={item.unitCost || ''}
+                               onChange={e => updateCompositionItem(item.id, 'unitCost', parseFloat(e.target.value) || 0)}
+                               className="h-8 w-24 text-xs text-right"
+                               placeholder="0,00"
+                             />
+                             <span className="text-[9px] text-muted-foreground block text-right mt-0.5">
+                               {pricingUnitShort[item.pricingUnit]}
+                             </span>
+                             {item.pricingUnit === 'barra' && item.unitCost > 0 && (
+                               <span className="text-[9px] text-primary block text-right">
+                                 = {formatCurrency(item.unitCost / 6)}/m
+                               </span>
+                             )}
                           </TableCell>
                           <TableCell className="text-center text-xs text-muted-foreground">
                             {item.displayMeasure}

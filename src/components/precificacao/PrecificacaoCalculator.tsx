@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/table';
 import {
   Package, FileDown, TrendingUp, TrendingDown, Minus,
-  Layers, Search, DollarSign, Ruler, BarChart3, Plus, Trash2,
+  Layers, Search, DollarSign, Ruler, BarChart3, Plus, Trash2, Weight, Scale,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
@@ -22,6 +22,12 @@ import {
   usePricingProducts,
   usePricingComponents,
   useCalculatePricing,
+  type PricingUnit,
+  pricingUnitLabels,
+  pricingUnitShort,
+  getDefaultPricingUnit,
+  getAllowedPricingUnits,
+  calculateComponentCost,
 } from '@/hooks/usePricingCalculator';
 import { useProductCategories } from '@/hooks/useProductCategories';
 import { generatePricingReportPdf } from '@/utils/generatePricingReportPdf';
@@ -65,6 +71,8 @@ interface ManualItem {
   itemName: string;
   itemType: string;
   unit: string;
+  pricingUnit: PricingUnit;
+  weightPerMeter: number;
   widthFormula: string;
   heightFormula: string;
   piecesQuantity: number;
@@ -150,12 +158,15 @@ export function PrecificacaoCalculator() {
   const addManualItem = () => {
     const item = itemTemplates.find(i => i.id === addItemId);
     if (!item) return;
+    const defaultUnit = getDefaultPricingUnit(item.type);
     setManualItems(prev => [...prev, {
       id: crypto.randomUUID(),
       templateItemId: item.id,
       itemName: item.name,
       itemType: item.type,
       unit: item.unit,
+      pricingUnit: defaultUnit,
+      weightPerMeter: 0,
       widthFormula: item.type === 'profile' || item.type === 'glass' ? 'Largura' : '',
       heightFormula: item.type === 'glass' ? 'Altura' : '',
       piecesQuantity: 1,
@@ -178,31 +189,39 @@ export function PrecificacaoCalculator() {
       const piecesQty = comp.piecesQuantity || 1;
       const calculatedQuantity = piecesQty * quantity;
 
-      if (comp.itemType === 'glass') {
+      if (comp.itemType === 'glass' || comp.pricingUnit === 'm2') {
         const calcW = evaluateFormula(comp.widthFormula || 'Largura', width, height);
         const calcH = evaluateFormula(comp.heightFormula || 'Altura', width, height);
         const glassAreaM2 = (calcW * calcH) / 1_000_000;
+        const totalCost = calculateComponentCost(comp.unitCost, comp.pricingUnit, comp.itemType, 0, glassAreaM2, calculatedQuantity, comp.weightPerMeter);
         return {
           ...comp,
           calculatedQuantity,
           calculatedLength: glassAreaM2,
           displayMeasure: `${glassAreaM2.toFixed(4)} m²`,
-          totalCost: comp.unitCost * glassAreaM2 * calculatedQuantity,
+          totalCost,
         };
-      } else if (comp.itemType === 'profile') {
+      } else if (comp.itemType === 'profile' || comp.pricingUnit === 'barra' || comp.pricingUnit === 'kg' || comp.pricingUnit === 'ml') {
         const length = comp.heightFormula
           ? evaluateFormula(comp.heightFormula, width, height)
           : comp.widthFormula
             ? evaluateFormula(comp.widthFormula, width, height)
             : width;
         const lengthM = length / 1000;
-        const costPerMeter = comp.unitCost / 6;
+        const totalCost = calculateComponentCost(comp.unitCost, comp.pricingUnit, comp.itemType, length, 0, calculatedQuantity, comp.weightPerMeter);
+        
+        let displayMeasure = `${length} mm`;
+        if (comp.pricingUnit === 'kg' && comp.weightPerMeter > 0) {
+          const weightKg = comp.weightPerMeter * lengthM;
+          displayMeasure = `${length} mm (${weightKg.toFixed(3)} kg)`;
+        }
+        
         return {
           ...comp,
           calculatedQuantity,
           calculatedLength: length,
-          displayMeasure: `${length} mm`,
-          totalCost: costPerMeter * lengthM * calculatedQuantity,
+          displayMeasure,
+          totalCost,
         };
       } else {
         return {
@@ -614,15 +633,16 @@ export function PrecificacaoCalculator() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Item</TableHead>
-                        <TableHead className="w-20">Tipo</TableHead>
-                        <TableHead className="w-16">Peças</TableHead>
-                        <TableHead className="w-28">Fórmula Larg.</TableHead>
-                        <TableHead className="w-28">Fórmula Alt.</TableHead>
-                        <TableHead className="w-24 text-right">Custo</TableHead>
-                        <TableHead className="text-center">Medida</TableHead>
-                        <TableHead className="text-right">Custo Total</TableHead>
-                        <TableHead className="w-10"></TableHead>
+                         <TableHead>Item</TableHead>
+                         <TableHead className="w-20">Tipo</TableHead>
+                         <TableHead className="w-16">Peças</TableHead>
+                         <TableHead className="w-28">Fórmula Larg.</TableHead>
+                         <TableHead className="w-28">Fórmula Alt.</TableHead>
+                         <TableHead className="w-28">Unidade Preço</TableHead>
+                         <TableHead className="w-24 text-right">Custo</TableHead>
+                         <TableHead className="text-center">Medida</TableHead>
+                         <TableHead className="text-right">Custo Total</TableHead>
+                         <TableHead className="w-10"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -659,6 +679,35 @@ export function PrecificacaoCalculator() {
                             />
                           </TableCell>
                           <TableCell>
+                            <Select 
+                              value={item.pricingUnit} 
+                              onValueChange={v => updateManualItem(item.id, 'pricingUnit', v as PricingUnit)}
+                            >
+                              <SelectTrigger className="h-7 text-xs w-28">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {getAllowedPricingUnits(item.itemType).map(pu => (
+                                  <SelectItem key={pu} value={pu} className="text-xs">
+                                    {pricingUnitLabels[pu]}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {item.pricingUnit === 'kg' && (
+                              <div className="mt-1">
+                                <Input
+                                  type="number" min={0} step={0.001}
+                                  value={item.weightPerMeter || ''}
+                                  onChange={e => updateManualItem(item.id, 'weightPerMeter', parseFloat(e.target.value) || 0)}
+                                  className="h-6 w-28 text-[10px]"
+                                  placeholder="kg/m"
+                                />
+                                <span className="text-[9px] text-muted-foreground">Peso por metro (kg/m)</span>
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell>
                             <Input
                               type="number" min={0} step={0.01}
                               value={item.unitCost || ''}
@@ -666,9 +715,9 @@ export function PrecificacaoCalculator() {
                               className="h-7 w-24 text-xs text-right"
                             />
                             <span className="text-[9px] text-muted-foreground block text-right">
-                              {item.itemType === 'profile' ? '/barra 6m' : item.itemType === 'glass' ? '/m²' : '/un'}
+                              {pricingUnitShort[item.pricingUnit]}
                             </span>
-                            {item.itemType === 'profile' && item.unitCost > 0 && (
+                            {item.pricingUnit === 'barra' && item.unitCost > 0 && (
                               <span className="text-[9px] text-primary block text-right">
                                 = {formatCurrency(item.unitCost / 6)}/m
                               </span>
