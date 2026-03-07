@@ -403,7 +403,7 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
               </div>
               <div className="flex items-center gap-2">
                 {isFiscalReady ? (
-                  <Badge variant="outline" className="text-xs gap-1 bg-green-50 text-green-700 border-green-200"><CheckCircle2 className="h-3 w-3" />Pronto para NFe</Badge>
+                  <Badge variant="outline" className="text-xs gap-1 bg-accent/50 text-accent-foreground border-accent"><CheckCircle2 className="h-3 w-3" />Pronto para NFe</Badge>
                 ) : (
                   <Badge variant="outline" className="text-xs text-muted-foreground">Opcional</Badge>
                 )}
