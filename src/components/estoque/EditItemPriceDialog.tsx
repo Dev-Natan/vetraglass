@@ -115,36 +115,68 @@ export function EditItemPriceDialog({
 
   // Fetch existing stock
   const { data: existingStock, isLoading: loadingStock } = useQuery({
-    queryKey: ['company-stock-item', currentCompany?.id, itemTemplateId],
+    queryKey: ['company-stock-item', currentCompany?.id, itemTemplateId, stockId],
     queryFn: async () => {
-      if (!currentCompany?.id || !itemTemplateId) return null;
-      const { data, error } = await supabase
-        .from('company_stock')
-        .select('*')
-        .eq('company_id', currentCompany.id)
-        .eq('item_template_id', itemTemplateId)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
+      if (!currentCompany?.id) return null;
+      
+      // Use stockId directly if available
+      if (stockId) {
+        const { data, error } = await supabase
+          .from('company_stock')
+          .select('*')
+          .eq('id', stockId)
+          .maybeSingle();
+        if (!error && data) return data;
+      }
+      
+      // Fallback by item_template_id
+      if (itemTemplateId) {
+        const { data, error } = await supabase
+          .from('company_stock')
+          .select('*')
+          .eq('company_id', currentCompany.id)
+          .eq('item_template_id', itemTemplateId)
+          .maybeSingle();
+        if (error) throw error;
+        return data;
+      }
+      
+      return null;
     },
-    enabled: !!currentCompany?.id && !!itemTemplateId && open,
+    enabled: !!currentCompany?.id && (!!itemTemplateId || !!stockId) && open,
   });
 
   // Fetch company_item for pricing fields
   const { data: companyItem, isLoading: loadingCompanyItem } = useQuery({
-    queryKey: ['company-item-details', currentCompany?.id, itemTemplateId],
+    queryKey: ['company-item-details', currentCompany?.id, itemTemplateId, companyItemId],
     queryFn: async () => {
-      if (!currentCompany?.id || !itemTemplateId) return null;
-      const { data, error } = await supabase
-        .from('company_items')
-        .select('*')
-        .eq('company_id', currentCompany.id)
-        .eq('item_template_id', itemTemplateId)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
+      if (!currentCompany?.id) return null;
+      
+      // Try by companyItemId first (works for custom items)
+      if (companyItemId) {
+        const { data, error } = await supabase
+          .from('company_items')
+          .select('*')
+          .eq('id', companyItemId)
+          .maybeSingle();
+        if (!error && data) return data;
+      }
+      
+      // Fallback: query by item_template_id
+      if (itemTemplateId) {
+        const { data, error } = await supabase
+          .from('company_items')
+          .select('*')
+          .eq('company_id', currentCompany.id)
+          .eq('item_template_id', itemTemplateId)
+          .maybeSingle();
+        if (error) throw error;
+        return data;
+      }
+      
+      return null;
     },
-    enabled: !!currentCompany?.id && !!itemTemplateId && open,
+    enabled: !!currentCompany?.id && (!!itemTemplateId || !!companyItemId) && open,
   });
 
   // Fetch item template for fiscal fields
@@ -265,30 +297,33 @@ export function EditItemPriceDialog({
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (!currentCompany?.id || !itemTemplateId) throw new Error('Dados incompletos');
+      if (!currentCompany?.id) throw new Error('Dados incompletos');
+      if (!itemTemplateId && !companyItem) throw new Error('Dados incompletos');
 
       const costNum = pNum(pricingData.costPerBar) ?? pNum(pricingData.costPerKg) ?? pNum(pricingData.costPerMeter) ?? 0;
       const salePriceNum = pNum(pricingData.salePricePerBar) ?? pNum(pricingData.salePricePerKg) ?? pNum(pricingData.salePricePerMeter) ?? 0;
 
-      // Save prices to company_item_prices
-      const priceData = {
-        company_id: currentCompany.id,
-        item_template_id: itemTemplateId,
-        cost: costNum,
-        price: salePriceNum,
-      };
+      // Save prices to company_item_prices (only for template-based items)
+      if (itemTemplateId) {
+        const priceData = {
+          company_id: currentCompany.id,
+          item_template_id: itemTemplateId,
+          cost: costNum,
+          price: salePriceNum,
+        };
 
-      if (existingPrice) {
-        const { error } = await supabase
-          .from('company_item_prices')
-          .update({ cost: priceData.cost, price: priceData.price })
-          .eq('id', existingPrice.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('company_item_prices')
-          .insert(priceData);
-        if (error) throw error;
+        if (existingPrice) {
+          const { error } = await supabase
+            .from('company_item_prices')
+            .update({ cost: priceData.cost, price: priceData.price })
+            .eq('id', existingPrice.id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from('company_item_prices')
+            .insert(priceData);
+          if (error) throw error;
+        }
       }
 
       // Save pricing fields to company_items
