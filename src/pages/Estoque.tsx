@@ -46,10 +46,13 @@ export default function Estoque() {
   const [saidaDialogOpen, setSaidaDialogOpen] = useState(false);
   const [mainTab, setMainTab] = useState('estoque');
   const [selectedItem, setSelectedItem] = useState<{
-    id: string;
+    id: string | null;
     name: string;
     imageUrl?: string | null;
     unit?: string;
+    companyItemId?: string | null;
+    isCustomItem?: boolean;
+    stockId?: string;
   } | null>(null);
 
   // Filter states
