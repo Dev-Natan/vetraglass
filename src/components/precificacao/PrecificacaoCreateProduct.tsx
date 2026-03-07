@@ -431,70 +431,100 @@ export function PrecificacaoCreateProduct() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-8">#</TableHead>
-                        <TableHead>Item</TableHead>
-                        <TableHead className="w-20">Tipo</TableHead>
-                        <TableHead className="w-16">Peças</TableHead>
-                        <TableHead className="w-28">Fórmula Larg.</TableHead>
-                        <TableHead className="w-28">Fórmula Alt.</TableHead>
-                        <TableHead className="w-24 text-right">Custo/Un</TableHead>
-                        <TableHead className="text-center">Medida</TableHead>
-                        <TableHead className="text-right">Custo Total</TableHead>
-                        <TableHead className="w-10"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {calculatedComponents.map((item, idx) => (
-                        <TableRow key={item.id}>
-                          <TableCell className="text-muted-foreground text-xs">
-                            <GripVertical className="h-3.5 w-3.5" />
-                          </TableCell>
-                          <TableCell className="font-medium text-sm">{item.itemName}</TableCell>
-                          <TableCell>
-                            <Badge variant="secondary" className="text-[10px]">
-                              {typeLabels[item.itemType] || item.itemType}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number" min={1}
-                              value={item.piecesQuantity}
-                              onChange={e => updateCompositionItem(item.id, 'piecesQuantity', parseInt(e.target.value) || 1)}
-                              className="h-8 w-16 text-xs"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              value={item.widthFormula}
-                              onChange={e => updateCompositionItem(item.id, 'widthFormula', e.target.value)}
-                              placeholder="Largura"
-                              className="h-8 text-xs"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              value={item.heightFormula}
-                              onChange={e => updateCompositionItem(item.id, 'heightFormula', e.target.value)}
-                              placeholder="Altura"
-                              className="h-8 text-xs"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number" min={0} step={0.01}
-                              value={item.unitCost || ''}
-                              onChange={e => updateCompositionItem(item.id, 'unitCost', parseFloat(e.target.value) || 0)}
-                              className="h-8 w-24 text-xs text-right"
-                              placeholder="0,00"
-                            />
-                            <span className="text-[9px] text-muted-foreground block text-right mt-0.5">
-                              {item.itemType === 'profile' ? '/barra 6m' : item.itemType === 'glass' ? '/m²' : '/un'}
-                            </span>
-                            {item.itemType === 'profile' && item.unitCost > 0 && (
-                              <span className="text-[9px] text-primary block text-right">
-                                = {formatCurrency(item.unitCost / 6)}/m
-                              </span>
-                            )}
+                         <TableHead className="w-8">#</TableHead>
+                         <TableHead>Item</TableHead>
+                         <TableHead className="w-20">Tipo</TableHead>
+                         <TableHead className="w-16">Peças</TableHead>
+                         <TableHead className="w-28">Fórmula Larg.</TableHead>
+                         <TableHead className="w-28">Fórmula Alt.</TableHead>
+                         <TableHead className="w-28">Unidade Preço</TableHead>
+                         <TableHead className="w-24 text-right">Custo/Un</TableHead>
+                         <TableHead className="text-center">Medida</TableHead>
+                         <TableHead className="text-right">Custo Total</TableHead>
+                         <TableHead className="w-10"></TableHead>
+                       </TableRow>
+                     </TableHeader>
+                     <TableBody>
+                       {calculatedComponents.map((item, idx) => (
+                         <TableRow key={item.id}>
+                           <TableCell className="text-muted-foreground text-xs">
+                             <GripVertical className="h-3.5 w-3.5" />
+                           </TableCell>
+                           <TableCell className="font-medium text-sm">{item.itemName}</TableCell>
+                           <TableCell>
+                             <Badge variant="secondary" className="text-[10px]">
+                               {typeLabels[item.itemType] || item.itemType}
+                             </Badge>
+                           </TableCell>
+                           <TableCell>
+                             <Input
+                               type="number" min={1}
+                               value={item.piecesQuantity}
+                               onChange={e => updateCompositionItem(item.id, 'piecesQuantity', parseInt(e.target.value) || 1)}
+                               className="h-8 w-16 text-xs"
+                             />
+                           </TableCell>
+                           <TableCell>
+                             <Input
+                               value={item.widthFormula}
+                               onChange={e => updateCompositionItem(item.id, 'widthFormula', e.target.value)}
+                               placeholder="Largura"
+                               className="h-8 text-xs"
+                             />
+                           </TableCell>
+                           <TableCell>
+                             <Input
+                               value={item.heightFormula}
+                               onChange={e => updateCompositionItem(item.id, 'heightFormula', e.target.value)}
+                               placeholder="Altura"
+                               className="h-8 text-xs"
+                             />
+                           </TableCell>
+                           <TableCell>
+                             <Select 
+                               value={item.pricingUnit} 
+                               onValueChange={v => updateCompositionItem(item.id, 'pricingUnit', v as PricingUnit)}
+                             >
+                               <SelectTrigger className="h-8 text-xs w-28">
+                                 <SelectValue />
+                               </SelectTrigger>
+                               <SelectContent>
+                                 {getAllowedPricingUnits(item.itemType).map(pu => (
+                                   <SelectItem key={pu} value={pu} className="text-xs">
+                                     {pricingUnitLabels[pu]}
+                                   </SelectItem>
+                                 ))}
+                               </SelectContent>
+                             </Select>
+                             {item.pricingUnit === 'kg' && (
+                               <div className="mt-1">
+                                 <Input
+                                   type="number" min={0} step={0.001}
+                                   value={item.weightPerMeter || ''}
+                                   onChange={e => updateCompositionItem(item.id, 'weightPerMeter', parseFloat(e.target.value) || 0)}
+                                   className="h-6 w-28 text-[10px]"
+                                   placeholder="kg/m"
+                                 />
+                                 <span className="text-[9px] text-muted-foreground">Peso por metro</span>
+                               </div>
+                             )}
+                           </TableCell>
+                           <TableCell>
+                             <Input
+                               type="number" min={0} step={0.01}
+                               value={item.unitCost || ''}
+                               onChange={e => updateCompositionItem(item.id, 'unitCost', parseFloat(e.target.value) || 0)}
+                               className="h-8 w-24 text-xs text-right"
+                               placeholder="0,00"
+                             />
+                             <span className="text-[9px] text-muted-foreground block text-right mt-0.5">
+                               {pricingUnitShort[item.pricingUnit]}
+                             </span>
+                             {item.pricingUnit === 'barra' && item.unitCost > 0 && (
+                               <span className="text-[9px] text-primary block text-right">
+                                 = {formatCurrency(item.unitCost / 6)}/m
+                               </span>
+                             )}
                           </TableCell>
                           <TableCell className="text-center text-xs text-muted-foreground">
                             {item.displayMeasure}
