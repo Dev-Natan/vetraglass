@@ -1,8 +1,25 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-// Templates-based pricing - no auth required
 import { evaluateFormula } from '@/utils/safeFormulaEvaluator';
+
+export type PricingUnit = 'barra' | 'kg' | 'm2' | 'ml' | 'un';
+
+export const pricingUnitLabels: Record<PricingUnit, string> = {
+  barra: 'Barra (6m)',
+  kg: 'Peso (kg)',
+  m2: 'Metro² (m²)',
+  ml: 'Metro linear (m)',
+  un: 'Unidade (un)',
+};
+
+export const pricingUnitShort: Record<PricingUnit, string> = {
+  barra: '/barra 6m',
+  kg: '/kg',
+  m2: '/m²',
+  ml: '/m',
+  un: '/un',
+};
 
 export interface PricingProduct {
   id: string;
@@ -23,6 +40,8 @@ export interface PricingComponent {
   itemName: string;
   itemType: string;
   unit: string;
+  pricingUnit: PricingUnit;
+  weightPerMeter: number;
   quantityFormula: string;
   widthFormula: string | null;
   heightFormula: string | null;
@@ -31,7 +50,6 @@ export interface PricingComponent {
   notes: string | null;
   unitCost: number;
   unitPrice: number;
-  // Calculated
   calculatedQuantity: number;
   calculatedLength: number;
   totalCost: number;
@@ -47,6 +65,61 @@ export interface PricingSummary {
   pricePerSqm: number;
   margin: number;
   marginPercent: number;
+}
+
+/** Get default pricing unit for a given item type */
+export function getDefaultPricingUnit(itemType: string): PricingUnit {
+  switch (itemType) {
+    case 'profile': return 'barra';
+    case 'glass': return 'm2';
+    default: return 'un';
+  }
+}
+
+/** Get allowed pricing units for a given item type */
+export function getAllowedPricingUnits(itemType: string): PricingUnit[] {
+  switch (itemType) {
+    case 'profile': return ['barra', 'kg', 'ml'];
+    case 'glass': return ['m2', 'un'];
+    default: return ['un', 'kg'];
+  }
+}
+
+/** Calculate total cost for a single component given its pricing unit */
+export function calculateComponentCost(
+  unitCost: number,
+  pricingUnit: PricingUnit,
+  itemType: string,
+  lengthMm: number,
+  areaSqm: number,
+  calculatedQuantity: number,
+  weightPerMeter: number,
+): number {
+  switch (pricingUnit) {
+    case 'barra': {
+      // Price per 6m bar → convert to per meter
+      const costPerMeter = unitCost / 6;
+      const lengthM = lengthMm / 1000;
+      return costPerMeter * lengthM * calculatedQuantity;
+    }
+    case 'kg': {
+      // Price per kg, need weight/meter and length
+      const lengthM = lengthMm / 1000;
+      const weightKg = weightPerMeter * lengthM;
+      return unitCost * weightKg * calculatedQuantity;
+    }
+    case 'ml': {
+      // Price per linear meter
+      const lengthM = lengthMm / 1000;
+      return unitCost * lengthM * calculatedQuantity;
+    }
+    case 'm2': {
+      return unitCost * areaSqm * calculatedQuantity;
+    }
+    case 'un':
+    default:
+      return unitCost * calculatedQuantity;
+  }
 }
 
 export function usePricingProducts() {
@@ -97,7 +170,6 @@ export function usePricingComponents(templateProductId: string | null) {
         .eq('product_template_id', templateProductId)
         .is('company_id', null);
       if (error) throw error;
-      // Map to expected format for useCalculatePricing
       return (data || []).map(d => ({
         ...d,
         sort_order: 0,
@@ -138,7 +210,6 @@ export function useCalculatePricing(
       const itemType = item?.type || 'accessory';
       const unit = item?.unit || 'un';
       
-      // Use override if provided, otherwise use original cost
       const originalCost = comp.company_item?.cost ?? 0;
       const unitCost = costOverrides && costOverrides[comp.id] !== undefined
         ? costOverrides[comp.id]
@@ -149,6 +220,7 @@ export function useCalculatePricing(
       const quantityFormula = comp.quantity_formula || '1';
       const widthF = comp.width_formula;
       const heightF = comp.height_formula;
+      const pricingUnit = getDefaultPricingUnit(itemType);
 
       let calculatedLength = 0;
       let calculatedQuantity = piecesQty * quantity;
@@ -158,26 +230,14 @@ export function useCalculatePricing(
         const calcH = evaluateFormula(heightF || 'Altura', width, height);
         const glassAreaM2 = (calcW * calcH) / 1_000_000;
         calculatedLength = calcW;
-        const totalCost = unitCost * glassAreaM2 * calculatedQuantity;
-        const totalPrice = unitPrice * glassAreaM2 * calculatedQuantity;
+        const totalCost = calculateComponentCost(unitCost, 'm2', itemType, 0, glassAreaM2, calculatedQuantity, 0);
+        const totalPrice = calculateComponentCost(unitPrice, 'm2', itemType, 0, glassAreaM2, calculatedQuantity, 0);
 
         return {
-          id: comp.id,
-          itemName,
-          itemType,
-          unit: 'm²',
-          quantityFormula,
-          widthFormula: widthF,
-          heightFormula: heightF,
-          piecesQuantity: piecesQty,
-          cutAngle: comp.cut_angle,
-          notes: comp.notes,
-          unitCost,
-          unitPrice,
-          calculatedQuantity,
-          calculatedLength: glassAreaM2,
-          totalCost,
-          totalPrice,
+          id: comp.id, itemName, itemType, unit: 'm²', pricingUnit: 'm2' as PricingUnit,
+          weightPerMeter: 0, quantityFormula, widthFormula: widthF, heightFormula: heightF,
+          piecesQuantity: piecesQty, cutAngle: comp.cut_angle, notes: comp.notes,
+          unitCost, unitPrice, calculatedQuantity, calculatedLength: glassAreaM2, totalCost, totalPrice,
         };
       } else if (itemType === 'profile') {
         if (heightF) {
@@ -188,52 +248,24 @@ export function useCalculatePricing(
           calculatedLength = evaluateFormula(quantityFormula, width, height);
         }
         
-        const lengthM = calculatedLength / 1000;
-        // Profile prices are per 6m bar — convert to price per meter
-        const costPerMeter = unitCost / 6;
-        const pricePerMeter = unitPrice / 6;
-        const totalCost = costPerMeter * lengthM * calculatedQuantity;
-        const totalPrice = pricePerMeter * lengthM * calculatedQuantity;
+        const totalCost = calculateComponentCost(unitCost, 'barra', itemType, calculatedLength, 0, calculatedQuantity, 0);
+        const totalPrice = calculateComponentCost(unitPrice, 'barra', itemType, calculatedLength, 0, calculatedQuantity, 0);
 
         return {
-          id: comp.id,
-          itemName,
-          itemType,
-          unit: 'm',
-          quantityFormula,
-          widthFormula: widthF,
-          heightFormula: heightF,
-          piecesQuantity: piecesQty,
-          cutAngle: comp.cut_angle,
-          notes: comp.notes,
-          unitCost,
-          unitPrice,
-          calculatedQuantity,
-          calculatedLength,
-          totalCost,
-          totalPrice,
+          id: comp.id, itemName, itemType, unit: 'm', pricingUnit: 'barra' as PricingUnit,
+          weightPerMeter: 0, quantityFormula, widthFormula: widthF, heightFormula: heightF,
+          piecesQuantity: piecesQty, cutAngle: comp.cut_angle, notes: comp.notes,
+          unitCost, unitPrice, calculatedQuantity, calculatedLength, totalCost, totalPrice,
         };
       } else {
         const totalCost = unitCost * calculatedQuantity;
         const totalPrice = unitPrice * calculatedQuantity;
 
         return {
-          id: comp.id,
-          itemName,
-          itemType,
-          unit,
-          quantityFormula,
-          widthFormula: widthF,
-          heightFormula: heightF,
-          piecesQuantity: piecesQty,
-          cutAngle: comp.cut_angle,
-          notes: comp.notes,
-          unitCost,
-          unitPrice,
-          calculatedQuantity,
-          calculatedLength: 0,
-          totalCost,
-          totalPrice,
+          id: comp.id, itemName, itemType, unit, pricingUnit: 'un' as PricingUnit,
+          weightPerMeter: 0, quantityFormula, widthFormula: widthF, heightFormula: heightF,
+          piecesQuantity: piecesQty, cutAngle: comp.cut_angle, notes: comp.notes,
+          unitCost, unitPrice, calculatedQuantity, calculatedLength: 0, totalCost, totalPrice,
         };
       }
     });
