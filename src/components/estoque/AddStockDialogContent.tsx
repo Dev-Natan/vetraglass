@@ -244,8 +244,9 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
   const isFiscalReady = fiscalData.ncm && fiscalData.cfop_venda && fiscalData.origem;
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
-      {/* Filters */}
+    <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        {/* Filters */}
       <div className="px-6 py-4 border-b bg-muted/30 space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="space-y-1.5">
@@ -284,7 +285,7 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
       </div>
 
       {/* Items Grid */}
-      <div className="flex-1 min-h-0 overflow-y-auto" style={{ minHeight: '300px' }}>
+      <div className="min-h-[260px]">
         <div className="px-6 py-4 space-y-4">
           {loadingItems ? (
             <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
@@ -415,6 +416,8 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
             <FiscalFieldsCard data={fiscalData} onChange={setFiscalData} type="item" itemType={category as 'glass' | 'profile' | 'accessory' | 'service'} />
           </CollapsibleContent>
         </Collapsible>
+      </div>
+
       </div>
 
       {/* Actions */}
