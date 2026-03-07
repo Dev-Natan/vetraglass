@@ -11,12 +11,20 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   Package, Plus, Trash2, GripVertical, Layers, Ruler,
-  DollarSign, TrendingUp, TrendingDown, Minus, BarChart3, Search, Eye,
+  DollarSign, TrendingUp, TrendingDown, Minus, BarChart3, Search, Eye, Weight,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useProductCategories } from '@/hooks/useProductCategories';
 import { evaluateFormula } from '@/utils/safeFormulaEvaluator';
 import { cn } from '@/lib/utils';
+import {
+  type PricingUnit,
+  pricingUnitLabels,
+  pricingUnitShort,
+  getDefaultPricingUnit,
+  getAllowedPricingUnits,
+  calculateComponentCost,
+} from '@/hooks/usePricingCalculator';
 
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
@@ -27,6 +35,8 @@ interface CompositionItem {
   itemName: string;
   itemType: string;
   unit: string;
+  pricingUnit: PricingUnit;
+  weightPerMeter: number;
   quantityFormula: string;
   widthFormula: string;
   heightFormula: string;
