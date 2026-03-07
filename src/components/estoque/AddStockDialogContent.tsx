@@ -20,7 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Package, Check, Search, X, ShoppingCart, ChevronDown, Receipt, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Loader2, Package, Check, Search, X, ShoppingCart, ChevronDown, Receipt, AlertCircle, CheckCircle2, Weight, Ruler } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { FiscalFieldsCard, type FiscalFieldsData } from '@/components/produtos/FiscalFieldsCard';
 import { useItemTypeLabels } from '@/hooks/useItemTypes';
@@ -42,6 +42,12 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
   const [minQuantity, setMinQuantity] = useState('');
   const [cost, setCost] = useState('');
   const [salePrice, setSalePrice] = useState('');
+  const [weight, setWeight] = useState('');
+  const [itemSize, setItemSize] = useState('');
+  const [pricePerKg, setPricePerKg] = useState('');
+  const [pricePerBar, setPricePerBar] = useState('');
+  const [pricePerUnit, setPricePerUnit] = useState('');
+  const [pricePerSqm, setPricePerSqm] = useState('');
   const [linha, setLinha] = useState('');
   const [category, setCategory] = useState('');
   const [allowFractional, setAllowFractional] = useState(false);
@@ -351,7 +357,7 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
         </div>
       )}
 
-      {/* Purchase Data - simplified, no duplicate linha/category */}
+      {/* Purchase Data */}
       <div className="px-6 py-4 border-t space-y-4 bg-muted/20">
         <div className="flex items-center gap-2 mb-2">
           <ShoppingCart className="h-4 w-4 text-primary" />
@@ -376,6 +382,39 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
             <Input type="number" min="0" step="0.01" value={minQuantity} onChange={(e) => setMinQuantity(e.target.value)} placeholder="0" className="h-9" />
           </div>
         </div>
+
+        {/* Peso e Tamanho */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs flex items-center gap-1"><Weight className="h-3 w-3 text-muted-foreground" /> Peso (Kg)</Label>
+            <Input type="number" min="0" step="0.001" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="0,000" className="h-9" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs flex items-center gap-1"><Ruler className="h-3 w-3 text-muted-foreground" /> Tamanho (mm)</Label>
+            <Input type="number" min="0" step="1" value={itemSize} onChange={(e) => setItemSize(e.target.value)} placeholder="Ex: 6000" className="h-9" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Preço/Kg (R$)</Label>
+            <Input type="number" min="0" step="0.01" value={pricePerKg} onChange={(e) => setPricePerKg(e.target.value)} placeholder="0,00" className="h-9" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Preço/Barra (R$)</Label>
+            <Input type="number" min="0" step="0.01" value={pricePerBar} onChange={(e) => setPricePerBar(e.target.value)} placeholder="0,00" className="h-9" />
+          </div>
+        </div>
+
+        {/* Preços adicionais */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Preço/Unidade (R$)</Label>
+            <Input type="number" min="0" step="0.01" value={pricePerUnit} onChange={(e) => setPricePerUnit(e.target.value)} placeholder="0,00" className="h-9" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Preço/m² (R$)</Label>
+            <Input type="number" min="0" step="0.01" value={pricePerSqm} onChange={(e) => setPricePerSqm(e.target.value)} placeholder="0,00" className="h-9" />
+          </div>
+        </div>
+
         <div className="flex items-center justify-between p-2.5 rounded-lg bg-background border h-9">
           <Label htmlFor="allowFractionalSys" className="text-xs cursor-pointer">Venda Fracionada</Label>
           <Switch id="allowFractionalSys" checked={allowFractional} onCheckedChange={setAllowFractional} className="scale-75" />
