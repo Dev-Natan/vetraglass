@@ -126,9 +126,18 @@ export const StockItemCard = memo(function StockItemCard({
 
       <div className="flex items-center gap-3">
         <div className="text-right">
-          <p className="font-semibold text-lg">
-            {item.quantity}{' '}
-            <span className="text-sm text-muted-foreground">{item.item_template?.unit || item.company_item?.unit}</span>
+          {(() => {
+            const rawUnit = (item.item_template?.unit || item.company_item?.unit || 'un').toLowerCase().trim();
+            const displayUnit = unitLabels[rawUnit] || rawUnit;
+            const qty = item.quantity;
+            const formattedQty = Number.isInteger(qty) ? qty : qty.toFixed(2);
+            return (
+              <p className="font-semibold text-lg">
+                {formattedQty}{' '}
+                <span className="text-sm text-muted-foreground">{displayUnit}</span>
+              </p>
+            );
+          })()}
           </p>
           {(item.min_quantity ?? 0) > 0 && (
             <p className="text-xs text-muted-foreground">Mín: {item.min_quantity}</p>
