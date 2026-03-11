@@ -426,7 +426,21 @@ export async function generateQuotePdf(
   doc.setFontSize(13);
   doc.text(formatCurrency(quote.total_amount), marginRight - 5, y + 10, { align: 'right' });
   
-  y += 18;
+  y += 2;
+  
+  // Show discount line if quote has discount
+  const hasQuoteDiscount = (quote.discount_amount && quote.discount_amount > 0) || (quote.discount_percent && quote.discount_percent > 0);
+  if (hasQuoteDiscount) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(220, 53, 69);
+    const discountLabel = `Desconto: -${formatCurrency(quote.discount_amount || 0)}`;
+    doc.text(discountLabel, marginLeft + 5, y + 8);
+    doc.text(formatCurrency(quote.final_amount), marginRight - 5, y + 8, { align: 'right' });
+    y += 12;
+  }
+  
+  y += 4;
   
   // Get payment methods to calculate values
   const methods = paymentSettings?.methods || [];
@@ -436,10 +450,12 @@ export async function generateQuotePdf(
   const maxDiscountFinal = discountMethodsForFinal.length > 0 
     ? Math.max(...discountMethodsForFinal.map(m => m.discountPercent || 0)) 
     : 0;
+  // Cash value: apply payment discount on already-discounted amount (final_amount)
+  const baseForPayment = hasQuoteDiscount ? quote.final_amount : quote.total_amount;
   const cashFinalValue = maxDiscountFinal > 0 
-    ? quote.total_amount * (1 - maxDiscountFinal / 100) 
-    : quote.final_amount;
-  const cardFinalValue = quote.total_amount;
+    ? baseForPayment * (1 - maxDiscountFinal / 100) 
+    : baseForPayment;
+  const cardFinalValue = baseForPayment;
   
   // Check page break
   if (y + 35 > pageHeight - 15) {
