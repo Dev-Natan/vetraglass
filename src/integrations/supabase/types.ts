@@ -6811,6 +6811,14 @@ export type Database = {
         Args: { _token: string; _user_id: string }
         Returns: Json
       }
+      activate_all_linhas_for_company: {
+        Args: { _company_id: string }
+        Returns: number
+      }
+      activate_all_products_for_company: {
+        Args: { _company_id: string }
+        Returns: number
+      }
       activate_product_template_for_company: {
         Args: { _company_id: string; _product_template_id: string }
         Returns: string
