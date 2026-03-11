@@ -693,14 +693,69 @@ export async function generateQuotePdf(
   }
   
   // ===== VALOR FINAL DESTACADO =====
-  doc.setFillColor(...headerBlue);
-  doc.rect(marginLeft, y, contentWidth, 12, 'F');
+  // Calculate cash value (with discount if applicable)
+  const discountMethodsForFinal = methods.filter(m => m.enabled && m.discountPercent && m.discountPercent > 0);
+  const maxDiscountFinal = discountMethodsForFinal.length > 0 
+    ? Math.max(...discountMethodsForFinal.map(m => m.discountPercent || 0)) 
+    : 0;
+  const cashFinalValue = maxDiscountFinal > 0 
+    ? quote.total_amount * (1 - maxDiscountFinal / 100) 
+    : quote.final_amount;
   
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.setTextColor(...textColor);
-  doc.text('VALOR FINAL', marginLeft + 5, y + 8);
-  doc.text(formatCurrency(quote.final_amount), marginRight - 5, y + 8, { align: 'right' });
+  // Calculate card value (total without discount)
+  const cardFinalValue = quote.total_amount;
+  
+  // Check if values are different to show both
+  const showBothValues = Math.abs(cashFinalValue - cardFinalValue) > 0.01;
+  
+  if (showBothValues) {
+    // Need more space - check page break
+    if (y + 30 > pageHeight - 15) {
+      doc.addPage();
+      y = 15;
+    }
+    
+    // À Vista row
+    doc.setFillColor(220, 245, 220);
+    doc.rect(marginLeft, y, contentWidth, 14, 'F');
+    doc.setDrawColor(...cardBorder);
+    doc.rect(marginLeft, y, contentWidth, 14, 'S');
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(...greenColor);
+    doc.text('VALOR FINAL À VISTA', marginLeft + 5, y + 10);
+    doc.setFontSize(13);
+    doc.text(formatCurrency(cashFinalValue), marginRight - 5, y + 10, { align: 'right' });
+    
+    y += 16;
+    
+    // Cartão row
+    doc.setFillColor(...headerBlue);
+    doc.rect(marginLeft, y, contentWidth, 14, 'F');
+    doc.setDrawColor(...cardBorder);
+    doc.rect(marginLeft, y, contentWidth, 14, 'S');
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(...textColor);
+    doc.text('VALOR FINAL NO CARTÃO', marginLeft + 5, y + 10);
+    doc.setFontSize(13);
+    doc.text(formatCurrency(cardFinalValue), marginRight - 5, y + 10, { align: 'right' });
+  } else {
+    // Single value - show generic final
+    doc.setFillColor(...headerBlue);
+    doc.rect(marginLeft, y, contentWidth, 14, 'F');
+    doc.setDrawColor(...cardBorder);
+    doc.rect(marginLeft, y, contentWidth, 14, 'S');
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(...textColor);
+    doc.text('VALOR FINAL', marginLeft + 5, y + 10);
+    doc.setFontSize(13);
+    doc.text(formatCurrency(quote.final_amount), marginRight - 5, y + 10, { align: 'right' });
+  }
   
   // Save or Print PDF
   const customerSlug = quote.customer_name
