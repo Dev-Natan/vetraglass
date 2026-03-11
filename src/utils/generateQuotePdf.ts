@@ -425,274 +425,11 @@ export async function generateQuotePdf(
   doc.text('VALOR TOTAL DOS PRODUTOS', marginLeft + 5, y + 7);
   doc.text(formatCurrency(quote.total_amount), marginRight - 5, y + 7, { align: 'right' });
   
-  y += 15;
+  y += 5;
   
-  // ========== FORMAS DE PAGAMENTO (ENHANCED) ==========
-  doc.setFillColor(...lightBlue);
-  doc.rect(marginLeft, y, contentWidth, 10, 'F');
-  
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.text('FORMAS DE PAGAMENTO', marginLeft + 5, y + 7);
-  
-  y += 15;
-
-  // Get payment methods and settings
+  // Get payment methods to calculate values
   const methods = paymentSettings?.methods || [];
-  const showFees = paymentSettings?.showFeesToCustomer ?? false;
-  const showOtherMethods = paymentSettings?.showOtherMethods ?? true;
-  const showInstallments = paymentSettings?.showInstallments ?? true;
-  const displayMode = paymentSettings?.displayMode || 'simple';
-  const customConditions = paymentSettings?.customConditions || '';
-
-  // Check if we have configured payment methods
-  const hasConfiguredMethods = methods.length > 0;
-
-  if (hasConfiguredMethods) {
-    // ===== À VISTA (PIX/Dinheiro with discount) =====
-    const discountMethods = methods.filter(m => m.enabled && m.discountPercent && m.discountPercent > 0);
-    
-    if (discountMethods.length > 0) {
-      const maxDiscount = Math.max(...discountMethods.map(m => m.discountPercent || 0));
-      const methodNames = discountMethods.map(m => m.name).join(' / ');
-      const discountedValue = quote.total_amount * (1 - maxDiscount / 100);
-      
-      doc.setDrawColor(...cardBorder);
-      doc.setLineWidth(0.5);
-      doc.rect(marginLeft, y, contentWidth, 18, 'S');
-      
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9);
-      doc.setTextColor(...greenColor);
-      doc.text('A VISTA', marginLeft + 5, y + 6);
-      
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(...textColor);
-      doc.text(`${methodNames}: `, marginLeft + 5, y + 13);
-      
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...greenColor);
-      doc.text(formatCurrency(discountedValue), marginLeft + 45, y + 13);
-      
-      y += 23;
-    }
-
-    // ===== CARTÃO DE CRÉDITO =====
-    if (showInstallments) {
-      const creditMethod = methods.find(m => m.id === 'credito' && m.enabled);
-      
-      if (creditMethod && creditMethod.maxInstallments && creditMethod.maxInstallments > 0) {
-        const noFeeInstallments = creditMethod.noFeeInstallments || 0;
-        const maxInstallments = creditMethod.maxInstallments;
-        const installmentFees = creditMethod.installmentFees || [];
-        
-        // Determine which installments to show
-        let installmentsToShow: number[] = [];
-        if (displayMode === 'simple') {
-          // Show main installments: 1, 3, 6, 10, 12 (if available)
-          installmentsToShow = [1, 3, 6, 10, 12].filter(i => i <= maxInstallments);
-        } else {
-          // Show all installments
-          installmentsToShow = Array.from({ length: maxInstallments }, (_, i) => i + 1);
-        }
-        
-        // Calculate card height based on content
-        const cardHeight = displayMode === 'simple' ? 35 : 20 + (Math.ceil(installmentsToShow.length / 3) * 8);
-        
-        doc.setDrawColor(...cardBorder);
-        doc.rect(marginLeft, y, contentWidth, cardHeight, 'S');
-        
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9);
-        doc.setTextColor(...textColor);
-        doc.text('PARCELAMENTO NO CARTAO', marginLeft + 5, y + 6);
-        
-        y += 10;
-        
-        // Separate interest-free and with-interest installments
-        const noFeeOptions = installmentsToShow.filter(i => i <= noFeeInstallments);
-        const withFeeOptions = installmentsToShow.filter(i => i > noFeeInstallments);
-        
-        // Interest-free installments
-        if (noFeeOptions.length > 0) {
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(8);
-          doc.setTextColor(...greenColor);
-          doc.text('SEM JUROS', marginLeft + 5, y + 4);
-          
-          doc.setFont('helvetica', 'normal');
-          doc.setTextColor(...textColor);
-          
-          let xPos = marginLeft + 35;
-          noFeeOptions.forEach((inst, idx) => {
-            const value = quote.total_amount / inst;
-            const text = `${inst}x ${formatCurrency(value)}`;
-            doc.text(text, xPos, y + 4);
-            xPos += 45;
-            if (idx < noFeeOptions.length - 1 && xPos < marginRight - 50) {
-              doc.text('|', xPos - 5, y + 4);
-            }
-          });
-          
-          y += 8;
-        }
-        
-        // With-interest installments
-        if (withFeeOptions.length > 0) {
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(8);
-          doc.setTextColor(...mutedColor);
-          doc.text('PARCELADO', marginLeft + 5, y + 4);
-          
-          doc.setFont('helvetica', 'normal');
-          doc.setTextColor(...textColor);
-          
-          let xPos = marginLeft + 35;
-          withFeeOptions.forEach((inst, idx) => {
-            const fee = installmentFees.find(f => f.installment === inst)?.fee || 0;
-            const installmentValue = calculateInstallmentValue(quote.total_amount, inst, fee);
-            
-            let text = `${inst}x ${formatCurrency(installmentValue)}`;
-            
-            // Show fees if enabled
-            if (showFees && fee > 0) {
-              const totalWithFee = quote.total_amount * (1 + fee / 100);
-              text = `${inst}x ${formatCurrency(installmentValue)} (${fee.toFixed(2)}% - Total ${formatCurrency(totalWithFee)})`;
-            }
-            
-            doc.text(text, xPos, y + 4);
-            
-            if (showFees) {
-              xPos += 90;
-            } else {
-              xPos += 45;
-              if (idx < withFeeOptions.length - 1 && xPos < marginRight - 50) {
-                doc.text('|', xPos - 5, y + 4);
-              }
-            }
-            
-            // Line break for detailed mode with fees
-            if (showFees && idx < withFeeOptions.length - 1) {
-              y += 6;
-              xPos = marginLeft + 35;
-            }
-          });
-          
-          y += 8;
-        }
-        
-        y += 5;
-      }
-    }
-
-    // ===== OTHER PAYMENT METHODS =====
-    if (showOtherMethods) {
-      const otherMethods = methods.filter(m => 
-        m.enabled && 
-        m.id !== 'pix' && 
-        m.id !== 'dinheiro' && 
-        m.id !== 'credito' &&
-        !m.discountPercent
-      );
-      
-      if (otherMethods.length > 0) {
-        doc.setDrawColor(...cardBorder);
-        doc.rect(marginLeft, y, contentWidth, 12, 'S');
-        
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.setTextColor(...textColor);
-        
-        const methodTexts = otherMethods.map(m => {
-          if (m.feePercent && m.feePercent > 0 && showFees) {
-            return `${m.name} (+${m.feePercent}%)`;
-          }
-          return m.name;
-        });
-        
-        doc.text(`Também aceitamos: ${methodTexts.join(', ')}`, marginLeft + 5, y + 8);
-        
-        y += 17;
-      }
-    }
-
-    // ===== CONDIÇÕES ESPECIAIS =====
-    if (customConditions.trim()) {
-      const lines = customConditions.split('\n');
-      const boxHeight = 10 + (lines.length * 5);
-      
-      doc.setDrawColor(...cardBorder);
-      doc.rect(marginLeft, y, contentWidth, boxHeight, 'S');
-      
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8);
-      doc.setTextColor(...mutedColor);
-      doc.text('CONDICOES ESPECIAIS:', marginLeft + 5, y + 6);
-      
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...textColor);
-      lines.forEach((line, idx) => {
-        doc.text(line.substring(0, 80), marginLeft + 5, y + 11 + (idx * 5));
-      });
-      
-      y += boxHeight + 5;
-    }
-
-  } else {
-    // ===== FALLBACK: Original payment section when no settings configured =====
-    const hasDiscount = quote.discount_percent && quote.discount_percent > 0;
-    
-    doc.setDrawColor(...cardBorder);
-    doc.setLineWidth(0.5);
-    doc.rect(marginLeft, y, contentWidth, hasDiscount ? 20 : 12, 'S');
-    
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.text('A VISTA (PIX / Dinheiro / Transferencia)', marginLeft + 5, y + 7);
-    
-    if (hasDiscount) {
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...mutedColor);
-      doc.text(`Desconto: -${formatCurrency(quote.discount_amount || 0)}`, marginLeft + 5, y + 14);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(0, 128, 0);
-      doc.text(formatCurrency(quote.final_amount), marginRight - 5, y + 14, { align: 'right' });
-      y += 20;
-    } else {
-      doc.setTextColor(...textColor);
-      doc.text(formatCurrency(quote.total_amount), marginRight - 5, y + 7, { align: 'right' });
-      y += 12;
-    }
-    
-    y += 5;
-    
-    doc.setDrawColor(...cardBorder);
-    doc.rect(marginLeft, y, contentWidth, 12, 'S');
-    
-    doc.setTextColor(...textColor);
-    doc.setFont('helvetica', 'bold');
-    doc.text('CARTAO DE CREDITO', marginLeft + 5, y + 8);
-    doc.setFont('helvetica', 'normal');
-    doc.text(formatCurrency(quote.total_amount), marginRight - 5, y + 8, { align: 'right' });
-    
-    y += 17;
-    
-    if (quote.payment_terms) {
-      doc.setDrawColor(...cardBorder);
-      doc.rect(marginLeft, y, contentWidth, 12, 'S');
-      
-      doc.setFont('helvetica', 'bold');
-      doc.text('CONDICOES ESPECIAIS:', marginLeft + 5, y + 8);
-      doc.setFont('helvetica', 'normal');
-      const termsText = quote.payment_terms.length > 60 ? quote.payment_terms.substring(0, 60) + '...' : quote.payment_terms;
-      doc.text(termsText, marginLeft + 48, y + 8);
-      
-      y += 17;
-    }
-  }
   
-  // ===== VALOR FINAL DESTACADO =====
   // Calculate cash value (with discount if applicable)
   const discountMethodsForFinal = methods.filter(m => m.enabled && m.discountPercent && m.discountPercent > 0);
   const maxDiscountFinal = discountMethodsForFinal.length > 0 
@@ -701,61 +438,41 @@ export async function generateQuotePdf(
   const cashFinalValue = maxDiscountFinal > 0 
     ? quote.total_amount * (1 - maxDiscountFinal / 100) 
     : quote.final_amount;
-  
-  // Calculate card value (total without discount)
   const cardFinalValue = quote.total_amount;
   
-  // Check if values are different to show both
-  const showBothValues = Math.abs(cashFinalValue - cardFinalValue) > 0.01;
-  
-  if (showBothValues) {
-    // Need more space - check page break
-    if (y + 30 > pageHeight - 15) {
-      doc.addPage();
-      y = 15;
-    }
-    
-    // À Vista row
-    doc.setFillColor(220, 245, 220);
-    doc.rect(marginLeft, y, contentWidth, 14, 'F');
-    doc.setDrawColor(...cardBorder);
-    doc.rect(marginLeft, y, contentWidth, 14, 'S');
-    
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.setTextColor(...greenColor);
-    doc.text('VALOR FINAL À VISTA', marginLeft + 5, y + 10);
-    doc.setFontSize(13);
-    doc.text(formatCurrency(cashFinalValue), marginRight - 5, y + 10, { align: 'right' });
-    
-    y += 16;
-    
-    // Cartão row
-    doc.setFillColor(...headerBlue);
-    doc.rect(marginLeft, y, contentWidth, 14, 'F');
-    doc.setDrawColor(...cardBorder);
-    doc.rect(marginLeft, y, contentWidth, 14, 'S');
-    
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.setTextColor(...textColor);
-    doc.text('VALOR FINAL NO CARTÃO', marginLeft + 5, y + 10);
-    doc.setFontSize(13);
-    doc.text(formatCurrency(cardFinalValue), marginRight - 5, y + 10, { align: 'right' });
-  } else {
-    // Single value - show generic final
-    doc.setFillColor(...headerBlue);
-    doc.rect(marginLeft, y, contentWidth, 14, 'F');
-    doc.setDrawColor(...cardBorder);
-    doc.rect(marginLeft, y, contentWidth, 14, 'S');
-    
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.setTextColor(...textColor);
-    doc.text('VALOR FINAL', marginLeft + 5, y + 10);
-    doc.setFontSize(13);
-    doc.text(formatCurrency(quote.final_amount), marginRight - 5, y + 10, { align: 'right' });
+  // Check page break
+  if (y + 35 > pageHeight - 15) {
+    doc.addPage();
+    y = 15;
   }
+  
+  // VALOR À VISTA
+  doc.setFillColor(220, 245, 220);
+  doc.rect(marginLeft, y, contentWidth, 14, 'F');
+  doc.setDrawColor(...cardBorder);
+  doc.rect(marginLeft, y, contentWidth, 14, 'S');
+  
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(...greenColor);
+  doc.text('VALOR À VISTA', marginLeft + 5, y + 10);
+  doc.setFontSize(13);
+  doc.text(formatCurrency(cashFinalValue), marginRight - 5, y + 10, { align: 'right' });
+  
+  y += 16;
+  
+  // VALOR NO CARTÃO
+  doc.setFillColor(...headerBlue);
+  doc.rect(marginLeft, y, contentWidth, 14, 'F');
+  doc.setDrawColor(...cardBorder);
+  doc.rect(marginLeft, y, contentWidth, 14, 'S');
+  
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(...textColor);
+  doc.text('VALOR NO CARTÃO', marginLeft + 5, y + 10);
+  doc.setFontSize(13);
+  doc.text(formatCurrency(cardFinalValue), marginRight - 5, y + 10, { align: 'right' });
   
   // Save or Print PDF
   const customerSlug = quote.customer_name
