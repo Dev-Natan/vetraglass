@@ -417,15 +417,16 @@ export async function generateQuotePdf(
   }
   
   doc.setFillColor(...headerBlue);
-  doc.rect(marginLeft, y, contentWidth, 10, 'F');
+  doc.rect(marginLeft, y, contentWidth, 14, 'F');
   
   doc.setTextColor(...textColor);
-  doc.setFontSize(10);
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.text('VALOR TOTAL DOS PRODUTOS', marginLeft + 5, y + 7);
-  doc.text(formatCurrency(quote.total_amount), marginRight - 5, y + 7, { align: 'right' });
+  doc.text('VALOR TOTAL DOS PRODUTOS', marginLeft + 5, y + 10);
+  doc.setFontSize(13);
+  doc.text(formatCurrency(quote.total_amount), marginRight - 5, y + 10, { align: 'right' });
   
-  y += 5;
+  y += 18;
   
   // Get payment methods to calculate values
   const methods = paymentSettings?.methods || [];
