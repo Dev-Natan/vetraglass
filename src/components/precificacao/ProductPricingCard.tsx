@@ -85,6 +85,7 @@ const unitOptions = [
 ];
 
 export function ProductPricingCard({ product, compositionItems, onSaved }: ProductPricingCardProps) {
+  const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(false);
   const [width, setWidth] = useState(1000);
   const [height, setHeight] = useState(1200);
