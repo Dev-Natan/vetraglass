@@ -132,8 +132,8 @@ export default function EditarProdutoEmpresa() {
   const { currentCompany, user } = useAuth();
   const { isAdmin } = usePermissions();
   
-  const [activeTab, setActiveTab] = useState('glass');
-  const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('profile');
+  const [addItemSection, setAddItemSection] = useState<'profile' | 'accessory' | 'glass'>('profile');
   const [itemSearchQuery, setItemSearchQuery] = useState('');
   const [isEditItemDialogOpen, setIsEditItemDialogOpen] = useState(false);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
