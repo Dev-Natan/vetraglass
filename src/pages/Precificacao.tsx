@@ -41,10 +41,11 @@ export default function Precificacao() {
             company_item:company_items (
               id, name, type, unit, bar_length_mm, weight_kg, weight_per_meter,
               cost, cost_per_kg, cost_per_meter,
-              sale_price, sale_price_per_kg, sale_price_per_meter
+              sale_price, sale_price_per_kg, sale_price_per_meter,
+              image_url
             ),
             item_template:item_templates (
-              id, name, type, unit, default_price
+              id, name, type, unit, default_price, image_url
             )
           )
         `)
@@ -98,6 +99,7 @@ export default function Precificacao() {
         itemName: source?.name || 'Item desconhecido',
         itemType: source?.type || 'accessory',
         unit: source?.unit || 'un',
+        imageUrl: ci?.image_url || ti?.image_url || null,
         quantityFormula: cpi.quantity_formula || '1',
         widthFormula: cpi.width_formula,
         heightFormula: cpi.height_formula,

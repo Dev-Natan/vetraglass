@@ -22,6 +22,7 @@ export interface CompositionItem {
   itemName: string;
   itemType: string;
   unit: string;
+  imageUrl: string | null;
   quantityFormula: string;
   widthFormula: string | null;
   heightFormula: string | null;
@@ -288,10 +289,12 @@ export function ProductPricingCard({ product, compositionItems, onSaved }: Produ
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             {product.image_url ? (
-              <img src={product.image_url} alt="" className="w-10 h-10 rounded object-cover" />
+              <div className="w-14 h-14 rounded-lg border bg-background p-1 flex items-center justify-center shrink-0">
+                <img src={product.image_url} alt={product.commercial_name} className="w-full h-full object-contain" />
+              </div>
             ) : (
-              <div className="w-10 h-10 rounded bg-muted flex items-center justify-center">
-                <Package className="w-5 h-5 text-muted-foreground" />
+              <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                <Package className="w-6 h-6 text-muted-foreground" />
               </div>
             )}
             <div>
@@ -399,13 +402,27 @@ export function ProductPricingCard({ product, compositionItems, onSaved }: Produ
                       <div key={item.id} className="border rounded-lg p-3 bg-card space-y-3">
                         {/* Item header */}
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium">{item.itemName}</span>
-                            {item.cutAngle && <Badge variant="outline" className="text-[9px]">{item.cutAngle}°</Badge>}
+                          <div className="flex items-center gap-3">
+                            {item.imageUrl ? (
+                              <div className="w-10 h-10 rounded border bg-background p-0.5 flex items-center justify-center shrink-0">
+                                <img src={item.imageUrl} alt={item.itemName} className="w-full h-full object-contain rounded-sm" />
+                              </div>
+                            ) : (
+                              <div className="w-10 h-10 rounded bg-muted/60 flex items-center justify-center shrink-0 text-base">
+                                {typeIcons[item.itemType] || '📦'}
+                              </div>
+                            )}
+                            <div>
+                              <span className="text-sm font-medium">{item.itemName}</span>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                {item.cutAngle && <Badge variant="outline" className="text-[9px] py-0">{item.cutAngle}°</Badge>}
+                                <Badge variant="secondary" className="text-[9px] py-0">{merged.unit || 'un'}</Badge>
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2 text-xs">
-                            <span className="text-muted-foreground">Medida: {item.displayMeasure}</span>
-                            <span className="font-medium">Qtd: {item.piecesQuantity}</span>
+                          <div className="flex items-center gap-3 text-xs">
+                            <span className="text-muted-foreground">{item.displayMeasure}</span>
+                            <Badge variant="outline" className="text-[10px]">×{item.piecesQuantity}</Badge>
                           </div>
                         </div>
 
