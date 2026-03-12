@@ -289,10 +289,12 @@ export function ProductPricingCard({ product, compositionItems, onSaved }: Produ
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             {product.image_url ? (
-              <img src={product.image_url} alt="" className="w-10 h-10 rounded object-cover" />
+              <div className="w-14 h-14 rounded-lg border bg-background p-1 flex items-center justify-center shrink-0">
+                <img src={product.image_url} alt={product.commercial_name} className="w-full h-full object-contain" />
+              </div>
             ) : (
-              <div className="w-10 h-10 rounded bg-muted flex items-center justify-center">
-                <Package className="w-5 h-5 text-muted-foreground" />
+              <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                <Package className="w-6 h-6 text-muted-foreground" />
               </div>
             )}
             <div>
