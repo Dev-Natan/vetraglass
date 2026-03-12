@@ -293,6 +293,7 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
       queryClient.invalidateQueries({ queryKey: ['company-item-prices'] });
       queryClient.invalidateQueries({ queryKey: ['company-items'] });
       queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['precificacao-products'] });
       resetForm();
       onOpenChange(false);
     },

@@ -409,6 +409,7 @@ export function EditItemPriceDialog({
       queryClient.invalidateQueries({ queryKey: ['item-template-fiscal'] });
       queryClient.invalidateQueries({ queryKey: ['company-items'] });
       queryClient.invalidateQueries({ queryKey: ['company-item-details'] });
+      queryClient.invalidateQueries({ queryKey: ['precificacao-products'] });
       onOpenChange(false);
     },
     onError: (error: Error) => {

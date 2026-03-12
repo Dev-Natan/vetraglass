@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -84,6 +85,7 @@ const unitOptions = [
 ];
 
 export function ProductPricingCard({ product, compositionItems, onSaved }: ProductPricingCardProps) {
+  const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(false);
   const [width, setWidth] = useState(1000);
   const [height, setHeight] = useState(1200);
@@ -269,6 +271,11 @@ export function ProductPricingCard({ product, compositionItems, onSaved }: Produ
           toast.info(`${uniqueProductIds.length} outro(s) produto(s) atualizado(s) automaticamente.`);
         }
       }
+
+      // Invalidate stock caches so Estoque page stays in sync
+      queryClient.invalidateQueries({ queryKey: ['company-stock'] });
+      queryClient.invalidateQueries({ queryKey: ['company-items'] });
+      queryClient.invalidateQueries({ queryKey: ['company-item-prices'] });
 
       toast.success('Preços salvos com sucesso!');
       onSaved?.();
