@@ -205,10 +205,9 @@ export default function EditarProdutoEmpresa() {
 
   // Fetch available item templates for adding
   const { data: availableItems } = useQuery({
-    queryKey: ['item-templates-by-type', activeTab, product?.linha],
+    queryKey: ['item-templates-by-type', addItemSection, product?.linha],
     queryFn: async () => {
-      const currentTab = itemTypeTabs.find(t => t.value === activeTab);
-      const dbType = currentTab?.dbType || 'accessory';
+      const dbType = addItemSection;
       
       const { data, error } = await supabase
         .from('item_templates')
