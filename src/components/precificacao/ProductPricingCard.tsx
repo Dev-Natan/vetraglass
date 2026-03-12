@@ -22,6 +22,7 @@ export interface CompositionItem {
   itemName: string;
   itemType: string;
   unit: string;
+  imageUrl: string | null;
   quantityFormula: string;
   widthFormula: string | null;
   heightFormula: string | null;
