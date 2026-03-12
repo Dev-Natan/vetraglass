@@ -120,10 +120,9 @@ const getFormulaType = (formula: string): 'Altura' | 'Largura' | null => {
 };
 
 const itemTypeTabs = [
-  { value: 'glass', label: 'VIDROS', dbType: 'glass' },
   { value: 'profile', label: 'PERFIS DE ALUMÍNIO', dbType: 'profile' },
-  { value: 'rubber', label: 'BORRACHAS E OUTROS', dbType: 'accessory' },
-  { value: 'accessory', label: 'ACESSÓRIOS E FERRAGENS', dbType: 'accessory' },
+  { value: 'accessory', label: 'COMPONENTES', dbType: 'accessory' },
+  { value: 'glass', label: 'VIDROS', dbType: 'glass' },
 ];
 
 export default function EditarProdutoEmpresa() {
