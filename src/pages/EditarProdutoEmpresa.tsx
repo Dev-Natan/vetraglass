@@ -134,6 +134,7 @@ export default function EditarProdutoEmpresa() {
   
   const [activeTab, setActiveTab] = useState('profile');
   const [addItemSection, setAddItemSection] = useState<'profile' | 'accessory' | 'glass'>('profile');
+  const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
   const [itemSearchQuery, setItemSearchQuery] = useState('');
   const [isEditItemDialogOpen, setIsEditItemDialogOpen] = useState(false);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
@@ -151,6 +152,15 @@ export default function EditarProdutoEmpresa() {
   const [formData, setFormData] = useState({
     commercial_name: '',
     description: '',
+  });
+
+  const [configData, setConfigData] = useState<ProductConfigData>({
+    acabamento: '',
+    cor_componentes: '',
+    reforco: '',
+    contramarco: '',
+    corte_contramarco: '',
+    arremate: '',
   });
 
   // Fetch company product
