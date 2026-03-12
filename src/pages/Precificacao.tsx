@@ -99,6 +99,7 @@ export default function Precificacao() {
         itemName: source?.name || 'Item desconhecido',
         itemType: source?.type || 'accessory',
         unit: source?.unit || 'un',
+        imageUrl: ci?.image_url || ti?.image_url || null,
         quantityFormula: cpi.quantity_formula || '1',
         widthFormula: cpi.width_formula,
         heightFormula: cpi.height_formula,
