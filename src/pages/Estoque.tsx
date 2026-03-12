@@ -77,12 +77,35 @@ export default function Estoque() {
   const { data: itemTypes } = useItemTypes();
   const { data: productLinhas } = useProductLinhas();
 
+  // Helper to get item name, type, linha from either source
+  const getItemData = useCallback((item: StockItem) => {
+    return {
+      name: item.company_item?.name ?? item.item_template?.name ?? 'Item',
+      type: item.company_item?.type ?? item.item_template?.type ?? '',
+      linha: item.company_item?.linha ?? item.item_template?.linha ?? '',
+    };
+  }, []);
+
   const linhas = useMemo(() => {
     const oficialLinhas = productLinhas?.map(l => l.name) || [];
     const uniqueLinhas = new Set<string>(oficialLinhas);
+    activeItems.forEach((item) => {
+      const linha = item.company_item?.linha ?? item.item_template?.linha;
+      if (linha) uniqueLinhas.add(linha);
+    });
     itemTemplates.forEach((t) => { if (t.linha) uniqueLinhas.add(t.linha); });
     return Array.from(uniqueLinhas).sort();
-  }, [productLinhas, itemTemplates]);
+  }, [productLinhas, itemTemplates, activeItems]);
+
+  // Get unique categories from active items
+  const activeCategories = useMemo(() => {
+    const cats = new Set<string>();
+    activeItems.forEach(item => {
+      const type = item.company_item?.type ?? item.item_template?.type;
+      if (type) cats.add(type);
+    });
+    return Array.from(cats);
+  }, [activeItems]);
 
   const toggleActiveMutation = useMutation({
     mutationFn: async ({ stockId, isActive }: { stockId: string; isActive: boolean }) => {
@@ -100,17 +123,35 @@ export default function Estoque() {
     let items = [...activeItems];
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
-      items = items.filter((item) => item.item_template?.name?.toLowerCase().includes(search));
+      items = items.filter((item) => {
+        const name = item.company_item?.name ?? item.item_template?.name ?? '';
+        return name.toLowerCase().includes(search);
+      });
     }
-    if (categoryFilter !== 'all') items = items.filter((item) => item.item_template?.type === categoryFilter);
-    if (linhaFilter !== 'all') items = items.filter((item) => item.item_template?.linha === linhaFilter);
+    if (categoryFilter !== 'all') {
+      items = items.filter((item) => {
+        const type = item.company_item?.type ?? item.item_template?.type;
+        return type === categoryFilter;
+      });
+    }
+    if (linhaFilter !== 'all') {
+      items = items.filter((item) => {
+        const linha = item.company_item?.linha ?? item.item_template?.linha;
+        return linha === linhaFilter;
+      });
+    }
     if (statusFilter === 'low') items = items.filter((item) => item.quantity <= (item.min_quantity || 0) && (item.min_quantity || 0) > 0);
+    else if (statusFilter === 'zero') items = items.filter((item) => item.quantity === 0);
     else if (statusFilter === 'normal') items = items.filter((item) => item.quantity > (item.min_quantity || 0) || (item.min_quantity || 0) === 0);
 
     items.sort((a, b) => {
-      if (sortBy === 'name') return (a.item_template?.name || '').localeCompare(b.item_template?.name || '');
+      if (sortBy === 'name') {
+        const nameA = a.company_item?.name ?? a.item_template?.name ?? '';
+        const nameB = b.company_item?.name ?? b.item_template?.name ?? '';
+        return nameA.localeCompare(nameB);
+      }
       if (sortBy === 'quantity') return b.quantity - a.quantity;
-      if (sortBy === 'value') return (b.quantity * (b.priceInfo?.cost || 0)) - (a.quantity * (a.priceInfo?.cost || 0));
+      if (sortBy === 'value') return (b.quantity * (b.company_item?.cost || b.priceInfo?.cost || 0)) - (a.quantity * (a.company_item?.cost || a.priceInfo?.cost || 0));
       return 0;
     });
 
@@ -211,6 +252,77 @@ export default function Estoque() {
               </div>
             )}
 
+            {/* Linha Selection Chips */}
+            {linhas.length > 0 && (
+              <div className="section-card">
+                <p className="text-xs font-medium text-muted-foreground mb-2">Filtrar por Linha</p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setLinhaFilter('all')}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${
+                      linhaFilter === 'all'
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
+                    }`}
+                  >
+                    Todas ({activeItems.length})
+                  </button>
+                  {linhas.map((linha) => {
+                    const count = activeItems.filter(i => (i.company_item?.linha ?? i.item_template?.linha) === linha).length;
+                    if (count === 0) return null;
+                    return (
+                      <button
+                        key={linha}
+                        onClick={() => setLinhaFilter(linha)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${
+                          linhaFilter === linha
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
+                        }`}
+                      >
+                        {linha} ({count})
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Category Selection Chips */}
+            {itemTypes && itemTypes.length > 0 && (
+              <div className="section-card">
+                <p className="text-xs font-medium text-muted-foreground mb-2">Filtrar por Categoria</p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setCategoryFilter('all')}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${
+                      categoryFilter === 'all'
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
+                    }`}
+                  >
+                    Todas
+                  </button>
+                  {itemTypes.filter(t => activeCategories.includes(t.slug)).map((type) => {
+                    const count = activeItems.filter(i => (i.company_item?.type ?? i.item_template?.type) === type.slug).length;
+                    return (
+                      <button
+                        key={type.slug}
+                        onClick={() => setCategoryFilter(type.slug)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${
+                          categoryFilter === type.slug
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
+                        }`}
+                      >
+                        {type.name} ({count})
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="section-card">
               <StockFilters
                 searchTerm={searchTerm}
@@ -263,7 +375,7 @@ export default function Estoque() {
                       <PackageCheck className="w-12 h-12 text-muted-foreground/50 mb-4" />
                       <h3 className="font-medium text-foreground mb-1">Nenhum item em estoque</h3>
                       <p className="text-sm text-muted-foreground mb-4">
-                        {searchTerm || categoryFilter !== 'all' || statusFilter !== 'all' ? 'Tente ajustar os filtros.' : 'Adicione itens para controlar seu estoque.'}
+                        {searchTerm || categoryFilter !== 'all' || linhaFilter !== 'all' || statusFilter !== 'all' ? 'Tente ajustar os filtros.' : 'Adicione itens para controlar seu estoque.'}
                       </p>
                       {!searchTerm && categoryFilter === 'all' && statusFilter === 'all' && (
                         <Button onClick={() => setAddDialogOpen(true)} className="gap-2">
