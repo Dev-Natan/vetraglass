@@ -1553,10 +1553,15 @@ export type Database = {
       }
       company_products: {
         Row: {
+          acabamento: string | null
+          arremate: string | null
           base_price: number | null
           category: string | null
           commercial_name: string
           company_id: string
+          contramarco: string | null
+          cor_componentes: string | null
+          corte_contramarco: string | null
           cost_per_sqm: number | null
           created_at: string
           description: string | null
@@ -1573,14 +1578,20 @@ export type Database = {
           price_per_sqm: number | null
           pricing_type: string
           product_template_id: string | null
+          reforco: string | null
           updated_at: string
           uses_glass: boolean | null
         }
         Insert: {
+          acabamento?: string | null
+          arremate?: string | null
           base_price?: number | null
           category?: string | null
           commercial_name: string
           company_id: string
+          contramarco?: string | null
+          cor_componentes?: string | null
+          corte_contramarco?: string | null
           cost_per_sqm?: number | null
           created_at?: string
           description?: string | null
@@ -1597,14 +1608,20 @@ export type Database = {
           price_per_sqm?: number | null
           pricing_type?: string
           product_template_id?: string | null
+          reforco?: string | null
           updated_at?: string
           uses_glass?: boolean | null
         }
         Update: {
+          acabamento?: string | null
+          arremate?: string | null
           base_price?: number | null
           category?: string | null
           commercial_name?: string
           company_id?: string
+          contramarco?: string | null
+          cor_componentes?: string | null
+          corte_contramarco?: string | null
           cost_per_sqm?: number | null
           created_at?: string
           description?: string | null
@@ -1621,6 +1638,7 @@ export type Database = {
           price_per_sqm?: number | null
           pricing_type?: string
           product_template_id?: string | null
+          reforco?: string | null
           updated_at?: string
           uses_glass?: boolean | null
         }
@@ -4402,13 +4420,18 @@ export type Database = {
       }
       product_templates: {
         Row: {
+          acabamento: string | null
           aliquota_iss: number | null
+          arremate: string | null
           base_price: number | null
           category: Database["public"]["Enums"]["product_category"]
           cest: string | null
           cfop_venda: string | null
           cfop_venda_interestadual: string | null
           codigo_servico: string | null
+          contramarco: string | null
+          cor_componentes: string | null
+          corte_contramarco: string | null
           created_at: string
           description: string | null
           id: string
@@ -4422,16 +4445,22 @@ export type Database = {
           name: string
           ncm: string | null
           origem: string | null
+          reforco: string | null
           updated_at: string
         }
         Insert: {
+          acabamento?: string | null
           aliquota_iss?: number | null
+          arremate?: string | null
           base_price?: number | null
           category: Database["public"]["Enums"]["product_category"]
           cest?: string | null
           cfop_venda?: string | null
           cfop_venda_interestadual?: string | null
           codigo_servico?: string | null
+          contramarco?: string | null
+          cor_componentes?: string | null
+          corte_contramarco?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -4445,16 +4474,22 @@ export type Database = {
           name: string
           ncm?: string | null
           origem?: string | null
+          reforco?: string | null
           updated_at?: string
         }
         Update: {
+          acabamento?: string | null
           aliquota_iss?: number | null
+          arremate?: string | null
           base_price?: number | null
           category?: Database["public"]["Enums"]["product_category"]
           cest?: string | null
           cfop_venda?: string | null
           cfop_venda_interestadual?: string | null
           codigo_servico?: string | null
+          contramarco?: string | null
+          cor_componentes?: string | null
+          corte_contramarco?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -4468,6 +4503,7 @@ export type Database = {
           name?: string
           ncm?: string | null
           origem?: string | null
+          reforco?: string | null
           updated_at?: string
         }
         Relationships: []
