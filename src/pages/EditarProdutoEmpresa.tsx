@@ -734,7 +734,7 @@ export default function EditarProdutoEmpresa() {
       <Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Adicionar Item</DialogTitle>
+            <DialogTitle>Adicionar {addItemSection === 'profile' ? 'Perfil' : addItemSection === 'glass' ? 'Vidro' : 'Componente'}</DialogTitle>
             <DialogDescription>
               Selecione um item e configure sua fórmula
             </DialogDescription>
