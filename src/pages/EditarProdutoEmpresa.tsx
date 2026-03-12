@@ -305,7 +305,13 @@ export default function EditarProdutoEmpresa() {
         .update({
           commercial_name: formData.commercial_name,
           description: formData.description,
-        })
+          acabamento: configData.acabamento || null,
+          cor_componentes: configData.cor_componentes || null,
+          reforco: configData.reforco || null,
+          contramarco: configData.contramarco || null,
+          corte_contramarco: configData.corte_contramarco || null,
+          arremate: configData.arremate || null,
+        } as any)
         .eq('id', id);
       if (error) throw error;
     },
