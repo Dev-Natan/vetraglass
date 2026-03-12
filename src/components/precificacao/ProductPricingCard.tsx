@@ -196,6 +196,7 @@ export function ProductPricingCard({ product, compositionItems, onSaved }: Produ
   const handleSave = async () => {
     setSaving(true);
     try {
+      // 1. Save current product pricing
       const { error: prodError } = await supabase
         .from('company_products')
         .update({
@@ -207,28 +208,65 @@ export function ProductPricingCard({ product, compositionItems, onSaved }: Produ
 
       if (prodError) throw prodError;
 
+      // 2. Update each modified company_item (propagates to ALL products using this item)
+      const updatedCompanyItemIds: string[] = [];
+
       for (const [itemId, overrides] of Object.entries(itemOverrides)) {
         const original = compositionItems.find(i => i.id === itemId);
         if (!original?.companyItemId) continue;
 
         const o = overrides as any;
+        const updateData: Record<string, any> = {};
+        
+        if (o.barLengthMm !== undefined) updateData.bar_length_mm = o.barLengthMm;
+        if (o.weightKg !== undefined) updateData.weight_kg = o.weightKg;
+        if (o.weightPerMeter !== undefined) updateData.weight_per_meter = o.weightPerMeter;
+        if (o.costPerBar !== undefined) updateData.cost = o.costPerBar;
+        if (o.costPerKg !== undefined) updateData.cost_per_kg = o.costPerKg;
+        if (o.costPerMeter !== undefined) updateData.cost_per_meter = o.costPerMeter;
+        if (o.salePricePerBar !== undefined) updateData.sale_price = o.salePricePerBar;
+        if (o.salePricePerKg !== undefined) updateData.sale_price_per_kg = o.salePricePerKg;
+        if (o.salePricePerMeter !== undefined) updateData.sale_price_per_meter = o.salePricePerMeter;
+        if (o.unit !== undefined) updateData.unit = o.unit;
+
+        if (Object.keys(updateData).length === 0) continue;
+
         const { error: itemError } = await supabase
           .from('company_items')
-          .update({
-            bar_length_mm: o.barLengthMm,
-            weight_kg: o.weightKg,
-            weight_per_meter: o.weightPerMeter,
-            cost: o.costPerBar,
-            cost_per_kg: o.costPerKg,
-            cost_per_meter: o.costPerMeter,
-            sale_price: o.salePricePerBar,
-            sale_price_per_kg: o.salePricePerKg,
-            sale_price_per_meter: o.salePricePerMeter,
-            unit: o.unit,
-          })
+          .update(updateData)
           .eq('id', original.companyItemId);
 
         if (itemError) throw itemError;
+        updatedCompanyItemIds.push(original.companyItemId);
+      }
+
+      // 3. Update company_stock for modified items (sync sale_price)
+      for (const companyItemId of updatedCompanyItemIds) {
+        await supabase
+          .from('company_stock')
+          .update({ updated_at: new Date().toISOString() })
+          .eq('company_item_id', companyItemId);
+      }
+
+      // 4. Find all OTHER products that use the same company_items and invalidate their cache
+      if (updatedCompanyItemIds.length > 0) {
+        const { data: affectedProducts } = await supabase
+          .from('company_product_items')
+          .select('company_product_id')
+          .in('company_item_id', updatedCompanyItemIds)
+          .neq('company_product_id', product.id);
+
+        if (affectedProducts && affectedProducts.length > 0) {
+          const uniqueProductIds = [...new Set(affectedProducts.map(p => p.company_product_id))];
+          // Touch updated_at on affected products so UI knows they changed
+          for (const pid of uniqueProductIds) {
+            await supabase
+              .from('company_products')
+              .update({ updated_at: new Date().toISOString() })
+              .eq('id', pid);
+          }
+          toast.info(`${uniqueProductIds.length} outro(s) produto(s) atualizado(s) automaticamente.`);
+        }
       }
 
       toast.success('Preços salvos com sucesso!');
