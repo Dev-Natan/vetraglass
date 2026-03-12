@@ -402,13 +402,27 @@ export function ProductPricingCard({ product, compositionItems, onSaved }: Produ
                       <div key={item.id} className="border rounded-lg p-3 bg-card space-y-3">
                         {/* Item header */}
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium">{item.itemName}</span>
-                            {item.cutAngle && <Badge variant="outline" className="text-[9px]">{item.cutAngle}°</Badge>}
+                          <div className="flex items-center gap-3">
+                            {item.imageUrl ? (
+                              <div className="w-10 h-10 rounded border bg-background p-0.5 flex items-center justify-center shrink-0">
+                                <img src={item.imageUrl} alt={item.itemName} className="w-full h-full object-contain rounded-sm" />
+                              </div>
+                            ) : (
+                              <div className="w-10 h-10 rounded bg-muted/60 flex items-center justify-center shrink-0 text-base">
+                                {typeIcons[item.itemType] || '📦'}
+                              </div>
+                            )}
+                            <div>
+                              <span className="text-sm font-medium">{item.itemName}</span>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                {item.cutAngle && <Badge variant="outline" className="text-[9px] py-0">{item.cutAngle}°</Badge>}
+                                <Badge variant="secondary" className="text-[9px] py-0">{merged.unit || 'un'}</Badge>
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2 text-xs">
-                            <span className="text-muted-foreground">Medida: {item.displayMeasure}</span>
-                            <span className="font-medium">Qtd: {item.piecesQuantity}</span>
+                          <div className="flex items-center gap-3 text-xs">
+                            <span className="text-muted-foreground">{item.displayMeasure}</span>
+                            <Badge variant="outline" className="text-[10px]">×{item.piecesQuantity}</Badge>
                           </div>
                         </div>
 
