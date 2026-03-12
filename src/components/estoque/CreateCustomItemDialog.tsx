@@ -212,6 +212,7 @@ export function CreateCustomItemDialog({
       queryClient.invalidateQueries({ queryKey: ['company-stock'] });
       queryClient.invalidateQueries({ queryKey: ['company-items'] });
       queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['precificacao-products'] });
       resetForm();
       onOpenChange(false);
       onSuccess?.();
