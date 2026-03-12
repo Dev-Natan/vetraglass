@@ -14,7 +14,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FormulaEditor } from '@/components/produtos/FormulaEditor';
 import { GlassFormulaEditor } from '@/components/produtos/GlassFormulaEditor';
-
+import { ProductConfigPanel, ProductConfigData } from '@/components/produtos/ProductConfigPanel';
+import { CompositionSections } from '@/components/produtos/CompositionSections';
 import {
   Select,
   SelectContent,
