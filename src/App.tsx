@@ -41,6 +41,7 @@ const Medicoes = lazy(() => import("./pages/Medicoes"));
 const Relatorios = lazy(() => import("./pages/Relatorios"));
 const PedidosCompra = lazy(() => import("./pages/PedidosCompra"));
 const Feedbacks = lazy(() => import("./pages/Feedbacks"));
+const Precificacao = lazy(() => import("./pages/Precificacao"));
 
 const AceitarConvite = lazy(() => import("./pages/AceitarConvite"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -212,6 +213,9 @@ function AppRoutes() {
       } />
       <Route path="/feedbacks" element={
         <ProtectedRoute><ModuleGuard moduleKey="feedbacks"><LazyRoute><Feedbacks /></LazyRoute></ModuleGuard></ProtectedRoute>
+      } />
+      <Route path="/precificacao" element={
+        <ProtectedRoute><ModuleGuard moduleKey="produtos"><LazyRoute><Precificacao /></LazyRoute></ModuleGuard></ProtectedRoute>
       } />
       
       {/* Settings routes - all lazy */}
