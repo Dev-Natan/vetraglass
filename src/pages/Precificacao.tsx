@@ -45,7 +45,7 @@ export default function Precificacao() {
               image_url
             ),
             item_template:item_templates (
-              id, name, type, unit, default_price
+              id, name, type, unit, default_price, image_url
             )
           )
         `)
