@@ -802,7 +802,7 @@ export default function EditarProdutoEmpresa() {
               </ScrollArea>
             </div>
 
-            {activeTab === 'glass' ? (
+            {addItemSection === 'glass' ? (
               <GlassFormulaEditor
                 widthFormula={widthFormula}
                 heightFormula={heightFormula}
