@@ -722,7 +722,6 @@ export default function EditarProdutoEmpresa() {
           items={productItems || []}
           onAddItem={(section) => {
             setAddItemSection(section);
-            setActiveTab(section === 'accessory' ? 'accessory' : section);
             setIsAddItemDialogOpen(true);
           }}
           onEditItem={handleEditItem}
