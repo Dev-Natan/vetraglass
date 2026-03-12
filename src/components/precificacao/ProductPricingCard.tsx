@@ -272,6 +272,11 @@ export function ProductPricingCard({ product, compositionItems, onSaved }: Produ
         }
       }
 
+      // Invalidate stock caches so Estoque page stays in sync
+      queryClient.invalidateQueries({ queryKey: ['company-stock'] });
+      queryClient.invalidateQueries({ queryKey: ['company-items'] });
+      queryClient.invalidateQueries({ queryKey: ['company-item-prices'] });
+
       toast.success('Preços salvos com sucesso!');
       onSaved?.();
     } catch (err: any) {
