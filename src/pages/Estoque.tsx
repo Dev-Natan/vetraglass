@@ -77,12 +77,35 @@ export default function Estoque() {
   const { data: itemTypes } = useItemTypes();
   const { data: productLinhas } = useProductLinhas();
 
+  // Helper to get item name, type, linha from either source
+  const getItemData = useCallback((item: StockItem) => {
+    return {
+      name: item.company_item?.name ?? item.item_template?.name ?? 'Item',
+      type: item.company_item?.type ?? item.item_template?.type ?? '',
+      linha: item.company_item?.linha ?? item.item_template?.linha ?? '',
+    };
+  }, []);
+
   const linhas = useMemo(() => {
     const oficialLinhas = productLinhas?.map(l => l.name) || [];
     const uniqueLinhas = new Set<string>(oficialLinhas);
+    activeItems.forEach((item) => {
+      const linha = item.company_item?.linha ?? item.item_template?.linha;
+      if (linha) uniqueLinhas.add(linha);
+    });
     itemTemplates.forEach((t) => { if (t.linha) uniqueLinhas.add(t.linha); });
     return Array.from(uniqueLinhas).sort();
-  }, [productLinhas, itemTemplates]);
+  }, [productLinhas, itemTemplates, activeItems]);
+
+  // Get unique categories from active items
+  const activeCategories = useMemo(() => {
+    const cats = new Set<string>();
+    activeItems.forEach(item => {
+      const type = item.company_item?.type ?? item.item_template?.type;
+      if (type) cats.add(type);
+    });
+    return Array.from(cats);
+  }, [activeItems]);
 
   const toggleActiveMutation = useMutation({
     mutationFn: async ({ stockId, isActive }: { stockId: string; isActive: boolean }) => {
@@ -100,17 +123,35 @@ export default function Estoque() {
     let items = [...activeItems];
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
-      items = items.filter((item) => item.item_template?.name?.toLowerCase().includes(search));
+      items = items.filter((item) => {
+        const name = item.company_item?.name ?? item.item_template?.name ?? '';
+        return name.toLowerCase().includes(search);
+      });
     }
-    if (categoryFilter !== 'all') items = items.filter((item) => item.item_template?.type === categoryFilter);
-    if (linhaFilter !== 'all') items = items.filter((item) => item.item_template?.linha === linhaFilter);
+    if (categoryFilter !== 'all') {
+      items = items.filter((item) => {
+        const type = item.company_item?.type ?? item.item_template?.type;
+        return type === categoryFilter;
+      });
+    }
+    if (linhaFilter !== 'all') {
+      items = items.filter((item) => {
+        const linha = item.company_item?.linha ?? item.item_template?.linha;
+        return linha === linhaFilter;
+      });
+    }
     if (statusFilter === 'low') items = items.filter((item) => item.quantity <= (item.min_quantity || 0) && (item.min_quantity || 0) > 0);
+    else if (statusFilter === 'zero') items = items.filter((item) => item.quantity === 0);
     else if (statusFilter === 'normal') items = items.filter((item) => item.quantity > (item.min_quantity || 0) || (item.min_quantity || 0) === 0);
 
     items.sort((a, b) => {
-      if (sortBy === 'name') return (a.item_template?.name || '').localeCompare(b.item_template?.name || '');
+      if (sortBy === 'name') {
+        const nameA = a.company_item?.name ?? a.item_template?.name ?? '';
+        const nameB = b.company_item?.name ?? b.item_template?.name ?? '';
+        return nameA.localeCompare(nameB);
+      }
       if (sortBy === 'quantity') return b.quantity - a.quantity;
-      if (sortBy === 'value') return (b.quantity * (b.priceInfo?.cost || 0)) - (a.quantity * (a.priceInfo?.cost || 0));
+      if (sortBy === 'value') return (b.quantity * (b.company_item?.cost || b.priceInfo?.cost || 0)) - (a.quantity * (a.company_item?.cost || a.priceInfo?.cost || 0));
       return 0;
     });
 
