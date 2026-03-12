@@ -248,6 +248,14 @@ export default function EditarProdutoEmpresa() {
         commercial_name: product.commercial_name || '',
         description: product.description || '',
       });
+      setConfigData({
+        acabamento: (product as any).acabamento || '',
+        cor_componentes: (product as any).cor_componentes || '',
+        reforco: (product as any).reforco || '',
+        contramarco: (product as any).contramarco || '',
+        corte_contramarco: (product as any).corte_contramarco || '',
+        arremate: (product as any).arremate || '',
+      });
     }
   }, [product]);
 
