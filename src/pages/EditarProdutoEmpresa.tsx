@@ -381,9 +381,9 @@ export default function EditarProdutoEmpresa() {
         pieces_quantity: piecesQuantity,
         is_optional: false,
         cut_angle: cutAngle,
-        width_formula: activeTab === 'glass' ? (widthFormula || null) : null,
-        height_formula: activeTab === 'glass' ? (heightFormula || null) : null,
-        notes: activeTab === 'glass' ? (glassName || null) : null,
+        width_formula: addItemSection === 'glass' ? (widthFormula || null) : null,
+        height_formula: addItemSection === 'glass' ? (heightFormula || null) : null,
+        notes: addItemSection === 'glass' ? (glassName || null) : null,
         sort_order: (productItems?.length || 0) + 1,
       };
 
