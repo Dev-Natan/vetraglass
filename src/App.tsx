@@ -214,6 +214,9 @@ function AppRoutes() {
       <Route path="/feedbacks" element={
         <ProtectedRoute><ModuleGuard moduleKey="feedbacks"><LazyRoute><Feedbacks /></LazyRoute></ModuleGuard></ProtectedRoute>
       } />
+      <Route path="/precificacao" element={
+        <ProtectedRoute><ModuleGuard moduleKey="produtos"><LazyRoute><Precificacao /></LazyRoute></ModuleGuard></ProtectedRoute>
+      } />
       
       {/* Settings routes - all lazy */}
       <Route path="/configuracoes" element={
