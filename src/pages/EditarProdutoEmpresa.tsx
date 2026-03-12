@@ -14,7 +14,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FormulaEditor } from '@/components/produtos/FormulaEditor';
 import { GlassFormulaEditor } from '@/components/produtos/GlassFormulaEditor';
-
+import { ProductConfigPanel, ProductConfigData } from '@/components/produtos/ProductConfigPanel';
+import { CompositionSections } from '@/components/produtos/CompositionSections';
 import {
   Select,
   SelectContent,
@@ -119,10 +120,9 @@ const getFormulaType = (formula: string): 'Altura' | 'Largura' | null => {
 };
 
 const itemTypeTabs = [
-  { value: 'glass', label: 'VIDROS', dbType: 'glass' },
   { value: 'profile', label: 'PERFIS DE ALUMÍNIO', dbType: 'profile' },
-  { value: 'rubber', label: 'BORRACHAS E OUTROS', dbType: 'accessory' },
-  { value: 'accessory', label: 'ACESSÓRIOS E FERRAGENS', dbType: 'accessory' },
+  { value: 'accessory', label: 'COMPONENTES', dbType: 'accessory' },
+  { value: 'glass', label: 'VIDROS', dbType: 'glass' },
 ];
 
 export default function EditarProdutoEmpresa() {
@@ -132,7 +132,8 @@ export default function EditarProdutoEmpresa() {
   const { currentCompany, user } = useAuth();
   const { isAdmin } = usePermissions();
   
-  const [activeTab, setActiveTab] = useState('glass');
+  const [activeTab, setActiveTab] = useState('profile');
+  const [addItemSection, setAddItemSection] = useState<'profile' | 'accessory' | 'glass'>('profile');
   const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
   const [itemSearchQuery, setItemSearchQuery] = useState('');
   const [isEditItemDialogOpen, setIsEditItemDialogOpen] = useState(false);
@@ -151,6 +152,15 @@ export default function EditarProdutoEmpresa() {
   const [formData, setFormData] = useState({
     commercial_name: '',
     description: '',
+  });
+
+  const [configData, setConfigData] = useState<ProductConfigData>({
+    acabamento: '',
+    cor_componentes: '',
+    reforco: '',
+    contramarco: '',
+    corte_contramarco: '',
+    arremate: '',
   });
 
   // Fetch company product
@@ -195,10 +205,9 @@ export default function EditarProdutoEmpresa() {
 
   // Fetch available item templates for adding
   const { data: availableItems } = useQuery({
-    queryKey: ['item-templates-by-type', activeTab, product?.linha],
+    queryKey: ['item-templates-by-type', addItemSection, product?.linha],
     queryFn: async () => {
-      const currentTab = itemTypeTabs.find(t => t.value === activeTab);
-      const dbType = currentTab?.dbType || 'accessory';
+      const dbType = addItemSection;
       
       const { data, error } = await supabase
         .from('item_templates')
@@ -238,6 +247,14 @@ export default function EditarProdutoEmpresa() {
       setFormData({
         commercial_name: product.commercial_name || '',
         description: product.description || '',
+      });
+      setConfigData({
+        acabamento: (product as any).acabamento || '',
+        cor_componentes: (product as any).cor_componentes || '',
+        reforco: (product as any).reforco || '',
+        contramarco: (product as any).contramarco || '',
+        corte_contramarco: (product as any).corte_contramarco || '',
+        arremate: (product as any).arremate || '',
       });
     }
   }, [product]);
@@ -288,7 +305,13 @@ export default function EditarProdutoEmpresa() {
         .update({
           commercial_name: formData.commercial_name,
           description: formData.description,
-        })
+          acabamento: configData.acabamento || null,
+          cor_componentes: configData.cor_componentes || null,
+          reforco: configData.reforco || null,
+          contramarco: configData.contramarco || null,
+          corte_contramarco: configData.corte_contramarco || null,
+          arremate: configData.arremate || null,
+        } as any)
         .eq('id', id);
       if (error) throw error;
     },
@@ -358,9 +381,9 @@ export default function EditarProdutoEmpresa() {
         pieces_quantity: piecesQuantity,
         is_optional: false,
         cut_angle: cutAngle,
-        width_formula: activeTab === 'glass' ? (widthFormula || null) : null,
-        height_formula: activeTab === 'glass' ? (heightFormula || null) : null,
-        notes: activeTab === 'glass' ? (glassName || null) : null,
+        width_formula: addItemSection === 'glass' ? (widthFormula || null) : null,
+        height_formula: addItemSection === 'glass' ? (heightFormula || null) : null,
+        notes: addItemSection === 'glass' ? (glassName || null) : null,
         sort_order: (productItems?.length || 0) + 1,
       };
 
@@ -684,219 +707,33 @@ export default function EditarProdutoEmpresa() {
           </div>
         </div>
 
-        {/* Items Tabs */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-lg">Composição do Produto</h2>
-            <p className="text-sm text-muted-foreground">
-              {productItems?.length || 0} itens configurados
-            </p>
-          </div>
-          
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="bg-muted/50 rounded-xl p-1.5">
-              <TabsList className="w-full h-auto bg-transparent gap-1">
-                {itemTypeTabs.map((tab) => {
-                  const itemCount = getItemsByType(tab.value).length;
-                  const isActive = activeTab === tab.value;
-                  const hasItems = itemCount > 0;
-                  
-                  return (
-                    <TabsTrigger
-                      key={tab.value}
-                      value={tab.value}
-                      className={`flex-1 py-3 text-xs sm:text-sm font-medium rounded-lg transition-all data-[state=active]:shadow-sm ${
-                        hasItems && !isActive
-                          ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground'
-                          : 'data-[state=active]:bg-primary data-[state=active]:text-primary-foreground'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        {hasItems ? (
-                          <CheckCircle2 className={`w-4 h-4 ${isActive ? '' : 'text-green-600 dark:text-green-400'}`} />
-                        ) : isActive ? (
-                          <CircleDot className="w-4 h-4" />
-                        ) : (
-                          <Circle className="w-4 h-4" />
-                        )}
-                        <span className="hidden sm:inline">{tab.label}</span>
-                        <span className="sm:hidden">{tab.label.split(' ')[0]}</span>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                          isActive 
-                            ? 'bg-primary-foreground/20' 
-                            : hasItems 
-                              ? 'bg-green-600/20 text-green-700 dark:bg-green-400/20 dark:text-green-300'
-                              : 'bg-muted'
-                        }`}>
-                          {itemCount}
-                        </span>
-                      </div>
-                    </TabsTrigger>
-                  );
-                })}
-              </TabsList>
-            </div>
+        {/* Product Config Panel */}
+        <ProductConfigPanel
+          config={configData}
+          onChange={setConfigData}
+          minWidth={(product as any).min_width}
+          maxWidth={(product as any).max_width}
+          minHeight={(product as any).min_height}
+          maxHeight={(product as any).max_height}
+        />
 
-            {itemTypeTabs.map((tab) => (
-              <TabsContent key={tab.value} value={tab.value} className="mt-4">
-                <div className="flex justify-between items-center gap-2 mb-4">
-                  <p className="text-sm text-muted-foreground">
-                    {getItemsByType(tab.value).length === 0 
-                      ? `Adicione ${tab.label.toLowerCase()} à composição`
-                      : `${getItemsByType(tab.value).length} ${tab.label.toLowerCase()} configurados`
-                    }
-                  </p>
-                  <Button 
-                    size="sm" 
-                    className="gap-2"
-                    onClick={() => setIsAddItemDialogOpen(true)}
-                  >
-                    <Plus className="w-4 h-4" />
-                    Adicionar item
-                  </Button>
-                </div>
-
-                {/* Items grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                  {getItemsByType(tab.value).map((item) => {
-                    const itemData = item.item_template || item.company_item;
-                    return (
-                      <div
-                        key={item.id}
-                        onClick={() => handleEditItem(item)}
-                        className="bg-card border rounded-lg p-4 relative group hover:shadow-md hover:border-primary/50 transition-all cursor-pointer"
-                      >
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="absolute top-2 right-2 w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <MoreHorizontal className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-background border shadow-lg z-50">
-                            <DropdownMenuItem
-                              className="cursor-pointer"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditItem(item);
-                              }}
-                            >
-                              Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-destructive cursor-pointer"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                removeItemMutation.mutate(item.id);
-                              }}
-                            >
-                              Remover
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-
-                        {/* Item image */}
-                        <div className="aspect-square rounded-lg mb-3 flex items-center justify-center overflow-hidden bg-muted">
-                          {itemData?.image_url ? (
-                            <img
-                              src={getStorageUrl(itemData.image_url)}
-                              alt={itemData?.name}
-                              className="w-full h-full object-contain"
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                                e.currentTarget.parentElement!.innerHTML = '<div class="text-3xl text-muted-foreground/30 w-full h-full flex items-center justify-center">📦</div>';
-                              }}
-                            />
-                          ) : (
-                            <div className="text-3xl text-muted-foreground/30 w-full h-full flex items-center justify-center">📦</div>
-                          )}
-                        </div>
-
-                        {/* Item info */}
-                        {tab.value === 'glass' && item.notes && (
-                          <h4 className="font-bold text-sm text-foreground truncate text-center mb-1">
-                            {item.notes}
-                          </h4>
-                        )}
-                        <h4 className={`font-medium text-xs truncate text-center ${tab.value === 'glass' && item.notes ? 'text-muted-foreground' : 'text-primary'}`}>
-                          {itemData?.name}
-                        </h4>
-                        
-                        {/* Glass formulas display */}
-                        {tab.value === 'glass' && (item.width_formula || item.height_formula) && (
-                          <div className="mt-2 space-y-1">
-                            {item.width_formula && (
-                              <div className="flex items-center justify-center gap-1">
-                                <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
-                                  L: {item.width_formula}
-                                </span>
-                              </div>
-                            )}
-                            {item.height_formula && (
-                              <div className="flex items-center justify-center gap-1">
-                                <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                                  A: {item.height_formula}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        
-                        {/* Formula type indicator for non-glass items */}
-                        {tab.value !== 'glass' && getFormulaType(item.quantity_formula) && (
-                          <div className="flex justify-center mt-1">
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                              getFormulaType(item.quantity_formula) === 'Altura' 
-                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' 
-                                : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-                            }`}>
-                              {getFormulaType(item.quantity_formula)}
-                            </span>
-                          </div>
-                        )}
-                        
-                        {tab.value !== 'glass' && (
-                          <p className="text-xs text-muted-foreground text-center mt-1">
-                            {item.quantity_formula}
-                          </p>
-                        )}
-
-                        {/* Pieces quantity and Angle indicators (for profiles) */}
-                        {tab.value === 'profile' && (
-                          <div className="flex justify-center gap-2 mt-3">
-                            <span className="text-xs font-medium text-foreground bg-primary/10 px-2 py-1 rounded">
-                              {item.pieces_quantity || 1}x peças
-                            </span>
-                            <span className="text-xs font-medium text-foreground bg-muted px-2 py-1 rounded">
-                              {item.cut_angle || 90}°
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-
-                  {getItemsByType(tab.value).length === 0 && (
-                    <div className="col-span-full text-center py-12 text-muted-foreground">
-                      Nenhum item vinculado. Clique em "Adicionar item" para vincular.
-                    </div>
-                  )}
-                </div>
-              </TabsContent>
-            ))}
-          </Tabs>
-        </div>
+        {/* Composition Sections */}
+        <CompositionSections
+          items={productItems || []}
+          onAddItem={(section) => {
+            setAddItemSection(section);
+            setIsAddItemDialogOpen(true);
+          }}
+          onEditItem={handleEditItem}
+          onRemoveItem={(itemId) => removeItemMutation.mutate(itemId)}
+        />
       </div>
 
       {/* Add Item Dialog */}
       <Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Adicionar Item</DialogTitle>
+            <DialogTitle>Adicionar {addItemSection === 'profile' ? 'Perfil' : addItemSection === 'glass' ? 'Vidro' : 'Componente'}</DialogTitle>
             <DialogDescription>
               Selecione um item e configure sua fórmula
             </DialogDescription>
@@ -964,7 +801,7 @@ export default function EditarProdutoEmpresa() {
               </ScrollArea>
             </div>
 
-            {activeTab === 'glass' ? (
+            {addItemSection === 'glass' ? (
               <GlassFormulaEditor
                 widthFormula={widthFormula}
                 heightFormula={heightFormula}
