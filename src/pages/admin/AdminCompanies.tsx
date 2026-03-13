@@ -29,6 +29,9 @@ interface Company {
 export default function AdminCompanies() {
   const { isSaasAdmin } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
+  const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const queryClient = useQueryClient();
 
   // Optimized query with JOIN to get user counts in a single request
   const { data: companies = [], isLoading } = useQuery({
