@@ -221,6 +221,7 @@ export default function AdminCompanies() {
                   <TableHead>Contato</TableHead>
                   <TableHead>Usuários</TableHead>
                   <TableHead>Cadastro</TableHead>
+                  <TableHead className="w-[80px]">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
