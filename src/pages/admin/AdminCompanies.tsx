@@ -1,15 +1,18 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Search, Building2, Users, Phone, Mail, MapPin } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Loader2, Search, Building2, Users, Phone, Mail, MapPin, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { toast } from 'sonner';
 
 interface Company {
   id: string;
@@ -26,6 +29,9 @@ interface Company {
 export default function AdminCompanies() {
   const { isSaasAdmin } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
+  const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const queryClient = useQueryClient();
 
   // Optimized query with JOIN to get user counts in a single request
   const { data: companies = [], isLoading } = useQuery({
@@ -66,6 +72,27 @@ export default function AdminCompanies() {
       company.phone?.includes(searchTerm)
     );
   });
+
+  const handleDeleteCompany = async () => {
+    if (!companyToDelete) return;
+    setIsDeleting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await supabase.functions.invoke('admin-delete-company', {
+        body: { company_id: companyToDelete.id },
+      });
+      if (res.error || res.data?.error) {
+        throw new Error(res.data?.error || res.error?.message || 'Erro ao excluir');
+      }
+      toast.success(`Empresa "${companyToDelete.name}" excluída com sucesso`);
+      queryClient.invalidateQueries({ queryKey: ['admin-companies'] });
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao excluir empresa');
+    } finally {
+      setIsDeleting(false);
+      setCompanyToDelete(null);
+    }
+  };
 
   const formatCNPJ = (cnpj: string | null) => {
     if (!cnpj) return '-';
@@ -194,12 +221,13 @@ export default function AdminCompanies() {
                   <TableHead>Contato</TableHead>
                   <TableHead>Usuários</TableHead>
                   <TableHead>Cadastro</TableHead>
+                  <TableHead className="w-[80px]">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredCompanies.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                       Nenhuma empresa encontrada
                     </TableCell>
                   </TableRow>
@@ -265,6 +293,16 @@ export default function AdminCompanies() {
                           {format(new Date(company.created_at), "dd/MM/yyyy", { locale: ptBR })}
                         </p>
                       </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => setCompanyToDelete(company)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -273,6 +311,31 @@ export default function AdminCompanies() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!companyToDelete} onOpenChange={(open) => !open && setCompanyToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Empresa</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir a empresa <strong>{companyToDelete?.name}</strong>?
+              <br /><br />
+              Esta ação é <strong>irreversível</strong> e removerá todos os dados associados: usuários, ordens de serviço, orçamentos, estoque, financeiro e demais registros.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteCompany}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+              Excluir Permanentemente
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AdminLayout>
   );
 }
