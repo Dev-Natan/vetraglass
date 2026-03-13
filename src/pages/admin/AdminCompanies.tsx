@@ -73,6 +73,27 @@ export default function AdminCompanies() {
     );
   });
 
+  const handleDeleteCompany = async () => {
+    if (!companyToDelete) return;
+    setIsDeleting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await supabase.functions.invoke('admin-delete-company', {
+        body: { company_id: companyToDelete.id },
+      });
+      if (res.error || res.data?.error) {
+        throw new Error(res.data?.error || res.error?.message || 'Erro ao excluir');
+      }
+      toast.success(`Empresa "${companyToDelete.name}" excluída com sucesso`);
+      queryClient.invalidateQueries({ queryKey: ['admin-companies'] });
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao excluir empresa');
+    } finally {
+      setIsDeleting(false);
+      setCompanyToDelete(null);
+    }
+  };
+
   const formatCNPJ = (cnpj: string | null) => {
     if (!cnpj) return '-';
     const cleaned = cnpj.replace(/\D/g, '');
