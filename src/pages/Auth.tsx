@@ -253,77 +253,12 @@ export default function Auth() {
               </TabsContent>
               
               <TabsContent value="signup" className="mt-0">
-                <form onSubmit={handleSignup} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-name">Nome Completo</Label>
-                    <Input
-                      id="signup-name"
-                      type="text"
-                      placeholder="Seu nome"
-                      value={signupFullName}
-                      onChange={(e) => setSignupFullName(e.target.value)}
-                      disabled={isLoading}
-                      maxLength={100}
-                    />
-                    {errors.fullName && (
-                      <p className="text-sm text-destructive">{errors.fullName}</p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
-                    <Input
-                      id="signup-email"
-                      type="email"
-                      placeholder="seu@email.com"
-                      value={signupEmail}
-                      onChange={(e) => setSignupEmail(e.target.value)}
-                      disabled={isLoading}
-                      maxLength={255}
-                    />
-                    {errors.email && (
-                      <p className="text-sm text-destructive">{errors.email}</p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">Senha</Label>
-                    <PasswordInput
-                      id="signup-password"
-                      placeholder="••••••••"
-                      value={signupPassword}
-                      onChange={(e) => setSignupPassword(e.target.value)}
-                      disabled={isLoading}
-                      maxLength={128}
-                    />
-                    <PasswordStrengthIndicator password={signupPassword} />
-                    {errors.password && (
-                      <p className="text-sm text-destructive">{errors.password}</p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-confirm">Confirmar Senha</Label>
-                    <PasswordInput
-                      id="signup-confirm"
-                      placeholder="••••••••"
-                      value={signupConfirmPassword}
-                      onChange={(e) => setSignupConfirmPassword(e.target.value)}
-                      disabled={isLoading}
-                      maxLength={128}
-                    />
-                    {errors.confirmPassword && (
-                      <p className="text-sm text-destructive">{errors.confirmPassword}</p>
-                    )}
-                  </div>
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Criando conta...
-                      </>
-                    ) : (
-                      'Criar Empresa'
-                    )}
-                  </Button>
-                </form>
+                <Alert className="mb-4">
+                  <ShieldAlert className="h-4 w-4" />
+                  <AlertDescription>
+                    A criação de novas contas está temporariamente suspensa. Entre em contato com o administrador para mais informações.
+                  </AlertDescription>
+                </Alert>
               </TabsContent>
             </CardContent>
           </Tabs>
