@@ -77,11 +77,16 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
 };
 
 const itemTypeConfig: Record<string, { label: string; icon: string }> = {
-  window: { label: "Janela", icon: "🪟" },
-  door: { label: "Porta", icon: "🚪" },
-  partition: { label: "Divisória", icon: "📐" },
-  mirror: { label: "Espelho", icon: "🪞" },
-  shower: { label: "Box", icon: "🚿" },
+  janelas: { label: "Janela", icon: "🪟" },
+  portas: { label: "Porta", icon: "🚪" },
+  box: { label: "Box", icon: "🚿" },
+  espelhos: { label: "Espelho", icon: "🪞" },
+  'maxim-ar': { label: "Maxim-Ar", icon: "🪟" },
+  'guarda-corpo': { label: "Guarda Corpo", icon: "🛡️" },
+  fachadas: { label: "Fachada", icon: "🏢" },
+  portao: { label: "Portão", icon: "🚪" },
+  basculante: { label: "Basculante", icon: "🪟" },
+  corrimao: { label: "Corrimão", icon: "🛡️" },
   other: { label: "Outro", icon: "📦" },
 };
 
