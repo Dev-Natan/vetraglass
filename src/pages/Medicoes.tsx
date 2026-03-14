@@ -381,7 +381,7 @@ export default function Medicoes() {
 
   const [newItemForm, setNewItemForm] = useState({
     item_name: "",
-    item_type: "window",
+    item_type: "janelas",
     room: "",
     width: "",
     height: "",
