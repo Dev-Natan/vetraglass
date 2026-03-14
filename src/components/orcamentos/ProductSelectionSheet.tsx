@@ -35,13 +35,16 @@ interface ProductSelectionSheetProps {
 type SelectionStep = 'linha' | 'category' | 'product';
 
 const categoryIcons: Record<string, string> = {
-  window: '🪟',
-  door: '🚪',
-  partition: '🧱',
-  mirror: '🪞',
-  shower: '🚿',
-  facade: '🏢',
-  guarda_corpo: '🛡️',
+  janelas: '🪟',
+  portas: '🚪',
+  box: '🚿',
+  espelhos: '🪞',
+  fachadas: '🏢',
+  'guarda-corpo': '🛡️',
+  'maxim-ar': '🪟',
+  portao: '🚪',
+  basculante: '🪟',
+  corrimao: '🛡️',
   other: '📦',
 };
 

@@ -26,19 +26,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-// Category translation
-const categoryLabels: Record<string, string> = {
-  window: 'Janela',
-  door: 'Porta',
-  facade: 'Fachada',
-  shower: 'Box de Banheiro',
-  mirror: 'Espelho',
-  partition: 'Divisória',
-  guarda_corpo: 'Guarda Corpo',
-  other: 'Outros',
-};
-
-const translateCategory = (category: string) => categoryLabels[category] || category;
+// Category translation - uses dynamic labels from product_categories table
+import { useProductCategoryLabels } from '@/hooks/useProductCategories';
 
 // Get storage URL helper
 const getStorageUrl = (path: string | null) => resolveImageUrl(path);
@@ -60,6 +49,8 @@ export default function Producao() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { currentCompany, isSaasAdmin } = useAuth();
+  const { labels: categoryLabels } = useProductCategoryLabels();
+  const translateCategory = (category: string) => categoryLabels[category] || category;
   
   // State
   const [selectedLinha, setSelectedLinha] = useState<string>('');

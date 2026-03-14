@@ -18,13 +18,16 @@ const formatCurrency = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
 
 const categoryLabels: Record<string, string> = {
-  window: 'Janela',
-  door: 'Porta',
-  facade: 'Fachada',
-  shower: 'Box de Banheiro',
-  mirror: 'Espelho',
-  partition: 'Divisória',
-  guarda_corpo: 'Guarda Corpo',
+  janelas: 'Janela',
+  portas: 'Porta',
+  fachadas: 'Fachada',
+  box: 'Box de Banheiro',
+  espelhos: 'Espelho',
+  'guarda-corpo': 'Guarda Corpo',
+  'maxim-ar': 'Maxim-Ar',
+  portao: 'Portão',
+  basculante: 'Basculante',
+  corrimao: 'Corrimão',
   other: 'Outros',
 };
 

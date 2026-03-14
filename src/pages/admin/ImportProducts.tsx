@@ -43,13 +43,13 @@ interface ImportResult {
 
 // Category mapping
 const categoryMap: Record<string, string> = {
-  janela: "window",
-  porta: "door",
-  divisoria: "partition",
+  janela: "janelas",
+  porta: "portas",
+  divisoria: "other",
   tampo: "other",
-  espelho: "mirror",
-  box: "shower",
-  fachada: "facade",
+  espelho: "espelhos",
+  box: "box",
+  fachada: "fachadas",
 };
 
 // Line mapping

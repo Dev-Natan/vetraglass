@@ -203,7 +203,7 @@ export default function ProductTemplates() {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    category: "window",
+    category: "janelas",
     linha: currentLinha || "",
     min_width: "",
     max_width: "",
@@ -465,7 +465,7 @@ export default function ProductTemplates() {
         .insert([{
           name: `${template.name} (Cópia)`,
           description: template.description,
-          category: template.category as "window" | "door" | "shower" | "mirror" | "partition" | "facade" | "other",
+          category: template.category,
           linha: template.linha,
           min_width: template.min_width,
           max_width: template.max_width,
@@ -739,7 +739,7 @@ export default function ProductTemplates() {
     setFormData({
       name: "",
       description: "",
-      category: categoriesList[0] || "window",
+      category: categoriesList[0] || "janelas",
       linha: currentLinha || "",
       min_width: "",
       max_width: "",
