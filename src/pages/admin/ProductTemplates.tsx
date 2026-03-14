@@ -465,7 +465,7 @@ export default function ProductTemplates() {
         .insert([{
           name: `${template.name} (Cópia)`,
           description: template.description,
-          category: template.category as "window" | "door" | "shower" | "mirror" | "partition" | "facade" | "other",
+          category: template.category,
           linha: template.linha,
           min_width: template.min_width,
           max_width: template.max_width,
