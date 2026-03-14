@@ -203,7 +203,7 @@ export default function ProductTemplates() {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    category: "window",
+    category: "janelas",
     linha: currentLinha || "",
     min_width: "",
     max_width: "",
