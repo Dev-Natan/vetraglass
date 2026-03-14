@@ -429,7 +429,7 @@ function parseWithHeaders(data: (string | number | null)[][], fileName: string):
   
   return {
     name: productName,
-    category: 'door',
+    category: 'portas',
     linha: 'Portões',
     description: `Produto importado de ${fileName}`,
     items,
