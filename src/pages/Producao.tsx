@@ -49,6 +49,8 @@ export default function Producao() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { currentCompany, isSaasAdmin } = useAuth();
+  const { labels: categoryLabels } = useProductCategoryLabels();
+  const translateCategory = (category: string) => categoryLabels[category] || category;
   
   // State
   const [selectedLinha, setSelectedLinha] = useState<string>('');
