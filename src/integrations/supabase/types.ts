@@ -4424,7 +4424,7 @@ export type Database = {
           aliquota_iss: number | null
           arremate: string | null
           base_price: number | null
-          category: Database["public"]["Enums"]["product_category"]
+          category: string
           cest: string | null
           cfop_venda: string | null
           cfop_venda_interestadual: string | null
@@ -4453,7 +4453,7 @@ export type Database = {
           aliquota_iss?: number | null
           arremate?: string | null
           base_price?: number | null
-          category: Database["public"]["Enums"]["product_category"]
+          category: string
           cest?: string | null
           cfop_venda?: string | null
           cfop_venda_interestadual?: string | null
@@ -4482,7 +4482,7 @@ export type Database = {
           aliquota_iss?: number | null
           arremate?: string | null
           base_price?: number | null
-          category?: Database["public"]["Enums"]["product_category"]
+          category?: string
           cest?: string | null
           cfop_venda?: string | null
           cfop_venda_interestadual?: string | null
@@ -7293,19 +7293,6 @@ export type Database = {
         | "instalador"
         | "financeiro"
         | "custom"
-      product_category:
-        | "window"
-        | "door"
-        | "partition"
-        | "mirror"
-        | "shower"
-        | "facade"
-        | "other"
-        | "guarda_corpo"
-        | "maxim_ar"
-        | "portao"
-        | "basculante"
-        | "corrimao"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -7445,20 +7432,6 @@ export const Constants = {
         "instalador",
         "financeiro",
         "custom",
-      ],
-      product_category: [
-        "window",
-        "door",
-        "partition",
-        "mirror",
-        "shower",
-        "facade",
-        "other",
-        "guarda_corpo",
-        "maxim_ar",
-        "portao",
-        "basculante",
-        "corrimao",
       ],
     },
   },
