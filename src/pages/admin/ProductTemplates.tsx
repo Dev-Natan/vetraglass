@@ -739,7 +739,7 @@ export default function ProductTemplates() {
     setFormData({
       name: "",
       description: "",
-      category: categoriesList[0] || "window",
+      category: categoriesList[0] || "janelas",
       linha: currentLinha || "",
       min_width: "",
       max_width: "",
