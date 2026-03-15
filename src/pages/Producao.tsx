@@ -319,8 +319,8 @@ export default function Producao() {
     // Dynamically add Arremate profiles
     if (arremate !== 'sem' && ARREMATE_OFFSETS[arremate]) {
       const offset = ARREMATE_OFFSETS[arremate];
-      const arremateWidthLength = effectiveWidth + offset;
-      const arremateHeightLength = effectiveHeight + offset;
+      const arremateWidthLength = width + offset;
+      const arremateHeightLength = height + offset;
 
       baseProfiles.push({
         id: `arremate-largura-${arremate}`,
