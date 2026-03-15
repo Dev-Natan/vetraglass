@@ -65,6 +65,17 @@ export default function Producao() {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [glassType, setGlassType] = useState('CRISTAL INCOLOR 10MM - TEMPERADO');
   const [hardwareType, setHardwareType] = useState('Ferragens cromadas');
+  const [folgaLargura, setFolgaLargura] = useState<number>(0);
+  const [folgaVertical, setFolgaVertical] = useState<number>(0);
+  const [acabamento, setAcabamento] = useState('Branco Brilhante RAL900');
+  const [corComponentes, setCorComponentes] = useState('Branco');
+  const [reforco, setReforco] = useState('Sem Reforço');
+  const [contramarco, setContramarco] = useState('sem');
+  const [corteContramarco, setCorteContramarco] = useState('45/45');
+  const [arremate, setArremate] = useState('sem');
+  const [tipoVidro, setTipoVidro] = useState('');
+  const [espessuraVidro, setEspessuraVidro] = useState('');
+  const [calculated, setCalculated] = useState(false);
 
   // Fetch product templates
   const { data: productTemplates } = useQuery({
