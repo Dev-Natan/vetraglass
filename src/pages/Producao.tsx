@@ -584,7 +584,6 @@ export default function Producao() {
           </div>
           
           <div className="flex items-center gap-2">
-            <SavedProjectsSheet onLoadProject={handleLoadProject} />
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
