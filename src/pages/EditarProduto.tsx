@@ -460,6 +460,8 @@ export default function EditarProduto() {
       setWidthFormula(item.width_formula || '');
       setHeightFormula(item.height_formula || '');
       setGlassName(item.notes || '');
+      setQuantityFormula(item.quantity_formula || '1');
+      setPiecesQuantity(item.pieces_quantity || 1);
     } else {
       setQuantityFormula(item.quantity_formula || '1');
       setPiecesQuantity(item.pieces_quantity || 1);
