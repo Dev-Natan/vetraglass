@@ -616,7 +616,7 @@ export default function ItemTemplates() {
           <div>
             <h1 className="text-2xl font-bold text-foreground">Item Templates</h1>
             <p className="text-sm text-muted-foreground">
-              {totalItems} itens cadastrados • {groupedItems.size} linhas
+              {totalItems} itens cadastrados • {productLinhas?.length || 0} linhas
             </p>
           </div>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -839,7 +839,7 @@ export default function ItemTemplates() {
           </Card>
           <Card className="bg-muted/30">
             <CardContent className="pt-3 pb-2">
-              <p className="text-2xl font-bold text-muted-foreground">{groupedItems.size}</p>
+              <p className="text-2xl font-bold text-muted-foreground">{productLinhas?.length || 0}</p>
               <p className="text-xs text-muted-foreground">Linhas</p>
             </CardContent>
           </Card>
