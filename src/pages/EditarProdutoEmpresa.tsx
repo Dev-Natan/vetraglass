@@ -806,12 +806,22 @@ export default function EditarProdutoEmpresa() {
             </div>
 
             {addItemSection === 'glass' ? (
-              <GlassFormulaEditor
-                widthFormula={widthFormula}
-                heightFormula={heightFormula}
-                onWidthFormulaChange={setWidthFormula}
-                onHeightFormulaChange={setHeightFormula}
-              />
+              <>
+                <GlassFormulaEditor
+                  widthFormula={widthFormula}
+                  heightFormula={heightFormula}
+                  onWidthFormulaChange={setWidthFormula}
+                  onHeightFormulaChange={setHeightFormula}
+                />
+
+                <FormulaEditor
+                  value={quantityFormula}
+                  onChange={setQuantityFormula}
+                  showPiecesQuantity={true}
+                  piecesQuantity={piecesQuantity}
+                  onPiecesChange={setPiecesQuantity}
+                />
+              </>
             ) : (
               <FormulaEditor
                 value={quantityFormula}
