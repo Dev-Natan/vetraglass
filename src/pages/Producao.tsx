@@ -7,7 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { evaluateFormula, getFormulaPosition } from '@/utils/safeFormulaEvaluator';
+import { evaluateFormula, getFormulaPosition, type FormulaContext } from '@/utils/safeFormulaEvaluator';
 import { type ProfileCutItem } from '@/components/plano-corte/ProfileCutsTable';
 import { type GlassCutItem } from '@/components/plano-corte/GlassCutsTable';
 import { generateCuttingLabels, expandCutsToLabels } from '@/utils/generateCuttingLabels';
