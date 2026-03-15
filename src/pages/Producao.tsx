@@ -363,7 +363,7 @@ export default function Producao() {
     }
 
     return baseProfiles;
-  }, [productItems, width, height, quantity, completedItems, arremate, contramarco]);
+  }, [productItems, effectiveWidth, effectiveHeight, quantity, completedItems, arremate, contramarco]);
 
   // Calculate glass cuts
   const calculatedGlassCuts = useMemo((): GlassCutItem[] => {
