@@ -583,36 +583,7 @@ export default function Producao() {
             </div>
           </div>
           
-          <div className="flex items-center gap-2">
-            
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2" disabled={!hasData}>
-                  <Download className="w-4 h-4" />
-                  Exportar
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-popover border shadow-md">
-                <DropdownMenuItem onClick={handleExportPdf}>
-                  <FileDown className="w-4 h-4 mr-2" />
-                  Exportar PDF
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleExportCSV}>
-                  <Download className="w-4 h-4 mr-2" />
-                  Exportar CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleGenerateLabels}>
-                  <Tags className="w-4 h-4 mr-2" />
-                  Gerar Etiquetas
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            
-            <Button onClick={() => setSaveDialogOpen(true)} disabled={!hasData}>
-              <Save className="w-4 h-4 mr-2" />
-              Salvar Projeto
-            </Button>
-          </div>
+        
         </div>
 
         {/* Product Selection Header */}
