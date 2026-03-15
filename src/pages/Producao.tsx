@@ -328,8 +328,8 @@ export default function Producao() {
     // Dynamically add Contramarco profiles
     if (contramarco !== 'sem' && CONTRAMARCO_OFFSETS[contramarco]) {
       const offset = CONTRAMARCO_OFFSETS[contramarco];
-      const contramarcoWidthLength = width + offset;
-      const contramarcoHeightLength = height + offset;
+      const contramarcoWidthLength = effectiveWidth + offset;
+      const contramarcoHeightLength = effectiveHeight + offset;
 
       baseProfiles.push({
         id: `contramarco-largura-${contramarco}`,
