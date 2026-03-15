@@ -324,12 +324,14 @@ export function ActivateWithCompositionDialog({
   };
 
   const handleAddItem = () => {
+    console.log('[handleAddItem] called', { selectedItemTemplateId, activeTab, availableItems: availableItems?.length });
     if (!selectedItemTemplateId) {
       toast.error('Selecione um item');
       return;
     }
 
     const itemTemplate = availableItems?.find(i => i.id === selectedItemTemplateId);
+    console.log('[handleAddItem] itemTemplate found:', !!itemTemplate, itemTemplate?.name);
     if (!itemTemplate) return;
 
     // Allow duplicate items with different formulas - no restriction needed
