@@ -228,6 +228,7 @@ export default function PlanoCorte() {
       const itemGlasses = productItems
         .filter(item => item.item_templates?.type === 'glass')
         .map(item => {
+          const piecesQty = (item as any).pieces_quantity || 1;
           const widthF = (item as any).width_formula || 'Largura';
           const heightF = (item as any).height_formula || 'Altura';
           const calcWidth = evaluateFormula(widthF, width, height);
@@ -245,7 +246,7 @@ export default function PlanoCorte() {
             calculatedWidth: calcWidth,
             calculatedHeight: calcHeight,
             areaM2: areaM2,
-            quantity: quantity,
+            quantity: piecesQty * quantity,
             isCompleted: completedItems.has(item.id),
           };
         });

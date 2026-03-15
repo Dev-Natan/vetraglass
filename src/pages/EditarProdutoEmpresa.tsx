@@ -433,6 +433,8 @@ export default function EditarProdutoEmpresa() {
         updateData.width_formula = widthFormula || null;
         updateData.height_formula = heightFormula || null;
         updateData.notes = glassName || null;
+        updateData.quantity_formula = quantityFormula || '1';
+        updateData.pieces_quantity = piecesQuantity;
       } else {
         updateData.quantity_formula = quantityFormula;
         updateData.pieces_quantity = piecesQuantity;
@@ -515,6 +517,8 @@ export default function EditarProdutoEmpresa() {
       setWidthFormula(item.width_formula || '');
       setHeightFormula(item.height_formula || '');
       setGlassName(item.notes || '');
+      setQuantityFormula(item.quantity_formula || '1');
+      setPiecesQuantity(item.pieces_quantity || 1);
     } else {
       setQuantityFormula(item.quantity_formula || '1');
       setPiecesQuantity(item.pieces_quantity || 1);
@@ -802,12 +806,22 @@ export default function EditarProdutoEmpresa() {
             </div>
 
             {addItemSection === 'glass' ? (
-              <GlassFormulaEditor
-                widthFormula={widthFormula}
-                heightFormula={heightFormula}
-                onWidthFormulaChange={setWidthFormula}
-                onHeightFormulaChange={setHeightFormula}
-              />
+              <>
+                <GlassFormulaEditor
+                  widthFormula={widthFormula}
+                  heightFormula={heightFormula}
+                  onWidthFormulaChange={setWidthFormula}
+                  onHeightFormulaChange={setHeightFormula}
+                />
+
+                <FormulaEditor
+                  value={quantityFormula}
+                  onChange={setQuantityFormula}
+                  showPiecesQuantity={true}
+                  piecesQuantity={piecesQuantity}
+                  onPiecesChange={setPiecesQuantity}
+                />
+              </>
             ) : (
               <FormulaEditor
                 value={quantityFormula}
@@ -845,12 +859,22 @@ export default function EditarProdutoEmpresa() {
 
           <div className="space-y-4">
             {(editingItem?.item_template?.type === 'glass' || editingItem?.company_item?.type === 'glass') ? (
-              <GlassFormulaEditor
-                widthFormula={widthFormula}
-                heightFormula={heightFormula}
-                onWidthFormulaChange={setWidthFormula}
-                onHeightFormulaChange={setHeightFormula}
-              />
+              <>
+                <GlassFormulaEditor
+                  widthFormula={widthFormula}
+                  heightFormula={heightFormula}
+                  onWidthFormulaChange={setWidthFormula}
+                  onHeightFormulaChange={setHeightFormula}
+                />
+
+                <FormulaEditor
+                  value={quantityFormula}
+                  onChange={setQuantityFormula}
+                  showPiecesQuantity={true}
+                  piecesQuantity={piecesQuantity}
+                  onPiecesChange={setPiecesQuantity}
+                />
+              </>
             ) : (
               <FormulaEditor
                 value={quantityFormula}
