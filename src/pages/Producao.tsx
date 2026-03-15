@@ -233,6 +233,10 @@ export default function Producao() {
     'MP347': 44,
   };
 
+  // Effective dimensions after folga subtraction
+  const effectiveWidth = width - folgaLargura;
+  const effectiveHeight = height - folgaVertical;
+
   // Calculate profile cuts
   const calculatedCuts = useMemo((): ProfileCutItem[] => {
     if (!productItems || productItems.length === 0) return [];
@@ -251,13 +255,13 @@ export default function Producao() {
         let displayHeightFormula: string | null = heightF;
         
         if (heightF) {
-          calculatedLength = evaluateFormula(heightF, width, height);
+          calculatedLength = evaluateFormula(heightF, effectiveWidth, effectiveHeight);
           position = 'Altura';
         } else if (widthF) {
-          calculatedLength = evaluateFormula(widthF, width, height);
+          calculatedLength = evaluateFormula(widthF, effectiveWidth, effectiveHeight);
           position = 'Largura';
         } else {
-          calculatedLength = evaluateFormula(quantityF, width, height);
+          calculatedLength = evaluateFormula(quantityF, effectiveWidth, effectiveHeight);
           position = getFormulaPosition(quantityF);
           if (position === 'Altura') {
             displayHeightFormula = quantityF;
