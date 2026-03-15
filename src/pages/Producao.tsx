@@ -630,9 +630,30 @@ export default function Producao() {
           width={width}
           height={height}
           quantity={quantity}
+          folgaLargura={folgaLargura}
+          folgaVertical={folgaVertical}
+          acabamento={acabamento}
+          corComponentes={corComponentes}
+          reforco={reforco}
+          contramarco={contramarco}
+          corteContramarco={corteContramarco}
+          arremate={arremate}
+          tipoVidro={tipoVidro}
+          espessuraVidro={espessuraVidro}
           onWidthChange={setWidth}
           onHeightChange={setHeight}
           onQuantityChange={setQuantity}
+          onFolgaLarguraChange={setFolgaLargura}
+          onFolgaVerticalChange={setFolgaVertical}
+          onAcabamentoChange={setAcabamento}
+          onCorComponentesChange={setCorComponentes}
+          onReforcoChange={setReforco}
+          onContramarcoChange={setContramarco}
+          onCorteContramarcoChange={setCorteContramarco}
+          onArremateChange={setArremate}
+          onTipoVidroChange={setTipoVidro}
+          onEspessuraVidroChange={setEspessuraVidro}
+          onCalcular={() => setCalculated(true)}
           productImageUrl={getStorageUrl(selectedProductData?.image_url || null)}
           productName={selectedProductData?.name || null}
         />
