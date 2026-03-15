@@ -257,9 +257,13 @@ export default function Producao() {
     'MP347': 44,
   };
 
-  // Effective dimensions after folga subtraction
-  const effectiveWidth = width - folgaLargura;
-  const effectiveHeight = height - folgaVertical;
+  // Parametric formula context with folga variables
+  const formulaCtx: FormulaContext = useMemo(() => ({
+    width,
+    height,
+    folgaLargura,
+    folgaAltura: folgaVertical,
+  }), [width, height, folgaLargura, folgaVertical]);
 
   // Calculate profile cuts
   const calculatedCuts = useMemo((): ProfileCutItem[] => {
