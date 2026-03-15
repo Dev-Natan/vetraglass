@@ -469,8 +469,8 @@ export default function Producao() {
         const piecesQty = (item as any).pieces_quantity || 1;
         const widthF = (item as any).width_formula || 'Largura';
         const heightF = (item as any).height_formula || 'Altura';
-        const calcWidth = evaluateFormula(widthF, effectiveWidth, effectiveHeight);
-        const calcHeight = evaluateFormula(heightF, effectiveWidth, effectiveHeight);
+        const calcWidth = evaluateFormula(widthF, formulaCtx);
+        const calcHeight = evaluateFormula(heightF, formulaCtx);
         const customName = (item as any).notes || item.item_templates?.name || 'Vidro';
         
         const panels: GlassPanelData[] = [];
