@@ -430,8 +430,8 @@ export default function Producao() {
       const formulaGlasses = glassFormulas.map((formula, idx) => {
         const widthF = formula.width_formula || 'Largura';
         const heightF = formula.height_formula || 'Altura';
-        const calcWidth = evaluateFormula(widthF, effectiveWidth, effectiveHeight);
-        const calcHeight = evaluateFormula(heightF, effectiveWidth, effectiveHeight);
+        const calcWidth = evaluateFormula(widthF, formulaCtx);
+        const calcHeight = evaluateFormula(heightF, formulaCtx);
         const areaM2 = (calcWidth * calcHeight) / 1000000;
         
         return {
