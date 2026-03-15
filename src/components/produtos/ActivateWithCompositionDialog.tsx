@@ -324,14 +324,12 @@ export function ActivateWithCompositionDialog({
   };
 
   const handleAddItem = () => {
-    console.log('[handleAddItem] called', { selectedItemTemplateId, activeTab, availableItems: availableItems?.length });
     if (!selectedItemTemplateId) {
       toast.error('Selecione um item');
       return;
     }
 
     const itemTemplate = availableItems?.find(i => i.id === selectedItemTemplateId);
-    console.log('[handleAddItem] itemTemplate found:', !!itemTemplate, itemTemplate?.name);
     if (!itemTemplate) return;
 
     // Allow duplicate items with different formulas - no restriction needed
@@ -710,7 +708,6 @@ export function ActivateWithCompositionDialog({
                         variant="outline"
                         className="gap-2"
                         onClick={() => {
-                          console.log('[AddButton] Opening add dialog, current activeTab:', activeTab, 'tab.value:', tab.value);
                           setActiveTab(tab.value);
                           setIsAddingItem(true);
                           resetForm();
