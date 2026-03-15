@@ -187,24 +187,21 @@ export function calculateFormulaQuantity(
 export function validateFormula(
   formula: string,
   sampleWidth: number = 800,
-  sampleHeight: number = 1000
+  sampleHeight: number = 1000,
+  sampleFL: number = 2,
+  sampleFA: number = 3
 ): { isValid: boolean; result: number | null; error: string } {
   if (!formula || formula.trim() === '') {
     return { isValid: true, result: null, error: '' };
   }
 
   try {
-    // Replace variables with sample values for preview
-    const testFormula = formula
-      .replace(/Altura/gi, String(sampleHeight))
-      .replace(/Largura/gi, String(sampleWidth))
-      .replace(/\bH\b/gi, String(sampleHeight))
-      .replace(/\bW\b/gi, String(sampleWidth))
-      .replace(/\bA\b/gi, String(sampleHeight))
-      .replace(/\bL\b/gi, String(sampleWidth))
-      .replace(/,/g, '.');
-    
-    const result = math.evaluate(testFormula, limitedScope);
+    const result = evaluateFormula(formula, {
+      width: sampleWidth,
+      height: sampleHeight,
+      folgaLargura: sampleFL,
+      folgaAltura: sampleFA,
+    });
     
     if (typeof result === 'number' && !isNaN(result) && isFinite(result)) {
       return { isValid: true, result, error: '' };
