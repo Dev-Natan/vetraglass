@@ -493,7 +493,7 @@ export default function Producao() {
         
         return panels;
       });
-  }, [productItems, effectiveWidth, effectiveHeight]);
+  }, [productItems, formulaCtx]);
 
   // Group panels by unique dimensions for export
   const groupedPanels = useMemo(() => {
