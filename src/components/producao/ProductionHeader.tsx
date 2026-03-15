@@ -172,7 +172,7 @@ export function ProductionHeader({
           <div className="space-y-4">
             {/* Product Preview Card */}
             <Card className="border shadow-sm overflow-hidden">
-              <div className="aspect-[4/3] bg-gradient-to-br from-blue-50 to-sky-100 dark:from-blue-950/30 dark:to-sky-950/30 flex items-center justify-center p-6">
+              <div className="aspect-[4/3] bg-gradient-to-br from-primary/5 to-primary/10 flex items-center justify-center p-6">
                 {productImageUrl ? (
                   <img
                     src={productImageUrl}
@@ -180,7 +180,7 @@ export function ProductionHeader({
                     className="max-w-full max-h-full object-contain"
                   />
                 ) : (
-                  <div className="text-7xl text-blue-300/50">🪟</div>
+                  <div className="text-7xl text-primary/20">🪟</div>
                 )}
               </div>
               <CardContent className="p-4 border-t bg-card">
