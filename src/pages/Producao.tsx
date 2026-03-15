@@ -218,7 +218,31 @@ export default function Producao() {
     enabled: !!selectedProduct
   });
 
-  // Contramarco/Arremate offset configs
+  // Load company folga defaults
+  const { data: companyFolgaSettings } = useQuery({
+    queryKey: ['company-folga-settings', currentCompany?.id],
+    queryFn: async () => {
+      if (!currentCompany?.id) return null;
+      const { data, error } = await supabase
+        .from('company_folga_settings' as any)
+        .select('*')
+        .eq('company_id', currentCompany.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!currentCompany?.id
+  });
+
+  // Apply company folga defaults on load
+  useEffect(() => {
+    if (companyFolgaSettings) {
+      setFolgaLargura(Number((companyFolgaSettings as any).folga_largura) || 0);
+      setFolgaVertical(Number((companyFolgaSettings as any).folga_altura) || 0);
+    }
+  }, [companyFolgaSettings]);
+
+
   const CONTRAMARCO_OFFSETS: Record<string, number> = {
     'CM200': 24,
     'CMT74': 24,
