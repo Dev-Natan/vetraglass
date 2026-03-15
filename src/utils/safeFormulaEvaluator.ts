@@ -27,43 +27,87 @@ const limitedScope = {
 };
 
 /**
- * Normalizes formula variable names to safe single-letter variables
- * Handles Portuguese variable names (Altura, Largura) and abbreviations (A, L)
+ * Normalizes formula variable names to safe internal variables
+ * Handles Portuguese variable names and abbreviations
+ * Supports: L/Largura → W, A/Altura → H, FL → FL, FA → FA
  */
 function normalizeFormula(formula: string): string {
   return formula
-    // Replace full Portuguese names first
+    // Protect FL and FA first (before L and A replacement)
+    .replace(/\bFL\b/g, '__FL__')
+    .replace(/\bFA\b/g, '__FA__')
+    // Replace full Portuguese names
     .replace(/Largura/gi, 'W')
     .replace(/Altura/gi, 'H')
-    // Replace standalone L and A (word boundaries) - common abbreviations
+    // Replace standalone L and A (word boundaries)
     .replace(/\bL\b/gi, 'W')
     .replace(/\bA\b/gi, 'H')
+    // Restore FL and FA
+    .replace(/__FL__/g, 'FL')
+    .replace(/__FA__/g, 'FA')
     // Replace commas with dots for decimal numbers
     .replace(/,/g, '.');
 }
 
 /**
- * Evaluates a formula with width (W) and height (H) variables
- * Returns the result rounded to the nearest integer
- * 
- * @param formula - The formula string (e.g., "Altura - 20", "Largura / 2")
- * @param width - The width value in mm
- * @param height - The height value in mm
- * @returns The calculated result, or 0 if evaluation fails
+ * Extended formula context with folga (clearance) variables
  */
-export function evaluateFormula(formula: string, width: number, height: number): number {
+export interface FormulaContext {
+  width: number;
+  height: number;
+  folgaLargura?: number;
+  folgaAltura?: number;
+}
+
+/**
+ * Evaluates a parametric formula with width, height, and optional folga variables
+ * 
+ * Supported variables in formulas:
+ * - L / Largura / W = width (largura do vão)
+ * - A / Altura / H = height (altura do vão)
+ * - FL = folga da largura
+ * - FA = folga da altura
+ * 
+ * @param formula - The formula string (e.g., "L - FL", "Altura - 20", "(L - FL) / 2 - 53")
+ * @param widthOrContext - Width value in mm, or a FormulaContext object
+ * @param height - Height value in mm (optional if using context)
+ * @returns The calculated result rounded to nearest integer, or 0 if evaluation fails
+ */
+export function evaluateFormula(
+  formula: string, 
+  widthOrContext: number | FormulaContext, 
+  height?: number
+): number {
   try {
     if (!formula || formula.trim() === '') return 0;
     
+    let w: number, h: number, fl: number, fa: number;
+    
+    if (typeof widthOrContext === 'object') {
+      w = widthOrContext.width;
+      h = widthOrContext.height;
+      fl = widthOrContext.folgaLargura ?? 0;
+      fa = widthOrContext.folgaAltura ?? 0;
+    } else {
+      w = widthOrContext;
+      h = height ?? 0;
+      fl = 0;
+      fa = 0;
+    }
+    
     const normalized = normalizeFormula(formula);
     
-    // Create scope with variables
+    // Create scope with all variables
     const scope = {
       ...limitedScope,
-      W: width,
-      H: height,
-      w: width,
-      h: height,
+      W: w,
+      H: h,
+      w: w,
+      h: h,
+      FL: fl,
+      FA: fa,
+      fl: fl,
+      fa: fa,
     };
     
     const result = math.evaluate(normalized, scope);
