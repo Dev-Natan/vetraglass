@@ -426,6 +426,8 @@ export default function EditarProduto() {
         updateData.width_formula = widthFormula || null;
         updateData.height_formula = heightFormula || null;
         updateData.notes = glassName || null;
+        updateData.quantity_formula = quantityFormula || '1';
+        updateData.pieces_quantity = piecesQuantity;
       } else {
         updateData.quantity_formula = quantityFormula;
         updateData.pieces_quantity = piecesQuantity;
