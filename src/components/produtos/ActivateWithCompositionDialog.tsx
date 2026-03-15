@@ -708,7 +708,6 @@ export function ActivateWithCompositionDialog({
                         variant="outline"
                         className="gap-2"
                         onClick={() => {
-                          console.log('[AddButton] Opening add dialog, current activeTab:', activeTab, 'tab.value:', tab.value);
                           setActiveTab(tab.value);
                           setIsAddingItem(true);
                           resetForm();
