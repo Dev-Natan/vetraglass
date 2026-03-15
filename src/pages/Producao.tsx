@@ -283,13 +283,13 @@ export default function Producao() {
         let displayHeightFormula: string | null = heightF;
         
         if (heightF) {
-          calculatedLength = evaluateFormula(heightF, effectiveWidth, effectiveHeight);
+          calculatedLength = evaluateFormula(heightF, formulaCtx);
           position = 'Altura';
         } else if (widthF) {
-          calculatedLength = evaluateFormula(widthF, effectiveWidth, effectiveHeight);
+          calculatedLength = evaluateFormula(widthF, formulaCtx);
           position = 'Largura';
         } else {
-          calculatedLength = evaluateFormula(quantityF, effectiveWidth, effectiveHeight);
+          calculatedLength = evaluateFormula(quantityF, formulaCtx);
           position = getFormulaPosition(quantityF);
           if (position === 'Altura') {
             displayHeightFormula = quantityF;
