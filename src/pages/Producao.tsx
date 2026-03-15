@@ -453,7 +453,7 @@ export default function Producao() {
     }
     
     return glassItems;
-  }, [productItems, glassFormulas, effectiveWidth, effectiveHeight, quantity, completedItems]);
+  }, [productItems, glassFormulas, formulaCtx, quantity, completedItems]);
 
   // Calculate glass panels for the project view
   const glassPanels = useMemo((): GlassPanelData[] => {
