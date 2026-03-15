@@ -218,11 +218,26 @@ export default function Producao() {
     enabled: !!selectedProduct
   });
 
+  // Contramarco/Arremate offset configs
+  const CONTRAMARCO_OFFSETS: Record<string, number> = {
+    'CM200': 24,
+    'CMT74': 24,
+    'CM063': 24,
+    'CM060': 24,
+  };
+
+  const ARREMATE_OFFSETS: Record<string, number> = {
+    'RM021': 50,
+    'RM019': 50,
+    'RM005': 44,
+    'MP347': 44,
+  };
+
   // Calculate profile cuts
   const calculatedCuts = useMemo((): ProfileCutItem[] => {
     if (!productItems || productItems.length === 0) return [];
 
-    return productItems
+    const baseProfiles = productItems
       .filter(item => item.item_templates?.type === 'profile')
       .map(item => {
         const piecesPerProduct = (item as any).pieces_quantity || 1;
@@ -268,7 +283,83 @@ export default function Producao() {
           isCompleted: completedItems.has(item.id),
         };
       });
-  }, [productItems, width, height, quantity, completedItems]);
+
+    // Dynamically add Arremate profiles
+    if (arremate !== 'sem' && ARREMATE_OFFSETS[arremate]) {
+      const offset = ARREMATE_OFFSETS[arremate];
+      const arremateWidthLength = width + offset;
+      const arremateHeightLength = height + offset;
+
+      baseProfiles.push({
+        id: `arremate-largura-${arremate}`,
+        profileName: arremate,
+        imageUrl: null,
+        widthFormula: `Largura + ${offset}`,
+        heightFormula: null,
+        quantityFormula: '1',
+        calculatedLength: arremateWidthLength,
+        quantity: 2 * quantity,
+        piecesPerProduct: 2,
+        cutAngle: 45,
+        position: 'Largura',
+        isCompleted: completedItems.has(`arremate-largura-${arremate}`),
+      });
+
+      baseProfiles.push({
+        id: `arremate-altura-${arremate}`,
+        profileName: arremate,
+        imageUrl: null,
+        widthFormula: null,
+        heightFormula: `Altura + ${offset}`,
+        quantityFormula: '1',
+        calculatedLength: arremateHeightLength,
+        quantity: 2 * quantity,
+        piecesPerProduct: 2,
+        cutAngle: 45,
+        position: 'Altura',
+        isCompleted: completedItems.has(`arremate-altura-${arremate}`),
+      });
+    }
+
+    // Dynamically add Contramarco profiles
+    if (contramarco !== 'sem' && CONTRAMARCO_OFFSETS[contramarco]) {
+      const offset = CONTRAMARCO_OFFSETS[contramarco];
+      const contramarcoWidthLength = width + offset;
+      const contramarcoHeightLength = height + offset;
+
+      baseProfiles.push({
+        id: `contramarco-largura-${contramarco}`,
+        profileName: contramarco,
+        imageUrl: null,
+        widthFormula: `Largura + ${offset}`,
+        heightFormula: null,
+        quantityFormula: '1',
+        calculatedLength: contramarcoWidthLength,
+        quantity: 2 * quantity,
+        piecesPerProduct: 2,
+        cutAngle: 45,
+        position: 'Largura',
+        isCompleted: completedItems.has(`contramarco-largura-${contramarco}`),
+      });
+
+      baseProfiles.push({
+        id: `contramarco-altura-${contramarco}`,
+        profileName: contramarco,
+        imageUrl: null,
+        widthFormula: null,
+        heightFormula: `Altura + ${offset}`,
+        quantityFormula: '1',
+        calculatedLength: contramarcoHeightLength,
+        quantity: 2 * quantity,
+        piecesPerProduct: 2,
+        cutAngle: 45,
+        position: 'Altura',
+        isCompleted: completedItems.has(`contramarco-altura-${contramarco}`),
+      });
+    }
+
+    return baseProfiles;
+  }, [productItems, width, height, quantity, completedItems, arremate, contramarco]);
 
   // Calculate glass cuts
   const calculatedGlassCuts = useMemo((): GlassCutItem[] => {

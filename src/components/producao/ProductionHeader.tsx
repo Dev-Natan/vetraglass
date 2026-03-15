@@ -79,6 +79,7 @@ const CONTRAMARCO_OPTIONS = [
 
 const ARREMATE_OPTIONS = [
   { value: 'sem', label: 'Sem arremate' },
+  { value: 'RM021', label: 'Arremate RM021' },
   { value: 'RM019', label: 'Arremate RM019' },
   { value: 'RM005', label: 'Arremate RM005' },
   { value: 'MP347', label: 'Arremate MP347' },
