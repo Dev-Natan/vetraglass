@@ -1044,6 +1044,48 @@ export type Database = {
           },
         ]
       }
+      company_folga_settings: {
+        Row: {
+          company_id: string
+          created_at: string
+          folga_altura: number
+          folga_largura: number
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          folga_altura?: number
+          folga_largura?: number
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          folga_altura?: number
+          folga_largura?: number
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_folga_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_folga_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_item_prices: {
         Row: {
           company_id: string

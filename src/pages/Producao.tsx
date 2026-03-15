@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { resolveImageUrl } from '@/utils/imageUrl';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ArrowLeft, Download, Tags, Save, FileDown } from 'lucide-react';
@@ -218,7 +218,31 @@ export default function Producao() {
     enabled: !!selectedProduct
   });
 
-  // Contramarco/Arremate offset configs
+  // Load company folga defaults
+  const { data: companyFolgaSettings } = useQuery({
+    queryKey: ['company-folga-settings', currentCompany?.id],
+    queryFn: async () => {
+      if (!currentCompany?.id) return null;
+      const { data, error } = await supabase
+        .from('company_folga_settings' as any)
+        .select('*')
+        .eq('company_id', currentCompany.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!currentCompany?.id
+  });
+
+  // Apply company folga defaults on load
+  useEffect(() => {
+    if (companyFolgaSettings) {
+      setFolgaLargura(Number((companyFolgaSettings as any).folga_largura) || 0);
+      setFolgaVertical(Number((companyFolgaSettings as any).folga_altura) || 0);
+    }
+  }, [companyFolgaSettings]);
+
+
   const CONTRAMARCO_OFFSETS: Record<string, number> = {
     'CM200': 24,
     'CMT74': 24,
@@ -232,6 +256,10 @@ export default function Producao() {
     'RM005': 44,
     'MP347': 44,
   };
+
+  // Effective dimensions after folga subtraction
+  const effectiveWidth = width - folgaLargura;
+  const effectiveHeight = height - folgaVertical;
 
   // Calculate profile cuts
   const calculatedCuts = useMemo((): ProfileCutItem[] => {
@@ -251,13 +279,13 @@ export default function Producao() {
         let displayHeightFormula: string | null = heightF;
         
         if (heightF) {
-          calculatedLength = evaluateFormula(heightF, width, height);
+          calculatedLength = evaluateFormula(heightF, effectiveWidth, effectiveHeight);
           position = 'Altura';
         } else if (widthF) {
-          calculatedLength = evaluateFormula(widthF, width, height);
+          calculatedLength = evaluateFormula(widthF, effectiveWidth, effectiveHeight);
           position = 'Largura';
         } else {
-          calculatedLength = evaluateFormula(quantityF, width, height);
+          calculatedLength = evaluateFormula(quantityF, effectiveWidth, effectiveHeight);
           position = getFormulaPosition(quantityF);
           if (position === 'Altura') {
             displayHeightFormula = quantityF;
@@ -287,8 +315,8 @@ export default function Producao() {
     // Dynamically add Arremate profiles
     if (arremate !== 'sem' && ARREMATE_OFFSETS[arremate]) {
       const offset = ARREMATE_OFFSETS[arremate];
-      const arremateWidthLength = width + offset;
-      const arremateHeightLength = height + offset;
+      const arremateWidthLength = effectiveWidth + offset;
+      const arremateHeightLength = effectiveHeight + offset;
 
       baseProfiles.push({
         id: `arremate-largura-${arremate}`,
@@ -324,8 +352,8 @@ export default function Producao() {
     // Dynamically add Contramarco profiles
     if (contramarco !== 'sem' && CONTRAMARCO_OFFSETS[contramarco]) {
       const offset = CONTRAMARCO_OFFSETS[contramarco];
-      const contramarcoWidthLength = width + offset;
-      const contramarcoHeightLength = height + offset;
+      const contramarcoWidthLength = effectiveWidth + offset;
+      const contramarcoHeightLength = effectiveHeight + offset;
 
       baseProfiles.push({
         id: `contramarco-largura-${contramarco}`,
@@ -359,7 +387,7 @@ export default function Producao() {
     }
 
     return baseProfiles;
-  }, [productItems, width, height, quantity, completedItems, arremate, contramarco]);
+  }, [productItems, effectiveWidth, effectiveHeight, quantity, completedItems, arremate, contramarco]);
 
   // Calculate glass cuts
   const calculatedGlassCuts = useMemo((): GlassCutItem[] => {
@@ -371,8 +399,8 @@ export default function Producao() {
         .map(item => {
           const widthF = (item as any).width_formula || 'Largura';
           const heightF = (item as any).height_formula || 'Altura';
-          const calcWidth = evaluateFormula(widthF, width, height);
-          const calcHeight = evaluateFormula(heightF, width, height);
+          const calcWidth = evaluateFormula(widthF, effectiveWidth, effectiveHeight);
+          const calcHeight = evaluateFormula(heightF, effectiveWidth, effectiveHeight);
           const areaM2 = (calcWidth * calcHeight) / 1000000;
           const customName = (item as any).notes || null;
           
@@ -398,8 +426,8 @@ export default function Producao() {
       const formulaGlasses = glassFormulas.map((formula, idx) => {
         const widthF = formula.width_formula || 'Largura';
         const heightF = formula.height_formula || 'Altura';
-        const calcWidth = evaluateFormula(widthF, width, height);
-        const calcHeight = evaluateFormula(heightF, width, height);
+        const calcWidth = evaluateFormula(widthF, effectiveWidth, effectiveHeight);
+        const calcHeight = evaluateFormula(heightF, effectiveWidth, effectiveHeight);
         const areaM2 = (calcWidth * calcHeight) / 1000000;
         
         return {
@@ -421,7 +449,7 @@ export default function Producao() {
     }
     
     return glassItems;
-  }, [productItems, glassFormulas, width, height, quantity, completedItems]);
+  }, [productItems, glassFormulas, effectiveWidth, effectiveHeight, quantity, completedItems]);
 
   // Calculate glass panels for the project view
   const glassPanels = useMemo((): GlassPanelData[] => {
@@ -437,8 +465,8 @@ export default function Producao() {
         const piecesQty = (item as any).pieces_quantity || 1;
         const widthF = (item as any).width_formula || 'Largura';
         const heightF = (item as any).height_formula || 'Altura';
-        const calcWidth = evaluateFormula(widthF, width, height);
-        const calcHeight = evaluateFormula(heightF, width, height);
+        const calcWidth = evaluateFormula(widthF, effectiveWidth, effectiveHeight);
+        const calcHeight = evaluateFormula(heightF, effectiveWidth, effectiveHeight);
         const customName = (item as any).notes || item.item_templates?.name || 'Vidro';
         
         const panels: GlassPanelData[] = [];
@@ -461,7 +489,7 @@ export default function Producao() {
         
         return panels;
       });
-  }, [productItems, width, height]);
+  }, [productItems, effectiveWidth, effectiveHeight]);
 
   // Group panels by unique dimensions for export
   const groupedPanels = useMemo(() => {
