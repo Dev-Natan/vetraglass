@@ -15,7 +15,7 @@ import { exportCuttingPlanToCSV, type CuttingPlanExport } from '@/utils/exportCu
 import { ProductionHeader } from '@/components/producao/ProductionHeader';
 import { UnifiedProductionView } from '@/components/producao/UnifiedProductionView';
 import { SaveProjectDialog } from '@/components/projeto-vidro/SaveProjectDialog';
-import { SavedProjectsSheet } from '@/components/projeto-vidro/SavedProjectsSheet';
+
 import { Hole, Cutout } from '@/components/projeto-vidro/HoleCutoutEditor';
 import { generateGlassProjectPdf } from '@/utils/generateGlassProjectPdf';
 import { toast } from 'sonner';
