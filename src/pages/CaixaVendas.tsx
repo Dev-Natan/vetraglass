@@ -580,17 +580,26 @@ export default function CaixaVendas() {
         }
       }
       // Deduzir estoque e registrar movimentações
-      for (const [itemTemplateId, deductionQty] of stockDeductions) {
-        const { data: stockItem } = await supabase.from('company_stock').select('id, quantity, company_item_id').eq('company_id', currentCompany.id).eq('item_template_id', itemTemplateId).maybeSingle();
+      for (const [key, deductionQty] of stockDeductions) {
+        let stockItem;
+        const isCompanyItem = key.startsWith('ci:');
+        
+        if (isCompanyItem) {
+          const companyItemId = key.replace('ci:', '');
+          const { data } = await supabase.from('company_stock').select('id, quantity, company_item_id, item_template_id').eq('company_id', currentCompany.id).eq('company_item_id', companyItemId).maybeSingle();
+          stockItem = data;
+        } else {
+          const { data } = await supabase.from('company_stock').select('id, quantity, company_item_id, item_template_id').eq('company_id', currentCompany.id).eq('item_template_id', key).maybeSingle();
+          stockItem = data;
+        }
+        
         if (stockItem) {
-          // Atualizar estoque
           await supabase.from('company_stock').update({ quantity: Math.max(0, stockItem.quantity - deductionQty) }).eq('id', stockItem.id);
           
-          // Registrar movimento de saída para rastreabilidade
           await supabase.from('stock_movements').insert({
             company_id: currentCompany.id,
             company_item_id: stockItem.company_item_id,
-            item_template_id: itemTemplateId,
+            item_template_id: stockItem.item_template_id || (isCompanyItem ? null : key),
             type: 'saida',
             category: 'venda_direta',
             quantity: deductionQty,
