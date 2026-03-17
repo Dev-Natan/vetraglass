@@ -807,19 +807,55 @@ export default function EditarProdutoEmpresa() {
 
             {addItemSection === 'glass' ? (
               <>
+                {/* Quantity of glass pieces - prominent field */}
+                <div className="space-y-2 p-4 rounded-lg border bg-card">
+                  <Label className="font-medium flex items-center gap-2">
+                    <Package className="w-4 h-4 text-primary" />
+                    Quantidade de peças de vidro
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Quantas peças de vidro este produto utiliza (ex: 2 folhas, 1 fixo, etc.)
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9"
+                      onClick={() => setPiecesQuantity(Math.max(1, piecesQuantity - 1))}
+                      disabled={piecesQuantity <= 1}
+                    >
+                      <span className="text-lg font-bold">−</span>
+                    </Button>
+                    <Input
+                      type="number"
+                      value={piecesQuantity}
+                      onChange={(e) => setPiecesQuantity(Math.max(1, Number(e.target.value)))}
+                      className="w-20 text-center font-mono text-lg"
+                      min={1}
+                      max={20}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9"
+                      onClick={() => setPiecesQuantity(piecesQuantity + 1)}
+                      disabled={piecesQuantity >= 20}
+                    >
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      {piecesQuantity === 1 ? 'peça' : 'peças'}
+                    </span>
+                  </div>
+                </div>
+
                 <GlassFormulaEditor
                   widthFormula={widthFormula}
                   heightFormula={heightFormula}
                   onWidthFormulaChange={setWidthFormula}
                   onHeightFormulaChange={setHeightFormula}
-                />
-
-                <FormulaEditor
-                  value={quantityFormula}
-                  onChange={setQuantityFormula}
-                  showPiecesQuantity={true}
-                  piecesQuantity={piecesQuantity}
-                  onPiecesChange={setPiecesQuantity}
                 />
               </>
             ) : (
@@ -860,19 +896,55 @@ export default function EditarProdutoEmpresa() {
           <div className="space-y-4">
             {(editingItem?.item_template?.type === 'glass' || editingItem?.company_item?.type === 'glass') ? (
               <>
+                {/* Quantity of glass pieces - prominent field */}
+                <div className="space-y-2 p-4 rounded-lg border bg-card">
+                  <Label className="font-medium flex items-center gap-2">
+                    <Package className="w-4 h-4 text-primary" />
+                    Quantidade de peças de vidro
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Quantas peças de vidro este produto utiliza
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9"
+                      onClick={() => setPiecesQuantity(Math.max(1, piecesQuantity - 1))}
+                      disabled={piecesQuantity <= 1}
+                    >
+                      <span className="text-lg font-bold">−</span>
+                    </Button>
+                    <Input
+                      type="number"
+                      value={piecesQuantity}
+                      onChange={(e) => setPiecesQuantity(Math.max(1, Number(e.target.value)))}
+                      className="w-20 text-center font-mono text-lg"
+                      min={1}
+                      max={20}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-9 w-9"
+                      onClick={() => setPiecesQuantity(piecesQuantity + 1)}
+                      disabled={piecesQuantity >= 20}
+                    >
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      {piecesQuantity === 1 ? 'peça' : 'peças'}
+                    </span>
+                  </div>
+                </div>
+
                 <GlassFormulaEditor
                   widthFormula={widthFormula}
                   heightFormula={heightFormula}
                   onWidthFormulaChange={setWidthFormula}
                   onHeightFormulaChange={setHeightFormula}
-                />
-
-                <FormulaEditor
-                  value={quantityFormula}
-                  onChange={setQuantityFormula}
-                  showPiecesQuantity={true}
-                  piecesQuantity={piecesQuantity}
-                  onPiecesChange={setPiecesQuantity}
                 />
               </>
             ) : (
