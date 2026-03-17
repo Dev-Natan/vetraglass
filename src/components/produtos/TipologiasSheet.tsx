@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { resolveProductImageUrl } from '@/utils/imageUrl';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -25,8 +25,8 @@ import {
   Loader2,
   X,
 } from 'lucide-react';
-import { ActivateWithCompositionDialog } from './ActivateWithCompositionDialog';
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
+import { toast } from 'sonner';
 
 interface TipologiasSheetProps {
   open: boolean;
@@ -49,12 +49,6 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
   const queryClient = useQueryClient();
   const { labels: categoryLabels } = useProductCategoryLabels();
   const [searchTerm, setSearchTerm] = useState('');
-  const [activateDialogOpen, setActivateDialogOpen] = useState(false);
-  const [selectedProductForActivation, setSelectedProductForActivation] = useState<{
-    id: string;
-    name: string;
-    image_url: string | null;
-  } | null>(null);
   const [activeTab, setActiveTab] = useState<'todos' | 'ativos'>('todos');
 
   // Fetch products for this linha
