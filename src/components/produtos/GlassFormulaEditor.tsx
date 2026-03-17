@@ -22,6 +22,9 @@ interface GlassFormulaEditorProps {
   heightFormula: string;
   onWidthFormulaChange: (value: string) => void;
   onHeightFormulaChange: (value: string) => void;
+  showPiecesQuantity?: boolean;
+  piecesQuantity?: number;
+  onPiecesChange?: (value: number) => void;
 }
 
 // Common formulas for width (based on VÃO - opening dimensions)
@@ -187,7 +190,10 @@ export function GlassFormulaEditor({
   widthFormula, 
   heightFormula, 
   onWidthFormulaChange, 
-  onHeightFormulaChange 
+  onHeightFormulaChange,
+  showPiecesQuantity = false,
+  piecesQuantity = 1,
+  onPiecesChange
 }: GlassFormulaEditorProps) {
   const widthValid = validateFormula(widthFormula);
   const heightValid = validateFormula(heightFormula);
@@ -257,6 +263,49 @@ export function GlassFormulaEditor({
               <div className="font-mono font-bold text-lg">{areaM2.toFixed(3)}m²</div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Pieces quantity */}
+      {showPiecesQuantity && onPiecesChange && (
+        <div className="space-y-2 pt-2 border-t">
+          <Label>Quantidade de peças por produto</Label>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => onPiecesChange(Math.max(1, piecesQuantity - 1))}
+              disabled={piecesQuantity <= 1}
+            >
+              <Minus className="w-4 h-4" />
+            </Button>
+            <Input
+              type="number"
+              value={piecesQuantity}
+              onChange={(e) => onPiecesChange(Math.max(1, Number(e.target.value)))}
+              className="w-20 text-center"
+              min={1}
+              max={20}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => onPiecesChange(piecesQuantity + 1)}
+              disabled={piecesQuantity >= 20}
+            >
+              <Plus className="w-4 h-4" />
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              peças
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Ex: Janela de correr 2 folhas = 2 peças, Fixo = 1 peça
+          </p>
         </div>
       )}
 
