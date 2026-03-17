@@ -54,44 +54,42 @@ const features = [
 
 const plans = [
   {
-    name: 'Inicial',
-    description: 'Para pequenas vidraçarias',
+    name: 'Básico',
+    price: 'R$ 98,99',
+    period: '/mês',
+    description: 'Gestão completa para sua vidraçaria',
     features: [
-      'Até 2 usuários',
+      'Até 5 usuários',
       'Orçamentos ilimitados',
-      'Controle de estoque básico',
-      'Suporte por email',
+      'Ordens de serviço',
+      'Controle de estoque',
+      'Plano de corte otimizado',
+      'Financeiro completo (contas a pagar/receber)',
+      'Caixa diário e caixa empresa',
+      'Gestão de clientes',
+      'Relatórios gerenciais',
+      'Suporte por email e chat',
     ],
     highlighted: false,
   },
   {
-    name: 'Profissional',
-    description: 'Para vidraçarias em crescimento',
+    name: 'Fiscal',
+    price: 'R$ 245,00',
+    period: '/mês',
+    description: 'Tudo do Básico + funcionalidades fiscais',
     features: [
-      'Até 5 usuários',
-      'Tudo do Inicial +',
-      'Plano de corte otimizado',
-      'Financeiro completo',
-      'Relatórios avançados',
+      'Tudo do plano Básico +',
+      'Emissão de NF-e e NFS-e',
+      'Certificado digital integrado',
+      'Configuração de regime tributário',
+      'NCM, CFOP e CEST automáticos',
+      'Ambiente de homologação e produção',
+      'Relatórios fiscais detalhados',
       'Suporte prioritário',
     ],
     highlighted: true,
   },
-  {
-    name: 'Enterprise',
-    description: 'Para grandes operações',
-    features: [
-      'Usuários ilimitados',
-      'Tudo do Profissional +',
-      'Multi-filiais',
-      'API de integração',
-      'Suporte dedicado',
-      'Treinamento incluído',
-    ],
-    highlighted: false,
-  },
 ];
-
 const testimonials = [
   {
     name: 'Carlos Silva',
@@ -121,12 +119,20 @@ export default function Landing() {
     "applicationCategory": "BusinessApplication",
     "operatingSystem": "Web",
     "description": "Sistema completo de gestão para vidraçarias: orçamentos, ordens de serviço, estoque, financeiro, agenda e muito mais.",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "BRL",
-      "description": "Teste 14 dias grátis"
-    },
+    "offers": [
+      {
+        "@type": "Offer",
+        "price": "98.99",
+        "priceCurrency": "BRL",
+        "description": "Plano Básico - Gestão completa"
+      },
+      {
+        "@type": "Offer",
+        "price": "245.00",
+        "priceCurrency": "BRL",
+        "description": "Plano Fiscal - Gestão + NF-e/NFS-e"
+      }
+    ],
     "aggregateRating": {
       "@type": "AggregateRating",
       "ratingValue": "5",
@@ -332,13 +338,13 @@ export default function Landing() {
             </p>
           </div>
           
-          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             {plans.map((plan, index) => (
               <Card 
                 key={plan.name}
                 className={`relative animate-fade-in ${
                   plan.highlighted 
-                    ? 'border-primary shadow-lg scale-105' 
+                    ? 'border-primary shadow-lg shadow-primary/10 scale-[1.02]' 
                     : ''
                 }`}
                 style={{ animationDelay: `${index * 0.1}s` }}
@@ -346,16 +352,20 @@ export default function Landing() {
                 {plan.highlighted && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                     <Badge className="bg-primary text-primary-foreground">
-                      Mais Popular
+                      Mais Completo
                     </Badge>
                   </div>
                 )}
-                <CardHeader className="text-center pb-4">
+                <CardHeader className="text-center pb-2">
                   <CardTitle className="text-xl">{plan.name}</CardTitle>
                   <CardDescription>{plan.description}</CardDescription>
+                  <div className="pt-4">
+                    <span className="text-4xl font-bold text-foreground">{plan.price}</span>
+                    <span className="text-muted-foreground">{plan.period}</span>
+                  </div>
                 </CardHeader>
-                <CardContent className="pt-0">
-                  <ul className="space-y-3 mb-6">
+                <CardContent className="pt-4">
+                  <ul className="space-y-3 mb-8">
                     {plan.features.map((feature) => (
                       <li key={feature} className="flex items-center gap-2 text-sm">
                         <Check className="w-4 h-4 text-success flex-shrink-0" />
@@ -365,6 +375,7 @@ export default function Landing() {
                   </ul>
                   <Button 
                     className="w-full" 
+                    size="lg"
                     variant={plan.highlighted ? 'default' : 'outline'}
                     asChild
                   >
@@ -372,6 +383,9 @@ export default function Landing() {
                       Começar agora
                     </Link>
                   </Button>
+                  <p className="text-xs text-muted-foreground text-center mt-3">
+                    14 dias grátis • Sem compromisso
+                  </p>
                 </CardContent>
               </Card>
             ))}
