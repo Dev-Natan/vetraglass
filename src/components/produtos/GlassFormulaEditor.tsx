@@ -190,7 +190,10 @@ export function GlassFormulaEditor({
   widthFormula, 
   heightFormula, 
   onWidthFormulaChange, 
-  onHeightFormulaChange 
+  onHeightFormulaChange,
+  showPiecesQuantity = false,
+  piecesQuantity = 1,
+  onPiecesChange
 }: GlassFormulaEditorProps) {
   const widthValid = validateFormula(widthFormula);
   const heightValid = validateFormula(heightFormula);
