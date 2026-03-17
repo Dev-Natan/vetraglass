@@ -54,44 +54,42 @@ const features = [
 
 const plans = [
   {
-    name: 'Inicial',
-    description: 'Para pequenas vidraçarias',
+    name: 'Básico',
+    price: 'R$ 98,99',
+    period: '/mês',
+    description: 'Gestão completa para sua vidraçaria',
     features: [
-      'Até 2 usuários',
+      'Até 5 usuários',
       'Orçamentos ilimitados',
-      'Controle de estoque básico',
-      'Suporte por email',
+      'Ordens de serviço',
+      'Controle de estoque',
+      'Plano de corte otimizado',
+      'Financeiro completo (contas a pagar/receber)',
+      'Caixa diário e caixa empresa',
+      'Gestão de clientes',
+      'Relatórios gerenciais',
+      'Suporte por email e chat',
     ],
     highlighted: false,
   },
   {
-    name: 'Profissional',
-    description: 'Para vidraçarias em crescimento',
+    name: 'Fiscal',
+    price: 'R$ 245,00',
+    period: '/mês',
+    description: 'Tudo do Básico + funcionalidades fiscais',
     features: [
-      'Até 5 usuários',
-      'Tudo do Inicial +',
-      'Plano de corte otimizado',
-      'Financeiro completo',
-      'Relatórios avançados',
+      'Tudo do plano Básico +',
+      'Emissão de NF-e e NFS-e',
+      'Certificado digital integrado',
+      'Configuração de regime tributário',
+      'NCM, CFOP e CEST automáticos',
+      'Ambiente de homologação e produção',
+      'Relatórios fiscais detalhados',
       'Suporte prioritário',
     ],
     highlighted: true,
   },
-  {
-    name: 'Enterprise',
-    description: 'Para grandes operações',
-    features: [
-      'Usuários ilimitados',
-      'Tudo do Profissional +',
-      'Multi-filiais',
-      'API de integração',
-      'Suporte dedicado',
-      'Treinamento incluído',
-    ],
-    highlighted: false,
-  },
 ];
-
 const testimonials = [
   {
     name: 'Carlos Silva',
