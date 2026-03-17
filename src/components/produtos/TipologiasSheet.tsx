@@ -125,13 +125,30 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
     return groups;
   }, [filteredProducts]);
 
+  const activateProductMutation = useMutation({
+    mutationFn: async (productTemplateId: string) => {
+      if (!currentCompany?.id) throw new Error('Empresa não selecionada');
+      const { data, error } = await supabase.rpc('activate_product_template_for_company', {
+        _company_id: currentCompany.id,
+        _product_template_id: productTemplateId,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-products'] });
+      queryClient.invalidateQueries({ queryKey: ['linha-products'] });
+      queryClient.invalidateQueries({ queryKey: ['company-items'] });
+      queryClient.invalidateQueries({ queryKey: ['company-stock'] });
+      toast.success('Produto ativado para venda!');
+    },
+    onError: (error) => {
+      toast.error('Erro ao ativar: ' + error.message);
+    },
+  });
+
   const handleActivateClick = (product: ProductTemplate) => {
-    setSelectedProductForActivation({ 
-      id: product.id, 
-      name: product.name, 
-      image_url: product.image_url 
-    });
-    setActivateDialogOpen(true);
+    activateProductMutation.mutate(product.id);
   };
 
   const getProductImage = resolveProductImageUrl;
