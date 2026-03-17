@@ -537,12 +537,38 @@ export default function CaixaVendas() {
           stockDeductions.set(item.itemTemplateId, (stockDeductions.get(item.itemTemplateId) || 0) + deductionQty);
         }
         if (item.isProduct && item.width && item.height) {
+          const companyProductId = item.companyProductId;
           let productTemplateId = item.productTemplateId;
-          if (!productTemplateId && item.companyProductId) {
-            const product = availableProducts.find(p => p.id === item.companyProductId);
+          if (!productTemplateId && companyProductId) {
+            const product = availableProducts.find(p => p.id === companyProductId);
             productTemplateId = product?.product_template_id;
           }
-          if (productTemplateId) {
+          
+          // 1. Buscar composição da empresa (company_product_items) - prioridade
+          let hasCompanyComposition = false;
+          if (companyProductId) {
+            const { data: companyItems } = await supabase
+              .from('company_product_items')
+              .select('item_template_id, company_item_id, quantity_formula, pieces_quantity, width_formula, height_formula')
+              .eq('company_product_id', companyProductId);
+            
+            if (companyItems && companyItems.length > 0) {
+              hasCompanyComposition = true;
+              for (const ci of companyItems) {
+                if (ci.quantity_formula) {
+                  const qty = calculateFormulaQuantity(ci.quantity_formula, item.width, item.height, ci.pieces_quantity || 1) * item.quantity;
+                  if (qty > 0) {
+                    // Suporta tanto item_template_id quanto company_item_id
+                    const key = ci.item_template_id || `ci:${ci.company_item_id}`;
+                    stockDeductions.set(key, (stockDeductions.get(key) || 0) + qty);
+                  }
+                }
+              }
+            }
+          }
+          
+          // 2. Fallback: composição do template global (product_template_items)
+          if (!hasCompanyComposition && productTemplateId) {
             const { data: templateItems } = await supabase.from('product_template_items').select('item_template_id, quantity_formula, pieces_quantity').eq('product_template_id', productTemplateId).or(`company_id.is.null,company_id.eq.${currentCompany.id}`);
             for (const ti of templateItems || []) {
               if (ti.item_template_id && ti.quantity_formula) {
