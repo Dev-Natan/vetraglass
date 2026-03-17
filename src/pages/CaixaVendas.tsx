@@ -651,30 +651,62 @@ export default function CaixaVendas() {
           stockRestorations.set(item.item_template_id, (stockRestorations.get(item.item_template_id) || 0) + restoreQty);
         }
         if (item.company_product_id && item.width && item.height) {
-          const { data: cp } = await supabase.from('company_products').select('product_template_id').eq('id', item.company_product_id).single();
-          if (cp?.product_template_id) {
-            const { data: templateItems } = await supabase.from('product_template_items').select('item_template_id, quantity_formula, pieces_quantity').eq('product_template_id', cp.product_template_id).or(`company_id.is.null,company_id.eq.${currentCompany.id}`);
-            for (const ti of templateItems || []) {
-              if (ti.item_template_id && ti.quantity_formula) {
-                const qty = calculateFormulaQuantity(ti.quantity_formula, item.width, item.height, ti.pieces_quantity || 1) * item.quantity;
-                if (qty > 0) stockRestorations.set(ti.item_template_id, (stockRestorations.get(ti.item_template_id) || 0) + qty);
+          // 1. Buscar composição da empresa (company_product_items) - prioridade
+          const { data: companyItems } = await supabase
+            .from('company_product_items')
+            .select('item_template_id, company_item_id, quantity_formula, pieces_quantity')
+            .eq('company_product_id', item.company_product_id);
+          
+          let hasCompanyComposition = false;
+          if (companyItems && companyItems.length > 0) {
+            hasCompanyComposition = true;
+            for (const ci of companyItems) {
+              if (ci.quantity_formula) {
+                const qty = calculateFormulaQuantity(ci.quantity_formula, item.width, item.height, ci.pieces_quantity || 1) * item.quantity;
+                if (qty > 0) {
+                  const key = ci.item_template_id || `ci:${ci.company_item_id}`;
+                  stockRestorations.set(key, (stockRestorations.get(key) || 0) + qty);
+                }
+              }
+            }
+          }
+          
+          // 2. Fallback: composição do template global
+          if (!hasCompanyComposition) {
+            const { data: cp } = await supabase.from('company_products').select('product_template_id').eq('id', item.company_product_id).single();
+            if (cp?.product_template_id) {
+              const { data: templateItems } = await supabase.from('product_template_items').select('item_template_id, quantity_formula, pieces_quantity').eq('product_template_id', cp.product_template_id).or(`company_id.is.null,company_id.eq.${currentCompany.id}`);
+              for (const ti of templateItems || []) {
+                if (ti.item_template_id && ti.quantity_formula) {
+                  const qty = calculateFormulaQuantity(ti.quantity_formula, item.width, item.height, ti.pieces_quantity || 1) * item.quantity;
+                  if (qty > 0) stockRestorations.set(ti.item_template_id, (stockRestorations.get(ti.item_template_id) || 0) + qty);
+                }
               }
             }
           }
         }
       }
       // Restaurar estoque e registrar movimentações de entrada (cancelamento)
-      for (const [itemTemplateId, restoreQty] of stockRestorations) {
-        const { data: stockItem } = await supabase.from('company_stock').select('id, quantity, company_item_id').eq('company_id', currentCompany.id).eq('item_template_id', itemTemplateId).maybeSingle();
+      for (const [key, restoreQty] of stockRestorations) {
+        let stockItem;
+        const isCompanyItem = key.startsWith('ci:');
+        
+        if (isCompanyItem) {
+          const companyItemId = key.replace('ci:', '');
+          const { data } = await supabase.from('company_stock').select('id, quantity, company_item_id, item_template_id').eq('company_id', currentCompany.id).eq('company_item_id', companyItemId).maybeSingle();
+          stockItem = data;
+        } else {
+          const { data } = await supabase.from('company_stock').select('id, quantity, company_item_id, item_template_id').eq('company_id', currentCompany.id).eq('item_template_id', key).maybeSingle();
+          stockItem = data;
+        }
+        
         if (stockItem) {
-          // Atualizar estoque
           await supabase.from('company_stock').update({ quantity: stockItem.quantity + restoreQty }).eq('id', stockItem.id);
           
-          // Registrar movimento de entrada (estorno por cancelamento)
           await supabase.from('stock_movements').insert({
             company_id: currentCompany.id,
             company_item_id: stockItem.company_item_id,
-            item_template_id: itemTemplateId,
+            item_template_id: stockItem.item_template_id || (isCompanyItem ? null : key),
             type: 'entrada',
             category: 'estorno_venda',
             quantity: restoreQty,
