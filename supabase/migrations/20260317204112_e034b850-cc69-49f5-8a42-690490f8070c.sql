@@ -1,0 +1,1 @@
+UPDATE product_templates SET linha = 'suprema' WHERE linha = 'Suprema';
