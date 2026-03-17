@@ -297,22 +297,6 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
         </SheetContent>
       </Sheet>
 
-      {/* Activate Dialog with Composition */}
-      {selectedProductForActivation && (
-        <ActivateWithCompositionDialog
-          open={activateDialogOpen}
-          onOpenChange={setActivateDialogOpen}
-          productTemplateId={selectedProductForActivation.id}
-          productName={selectedProductForActivation.name}
-          productImageUrl={selectedProductForActivation.image_url}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['company-products'] });
-            queryClient.invalidateQueries({ queryKey: ['linha-products'] });
-            queryClient.invalidateQueries({ queryKey: ['company-items'] });
-            queryClient.invalidateQueries({ queryKey: ['company-stock'] });
-          }}
-        />
-      )}
     </>
   );
 }
