@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { resolveProductImageUrl } from '@/utils/imageUrl';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -25,8 +25,8 @@ import {
   Loader2,
   X,
 } from 'lucide-react';
-import { ActivateWithCompositionDialog } from './ActivateWithCompositionDialog';
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
+import { toast } from 'sonner';
 
 interface TipologiasSheetProps {
   open: boolean;
@@ -49,12 +49,6 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
   const queryClient = useQueryClient();
   const { labels: categoryLabels } = useProductCategoryLabels();
   const [searchTerm, setSearchTerm] = useState('');
-  const [activateDialogOpen, setActivateDialogOpen] = useState(false);
-  const [selectedProductForActivation, setSelectedProductForActivation] = useState<{
-    id: string;
-    name: string;
-    image_url: string | null;
-  } | null>(null);
   const [activeTab, setActiveTab] = useState<'todos' | 'ativos'>('todos');
 
   // Fetch products for this linha
@@ -131,13 +125,30 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
     return groups;
   }, [filteredProducts]);
 
+  const activateProductMutation = useMutation({
+    mutationFn: async (productTemplateId: string) => {
+      if (!currentCompany?.id) throw new Error('Empresa não selecionada');
+      const { data, error } = await supabase.rpc('activate_product_template_for_company', {
+        _company_id: currentCompany.id,
+        _product_template_id: productTemplateId,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-products'] });
+      queryClient.invalidateQueries({ queryKey: ['linha-products'] });
+      queryClient.invalidateQueries({ queryKey: ['company-items'] });
+      queryClient.invalidateQueries({ queryKey: ['company-stock'] });
+      toast.success('Produto ativado para venda!');
+    },
+    onError: (error) => {
+      toast.error('Erro ao ativar: ' + error.message);
+    },
+  });
+
   const handleActivateClick = (product: ProductTemplate) => {
-    setSelectedProductForActivation({ 
-      id: product.id, 
-      name: product.name, 
-      image_url: product.image_url 
-    });
-    setActivateDialogOpen(true);
+    activateProductMutation.mutate(product.id);
   };
 
   const getProductImage = resolveProductImageUrl;
@@ -286,22 +297,6 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
         </SheetContent>
       </Sheet>
 
-      {/* Activate Dialog with Composition */}
-      {selectedProductForActivation && (
-        <ActivateWithCompositionDialog
-          open={activateDialogOpen}
-          onOpenChange={setActivateDialogOpen}
-          productTemplateId={selectedProductForActivation.id}
-          productName={selectedProductForActivation.name}
-          productImageUrl={selectedProductForActivation.image_url}
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['company-products'] });
-            queryClient.invalidateQueries({ queryKey: ['linha-products'] });
-            queryClient.invalidateQueries({ queryKey: ['company-items'] });
-            queryClient.invalidateQueries({ queryKey: ['company-stock'] });
-          }}
-        />
-      )}
     </>
   );
 }
