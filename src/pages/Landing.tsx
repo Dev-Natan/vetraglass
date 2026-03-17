@@ -119,12 +119,20 @@ export default function Landing() {
     "applicationCategory": "BusinessApplication",
     "operatingSystem": "Web",
     "description": "Sistema completo de gestão para vidraçarias: orçamentos, ordens de serviço, estoque, financeiro, agenda e muito mais.",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "BRL",
-      "description": "Teste 14 dias grátis"
-    },
+    "offers": [
+      {
+        "@type": "Offer",
+        "price": "98.99",
+        "priceCurrency": "BRL",
+        "description": "Plano Básico - Gestão completa"
+      },
+      {
+        "@type": "Offer",
+        "price": "245.00",
+        "priceCurrency": "BRL",
+        "description": "Plano Fiscal - Gestão + NF-e/NFS-e"
+      }
+    ],
     "aggregateRating": {
       "@type": "AggregateRating",
       "ratingValue": "5",
