@@ -5,10 +5,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
-  ChevronDown, ChevronUp, Save, Ruler, Weight, DollarSign,
-  TrendingUp, Package, Calculator,
+  ChevronDown, ChevronUp, Save, Ruler, DollarSign,
+  TrendingUp, Package, AlertCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
@@ -75,14 +74,42 @@ const categoryLabels: Record<string, string> = {
   guarda_corpo: 'Guarda Corpo', other: 'Outros',
 };
 
-const unitOptions = [
-  { value: 'barra', label: 'Barra' },
-  { value: 'metro', label: 'Metro (m)' },
-  { value: 'kg', label: 'Quilo (kg)' },
-  { value: 'm2', label: 'Metro² (m²)' },
-  { value: 'un', label: 'Unidade (un)' },
-  { value: 'pc', label: 'Peça (pç)' },
-];
+/**
+ * Returns the PRIMARY cost for an item based on its type.
+ * - profile: cost per kg (most common in aluminum industry)
+ * - glass: cost per m²
+ * - accessory/component/service: cost per unit
+ */
+function getPrimaryCost(item: CompositionItem): number {
+  if (item.itemType === 'profile') return item.costPerKg;
+  if (item.itemType === 'glass') return item.costPerMeter; // m²
+  return item.costPerBar || item.costPerMeter || 0; // unit cost
+}
+
+function getPrimaryCostLabel(type: string): string {
+  if (type === 'profile') return 'Custo/Kg';
+  if (type === 'glass') return 'Custo/m²';
+  return 'Custo/Un';
+}
+
+/** Derive all cost fields from the primary cost input */
+function deriveCosts(item: CompositionItem, primaryCost: number): Partial<CompositionItem> {
+  const barLengthM = (item.barLengthMm || 6000) / 1000;
+
+  if (item.itemType === 'profile') {
+    // Primary = costPerKg
+    const costPerKg = primaryCost;
+    const costPerBar = costPerKg * (item.weightKg || 0);
+    const costPerMeter = barLengthM > 0 ? costPerBar / barLengthM : 0;
+    return { costPerKg, costPerBar, costPerMeter };
+  }
+  if (item.itemType === 'glass') {
+    // Primary = costPerMeter (which is cost/m² for glass)
+    return { costPerMeter: primaryCost };
+  }
+  // accessory/component/service: unit cost
+  return { costPerBar: primaryCost };
+}
 
 export function ProductPricingCard({ product, compositionItems, onSaved }: ProductPricingCardProps) {
   const queryClient = useQueryClient();
@@ -91,64 +118,26 @@ export function ProductPricingCard({ product, compositionItems, onSaved }: Produ
   const [height, setHeight] = useState(1200);
   const [marginPercent, setMarginPercent] = useState(product.margin_percent ?? 30);
   const [saving, setSaving] = useState(false);
-  const [itemOverrides, setItemOverrides] = useState<Record<string, Partial<CompositionItem & { salePrice: number }>>>({});
+  // Store only the primary cost override per item
+  const [costOverrides, setCostOverrides] = useState<Record<string, number>>({});
 
-  const getItem = useCallback((item: CompositionItem) => {
-    return { ...item, ...(itemOverrides[item.id] || {}) };
-  }, [itemOverrides]);
+  const getEffectiveCost = useCallback((item: CompositionItem) => {
+    if (costOverrides[item.id] !== undefined) return costOverrides[item.id];
+    return getPrimaryCost(item);
+  }, [costOverrides]);
 
-  const updateItemField = useCallback((itemId: string, field: string, value: number | string) => {
-    setItemOverrides(prev => {
-      const current = prev[itemId] || {};
-      const item = compositionItems.find(i => i.id === itemId);
-      if (!item) return prev;
-      const merged: any = { ...item, ...current, [field]: value };
-
-      // Auto-calc derived fields for profiles
-      if (merged.itemType === 'profile' || merged.unit === 'barra' || merged.unit === 'metro') {
-        const barLengthM = (merged.barLengthMm || 6000) / 1000;
-
-        if (field === 'weightKg' || field === 'barLengthMm') {
-          if (merged.weightKg > 0 && barLengthM > 0) {
-            merged.weightPerMeter = merged.weightKg / barLengthM;
-          }
-        }
-        if (['costPerBar', 'weightKg', 'barLengthMm'].includes(field)) {
-          if (merged.costPerBar > 0 && merged.weightKg > 0) {
-            merged.costPerKg = merged.costPerBar / merged.weightKg;
-          }
-          if (merged.costPerBar > 0 && barLengthM > 0) {
-            merged.costPerMeter = merged.costPerBar / barLengthM;
-          }
-        }
-        if (field === 'costPerKg') {
-          if (typeof value === 'number' && value > 0 && merged.weightKg > 0) {
-            merged.costPerBar = value * merged.weightKg;
-            if (barLengthM > 0) merged.costPerMeter = merged.costPerBar / barLengthM;
-          }
-        }
-        if (field === 'costPerMeter') {
-          if (typeof value === 'number' && value > 0 && barLengthM > 0) {
-            merged.costPerBar = value * barLengthM;
-            if (merged.weightKg > 0) merged.costPerKg = merged.costPerBar / merged.weightKg;
-          }
-        }
-
-        // Auto sale prices
-        const mult = 1 + (marginPercent / 100);
-        if (merged.costPerBar > 0) merged.salePricePerBar = merged.costPerBar * mult;
-        if (merged.costPerKg > 0) merged.salePricePerKg = merged.costPerKg * mult;
-        if (merged.costPerMeter > 0) merged.salePricePerMeter = merged.costPerMeter * mult;
-      }
-
-      return { ...prev, [itemId]: merged };
-    });
-  }, [compositionItems, marginPercent]);
+  const updateCost = useCallback((itemId: string, value: number) => {
+    setCostOverrides(prev => ({ ...prev, [itemId]: value }));
+  }, []);
 
   // Calculate component costs for simulation
   const calculatedItems = useMemo(() => {
+    const mult = 1 + (marginPercent / 100);
+
     return compositionItems.map(raw => {
-      const item = getItem(raw);
+      const primaryCost = getEffectiveCost(raw);
+      const derived = deriveCosts(raw, primaryCost);
+      const item = { ...raw, ...derived };
       const piecesQty = item.piecesQuantity || 1;
 
       if (item.itemType === 'glass') {
@@ -156,8 +145,8 @@ export function ProductPricingCard({ product, compositionItems, onSaved }: Produ
         const calcH = evaluateFormula(item.heightFormula || 'Altura', width, height);
         const areaM2 = (calcW * calcH) / 1_000_000;
         const totalCost = (item.costPerMeter || 0) * areaM2 * piecesQty;
-        const saleTotal = (item.salePricePerMeter || 0) * areaM2 * piecesQty;
-        return { ...item, totalCost, saleTotal, displayMeasure: `${calcW.toFixed(0)} x ${calcH.toFixed(0)} mm`, calcValue: areaM2 };
+        const saleTotal = totalCost * mult;
+        return { ...item, totalCost, saleTotal, displayMeasure: `${calcW.toFixed(0)} × ${calcH.toFixed(0)} mm`, calcValue: areaM2, primaryCost };
       } else if (item.itemType === 'profile') {
         const length = item.heightFormula
           ? evaluateFormula(item.heightFormula, width, height)
@@ -166,17 +155,17 @@ export function ProductPricingCard({ product, compositionItems, onSaved }: Produ
             : width;
         const lengthM = length / 1000;
         const costPerMeter = item.barLengthMm > 0 ? item.costPerBar / (item.barLengthMm / 1000) : item.costPerMeter;
-        const salePricePerMeter = item.barLengthMm > 0 ? item.salePricePerBar / (item.barLengthMm / 1000) : item.salePricePerMeter;
         const totalCost = costPerMeter * lengthM * piecesQty;
-        const saleTotal = salePricePerMeter * lengthM * piecesQty;
-        return { ...item, totalCost, saleTotal, displayMeasure: `${length.toFixed(0)} mm`, calcValue: length };
+        const saleTotal = totalCost * mult;
+        return { ...item, totalCost, saleTotal, displayMeasure: `${length.toFixed(0)} mm`, calcValue: length, primaryCost };
       } else {
-        const totalCost = (item.costPerBar || item.costPerMeter || 0) * piecesQty;
-        const saleTotal = (item.salePricePerBar || item.salePricePerMeter || 0) * piecesQty;
-        return { ...item, totalCost, saleTotal, displayMeasure: `${piecesQty} un`, calcValue: piecesQty };
+        const unitCost = item.costPerBar || item.costPerMeter || 0;
+        const totalCost = unitCost * piecesQty;
+        const saleTotal = totalCost * mult;
+        return { ...item, totalCost, saleTotal, displayMeasure: `${piecesQty} un`, calcValue: piecesQty, primaryCost };
       }
     });
-  }, [compositionItems, itemOverrides, width, height, getItem]);
+  }, [compositionItems, costOverrides, width, height, marginPercent, getEffectiveCost]);
 
   const totalCost = calculatedItems.reduce((s, c) => s + c.totalCost, 0);
   const totalSale = calculatedItems.reduce((s, c) => s + c.saleTotal, 0);
@@ -184,7 +173,6 @@ export function ProductPricingCard({ product, compositionItems, onSaved }: Produ
   const costPerSqm = areaM2 > 0 ? totalCost / areaM2 : 0;
   const pricePerSqm = areaM2 > 0 ? totalSale / areaM2 : 0;
   const profit = totalSale - totalCost;
-  const realMargin = totalCost > 0 ? ((totalSale - totalCost) / totalCost) * 100 : 0;
 
   // Group by type
   const grouped = useMemo(() => {
@@ -196,10 +184,14 @@ export function ProductPricingCard({ product, compositionItems, onSaved }: Produ
     return g;
   }, [calculatedItems]);
 
+  const hasChanges = Object.keys(costOverrides).length > 0 || marginPercent !== (product.margin_percent ?? 30);
+
   const handleSave = async () => {
     setSaving(true);
     try {
-      // 1. Save current product pricing
+      const mult = 1 + (marginPercent / 100);
+
+      // 1. Save product pricing
       const { error: prodError } = await supabase
         .from('company_products')
         .update({
@@ -208,50 +200,44 @@ export function ProductPricingCard({ product, compositionItems, onSaved }: Produ
           margin_percent: marginPercent,
         })
         .eq('id', product.id);
-
       if (prodError) throw prodError;
 
-      // 2. Update each modified company_item (propagates to ALL products using this item)
+      // 2. Update each modified company_item
       const updatedCompanyItemIds: string[] = [];
 
-      for (const [itemId, overrides] of Object.entries(itemOverrides)) {
+      for (const [itemId, primaryCost] of Object.entries(costOverrides)) {
         const original = compositionItems.find(i => i.id === itemId);
         if (!original?.companyItemId) continue;
 
-        const o = overrides as any;
-        const updateData: Record<string, any> = {};
-        
-        if (o.barLengthMm !== undefined) updateData.bar_length_mm = o.barLengthMm;
-        if (o.weightKg !== undefined) updateData.weight_kg = o.weightKg;
-        if (o.weightPerMeter !== undefined) updateData.weight_per_meter = o.weightPerMeter;
-        if (o.costPerBar !== undefined) updateData.cost = o.costPerBar;
-        if (o.costPerKg !== undefined) updateData.cost_per_kg = o.costPerKg;
-        if (o.costPerMeter !== undefined) updateData.cost_per_meter = o.costPerMeter;
-        if (o.salePricePerBar !== undefined) updateData.sale_price = o.salePricePerBar;
-        if (o.salePricePerKg !== undefined) updateData.sale_price_per_kg = o.salePricePerKg;
-        if (o.salePricePerMeter !== undefined) updateData.sale_price_per_meter = o.salePricePerMeter;
-        if (o.unit !== undefined) updateData.unit = o.unit;
+        const derived = deriveCosts(original, primaryCost);
+        const barLengthM = (original.barLengthMm || 6000) / 1000;
 
-        if (Object.keys(updateData).length === 0) continue;
+        const updateData: Record<string, any> = {};
+
+        if (original.itemType === 'profile') {
+          updateData.cost_per_kg = derived.costPerKg;
+          updateData.cost = derived.costPerBar;
+          updateData.cost_per_meter = derived.costPerMeter;
+          updateData.sale_price_per_kg = (derived.costPerKg || 0) * mult;
+          updateData.sale_price = (derived.costPerBar || 0) * mult;
+          updateData.sale_price_per_meter = (derived.costPerMeter || 0) * mult;
+        } else if (original.itemType === 'glass') {
+          updateData.cost_per_meter = derived.costPerMeter;
+          updateData.sale_price_per_meter = (derived.costPerMeter || 0) * mult;
+        } else {
+          updateData.cost = derived.costPerBar;
+          updateData.sale_price = (derived.costPerBar || 0) * mult;
+        }
 
         const { error: itemError } = await supabase
           .from('company_items')
           .update(updateData)
           .eq('id', original.companyItemId);
-
         if (itemError) throw itemError;
         updatedCompanyItemIds.push(original.companyItemId);
       }
 
-      // 3. Update company_stock for modified items (sync sale_price)
-      for (const companyItemId of updatedCompanyItemIds) {
-        await supabase
-          .from('company_stock')
-          .update({ updated_at: new Date().toISOString() })
-          .eq('company_item_id', companyItemId);
-      }
-
-      // 4. Find all OTHER products that use the same company_items and invalidate their cache
+      // 3. Propagate to other products using same items
       if (updatedCompanyItemIds.length > 0) {
         const { data: affectedProducts } = await supabase
           .from('company_product_items')
@@ -261,7 +247,6 @@ export function ProductPricingCard({ product, compositionItems, onSaved }: Produ
 
         if (affectedProducts && affectedProducts.length > 0) {
           const uniqueProductIds = [...new Set(affectedProducts.map(p => p.company_product_id))];
-          // Touch updated_at on affected products so UI knows they changed
           for (const pid of uniqueProductIds) {
             await supabase
               .from('company_products')
@@ -272,12 +257,13 @@ export function ProductPricingCard({ product, compositionItems, onSaved }: Produ
         }
       }
 
-      // Invalidate stock caches so Estoque page stays in sync
       queryClient.invalidateQueries({ queryKey: ['company-stock'] });
       queryClient.invalidateQueries({ queryKey: ['company-items'] });
       queryClient.invalidateQueries({ queryKey: ['company-item-prices'] });
+      queryClient.invalidateQueries({ queryKey: ['precificacao-products'] });
 
       toast.success('Preços salvos com sucesso!');
+      setCostOverrides({});
       onSaved?.();
     } catch (err: any) {
       toast.error('Erro ao salvar: ' + err.message);
@@ -286,53 +272,58 @@ export function ProductPricingCard({ product, compositionItems, onSaved }: Produ
     }
   };
 
+  const noPricing = compositionItems.length > 0 && totalCost === 0;
+
   return (
-    <Card className={cn("transition-all", expanded && "ring-1 ring-primary/30")}>
-      {/* Header */}
+    <Card className={cn("transition-all", expanded && "ring-1 ring-primary/20")}>
+      {/* Collapsed Header */}
       <CardHeader
-        className="pb-3 cursor-pointer hover:bg-accent/50 transition-colors rounded-t-lg"
+        className="pb-3 cursor-pointer hover:bg-accent/30 transition-colors rounded-t-lg"
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             {product.image_url ? (
-              <div className="w-14 h-14 rounded-lg border bg-background p-1 flex items-center justify-center shrink-0">
+              <div className="w-12 h-12 rounded-lg border bg-background p-1 flex items-center justify-center shrink-0">
                 <img src={product.image_url} alt={product.commercial_name} className="w-full h-full object-contain" />
               </div>
             ) : (
-              <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                <Package className="w-6 h-6 text-muted-foreground" />
+              <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                <Package className="w-5 h-5 text-muted-foreground" />
               </div>
             )}
             <div>
               <CardTitle className="text-sm font-semibold">{product.commercial_name}</CardTitle>
-              <div className="flex items-center gap-2 mt-0.5">
+              <div className="flex items-center gap-1.5 mt-0.5">
                 {product.linha && <Badge variant="outline" className="text-[10px] px-1.5 py-0">{product.linha}</Badge>}
                 {product.category && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{categoryLabels[product.category] || product.category}</Badge>}
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground">{compositionItems.length} itens</Badge>
+                <span className="text-[10px] text-muted-foreground">{compositionItems.length} itens</span>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {noPricing && !expanded && (
+              <AlertCircle className="h-4 w-4 text-amber-500" />
+            )}
             <div className="hidden sm:flex items-center gap-4 text-xs">
               <div className="text-right">
                 <span className="text-muted-foreground">Custo/m²</span>
-                <p className="font-semibold">{formatCurrency(costPerSqm)}</p>
+                <p className="font-semibold">{costPerSqm > 0 ? formatCurrency(costPerSqm) : '—'}</p>
               </div>
               <div className="text-right">
                 <span className="text-primary">Venda/m²</span>
-                <p className="font-semibold text-primary">{formatCurrency(pricePerSqm)}</p>
+                <p className="font-semibold text-primary">{pricePerSqm > 0 ? formatCurrency(pricePerSqm) : '—'}</p>
               </div>
             </div>
-            {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            {expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
           </div>
         </div>
       </CardHeader>
 
       {expanded && (
-        <CardContent className="space-y-5 pt-0">
-          {/* Simulation controls */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-muted/40 rounded-lg">
+        <CardContent className="space-y-4 pt-0">
+          {/* Simulation + Margin */}
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 p-3 bg-muted/30 rounded-lg">
             <div className="space-y-1">
               <Label className="text-[10px] text-muted-foreground flex items-center gap-1">
                 <Ruler className="h-3 w-3" /> Largura (mm)
@@ -346,257 +337,100 @@ export function ProductPricingCard({ product, compositionItems, onSaved }: Produ
               <Input type="number" min={100} step={10} value={height} onChange={e => setHeight(parseInt(e.target.value) || 0)} className="h-8 text-sm" />
             </div>
             <div className="space-y-1">
-              <Label className="text-[10px] text-muted-foreground flex items-center gap-1">
+              <Label className="text-[10px] text-primary font-semibold flex items-center gap-1">
                 <TrendingUp className="h-3 w-3" /> Margem (%)
               </Label>
-              <Input type="number" min={0} step={1} value={marginPercent} onChange={e => setMarginPercent(parseFloat(e.target.value) || 0)} className="h-8 text-sm" />
+              <Input
+                type="number" min={0} step={1}
+                value={marginPercent}
+                onChange={e => setMarginPercent(parseFloat(e.target.value) || 0)}
+                className="h-8 text-sm border-primary/30 font-semibold"
+              />
             </div>
-            <div className="space-y-1">
+            <div className="hidden sm:block space-y-1">
               <Label className="text-[10px] text-muted-foreground">Área</Label>
-              <div className="h-8 flex items-center text-sm font-medium">{areaM2.toFixed(4)} m²</div>
+              <div className="h-8 flex items-center text-sm font-medium">{areaM2.toFixed(3)} m²</div>
             </div>
           </div>
 
-          {/* KPI summary */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-            <div className="p-2 rounded-md bg-muted/30 text-center">
-              <span className="text-[10px] text-muted-foreground">Custo Total</span>
-              <p className="text-sm font-bold">{formatCurrency(totalCost)}</p>
+          {/* KPI Summary - simplified to 3 cards */}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="p-2.5 rounded-lg bg-muted/40 text-center">
+              <span className="text-[10px] text-muted-foreground block">Custo/m²</span>
+              <p className="text-sm font-bold mt-0.5">{costPerSqm > 0 ? formatCurrency(costPerSqm) : '—'}</p>
             </div>
-            <div className="p-2 rounded-md bg-primary/10 text-center">
-              <span className="text-[10px] text-primary">Venda Total</span>
-              <p className="text-sm font-bold text-primary">{formatCurrency(totalSale)}</p>
+            <div className="p-2.5 rounded-lg bg-primary/10 text-center">
+              <span className="text-[10px] text-primary block">Venda/m²</span>
+              <p className="text-sm font-bold text-primary mt-0.5">{pricePerSqm > 0 ? formatCurrency(pricePerSqm) : '—'}</p>
             </div>
-            <div className="p-2 rounded-md bg-muted/30 text-center">
-              <span className="text-[10px] text-muted-foreground">Custo/m²</span>
-              <p className="text-sm font-bold">{formatCurrency(costPerSqm)}</p>
-            </div>
-            <div className="p-2 rounded-md bg-primary/10 text-center">
-              <span className="text-[10px] text-primary">Venda/m²</span>
-              <p className="text-sm font-bold text-primary">{formatCurrency(pricePerSqm)}</p>
-            </div>
-            <div className={cn("p-2 rounded-md text-center", profit >= 0 ? "bg-emerald-500/10" : "bg-destructive/10")}>
-              <span className="text-[10px] text-muted-foreground">Lucro ({realMargin.toFixed(1)}%)</span>
-              <p className={cn("text-sm font-bold", profit >= 0 ? "text-emerald-600" : "text-destructive")}>{formatCurrency(profit)}</p>
+            <div className={cn("p-2.5 rounded-lg text-center", profit >= 0 ? "bg-emerald-500/10" : "bg-destructive/10")}>
+              <span className="text-[10px] text-muted-foreground block">Lucro</span>
+              <p className={cn("text-sm font-bold mt-0.5", profit >= 0 ? "text-emerald-600" : "text-destructive")}>
+                {formatCurrency(profit)}
+              </p>
             </div>
           </div>
 
-          {/* Components List by Type */}
+          {/* Components grouped by type - SIMPLIFIED */}
           {['profile', 'glass', 'accessory', 'component', 'service'].map(type => {
             const items = grouped[type];
             if (!items || items.length === 0) return null;
             const typeCost = items.reduce((s, c) => s + c.totalCost, 0);
-            const typeSale = items.reduce((s, c) => s + c.saleTotal, 0);
 
             return (
-              <div key={type} className="space-y-3">
+              <div key={type} className="space-y-2">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-semibold flex items-center gap-1.5">
                     <span>{typeIcons[type]}</span>
                     {typeLabels[type] || type}
                     <Badge variant="secondary" className="text-[9px] ml-1">{items.length}</Badge>
                   </h4>
-                  <div className="flex gap-3 text-xs text-muted-foreground">
-                    <span>Custo: {formatCurrency(typeCost)}</span>
-                    <span className="text-primary font-medium">Venda: {formatCurrency(typeSale)}</span>
-                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    Subtotal: <strong>{formatCurrency(typeCost)}</strong>
+                  </span>
                 </div>
 
-                <div className="space-y-2">
-                  {items.map(item => {
-                    const merged = getItem(item);
-                    return (
-                      <div key={item.id} className="border rounded-lg p-3 bg-card space-y-3">
-                        {/* Item header */}
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            {item.imageUrl ? (
-                              <div className="w-10 h-10 rounded border bg-background p-0.5 flex items-center justify-center shrink-0">
-                                <img src={item.imageUrl} alt={item.itemName} className="w-full h-full object-contain rounded-sm" />
-                              </div>
-                            ) : (
-                              <div className="w-10 h-10 rounded bg-muted/60 flex items-center justify-center shrink-0 text-base">
-                                {typeIcons[item.itemType] || '📦'}
-                              </div>
-                            )}
-                            <div>
-                              <span className="text-sm font-medium">{item.itemName}</span>
-                              <div className="flex items-center gap-1.5 mt-0.5">
-                                {item.cutAngle && <Badge variant="outline" className="text-[9px] py-0">{item.cutAngle}°</Badge>}
-                                <Badge variant="secondary" className="text-[9px] py-0">{merged.unit || 'un'}</Badge>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3 text-xs">
-                            <span className="text-muted-foreground">{item.displayMeasure}</span>
-                            <Badge variant="outline" className="text-[10px]">×{item.piecesQuantity}</Badge>
-                          </div>
-                        </div>
+                <div className="space-y-1.5">
+                  {items.map(item => (
+                    <div key={item.id} className="flex items-center gap-2 p-2 rounded-lg border bg-card hover:bg-accent/20 transition-colors">
+                      {/* Icon */}
+                      <div className="w-8 h-8 rounded bg-muted/60 flex items-center justify-center shrink-0 text-sm overflow-hidden">
+                        {item.imageUrl ? (
+                          <img src={item.imageUrl} alt={item.itemName} className="w-full h-full object-contain" />
+                        ) : (
+                          <span>{typeIcons[item.itemType] || '📦'}</span>
+                        )}
+                      </div>
 
-                        {/* Editable fields grid */}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-                          {/* Unit of measure */}
-                          <div className="space-y-1">
-                            <Label className="text-[10px] text-muted-foreground">Unidade</Label>
-                            <Select
-                              value={merged.unit || 'un'}
-                              onValueChange={v => updateItemField(item.id, 'unit', v)}
-                            >
-                              <SelectTrigger className="h-8 text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {unitOptions.map(o => (
-                                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          {/* Bar Length / Comprimento */}
-                          {(type === 'profile' || merged.unit === 'barra' || merged.unit === 'metro') && (
-                            <div className="space-y-1">
-                              <Label className="text-[10px] text-muted-foreground flex items-center gap-1">
-                                <Ruler className="h-3 w-3" /> Comprimento (mm)
-                              </Label>
-                              <Input
-                                type="number" min={0} step={1}
-                                value={merged.barLengthMm || ''}
-                                onChange={e => updateItemField(item.id, 'barLengthMm', parseFloat(e.target.value) || 0)}
-                                className="h-8 text-xs" placeholder="6000"
-                              />
-                            </div>
-                          )}
-
-                          {/* Weight */}
-                          {(type === 'profile' || merged.unit === 'kg') && (
-                            <div className="space-y-1">
-                              <Label className="text-[10px] text-muted-foreground flex items-center gap-1">
-                                <Weight className="h-3 w-3" /> Peso (kg)
-                              </Label>
-                              <Input
-                                type="number" min={0} step={0.001}
-                                value={merged.weightKg || ''}
-                                onChange={e => updateItemField(item.id, 'weightKg', parseFloat(e.target.value) || 0)}
-                                className="h-8 text-xs" placeholder="0,000"
-                              />
-                            </div>
-                          )}
-
-                          {/* Weight per meter (auto-calculated, read-only) */}
-                          {type === 'profile' && (
-                            <div className="space-y-1">
-                              <Label className="text-[10px] text-muted-foreground">Peso/m (kg)</Label>
-                              <div className="h-8 flex items-center text-xs text-muted-foreground bg-muted/30 rounded-md px-2">
-                                {merged.weightPerMeter > 0 ? merged.weightPerMeter.toFixed(3) : '-'}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Glass dimensions */}
-                          {type === 'glass' && (
-                            <>
-                              <div className="space-y-1">
-                                <Label className="text-[10px] text-muted-foreground">Largura (fórmula)</Label>
-                                <div className="h-8 flex items-center text-xs text-muted-foreground bg-muted/30 rounded-md px-2">
-                                  {item.widthFormula || 'Largura'}
-                                </div>
-                              </div>
-                              <div className="space-y-1">
-                                <Label className="text-[10px] text-muted-foreground">Altura (fórmula)</Label>
-                                <div className="h-8 flex items-center text-xs text-muted-foreground bg-muted/30 rounded-md px-2">
-                                  {item.heightFormula || 'Altura'}
-                                </div>
-                              </div>
-                            </>
-                          )}
-                        </div>
-
-                        {/* Pricing fields */}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 pt-2 border-t border-dashed">
-                          {/* Cost per bar / unit */}
-                          <div className="space-y-1">
-                            <Label className="text-[10px] text-muted-foreground flex items-center gap-1">
-                              <DollarSign className="h-3 w-3" />
-                              {type === 'profile' ? 'Custo/Barra' : type === 'glass' ? 'Custo/m²' : 'Custo/Un'}
-                            </Label>
-                            <Input
-                              type="number" min={0} step={0.01}
-                              value={type === 'glass' ? (merged.costPerMeter || '') : (merged.costPerBar || '')}
-                              onChange={e => updateItemField(item.id, type === 'glass' ? 'costPerMeter' : 'costPerBar', parseFloat(e.target.value) || 0)}
-                              className="h-8 text-xs" placeholder="0,00"
-                            />
-                          </div>
-
-                          {/* Cost per kg (profiles) */}
-                          {type === 'profile' && (
-                            <div className="space-y-1">
-                              <Label className="text-[10px] text-muted-foreground">Custo/Kg</Label>
-                              <Input
-                                type="number" min={0} step={0.01}
-                                value={merged.costPerKg || ''}
-                                onChange={e => updateItemField(item.id, 'costPerKg', parseFloat(e.target.value) || 0)}
-                                className="h-8 text-xs" placeholder="0,00"
-                              />
-                            </div>
-                          )}
-
-                          {/* Cost per meter (profiles) */}
-                          {type === 'profile' && (
-                            <div className="space-y-1">
-                              <Label className="text-[10px] text-muted-foreground">Custo/Metro</Label>
-                              <Input
-                                type="number" min={0} step={0.01}
-                                value={merged.costPerMeter || ''}
-                                onChange={e => updateItemField(item.id, 'costPerMeter', parseFloat(e.target.value) || 0)}
-                                className="h-8 text-xs" placeholder="0,00"
-                              />
-                            </div>
-                          )}
-
-                          {/* Sale price per bar / unit */}
-                          <div className="space-y-1">
-                            <Label className="text-[10px] text-primary flex items-center gap-1">
-                              <TrendingUp className="h-3 w-3" />
-                              {type === 'profile' ? 'Venda/Barra' : type === 'glass' ? 'Venda/m²' : 'Venda/Un'}
-                            </Label>
-                            <Input
-                              type="number" min={0} step={0.01}
-                              value={type === 'glass' ? (merged.salePricePerMeter || '') : (merged.salePricePerBar || '')}
-                              onChange={e => updateItemField(item.id, type === 'glass' ? 'salePricePerMeter' : 'salePricePerBar', parseFloat(e.target.value) || 0)}
-                              className="h-8 text-xs border-primary/30" placeholder="0,00"
-                            />
-                          </div>
-
-                          {/* Sale per kg */}
-                          {type === 'profile' && (
-                            <div className="space-y-1">
-                              <Label className="text-[10px] text-primary">Venda/Kg</Label>
-                              <div className="h-8 flex items-center text-xs text-primary bg-primary/5 rounded-md px-2">
-                                {merged.salePricePerKg > 0 ? formatCurrency(merged.salePricePerKg) : '-'}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Sale per meter */}
-                          {type === 'profile' && (
-                            <div className="space-y-1">
-                              <Label className="text-[10px] text-primary">Venda/Metro</Label>
-                              <div className="h-8 flex items-center text-xs text-primary bg-primary/5 rounded-md px-2">
-                                {merged.salePricePerMeter > 0 ? formatCurrency(merged.salePricePerMeter) : '-'}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Item totals */}
-                        <div className="flex items-center justify-end gap-4 text-xs pt-1">
-                          <span className="text-muted-foreground">Custo: <strong>{formatCurrency(item.totalCost)}</strong></span>
-                          <span className="text-primary">Venda: <strong>{formatCurrency(item.saleTotal)}</strong></span>
+                      {/* Name + measure */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium truncate">{item.itemName}</p>
+                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                          <span>{item.displayMeasure}</span>
+                          {item.piecesQuantity > 1 && <span>× {item.piecesQuantity}</span>}
+                          {item.cutAngle && <span>({item.cutAngle}°)</span>}
                         </div>
                       </div>
-                    );
-                  })}
+
+                      {/* ONE cost input */}
+                      <div className="w-24 shrink-0">
+                        <Label className="text-[9px] text-muted-foreground block mb-0.5">{getPrimaryCostLabel(type)}</Label>
+                        <Input
+                          type="number" min={0} step={0.01}
+                          value={costOverrides[item.id] !== undefined ? costOverrides[item.id] : (item.primaryCost || '')}
+                          onChange={e => updateCost(item.id, parseFloat(e.target.value) || 0)}
+                          className="h-7 text-xs"
+                          placeholder="0,00"
+                        />
+                      </div>
+
+                      {/* Auto-calculated total */}
+                      <div className="w-20 text-right shrink-0">
+                        <span className="text-[9px] text-muted-foreground block">Total</span>
+                        <p className="text-xs font-semibold">{formatCurrency(item.totalCost)}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             );
@@ -611,8 +445,11 @@ export function ProductPricingCard({ product, compositionItems, onSaved }: Produ
           )}
 
           {/* Save button */}
-          <div className="flex justify-end pt-3 border-t">
-            <Button onClick={handleSave} disabled={saving} size="sm">
+          <div className="flex items-center justify-between pt-3 border-t">
+            <p className="text-[10px] text-muted-foreground">
+              {hasChanges ? 'Alterações não salvas' : 'Nenhuma alteração pendente'}
+            </p>
+            <Button onClick={handleSave} disabled={saving || !hasChanges} size="sm">
               <Save className="h-4 w-4 mr-1.5" />
               {saving ? 'Salvando...' : 'Salvar Preços'}
             </Button>
