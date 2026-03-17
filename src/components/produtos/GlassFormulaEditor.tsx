@@ -267,6 +267,49 @@ export function GlassFormulaEditor({
         </div>
       )}
 
+      {/* Pieces quantity */}
+      {showPiecesQuantity && onPiecesChange && (
+        <div className="space-y-2 pt-2 border-t">
+          <Label>Quantidade de peças por produto</Label>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => onPiecesChange(Math.max(1, piecesQuantity - 1))}
+              disabled={piecesQuantity <= 1}
+            >
+              <Minus className="w-4 h-4" />
+            </Button>
+            <Input
+              type="number"
+              value={piecesQuantity}
+              onChange={(e) => onPiecesChange(Math.max(1, Number(e.target.value)))}
+              className="w-20 text-center"
+              min={1}
+              max={20}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => onPiecesChange(piecesQuantity + 1)}
+              disabled={piecesQuantity >= 20}
+            >
+              <Plus className="w-4 h-4" />
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              peças
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Ex: Janela de correr 2 folhas = 2 peças, Fixo = 1 peça
+          </p>
+        </div>
+      )}
+
       {/* Help text */}
       <div className="text-xs text-muted-foreground bg-muted/30 p-3 rounded-lg">
         <p className="font-medium mb-1">💡 Fórmulas baseadas no VÃO</p>
