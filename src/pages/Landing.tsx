@@ -330,13 +330,13 @@ export default function Landing() {
             </p>
           </div>
           
-          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             {plans.map((plan, index) => (
               <Card 
                 key={plan.name}
                 className={`relative animate-fade-in ${
                   plan.highlighted 
-                    ? 'border-primary shadow-lg scale-105' 
+                    ? 'border-primary shadow-lg shadow-primary/10 scale-[1.02]' 
                     : ''
                 }`}
                 style={{ animationDelay: `${index * 0.1}s` }}
@@ -344,16 +344,20 @@ export default function Landing() {
                 {plan.highlighted && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                     <Badge className="bg-primary text-primary-foreground">
-                      Mais Popular
+                      Mais Completo
                     </Badge>
                   </div>
                 )}
-                <CardHeader className="text-center pb-4">
+                <CardHeader className="text-center pb-2">
                   <CardTitle className="text-xl">{plan.name}</CardTitle>
                   <CardDescription>{plan.description}</CardDescription>
+                  <div className="pt-4">
+                    <span className="text-4xl font-bold text-foreground">{plan.price}</span>
+                    <span className="text-muted-foreground">{plan.period}</span>
+                  </div>
                 </CardHeader>
-                <CardContent className="pt-0">
-                  <ul className="space-y-3 mb-6">
+                <CardContent className="pt-4">
+                  <ul className="space-y-3 mb-8">
                     {plan.features.map((feature) => (
                       <li key={feature} className="flex items-center gap-2 text-sm">
                         <Check className="w-4 h-4 text-success flex-shrink-0" />
@@ -363,6 +367,7 @@ export default function Landing() {
                   </ul>
                   <Button 
                     className="w-full" 
+                    size="lg"
                     variant={plan.highlighted ? 'default' : 'outline'}
                     asChild
                   >
@@ -370,6 +375,9 @@ export default function Landing() {
                       Começar agora
                     </Link>
                   </Button>
+                  <p className="text-xs text-muted-foreground text-center mt-3">
+                    14 dias grátis • Sem compromisso
+                  </p>
                 </CardContent>
               </Card>
             ))}
