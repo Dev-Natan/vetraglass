@@ -1006,7 +1006,7 @@ export default function ItemTemplates() {
                                         ? <span className="w-2 h-2 rounded-full bg-green-500" title="Ativo" />
                                         : <span className="w-2 h-2 rounded-full bg-muted-foreground" title="Inativo" />
                                       }
-                                      {!item.image_url && <AlertCircle className="w-3.5 h-3.5 text-amber-500" title="Sem imagem" />}
+                                      {!item.image_url && <span title="Sem imagem"><AlertCircle className="w-3.5 h-3.5 text-amber-500" /></span>}
                                     </div>
                                   </td>
                                   <td className="p-3">
