@@ -1875,6 +1875,66 @@ export type Database = {
           },
         ]
       }
+      company_subscriptions: {
+        Row: {
+          cancelled_at: string | null
+          company_id: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          notes: string | null
+          plan_name: string
+          plan_price: number
+          renewed_at: string | null
+          started_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          cancelled_at?: string | null
+          company_id: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          plan_name?: string
+          plan_price?: number
+          renewed_at?: string | null
+          started_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          cancelled_at?: string | null
+          company_id?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          plan_name?: string
+          plan_price?: number
+          renewed_at?: string | null
+          started_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_subscriptions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_subscriptions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_tax_config: {
         Row: {
           aliquota_efetiva: number
