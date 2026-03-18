@@ -897,149 +897,175 @@ export default function ItemTemplates() {
             </CardContent>
           </Card>
         ) : viewMode === 'grouped' ? (
-          <div className="space-y-3">
-            <div className="flex gap-2 mb-2">
-              <Button variant="ghost" size="sm" onClick={expandAll}>Expandir tudo</Button>
-              <Button variant="ghost" size="sm" onClick={collapseAll}>Recolher tudo</Button>
-            </div>
-            {Array.from(groupedItems.entries()).map(([linha, groupItems]) => {
-              const typeCounts = groupItems.reduce((acc, i) => { acc[i.type] = (acc[i.type] || 0) + 1; return acc; }, {} as Record<string, number>);
-              const withImage = groupItems.filter(i => i.image_url).length;
-              const withoutImage = groupItems.length - withImage;
-              const totalWeight = groupItems.reduce((sum, i) => sum + (i.weight_per_meter || 0), 0);
-              const isOpen = expandedLinhas.has(linha);
+          <div className="space-y-6">
+            {/* Linha Cards Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {Array.from(groupedItems.entries()).map(([linha, groupItems]) => {
+                const typeCounts = groupItems.reduce((acc, i) => { acc[i.type] = (acc[i.type] || 0) + 1; return acc; }, {} as Record<string, number>);
+                const withImage = groupItems.filter(i => i.image_url).length;
+                const withoutImage = groupItems.length - withImage;
+                const totalWeight = groupItems.reduce((sum, i) => sum + (i.weight_per_meter || 0), 0);
+                const activeCount = groupItems.filter(i => i.is_active).length;
+                const isSelected = expandedLinhas.has(linha);
 
-              return (
-                <Collapsible key={linha} open={isOpen} onOpenChange={() => toggleLinha(linha)}>
-                  <Card className={`overflow-hidden transition-all ${isOpen ? 'ring-1 ring-primary/20' : 'hover:bg-muted/30'}`}>
-                    <CollapsibleTrigger asChild>
-                      <button className="w-full text-left p-4 flex items-center gap-4 cursor-pointer">
-                        <div className={`flex items-center justify-center w-10 h-10 rounded-lg flex-shrink-0 transition-colors ${isOpen ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
-                          {isOpen ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
-                        </div>
-                        
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-bold text-foreground text-base truncate">{linha}</h3>
-                            <Badge variant="secondary" className="text-xs font-mono">{groupItems.length}</Badge>
-                          </div>
-                          <div className="flex items-center gap-3 flex-wrap">
-                            {Object.entries(typeCounts).map(([type, count]) => (
-                              <span key={type} className={`text-xs font-medium ${typeColors[type]}`}>
-                                {count} {typeLabels[type]}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
+                return (
+                  <Card
+                    key={linha}
+                    className={`cursor-pointer transition-all hover:shadow-md ${isSelected ? 'ring-2 ring-primary border-primary' : 'hover:border-primary/40'}`}
+                    onClick={() => {
+                      setExpandedLinhas(prev => {
+                        const next = new Set<string>();
+                        if (!prev.has(linha)) next.add(linha);
+                        return next;
+                      });
+                    }}
+                  >
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-base font-bold truncate">{linha}</CardTitle>
+                        <Badge variant={isSelected ? "default" : "secondary"} className="text-xs font-mono flex-shrink-0">
+                          {groupItems.length}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-0 space-y-3">
+                      {/* Type breakdown */}
+                      <div className="flex flex-wrap gap-1.5">
+                        {Object.entries(typeCounts).map(([type, count]) => (
+                          <Badge key={type} variant="outline" className={`text-xs ${typeColors[type]}`}>
+                            {count} {typeLabels[type]}
+                          </Badge>
+                        ))}
+                      </div>
 
-                        <div className="hidden md:flex items-center gap-4 flex-shrink-0">
-                          {totalWeight > 0 && (
-                            <div className="text-right">
-                              <p className="text-xs text-muted-foreground">Peso total</p>
-                              <p className="text-sm font-semibold text-foreground">{totalWeight.toFixed(2)} kg/m</p>
-                            </div>
-                          )}
-                          <div className="text-right">
-                            <p className="text-xs text-muted-foreground">Imagens</p>
-                            <p className="text-sm font-medium">
-                              <span className="text-green-600">{withImage}</span>
-                              {withoutImage > 0 && <span className="text-amber-500"> / {withoutImage} sem</span>}
-                            </p>
+                      {/* Stats grid */}
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        {totalWeight > 0 && (
+                          <div className="bg-muted/50 rounded-md p-2">
+                            <p className="text-muted-foreground">Peso total</p>
+                            <p className="font-semibold text-foreground">{totalWeight.toFixed(1)} kg/m</p>
                           </div>
+                        )}
+                        <div className="bg-muted/50 rounded-md p-2">
+                          <p className="text-muted-foreground">Ativos</p>
+                          <p className="font-semibold text-foreground">{activeCount} / {groupItems.length}</p>
                         </div>
-                      </button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <div className="border-t">
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-sm">
-                            <thead className="bg-muted/40">
-                              <tr>
-                                <th className="text-left p-3 font-medium text-muted-foreground w-10"></th>
-                                <th className="text-left p-3 font-medium text-muted-foreground">Nome</th>
-                                <th className="text-left p-3 font-medium text-muted-foreground">Tipo</th>
-                                <th className="text-left p-3 font-medium text-muted-foreground">Unidade</th>
-                                <th className="text-right p-3 font-medium text-muted-foreground">Peso (kg/m)</th>
-                                <th className="text-right p-3 font-medium text-muted-foreground">Preço</th>
-                                <th className="text-center p-3 font-medium text-muted-foreground">Status</th>
-                                <th className="p-3 w-10"></th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {groupItems.map((item) => (
-                                <tr key={item.id} className={`border-b last:border-0 hover:bg-muted/30 transition-colors ${!item.is_active ? 'opacity-50' : ''}`}>
-                                  <td className="p-3">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleQuickImageUpload(item.id)}
-                                      className="relative w-9 h-9 bg-white rounded border flex items-center justify-center hover:border-primary transition-colors flex-shrink-0"
-                                    >
-                                      {uploadingImageId === item.id ? (
-                                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                                      ) : item.image_url ? (
-                                        <img src={item.image_url} alt={item.name} className="max-w-full max-h-full object-contain p-0.5" />
-                                      ) : (
-                                        <Package className="h-4 w-4 text-muted-foreground" />
-                                      )}
-                                    </button>
-                                  </td>
-                                  <td className="p-3">
-                                    <p className="font-medium text-foreground">{item.name}</p>
-                                    {item.description && <p className="text-xs text-muted-foreground truncate max-w-[250px]">{item.description}</p>}
-                                  </td>
-                                  <td className="p-3">
-                                    <Badge variant="outline" className={`text-xs ${typeColors[item.type]}`}>{typeLabels[item.type]}</Badge>
-                                  </td>
-                                  <td className="p-3 text-muted-foreground">{unitLabels[item.unit] || item.unit}</td>
-                                  <td className="p-3 text-right font-mono">
-                                    {item.weight_per_meter ? `${item.weight_per_meter}` : '—'}
-                                  </td>
-                                  <td className="p-3 text-right">
-                                    {item.default_price > 0
-                                      ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.default_price)
-                                      : <span className="text-muted-foreground">—</span>
-                                    }
-                                  </td>
-                                  <td className="p-3 text-center">
-                                    <div className="flex items-center justify-center gap-1">
-                                      {item.is_active
-                                        ? <span className="w-2 h-2 rounded-full bg-green-500" title="Ativo" />
-                                        : <span className="w-2 h-2 rounded-full bg-muted-foreground" title="Inativo" />
-                                      }
-                                      {!item.image_url && <span title="Sem imagem"><AlertCircle className="w-3.5 h-3.5 text-amber-500" /></span>}
-                                    </div>
-                                  </td>
-                                  <td className="p-3">
-                                    <DropdownMenu>
-                                      <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-7 w-7">
-                                          <MoreVertical className="w-4 h-4" />
-                                        </Button>
-                                      </DropdownMenuTrigger>
-                                      <DropdownMenuContent align="end">
-                                        <DropdownMenuItem onClick={() => handleEdit(item)}><Pencil className="w-4 h-4 mr-2" />Editar</DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => handleQuickImageUpload(item.id)}><Upload className="w-4 h-4 mr-2" />Trocar Imagem</DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => copyMutation.mutate(item)}><Copy className="w-4 h-4 mr-2" />Duplicar</DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => toggleActiveMutation.mutate({ id: item.id, is_active: !item.is_active })}>
-                                          {item.is_active ? <><EyeOff className="w-4 h-4 mr-2" />Desativar</> : <><Eye className="w-4 h-4 mr-2" />Ativar</>}
-                                        </DropdownMenuItem>
-                                        <DropdownMenuSeparator />
-                                        <DropdownMenuItem className="text-destructive" onClick={() => {
-                                          setForceDeleteDialog({ open: false, itemId: item.id, itemName: item.name, errorMessage: '' });
-                                          deleteMutation.mutate({ id: item.id, force: false });
-                                        }}><Trash2 className="w-4 h-4 mr-2" />Excluir</DropdownMenuItem>
-                                      </DropdownMenuContent>
-                                    </DropdownMenu>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                        <div className="bg-muted/50 rounded-md p-2">
+                          <p className="text-muted-foreground">Com imagem</p>
+                          <p className={`font-semibold ${withoutImage > 0 ? 'text-amber-600' : 'text-foreground'}`}>
+                            {withImage} / {groupItems.length}
+                          </p>
                         </div>
                       </div>
-                    </CollapsibleContent>
+                    </CardContent>
                   </Card>
-                </Collapsible>
+                );
+              })}
+            </div>
+
+            {/* Expanded linha detail */}
+            {Array.from(expandedLinhas).map(linha => {
+              const groupItems = groupedItems.get(linha);
+              if (!groupItems) return null;
+              return (
+                <Card key={`detail-${linha}`} className="ring-1 ring-primary/20 overflow-hidden">
+                  <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                    <div>
+                      <CardTitle className="text-lg">{linha}</CardTitle>
+                      <CardDescription>{groupItems.length} itens cadastrados</CardDescription>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => setExpandedLinhas(new Set())}>
+                      <X className="w-4 h-4 mr-1" /> Fechar
+                    </Button>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-muted/40">
+                          <tr>
+                            <th className="text-left p-3 font-medium text-muted-foreground w-10"></th>
+                            <th className="text-left p-3 font-medium text-muted-foreground">Nome</th>
+                            <th className="text-left p-3 font-medium text-muted-foreground">Tipo</th>
+                            <th className="text-left p-3 font-medium text-muted-foreground">Unidade</th>
+                            <th className="text-right p-3 font-medium text-muted-foreground">Peso (kg/m)</th>
+                            <th className="text-right p-3 font-medium text-muted-foreground">Preço</th>
+                            <th className="text-center p-3 font-medium text-muted-foreground">Status</th>
+                            <th className="p-3 w-10"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {groupItems.map((item) => (
+                            <tr key={item.id} className={`border-b last:border-0 hover:bg-muted/30 transition-colors ${!item.is_active ? 'opacity-50' : ''}`}>
+                              <td className="p-3">
+                                <button
+                                  type="button"
+                                  onClick={() => handleQuickImageUpload(item.id)}
+                                  className="relative w-9 h-9 bg-white rounded border flex items-center justify-center hover:border-primary transition-colors flex-shrink-0"
+                                >
+                                  {uploadingImageId === item.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                                  ) : item.image_url ? (
+                                    <img src={item.image_url} alt={item.name} className="max-w-full max-h-full object-contain p-0.5" />
+                                  ) : (
+                                    <Package className="h-4 w-4 text-muted-foreground" />
+                                  )}
+                                </button>
+                              </td>
+                              <td className="p-3">
+                                <p className="font-medium text-foreground">{item.name}</p>
+                                {item.description && <p className="text-xs text-muted-foreground truncate max-w-[250px]">{item.description}</p>}
+                              </td>
+                              <td className="p-3">
+                                <Badge variant="outline" className={`text-xs ${typeColors[item.type]}`}>{typeLabels[item.type]}</Badge>
+                              </td>
+                              <td className="p-3 text-muted-foreground">{unitLabels[item.unit] || item.unit}</td>
+                              <td className="p-3 text-right font-mono">
+                                {item.weight_per_meter ? `${item.weight_per_meter}` : '—'}
+                              </td>
+                              <td className="p-3 text-right">
+                                {item.default_price > 0
+                                  ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.default_price)
+                                  : <span className="text-muted-foreground">—</span>
+                                }
+                              </td>
+                              <td className="p-3 text-center">
+                                <div className="flex items-center justify-center gap-1">
+                                  {item.is_active
+                                    ? <span className="w-2 h-2 rounded-full bg-green-500" title="Ativo" />
+                                    : <span className="w-2 h-2 rounded-full bg-muted-foreground" title="Inativo" />
+                                  }
+                                  {!item.image_url && <span title="Sem imagem"><AlertCircle className="w-3.5 h-3.5 text-amber-500" /></span>}
+                                </div>
+                              </td>
+                              <td className="p-3">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7">
+                                      <MoreVertical className="w-4 h-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => handleEdit(item)}><Pencil className="w-4 h-4 mr-2" />Editar</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleQuickImageUpload(item.id)}><Upload className="w-4 h-4 mr-2" />Trocar Imagem</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => copyMutation.mutate(item)}><Copy className="w-4 h-4 mr-2" />Duplicar</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => toggleActiveMutation.mutate({ id: item.id, is_active: !item.is_active })}>
+                                      {item.is_active ? <><EyeOff className="w-4 h-4 mr-2" />Desativar</> : <><Eye className="w-4 h-4 mr-2" />Ativar</>}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem className="text-destructive" onClick={() => {
+                                      setForceDeleteDialog({ open: false, itemId: item.id, itemName: item.name, errorMessage: '' });
+                                      deleteMutation.mutate({ id: item.id, force: false });
+                                    }}><Trash2 className="w-4 h-4 mr-2" />Excluir</DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
               );
             })}
           </div>
