@@ -323,6 +323,7 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
       glass_color: item.glass_color,
       glass_thickness: item.glass_thickness,
       aluminum_color: item.aluminum_color,
+      notes: item.notes,
       // Priority: company_products > product_templates > company_items
       image_url: item.company_products?.image_url || item.product_templates?.image_url || item.company_items?.image_url || null,
       linha: item.company_products?.linha || item.product_templates?.linha || null,
