@@ -1283,7 +1283,10 @@ export default function ProductTemplates() {
         {/* Composition Dialog */}
         <Dialog open={isCompositionDialogOpen} onOpenChange={(open) => {
           setIsCompositionDialogOpen(open);
-          if (!open) resetCompositionForm();
+          if (!open) {
+            clearCompositionDraft();
+            resetCompositionForm();
+          }
         }}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
