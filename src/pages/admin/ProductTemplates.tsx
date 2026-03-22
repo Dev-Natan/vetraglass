@@ -524,9 +524,7 @@ export default function ProductTemplates() {
       // First delete composition items from template
       await supabase.from("product_template_items").delete().eq("product_template_id", id);
       
-      // Unlink company_products that reference this template (set to null instead of deleting)
-      await supabase.from("company_products").update({ product_template_id: null }).eq("product_template_id", id);
-      
+      // company_products are automatically unlinked via ON DELETE SET NULL
       const { error } = await supabase.from("product_templates").delete().eq("id", id);
       if (error) throw error;
     },
