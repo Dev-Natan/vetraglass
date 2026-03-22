@@ -1341,8 +1341,30 @@ export default function ProductTemplates() {
                       )}
                     </Label>
                     <Select value={selectedItemToAdd} onValueChange={setSelectedItemToAdd}>
-                      <SelectTrigger className="h-14">
-                        <SelectValue placeholder="Clique para escolher um item" />
+                      <SelectTrigger className="h-auto min-h-[3.5rem] py-2">
+                        {selectedItemToAdd ? (
+                          (() => {
+                            const sel = getItemsByTypeForAdd(compositionActiveTab).find(i => i.id === selectedItemToAdd);
+                            if (!sel) return <SelectValue placeholder="Clique para escolher um item" />;
+                            return (
+                              <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 rounded-md bg-muted flex-shrink-0 overflow-hidden border border-border">
+                                  {sel.image_url ? (
+                                    <img src={getStorageUrl(sel.image_url)} alt={sel.name} className="w-full h-full object-contain p-0.5" />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">—</div>
+                                  )}
+                                </div>
+                                <div className="flex flex-col min-w-0 text-left">
+                                  <span className="font-medium truncate text-sm">{sel.name}</span>
+                                  {sel.linha && <span className="text-xs text-muted-foreground">{sel.linha}</span>}
+                                </div>
+                              </div>
+                            );
+                          })()
+                        ) : (
+                          <SelectValue placeholder="Clique para escolher um item" />
+                        )}
                       </SelectTrigger>
                       <SelectContent className="max-h-[400px]">
                         {getItemsByTypeForAdd(compositionActiveTab).map((item, index) => {
@@ -1371,13 +1393,13 @@ export default function ProductTemplates() {
                                 )}
                               >
                                 <div className="flex items-center gap-3">
-                                  {/* Item image */}
-                                  <div className="w-10 h-10 rounded bg-muted flex-shrink-0 overflow-hidden">
+                                  {/* Item image - larger with contain */}
+                                  <div className="w-12 h-12 rounded-md bg-muted flex-shrink-0 overflow-hidden border border-border">
                                     {item.image_url ? (
                                       <img 
                                         src={getStorageUrl(item.image_url)}
                                         alt={item.name}
-                                        className="w-full h-full object-cover"
+                                        className="w-full h-full object-contain p-0.5"
                                         onError={(e) => {
                                           (e.target as HTMLImageElement).style.display = 'none';
                                         }}
