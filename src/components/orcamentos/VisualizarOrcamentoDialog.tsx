@@ -82,6 +82,7 @@ interface QuoteItem {
   glass_color?: string | null;
   glass_thickness?: string | null;
   aluminum_color?: string | null;
+  notes?: string | null;
   product_template_id?: string | null;
   company_product_id?: string | null;
   company_item_id?: string | null;
