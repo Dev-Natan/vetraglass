@@ -85,15 +85,15 @@ export const queryKeys = {
   },
 };
 
-// Create QueryClient - dados frescos mas sem recarregar ao trocar de aba
+// Create QueryClient with ZERO CACHE - dados sempre frescos do servidor
 export function createQueryClient() {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        // Cache por 2 minutos - evita refetch desnecessário ao trocar abas
-        staleTime: 2 * 60 * 1000,
-        // Manter cache por 5 minutos após componente desmontar
-        gcTime: 5 * 60 * 1000,
+        // ZERO CACHE: dados sempre considerados desatualizados
+        staleTime: 0,
+        // ZERO CACHE: sem garbage collection cache
+        gcTime: 0,
         // Retry configuration
         retry: (failureCount, error: any) => {
           // Don't retry on 4xx errors
@@ -103,9 +103,9 @@ export function createQueryClient() {
           return failureCount < 2;
         },
         retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-        // NÃO recarregar ao voltar para a aba - evita "reiniciar" tarefas
-        refetchOnWindowFocus: false,
-        refetchOnMount: true,
+        // ZERO CACHE: sempre recarregar dados
+        refetchOnWindowFocus: true,
+        refetchOnMount: 'always',
         refetchOnReconnect: true,
       },
       mutations: {

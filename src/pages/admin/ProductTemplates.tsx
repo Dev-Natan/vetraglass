@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { resolveImageUrl } from '@/utils/imageUrl';
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -121,6 +121,21 @@ type ItemTemplate = {
   image_url: string | null;
 };
 
+type CompositionDraft = {
+  templateId: string;
+  activeTab: string;
+  selectedItemToAdd: string;
+  quantityFormula: string;
+  piecesQuantity: number;
+  widthFormula: string;
+  heightFormula: string;
+  glassName: string;
+  cutAngle: number;
+  isOpen: boolean;
+};
+
+const COMPOSITION_DRAFT_STORAGE_KEY = "admin-product-template-composition-draft";
+
 // Item type tabs for the dialog - derived from itemTypes hook
 const getItemTypeTabs = (itemTypes: { slug: string; name: string }[] | undefined) => {
   const defaultTabs = [
@@ -152,6 +167,7 @@ export default function ProductTemplates() {
   const navigate = useNavigate();
   const { isSaasAdmin } = useAuth();
   const queryClient = useQueryClient();
+  const compositionDraftRestoredRef = useRef(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCompositionDialogOpen, setIsCompositionDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<ProductTemplate | null>(null);
@@ -211,6 +227,11 @@ export default function ProductTemplates() {
     max_height: "",
     is_active: true,
   });
+
+  const clearCompositionDraft = () => {
+    if (typeof window === "undefined") return;
+    window.sessionStorage.removeItem(COMPOSITION_DRAFT_STORAGE_KEY);
+  };
 
   // Fetch product templates with composition count
   const { data: templates, isLoading } = useQuery({
@@ -279,6 +300,80 @@ export default function ProductTemplates() {
     },
     enabled: !!selectedTemplate,
   });
+
+  useEffect(() => {
+    if (compositionDraftRestoredRef.current || !templates?.length || typeof window === "undefined") {
+      return;
+    }
+
+    const rawDraft = window.sessionStorage.getItem(COMPOSITION_DRAFT_STORAGE_KEY);
+    compositionDraftRestoredRef.current = true;
+
+    if (!rawDraft) return;
+
+    try {
+      const draft = JSON.parse(rawDraft) as Partial<CompositionDraft>;
+
+      if (!draft.isOpen || !draft.templateId) {
+        clearCompositionDraft();
+        return;
+      }
+
+      const draftTemplate = templates.find((template) => template.id === draft.templateId);
+      if (!draftTemplate) {
+        clearCompositionDraft();
+        return;
+      }
+
+      setSelectedTemplate(draftTemplate);
+      setIsCompositionDialogOpen(true);
+      setCompositionActiveTab(draft.activeTab || "glass");
+      setSelectedItemToAdd(draft.selectedItemToAdd || "");
+      setQuantityFormula(draft.quantityFormula || "1");
+      setPiecesQuantity(typeof draft.piecesQuantity === "number" ? draft.piecesQuantity : 1);
+      setWidthFormula(draft.widthFormula || "");
+      setHeightFormula(draft.heightFormula || "");
+      setGlassName(draft.glassName || "");
+      setCutAngle(typeof draft.cutAngle === "number" ? draft.cutAngle : 90);
+    } catch {
+      clearCompositionDraft();
+    }
+  }, [templates]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    if (!isCompositionDialogOpen || !selectedTemplate?.id) {
+      clearCompositionDraft();
+      return;
+    }
+
+    const draft: CompositionDraft = {
+      templateId: selectedTemplate.id,
+      activeTab: compositionActiveTab,
+      selectedItemToAdd,
+      quantityFormula,
+      piecesQuantity,
+      widthFormula,
+      heightFormula,
+      glassName,
+      cutAngle,
+      isOpen: true,
+    };
+
+    window.sessionStorage.setItem(COMPOSITION_DRAFT_STORAGE_KEY, JSON.stringify(draft));
+  }, [
+    isCompositionDialogOpen,
+    selectedTemplate?.id,
+    compositionActiveTab,
+    selectedItemToAdd,
+    quantityFormula,
+    piecesQuantity,
+    widthFormula,
+    heightFormula,
+    glassName,
+    cutAngle,
+  ]);
 
   // Filter templates
   const filteredTemplates = templates?.filter((template) => {
@@ -1188,7 +1283,10 @@ export default function ProductTemplates() {
         {/* Composition Dialog */}
         <Dialog open={isCompositionDialogOpen} onOpenChange={(open) => {
           setIsCompositionDialogOpen(open);
-          if (!open) resetCompositionForm();
+          if (!open) {
+            clearCompositionDraft();
+            resetCompositionForm();
+          }
         }}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
