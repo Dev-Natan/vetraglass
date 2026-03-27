@@ -900,6 +900,7 @@ export function AprovarOrcamentoDialog({
                   <MaterialsAvailabilityPreview 
                     quoteItems={items}
                     companyId={currentCompany?.id}
+                    onStockCheck={setStockCheckResult}
                   />
                 </div>
               )}
