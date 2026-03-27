@@ -83,6 +83,8 @@ export function EditItemPriceDialog({
   const [pricingData, setPricingData] = useState<ItemPricingData>(defaultPricingData);
   const [fiscalOpen, setFiscalOpen] = useState(false);
   const [selectedTaxCategory, setSelectedTaxCategory] = useState<string>('');
+  const [itemTypeLocal, setItemTypeLocal] = useState<string>('profile');
+  const [linhaLocal, setLinhaLocal] = useState<string>('');
   
   // Fiscal fields state
   const [ncm, setNcm] = useState('');
