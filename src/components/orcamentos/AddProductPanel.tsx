@@ -735,9 +735,11 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                   </TooltipTrigger>
                   <TooltipContent>
                     <p className="text-xs">
-                      {hasGlass && productUsesGlass && glassPricePerSqm > 0 
-                        ? `Preço do vidro: ${formatCurrency(glassPricePerSqm)}/m²`
-                        : `Preço base: ${formatCurrency(productBasePricePerSqm)}/m²`
+                      {compositionPricing.isReady
+                        ? `Preço por composição: ${formatCurrency(compositionPricing.compositionCostPerSqm)}/m²`
+                        : hasGlass && productUsesGlass && glassPricePerSqm > 0 
+                          ? `Preço do vidro: ${formatCurrency(glassPricePerSqm)}/m²`
+                          : `Preço base: ${formatCurrency(productBasePricePerSqm)}/m²`
                       }
                     </p>
                   </TooltipContent>
