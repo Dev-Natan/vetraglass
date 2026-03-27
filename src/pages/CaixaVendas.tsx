@@ -602,8 +602,11 @@ export default function CaixaVendas() {
           }
         }
       }
-      // Deduzir estoque e registrar movimentações
-      for (const [key, deductionQty] of stockDeductions) {
+      // Deduzir estoque e registrar movimentações (apenas se não for venda parcial e OS não consumiu)
+      if (!shouldDeductStock) {
+        console.log('Baixa de estoque ignorada:', isPartialQuoteSale ? 'venda parcial de orçamento' : 'materiais já consumidos pela OS');
+      }
+      for (const [key, deductionQty] of shouldDeductStock ? stockDeductions : new Map()) {
         let stockItem;
         const isCompanyItem = key.startsWith('ci:');
         
