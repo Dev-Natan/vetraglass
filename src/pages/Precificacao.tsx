@@ -27,6 +27,7 @@ export default function Precificacao() {
   const [search, setSearch] = useState('');
   const [selectedLinha, setSelectedLinha] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [bulkAdjustOpen, setBulkAdjustOpen] = useState(false);
 
   // Fetch company products with composition
   const { data: products, isLoading, refetch } = useQuery({
