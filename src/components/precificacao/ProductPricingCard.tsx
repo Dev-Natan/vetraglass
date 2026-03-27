@@ -179,6 +179,35 @@ export function ProductPricingCard({ product, compositionItems, onSaved }: Produ
   const pricePerSqm = areaM2 > 0 ? totalSale / areaM2 : 0;
   const profit = totalSale - totalCost;
 
+  // Engine-based calculation for memory display
+  const engineResult = useMemo(() => {
+    if (compositionItems.length === 0) return null;
+    const engineItems: CompositionItemInput[] = compositionItems.map(raw => {
+      const primaryCost = getEffectiveCost(raw);
+      return {
+        id: raw.id,
+        itemName: raw.itemName,
+        itemType: raw.itemType as any,
+        unit: raw.unit,
+        imageUrl: raw.imageUrl,
+        widthFormula: raw.widthFormula,
+        heightFormula: raw.heightFormula,
+        quantityFormula: raw.quantityFormula,
+        piecesQuantity: raw.piecesQuantity,
+        cutAngle: raw.cutAngle,
+        lossPercent: policy.defaultLossPercent,
+        barLengthMm: raw.barLengthMm,
+        weightPerMeter: raw.weightPerMeter,
+        costPerBar: raw.itemType === 'profile' ? (raw.costPerKg > 0 ? raw.costPerKg * (raw.weightKg || 0) : raw.costPerBar) : raw.costPerBar,
+        costPerKg: raw.costPerKg,
+        costPerMeter: raw.costPerMeter,
+        costPerUnit: raw.costPerBar || raw.costPerMeter || 0,
+      };
+    });
+    const input: PricingInput = { vaoLargura: width, vaoAltura: height, quantity: 1 };
+    return calculatePricing(engineItems, input, policy, marginPercent);
+  }, [compositionItems, width, height, marginPercent, policy, getEffectiveCost]);
+
   // Group by type
   const grouped = useMemo(() => {
     const g: Record<string, typeof calculatedItems> = {};
