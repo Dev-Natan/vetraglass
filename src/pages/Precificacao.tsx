@@ -4,12 +4,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Calculator, Search, Package, Layers, AlertCircle } from 'lucide-react';
+import { Calculator, Search, Package, Layers, AlertCircle, TrendingUp } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { ProductPricingCard } from '@/components/precificacao/ProductPricingCard';
+import { PricingDashboard } from '@/components/precificacao/PricingDashboard';
+import { BulkPriceAdjustDialog } from '@/components/precificacao/BulkPriceAdjustDialog';
 
 const categoryLabels: Record<string, string> = {
   window: 'Janela', door: 'Porta', facade: 'Fachada',
@@ -24,6 +27,7 @@ export default function Precificacao() {
   const [search, setSearch] = useState('');
   const [selectedLinha, setSelectedLinha] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [bulkAdjustOpen, setBulkAdjustOpen] = useState(false);
 
   // Fetch company products with composition
   const { data: products, isLoading, refetch } = useQuery({
@@ -127,7 +131,7 @@ export default function Precificacao() {
     <MainLayout>
       <div className="space-y-5 animate-fade-in">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
               <Calculator className="h-6 w-6 text-primary" />
@@ -137,12 +141,19 @@ export default function Precificacao() {
               Configure os preços dos seus produtos com base nos componentes da composição
             </p>
           </div>
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setBulkAdjustOpen(true)}>
+              <TrendingUp className="h-4 w-4 mr-1.5" />
+              Reajuste em Massa
+            </Button>
             <Badge variant="outline" className="text-xs">
               {productsWithPrices}/{totalProducts} precificados
             </Badge>
           </div>
         </div>
+
+        {/* Dashboard */}
+        <PricingDashboard products={products || []} />
 
         {/* Filters */}
         <Card>
@@ -260,6 +271,21 @@ export default function Precificacao() {
             ))}
           </div>
         )}
+        <BulkPriceAdjustDialog
+          open={bulkAdjustOpen}
+          onOpenChange={setBulkAdjustOpen}
+          products={(products || []).map(p => ({
+            id: p.id,
+            commercial_name: p.commercial_name,
+            linha: p.linha,
+            category: p.category,
+            margin_percent: p.margin_percent,
+            cost_per_sqm: p.cost_per_sqm,
+            price_per_sqm: p.price_per_sqm,
+          }))}
+          linhas={linhas}
+          onSaved={() => refetch()}
+        />
       </div>
     </MainLayout>
   );
