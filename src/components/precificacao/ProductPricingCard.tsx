@@ -7,12 +7,15 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   ChevronDown, ChevronUp, Save, Ruler, DollarSign,
-  TrendingUp, Package, AlertCircle,
+  TrendingUp, Package, AlertCircle, FileText,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { evaluateFormula } from '@/utils/safeFormulaEvaluator';
+import { calculatePricing, type CompositionItemInput, type PricingInput } from '@/utils/pricingEngine';
+import { usePricingPolicy } from '@/hooks/usePricingPolicy';
+import { CalculationMemory } from './CalculationMemory';
 
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
@@ -113,10 +116,12 @@ function deriveCosts(item: CompositionItem, primaryCost: number): Partial<Compos
 
 export function ProductPricingCard({ product, compositionItems, onSaved }: ProductPricingCardProps) {
   const queryClient = useQueryClient();
+  const { policy } = usePricingPolicy();
   const [expanded, setExpanded] = useState(false);
+  const [showMemory, setShowMemory] = useState(false);
   const [width, setWidth] = useState(1000);
   const [height, setHeight] = useState(1200);
-  const [marginPercent, setMarginPercent] = useState(product.margin_percent ?? 30);
+  const [marginPercent, setMarginPercent] = useState(product.margin_percent ?? policy.defaultMargin);
   const [saving, setSaving] = useState(false);
   // Store only the primary cost override per item
   const [costOverrides, setCostOverrides] = useState<Record<string, number>>({});
@@ -173,6 +178,35 @@ export function ProductPricingCard({ product, compositionItems, onSaved }: Produ
   const costPerSqm = areaM2 > 0 ? totalCost / areaM2 : 0;
   const pricePerSqm = areaM2 > 0 ? totalSale / areaM2 : 0;
   const profit = totalSale - totalCost;
+
+  // Engine-based calculation for memory display
+  const engineResult = useMemo(() => {
+    if (compositionItems.length === 0) return null;
+    const engineItems: CompositionItemInput[] = compositionItems.map(raw => {
+      const primaryCost = getEffectiveCost(raw);
+      return {
+        id: raw.id,
+        itemName: raw.itemName,
+        itemType: raw.itemType as any,
+        unit: raw.unit,
+        imageUrl: raw.imageUrl,
+        widthFormula: raw.widthFormula,
+        heightFormula: raw.heightFormula,
+        quantityFormula: raw.quantityFormula,
+        piecesQuantity: raw.piecesQuantity,
+        cutAngle: raw.cutAngle,
+        lossPercent: policy.defaultLossPercent,
+        barLengthMm: raw.barLengthMm,
+        weightPerMeter: raw.weightPerMeter,
+        costPerBar: raw.itemType === 'profile' ? (raw.costPerKg > 0 ? raw.costPerKg * (raw.weightKg || 0) : raw.costPerBar) : raw.costPerBar,
+        costPerKg: raw.costPerKg,
+        costPerMeter: raw.costPerMeter,
+        costPerUnit: raw.costPerBar || raw.costPerMeter || 0,
+      };
+    });
+    const input: PricingInput = { vaoLargura: width, vaoAltura: height, quantity: 1 };
+    return calculatePricing(engineItems, input, policy, marginPercent);
+  }, [compositionItems, width, height, marginPercent, policy, getEffectiveCost]);
 
   // Group by type
   const grouped = useMemo(() => {
@@ -441,6 +475,30 @@ export function ProductPricingCard({ product, compositionItems, onSaved }: Produ
             <div className="py-8 text-center text-sm text-muted-foreground">
               <Package className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
               Este produto não possui composição cadastrada.
+            </div>
+          )}
+
+          {/* Calculation Memory */}
+          {compositionItems.length > 0 && (
+            <div className="space-y-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowMemory(!showMemory)}
+                className="text-xs"
+              >
+                <FileText className="h-3.5 w-3.5 mr-1" />
+                {showMemory ? 'Ocultar' : 'Ver'} Memória de Cálculo
+              </Button>
+              {showMemory && engineResult && (
+                <CalculationMemory
+                  productName={product.commercial_name}
+                  result={engineResult}
+                  width={width}
+                  height={height}
+                  quantity={1}
+                />
+              )}
             </div>
           )}
 

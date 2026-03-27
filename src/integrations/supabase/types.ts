@@ -1530,6 +1530,7 @@ export type Database = {
           id: string
           is_optional: boolean | null
           item_template_id: string | null
+          loss_percent: number | null
           notes: string | null
           pieces_quantity: number | null
           quantity_formula: string
@@ -1546,6 +1547,7 @@ export type Database = {
           id?: string
           is_optional?: boolean | null
           item_template_id?: string | null
+          loss_percent?: number | null
           notes?: string | null
           pieces_quantity?: number | null
           quantity_formula?: string
@@ -1562,6 +1564,7 @@ export type Database = {
           id?: string
           is_optional?: boolean | null
           item_template_id?: string | null
+          loss_percent?: number | null
           notes?: string | null
           pieces_quantity?: number | null
           quantity_formula?: string
@@ -4289,6 +4292,96 @@ export type Database = {
           },
         ]
       }
+      pricing_policies: {
+        Row: {
+          admin_fee: number
+          commission_percent: number
+          company_id: string
+          created_at: string
+          default_loss_percent: number
+          default_margin: number
+          id: string
+          include_commission: boolean
+          include_installation: boolean
+          include_labor: boolean
+          include_packaging: boolean
+          include_tax: boolean
+          include_transport: boolean
+          installation_cost_per_sqm: number
+          labor_cost_per_sqm: number
+          margin_type: string
+          packaging_cost_per_unit: number
+          price_decimals: number
+          rounding_mode: string
+          tax_percent: number
+          transport_cost_per_unit: number
+          updated_at: string
+        }
+        Insert: {
+          admin_fee?: number
+          commission_percent?: number
+          company_id: string
+          created_at?: string
+          default_loss_percent?: number
+          default_margin?: number
+          id?: string
+          include_commission?: boolean
+          include_installation?: boolean
+          include_labor?: boolean
+          include_packaging?: boolean
+          include_tax?: boolean
+          include_transport?: boolean
+          installation_cost_per_sqm?: number
+          labor_cost_per_sqm?: number
+          margin_type?: string
+          packaging_cost_per_unit?: number
+          price_decimals?: number
+          rounding_mode?: string
+          tax_percent?: number
+          transport_cost_per_unit?: number
+          updated_at?: string
+        }
+        Update: {
+          admin_fee?: number
+          commission_percent?: number
+          company_id?: string
+          created_at?: string
+          default_loss_percent?: number
+          default_margin?: number
+          id?: string
+          include_commission?: boolean
+          include_installation?: boolean
+          include_labor?: boolean
+          include_packaging?: boolean
+          include_tax?: boolean
+          include_transport?: boolean
+          installation_cost_per_sqm?: number
+          labor_cost_per_sqm?: number
+          margin_type?: string
+          packaging_cost_per_unit?: number
+          price_decimals?: number
+          rounding_mode?: string
+          tax_percent?: number
+          transport_cost_per_unit?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pricing_policies_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pricing_policies_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_aluminum_prices: {
         Row: {
           color_name: string
@@ -4455,6 +4548,7 @@ export type Database = {
           id: string
           is_optional: boolean
           item_template_id: string
+          loss_percent: number | null
           notes: string | null
           pieces_quantity: number
           product_template_id: string
@@ -4469,6 +4563,7 @@ export type Database = {
           id?: string
           is_optional?: boolean
           item_template_id: string
+          loss_percent?: number | null
           notes?: string | null
           pieces_quantity?: number
           product_template_id: string
@@ -4483,6 +4578,7 @@ export type Database = {
           id?: string
           is_optional?: boolean
           item_template_id?: string
+          loss_percent?: number | null
           notes?: string | null
           pieces_quantity?: number
           product_template_id?: string
