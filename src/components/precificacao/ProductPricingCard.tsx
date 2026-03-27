@@ -478,6 +478,30 @@ export function ProductPricingCard({ product, compositionItems, onSaved }: Produ
             </div>
           )}
 
+          {/* Calculation Memory */}
+          {compositionItems.length > 0 && (
+            <div className="space-y-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowMemory(!showMemory)}
+                className="text-xs"
+              >
+                <FileText className="h-3.5 w-3.5 mr-1" />
+                {showMemory ? 'Ocultar' : 'Ver'} Memória de Cálculo
+              </Button>
+              {showMemory && engineResult && (
+                <CalculationMemory
+                  productName={product.commercial_name}
+                  result={engineResult}
+                  width={width}
+                  height={height}
+                  quantity={1}
+                />
+              )}
+            </div>
+          )}
+
           {/* Save button */}
           <div className="flex items-center justify-between pt-3 border-t">
             <p className="text-[10px] text-muted-foreground">
