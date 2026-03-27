@@ -7,12 +7,15 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   ChevronDown, ChevronUp, Save, Ruler, DollarSign,
-  TrendingUp, Package, AlertCircle,
+  TrendingUp, Package, AlertCircle, FileText,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { evaluateFormula } from '@/utils/safeFormulaEvaluator';
+import { calculatePricing, type CompositionItemInput, type PricingInput } from '@/utils/pricingEngine';
+import { usePricingPolicy } from '@/hooks/usePricingPolicy';
+import { CalculationMemory } from './CalculationMemory';
 
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
