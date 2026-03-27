@@ -127,7 +127,7 @@ export function AprovarOrcamentoDialog({
   const [estimatedEnd, setEstimatedEnd] = useState<Date | undefined>(addDays(new Date(), 7));
   const [priority, setPriority] = useState<'low' | 'normal' | 'high' | 'urgent'>('normal');
   const [notes, setNotes] = useState('');
-
+  const [stockCheckResult, setStockCheckResult] = useState<CompositionStockResult | null>(null);
   // Hooks
   const { 
     formasPagamento, 
