@@ -1045,6 +1045,7 @@ export function AprovarOrcamentoDialog({
                   )}
                   {stockCheckResult?.hasShortage ? 'Aprovar (com falta)' : 'Aprovar'}
                 </Button>
+              )}
             </div>
           </div>
         </div>
