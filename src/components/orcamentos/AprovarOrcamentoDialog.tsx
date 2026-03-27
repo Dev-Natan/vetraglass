@@ -1043,9 +1043,8 @@ export function AprovarOrcamentoDialog({
                   ) : (
                     <CheckCircle className="w-4 h-4" />
                   )}
-                  Aprovar
+                  {stockCheckResult?.hasShortage ? 'Aprovar (com falta)' : 'Aprovar'}
                 </Button>
-              )}
             </div>
           </div>
         </div>
