@@ -346,6 +346,8 @@ export function EditItemPriceDialog({
         const { error: itemError } = await supabase
           .from('company_items')
           .update({
+            type: itemTypeLocal,
+            linha: linhaLocal || null,
             cost: costNum,
             sale_price: salePriceNum,
             bar_length_mm: pNum(pricingData.barLengthMm),
