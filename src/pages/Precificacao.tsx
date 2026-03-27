@@ -131,7 +131,7 @@ export default function Precificacao() {
     <MainLayout>
       <div className="space-y-5 animate-fade-in">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
               <Calculator className="h-6 w-6 text-primary" />
@@ -141,12 +141,19 @@ export default function Precificacao() {
               Configure os preços dos seus produtos com base nos componentes da composição
             </p>
           </div>
-          <div className="flex items-center gap-2 text-sm">
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setBulkAdjustOpen(true)}>
+              <TrendingUp className="h-4 w-4 mr-1.5" />
+              Reajuste em Massa
+            </Button>
             <Badge variant="outline" className="text-xs">
               {productsWithPrices}/{totalProducts} precificados
             </Badge>
           </div>
         </div>
+
+        {/* Dashboard */}
+        <PricingDashboard products={products || []} />
 
         {/* Filters */}
         <Card>
