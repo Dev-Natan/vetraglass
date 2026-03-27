@@ -4,12 +4,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Calculator, Search, Package, Layers, AlertCircle } from 'lucide-react';
+import { Calculator, Search, Package, Layers, AlertCircle, TrendingUp } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { ProductPricingCard } from '@/components/precificacao/ProductPricingCard';
+import { PricingDashboard } from '@/components/precificacao/PricingDashboard';
+import { BulkPriceAdjustDialog } from '@/components/precificacao/BulkPriceAdjustDialog';
 
 const categoryLabels: Record<string, string> = {
   window: 'Janela', door: 'Porta', facade: 'Fachada',
