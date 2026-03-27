@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useCompositionPricing } from '@/hooks/useCompositionPricing';
 import { resolveProductImageUrl } from '@/utils/imageUrl';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -239,6 +240,15 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   // Use price_per_sqm as the primary pricing method
   const productBasePricePerSqm = Number((companyProduct as any)?.price_per_sqm) || Number(companyProduct?.base_price) || 0;
   
+  // Composition-based dynamic pricing
+  const compositionPricing = useCompositionPricing({
+    companyProductId: companyProduct?.id,
+    width: width || 1000,
+    height: height || 1000,
+    quantity: quantity || 1,
+    enabled: !!companyProduct?.id && width > 0 && height > 0,
+  });
+
   // Determine final price based on pricing type
   const finalPricePerSqm = (() => {
     if (productUsesGlass && hasGlass && glassPricePerSqm > 0) {
@@ -252,10 +262,14 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   
   const basePrice = customPrice !== null ? customPrice : finalPricePerSqm;
 
-  // Calculate prices: area in m² × price per m²
+  // Calculate prices: use composition when available, otherwise area × price/m²
   const area = width && height ? (width / 1000) * (height / 1000) : 0;
-  const unitPrice = area > 0 ? basePrice * area : 0;
-  const totalPrice = unitPrice * quantity;
+  const unitPrice = compositionPricing.isReady
+    ? compositionPricing.compositionCostPerUnit
+    : (area > 0 ? basePrice * area : 0);
+  const totalPrice = compositionPricing.isReady
+    ? compositionPricing.totalCost
+    : unitPrice * quantity;
 
   // Check if the selected product is from "Temperado" line (always has glass)
   const isTemperadoLine = selectedProduct?.linha?.toLowerCase().includes('temperado');
@@ -288,7 +302,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
       product_template_id: selectedProduct.is_custom ? null : selectedProduct.product_template_id,
       company_product_id: companyProduct?.id,
       name: selectedProduct.name,
-      base_price: basePrice,
+      base_price: compositionPricing.isReady ? compositionPricing.compositionCostPerSqm : basePrice,
       image_url: selectedProduct.image_url,
       linha: selectedProduct.linha,
       category: selectedProduct.category,
@@ -721,9 +735,11 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                   </TooltipTrigger>
                   <TooltipContent>
                     <p className="text-xs">
-                      {hasGlass && productUsesGlass && glassPricePerSqm > 0 
-                        ? `Preço do vidro: ${formatCurrency(glassPricePerSqm)}/m²`
-                        : `Preço base: ${formatCurrency(productBasePricePerSqm)}/m²`
+                      {compositionPricing.isReady
+                        ? `Preço por composição: ${formatCurrency(compositionPricing.compositionCostPerSqm)}/m²`
+                        : hasGlass && productUsesGlass && glassPricePerSqm > 0 
+                          ? `Preço do vidro: ${formatCurrency(glassPricePerSqm)}/m²`
+                          : `Preço base: ${formatCurrency(productBasePricePerSqm)}/m²`
                       }
                     </p>
                   </TooltipContent>
@@ -759,20 +775,30 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
 
         {/* Price Summary & Actions */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-4 rounded-xl bg-gradient-to-r from-primary/10 to-primary/5 border">
-          <div className="flex-1 flex items-center gap-4">
-            <div className="space-y-0.5">
-              <span className="text-xs text-muted-foreground">Unitário</span>
-              <p className="font-semibold">{formatCurrency(unitPrice)}</p>
-            </div>
-            <span className="text-muted-foreground">×</span>
-            <div className="space-y-0.5">
-              <span className="text-xs text-muted-foreground">Qtd</span>
-              <p className="font-semibold">{quantity}</p>
-            </div>
-            <span className="text-muted-foreground">=</span>
-            <div className="space-y-0.5">
-              <span className="text-xs text-muted-foreground uppercase tracking-wide">Total</span>
-              <p className="text-xl font-bold text-primary">{formatCurrency(totalPrice)}</p>
+          <div className="flex-1 space-y-1">
+            {compositionPricing.isReady && (
+              <div className="flex items-center gap-1.5 mb-1">
+                <Badge variant="outline" className="text-[10px] bg-primary/5 border-primary/20">
+                  <Sparkles className="w-3 h-3 mr-1" />
+                  Preço por composição
+                </Badge>
+              </div>
+            )}
+            <div className="flex items-center gap-4">
+              <div className="space-y-0.5">
+                <span className="text-xs text-muted-foreground">Unitário</span>
+                <p className="font-semibold">{formatCurrency(unitPrice)}</p>
+              </div>
+              <span className="text-muted-foreground">×</span>
+              <div className="space-y-0.5">
+                <span className="text-xs text-muted-foreground">Qtd</span>
+                <p className="font-semibold">{quantity}</p>
+              </div>
+              <span className="text-muted-foreground">=</span>
+              <div className="space-y-0.5">
+                <span className="text-xs text-muted-foreground uppercase tracking-wide">Total</span>
+                <p className="text-xl font-bold text-primary">{formatCurrency(totalPrice)}</p>
+              </div>
             </div>
           </div>
           
