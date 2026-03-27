@@ -6,13 +6,14 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Calculator, Search, Package, Layers, AlertCircle, TrendingUp } from 'lucide-react';
+import { Calculator, Search, Package, Layers, AlertCircle, TrendingUp, Settings2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { ProductPricingCard } from '@/components/precificacao/ProductPricingCard';
 import { PricingDashboard } from '@/components/precificacao/PricingDashboard';
 import { BulkPriceAdjustDialog } from '@/components/precificacao/BulkPriceAdjustDialog';
+import { PricingPolicySettings } from '@/components/precificacao/PricingPolicySettings';
 
 const categoryLabels: Record<string, string> = {
   window: 'Janela', door: 'Porta', facade: 'Fachada',
@@ -142,6 +143,7 @@ export default function Precificacao() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <PricingPolicySettings />
             <Button variant="outline" size="sm" onClick={() => setBulkAdjustOpen(true)}>
               <TrendingUp className="h-4 w-4 mr-1.5" />
               Reajuste em Massa
