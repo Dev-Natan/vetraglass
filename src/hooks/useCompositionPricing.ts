@@ -72,7 +72,7 @@ export function useCompositionPricing({
     const inputs: CompositionItemInput[] = compositionItems.map(ci => {
       const tpl = ci.item_template;
       const compItem = ci.company_item || fallbackCompanyItems?.find(f => f.item_template_id === tpl?.id);
-      const itemType = (tpl?.type || compItem?.type || 'accessory') as CompositionItemInput['itemType'];
+      const itemType = (tpl?.type || (compItem as any)?.type || 'accessory') as CompositionItemInput['itemType'];
 
       return {
         id: ci.id,
