@@ -57,6 +57,7 @@ import { cn } from '@/lib/utils';
 import { generateOSDocuments } from '@/utils/generateOSDocuments';
 import { generateMaterialConsumption, linkReservationsToConsumption } from '@/utils/generateMaterialConsumption';
 import { MaterialsAvailabilityPreview } from './MaterialsAvailabilityPreview';
+import type { CompositionStockResult } from '@/utils/checkCompositionStock';
 import { usePaymentOptions } from '@/hooks/usePaymentOptions';
 
 interface Quote {
@@ -126,7 +127,7 @@ export function AprovarOrcamentoDialog({
   const [estimatedEnd, setEstimatedEnd] = useState<Date | undefined>(addDays(new Date(), 7));
   const [priority, setPriority] = useState<'low' | 'normal' | 'high' | 'urgent'>('normal');
   const [notes, setNotes] = useState('');
-
+  const [stockCheckResult, setStockCheckResult] = useState<CompositionStockResult | null>(null);
   // Hooks
   const { 
     formasPagamento, 
@@ -899,6 +900,7 @@ export function AprovarOrcamentoDialog({
                   <MaterialsAvailabilityPreview 
                     quoteItems={items}
                     companyId={currentCompany?.id}
+                    onStockCheck={setStockCheckResult}
                   />
                 </div>
               )}
@@ -1041,7 +1043,7 @@ export function AprovarOrcamentoDialog({
                   ) : (
                     <CheckCircle className="w-4 h-4" />
                   )}
-                  Aprovar
+                  {stockCheckResult?.hasShortage ? 'Aprovar (com falta)' : 'Aprovar'}
                 </Button>
               )}
             </div>
