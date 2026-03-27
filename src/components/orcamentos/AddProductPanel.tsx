@@ -240,6 +240,15 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   // Use price_per_sqm as the primary pricing method
   const productBasePricePerSqm = Number((companyProduct as any)?.price_per_sqm) || Number(companyProduct?.base_price) || 0;
   
+  // Composition-based dynamic pricing
+  const compositionPricing = useCompositionPricing({
+    companyProductId: companyProduct?.id,
+    width: width || 1000,
+    height: height || 1000,
+    quantity: quantity || 1,
+    enabled: !!companyProduct?.id && width > 0 && height > 0,
+  });
+
   // Determine final price based on pricing type
   const finalPricePerSqm = (() => {
     if (productUsesGlass && hasGlass && glassPricePerSqm > 0) {
@@ -253,10 +262,14 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   
   const basePrice = customPrice !== null ? customPrice : finalPricePerSqm;
 
-  // Calculate prices: area in m² × price per m²
+  // Calculate prices: use composition when available, otherwise area × price/m²
   const area = width && height ? (width / 1000) * (height / 1000) : 0;
-  const unitPrice = area > 0 ? basePrice * area : 0;
-  const totalPrice = unitPrice * quantity;
+  const unitPrice = compositionPricing.isReady
+    ? compositionPricing.compositionCostPerUnit
+    : (area > 0 ? basePrice * area : 0);
+  const totalPrice = compositionPricing.isReady
+    ? compositionPricing.totalCost
+    : unitPrice * quantity;
 
   // Check if the selected product is from "Temperado" line (always has glass)
   const isTemperadoLine = selectedProduct?.linha?.toLowerCase().includes('temperado');
