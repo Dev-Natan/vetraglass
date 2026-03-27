@@ -775,21 +775,30 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
 
         {/* Price Summary & Actions */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-4 rounded-xl bg-gradient-to-r from-primary/10 to-primary/5 border">
-          <div className="flex-1 flex items-center gap-4">
-            <div className="space-y-0.5">
-              <span className="text-xs text-muted-foreground">Unitário</span>
-              <p className="font-semibold">{formatCurrency(unitPrice)}</p>
-            </div>
-            <span className="text-muted-foreground">×</span>
-            <div className="space-y-0.5">
-              <span className="text-xs text-muted-foreground">Qtd</span>
-              <p className="font-semibold">{quantity}</p>
-            </div>
-            <span className="text-muted-foreground">=</span>
-            <div className="space-y-0.5">
-              <span className="text-xs text-muted-foreground uppercase tracking-wide">Total</span>
-              <p className="text-xl font-bold text-primary">{formatCurrency(totalPrice)}</p>
-            </div>
+          <div className="flex-1 space-y-1">
+            {compositionPricing.isReady && (
+              <div className="flex items-center gap-1.5 mb-1">
+                <Badge variant="outline" className="text-[10px] bg-primary/5 border-primary/20">
+                  <Sparkles className="w-3 h-3 mr-1" />
+                  Preço por composição
+                </Badge>
+              </div>
+            )}
+            <div className="flex items-center gap-4">
+              <div className="space-y-0.5">
+                <span className="text-xs text-muted-foreground">Unitário</span>
+                <p className="font-semibold">{formatCurrency(unitPrice)}</p>
+              </div>
+              <span className="text-muted-foreground">×</span>
+              <div className="space-y-0.5">
+                <span className="text-xs text-muted-foreground">Qtd</span>
+                <p className="font-semibold">{quantity}</p>
+              </div>
+              <span className="text-muted-foreground">=</span>
+              <div className="space-y-0.5">
+                <span className="text-xs text-muted-foreground uppercase tracking-wide">Total</span>
+                <p className="text-xl font-bold text-primary">{formatCurrency(totalPrice)}</p>
+              </div>
           </div>
           
           <div className="flex gap-2">
