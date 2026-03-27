@@ -188,7 +188,7 @@ export function EditItemPriceDialog({
       if (!itemTemplateId) return null;
       const { data, error } = await supabase
         .from('item_templates')
-        .select('ncm, cest, cfop_venda, cfop_venda_interestadual, origem, codigo_servico, aliquota_iss, aliquota_ibs, aliquota_cbs, aliquota_is')
+        .select('ncm, cest, cfop_venda, cfop_venda_interestadual, origem, codigo_servico, aliquota_iss, aliquota_ibs, aliquota_cbs, aliquota_is, bar_length_mm, weight_per_bar, weight_per_meter')
         .eq('id', itemTemplateId)
         .single();
       if (error) throw error;
@@ -230,13 +230,15 @@ export function EditItemPriceDialog({
 
   // Load pricing data from company_item - only when data has finished loading
   useEffect(() => {
-    if (loadingCompanyItem || loadingPrice) return; // Wait for queries to finish
+    if (loadingCompanyItem || loadingPrice || loadingTemplate) return;
     
     if (companyItem) {
+      // Use company_item data, but fallback to template for missing weight/length
+      const tpl = itemTemplate as any;
       setPricingData({
-        barLengthMm: companyItem.bar_length_mm?.toString() ?? '',
-        weightKg: companyItem.weight_kg?.toString() ?? '',
-        weightPerMeter: companyItem.weight_per_meter?.toString() ?? '',
+        barLengthMm: companyItem.bar_length_mm?.toString() ?? tpl?.bar_length_mm?.toString() ?? '',
+        weightKg: companyItem.weight_kg?.toString() ?? tpl?.weight_per_bar?.toString() ?? '',
+        weightPerMeter: companyItem.weight_per_meter?.toString() ?? tpl?.weight_per_meter?.toString() ?? '',
         costPerBar: companyItem.cost_per_bar?.toString() ?? '',
         costPerKg: companyItem.cost_per_kg?.toString() ?? '',
         costPerMeter: companyItem.cost_per_meter?.toString() ?? '',
@@ -252,15 +254,13 @@ export function EditItemPriceDialog({
       setItemTypeLocal(companyItem.type || 'profile');
       setLinhaLocal(companyItem.linha || '');
     } else if (existingPrice) {
-      // Fallback: load from company_item_prices if no company_item exists
       setPricingData(prev => ({
         ...prev,
         costPerBar: existingPrice.cost?.toString() ?? '',
         salePricePerBar: existingPrice.price?.toString() ?? '',
       }));
     }
-    // Only reset to defaults when dialog first opens with no data
-  }, [companyItem, existingPrice, loadingCompanyItem, loadingPrice]);
+  }, [companyItem, existingPrice, loadingCompanyItem, loadingPrice, itemTemplate, loadingTemplate]);
   // Reset pricing data when dialog opens with a new item
   useEffect(() => {
     if (!open) {
