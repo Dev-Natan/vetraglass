@@ -520,7 +520,30 @@ export default function CaixaVendas() {
         }
       }
       
-      // Stock deductions - calcula área em m² para itens com unidade m² (vidros, chaparias)
+      // Stock deductions - só executa na venda total (evita baixa duplicada em vendas parciais de orçamento)
+      const isPartialQuoteSale = data.quoteId && !isPaidInFull;
+      
+      // Se for venda parcial de orçamento, verificar se OS já consumiu materiais
+      let osAlreadyConsumed = false;
+      if (data.quoteId) {
+        const { data: osData } = await supabase
+          .from('ordens_servico')
+          .select('id')
+          .eq('quote_id', data.quoteId)
+          .in('status', ['completed'])
+          .limit(1);
+        if (osData && osData.length > 0) {
+          const { data: consumed } = await supabase
+            .from('material_consumption')
+            .select('id')
+            .eq('ordem_servico_id', osData[0].id)
+            .eq('status', 'consumed')
+            .limit(1);
+          osAlreadyConsumed = !!(consumed && consumed.length > 0);
+        }
+      }
+      
+      const shouldDeductStock = !isPartialQuoteSale && !osAlreadyConsumed;
       const stockDeductions: Map<string, number> = new Map();
       for (const item of data.items) {
         if (item.itemTemplateId && !item.isProduct) {
