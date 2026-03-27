@@ -83,6 +83,8 @@ export function EditItemPriceDialog({
   const [pricingData, setPricingData] = useState<ItemPricingData>(defaultPricingData);
   const [fiscalOpen, setFiscalOpen] = useState(false);
   const [selectedTaxCategory, setSelectedTaxCategory] = useState<string>('');
+  const [itemTypeLocal, setItemTypeLocal] = useState<string>('profile');
+  const [linhaLocal, setLinhaLocal] = useState<string>('');
   
   // Fiscal fields state
   const [ncm, setNcm] = useState('');
@@ -242,7 +244,13 @@ export function EditItemPriceDialog({
         salePricePerKg: companyItem.sale_price_per_kg?.toString() ?? '',
         salePricePerMeter: companyItem.sale_price_per_meter?.toString() ?? '',
         saleMarginPercent: companyItem.sale_margin_percent?.toString() ?? '30',
+        costPerUnit: companyItem.cost?.toString() ?? '',
+        salePricePerUnit: companyItem.sale_price?.toString() ?? '',
+        costPerSqm: companyItem.type === 'glass' ? (companyItem.cost_per_meter?.toString() ?? '') : '',
+        salePricePerSqm: companyItem.type === 'glass' ? (companyItem.sale_price_per_meter?.toString() ?? '') : '',
       });
+      setItemTypeLocal(companyItem.type || 'profile');
+      setLinhaLocal(companyItem.linha || '');
     } else if (existingPrice) {
       // Fallback: load from company_item_prices if no company_item exists
       setPricingData(prev => ({
@@ -338,6 +346,8 @@ export function EditItemPriceDialog({
         const { error: itemError } = await supabase
           .from('company_items')
           .update({
+            type: itemTypeLocal,
+            linha: linhaLocal || null,
             cost: costNum,
             sale_price: salePriceNum,
             bar_length_mm: pNum(pricingData.barLengthMm),
@@ -520,7 +530,37 @@ export function EditItemPriceDialog({
             <div className="border-t" />
 
             {/* Pricing Section - same as AddStockDialogContent */}
-            <ItemPricingFields data={pricingData} onChange={setPricingData} />
+            {/* Classification Section */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Package className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium">Classificação</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Tipo do Item</Label>
+                  <Select value={itemTypeLocal} onValueChange={setItemTypeLocal}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="profile">🔩 Perfil</SelectItem>
+                      <SelectItem value="glass">🪟 Vidro</SelectItem>
+                      <SelectItem value="accessory">⚙️ Acessório</SelectItem>
+                      <SelectItem value="component">🧩 Componente</SelectItem>
+                      <SelectItem value="service">🔧 Serviço</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Linha</Label>
+                  <Input value={linhaLocal} onChange={e => setLinhaLocal(e.target.value)} placeholder="Ex: Suprema, Gold..." className="h-9" />
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t" />
+
+            {/* Pricing Section */}
+            <ItemPricingFields data={pricingData} onChange={setPricingData} itemType={itemTypeLocal} />
 
             {/* Separator */}
             <div className="border-t" />
