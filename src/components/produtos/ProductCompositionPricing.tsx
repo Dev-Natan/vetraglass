@@ -261,7 +261,7 @@ export function ProductCompositionPricing({
 
         {/* Warning */}
         {itemsWithoutPrice > 0 && (
-          <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 dark:bg-amber-950/30 rounded-md px-3 py-2">
+          <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 rounded-md px-3 py-2">
             <AlertTriangle className="h-4 w-4 flex-shrink-0" />
             <span>{itemsWithoutPrice} item(ns) sem preço definido no estoque</span>
           </div>
