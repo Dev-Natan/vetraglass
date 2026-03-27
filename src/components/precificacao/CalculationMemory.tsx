@@ -69,7 +69,7 @@ export function CalculationMemory({ productName, result, width, height, quantity
                       <span className="font-medium">{item.itemName}</span>
                       <p className="text-muted-foreground">{item.displayMeasure}</p>
                       {item.lossPercent > 0 && (
-                        <p className="text-amber-600 flex items-center gap-0.5">
+                        <p className="text-warning flex items-center gap-0.5">
                           <AlertTriangle className="h-3 w-3" />
                           +{item.lossPercent}% perda = {formatBRL(item.lossCost)}
                         </p>
@@ -98,7 +98,7 @@ export function CalculationMemory({ productName, result, width, height, quantity
           </div>
           
           {hasLosses && (
-            <div className="flex justify-between text-amber-600">
+            <div className="flex justify-between text-warning">
               <span>Perdas/desperdícios</span>
               <span>+ {formatBRL(result.totalLossCost)}</span>
             </div>
