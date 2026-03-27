@@ -116,10 +116,12 @@ function deriveCosts(item: CompositionItem, primaryCost: number): Partial<Compos
 
 export function ProductPricingCard({ product, compositionItems, onSaved }: ProductPricingCardProps) {
   const queryClient = useQueryClient();
+  const { policy } = usePricingPolicy();
   const [expanded, setExpanded] = useState(false);
+  const [showMemory, setShowMemory] = useState(false);
   const [width, setWidth] = useState(1000);
   const [height, setHeight] = useState(1200);
-  const [marginPercent, setMarginPercent] = useState(product.margin_percent ?? 30);
+  const [marginPercent, setMarginPercent] = useState(product.margin_percent ?? policy.defaultMargin);
   const [saving, setSaving] = useState(false);
   // Store only the primary cost override per item
   const [costOverrides, setCostOverrides] = useState<Record<string, number>>({});
