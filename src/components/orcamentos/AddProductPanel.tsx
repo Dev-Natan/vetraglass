@@ -799,6 +799,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                 <span className="text-xs text-muted-foreground uppercase tracking-wide">Total</span>
                 <p className="text-xl font-bold text-primary">{formatCurrency(totalPrice)}</p>
               </div>
+            </div>
           </div>
           
           <div className="flex gap-2">
