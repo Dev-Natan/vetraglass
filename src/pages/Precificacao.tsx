@@ -271,6 +271,21 @@ export default function Precificacao() {
             ))}
           </div>
         )}
+        <BulkPriceAdjustDialog
+          open={bulkAdjustOpen}
+          onOpenChange={setBulkAdjustOpen}
+          products={(products || []).map(p => ({
+            id: p.id,
+            commercial_name: p.commercial_name,
+            linha: p.linha,
+            category: p.category,
+            margin_percent: p.margin_percent,
+            cost_per_sqm: p.cost_per_sqm,
+            price_per_sqm: p.price_per_sqm,
+          }))}
+          linhas={linhas}
+          onSaved={() => refetch()}
+        />
       </div>
     </MainLayout>
   );
