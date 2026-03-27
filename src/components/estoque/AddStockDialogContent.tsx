@@ -102,6 +102,15 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
       setLinha(selectedItem.linha || '');
       setCategory(selectedItem.type || '');
       setAllowFractional(selectedItem.type === 'profile');
+
+      // Pre-fill pricing data from template (weight, bar length)
+      setPricingData(prev => ({
+        ...prev,
+        barLengthMm: selectedItem.bar_length_mm?.toString() ?? prev.barLengthMm,
+        weightKg: selectedItem.weight_per_bar?.toString() ?? prev.weightKg,
+        weightPerMeter: selectedItem.weight_per_meter?.toString() ?? prev.weightPerMeter,
+      }));
+
       const templateSpecs = selectedItem.specifications as Record<string, unknown> | null;
       if (templateSpecs) {
         setFiscalData(prev => ({
