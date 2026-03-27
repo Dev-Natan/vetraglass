@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useCompositionPricing } from '@/hooks/useCompositionPricing';
 import { resolveProductImageUrl } from '@/utils/imageUrl';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
