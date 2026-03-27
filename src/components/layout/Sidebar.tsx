@@ -19,7 +19,6 @@ import {
   Ruler,
   Headphones,
   Lightbulb,
-  Calculator,
   LucideIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -61,7 +60,6 @@ const menuItems: MenuItem[] = [
   { icon: Scissors, label: 'Produção', path: '/producao', module: 'plano-corte', tutorialId: 'menu-producao' },
   
   // Financeiro
-  { icon: Calculator, label: 'Precificação', path: '/precificacao', module: 'produtos', tutorialId: 'menu-precificacao' },
   { icon: DollarSign, label: 'Financeiro', path: '/financeiro', module: 'financeiro', tutorialId: 'menu-financeiro' },
   { icon: Receipt, label: 'Fiscal', path: '/notas-fiscais', module: 'notas-fiscais', tutorialId: 'menu-notas-fiscais' },
   
