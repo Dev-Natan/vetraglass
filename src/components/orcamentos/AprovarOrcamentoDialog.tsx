@@ -57,6 +57,7 @@ import { cn } from '@/lib/utils';
 import { generateOSDocuments } from '@/utils/generateOSDocuments';
 import { generateMaterialConsumption, linkReservationsToConsumption } from '@/utils/generateMaterialConsumption';
 import { MaterialsAvailabilityPreview } from './MaterialsAvailabilityPreview';
+import type { CompositionStockResult } from '@/utils/checkCompositionStock';
 import { usePaymentOptions } from '@/hooks/usePaymentOptions';
 
 interface Quote {
