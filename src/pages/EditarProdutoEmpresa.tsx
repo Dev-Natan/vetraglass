@@ -732,6 +732,15 @@ export default function EditarProdutoEmpresa() {
           onEditItem={handleEditItem}
           onRemoveItem={(itemId) => removeItemMutation.mutate(itemId)}
         />
+
+        {/* Composition-Based Pricing */}
+        <ProductCompositionPricing
+          productId={id!}
+          productItems={productItems || []}
+          currentCostPerSqm={(product as any)?.cost_per_sqm}
+          currentPricePerSqm={(product as any)?.price_per_sqm}
+          currentMargin={(product as any)?.margin_percent}
+        />
       </div>
 
       {/* Add Item Dialog */}
