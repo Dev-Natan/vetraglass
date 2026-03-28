@@ -251,7 +251,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     height: height || 1000,
     quantity: quantity || 1,
     enabled: !!companyProduct?.id && width > 0 && height > 0,
-    excludeOptionalIds,
+    excludeOptionalIds: excludedOptionalIds,
   });
 
   // Get optional items for toggle UI
