@@ -86,6 +86,8 @@ interface QuoteItem {
   has_glass?: boolean;
   glass_color?: string;
   glass_thickness?: string;
+  include_contramarco?: boolean;
+  excluded_optional_ids?: string[];
 }
 
 interface Quote {
