@@ -251,7 +251,11 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     height: height || 1000,
     quantity: quantity || 1,
     enabled: !!companyProduct?.id && width > 0 && height > 0,
+    excludeOptionalIds,
   });
+
+  // Get optional items for toggle UI
+  const optionalItems = compositionPricing.optionalItems || [];
 
   // Determine final price based on pricing type
   const finalPricePerSqm = (() => {
