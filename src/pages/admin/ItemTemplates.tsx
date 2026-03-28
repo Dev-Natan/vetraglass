@@ -220,6 +220,14 @@ export default function ItemTemplates() {
         const { data: urlData } = supabase.storage.from('item-templates').getPublicUrl(filePath);
         imageUrl = urlData.publicUrl;
       }
+      const specsBase = JSON.parse(data.specifications || '{}');
+      // Merge structured fields into specifications
+      if (data.type === 'profile') {
+        if (data.spec_width_mm) specsBase.width_mm = parseFloat(data.spec_width_mm);
+        if (data.spec_height_mm) specsBase.height_mm = parseFloat(data.spec_height_mm);
+        if (data.spec_alloy) specsBase.alloy = data.spec_alloy;
+        if (data.spec_temper) specsBase.temper = data.spec_temper;
+      }
       const itemData: any = {
         name: data.name,
         description: data.description || null,
@@ -227,7 +235,7 @@ export default function ItemTemplates() {
         unit: data.unit,
         linha: data.linha || null,
         default_price: parseFloat(data.default_price) || 0,
-        specifications: JSON.parse(data.specifications || '{}'),
+        specifications: specsBase,
         image_url: imageUrl,
         is_active: data.is_active,
       };
