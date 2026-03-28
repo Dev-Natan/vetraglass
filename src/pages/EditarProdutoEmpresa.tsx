@@ -208,7 +208,7 @@ export default function EditarProdutoEmpresa() {
   const { data: availableItems } = useQuery({
     queryKey: ['item-templates-by-type', addItemSection, product?.linha],
     queryFn: async () => {
-      const dbType = addItemSection;
+      const dbType = addItemSection === 'contramarco' ? 'profile' : addItemSection;
       
       const { data, error } = await supabase
         .from('item_templates')
