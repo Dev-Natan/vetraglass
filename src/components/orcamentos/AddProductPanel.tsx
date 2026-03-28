@@ -327,6 +327,8 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
       glass_price_per_sqm: hasGlass ? glassPricePerSqm : undefined,
       aluminum_color: aluminumColorName || undefined,
       is_custom: selectedProduct.is_custom,
+      include_contramarco: excludedOptionalIds.length === 0,
+      excluded_optional_ids: excludedOptionalIds.length > 0 ? excludedOptionalIds : undefined,
     });
   };
 
