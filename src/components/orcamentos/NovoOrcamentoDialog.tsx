@@ -282,6 +282,8 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
     has_glass?: boolean;
     glass_color?: string;
     glass_thickness?: string;
+    include_contramarco?: boolean;
+    excluded_optional_ids?: string[];
   }) => {
     const newItem: QuoteItem = {
       product_template_id: product.product_template_id,
@@ -299,6 +301,8 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
       has_glass: product.has_glass,
       glass_color: product.glass_color,
       glass_thickness: product.glass_thickness,
+      include_contramarco: product.include_contramarco,
+      excluded_optional_ids: product.excluded_optional_ids,
     };
     setItems([...items, newItem]);
     setShowAddProduct(false);
