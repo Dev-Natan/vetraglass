@@ -134,7 +134,7 @@ export default function EditarProdutoEmpresa() {
   const { isAdmin } = usePermissions();
   
   const [activeTab, setActiveTab] = useState('profile');
-  const [addItemSection, setAddItemSection] = useState<'profile' | 'accessory' | 'glass'>('profile');
+  const [addItemSection, setAddItemSection] = useState<'profile' | 'accessory' | 'glass' | 'contramarco'>('profile');
   const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
   const [itemSearchQuery, setItemSearchQuery] = useState('');
   const [isEditItemDialogOpen, setIsEditItemDialogOpen] = useState(false);
@@ -374,18 +374,20 @@ export default function EditarProdutoEmpresa() {
         }
       }
 
+      const isContramarco = addItemSection === 'contramarco';
       const insertData = {
         company_product_id: id,
         item_template_id: selectedItemToAdd,
         company_item_id: companyItemId,
         quantity_formula: quantityFormula,
         pieces_quantity: piecesQuantity,
-        is_optional: false,
+        is_optional: isContramarco ? true : false,
         cut_angle: cutAngle,
         width_formula: addItemSection === 'glass' ? (widthFormula || null) : null,
         height_formula: addItemSection === 'glass' ? (heightFormula || null) : null,
         notes: addItemSection === 'glass' ? (glassName || null) : null,
         sort_order: (productItems?.length || 0) + 1,
+        section: isContramarco ? 'contramarco' : null,
       };
 
       const { error } = await supabase
