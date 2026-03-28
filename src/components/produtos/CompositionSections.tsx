@@ -314,19 +314,89 @@ function GlassSection({ items, onAdd, onEdit, onRemove }: {
   );
 }
 
+// ==================== CONTRAMARCO SECTION ====================
+function ContramarcoSection({ items, onAdd, onEdit, onRemove }: {
+  items: CompositionItem[];
+  onAdd: () => void;
+  onEdit: (item: CompositionItem) => void;
+  onRemove: (id: string) => void;
+}) {
+  return (
+    <Card className="border-amber-200 dark:border-amber-800">
+      <CardHeader className="pb-2 pt-4 px-4">
+        <SectionHeader icon={Frame} title="Contramarco (Opcional)" count={items.length} buttonLabel="Adicionar Contramarco" onAdd={onAdd} />
+        <p className="text-xs text-muted-foreground mt-1">
+          Itens opcionais — incluídos no plano de corte apenas quando ativados no orçamento
+        </p>
+      </CardHeader>
+      <CardContent className="px-0 pb-2">
+        {items.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8 px-4">
+            Nenhum contramarco adicionado. Clique em "Adicionar Contramarco".
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-amber-50/50 dark:bg-amber-900/10">
+                  <th className="text-left py-2 px-4 font-medium text-muted-foreground text-xs">Imagem</th>
+                  <th className="text-left py-2 px-2 font-medium text-muted-foreground text-xs">Código</th>
+                  <th className="text-left py-2 px-2 font-medium text-muted-foreground text-xs">Nome</th>
+                  <th className="text-center py-2 px-2 font-medium text-muted-foreground text-xs">Qtd.</th>
+                  <th className="text-center py-2 px-2 font-medium text-muted-foreground text-xs">Comprimento</th>
+                  <th className="text-center py-2 px-2 font-medium text-muted-foreground text-xs">Corte</th>
+                  <th className="text-right py-2 px-4 font-medium text-muted-foreground text-xs">Opções</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item) => {
+                  const itemData = item.item_template || item.company_item;
+                  return (
+                    <tr key={item.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors cursor-pointer" onClick={() => onEdit(item)}>
+                      <td className="py-2 px-4"><ItemImage item={item} /></td>
+                      <td className="py-2 px-2"><ItemCode item={item} /></td>
+                      <td className="py-2 px-2 font-medium text-primary">{itemData?.name}</td>
+                      <td className="py-2 px-2 text-center">{item.pieces_quantity || 1}</td>
+                      <td className="py-2 px-2 text-center">
+                        <span className="text-xs text-muted-foreground">{item.quantity_formula}</span>
+                      </td>
+                      <td className="py-2 px-2 text-center">
+                        <Badge variant="outline" className="text-[10px] font-mono">
+                          {getCutAngleLabel(item.cut_angle)}
+                        </Badge>
+                      </td>
+                      <td className="py-2 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                        <ItemActions item={item} onEdit={() => onEdit(item)} onRemove={() => onRemove(item.id)} />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 // ==================== MAIN EXPORT ====================
 export function CompositionSections({ items, onAddItem, onEditItem, onRemoveItem }: CompositionSectionsProps) {
-  const profiles = items.filter(i => {
+  // Separate contramarco items first (by section field)
+  const contramarcoItems = items.filter(i => (i as any).section === 'contramarco');
+  const nonContramarcoItems = items.filter(i => (i as any).section !== 'contramarco');
+
+  const profiles = nonContramarcoItems.filter(i => {
     const type = i.item_template?.type || i.company_item?.type;
     return type === 'profile';
   });
   
-  const components = items.filter(i => {
+  const components = nonContramarcoItems.filter(i => {
     const type = i.item_template?.type || i.company_item?.type;
     return type === 'accessory';
   });
   
-  const glasses = items.filter(i => {
+  const glasses = nonContramarcoItems.filter(i => {
     const type = i.item_template?.type || i.company_item?.type;
     return type === 'glass';
   });
@@ -357,6 +427,13 @@ export function CompositionSections({ items, onAddItem, onEditItem, onRemoveItem
       <GlassSection 
         items={glasses} 
         onAdd={() => onAddItem('glass')} 
+        onEdit={onEditItem} 
+        onRemove={onRemoveItem} 
+      />
+
+      <ContramarcoSection 
+        items={contramarcoItems} 
+        onAdd={() => onAddItem('contramarco')} 
         onEdit={onEditItem} 
         onRemove={onRemoveItem} 
       />
