@@ -134,7 +134,7 @@ export default function EditarProdutoEmpresa() {
   const { isAdmin } = usePermissions();
   
   const [activeTab, setActiveTab] = useState('profile');
-  const [addItemSection, setAddItemSection] = useState<'profile' | 'accessory' | 'glass'>('profile');
+  const [addItemSection, setAddItemSection] = useState<'profile' | 'accessory' | 'glass' | 'contramarco'>('profile');
   const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
   const [itemSearchQuery, setItemSearchQuery] = useState('');
   const [isEditItemDialogOpen, setIsEditItemDialogOpen] = useState(false);
@@ -208,7 +208,7 @@ export default function EditarProdutoEmpresa() {
   const { data: availableItems } = useQuery({
     queryKey: ['item-templates-by-type', addItemSection, product?.linha],
     queryFn: async () => {
-      const dbType = addItemSection;
+      const dbType = addItemSection === 'contramarco' ? 'profile' : addItemSection;
       
       const { data, error } = await supabase
         .from('item_templates')
@@ -374,18 +374,20 @@ export default function EditarProdutoEmpresa() {
         }
       }
 
+      const isContramarco = addItemSection === 'contramarco';
       const insertData = {
         company_product_id: id,
         item_template_id: selectedItemToAdd,
         company_item_id: companyItemId,
         quantity_formula: quantityFormula,
         pieces_quantity: piecesQuantity,
-        is_optional: false,
+        is_optional: isContramarco ? true : false,
         cut_angle: cutAngle,
         width_formula: addItemSection === 'glass' ? (widthFormula || null) : null,
         height_formula: addItemSection === 'glass' ? (heightFormula || null) : null,
         notes: addItemSection === 'glass' ? (glassName || null) : null,
         sort_order: (productItems?.length || 0) + 1,
+        section: isContramarco ? 'contramarco' : null,
       };
 
       const { error } = await supabase
@@ -747,7 +749,7 @@ export default function EditarProdutoEmpresa() {
       <Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Adicionar {addItemSection === 'profile' ? 'Perfil' : addItemSection === 'glass' ? 'Vidro' : 'Componente'}</DialogTitle>
+            <DialogTitle>Adicionar {addItemSection === 'profile' ? 'Perfil' : addItemSection === 'glass' ? 'Vidro' : addItemSection === 'contramarco' ? 'Contramarco' : 'Componente'}</DialogTitle>
             <DialogDescription>
               Selecione um item e configure sua fórmula
             </DialogDescription>

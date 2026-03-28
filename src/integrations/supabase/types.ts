@@ -1534,6 +1534,7 @@ export type Database = {
           notes: string | null
           pieces_quantity: number | null
           quantity_formula: string
+          section: string | null
           sort_order: number | null
           updated_at: string | null
           width_formula: string | null
@@ -1551,6 +1552,7 @@ export type Database = {
           notes?: string | null
           pieces_quantity?: number | null
           quantity_formula?: string
+          section?: string | null
           sort_order?: number | null
           updated_at?: string | null
           width_formula?: string | null
@@ -1568,6 +1570,7 @@ export type Database = {
           notes?: string | null
           pieces_quantity?: number | null
           quantity_formula?: string
+          section?: string | null
           sort_order?: number | null
           updated_at?: string | null
           width_formula?: string | null
@@ -4553,6 +4556,7 @@ export type Database = {
           pieces_quantity: number
           product_template_id: string
           quantity_formula: string
+          section: string | null
           width_formula: string | null
         }
         Insert: {
@@ -4568,6 +4572,7 @@ export type Database = {
           pieces_quantity?: number
           product_template_id: string
           quantity_formula?: string
+          section?: string | null
           width_formula?: string | null
         }
         Update: {
@@ -4583,6 +4588,7 @@ export type Database = {
           pieces_quantity?: number
           product_template_id?: string
           quantity_formula?: string
+          section?: string | null
           width_formula?: string | null
         }
         Relationships: [
