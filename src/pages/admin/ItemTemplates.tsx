@@ -76,7 +76,7 @@ export default function ItemTemplates() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ItemTemplate | null>(null);
   
-  const [formData, setFormData] = useState({
+  const defaultFormData = {
     name: '',
     description: '',
     type: 'profile' as 'glass' | 'profile' | 'accessory' | 'service',
@@ -88,9 +88,14 @@ export default function ItemTemplates() {
     default_cost: '',
     default_sale_price: '',
     bar_length_mm: '6000',
+    spec_width_mm: '',
+    spec_height_mm: '',
+    spec_alloy: '',
+    spec_temper: '',
     specifications: '{}',
     is_active: true,
-  });
+  };
+  const [formData, setFormData] = useState(defaultFormData);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploadingImageId, setUploadingImageId] = useState<string | null>(null);
@@ -395,13 +400,14 @@ export default function ItemTemplates() {
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setEditingItem(null);
-    setFormData({ name: '', description: '', type: 'profile', unit: 'barra', linha: '', default_price: '', weight_per_meter: '', weight_per_bar: '', default_cost: '', default_sale_price: '', bar_length_mm: '6000', specifications: '{}', is_active: true });
+    setFormData(defaultFormData);
     setImageFile(null);
     setImagePreview(null);
   };
 
   const handleEdit = (item: ItemTemplate) => {
     setEditingItem(item);
+    const specs = (item.specifications || {}) as Record<string, any>;
     setFormData({
       name: item.name,
       description: item.description || '',
@@ -414,6 +420,10 @@ export default function ItemTemplates() {
       default_cost: item.default_cost?.toString() || '',
       default_sale_price: item.default_sale_price?.toString() || '',
       bar_length_mm: item.bar_length_mm?.toString() || '6000',
+      spec_width_mm: specs.width_mm?.toString() || '',
+      spec_height_mm: specs.height_mm?.toString() || '',
+      spec_alloy: specs.alloy || '',
+      spec_temper: specs.temper || '',
       specifications: JSON.stringify(item.specifications, null, 2),
       is_active: item.is_active,
     });
