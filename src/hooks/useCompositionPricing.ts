@@ -10,6 +10,7 @@ interface UseCompositionPricingOptions {
   height: number; // mm
   quantity: number;
   enabled?: boolean;
+  excludeOptionalIds?: string[];
 }
 
 export function useCompositionPricing({
