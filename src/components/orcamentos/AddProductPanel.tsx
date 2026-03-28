@@ -47,6 +47,8 @@ interface AddProductPanelProps {
     glass_price_per_sqm?: number;
     aluminum_color?: string;
     is_custom?: boolean;
+    include_contramarco?: boolean;
+    excluded_optional_ids?: string[];
   }) => void;
   onCancel: () => void;
 }
