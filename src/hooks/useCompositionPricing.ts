@@ -19,6 +19,7 @@ export function useCompositionPricing({
   height,
   quantity,
   enabled = true,
+  excludeOptionalIds = [],
 }: UseCompositionPricingOptions) {
   const { currentCompany } = useAuth();
 

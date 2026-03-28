@@ -5016,11 +5016,13 @@ export type Database = {
           company_product_id: string | null
           created_at: string
           description: string
+          excluded_optional_ids: Json | null
           glass_color: string | null
           glass_thickness: string | null
           has_glass: boolean | null
           height: number | null
           id: string
+          include_contramarco: boolean | null
           item_type: string | null
           notes: string | null
           product_template_id: string | null
@@ -5037,11 +5039,13 @@ export type Database = {
           company_product_id?: string | null
           created_at?: string
           description: string
+          excluded_optional_ids?: Json | null
           glass_color?: string | null
           glass_thickness?: string | null
           has_glass?: boolean | null
           height?: number | null
           id?: string
+          include_contramarco?: boolean | null
           item_type?: string | null
           notes?: string | null
           product_template_id?: string | null
@@ -5058,11 +5062,13 @@ export type Database = {
           company_product_id?: string | null
           created_at?: string
           description?: string
+          excluded_optional_ids?: Json | null
           glass_color?: string | null
           glass_thickness?: string | null
           has_glass?: boolean | null
           height?: number | null
           id?: string
+          include_contramarco?: boolean | null
           item_type?: string | null
           notes?: string | null
           product_template_id?: string | null
