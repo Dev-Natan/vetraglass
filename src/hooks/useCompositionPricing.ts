@@ -142,5 +142,6 @@ export function useCompositionPricing({
     costByType: result?.costByType ?? {},
     items: result?.items ?? [],
     isReady: hasComposition && !!result,
+    optionalItems,
   };
 }
