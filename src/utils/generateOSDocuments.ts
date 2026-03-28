@@ -15,6 +15,7 @@ interface QuoteItem {
   product_template_id?: string | null;
   glass_thickness?: string | null;
   glass_color?: string | null;
+  include_contramarco?: boolean | null;
 }
 
 interface ProductCompositionItem {
@@ -26,6 +27,7 @@ interface ProductCompositionItem {
   cut_angle: number;
   pieces_quantity: number;
   is_optional: boolean;
+  section: string | null;
   item_template: {
     id: string;
     name: string;
@@ -61,6 +63,7 @@ async function getProductComposition(productTemplateId: string): Promise<Product
       cut_angle,
       pieces_quantity,
       is_optional,
+      section,
       item_template:item_templates!inner(
         id,
         name,
