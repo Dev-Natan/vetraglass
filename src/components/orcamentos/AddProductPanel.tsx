@@ -706,6 +706,39 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
           </div>
         )}
 
+        {/* Optional Items (Contramarco) Toggle */}
+        {selectedProduct && optionalItems.length > 0 && (
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+              <Frame className="w-3 h-3" />
+              Itens Opcionais
+            </label>
+            <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+              {optionalItems.map((item) => {
+                const isExcluded = excludedOptionalIds.includes(item.id);
+                return (
+                  <div key={item.id} className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Frame className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                      <span className="text-sm truncate">{item.name}</span>
+                    </div>
+                    <Switch
+                      checked={!isExcluded}
+                      onCheckedChange={(checked) => {
+                        setExcludedOptionalIds(prev =>
+                          checked
+                            ? prev.filter(id => id !== item.id)
+                            : [...prev, item.id]
+                        );
+                      }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Dimensions, Price & Quantity */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           <div className="space-y-1.5">
