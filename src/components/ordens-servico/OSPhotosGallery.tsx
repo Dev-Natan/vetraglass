@@ -106,7 +106,7 @@ export function OSPhotosGallery({ ordemServicoId }: OSPhotosGalleryProps) {
 
       // Process image to have white background
       const processedFile = await processFileWithWhiteBackground(selectedFile);
-      const fileName = `${ordemServicoId}/${Date.now()}.png`;
+      const fileName = `${currentCompany.id}/${ordemServicoId}/${Date.now()}.png`;
 
       const { error: uploadError } = await supabase.storage
         .from('os-photos')
