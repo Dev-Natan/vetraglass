@@ -148,8 +148,13 @@ export async function generateOSDocuments(
       const product = await getProductTemplate(item.product_template_id);
       if (!product) continue;
 
-      // Get composition
-      const composition = await getProductComposition(item.product_template_id);
+      // Get composition and filter contramarco items based on quote setting
+      const allComposition = await getProductComposition(item.product_template_id);
+      const includeContramarco = item.include_contramarco !== false; // default true
+      const composition = allComposition.filter(comp => {
+        if (comp.section === 'contramarco' && !includeContramarco) return false;
+        return true;
+      });
       
       // Get glass formulas
       const glassFormulas = await getGlassFormulas(
