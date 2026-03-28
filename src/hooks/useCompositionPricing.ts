@@ -67,11 +67,31 @@ export function useCompositionPricing({
     staleTime: 60_000,
   });
 
-  // 3. Calculate pricing
+  // 3. Identify optional items for UI
+  const optionalItems = useMemo(() => {
+    if (!compositionItems) return [];
+    return compositionItems
+      .filter(ci => ci.is_optional)
+      .map(ci => {
+        const info = ci.company_item || ci.item_template;
+        return {
+          id: ci.id,
+          name: (info as any)?.name || 'Item',
+          type: (info as any)?.type || 'component',
+        };
+      });
+  }, [compositionItems]);
+
+  // 4. Calculate pricing (filtering out excluded optional items)
   const result = useMemo(() => {
     if (!compositionItems || compositionItems.length === 0 || !width || !height) return null;
 
-    const inputs: CompositionItemInput[] = compositionItems.map(ci => {
+    const filteredItems = compositionItems.filter(ci => {
+      if (ci.is_optional && excludeOptionalIds.includes(ci.id)) return false;
+      return true;
+    });
+
+    const inputs: CompositionItemInput[] = filteredItems.map(ci => {
       const tpl = ci.item_template;
       const compItem = ci.company_item || fallbackCompanyItems?.find(f => f.item_template_id === tpl?.id);
       const itemType = (tpl?.type || (compItem as any)?.type || 'accessory') as CompositionItemInput['itemType'];
@@ -83,7 +103,7 @@ export function useCompositionPricing({
         unit: tpl?.unit || (compItem as any)?.unit || 'un',
         imageUrl: null,
         widthFormula: ci.width_formula,
-        heightFormula: ci.quantity_formula, // profiles use quantity_formula as dimension formula
+        heightFormula: ci.quantity_formula,
         quantityFormula: ci.quantity_formula,
         piecesQuantity: ci.pieces_quantity || 1,
         cutAngle: ci.cut_angle,
@@ -104,11 +124,11 @@ export function useCompositionPricing({
     };
 
     try {
-      return calculatePricing(inputs, pricingInput, DEFAULT_PRICING_POLICY, 0); // margin 0, price = cost
+      return calculatePricing(inputs, pricingInput, DEFAULT_PRICING_POLICY, 0);
     } catch {
       return null;
     }
-  }, [compositionItems, fallbackCompanyItems, width, height, quantity]);
+  }, [compositionItems, fallbackCompanyItems, width, height, quantity, excludeOptionalIds]);
 
   const hasComposition = !!compositionItems && compositionItems.length > 0;
   const compositionCostPerUnit = result ? result.totalCost / (quantity || 1) : 0;
