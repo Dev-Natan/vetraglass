@@ -229,6 +229,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     setHasGlass(productUsesGlass);
     // Aluminum-priced products always have acabamento (it's the aluminum color itself)
     setHasAcabamento(productUsesAluminum);
+    setExcludedOptionalIds([]);
   }, [companyProduct?.id, productUsesGlass, productUsesAluminum]);
 
   // Get selected glass price details
