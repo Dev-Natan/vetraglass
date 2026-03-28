@@ -70,6 +70,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   const [selectedGlassPriceId, setSelectedGlassPriceId] = useState<string>('');
   const [selectedAluminumColor, setSelectedAluminumColor] = useState<string>('');
   const [hasAcabamento, setHasAcabamento] = useState<boolean>(false);
+  const [excludedOptionalIds, setExcludedOptionalIds] = useState<string[]>([]);
 
   // Fetch active company products with template data
   const { data: companyProducts, isLoading } = useQuery({
