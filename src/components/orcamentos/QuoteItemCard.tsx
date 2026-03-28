@@ -28,6 +28,8 @@ interface QuoteItem {
   glass_color?: string;
   glass_thickness?: string;
   aluminum_color?: string;
+  include_contramarco?: boolean;
+  excluded_optional_ids?: string[];
 }
 
 const glassColorLabels: Record<string, string> = {

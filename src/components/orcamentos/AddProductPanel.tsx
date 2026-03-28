@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Package, Check, ArrowLeft, Ruler, DollarSign, Sparkles, Info, GlassWater, Layers, Palette } from 'lucide-react';
+import { Search, Package, Check, ArrowLeft, Ruler, DollarSign, Sparkles, Info, GlassWater, Layers, Palette, Frame } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
 import { useProductLinhas } from '@/hooks/useProductLinhas';
@@ -46,6 +47,8 @@ interface AddProductPanelProps {
     glass_price_per_sqm?: number;
     aluminum_color?: string;
     is_custom?: boolean;
+    include_contramarco?: boolean;
+    excluded_optional_ids?: string[];
   }) => void;
   onCancel: () => void;
 }
@@ -67,6 +70,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   const [selectedGlassPriceId, setSelectedGlassPriceId] = useState<string>('');
   const [selectedAluminumColor, setSelectedAluminumColor] = useState<string>('');
   const [hasAcabamento, setHasAcabamento] = useState<boolean>(false);
+  const [excludedOptionalIds, setExcludedOptionalIds] = useState<string[]>([]);
 
   // Fetch active company products with template data
   const { data: companyProducts, isLoading } = useQuery({
@@ -225,6 +229,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     setHasGlass(productUsesGlass);
     // Aluminum-priced products always have acabamento (it's the aluminum color itself)
     setHasAcabamento(productUsesAluminum);
+    setExcludedOptionalIds([]);
   }, [companyProduct?.id, productUsesGlass, productUsesAluminum]);
 
   // Get selected glass price details
@@ -247,7 +252,11 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     height: height || 1000,
     quantity: quantity || 1,
     enabled: !!companyProduct?.id && width > 0 && height > 0,
+    excludeOptionalIds: excludedOptionalIds,
   });
+
+  // Get optional items for toggle UI
+  const optionalItems = compositionPricing.optionalItems || [];
 
   // Determine final price based on pricing type
   const finalPricePerSqm = (() => {
@@ -318,6 +327,8 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
       glass_price_per_sqm: hasGlass ? glassPricePerSqm : undefined,
       aluminum_color: aluminumColorName || undefined,
       is_custom: selectedProduct.is_custom,
+      include_contramarco: excludedOptionalIds.length === 0,
+      excluded_optional_ids: excludedOptionalIds.length > 0 ? excludedOptionalIds : undefined,
     });
   };
 
@@ -692,6 +703,39 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Optional Items (Contramarco) Toggle */}
+        {selectedProduct && optionalItems.length > 0 && (
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+              <Frame className="w-3 h-3" />
+              Itens Opcionais
+            </label>
+            <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+              {optionalItems.map((item) => {
+                const isExcluded = excludedOptionalIds.includes(item.id);
+                return (
+                  <div key={item.id} className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Frame className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                      <span className="text-sm truncate">{item.name}</span>
+                    </div>
+                    <Switch
+                      checked={!isExcluded}
+                      onCheckedChange={(checked) => {
+                        setExcludedOptionalIds(prev =>
+                          checked
+                            ? prev.filter(id => id !== item.id)
+                            : [...prev, item.id]
+                        );
+                      }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 

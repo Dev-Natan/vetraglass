@@ -1,0 +1,2 @@
+ALTER TABLE public.quote_items ADD COLUMN IF NOT EXISTS include_contramarco boolean DEFAULT true;
+ALTER TABLE public.quote_items ADD COLUMN IF NOT EXISTS excluded_optional_ids jsonb DEFAULT '[]'::jsonb;

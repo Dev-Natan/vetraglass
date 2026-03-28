@@ -10,6 +10,7 @@ interface UseCompositionPricingOptions {
   height: number; // mm
   quantity: number;
   enabled?: boolean;
+  excludeOptionalIds?: string[];
 }
 
 export function useCompositionPricing({
@@ -18,10 +19,11 @@ export function useCompositionPricing({
   height,
   quantity,
   enabled = true,
+  excludeOptionalIds = [],
 }: UseCompositionPricingOptions) {
   const { currentCompany } = useAuth();
 
-  // 1. Fetch composition items
+  // 1. Fetch composition items (including is_optional)
   const { data: compositionItems } = useQuery({
     queryKey: ['composition-for-pricing', companyProductId],
     queryFn: async () => {
@@ -29,7 +31,7 @@ export function useCompositionPricing({
       const { data, error } = await supabase
         .from('company_product_items')
         .select(`
-          id, quantity_formula, width_formula, height_formula, pieces_quantity, cut_angle,
+          id, quantity_formula, width_formula, height_formula, pieces_quantity, cut_angle, is_optional,
           item_template:item_templates(id, name, type, unit, bar_length_mm, weight_per_bar, weight_per_meter),
           company_item:company_items(id, name, type, unit, cost, cost_per_bar, cost_per_kg, cost_per_meter, bar_length_mm, weight_kg, weight_per_meter)
         `)
@@ -65,11 +67,31 @@ export function useCompositionPricing({
     staleTime: 60_000,
   });
 
-  // 3. Calculate pricing
+  // 3. Identify optional items for UI
+  const optionalItems = useMemo(() => {
+    if (!compositionItems) return [];
+    return compositionItems
+      .filter(ci => ci.is_optional)
+      .map(ci => {
+        const info = ci.company_item || ci.item_template;
+        return {
+          id: ci.id,
+          name: (info as any)?.name || 'Item',
+          type: (info as any)?.type || 'component',
+        };
+      });
+  }, [compositionItems]);
+
+  // 4. Calculate pricing (filtering out excluded optional items)
   const result = useMemo(() => {
     if (!compositionItems || compositionItems.length === 0 || !width || !height) return null;
 
-    const inputs: CompositionItemInput[] = compositionItems.map(ci => {
+    const filteredItems = compositionItems.filter(ci => {
+      if (ci.is_optional && excludeOptionalIds.includes(ci.id)) return false;
+      return true;
+    });
+
+    const inputs: CompositionItemInput[] = filteredItems.map(ci => {
       const tpl = ci.item_template;
       const compItem = ci.company_item || fallbackCompanyItems?.find(f => f.item_template_id === tpl?.id);
       const itemType = (tpl?.type || (compItem as any)?.type || 'accessory') as CompositionItemInput['itemType'];
@@ -81,7 +103,7 @@ export function useCompositionPricing({
         unit: tpl?.unit || (compItem as any)?.unit || 'un',
         imageUrl: null,
         widthFormula: ci.width_formula,
-        heightFormula: ci.quantity_formula, // profiles use quantity_formula as dimension formula
+        heightFormula: ci.quantity_formula,
         quantityFormula: ci.quantity_formula,
         piecesQuantity: ci.pieces_quantity || 1,
         cutAngle: ci.cut_angle,
@@ -102,11 +124,11 @@ export function useCompositionPricing({
     };
 
     try {
-      return calculatePricing(inputs, pricingInput, DEFAULT_PRICING_POLICY, 0); // margin 0, price = cost
+      return calculatePricing(inputs, pricingInput, DEFAULT_PRICING_POLICY, 0);
     } catch {
       return null;
     }
-  }, [compositionItems, fallbackCompanyItems, width, height, quantity]);
+  }, [compositionItems, fallbackCompanyItems, width, height, quantity, excludeOptionalIds]);
 
   const hasComposition = !!compositionItems && compositionItems.length > 0;
   const compositionCostPerUnit = result ? result.totalCost / (quantity || 1) : 0;
@@ -120,5 +142,6 @@ export function useCompositionPricing({
     costByType: result?.costByType ?? {},
     items: result?.items ?? [],
     isReady: hasComposition && !!result,
+    optionalItems,
   };
 }

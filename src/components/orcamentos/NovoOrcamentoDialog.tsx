@@ -86,6 +86,8 @@ interface QuoteItem {
   has_glass?: boolean;
   glass_color?: string;
   glass_thickness?: string;
+  include_contramarco?: boolean;
+  excluded_optional_ids?: string[];
 }
 
 interface Quote {
@@ -280,6 +282,8 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
     has_glass?: boolean;
     glass_color?: string;
     glass_thickness?: string;
+    include_contramarco?: boolean;
+    excluded_optional_ids?: string[];
   }) => {
     const newItem: QuoteItem = {
       product_template_id: product.product_template_id,
@@ -297,6 +301,8 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
       has_glass: product.has_glass,
       glass_color: product.glass_color,
       glass_thickness: product.glass_thickness,
+      include_contramarco: product.include_contramarco,
+      excluded_optional_ids: product.excluded_optional_ids,
     };
     setItems([...items, newItem]);
     setShowAddProduct(false);
@@ -425,6 +431,8 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
             has_glass: item.has_glass ?? false,
             glass_color: item.glass_color || null,
             glass_thickness: item.glass_thickness || null,
+            include_contramarco: item.include_contramarco ?? true,
+            excluded_optional_ids: item.excluded_optional_ids || [],
           })));
 
         if (itemsError) throw itemsError;
@@ -490,6 +498,8 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
             has_glass: item.has_glass ?? false,
             glass_color: item.glass_color || null,
             glass_thickness: item.glass_thickness || null,
+            include_contramarco: item.include_contramarco ?? true,
+            excluded_optional_ids: item.excluded_optional_ids || [],
           })));
 
         if (itemsError) throw itemsError;
