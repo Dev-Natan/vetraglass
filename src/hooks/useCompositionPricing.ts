@@ -23,7 +23,7 @@ export function useCompositionPricing({
 }: UseCompositionPricingOptions) {
   const { currentCompany } = useAuth();
 
-  // 1. Fetch composition items
+  // 1. Fetch composition items (including is_optional)
   const { data: compositionItems } = useQuery({
     queryKey: ['composition-for-pricing', companyProductId],
     queryFn: async () => {
@@ -31,7 +31,7 @@ export function useCompositionPricing({
       const { data, error } = await supabase
         .from('company_product_items')
         .select(`
-          id, quantity_formula, width_formula, height_formula, pieces_quantity, cut_angle,
+          id, quantity_formula, width_formula, height_formula, pieces_quantity, cut_angle, is_optional,
           item_template:item_templates(id, name, type, unit, bar_length_mm, weight_per_bar, weight_per_meter),
           company_item:company_items(id, name, type, unit, cost, cost_per_bar, cost_per_kg, cost_per_meter, bar_length_mm, weight_kg, weight_per_meter)
         `)
