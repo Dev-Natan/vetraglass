@@ -723,13 +723,49 @@ export default function ItemTemplates() {
                     </div>
                   </div>
                 </div>
-                {/* Profile-specific fields: Weight & Pricing */}
+                {/* Profile-specific fields */}
                 {formData.type === 'profile' && (
                   <div className="space-y-4 p-4 rounded-lg border border-amber-500/20 bg-amber-500/5">
                     <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
                       <Ruler className="w-4 h-4" />
-                      Peso e Preços Sugestivos (Perfil)
+                      Dados Técnicos do Perfil
                     </h4>
+                    {/* Cross-section dimensions */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="spec_width_mm">Largura (mm)</Label>
+                        <Input id="spec_width_mm" type="number" step="0.1" value={formData.spec_width_mm} onChange={(e) => setFormData({ ...formData, spec_width_mm: e.target.value })} placeholder="Ex: 29.1" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="spec_height_mm">Altura (mm)</Label>
+                        <Input id="spec_height_mm" type="number" step="0.1" value={formData.spec_height_mm} onChange={(e) => setFormData({ ...formData, spec_height_mm: e.target.value })} placeholder="Ex: 15.7" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="spec_alloy">Liga</Label>
+                        <Select value={formData.spec_alloy || 'none'} onValueChange={(v) => setFormData({ ...formData, spec_alloy: v === 'none' ? '' : v })}>
+                          <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">—</SelectItem>
+                            <SelectItem value="6060">6060</SelectItem>
+                            <SelectItem value="6063">6063</SelectItem>
+                            <SelectItem value="6005">6005</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="spec_temper">Têmpera</Label>
+                        <Select value={formData.spec_temper || 'none'} onValueChange={(v) => setFormData({ ...formData, spec_temper: v === 'none' ? '' : v })}>
+                          <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">—</SelectItem>
+                            <SelectItem value="T5">T5</SelectItem>
+                            <SelectItem value="T6">T6</SelectItem>
+                            <SelectItem value="T4">T4</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    {/* Weight fields */}
                     <div className="grid grid-cols-3 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="bar_length_mm">Comprimento da Barra (mm)</Label>
@@ -752,6 +788,7 @@ export default function ItemTemplates() {
                         }} placeholder="0.000" />
                       </div>
                     </div>
+                    {/* Pricing fields */}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="default_cost">Custo Sugestivo (R$/barra)</Label>
