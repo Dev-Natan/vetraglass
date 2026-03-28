@@ -76,7 +76,7 @@ export default function ItemTemplates() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ItemTemplate | null>(null);
   
-  const [formData, setFormData] = useState({
+  const defaultFormData = {
     name: '',
     description: '',
     type: 'profile' as 'glass' | 'profile' | 'accessory' | 'service',
@@ -88,9 +88,14 @@ export default function ItemTemplates() {
     default_cost: '',
     default_sale_price: '',
     bar_length_mm: '6000',
+    spec_width_mm: '',
+    spec_height_mm: '',
+    spec_alloy: '',
+    spec_temper: '',
     specifications: '{}',
     is_active: true,
-  });
+  };
+  const [formData, setFormData] = useState(defaultFormData);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploadingImageId, setUploadingImageId] = useState<string | null>(null);
@@ -215,6 +220,14 @@ export default function ItemTemplates() {
         const { data: urlData } = supabase.storage.from('item-templates').getPublicUrl(filePath);
         imageUrl = urlData.publicUrl;
       }
+      const specsBase = JSON.parse(data.specifications || '{}');
+      // Merge structured fields into specifications
+      if (data.type === 'profile') {
+        if (data.spec_width_mm) specsBase.width_mm = parseFloat(data.spec_width_mm);
+        if (data.spec_height_mm) specsBase.height_mm = parseFloat(data.spec_height_mm);
+        if (data.spec_alloy) specsBase.alloy = data.spec_alloy;
+        if (data.spec_temper) specsBase.temper = data.spec_temper;
+      }
       const itemData: any = {
         name: data.name,
         description: data.description || null,
@@ -222,7 +235,7 @@ export default function ItemTemplates() {
         unit: data.unit,
         linha: data.linha || null,
         default_price: parseFloat(data.default_price) || 0,
-        specifications: JSON.parse(data.specifications || '{}'),
+        specifications: specsBase,
         image_url: imageUrl,
         is_active: data.is_active,
       };
@@ -395,13 +408,14 @@ export default function ItemTemplates() {
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setEditingItem(null);
-    setFormData({ name: '', description: '', type: 'profile', unit: 'barra', linha: '', default_price: '', weight_per_meter: '', weight_per_bar: '', default_cost: '', default_sale_price: '', bar_length_mm: '6000', specifications: '{}', is_active: true });
+    setFormData(defaultFormData);
     setImageFile(null);
     setImagePreview(null);
   };
 
   const handleEdit = (item: ItemTemplate) => {
     setEditingItem(item);
+    const specs = (item.specifications || {}) as Record<string, any>;
     setFormData({
       name: item.name,
       description: item.description || '',
@@ -414,6 +428,10 @@ export default function ItemTemplates() {
       default_cost: item.default_cost?.toString() || '',
       default_sale_price: item.default_sale_price?.toString() || '',
       bar_length_mm: item.bar_length_mm?.toString() || '6000',
+      spec_width_mm: specs.width_mm?.toString() || '',
+      spec_height_mm: specs.height_mm?.toString() || '',
+      spec_alloy: specs.alloy || '',
+      spec_temper: specs.temper || '',
       specifications: JSON.stringify(item.specifications, null, 2),
       is_active: item.is_active,
     });
@@ -705,13 +723,49 @@ export default function ItemTemplates() {
                     </div>
                   </div>
                 </div>
-                {/* Profile-specific fields: Weight & Pricing */}
+                {/* Profile-specific fields */}
                 {formData.type === 'profile' && (
                   <div className="space-y-4 p-4 rounded-lg border border-amber-500/20 bg-amber-500/5">
                     <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
                       <Ruler className="w-4 h-4" />
-                      Peso e Preços Sugestivos (Perfil)
+                      Dados Técnicos do Perfil
                     </h4>
+                    {/* Cross-section dimensions */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="spec_width_mm">Largura (mm)</Label>
+                        <Input id="spec_width_mm" type="number" step="0.1" value={formData.spec_width_mm} onChange={(e) => setFormData({ ...formData, spec_width_mm: e.target.value })} placeholder="Ex: 29.1" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="spec_height_mm">Altura (mm)</Label>
+                        <Input id="spec_height_mm" type="number" step="0.1" value={formData.spec_height_mm} onChange={(e) => setFormData({ ...formData, spec_height_mm: e.target.value })} placeholder="Ex: 15.7" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="spec_alloy">Liga</Label>
+                        <Select value={formData.spec_alloy || 'none'} onValueChange={(v) => setFormData({ ...formData, spec_alloy: v === 'none' ? '' : v })}>
+                          <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">—</SelectItem>
+                            <SelectItem value="6060">6060</SelectItem>
+                            <SelectItem value="6063">6063</SelectItem>
+                            <SelectItem value="6005">6005</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="spec_temper">Têmpera</Label>
+                        <Select value={formData.spec_temper || 'none'} onValueChange={(v) => setFormData({ ...formData, spec_temper: v === 'none' ? '' : v })}>
+                          <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">—</SelectItem>
+                            <SelectItem value="T5">T5</SelectItem>
+                            <SelectItem value="T6">T6</SelectItem>
+                            <SelectItem value="T4">T4</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    {/* Weight fields */}
                     <div className="grid grid-cols-3 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="bar_length_mm">Comprimento da Barra (mm)</Label>
@@ -734,6 +788,7 @@ export default function ItemTemplates() {
                         }} placeholder="0.000" />
                       </div>
                     </div>
+                    {/* Pricing fields */}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="default_cost">Custo Sugestivo (R$/barra)</Label>
