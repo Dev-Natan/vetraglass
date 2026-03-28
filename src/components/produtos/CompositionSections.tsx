@@ -19,6 +19,8 @@ interface CompositionItem {
   cut_angle: number | null;
   notes: string | null;
   sort_order: number | null;
+  section?: string | null;
+  is_optional?: boolean | null;
   item_template?: {
     id: string;
     name: string;
@@ -38,7 +40,7 @@ interface CompositionItem {
 
 interface CompositionSectionsProps {
   items: CompositionItem[];
-  onAddItem: (section: 'profile' | 'accessory' | 'glass') => void;
+  onAddItem: (section: 'profile' | 'accessory' | 'glass' | 'contramarco') => void;
   onEditItem: (item: CompositionItem) => void;
   onRemoveItem: (itemId: string) => void;
 }
