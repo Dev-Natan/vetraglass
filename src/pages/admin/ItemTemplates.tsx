@@ -88,10 +88,6 @@ export default function ItemTemplates() {
     default_cost: '',
     default_sale_price: '',
     bar_length_mm: '6000',
-    spec_width_mm: '',
-    spec_height_mm: '',
-    spec_alloy: '',
-    spec_temper: '',
     specifications: '{}',
     is_active: true,
   };
@@ -221,13 +217,6 @@ export default function ItemTemplates() {
         imageUrl = urlData.publicUrl;
       }
       const specsBase = JSON.parse(data.specifications || '{}');
-      // Merge structured fields into specifications
-      if (data.type === 'profile') {
-        if (data.spec_width_mm) specsBase.width_mm = parseFloat(data.spec_width_mm);
-        if (data.spec_height_mm) specsBase.height_mm = parseFloat(data.spec_height_mm);
-        if (data.spec_alloy) specsBase.alloy = data.spec_alloy;
-        if (data.spec_temper) specsBase.temper = data.spec_temper;
-      }
       const itemData: any = {
         name: data.name,
         description: data.description || null,
@@ -415,7 +404,6 @@ export default function ItemTemplates() {
 
   const handleEdit = (item: ItemTemplate) => {
     setEditingItem(item);
-    const specs = (item.specifications || {}) as Record<string, any>;
     setFormData({
       name: item.name,
       description: item.description || '',
@@ -428,10 +416,6 @@ export default function ItemTemplates() {
       default_cost: item.default_cost?.toString() || '',
       default_sale_price: item.default_sale_price?.toString() || '',
       bar_length_mm: item.bar_length_mm?.toString() || '6000',
-      spec_width_mm: specs.width_mm?.toString() || '',
-      spec_height_mm: specs.height_mm?.toString() || '',
-      spec_alloy: specs.alloy || '',
-      spec_temper: specs.temper || '',
       specifications: JSON.stringify(item.specifications, null, 2),
       is_active: item.is_active,
     });
