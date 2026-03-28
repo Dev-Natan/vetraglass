@@ -765,38 +765,11 @@ export default function ItemTemplates() {
                         </Select>
                       </div>
                     </div>
-                    {/* Weight fields */}
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="bar_length_mm">Comprimento da Barra (mm)</Label>
-                        <Input id="bar_length_mm" type="number" value={formData.bar_length_mm} onChange={(e) => setFormData({ ...formData, bar_length_mm: e.target.value })} placeholder="6000" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="weight_per_meter">Peso por Metro (kg/m)</Label>
-                        <Input id="weight_per_meter" type="number" step="0.001" value={formData.weight_per_meter} onChange={(e) => {
-                          const wpm = parseFloat(e.target.value) || 0;
-                          const barLen = (parseInt(formData.bar_length_mm) || 6000) / 1000;
-                          setFormData({ ...formData, weight_per_meter: e.target.value, weight_per_bar: wpm > 0 ? (wpm * barLen).toFixed(3) : '' });
-                        }} placeholder="0.000" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="weight_per_bar">Peso por Barra (kg)</Label>
-                        <Input id="weight_per_bar" type="number" step="0.001" value={formData.weight_per_bar} onChange={(e) => {
-                          const wpb = parseFloat(e.target.value) || 0;
-                          const barLen = (parseInt(formData.bar_length_mm) || 6000) / 1000;
-                          setFormData({ ...formData, weight_per_bar: e.target.value, weight_per_meter: wpb > 0 ? (wpb / barLen).toFixed(3) : '' });
-                        }} placeholder="0.000" />
-                      </div>
-                    </div>
-                    {/* Pricing fields */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="default_cost">Custo Sugestivo (R$/barra)</Label>
-                        <Input id="default_cost" type="number" step="0.01" value={formData.default_cost} onChange={(e) => setFormData({ ...formData, default_cost: e.target.value })} placeholder="0.00" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="default_sale_price">Preço Venda Sugestivo (R$/barra)</Label>
-                        <Input id="default_sale_price" type="number" step="0.01" value={formData.default_sale_price} onChange={(e) => setFormData({ ...formData, default_sale_price: e.target.value })} placeholder="0.00" />
+                    {/* Weight field */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="space-y-2 col-span-2">
+                        <Label htmlFor="weight_per_meter">Peso do Perfil (kg/m)</Label>
+                        <Input id="weight_per_meter" type="number" step="0.001" value={formData.weight_per_meter} onChange={(e) => setFormData({ ...formData, weight_per_meter: e.target.value })} placeholder="Ex: 0.350" />
                       </div>
                     </div>
                   </div>
