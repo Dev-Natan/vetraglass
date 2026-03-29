@@ -103,6 +103,11 @@ type CompanyProductItem = {
   } | null;
 };
 
+type DefaultFormula = {
+  formula: string;
+  position: string;
+};
+
 type ItemTemplate = {
   id: string;
   name: string;
@@ -110,6 +115,7 @@ type ItemTemplate = {
   unit: string;
   image_url: string | null;
   linha: string | null;
+  default_formulas: DefaultFormula[] | null;
 };
 
 // Helper para detectar se a fórmula usa Altura ou Largura
