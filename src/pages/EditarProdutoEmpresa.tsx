@@ -798,7 +798,7 @@ export default function EditarProdutoEmpresa() {
                       <button
                         key={item.id}
                         type="button"
-                        onClick={() => setSelectedItemToAdd(item.id)}
+                        onClick={() => handleSelectItem(item.id)}
                         className={cn(
                           "w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-colors",
                           selectedItemToAdd === item.id
