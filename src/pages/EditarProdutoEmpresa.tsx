@@ -103,6 +103,11 @@ type CompanyProductItem = {
   } | null;
 };
 
+type DefaultFormula = {
+  formula: string;
+  position: string;
+};
+
 type ItemTemplate = {
   id: string;
   name: string;
@@ -110,6 +115,7 @@ type ItemTemplate = {
   unit: string;
   image_url: string | null;
   linha: string | null;
+  default_formulas: DefaultFormula[] | null;
 };
 
 // Helper para detectar se a fórmula usa Altura ou Largura
@@ -220,7 +226,7 @@ export default function EditarProdutoEmpresa() {
       if (error) throw error;
       
       // Sort items: product linha first, then others
-      const items = data as ItemTemplate[];
+      const items = data as unknown as ItemTemplate[];
       const productLinha = product?.linha || product?.product_template?.linha;
       
       if (productLinha) {
@@ -503,6 +509,22 @@ export default function EditarProdutoEmpresa() {
     setItemSearchQuery('');
   };
 
+  const handleSelectItem = (itemId: string) => {
+    setSelectedItemToAdd(itemId);
+    const item = availableItems?.find(i => i.id === itemId);
+    if (item?.default_formulas && item.default_formulas.length > 0) {
+      const firstFormula = item.default_formulas[0];
+      if (addItemSection === 'glass') {
+        const wf = item.default_formulas.find(f => f.position === 'Largura');
+        const hf = item.default_formulas.find(f => f.position === 'Altura');
+        if (wf) setWidthFormula(wf.formula);
+        if (hf) setHeightFormula(hf.formula);
+      } else {
+        setQuantityFormula(firstFormula.formula);
+      }
+    }
+  };
+
   const filteredAvailableItems = useMemo(() => {
     if (!availableItems) return [];
     if (!itemSearchQuery) return availableItems;
@@ -776,7 +798,7 @@ export default function EditarProdutoEmpresa() {
                       <button
                         key={item.id}
                         type="button"
-                        onClick={() => setSelectedItemToAdd(item.id)}
+                        onClick={() => handleSelectItem(item.id)}
                         className={cn(
                           "w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-colors",
                           selectedItemToAdd === item.id
@@ -808,6 +830,11 @@ export default function EditarProdutoEmpresa() {
                         {item.linha && (
                           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground font-medium flex-shrink-0">
                             {item.linha}
+                          </span>
+                        )}
+                        {item.default_formulas && item.default_formulas.length > 0 && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 font-medium flex-shrink-0">
+                            Fórmula
                           </span>
                         )}
                       </button>

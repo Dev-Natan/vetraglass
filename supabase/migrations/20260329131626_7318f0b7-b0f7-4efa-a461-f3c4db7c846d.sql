@@ -1,0 +1,1 @@
+ALTER TABLE item_templates ADD COLUMN default_formulas jsonb DEFAULT NULL;
