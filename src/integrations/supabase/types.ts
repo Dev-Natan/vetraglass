@@ -2915,6 +2915,7 @@ export type Database = {
           codigo_servico: string | null
           created_at: string
           default_cost: number | null
+          default_formulas: Json | null
           default_price: number | null
           default_sale_price: number | null
           default_supplier: string | null
@@ -2946,6 +2947,7 @@ export type Database = {
           codigo_servico?: string | null
           created_at?: string
           default_cost?: number | null
+          default_formulas?: Json | null
           default_price?: number | null
           default_sale_price?: number | null
           default_supplier?: string | null
@@ -2977,6 +2979,7 @@ export type Database = {
           codigo_servico?: string | null
           created_at?: string
           default_cost?: number | null
+          default_formulas?: Json | null
           default_price?: number | null
           default_sale_price?: number | null
           default_supplier?: string | null
