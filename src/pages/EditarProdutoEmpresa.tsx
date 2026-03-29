@@ -226,7 +226,7 @@ export default function EditarProdutoEmpresa() {
       if (error) throw error;
       
       // Sort items: product linha first, then others
-      const items = data as ItemTemplate[];
+      const items = data as unknown as ItemTemplate[];
       const productLinha = product?.linha || product?.product_template?.linha;
       
       if (productLinha) {
