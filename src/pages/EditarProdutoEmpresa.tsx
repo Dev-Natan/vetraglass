@@ -832,6 +832,11 @@ export default function EditarProdutoEmpresa() {
                             {item.linha}
                           </span>
                         )}
+                        {item.default_formulas && item.default_formulas.length > 0 && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 font-medium flex-shrink-0">
+                            Fórmula
+                          </span>
+                        )}
                       </button>
                     ))
                   )}
