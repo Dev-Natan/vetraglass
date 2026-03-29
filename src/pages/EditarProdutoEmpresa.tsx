@@ -509,6 +509,22 @@ export default function EditarProdutoEmpresa() {
     setItemSearchQuery('');
   };
 
+  const handleSelectItem = (itemId: string) => {
+    setSelectedItemToAdd(itemId);
+    const item = availableItems?.find(i => i.id === itemId);
+    if (item?.default_formulas && item.default_formulas.length > 0) {
+      const firstFormula = item.default_formulas[0];
+      if (addItemSection === 'glass') {
+        const wf = item.default_formulas.find(f => f.position === 'Largura');
+        const hf = item.default_formulas.find(f => f.position === 'Altura');
+        if (wf) setWidthFormula(wf.formula);
+        if (hf) setHeightFormula(hf.formula);
+      } else {
+        setQuantityFormula(firstFormula.formula);
+      }
+    }
+  };
+
   const filteredAvailableItems = useMemo(() => {
     if (!availableItems) return [];
     if (!itemSearchQuery) return availableItems;
