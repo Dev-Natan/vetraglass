@@ -905,6 +905,8 @@ export default function EditarProdutoEmpresa() {
                 showPiecesQuantity={true}
                 piecesQuantity={piecesQuantity}
                 onPiecesChange={setPiecesQuantity}
+                piecesFormula={piecesFormula}
+                onPiecesFormulaChange={setPiecesFormula}
               />
             ) : (
               <FormulaEditor
@@ -913,6 +915,8 @@ export default function EditarProdutoEmpresa() {
                 showPiecesQuantity={true}
                 piecesQuantity={piecesQuantity}
                 onPiecesChange={setPiecesQuantity}
+                piecesFormula={piecesFormula}
+                onPiecesFormulaChange={setPiecesFormula}
               />
             )}
           </div>
