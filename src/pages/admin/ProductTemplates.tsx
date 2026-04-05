@@ -475,6 +475,7 @@ export default function ProductTemplates() {
       id: editingItem.id,
       quantity_formula: editQuantityFormula,
       pieces_quantity: editPiecesQuantity,
+      pieces_formula: editPiecesFormula,
       cut_angle: editCutAngle,
       notes: itemType === 'glass' ? editGlassName : undefined,
       width_formula: itemType === 'glass' ? editWidthFormula : undefined,
