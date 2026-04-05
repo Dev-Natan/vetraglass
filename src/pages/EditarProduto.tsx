@@ -119,6 +119,7 @@ export default function EditarProduto() {
   const [cutAngle, setCutAngle] = useState(90);
   const [widthFormula, setWidthFormula] = useState('');
   const [heightFormula, setHeightFormula] = useState('');
+  const [piecesFormula, setPiecesFormula] = useState<string | null>(null);
   const [glassName, setGlassName] = useState('');
   const [isUploading, setIsUploading] = useState(false);
 
