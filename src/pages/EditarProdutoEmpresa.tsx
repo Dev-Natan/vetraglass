@@ -151,6 +151,7 @@ export default function EditarProdutoEmpresa() {
   const [quantityFormula, setQuantityFormula] = useState('1');
   const [piecesQuantity, setPiecesQuantity] = useState(1);
   const [cutAngle, setCutAngle] = useState(90);
+  const [piecesFormula, setPiecesFormula] = useState<string | null>(null);
   const [widthFormula, setWidthFormula] = useState('');
   const [heightFormula, setHeightFormula] = useState('');
   const [glassName, setGlassName] = useState('');
