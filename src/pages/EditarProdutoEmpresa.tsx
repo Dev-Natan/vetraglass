@@ -548,9 +548,11 @@ export default function EditarProdutoEmpresa() {
       setGlassName(item.notes || '');
       setQuantityFormula(item.quantity_formula || '1');
       setPiecesQuantity(item.pieces_quantity || 1);
+      setPiecesFormula((item as any).pieces_formula || null);
     } else {
       setQuantityFormula(item.quantity_formula || '1');
       setPiecesQuantity(item.pieces_quantity || 1);
+      setPiecesFormula((item as any).pieces_formula || null);
       setCutAngle(item.cut_angle || 90);
     }
     
