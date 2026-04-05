@@ -102,7 +102,6 @@ export async function generateMaterialConsumption(
             width_formula,
             height_formula,
             pieces_quantity,
-            pieces_formula,
             company_items (
               id,
               name,
