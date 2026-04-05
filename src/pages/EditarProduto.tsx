@@ -429,9 +429,11 @@ export default function EditarProduto() {
         updateData.notes = glassName || null;
         updateData.quantity_formula = quantityFormula || '1';
         updateData.pieces_quantity = piecesQuantity;
+        updateData.pieces_formula = piecesFormula;
       } else {
         updateData.quantity_formula = quantityFormula;
         updateData.pieces_quantity = piecesQuantity;
+        updateData.pieces_formula = piecesFormula;
         updateData.cut_angle = cutAngle;
       }
       
