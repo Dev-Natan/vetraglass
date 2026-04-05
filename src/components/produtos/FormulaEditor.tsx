@@ -53,7 +53,9 @@ export const FormulaEditor = forwardRef<HTMLDivElement, FormulaEditorProps>(
     onChange, 
     showPiecesQuantity = false,
     piecesQuantity = 1,
-    onPiecesChange
+    onPiecesChange,
+    piecesFormula = null,
+    onPiecesFormulaChange
   }, ref) {
   const [previewResult, setPreviewResult] = useState<string | null>(null);
   const [isValid, setIsValid] = useState(true);
