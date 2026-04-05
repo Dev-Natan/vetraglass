@@ -147,6 +147,7 @@ export function ProductCompositionPricing({
         heightFormula: pi.quantity_formula, // profiles use quantity_formula as dimension
         quantityFormula: pi.quantity_formula,
         piecesQuantity: pi.pieces_quantity || 1,
+        piecesFormula: (pi as any).pieces_formula,
         cutAngle: pi.cut_angle,
         lossPercent: 0,
         barLengthMm: ci?.bar_length_mm || tpl?.bar_length_mm || 6000,
