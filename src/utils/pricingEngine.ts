@@ -73,6 +73,7 @@ export interface CompositionItemInput {
   heightFormula: string | null;
   quantityFormula: string;
   piecesQuantity: number;
+  piecesFormula?: string | null;
   cutAngle?: number | null;
   lossPercent: number;
   // Cost fields
