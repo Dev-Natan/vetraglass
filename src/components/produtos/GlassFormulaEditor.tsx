@@ -195,7 +195,9 @@ export function GlassFormulaEditor({
   onHeightFormulaChange,
   showPiecesQuantity = false,
   piecesQuantity = 1,
-  onPiecesChange
+  onPiecesChange,
+  piecesFormula = null,
+  onPiecesFormulaChange
 }: GlassFormulaEditorProps) {
   const widthValid = validateFormula(widthFormula);
   const heightValid = validateFormula(heightFormula);
