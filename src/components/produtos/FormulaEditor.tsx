@@ -23,6 +23,8 @@ interface FormulaEditorProps {
   showPiecesQuantity?: boolean;
   piecesQuantity?: number;
   onPiecesChange?: (value: number) => void;
+  piecesFormula?: string | null;
+  onPiecesFormulaChange?: (value: string) => void;
 }
 
 // Common glass formulas
