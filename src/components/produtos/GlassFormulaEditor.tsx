@@ -25,6 +25,8 @@ interface GlassFormulaEditorProps {
   showPiecesQuantity?: boolean;
   piecesQuantity?: number;
   onPiecesChange?: (value: number) => void;
+  piecesFormula?: string | null;
+  onPiecesFormulaChange?: (value: string) => void;
 }
 
 // Common formulas for width (based on VÃO - opening dimensions)
