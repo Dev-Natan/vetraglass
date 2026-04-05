@@ -193,6 +193,7 @@ export default function ProductTemplates() {
   const [isEditItemDialogOpen, setIsEditItemDialogOpen] = useState(false);
   const [editQuantityFormula, setEditQuantityFormula] = useState("1");
   const [editPiecesQuantity, setEditPiecesQuantity] = useState(1);
+  const [editPiecesFormula, setEditPiecesFormula] = useState<string | null>(null);
   const [editWidthFormula, setEditWidthFormula] = useState("");
   const [editHeightFormula, setEditHeightFormula] = useState("");
   const [editGlassName, setEditGlassName] = useState("");
