@@ -457,6 +457,7 @@ export default function ProductTemplates() {
     setEditingItem(item);
     setEditQuantityFormula(item.quantity_formula || "1");
     setEditPiecesQuantity(item.pieces_quantity || 1);
+    setEditPiecesFormula((item as any).pieces_formula || null);
     setEditWidthFormula(item.width_formula || "");
     setEditHeightFormula(item.height_formula || "");
     setEditGlassName(item.notes || "");
