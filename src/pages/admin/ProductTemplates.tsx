@@ -1691,6 +1691,11 @@ export default function ProductTemplates() {
                     heightFormula={editHeightFormula}
                     onWidthFormulaChange={setEditWidthFormula}
                     onHeightFormulaChange={setEditHeightFormula}
+                    showPiecesQuantity={true}
+                    piecesQuantity={editPiecesQuantity}
+                    onPiecesChange={setEditPiecesQuantity}
+                    piecesFormula={editPiecesFormula}
+                    onPiecesFormulaChange={setEditPiecesFormula}
                   />
                 </>
               ) : (
@@ -1701,6 +1706,8 @@ export default function ProductTemplates() {
                     showPiecesQuantity={editingItem?.item_template?.type === 'profile'}
                     piecesQuantity={editPiecesQuantity}
                     onPiecesChange={setEditPiecesQuantity}
+                    piecesFormula={editPiecesFormula}
+                    onPiecesFormulaChange={setEditPiecesFormula}
                   />
                   
                   {editingItem?.item_template?.type === 'profile' && (
