@@ -179,7 +179,9 @@ export async function generateMaterialConsumption(
         }
 
         // Evaluate the quantity formula
-        const piecesQty = component.pieces_quantity || 1;
+        const piecesQty = (component as any).pieces_formula 
+          ? evaluateFormula((component as any).pieces_formula, width, height)
+          : (component.pieces_quantity || 1);
         let calculatedQty = piecesQty * qty;
 
         // If there's a quantity formula, evaluate it
