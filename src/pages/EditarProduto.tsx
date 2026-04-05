@@ -1108,6 +1108,8 @@ export default function EditarProduto() {
                     showPiecesQuantity={true}
                     piecesQuantity={piecesQuantity}
                     onPiecesChange={setPiecesQuantity}
+                    piecesFormula={piecesFormula}
+                    onPiecesFormulaChange={setPiecesFormula}
                   />
                 </>
               ) : (
@@ -1118,6 +1120,8 @@ export default function EditarProduto() {
                     showPiecesQuantity={editingItem?.item_template?.type === 'profile'}
                     piecesQuantity={piecesQuantity}
                     onPiecesChange={setPiecesQuantity}
+                    piecesFormula={piecesFormula}
+                    onPiecesFormulaChange={setPiecesFormula}
                   />
                   
                   {/* Cut Angle for profiles */}
