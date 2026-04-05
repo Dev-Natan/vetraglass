@@ -155,7 +155,6 @@ export function ActivateWithCompositionDialog({
           item_template_id,
           quantity_formula,
           pieces_quantity,
-          pieces_formula,
           cut_angle,
           width_formula,
           height_formula,
