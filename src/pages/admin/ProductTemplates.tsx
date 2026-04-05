@@ -193,6 +193,7 @@ export default function ProductTemplates() {
   const [isEditItemDialogOpen, setIsEditItemDialogOpen] = useState(false);
   const [editQuantityFormula, setEditQuantityFormula] = useState("1");
   const [editPiecesQuantity, setEditPiecesQuantity] = useState(1);
+  const [editPiecesFormula, setEditPiecesFormula] = useState<string | null>(null);
   const [editWidthFormula, setEditWidthFormula] = useState("");
   const [editHeightFormula, setEditHeightFormula] = useState("");
   const [editGlassName, setEditGlassName] = useState("");
@@ -456,6 +457,7 @@ export default function ProductTemplates() {
     setEditingItem(item);
     setEditQuantityFormula(item.quantity_formula || "1");
     setEditPiecesQuantity(item.pieces_quantity || 1);
+    setEditPiecesFormula((item as any).pieces_formula || null);
     setEditWidthFormula(item.width_formula || "");
     setEditHeightFormula(item.height_formula || "");
     setEditGlassName(item.notes || "");
@@ -473,6 +475,7 @@ export default function ProductTemplates() {
       id: editingItem.id,
       quantity_formula: editQuantityFormula,
       pieces_quantity: editPiecesQuantity,
+      pieces_formula: editPiecesFormula,
       cut_angle: editCutAngle,
       notes: itemType === 'glass' ? editGlassName : undefined,
       width_formula: itemType === 'glass' ? editWidthFormula : undefined,
@@ -663,6 +666,7 @@ export default function ProductTemplates() {
       id: string;
       quantity_formula: string; 
       pieces_quantity: number;
+      pieces_formula?: string | null;
       cut_angle: number;
       notes?: string;
       width_formula?: string;
@@ -673,6 +677,7 @@ export default function ProductTemplates() {
         .update({
           quantity_formula: data.quantity_formula,
           pieces_quantity: data.pieces_quantity,
+          pieces_formula: data.pieces_formula,
           cut_angle: data.cut_angle,
           notes: data.notes || null,
           width_formula: data.width_formula || null,
@@ -1686,6 +1691,11 @@ export default function ProductTemplates() {
                     heightFormula={editHeightFormula}
                     onWidthFormulaChange={setEditWidthFormula}
                     onHeightFormulaChange={setEditHeightFormula}
+                    showPiecesQuantity={true}
+                    piecesQuantity={editPiecesQuantity}
+                    onPiecesChange={setEditPiecesQuantity}
+                    piecesFormula={editPiecesFormula}
+                    onPiecesFormulaChange={setEditPiecesFormula}
                   />
                 </>
               ) : (
@@ -1696,6 +1706,8 @@ export default function ProductTemplates() {
                     showPiecesQuantity={editingItem?.item_template?.type === 'profile'}
                     piecesQuantity={editPiecesQuantity}
                     onPiecesChange={setEditPiecesQuantity}
+                    piecesFormula={editPiecesFormula}
+                    onPiecesFormulaChange={setEditPiecesFormula}
                   />
                   
                   {editingItem?.item_template?.type === 'profile' && (

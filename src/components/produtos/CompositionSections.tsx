@@ -171,7 +171,18 @@ function ProfilesSection({ items, onAdd, onEdit, onRemove }: {
                       <td className="py-2 px-4"><ItemImage item={item} /></td>
                       <td className="py-2 px-2"><ItemCode item={item} /></td>
                       <td className="py-2 px-2 font-medium text-primary">{itemData?.name}</td>
-                      <td className="py-2 px-2 text-center">{item.pieces_quantity || 1}</td>
+                      <td className="py-2 px-2 text-center">
+                        {(item as any).pieces_formula ? (
+                          <div className="flex flex-col items-center">
+                            <span className="text-primary font-bold">f(x)</span>
+                            <span className="text-[10px] text-muted-foreground truncate max-w-[60px]" title={(item as any).pieces_formula}>
+                              {(item as any).pieces_formula}
+                            </span>
+                          </div>
+                        ) : (
+                          item.pieces_quantity || 1
+                        )}
+                      </td>
                       <td className="py-2 px-2 text-center">
                         <span className="text-xs text-muted-foreground">{item.quantity_formula}</span>
                       </td>
@@ -298,7 +309,18 @@ function GlassSection({ items, onAdd, onEdit, onRemove }: {
                       <td className="py-2 px-2 text-center">
                         <span className="text-xs">{item.height_formula || '-'}</span>
                       </td>
-                      <td className="py-2 px-2 text-center">{item.pieces_quantity || 1}</td>
+                      <td className="py-2 px-2 text-center">
+                        {(item as any).pieces_formula ? (
+                          <div className="flex flex-col items-center">
+                            <span className="text-primary font-bold">f(x)</span>
+                            <span className="text-[10px] text-muted-foreground truncate max-w-[60px]" title={(item as any).pieces_formula}>
+                              {(item as any).pieces_formula}
+                            </span>
+                          </div>
+                        ) : (
+                          item.pieces_quantity || 1
+                        )}
+                      </td>
                       <td className="py-2 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <ItemActions item={item} onEdit={() => onEdit(item)} onRemove={() => onRemove(item.id)} />
                       </td>
@@ -356,7 +378,18 @@ function ContramarcoSection({ items, onAdd, onEdit, onRemove }: {
                       <td className="py-2 px-4"><ItemImage item={item} /></td>
                       <td className="py-2 px-2"><ItemCode item={item} /></td>
                       <td className="py-2 px-2 font-medium text-primary">{itemData?.name}</td>
-                      <td className="py-2 px-2 text-center">{item.pieces_quantity || 1}</td>
+                      <td className="py-2 px-2 text-center">
+                        {(item as any).pieces_formula ? (
+                          <div className="flex flex-col items-center">
+                            <span className="text-primary font-bold">f(x)</span>
+                            <span className="text-[10px] text-muted-foreground truncate max-w-[60px]" title={(item as any).pieces_formula}>
+                              {(item as any).pieces_formula}
+                            </span>
+                          </div>
+                        ) : (
+                          item.pieces_quantity || 1
+                        )}
+                      </td>
                       <td className="py-2 px-2 text-center">
                         <span className="text-xs text-muted-foreground">{item.quantity_formula}</span>
                       </td>

@@ -73,6 +73,7 @@ export interface CompositionItemInput {
   heightFormula: string | null;
   quantityFormula: string;
   piecesQuantity: number;
+  piecesFormula?: string | null;
   cutAngle?: number | null;
   lossPercent: number;
   // Cost fields
@@ -153,7 +154,9 @@ function calculateItemCost(
   input: PricingInput,
   folgaCtx: FormulaContext,
 ): CalculatedItem {
-  const piecesQty = item.piecesQuantity || 1;
+  const piecesQty = item.piecesFormula 
+    ? evaluateFormula(item.piecesFormula, folgaCtx)
+    : (item.piecesQuantity || 1);
   const totalPieces = piecesQty * input.quantity;
   
   let calculatedLength = 0;

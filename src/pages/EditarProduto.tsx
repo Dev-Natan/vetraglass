@@ -119,6 +119,7 @@ export default function EditarProduto() {
   const [cutAngle, setCutAngle] = useState(90);
   const [widthFormula, setWidthFormula] = useState('');
   const [heightFormula, setHeightFormula] = useState('');
+  const [piecesFormula, setPiecesFormula] = useState<string | null>(null);
   const [glassName, setGlassName] = useState('');
   const [isUploading, setIsUploading] = useState(false);
 
@@ -428,9 +429,11 @@ export default function EditarProduto() {
         updateData.notes = glassName || null;
         updateData.quantity_formula = quantityFormula || '1';
         updateData.pieces_quantity = piecesQuantity;
+        updateData.pieces_formula = piecesFormula;
       } else {
         updateData.quantity_formula = quantityFormula;
         updateData.pieces_quantity = piecesQuantity;
+        updateData.pieces_formula = piecesFormula;
         updateData.cut_angle = cutAngle;
       }
       
@@ -462,9 +465,11 @@ export default function EditarProduto() {
       setGlassName(item.notes || '');
       setQuantityFormula(item.quantity_formula || '1');
       setPiecesQuantity(item.pieces_quantity || 1);
+      setPiecesFormula((item as any).pieces_formula || null);
     } else {
       setQuantityFormula(item.quantity_formula || '1');
       setPiecesQuantity(item.pieces_quantity || 1);
+      setPiecesFormula((item as any).pieces_formula || null);
       setCutAngle(item.cut_angle || 90);
     }
     
@@ -1103,6 +1108,8 @@ export default function EditarProduto() {
                     showPiecesQuantity={true}
                     piecesQuantity={piecesQuantity}
                     onPiecesChange={setPiecesQuantity}
+                    piecesFormula={piecesFormula}
+                    onPiecesFormulaChange={setPiecesFormula}
                   />
                 </>
               ) : (
@@ -1113,6 +1120,8 @@ export default function EditarProduto() {
                     showPiecesQuantity={editingItem?.item_template?.type === 'profile'}
                     piecesQuantity={piecesQuantity}
                     onPiecesChange={setPiecesQuantity}
+                    piecesFormula={piecesFormula}
+                    onPiecesFormulaChange={setPiecesFormula}
                   />
                   
                   {/* Cut Angle for profiles */}

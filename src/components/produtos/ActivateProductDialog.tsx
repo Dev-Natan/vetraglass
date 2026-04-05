@@ -155,6 +155,7 @@ export function ActivateProductDialog({
         item_template_id: component.item_template_id,
         quantity_formula: component.quantity_formula,
         pieces_quantity: component.pieces_quantity,
+        pieces_formula: (component as any).pieces_formula,
         cut_angle: component.cut_angle,
         width_formula: component.width_formula,
         height_formula: component.height_formula,

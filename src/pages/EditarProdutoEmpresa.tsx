@@ -151,6 +151,7 @@ export default function EditarProdutoEmpresa() {
   const [quantityFormula, setQuantityFormula] = useState('1');
   const [piecesQuantity, setPiecesQuantity] = useState(1);
   const [cutAngle, setCutAngle] = useState(90);
+  const [piecesFormula, setPiecesFormula] = useState<string | null>(null);
   const [widthFormula, setWidthFormula] = useState('');
   const [heightFormula, setHeightFormula] = useState('');
   const [glassName, setGlassName] = useState('');
@@ -444,9 +445,11 @@ export default function EditarProdutoEmpresa() {
         updateData.notes = glassName || null;
         updateData.quantity_formula = quantityFormula || '1';
         updateData.pieces_quantity = piecesQuantity;
+        updateData.pieces_formula = piecesFormula;
       } else {
         updateData.quantity_formula = quantityFormula;
         updateData.pieces_quantity = piecesQuantity;
+        updateData.pieces_formula = piecesFormula;
         updateData.cut_angle = cutAngle;
       }
       
@@ -502,6 +505,7 @@ export default function EditarProdutoEmpresa() {
     setSelectedItemToAdd('');
     setQuantityFormula('1');
     setPiecesQuantity(1);
+    setPiecesFormula(null);
     setCutAngle(90);
     setWidthFormula('');
     setHeightFormula('');
@@ -544,9 +548,11 @@ export default function EditarProdutoEmpresa() {
       setGlassName(item.notes || '');
       setQuantityFormula(item.quantity_formula || '1');
       setPiecesQuantity(item.pieces_quantity || 1);
+      setPiecesFormula((item as any).pieces_formula || null);
     } else {
       setQuantityFormula(item.quantity_formula || '1');
       setPiecesQuantity(item.pieces_quantity || 1);
+      setPiecesFormula((item as any).pieces_formula || null);
       setCutAngle(item.cut_angle || 90);
     }
     
@@ -899,6 +905,8 @@ export default function EditarProdutoEmpresa() {
                 showPiecesQuantity={true}
                 piecesQuantity={piecesQuantity}
                 onPiecesChange={setPiecesQuantity}
+                piecesFormula={piecesFormula}
+                onPiecesFormulaChange={setPiecesFormula}
               />
             ) : (
               <FormulaEditor
@@ -907,6 +915,8 @@ export default function EditarProdutoEmpresa() {
                 showPiecesQuantity={true}
                 piecesQuantity={piecesQuantity}
                 onPiecesChange={setPiecesQuantity}
+                piecesFormula={piecesFormula}
+                onPiecesFormulaChange={setPiecesFormula}
               />
             )}
           </div>
