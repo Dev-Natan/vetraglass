@@ -29,6 +29,7 @@ interface ProductCompositionItem {
   width_formula: string | null;
   height_formula: string | null;
   pieces_quantity: number | null;
+  pieces_formula: string | null;
   company_items?: {
     id: string;
     name: string;
