@@ -2,6 +2,7 @@ import { useState, useEffect, forwardRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { 
   ArrowUpDown, 
   ArrowLeftRight, 
@@ -35,6 +36,13 @@ const commonFormulas = [
   { label: 'Qtde Vez.', formula: '((Altura - 132) / 60) * 2', icon: null, color: 'bg-purple-500' },
   { label: '(Largura / 2) - 20', formula: '(Largura / 2) - 20', icon: null, color: 'bg-emerald-500' },
   { label: 'Área m²', formula: 'Altura * Largura / 1000000', icon: null, color: 'bg-purple-500' },
+];
+
+const commonQuantityFormulas = [
+  { label: 'Fixa 1', formula: '1' },
+  { label: 'Largura / 500', formula: '(Largura / 500) + 1' },
+  { label: 'Altura / 500', formula: '(Altura / 500) + 1' },
+  { label: 'Largura / 1000', formula: 'Largura / 1000' },
 ];
 
 // Operators
@@ -247,73 +255,99 @@ export const FormulaEditor = forwardRef<HTMLDivElement, FormulaEditorProps>(
         </div>
       </div>
 
-      {/* Pieces quantity (for profiles) */}
       {showPiecesQuantity && (onPiecesChange || onPiecesFormulaChange) && (
-        <div className="space-y-3 pt-3 border-t">
-          <Label className="flex items-center gap-2">
-            <Calculator className="w-4 h-4 text-primary" />
-            Quantidade de peças
-          </Label>
+        <div className="space-y-4 pt-4 border-t">
+          <div className="flex items-center justify-between">
+            <Label className="flex items-center gap-2 cursor-pointer text-sm font-semibold">
+              <Calculator className="w-4 h-4 text-primary" />
+              Usar fórmula para calcular quantidade?
+            </Label>
+            <Switch
+              checked={!!piecesFormula}
+              onCheckedChange={(checked) => {
+                if (checked) {
+                  onPiecesFormulaChange?.('1');
+                } else {
+                  onPiecesFormulaChange?.(null);
+                }
+              }}
+            />
+          </div>
           
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1 bg-muted/50 rounded-md p-1 border">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={() => onPiecesChange?.(Math.max(1, (piecesQuantity || 1) - 1))}
-                  disabled={!onPiecesChange || (piecesQuantity || 1) <= 1 || (piecesFormula !== null && piecesFormula !== '')}
-                >
-                  <Minus className="w-3 h-3" />
-                </Button>
-                <Input
-                  type="number"
-                  value={piecesQuantity || 1}
-                  onChange={(e) => onPiecesChange?.(Math.max(1, Number(e.target.value)))}
-                  className="w-12 h-7 p-0 border-none bg-transparent text-center focus-visible:ring-0"
-                  min={1}
-                  disabled={(piecesFormula !== null && piecesFormula !== '')}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={() => onPiecesChange?.((piecesQuantity || 1) + 1)}
-                  disabled={!onPiecesChange || (piecesQuantity || 1) >= 100 || (piecesFormula !== null && piecesFormula !== '')}
-                >
-                  <Plus className="w-3 h-3" />
-                </Button>
-              </div>
-              <span className="text-xs text-muted-foreground font-medium">
-                quantidade fixa
-              </span>
-            </div>
-
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Ou use uma fórmula para calcular a quantidade:</span>
-                {(piecesFormula !== null && piecesFormula !== '') && (
-                  <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded animate-pulse">
-                    Fórmula Ativa
+          <div className="space-y-4">
+            {!piecesFormula ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1 bg-muted/50 rounded-md p-1 border">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => onPiecesChange?.(Math.max(1, (piecesQuantity || 1) - 1))}
+                      disabled={!onPiecesChange || (piecesQuantity || 1) <= 1}
+                    >
+                      <Minus className="w-4 h-4" />
+                    </Button>
+                    <Input
+                      type="number"
+                      value={piecesQuantity || 1}
+                      onChange={(e) => onPiecesChange?.(Math.max(1, Number(e.target.value)))}
+                      className="w-12 h-8 p-0 border-none bg-transparent text-center focus-visible:ring-0 font-bold"
+                      min={1}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => onPiecesChange?.((piecesQuantity || 1) + 1)}
+                      disabled={!onPiecesChange || (piecesQuantity || 1) >= 100}
+                    >
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <span className="text-sm text-muted-foreground font-medium">
+                    quantidade fixa de peças
                   </span>
-                )}
+                </div>
               </div>
-              <Input
-                value={piecesFormula || ''}
-                onChange={(e) => onPiecesFormulaChange?.(e.target.value)}
-                placeholder="Ex: (Largura / 500) + 1"
-                className={cn(
-                  "font-mono text-sm h-8",
-                  (piecesFormula !== null && piecesFormula !== '') && "border-primary/50 bg-primary/5"
-                )}
-              />
-              <p className="text-[10px] text-muted-foreground leading-tight">
-                Se preenchido, a fórmula calcula dinamicamente a quantidade de peças baseado nas dimensões.
-              </p>
-            </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">Fórmula ativa para calcular a quantidade:</span>
+                  <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-medium">
+                    Fórmula Dinâmica
+                  </span>
+                </div>
+                <Input
+                  value={piecesFormula || ''}
+                  onChange={(e) => onPiecesFormulaChange?.(e.target.value)}
+                  placeholder="Ex: (Largura / 500) + 1"
+                  className="font-mono text-sm h-10 border-primary/50 bg-primary/5 focus-visible:ring-primary/30"
+                />
+                <div className="flex flex-wrap gap-2">
+                  {commonQuantityFormulas.map((f, i) => (
+                    <Button
+                      key={i}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className={cn(
+                        "text-[11px] h-7 px-2",
+                        piecesFormula === f.formula && "border-primary bg-primary/5"
+                      )}
+                      onClick={() => onPiecesFormulaChange?.(f.formula)}
+                    >
+                      {f.label}
+                    </Button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-tight bg-muted/50 p-2 rounded border border-dashed">
+                  A quantidade de peças será calculada dinamicamente com base nas dimensões do produto.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -63,6 +63,7 @@ interface ComponentItem {
   item_template_id: string;
   quantity_formula: string;
   pieces_quantity: number;
+  pieces_formula?: string | null;
   cut_angle: number;
   width_formula: string | null;
   height_formula: string | null;
@@ -139,6 +140,7 @@ export function ActivateWithCompositionDialog({
   const [selectedItemTemplateId, setSelectedItemTemplateId] = useState('');
   const [quantityFormula, setQuantityFormula] = useState('1');
   const [piecesQuantity, setPiecesQuantity] = useState(1);
+  const [piecesFormula, setPiecesFormula] = useState<string | null>(null);
   const [cutAngle, setCutAngle] = useState(90);
   const [widthFormula, setWidthFormula] = useState('');
   const [heightFormula, setHeightFormula] = useState('');
@@ -155,6 +157,7 @@ export function ActivateWithCompositionDialog({
           item_template_id,
           quantity_formula,
           pieces_quantity,
+          pieces_formula,
           cut_angle,
           width_formula,
           height_formula,
@@ -173,7 +176,7 @@ export function ActivateWithCompositionDialog({
         .order('item_template_id');
 
       if (error) throw error;
-      return (data || []) as ComponentItem[];
+      return (data as any) as ComponentItem[];
     },
     enabled: open && !!productTemplateId,
   });
@@ -316,6 +319,7 @@ export function ActivateWithCompositionDialog({
     setSelectedItemTemplateId('');
     setQuantityFormula('1');
     setPiecesQuantity(1);
+    setPiecesFormula(null);
     setCutAngle(90);
     setWidthFormula('');
     setHeightFormula('');
@@ -340,6 +344,7 @@ export function ActivateWithCompositionDialog({
       item_template_id: selectedItemTemplateId,
       quantity_formula: activeTab === 'glass' ? '1' : quantityFormula,
       pieces_quantity: piecesQuantity,
+      pieces_formula: piecesFormula,
       cut_angle: cutAngle,
       width_formula: activeTab === 'glass' ? widthFormula : null,
       height_formula: activeTab === 'glass' ? heightFormula : null,
@@ -378,6 +383,7 @@ export function ActivateWithCompositionDialog({
           ...item,
           quantity_formula: itemType === 'glass' ? item.quantity_formula : quantityFormula,
           pieces_quantity: piecesQuantity,
+          pieces_formula: piecesFormula,
           cut_angle: cutAngle,
           width_formula: itemType === 'glass' ? widthFormula : null,
           height_formula: itemType === 'glass' ? heightFormula : null,
@@ -396,6 +402,7 @@ export function ActivateWithCompositionDialog({
     setEditingItemId(item.id);
     setQuantityFormula(item.quantity_formula);
     setPiecesQuantity(item.pieces_quantity);
+    setPiecesFormula(item.pieces_formula || null);
     setCutAngle(item.cut_angle);
     setWidthFormula(item.width_formula || '');
     setHeightFormula(item.height_formula || '');
@@ -413,6 +420,7 @@ export function ActivateWithCompositionDialog({
           ...item,
           quantity_formula: itemType === 'glass' ? item.quantity_formula : quantityFormula,
           pieces_quantity: piecesQuantity,
+          pieces_formula: piecesFormula,
           cut_angle: cutAngle,
           width_formula: itemType === 'glass' ? widthFormula : null,
           height_formula: itemType === 'glass' ? heightFormula : null,
@@ -498,6 +506,7 @@ export function ActivateWithCompositionDialog({
         item_template_id: item.item_template_id,
         quantity_formula: item.quantity_formula,
         pieces_quantity: item.pieces_quantity,
+        pieces_formula: item.pieces_formula,
         cut_angle: item.cut_angle,
         width_formula: item.width_formula,
         height_formula: item.height_formula,
@@ -837,6 +846,11 @@ export function ActivateWithCompositionDialog({
                                         heightFormula={heightFormula}
                                         onWidthFormulaChange={setWidthFormula}
                                         onHeightFormulaChange={setHeightFormula}
+                                        showPiecesQuantity={true}
+                                        piecesQuantity={piecesQuantity}
+                                        onPiecesChange={setPiecesQuantity}
+                                        piecesFormula={piecesFormula}
+                                        onPiecesFormulaChange={setPiecesFormula}
                                       />
                                     </div>
                                   ) : (
@@ -847,6 +861,8 @@ export function ActivateWithCompositionDialog({
                                         showPiecesQuantity={itemType === 'profile'}
                                         piecesQuantity={piecesQuantity}
                                         onPiecesChange={setPiecesQuantity}
+                                        piecesFormula={piecesFormula}
+                                        onPiecesFormulaChange={setPiecesFormula}
                                       />
                                       {itemType === 'profile' && (
                                         <div className="space-y-2">
@@ -913,7 +929,7 @@ export function ActivateWithCompositionDialog({
                                     {itemType === 'glass' ? (
                                       <>
                                         <span className="text-xs px-2 py-0.5 rounded bg-muted">
-                                          {item.pieces_quantity || 1}x
+                                          {item.pieces_formula ? item.pieces_formula : (item.pieces_quantity || 1)}x
                                         </span>
                                         {item.width_formula && (
                                           <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
@@ -934,7 +950,7 @@ export function ActivateWithCompositionDialog({
                                         {itemType === 'profile' && (
                                           <>
                                             <span className="text-xs px-2 py-0.5 rounded bg-muted">
-                                              {item.pieces_quantity}x
+                                              {item.pieces_formula ? item.pieces_formula : (item.pieces_quantity || 1)}x
                                             </span>
                                             <span className="text-xs px-2 py-0.5 rounded bg-muted">
                                               {item.cut_angle}°
