@@ -319,6 +319,7 @@ export function ActivateWithCompositionDialog({
     setSelectedItemTemplateId('');
     setQuantityFormula('1');
     setPiecesQuantity(1);
+    setPiecesFormula(null);
     setCutAngle(90);
     setWidthFormula('');
     setHeightFormula('');
