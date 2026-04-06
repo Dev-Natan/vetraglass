@@ -132,10 +132,11 @@ export default function FormulaTester() {
               <div className="pt-4 border-t">
                 <h4 className="text-xs font-semibold uppercase text-muted-foreground mb-3">Variáveis Disponíveis</h4>
                 <div className="flex flex-wrap gap-2">
-                  <Badge variant="outline" className="font-mono">Largura / L / W</Badge>
-                  <Badge variant="outline" className="font-mono">Altura / A / H</Badge>
-                  <Badge variant="outline" className="font-mono">FL</Badge>
-                  <Badge variant="outline" className="font-mono">FA</Badge>
+                  <Badge variant="outline" className="font-mono" title="Geométrica (mm)">Largura / L / W</Badge>
+                  <Badge variant="outline" className="font-mono" title="Geométrica (mm)">Altura / A / H</Badge>
+                  <Badge variant="outline" className="font-mono" title="Geométrica (mm)">FL (Folga L)</Badge>
+                  <Badge variant="outline" className="font-mono" title="Geométrica (mm)">FA (Folga A)</Badge>
+                  <Badge variant="secondary" className="font-mono" title="Quantidade (metros)">L / A (em metros)</Badge>
                 </div>
               </div>
             </CardContent>
