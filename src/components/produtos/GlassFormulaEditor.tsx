@@ -74,8 +74,7 @@ interface FormulaInputProps {
   quickFormulas: { label: string; formula: string }[];
   icon: React.ReactNode;
   color: string;
-  variableName: string;
-  variableDescription?: string;
+  variables: { name: string; description: string; icon: React.ReactNode; color: string }[];
 }
 
 function FormulaInput({ label, value, onChange, quickFormulas, icon, color, variableName, variableDescription }: FormulaInputProps) {
