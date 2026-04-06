@@ -845,6 +845,11 @@ export function ActivateWithCompositionDialog({
                                         heightFormula={heightFormula}
                                         onWidthFormulaChange={setWidthFormula}
                                         onHeightFormulaChange={setHeightFormula}
+                                        showPiecesQuantity={true}
+                                        piecesQuantity={piecesQuantity}
+                                        onPiecesChange={setPiecesQuantity}
+                                        piecesFormula={piecesFormula}
+                                        onPiecesFormulaChange={setPiecesFormula}
                                       />
                                     </div>
                                   ) : (
@@ -855,6 +860,8 @@ export function ActivateWithCompositionDialog({
                                         showPiecesQuantity={itemType === 'profile'}
                                         piecesQuantity={piecesQuantity}
                                         onPiecesChange={setPiecesQuantity}
+                                        piecesFormula={piecesFormula}
+                                        onPiecesFormulaChange={setPiecesFormula}
                                       />
                                       {itemType === 'profile' && (
                                         <div className="space-y-2">
