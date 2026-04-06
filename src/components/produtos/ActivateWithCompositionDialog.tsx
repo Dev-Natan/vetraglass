@@ -140,6 +140,7 @@ export function ActivateWithCompositionDialog({
   const [selectedItemTemplateId, setSelectedItemTemplateId] = useState('');
   const [quantityFormula, setQuantityFormula] = useState('1');
   const [piecesQuantity, setPiecesQuantity] = useState(1);
+  const [piecesFormula, setPiecesFormula] = useState<string | null>(null);
   const [cutAngle, setCutAngle] = useState(90);
   const [widthFormula, setWidthFormula] = useState('');
   const [heightFormula, setHeightFormula] = useState('');
