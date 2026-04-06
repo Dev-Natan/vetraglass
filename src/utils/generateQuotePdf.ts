@@ -426,7 +426,7 @@ export async function generateQuotePdf(
   doc.setFontSize(13);
   doc.text(formatCurrency(quote.total_amount), marginRight - 5, y + 10, { align: 'right' });
   
-  y += 2;
+  y += 16;
   
   // Show discount line if quote has discount
   const hasQuoteDiscount = (quote.discount_amount && quote.discount_amount > 0) || (quote.discount_percent && quote.discount_percent > 0);
