@@ -13,7 +13,8 @@ import {
   Activity,
   TrendingUp,
   Building2,
-  FileText
+  FileText,
+  Calculator
 } from "lucide-react";
 import { useAdminStats } from "@/hooks/useAdminStats";
 
