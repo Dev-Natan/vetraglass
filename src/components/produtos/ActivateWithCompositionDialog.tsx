@@ -402,6 +402,7 @@ export function ActivateWithCompositionDialog({
     setEditingItemId(item.id);
     setQuantityFormula(item.quantity_formula);
     setPiecesQuantity(item.pieces_quantity);
+    setPiecesFormula(item.pieces_formula || null);
     setCutAngle(item.cut_angle);
     setWidthFormula(item.width_formula || '');
     setHeightFormula(item.height_formula || '');
