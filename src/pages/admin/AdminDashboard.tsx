@@ -87,6 +87,13 @@ export default function AdminDashboard() {
       path: "/admin/settings",
       color: "bg-orange-500",
     },
+    {
+      title: "Testador de Fórmulas",
+      description: "Valide fórmulas geométricas e de insumos",
+      icon: Calculator,
+      path: "/admin/formula-tester",
+      color: "bg-pink-500",
+    },
   ];
 
   return (
