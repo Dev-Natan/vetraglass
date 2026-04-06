@@ -74,11 +74,10 @@ interface FormulaInputProps {
   quickFormulas: { label: string; formula: string }[];
   icon: React.ReactNode;
   color: string;
-  variableName: string;
-  variableDescription?: string;
+  variables: { name: string; description: string; icon: React.ReactNode; color: string }[];
 }
 
-function FormulaInput({ label, value, onChange, quickFormulas, icon, color, variableName, variableDescription }: FormulaInputProps) {
+function FormulaInput({ label, value, onChange, quickFormulas, icon, color, variables }: FormulaInputProps) {
   const [focusedInput, setFocusedInput] = useState(false);
   const validation = validateFormula(value);
 
@@ -95,7 +94,7 @@ function FormulaInput({ label, value, onChange, quickFormulas, icon, color, vari
         </div>
         <div>
           <Label className="font-medium">{label}</Label>
-          <p className="text-xs text-muted-foreground">Fórmula para calcular a {label.toLowerCase()} do vidro</p>
+          <p className="text-xs text-muted-foreground">Fórmula para calcular a {label.toLowerCase()}</p>
         </div>
       </div>
 
@@ -104,7 +103,7 @@ function FormulaInput({ label, value, onChange, quickFormulas, icon, color, vari
         <Input
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder={`Ex: ${variableName} - 40`}
+          placeholder={`Ex: Largura - 40`}
           className={cn(
             "pr-10 font-mono text-sm",
             !validation.isValid && "border-destructive focus-visible:ring-destructive"
@@ -133,43 +132,49 @@ function FormulaInput({ label, value, onChange, quickFormulas, icon, color, vari
         <div className="flex items-center gap-2 text-sm p-2 rounded bg-muted/50">
           <span className="text-muted-foreground">Preview (1000×800mm):</span>
           <span className="font-mono font-medium text-foreground">
-            {validation.result.toFixed(0)}mm
+            {validation.result.toFixed(0)}
+            {label.toLowerCase().includes('quantidade') ? '' : 'mm'}
           </span>
         </div>
       )}
 
       {/* Quick formulas */}
-      <div className="flex flex-wrap gap-2">
-        {quickFormulas.map((formula, index) => (
-          <Button
-            key={index}
-            type="button"
-            variant="outline"
-            size="sm"
-            className={cn(
-              "text-xs h-7",
-              value === formula.formula && "ring-2 ring-primary"
-            )}
-            onClick={() => onChange(formula.formula)}
-          >
-            {formula.label}
-          </Button>
-        ))}
-      </div>
+      {quickFormulas.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {quickFormulas.map((formula, index) => (
+            <Button
+              key={index}
+              type="button"
+              variant="outline"
+              size="sm"
+              className={cn(
+                "text-xs h-7",
+                value === formula.formula && "ring-2 ring-primary"
+              )}
+              onClick={() => onChange(formula.formula)}
+            >
+              {formula.label}
+            </Button>
+          ))}
+        </div>
+      )}
 
       {/* Variable and operators */}
       <div className="flex flex-wrap gap-1">
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          className={cn("h-8 text-xs gap-1", color.replace('bg-', 'text-').replace('/10', ''))}
-          onClick={() => insertText(variableName)}
-          title={variableDescription || variableName}
-        >
-          {icon}
-          {variableDescription || variableName}
-        </Button>
+        {variables.map((variable, idx) => (
+          <Button
+            key={idx}
+            type="button"
+            variant="secondary"
+            size="sm"
+            className={cn("h-8 text-xs gap-1", variable.color)}
+            onClick={() => insertText(variable.name)}
+            title={variable.description}
+          >
+            {variable.icon}
+            {variable.description}
+          </Button>
+        ))}
         {operators.map((op, index) => (
           <Button
             key={index}
@@ -238,8 +243,9 @@ export function GlassFormulaEditor({
         quickFormulas={widthFormulas}
         icon={<ArrowLeftRight className="w-4 h-4 text-green-600" />}
         color="bg-green-500/10"
-        variableName="Largura"
-        variableDescription="Largura do Vão"
+        variables={[
+          { name: 'Largura', description: 'Largura do Vão', icon: <ArrowLeftRight className="w-3 h-3" />, color: 'text-green-600' }
+        ]}
       />
 
       {/* Height formula */}
@@ -250,8 +256,9 @@ export function GlassFormulaEditor({
         quickFormulas={heightFormulas}
         icon={<ArrowUpDown className="w-4 h-4 text-blue-600" />}
         color="bg-blue-500/10"
-        variableName="Altura"
-        variableDescription="Altura do Vão"
+        variables={[
+          { name: 'Altura', description: 'Altura do Vão', icon: <ArrowUpDown className="w-3 h-3" />, color: 'text-blue-600' }
+        ]}
       />
 
       {/* Combined preview */}
@@ -337,37 +344,21 @@ export function GlassFormulaEditor({
               </div>
             ) : (
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">Fórmula ativa para calcular a quantidade:</span>
-                  <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-medium">
-                    Fórmula Dinâmica
-                  </span>
-                </div>
-                <Input
+                <FormulaInput
+                  label="Quantidade de Peças"
                   value={piecesFormula || ''}
-                  onChange={(e) => onPiecesFormulaChange?.(e.target.value)}
-                  placeholder="Ex: (Largura / 500) + 1"
-                  className="font-mono text-sm h-10 border-primary/50 bg-primary/5 focus-visible:ring-primary/30"
+                  onChange={(val) => onPiecesFormulaChange?.(val)}
+                  quickFormulas={commonQuantityFormulas}
+                  icon={<Calculator className="w-4 h-4 text-primary" />}
+                  color="bg-primary/10"
+                  variables={[
+                    { name: 'Largura', description: 'Largura do Vão', icon: <ArrowLeftRight className="w-3 h-3" />, color: 'text-green-600' },
+                    { name: 'Altura', description: 'Altura do Vão', icon: <ArrowUpDown className="w-3 h-3" />, color: 'text-blue-600' }
+                  ]}
                 />
-                <div className="flex flex-wrap gap-2">
-                  {commonQuantityFormulas.map((f, i) => (
-                    <Button
-                      key={i}
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className={cn(
-                        "text-[11px] h-7 px-2",
-                        piecesFormula === f.formula && "border-primary bg-primary/5"
-                      )}
-                      onClick={() => onPiecesFormulaChange?.(f.formula)}
-                    >
-                      {f.label}
-                    </Button>
-                  ))}
-                </div>
                 <p className="text-[11px] text-muted-foreground leading-tight bg-muted/50 p-2 rounded border border-dashed">
                   A quantidade de peças será calculada dinamicamente com base nas dimensões do produto.
+                  Ex: <code>(Largura / 500) + 1</code>
                 </p>
               </div>
             )}
