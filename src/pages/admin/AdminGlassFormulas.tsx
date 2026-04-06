@@ -322,6 +322,14 @@ export default function AdminGlassFormulas() {
               Gerencie as fórmulas de cálculo de vidro por produto
             </p>
           </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" asChild>
+              <Link to="/admin/formula-tester">
+                <Calculator className="w-4 h-4 mr-2" />
+                Testar Fórmulas
+              </Link>
+            </Button>
+          </div>
         </div>
 
         {/* Search */}
