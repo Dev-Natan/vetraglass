@@ -13,6 +13,7 @@ export type Module =
   | 'agenda'
   | 'medicoes'
   | 'plano-corte'
+  | 'producao'
   | 'produtos'
   | 'estoque'
   | 'caixa-vendas'
