@@ -13,7 +13,8 @@ import {
   Activity,
   TrendingUp,
   Building2,
-  FileText
+  FileText,
+  Calculator
 } from "lucide-react";
 import { useAdminStats } from "@/hooks/useAdminStats";
 
@@ -86,6 +87,13 @@ export default function AdminDashboard() {
       icon: Settings,
       path: "/admin/settings",
       color: "bg-orange-500",
+    },
+    {
+      title: "Testador de Fórmulas",
+      description: "Valide fórmulas geométricas e de insumos",
+      icon: Calculator,
+      path: "/admin/formula-tester",
+      color: "bg-pink-500",
     },
   ];
 

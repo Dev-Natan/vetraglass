@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { GlassWater, Plus, Search, Trash2, Pencil, Save, Copy, ChevronDown, ChevronRight, Package, Zap, Calculator, Info, Check } from 'lucide-react';
@@ -321,6 +322,14 @@ export default function AdminGlassFormulas() {
             <p className="text-muted-foreground mt-1">
               Gerencie as fórmulas de cálculo de vidro por produto
             </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" asChild>
+              <Link to="/admin/formula-tester">
+                <Calculator className="w-4 h-4 mr-2" />
+                Testar Fórmulas
+              </Link>
+            </Button>
           </div>
         </div>
 
