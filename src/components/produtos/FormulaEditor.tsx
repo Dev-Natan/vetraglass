@@ -313,19 +313,26 @@ export const FormulaEditor = forwardRef<HTMLDivElement, FormulaEditorProps>(
                 </div>
               </div>
             ) : (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">Fórmula ativa para calcular a quantidade:</span>
-                  <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-medium">
-                    Fórmula Dinâmica
-                  </span>
+              <div className="space-y-3 p-4 rounded-lg border bg-card">
+                <div className="flex items-center gap-2 mb-2">
+                  <Calculator className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-medium">Fórmula da Quantidade</span>
                 </div>
-                <Input
-                  value={piecesFormula || ''}
-                  onChange={(e) => onPiecesFormulaChange?.(e.target.value)}
-                  placeholder="Ex: (Largura / 500) + 1"
-                  className="font-mono text-sm h-10 border-primary/50 bg-primary/5 focus-visible:ring-primary/30"
-                />
+                
+                <div className="relative">
+                  <Input
+                    value={piecesFormula || ''}
+                    onChange={(e) => onPiecesFormulaChange?.(e.target.value)}
+                    placeholder="Ex: (Largura / 500) + 1"
+                    className="font-mono text-sm h-10 border-primary/50 bg-primary/5 focus-visible:ring-primary/30 pr-10"
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    {piecesFormula && (
+                      <Check className="w-4 h-4 text-green-500" />
+                    )}
+                  </div>
+                </div>
+
                 <div className="flex flex-wrap gap-2">
                   {commonQuantityFormulas.map((f, i) => (
                     <Button
@@ -343,7 +350,43 @@ export const FormulaEditor = forwardRef<HTMLDivElement, FormulaEditorProps>(
                     </Button>
                   ))}
                 </div>
-                <p className="text-[11px] text-muted-foreground leading-tight bg-muted/50 p-2 rounded border border-dashed">
+
+                <div className="flex flex-wrap gap-1 mt-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="h-8 text-[11px] gap-1 bg-green-500/10 text-green-600 hover:bg-green-500/20"
+                    onClick={() => onPiecesFormulaChange?.((piecesFormula || '') + 'Largura')}
+                  >
+                    <ArrowLeftRight className="w-3 h-3" />
+                    Largura
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="h-8 text-[11px] gap-1 bg-blue-500/10 text-blue-600 hover:bg-blue-500/20"
+                    onClick={() => onPiecesFormulaChange?.((piecesFormula || '') + 'Altura')}
+                  >
+                    <ArrowUpDown className="w-3 h-3" />
+                    Altura
+                  </Button>
+                  {operators.map((op, index) => (
+                    <Button
+                      key={index}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-8 h-8 p-0 font-mono text-xs"
+                      onClick={() => onPiecesFormulaChange?.((piecesFormula || '') + op.value)}
+                    >
+                      {op.icon ? <op.icon className="w-3 h-3" /> : op.label}
+                    </Button>
+                  ))}
+                </div>
+
+                <p className="text-[11px] text-muted-foreground leading-tight bg-muted/50 p-2 rounded border border-dashed mt-2">
                   A quantidade de peças será calculada dinamicamente com base nas dimensões do produto.
                 </p>
               </div>
