@@ -63,6 +63,7 @@ interface ComponentItem {
   item_template_id: string;
   quantity_formula: string;
   pieces_quantity: number;
+  pieces_formula?: string | null;
   cut_angle: number;
   width_formula: string | null;
   height_formula: string | null;
