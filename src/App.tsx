@@ -70,6 +70,7 @@ const AdminCategories = lazy(() => import("./pages/admin/AdminCategories"));
 const AdminAuditLogs = lazy(() => import("./pages/admin/AdminAuditLogs"));
 const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
 const AdminFeedbacks = lazy(() => import("./pages/admin/AdminFeedbacks"));
+const FormulaTester = lazy(() => import("./pages/admin/FormulaTester"));
 
 // Create optimized QueryClient with caching
 const queryClient = createQueryClient();
