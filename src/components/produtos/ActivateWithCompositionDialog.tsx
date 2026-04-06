@@ -950,7 +950,7 @@ export function ActivateWithCompositionDialog({
                                         {itemType === 'profile' && (
                                           <>
                                             <span className="text-xs px-2 py-0.5 rounded bg-muted">
-                                              {item.pieces_quantity}x
+                                              {item.pieces_formula ? item.pieces_formula : (item.pieces_quantity || 1)}x
                                             </span>
                                             <span className="text-xs px-2 py-0.5 rounded bg-muted">
                                               {item.cut_angle}°
