@@ -344,6 +344,7 @@ export function ActivateWithCompositionDialog({
       item_template_id: selectedItemTemplateId,
       quantity_formula: activeTab === 'glass' ? '1' : quantityFormula,
       pieces_quantity: piecesQuantity,
+      pieces_formula: piecesFormula,
       cut_angle: cutAngle,
       width_formula: activeTab === 'glass' ? widthFormula : null,
       height_formula: activeTab === 'glass' ? heightFormula : null,
