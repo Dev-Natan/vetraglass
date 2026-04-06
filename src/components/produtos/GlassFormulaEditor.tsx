@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { 
   ArrowUpDown, 
   ArrowLeftRight, 
@@ -28,6 +29,13 @@ interface GlassFormulaEditorProps {
   piecesFormula?: string | null;
   onPiecesFormulaChange?: (value: string) => void;
 }
+
+const commonQuantityFormulas = [
+  { label: 'Fixa 1', formula: '1' },
+  { label: 'Largura / 500', formula: '(Largura / 500) + 1' },
+  { label: 'Altura / 500', formula: '(Altura / 500) + 1' },
+  { label: 'Largura / 1000', formula: 'Largura / 1000' },
+];
 
 // Common formulas for width (based on VÃO - opening dimensions)
 const widthFormulas = [
