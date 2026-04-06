@@ -243,8 +243,9 @@ export function GlassFormulaEditor({
         quickFormulas={widthFormulas}
         icon={<ArrowLeftRight className="w-4 h-4 text-green-600" />}
         color="bg-green-500/10"
-        variableName="Largura"
-        variableDescription="Largura do Vão"
+        variables={[
+          { name: 'Largura', description: 'Largura do Vão', icon: <ArrowLeftRight className="w-3 h-3" />, color: 'text-green-600' }
+        ]}
       />
 
       {/* Height formula */}
@@ -255,8 +256,9 @@ export function GlassFormulaEditor({
         quickFormulas={heightFormulas}
         icon={<ArrowUpDown className="w-4 h-4 text-blue-600" />}
         color="bg-blue-500/10"
-        variableName="Altura"
-        variableDescription="Altura do Vão"
+        variables={[
+          { name: 'Altura', description: 'Altura do Vão', icon: <ArrowUpDown className="w-3 h-3" />, color: 'text-blue-600' }
+        ]}
       />
 
       {/* Combined preview */}
