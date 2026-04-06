@@ -420,6 +420,7 @@ export function ActivateWithCompositionDialog({
           ...item,
           quantity_formula: itemType === 'glass' ? item.quantity_formula : quantityFormula,
           pieces_quantity: piecesQuantity,
+          pieces_formula: piecesFormula,
           cut_angle: cutAngle,
           width_formula: itemType === 'glass' ? widthFormula : null,
           height_formula: itemType === 'glass' ? heightFormula : null,
