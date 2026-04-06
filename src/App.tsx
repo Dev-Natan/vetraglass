@@ -288,6 +288,9 @@ function AppRoutes() {
       <Route path="/admin/feedbacks" element={
         <ProtectedRoute><LazyRoute><AdminFeedbacks /></LazyRoute></ProtectedRoute>
       } />
+      <Route path="/admin/formula-tester" element={
+        <ProtectedRoute><LazyRoute><FormulaTester /></LazyRoute></ProtectedRoute>
+      } />
       
       <Route path="*" element={<LazyRoute><NotFound /></LazyRoute>} />
     </Routes>
