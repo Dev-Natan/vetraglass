@@ -455,7 +455,7 @@ export async function generateQuotePdf(
   const cashFinalValue = maxDiscountFinal > 0 
     ? baseForPayment * (1 - maxDiscountFinal / 100) 
     : baseForPayment;
-  const cardFinalValue = baseForPayment;
+  const cardFinalValue = quote.total_amount;
   
   // Check page break
   if (y + 35 > pageHeight - 15) {
