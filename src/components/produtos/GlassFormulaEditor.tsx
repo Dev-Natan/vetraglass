@@ -344,37 +344,21 @@ export function GlassFormulaEditor({
               </div>
             ) : (
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">Fórmula ativa para calcular a quantidade:</span>
-                  <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-medium">
-                    Fórmula Dinâmica
-                  </span>
-                </div>
-                <Input
+                <FormulaInput
+                  label="Quantidade de Peças"
                   value={piecesFormula || ''}
-                  onChange={(e) => onPiecesFormulaChange?.(e.target.value)}
-                  placeholder="Ex: (Largura / 500) + 1"
-                  className="font-mono text-sm h-10 border-primary/50 bg-primary/5 focus-visible:ring-primary/30"
+                  onChange={(val) => onPiecesFormulaChange?.(val)}
+                  quickFormulas={commonQuantityFormulas}
+                  icon={<Calculator className="w-4 h-4 text-primary" />}
+                  color="bg-primary/10"
+                  variables={[
+                    { name: 'Largura', description: 'Largura do Vão', icon: <ArrowLeftRight className="w-3 h-3" />, color: 'text-green-600' },
+                    { name: 'Altura', description: 'Altura do Vão', icon: <ArrowUpDown className="w-3 h-3" />, color: 'text-blue-600' }
+                  ]}
                 />
-                <div className="flex flex-wrap gap-2">
-                  {commonQuantityFormulas.map((f, i) => (
-                    <Button
-                      key={i}
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className={cn(
-                        "text-[11px] h-7 px-2",
-                        piecesFormula === f.formula && "border-primary bg-primary/5"
-                      )}
-                      onClick={() => onPiecesFormulaChange?.(f.formula)}
-                    >
-                      {f.label}
-                    </Button>
-                  ))}
-                </div>
                 <p className="text-[11px] text-muted-foreground leading-tight bg-muted/50 p-2 rounded border border-dashed">
                   A quantidade de peças será calculada dinamicamente com base nas dimensões do produto.
+                  Ex: <code>(Largura / 500) + 1</code>
                 </p>
               </div>
             )}
