@@ -57,7 +57,8 @@ const menuItems: MenuItem[] = [
   
   // Operacional
   { icon: Ruler, label: 'Medições', path: '/medicoes', module: 'medicoes', tutorialId: 'menu-medicoes' },
-  { icon: Scissors, label: 'Produção', path: '/producao', module: 'plano-corte', tutorialId: 'menu-producao' },
+  { icon: Scissors, label: 'Plano de Corte', path: '/plano-corte', module: 'plano-corte', tutorialId: 'menu-plano-corte' },
+  { icon: ClipboardList, label: 'Produção', path: '/producao', module: 'producao', tutorialId: 'menu-producao' },
   
   // Financeiro
   { icon: DollarSign, label: 'Financeiro', path: '/financeiro', module: 'financeiro', tutorialId: 'menu-financeiro' },

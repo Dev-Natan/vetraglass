@@ -1,7 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { resolveImageUrl } from '@/utils/imageUrl';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { ArrowLeft, Printer, Download, Tags, BarChart3 } from 'lucide-react';
+import { ArrowLeft, Printer, Download, Tags, BarChart3, Calculator } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,6 +23,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { toast } from 'sonner';
 
 // Get storage URL helper
 const getStorageUrl = (path: string | null) => resolveImageUrl(path);
