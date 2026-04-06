@@ -176,7 +176,7 @@ export function ActivateWithCompositionDialog({
         .order('item_template_id');
 
       if (error) throw error;
-      return (data || []) as ComponentItem[];
+      return (data as any) as ComponentItem[];
     },
     enabled: open && !!productTemplateId,
   });
