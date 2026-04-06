@@ -38,6 +38,13 @@ const commonFormulas = [
   { label: 'Área m²', formula: 'Altura * Largura / 1000000', icon: null, color: 'bg-purple-500' },
 ];
 
+const commonQuantityFormulas = [
+  { label: 'Fixa 1', formula: '1' },
+  { label: 'Largura / 500', formula: '(Largura / 500) + 1' },
+  { label: 'Altura / 500', formula: '(Altura / 500) + 1' },
+  { label: 'Largura / 1000', formula: 'Largura / 1000' },
+];
+
 // Operators
 const operators = [
   { label: '+', value: ' + ', icon: Plus },
