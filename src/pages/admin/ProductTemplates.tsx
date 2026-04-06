@@ -677,12 +677,11 @@ export default function ProductTemplates() {
         .update({
           quantity_formula: data.quantity_formula,
           pieces_quantity: data.pieces_quantity,
-          pieces_formula: data.pieces_formula,
           cut_angle: data.cut_angle,
           notes: data.notes || null,
           width_formula: data.width_formula || null,
           height_formula: data.height_formula || null,
-        })
+        } as any)
         .eq("id", data.id);
       if (error) throw error;
     },
