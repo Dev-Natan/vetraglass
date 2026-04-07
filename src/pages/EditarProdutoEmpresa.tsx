@@ -270,6 +270,8 @@ export default function EditarProdutoEmpresa() {
         arremate: (product as any).arremate || '',
       });
       setPricingType(product.pricing_type === 'composition' ? 'composition' : 'fixed');
+      setCostPerSqm(product.cost_per_sqm || 0);
+      setPricePerSqm(product.price_per_sqm || 0);
     }
   }, [product]);
 
