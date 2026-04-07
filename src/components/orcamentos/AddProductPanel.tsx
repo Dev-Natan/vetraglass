@@ -274,10 +274,10 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
 
   // Calculate prices: use composition when available, otherwise area × price/m²
   const area = width && height ? (width / 1000) * (height / 1000) : 0;
-  const unitPrice = compositionPricing.isReady
+  const unitPrice = (productUsesComposition && compositionPricing.isReady)
     ? compositionPricing.compositionCostPerUnit
     : (area > 0 ? basePrice * area : 0);
-  const totalPrice = compositionPricing.isReady
+  const totalPrice = (productUsesComposition && compositionPricing.isReady)
     ? compositionPricing.totalCost
     : unitPrice * quantity;
 
