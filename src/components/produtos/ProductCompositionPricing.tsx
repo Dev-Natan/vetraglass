@@ -207,6 +207,9 @@ export function ProductCompositionPricing({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company-product', productId] });
       queryClient.invalidateQueries({ queryKey: ['company-products'] });
+      if (onSuccess && pricingResult) {
+        onSuccess(pricingResult.costPerSqm, pricingResult.pricePerSqm);
+      }
       toast.success('Preço do produto atualizado!');
     },
     onError: (e) => toast.error('Erro: ' + e.message),
