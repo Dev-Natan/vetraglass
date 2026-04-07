@@ -165,6 +165,8 @@ export default function EditarProdutoEmpresa() {
   const [glassName, setGlassName] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [pricingType, setPricingType] = useState<string>('fixed');
+  const [costPerSqm, setCostPerSqm] = useState<number>(0);
+  const [pricePerSqm, setPricePerSqm] = useState<number>(0);
 
   const [formData, setFormData] = useState({
     commercial_name: '',
@@ -268,6 +270,8 @@ export default function EditarProdutoEmpresa() {
         arremate: (product as any).arremate || '',
       });
       setPricingType(product.pricing_type === 'composition' ? 'composition' : 'fixed');
+      setCostPerSqm(product.cost_per_sqm || 0);
+      setPricePerSqm(product.price_per_sqm || 0);
     }
   }, [product]);
 
@@ -320,6 +324,8 @@ export default function EditarProdutoEmpresa() {
           corte_contramarco: configData.corte_contramarco || null,
           arremate: configData.arremate || null,
           pricing_type: pricingType,
+          cost_per_sqm: costPerSqm,
+          price_per_sqm: pricePerSqm,
         } as any)
         .eq('id', id);
       if (error) throw error;
@@ -706,12 +712,24 @@ export default function EditarProdutoEmpresa() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg border border-border/50">
                 <div className="space-y-2">
                   <Label>Custo Referencial / m² (R$)</Label>
-                  <Input type="number" step="0.01" value={product.cost_per_sqm || 0} readOnly className="bg-muted" />
-                  <p className="text-[10px] text-muted-foreground">Clique em "Editar Preços" no topo ou na lista para alterar</p>
+                  <Input 
+                    type="number" 
+                    step="0.01" 
+                    value={costPerSqm || 0} 
+                    onChange={(e) => setCostPerSqm(Number(e.target.value) || 0)} 
+                  />
+                  <p className="text-[10px] text-muted-foreground">O custo definido manualmente aqui será o usado no orçamento</p>
                 </div>
                 <div className="space-y-2">
                   <Label>Preço de Venda / m² (R$)</Label>
-                  <Input type="number" step="0.01" value={product.price_per_sqm || 0} readOnly className="bg-muted font-bold text-primary" />
+                  <Input 
+                    type="number" 
+                    step="0.01" 
+                    value={pricePerSqm || 0} 
+                    onChange={(e) => setPricePerSqm(Number(e.target.value) || 0)} 
+                    className="font-bold text-primary" 
+                  />
+                  <p className="text-[10px] text-muted-foreground">O preço de venda por m² usado no orçamento</p>
                 </div>
               </div>
             )}
@@ -730,6 +748,10 @@ export default function EditarProdutoEmpresa() {
         {pricingType === 'composition' && (
           <ProductCompositionPricing
             productId={id!}
+            onSuccess={(cost, price) => {
+              setCostPerSqm(cost);
+              setPricePerSqm(price);
+            }}
             productItems={productItems || []}
             currentCostPerSqm={product.cost_per_sqm}
             currentPricePerSqm={product.price_per_sqm}

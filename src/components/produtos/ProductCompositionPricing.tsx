@@ -14,6 +14,7 @@ import { useState } from 'react';
 
 interface ProductCompositionPricingProps {
   productId: string;
+  onSuccess?: (cost: number, price: number) => void;
   productItems: Array<{
     id: string;
     item_template_id: string | null;
@@ -49,6 +50,7 @@ const formatBRL = (v: number) =>
 
 export function ProductCompositionPricing({
   productId,
+  onSuccess,
   productItems,
   currentCostPerSqm,
   currentPricePerSqm,
@@ -205,6 +207,9 @@ export function ProductCompositionPricing({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company-product', productId] });
       queryClient.invalidateQueries({ queryKey: ['company-products'] });
+      if (onSuccess && pricingResult) {
+        onSuccess(pricingResult.costPerSqm, pricingResult.pricePerSqm);
+      }
       toast.success('Preço do produto atualizado!');
     },
     onError: (e) => toast.error('Erro: ' + e.message),
@@ -334,7 +339,11 @@ export function ProductCompositionPricing({
               </div>
               <Button
                 size="sm"
-                onClick={() => savePricingMutation.mutate()}
+                onClick={() => {
+                  if (confirm('Isso irá sobrescrever o preço de venda atual do produto. Deseja continuar?')) {
+                    savePricingMutation.mutate();
+                  }
+                }}
                 disabled={savePricingMutation.isPending}
                 className="gap-2"
               >
