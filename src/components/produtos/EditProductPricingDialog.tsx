@@ -73,7 +73,7 @@ export function EditProductPricingDialog({
         .update({
           cost_per_sqm: parseFloat(costPerSqm) || 0,
           price_per_sqm: parseFloat(pricePerSqm) || 0,
-          uses_glass: pricingType === 'glass',
+          uses_glass: false,
           pricing_type: pricingType,
           updated_at: new Date().toISOString(),
         } as any)
