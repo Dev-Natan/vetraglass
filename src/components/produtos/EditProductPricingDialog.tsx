@@ -9,7 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, DollarSign, Package, GlassWater, Info, Palette } from 'lucide-react';
+import { Loader2, DollarSign, Package, GlassWater, Info, Palette, Calculator } from 'lucide-react';
 import { toast } from 'sonner';
 import { ProductGlassPricesSection } from './ProductGlassPricesSection';
 import { ProductAluminumPricesSection } from './ProductAluminumPricesSection';
