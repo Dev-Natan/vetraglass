@@ -165,6 +165,8 @@ export default function EditarProdutoEmpresa() {
   const [glassName, setGlassName] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [pricingType, setPricingType] = useState<string>('fixed');
+  const [costPerSqm, setCostPerSqm] = useState<number>(0);
+  const [pricePerSqm, setPricePerSqm] = useState<number>(0);
 
   const [formData, setFormData] = useState({
     commercial_name: '',
