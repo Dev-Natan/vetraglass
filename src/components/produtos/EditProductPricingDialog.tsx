@@ -9,10 +9,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, DollarSign, Package, GlassWater, Info, Palette, Calculator } from 'lucide-react';
+import { Loader2, DollarSign, Package, Info, Calculator } from 'lucide-react';
 import { toast } from 'sonner';
-import { ProductGlassPricesSection } from './ProductGlassPricesSection';
-import { ProductAluminumPricesSection } from './ProductAluminumPricesSection';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -132,36 +130,6 @@ export function EditProductPricingDialog({
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Preço Base do Produto */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-medium flex items-center gap-2">
-                <Package className="w-4 h-4" />
-                Preço Base do Produto (Perfis e Componentes)
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Custo/m² (R$)</Label>
-                  <Input type="number" step="0.01" min="0" placeholder="0,00"
-                    value={costPerSqm} onChange={(e) => setCostPerSqm(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Preço/m² (R$)</Label>
-                  <Input type="number" step="0.01" min="0" placeholder="0,00"
-                    value={pricePerSqm} onChange={(e) => setPricePerSqm(e.target.value)} />
-                </div>
-              </div>
-              {(parseFloat(pricePerSqm) > 0 || parseFloat(costPerSqm) > 0) && (
-                <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                  <span className="text-sm text-muted-foreground">Margem base:</span>
-                  <Badge variant={margin >= 30 ? 'default' : margin >= 15 ? 'secondary' : 'destructive'}>
-                    {margin.toFixed(1)}%
-                  </Badge>
-                </div>
-              )}
-            </div>
-
-            <Separator />
-
             {/* Tipo de Precificação */}
             <div className="space-y-3">
               <div className="flex items-center gap-2">
@@ -202,22 +170,43 @@ export function EditProductPricingDialog({
               </RadioGroup>
             </div>
 
-            {/* Glass Prices Section */}
-            {pricingType === 'glass' && companyProductId && (
-              <ProductGlassPricesSection
-                companyProductId={companyProductId}
-                productName={productName}
-                usesGlass={true}
-              />
-            )}
+            <Separator />
 
-            {/* Aluminum Prices Section */}
-            {pricingType === 'aluminum' && companyProductId && (
-              <ProductAluminumPricesSection
-                companyProductId={companyProductId}
-                productName={productName}
-              />
-            )}
+            {/* Preço Base do Produto */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium flex items-center gap-2">
+                {pricingType === 'fixed' ? (
+                  <><DollarSign className="w-4 h-4" /> Preços Manuais</>
+                ) : (
+                  <><Calculator className="w-4 h-4" /> Valores Referenciais (Base)</>
+                )}
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Custo/m² (R$)</Label>
+                  <Input type="number" step="0.01" min="0" placeholder="0,00"
+                    value={costPerSqm} onChange={(e) => setCostPerSqm(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Preço/m² (R$)</Label>
+                  <Input type="number" step="0.01" min="0" placeholder="0,00"
+                    value={pricePerSqm} onChange={(e) => setPricePerSqm(e.target.value)} />
+                </div>
+              </div>
+              {(parseFloat(pricePerSqm) > 0 || parseFloat(costPerSqm) > 0) && (
+                <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                  <span className="text-sm text-muted-foreground">Margem:</span>
+                  <Badge variant={margin >= 30 ? 'default' : margin >= 15 ? 'secondary' : 'destructive'}>
+                    {margin.toFixed(1)}%
+                  </Badge>
+                </div>
+              )}
+              {pricingType === 'composition' && (
+                <p className="text-xs text-muted-foreground bg-primary/5 p-3 rounded-lg border border-primary/10">
+                  <strong>Dica:</strong> Na página de edição do produto, você pode usar o calculador automático para atualizar estes valores baseado nos itens de composição.
+                </p>
+              )}
+            </div>
           </div>
         )}
 
@@ -229,7 +218,7 @@ export function EditProductPricingDialog({
             {saveMutation.isPending ? (
               <><Loader2 className="w-4 h-4 animate-spin mr-2" />Salvando...</>
             ) : (
-              'Salvar Preços'
+              'Salvar Configuração'
             )}
           </Button>
         </DialogFooter>
