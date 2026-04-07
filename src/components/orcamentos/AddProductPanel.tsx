@@ -197,9 +197,10 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   ];
 
   // Get pricing type for the product
-  const pricingType = companyProduct?.pricing_type || (companyProduct?.uses_glass ? 'glass' : 'none');
+  const pricingType = companyProduct?.pricing_type || (companyProduct?.uses_glass ? 'glass' : 'fixed');
   const productUsesGlass = pricingType === 'glass';
   const productUsesAluminum = pricingType === 'aluminum';
+  const productUsesComposition = pricingType === 'composition';
   const hasGlassPrices = (productGlassPrices?.length || 0) > 0;
 
   // Fetch aluminum color prices (only when product uses aluminum pricing)
