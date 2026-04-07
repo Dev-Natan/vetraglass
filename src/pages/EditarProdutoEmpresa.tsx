@@ -748,6 +748,10 @@ export default function EditarProdutoEmpresa() {
         {pricingType === 'composition' && (
           <ProductCompositionPricing
             productId={id!}
+            onSuccess={(cost, price) => {
+              setCostPerSqm(cost);
+              setPricePerSqm(price);
+            }}
             productItems={productItems || []}
             currentCostPerSqm={product.cost_per_sqm}
             currentPricePerSqm={product.price_per_sqm}
