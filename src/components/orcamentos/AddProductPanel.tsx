@@ -312,7 +312,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
       product_template_id: selectedProduct.is_custom ? null : selectedProduct.product_template_id,
       company_product_id: companyProduct?.id,
       name: selectedProduct.name,
-      base_price: compositionPricing.isReady ? compositionPricing.compositionCostPerSqm : basePrice,
+      base_price: (productUsesComposition && compositionPricing.isReady) ? compositionPricing.compositionCostPerSqm : basePrice,
       image_url: selectedProduct.image_url,
       linha: selectedProduct.linha,
       category: selectedProduct.category,
