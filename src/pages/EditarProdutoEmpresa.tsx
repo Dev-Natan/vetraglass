@@ -324,6 +324,8 @@ export default function EditarProdutoEmpresa() {
           corte_contramarco: configData.corte_contramarco || null,
           arremate: configData.arremate || null,
           pricing_type: pricingType,
+          cost_per_sqm: costPerSqm,
+          price_per_sqm: pricePerSqm,
         } as any)
         .eq('id', id);
       if (error) throw error;
