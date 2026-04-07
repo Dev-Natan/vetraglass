@@ -50,6 +50,7 @@ const formatBRL = (v: number) =>
 
 export function ProductCompositionPricing({
   productId,
+  onSuccess,
   productItems,
   currentCostPerSqm,
   currentPricePerSqm,
