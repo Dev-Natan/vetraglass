@@ -3,7 +3,7 @@ import { resolveImageUrl, resolveProductImageUrl } from '@/utils/imageUrl';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { ArrowLeft, Upload, MoreHorizontal, Plus, ChevronRight, Home, Package, CheckCircle2, Circle, CircleDot, RotateCcw, Search } from 'lucide-react';
+import { ArrowLeft, Upload, MoreHorizontal, Plus, ChevronRight, Home, Package, CheckCircle2, Circle, CircleDot, RotateCcw, Search, DollarSign, Calculator, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { processFileWithWhiteBackground } from '@/utils/imageBackgroundProcessor';
@@ -48,6 +48,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -61,6 +74,9 @@ type CompanyProduct = {
   description: string | null;
   base_price: number | null;
   price_per_sqm: number | null;
+  cost_per_sqm: number | null;
+  margin_percent: number | null;
+  pricing_type: string | null;
   is_active: boolean;
   is_custom: boolean | null;
   linha: string | null;
@@ -118,14 +134,6 @@ type ItemTemplate = {
   default_formulas: DefaultFormula[] | null;
 };
 
-// Helper para detectar se a fórmula usa Altura ou Largura
-const getFormulaType = (formula: string): 'Altura' | 'Largura' | null => {
-  const lower = formula.toLowerCase();
-  if (lower.includes('altura')) return 'Altura';
-  if (lower.includes('largura')) return 'Largura';
-  return null;
-};
-
 const itemTypeTabs = [
   { value: 'profile', label: 'PERFIS DE ALUMÍNIO', dbType: 'profile' },
   { value: 'accessory', label: 'COMPONENTES', dbType: 'accessory' },
@@ -156,6 +164,7 @@ export default function EditarProdutoEmpresa() {
   const [heightFormula, setHeightFormula] = useState('');
   const [glassName, setGlassName] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [pricingType, setPricingType] = useState<string>('fixed');
 
   const [formData, setFormData] = useState({
     commercial_name: '',
@@ -175,7 +184,6 @@ export default function EditarProdutoEmpresa() {
   const { data: product, isLoading: productLoading, error: productError } = useQuery({
     queryKey: ['company-product', id],
     queryFn: async () => {
-      console.log('[EditarProdutoEmpresa] Fetching company product with id:', id);
       const { data, error } = await supabase
         .from('company_products')
         .select(`
@@ -185,7 +193,6 @@ export default function EditarProdutoEmpresa() {
         .eq('id', id!)
         .maybeSingle();
       
-      console.log('[EditarProdutoEmpresa] Query result:', { data, error });
       if (error) throw error;
       return data as CompanyProduct | null;
     },
@@ -226,7 +233,6 @@ export default function EditarProdutoEmpresa() {
         .order('name');
       if (error) throw error;
       
-      // Sort items: product linha first, then others
       const items = data as unknown as ItemTemplate[];
       const productLinha = product?.linha || product?.product_template?.linha;
       
@@ -234,17 +240,14 @@ export default function EditarProdutoEmpresa() {
         return items.sort((a, b) => {
           const aMatchesLinha = a.linha === productLinha;
           const bMatchesLinha = b.linha === productLinha;
-          
           if (aMatchesLinha && !bMatchesLinha) return -1;
           if (!aMatchesLinha && bMatchesLinha) return 1;
-          
           if (a.linha !== b.linha) {
             return (a.linha || 'ZZZ').localeCompare(b.linha || 'ZZZ');
           }
           return a.name.localeCompare(b.name);
         });
       }
-      
       return items;
     },
   });
@@ -264,6 +267,7 @@ export default function EditarProdutoEmpresa() {
         corte_contramarco: (product as any).corte_contramarco || '',
         arremate: (product as any).arremate || '',
       });
+      setPricingType(product.pricing_type === 'composition' ? 'composition' : 'fixed');
     }
   }, [product]);
 
@@ -279,23 +283,19 @@ export default function EditarProdutoEmpresa() {
 
     setIsUploading(true);
     try {
-      // Process image to have white background
       const processedFile = await processFileWithWhiteBackground(file);
       const fileName = `${currentCompany.id}/${id}.png`;
-
       const { error: uploadError } = await supabase.storage
         .from('company-product-images')
         .upload(fileName, processedFile, { upsert: true });
 
       if (uploadError) throw uploadError;
-
       const { error: updateError } = await supabase
         .from('company_products')
         .update({ image_url: fileName })
         .eq('id', id);
 
       if (updateError) throw updateError;
-
       queryClient.invalidateQueries({ queryKey: ['company-product', id] });
       toast.success('Imagem atualizada!');
     } catch (error: any) {
@@ -319,6 +319,7 @@ export default function EditarProdutoEmpresa() {
           contramarco: configData.contramarco || null,
           corte_contramarco: configData.corte_contramarco || null,
           arremate: configData.arremate || null,
+          pricing_type: pricingType,
         } as any)
         .eq('id', id);
       if (error) throw error;
@@ -336,8 +337,6 @@ export default function EditarProdutoEmpresa() {
   const addItemMutation = useMutation({
     mutationFn: async () => {
       if (!currentCompany?.id) throw new Error('Empresa não selecionada');
-      
-      // 1. Ensure company_item exists for the item_template
       const { data: existingCompanyItem } = await supabase
         .from('company_items')
         .select('id')
@@ -346,8 +345,6 @@ export default function EditarProdutoEmpresa() {
         .maybeSingle();
 
       let companyItemId = existingCompanyItem?.id || null;
-
-      // If no company_item exists, create one from the template
       if (!companyItemId) {
         const { data: itemTemplate } = await supabase
           .from('item_templates')
@@ -435,10 +432,8 @@ export default function EditarProdutoEmpresa() {
   const updateItemMutation = useMutation({
     mutationFn: async () => {
       if (!editingItem) throw new Error('Nenhum item selecionado');
-      
       const itemType = editingItem.item_template?.type || editingItem.company_item?.type;
       const updateData: Record<string, any> = {};
-      
       if (itemType === 'glass') {
         updateData.width_formula = widthFormula || null;
         updateData.height_formula = heightFormula || null;
@@ -450,12 +445,10 @@ export default function EditarProdutoEmpresa() {
         updateData.pieces_quantity = piecesQuantity;
         updateData.cut_angle = cutAngle;
       }
-      
       const { error } = await supabase
         .from('company_product_items')
         .update(updateData)
         .eq('id', editingItem.id);
-        
       if (error) throw error;
     },
     onSuccess: () => {
@@ -473,19 +466,13 @@ export default function EditarProdutoEmpresa() {
   const resetProductMutation = useMutation({
     mutationFn: async () => {
       if (!id || !user?.id) throw new Error('Dados inválidos');
-      
       const { data, error } = await supabase.rpc('reset_company_product_to_template', {
         p_company_product_id: id,
         p_user_id: user.id,
       });
-      
       if (error) throw error;
-      
       const result = data as { success: boolean; error?: string; items_deleted?: number; items_created?: number };
-      if (!result.success) {
-        throw new Error(result.error || 'Erro desconhecido ao resetar produto');
-      }
-      
+      if (!result.success) throw new Error(result.error || 'Erro desconhecido ao resetar produto');
       return result;
     },
     onSuccess: (result) => {
@@ -539,7 +526,6 @@ export default function EditarProdutoEmpresa() {
   const handleEditItem = (item: CompanyProductItem) => {
     setEditingItem(item);
     const itemType = item.item_template?.type || item.company_item?.type;
-    
     if (itemType === 'glass') {
       setWidthFormula(item.width_formula || '');
       setHeightFormula(item.height_formula || '');
@@ -553,7 +539,6 @@ export default function EditarProdutoEmpresa() {
       setPiecesFormula((item as any).pieces_formula || null);
       setCutAngle(item.cut_angle || 90);
     }
-    
     setIsEditItemDialogOpen(true);
   };
 
@@ -592,9 +577,7 @@ export default function EditarProdutoEmpresa() {
         <div className="flex flex-col items-center justify-center h-64 gap-4">
           <div className="text-muted-foreground">Produto não encontrado (ID: {id})</div>
           {productError && <div className="text-destructive text-sm">Erro: {productError.message}</div>}
-          <Button variant="outline" onClick={() => navigate(-1)}>
-            Voltar
-          </Button>
+          <Button variant="outline" onClick={() => navigate(-1)}>Voltar</Button>
         </div>
       </MainLayout>
     );
@@ -605,66 +588,36 @@ export default function EditarProdutoEmpresa() {
       <div className="space-y-6 animate-fade-in pb-24">
         {/* Breadcrumb Navigation */}
         <nav className="flex items-center gap-2 text-sm text-muted-foreground">
-          <button 
-            onClick={() => navigate('/')}
-            className="flex items-center gap-1 hover:text-foreground transition-colors"
-          >
+          <button onClick={() => navigate('/')} className="flex items-center gap-1 hover:text-foreground transition-colors">
             <Home className="w-4 h-4" />
             <span className="hidden sm:inline">Início</span>
           </button>
           <ChevronRight className="w-4 h-4" />
-          <button 
-            onClick={() => navigate('/produtos')}
-            className="hover:text-foreground transition-colors"
-          >
-            Produtos
-          </button>
+          <button onClick={() => navigate('/produtos')} className="hover:text-foreground transition-colors">Produtos</button>
           {(product?.linha || product?.product_template?.linha) && (
             <>
               <ChevronRight className="w-4 h-4" />
-              <button 
-                onClick={() => navigate(`/produtos/linha/${product.linha || product.product_template?.linha}`)}
-                className="hover:text-foreground transition-colors"
-              >
+              <button onClick={() => navigate(`/produtos/linha/${product.linha || product.product_template?.linha}`)} className="hover:text-foreground transition-colors">
                 {product.linha || product.product_template?.linha}
               </button>
             </>
           )}
           <ChevronRight className="w-4 h-4" />
-          <span className="text-foreground font-medium truncate max-w-[150px]">
-            {product?.commercial_name}
-          </span>
+          <span className="text-foreground font-medium truncate max-w-[150px]">{product?.commercial_name}</span>
         </nav>
 
         {/* Header */}
         <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div>
-              <h1 className="font-display font-bold text-xl text-foreground">
-                Editar Produto
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Configure os componentes e informações do produto
-              </p>
-            </div>
+          <div>
+            <h1 className="font-display font-bold text-xl text-foreground">Editar Produto</h1>
+            <p className="text-sm text-muted-foreground">Configure os componentes e informações do produto</p>
           </div>
-          
-          {/* Quick status */}
           <div className="hidden md:flex items-center gap-4">
             {itemTypeTabs.map((tab) => {
               const count = getItemsByType(tab.value).length;
               return (
-                <div 
-                  key={tab.value}
-                  className={`flex items-center gap-1.5 text-xs ${
-                    count > 0 ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'
-                  }`}
-                >
-                  {count > 0 ? (
-                    <CheckCircle2 className="w-4 h-4" />
-                  ) : (
-                    <Circle className="w-4 h-4" />
-                  )}
+                <div key={tab.value} className={cn("flex items-center gap-1.5 text-xs", count > 0 ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground')}>
+                  {count > 0 ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-4 h-4" />}
                   <span>{tab.label.split(' ')[0]}</span>
                   <span className="font-medium">({count})</span>
                 </div>
@@ -675,100 +628,114 @@ export default function EditarProdutoEmpresa() {
 
         {/* Product Info Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Product Image */}
           <div className="flex flex-col items-center gap-3">
             <label className="w-full aspect-square max-w-[250px] bg-muted rounded-lg flex items-center justify-center border-2 border-dashed border-muted-foreground/30 relative group cursor-pointer hover:border-primary/50 transition-colors">
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/jpg"
-                className="hidden"
-                onChange={handleImageUpload}
-                disabled={isUploading}
-              />
-              {getProductImageUrl() ? (
-                <img 
-                  src={getProductImageUrl()!} 
-                  alt={product.commercial_name}
-                  className="w-full h-full object-contain rounded-lg"
-                />
-              ) : (
-                <div className="text-6xl text-muted-foreground/30">🪟</div>
-              )}
+              <input type="file" accept="image/png,image/jpeg,image/jpg" className="hidden" onChange={handleImageUpload} disabled={isUploading} />
+              {getProductImageUrl() ? <img src={getProductImageUrl()!} alt={product.commercial_name} className="w-full h-full object-contain rounded-lg" /> : <div className="text-6xl text-muted-foreground/30">🪟</div>}
               <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
                 <Button variant="secondary" size="sm" className="gap-2 pointer-events-none" disabled={isUploading}>
-                  <Upload className="w-4 h-4" />
-                  {isUploading ? 'Enviando...' : 'Alterar foto'}
+                  <Upload className="w-4 h-4" /> {isUploading ? 'Enviando...' : 'Alterar foto'}
                 </Button>
               </div>
             </label>
-            <p className="text-xs text-muted-foreground text-center">
-              Arquivos permitidos: PNG, JPEG ou JPG<br />
-              Obs: Essa imagem será usada na folha de orçamento
-            </p>
+            <p className="text-xs text-muted-foreground text-center">Arquivos: PNG, JPEG ou JPG<br />Usada na folha de orçamento</p>
           </div>
 
-          {/* Product Form */}
           <div className="lg:col-span-2 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Nome do produto:</Label>
-                <Input
-                  value={formData.commercial_name}
-                  onChange={(e) => setFormData({ ...formData, commercial_name: e.target.value })}
-                  placeholder="Nome comercial do produto"
-                />
+                <Input value={formData.commercial_name} onChange={(e) => setFormData({ ...formData, commercial_name: e.target.value })} placeholder="Nome comercial" />
               </div>
               {product.product_template_id && (
                 <div className="space-y-2">
                   <Label>Template base:</Label>
-                  <div className="bg-muted/50 rounded-lg px-3 py-2 text-sm text-muted-foreground h-10 flex items-center">
-                    {product.product_template?.name}
-                  </div>
+                  <div className="bg-muted/50 rounded-lg px-3 py-2 text-sm text-muted-foreground h-10 flex items-center">{product.product_template?.name}</div>
                 </div>
               )}
             </div>
-
             <div className="space-y-2">
               <Label>Descritivo do produto: (opcional)</Label>
-              <Textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Descrição do produto"
-                rows={3}
-              />
+              <Textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Descrição" rows={3} />
             </div>
           </div>
         </div>
 
         {/* Product Config Panel */}
-        <ProductConfigPanel
-          config={configData}
-          onChange={setConfigData}
-          minWidth={(product as any).min_width}
-          maxWidth={(product as any).max_width}
-          minHeight={(product as any).min_height}
-          maxHeight={(product as any).max_height}
-        />
+        <ProductConfigPanel config={configData} onChange={setConfigData} minWidth={(product as any).min_width} maxWidth={(product as any).max_width} minHeight={(product as any).min_height} maxHeight={(product as any).max_height} />
+
+        {/* Pricing Selection */}
+        <Card className="border-primary/20">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <DollarSign className="h-4 w-4 text-primary" />
+              Forma de Precificação
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Label className="text-sm font-medium">Escolha como o preço será definido:</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild><Info className="w-4 h-4 text-muted-foreground cursor-help" /></TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p><strong>Preços Fixos:</strong> Você define manualmente o custo e o preço por m².<br/><strong>Por Composição:</strong> O sistema calcula o preço automaticamente baseado nos materiais abaixo.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+
+              <RadioGroup value={pricingType} onValueChange={setPricingType} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <label className={cn("flex flex-col items-center gap-2 p-4 border rounded-lg cursor-pointer transition-all", pricingType === 'fixed' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border hover:border-primary/50')}>
+                  <RadioGroupItem value="fixed" className="sr-only" />
+                  <DollarSign className={cn("w-6 h-6", pricingType === 'fixed' ? "text-primary" : "text-muted-foreground")} />
+                  <span className="font-semibold">Preços Fixos</span>
+                  <span className="text-xs text-muted-foreground text-center">Controle manual de custo e venda por m²</span>
+                </label>
+                <label className={cn("flex flex-col items-center gap-2 p-4 border rounded-lg cursor-pointer transition-all", pricingType === 'composition' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border hover:border-primary/50')}>
+                  <RadioGroupItem value="composition" className="sr-only" />
+                  <Calculator className={cn("w-6 h-6", pricingType === 'composition' ? "text-primary" : "text-muted-foreground")} />
+                  <span className="font-semibold">Por Composição</span>
+                  <span className="text-xs text-muted-foreground text-center">Cálculo dinâmico baseado nos materiais utilizados</span>
+                </label>
+              </RadioGroup>
+            </div>
+
+            {pricingType === 'fixed' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg border border-border/50">
+                <div className="space-y-2">
+                  <Label>Custo Referencial / m² (R$)</Label>
+                  <Input type="number" step="0.01" value={product.cost_per_sqm || 0} readOnly className="bg-muted" />
+                  <p className="text-[10px] text-muted-foreground">Clique em "Editar Preços" no topo ou na lista para alterar</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Preço de Venda / m² (R$)</Label>
+                  <Input type="number" step="0.01" value={product.price_per_sqm || 0} readOnly className="bg-muted font-bold text-primary" />
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Composition Sections */}
         <CompositionSections
           items={productItems || []}
-          onAddItem={(section) => {
-            setAddItemSection(section);
-            setIsAddItemDialogOpen(true);
-          }}
+          onAddItem={(section) => { setAddItemSection(section); setIsAddItemDialogOpen(true); }}
           onEditItem={handleEditItem}
           onRemoveItem={(itemId) => removeItemMutation.mutate(itemId)}
         />
 
-        {/* Composition-Based Pricing */}
-        <ProductCompositionPricing
-          productId={id!}
-          productItems={productItems || []}
-          currentCostPerSqm={(product as any)?.cost_per_sqm}
-          currentPricePerSqm={(product as any)?.price_per_sqm}
-          currentMargin={(product as any)?.margin_percent}
-        />
+        {/* Composition-Based Pricing (Visible if composition selected) */}
+        {pricingType === 'composition' && (
+          <ProductCompositionPricing
+            productId={id!}
+            productItems={productItems || []}
+            currentCostPerSqm={product.cost_per_sqm}
+            currentPricePerSqm={product.price_per_sqm}
+            currentMargin={product.margin_percent}
+          />
+        )}
       </div>
 
       {/* Add Item Dialog */}
@@ -776,109 +743,34 @@ export default function EditarProdutoEmpresa() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Adicionar {addItemSection === 'profile' ? 'Perfil' : addItemSection === 'glass' ? 'Vidro' : addItemSection === 'contramarco' ? 'Contramarco' : 'Componente'}</DialogTitle>
-            <DialogDescription>
-              Selecione um item e configure sua fórmula
-            </DialogDescription>
+            <DialogDescription>Selecione um item e configure sua fórmula</DialogDescription>
           </DialogHeader>
-
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Item:</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Pesquisar por nome ou linha..."
-                  value={itemSearchQuery}
-                  onChange={(e) => setItemSearchQuery(e.target.value)}
-                  className="pl-9"
-                />
+                <Input placeholder="Pesquisar..." value={itemSearchQuery} onChange={(e) => setItemSearchQuery(e.target.value)} className="pl-9" />
               </div>
               <ScrollArea className="h-[220px] rounded-lg border bg-muted/20 p-2">
                 <div className="space-y-1">
-                  {filteredAvailableItems.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-6">Nenhum item encontrado</p>
-                  ) : (
-                    filteredAvailableItems.map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => handleSelectItem(item.id)}
-                        className={cn(
-                          "w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-colors",
-                          selectedItemToAdd === item.id
-                            ? "bg-primary/10 border border-primary/30"
-                            : "hover:bg-muted"
-                        )}
-                      >
-                        <div className="w-8 h-8 rounded border bg-muted flex-shrink-0 flex items-center justify-center overflow-hidden">
-                          {item.image_url ? (
-                            <img
-                              src={getStorageUrl(item.image_url)}
-                              alt={item.name}
-                              className="w-full h-full object-contain"
-                              onError={(e) => {
-                                e.currentTarget.style.display = 'none';
-                                e.currentTarget.parentElement!.innerHTML = '<span class="text-xs text-muted-foreground/50">📦</span>';
-                              }}
-                            />
-                          ) : (
-                            <span className="text-xs text-muted-foreground/50">📦</span>
-                          )}
-                        </div>
-                        <span className="text-sm truncate flex-1">{item.name}</span>
-                        {item.type && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium flex-shrink-0">
-                            {item.type === 'profile' ? 'Perfil' : item.type === 'glass' ? 'Vidro' : item.type === 'accessory' ? 'Acessório' : item.type}
-                          </span>
-                        )}
-                        {item.linha && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground font-medium flex-shrink-0">
-                            {item.linha}
-                          </span>
-                        )}
-                        {item.default_formulas && item.default_formulas.length > 0 && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 font-medium flex-shrink-0">
-                            Fórmula
-                          </span>
-                        )}
-                      </button>
-                    ))
-                  )}
+                  {filteredAvailableItems.length === 0 ? <p className="text-sm text-muted-foreground text-center py-6">Vazio</p> : filteredAvailableItems.map((item) => (
+                    <button key={item.id} type="button" onClick={() => handleSelectItem(item.id)} className={cn("w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-colors", selectedItemToAdd === item.id ? "bg-primary/10 border border-primary/30" : "hover:bg-muted")}>
+                      <div className="w-8 h-8 rounded border bg-muted flex-shrink-0 flex items-center justify-center overflow-hidden">
+                        {item.image_url ? <img src={getStorageUrl(item.image_url)} alt={item.name} className="w-full h-full object-contain" /> : <span className="text-xs text-muted-foreground/50">📦</span>}
+                      </div>
+                      <span className="text-sm truncate flex-1">{item.name}</span>
+                      {item.linha && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground font-medium flex-shrink-0">{item.linha}</span>}
+                    </button>
+                  ))}
                 </div>
               </ScrollArea>
             </div>
-
-            {addItemSection === 'glass' ? (
-              <GlassFormulaEditor
-                widthFormula={widthFormula}
-                heightFormula={heightFormula}
-                onWidthFormulaChange={setWidthFormula}
-                onHeightFormulaChange={setHeightFormula}
-                showPiecesQuantity={true}
-                piecesQuantity={piecesQuantity}
-                onPiecesChange={setPiecesQuantity}
-              />
-            ) : (
-              <FormulaEditor
-                value={quantityFormula}
-                onChange={setQuantityFormula}
-                showPiecesQuantity={true}
-                piecesQuantity={piecesQuantity}
-                onPiecesChange={setPiecesQuantity}
-              />
-            )}
+            {addItemSection === 'glass' ? <GlassFormulaEditor widthFormula={widthFormula} heightFormula={heightFormula} onWidthFormulaChange={setWidthFormula} onHeightFormulaChange={setHeightFormula} showPiecesQuantity={true} piecesQuantity={piecesQuantity} onPiecesChange={setPiecesQuantity} /> : <FormulaEditor value={quantityFormula} onChange={setQuantityFormula} showPiecesQuantity={true} piecesQuantity={piecesQuantity} onPiecesChange={setPiecesQuantity} />}
           </div>
-
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddItemDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button 
-              onClick={() => addItemMutation.mutate()} 
-              disabled={!selectedItemToAdd || addItemMutation.isPending}
-            >
-              {addItemMutation.isPending ? 'Adicionando...' : 'Adicionar'}
-            </Button>
+            <Button variant="outline" onClick={() => setIsAddItemDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={() => addItemMutation.mutate()} disabled={!selectedItemToAdd || addItemMutation.isPending}>{addItemMutation.isPending ? 'Adicionando...' : 'Adicionar'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -886,49 +778,13 @@ export default function EditarProdutoEmpresa() {
       {/* Edit Item Dialog */}
       <Dialog open={isEditItemDialogOpen} onOpenChange={setIsEditItemDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Editar Item</DialogTitle>
-            <DialogDescription>
-              {editingItem?.item_template?.name || editingItem?.company_item?.name}
-            </DialogDescription>
-          </DialogHeader>
-
+          <DialogHeader><DialogTitle>Editar Item</DialogTitle><DialogDescription>{editingItem?.item_template?.name || editingItem?.company_item?.name}</DialogDescription></DialogHeader>
           <div className="space-y-4">
-            {(editingItem?.item_template?.type === 'glass' || editingItem?.company_item?.type === 'glass') ? (
-              <GlassFormulaEditor
-                widthFormula={widthFormula}
-                heightFormula={heightFormula}
-                onWidthFormulaChange={setWidthFormula}
-                onHeightFormulaChange={setHeightFormula}
-                showPiecesQuantity={true}
-                piecesQuantity={piecesQuantity}
-                onPiecesChange={setPiecesQuantity}
-                piecesFormula={piecesFormula}
-                onPiecesFormulaChange={setPiecesFormula}
-              />
-            ) : (
-              <FormulaEditor
-                value={quantityFormula}
-                onChange={setQuantityFormula}
-                showPiecesQuantity={true}
-                piecesQuantity={piecesQuantity}
-                onPiecesChange={setPiecesQuantity}
-                piecesFormula={piecesFormula}
-                onPiecesFormulaChange={setPiecesFormula}
-              />
-            )}
+            {(editingItem?.item_template?.type === 'glass' || editingItem?.company_item?.type === 'glass') ? <GlassFormulaEditor widthFormula={widthFormula} heightFormula={heightFormula} onWidthFormulaChange={setWidthFormula} onHeightFormulaChange={setHeightFormula} showPiecesQuantity={true} piecesQuantity={piecesQuantity} onPiecesChange={setPiecesQuantity} piecesFormula={piecesFormula} onPiecesFormulaChange={setPiecesFormula} /> : <FormulaEditor value={quantityFormula} onChange={setQuantityFormula} showPiecesQuantity={true} piecesQuantity={piecesQuantity} onPiecesChange={setPiecesQuantity} piecesFormula={piecesFormula} onPiecesFormulaChange={setPiecesFormula} />}
           </div>
-
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditItemDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button 
-              onClick={() => updateItemMutation.mutate()} 
-              disabled={updateItemMutation.isPending}
-            >
-              {updateItemMutation.isPending ? 'Salvando...' : 'Salvar'}
-            </Button>
+            <Button variant="outline" onClick={() => setIsEditItemDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={() => updateItemMutation.mutate()} disabled={updateItemMutation.isPending}>{updateItemMutation.isPending ? 'Salvando...' : 'Salvar'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -937,32 +793,15 @@ export default function EditarProdutoEmpresa() {
       <AlertDialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-primary">
-              <RotateCcw className="w-5 h-5" />
-              Re-sincronizar Componentes do Template
-            </AlertDialogTitle>
+            <AlertDialogTitle className="flex items-center gap-2 text-primary"><RotateCcw className="w-5 h-5" /> Re-sincronizar Template</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
-              <p>
-                Esta ação irá <strong>restaurar todos os componentes (perfis, vidros, acessórios)</strong> 
-                a partir do template original, garantindo que a composição fique completa.
-              </p>
-              <p className="text-destructive font-medium">
-                Componentes personalizados serão substituídos pelos do template!
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Use quando a composição estiver incompleta ou inconsistente.
-              </p>
+              <p>Restaura os componentes do template original.</p>
+              <p className="text-destructive font-medium">Componentes personalizados serão substituídos!</p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
-              className="bg-primary hover:bg-primary/90"
-              onClick={() => resetProductMutation.mutate()}
-              disabled={resetProductMutation.isPending}
-            >
-              {resetProductMutation.isPending ? 'Sincronizando...' : 'Confirmar Re-sincronização'}
-            </AlertDialogAction>
+            <AlertDialogAction className="bg-primary hover:bg-primary/90" onClick={() => resetProductMutation.mutate()} disabled={resetProductMutation.isPending}>{resetProductMutation.isPending ? 'Sincronizando...' : 'Confirmar'}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -972,34 +811,14 @@ export default function EditarProdutoEmpresa() {
         <div className="px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
           <Button variant="outline" onClick={() => {
             const linha = product?.linha || product?.product_template?.linha;
-            if (linha) {
-              navigate(`/produtos/linha/${linha}`);
-            } else {
-              navigate('/produtos');
-            }
-          }} className="gap-2">
-            <ArrowLeft className="w-4 h-4" />
-            Voltar
-          </Button>
+            if (linha) navigate(`/produtos/linha/${linha}`); else navigate('/produtos');
+          }} className="gap-2"><ArrowLeft className="w-4 h-4" /> Voltar</Button>
           <div className="flex gap-2">
-            {canReset && (
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="gap-2 hidden sm:inline-flex"
-                onClick={() => setIsResetDialogOpen(true)}
-              >
-                <RotateCcw className="w-4 h-4" />
-                Re-sincronizar
-              </Button>
-            )}
-            <Button onClick={() => saveProductMutation.mutate()} disabled={saveProductMutation.isPending}>
-              {saveProductMutation.isPending ? 'Salvando...' : 'Salvar Alterações'}
-            </Button>
+            {canReset && <Button variant="outline" size="sm" className="gap-2 hidden sm:inline-flex" onClick={() => setIsResetDialogOpen(true)}><RotateCcw className="w-4 h-4" /> Re-sincronizar</Button>}
+            <Button onClick={() => saveProductMutation.mutate()} disabled={saveProductMutation.isPending}>{saveProductMutation.isPending ? 'Salvando...' : 'Salvar Alterações'}</Button>
           </div>
         </div>
       </div>
-
     </MainLayout>
   );
 }

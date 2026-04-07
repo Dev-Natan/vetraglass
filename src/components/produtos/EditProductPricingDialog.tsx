@@ -9,10 +9,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, DollarSign, Package, GlassWater, Info, Palette } from 'lucide-react';
+import { Loader2, DollarSign, Package, Info, Calculator } from 'lucide-react';
 import { toast } from 'sonner';
-import { ProductGlassPricesSection } from './ProductGlassPricesSection';
-import { ProductAluminumPricesSection } from './ProductAluminumPricesSection';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -36,7 +34,7 @@ export function EditProductPricingDialog({
   const queryClient = useQueryClient();
   const [costPerSqm, setCostPerSqm] = useState<string>('');
   const [pricePerSqm, setPricePerSqm] = useState<string>('');
-  const [pricingType, setPricingType] = useState<string>('none');
+  const [pricingType, setPricingType] = useState<string>('fixed');
 
   const { data: companyProduct, isLoading: loadingProduct } = useQuery({
     queryKey: ['company-product-pricing', companyProductId],
@@ -57,12 +55,10 @@ export function EditProductPricingDialog({
       setCostPerSqm(String(companyProduct.cost_per_sqm || ''));
       setPricePerSqm(String(companyProduct.price_per_sqm || ''));
       const pt = (companyProduct as any).pricing_type;
-      if (pt && pt !== 'none') {
-        setPricingType(pt);
-      } else if (companyProduct.uses_glass) {
-        setPricingType('glass');
+      if (pt === 'composition') {
+        setPricingType('composition');
       } else {
-        setPricingType('none');
+        setPricingType('fixed');
       }
     }
   }, [companyProduct, open]);
@@ -75,7 +71,7 @@ export function EditProductPricingDialog({
         .update({
           cost_per_sqm: parseFloat(costPerSqm) || 0,
           price_per_sqm: parseFloat(pricePerSqm) || 0,
-          uses_glass: pricingType === 'glass',
+          uses_glass: false,
           pricing_type: pricingType,
           updated_at: new Date().toISOString(),
         } as any)
@@ -134,11 +130,56 @@ export function EditProductPricingDialog({
           </div>
         ) : (
           <div className="space-y-6">
+            {/* Tipo de Precificação */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Label className="text-sm font-medium">Forma de Precificação</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>Escolha como o preço deste produto é definido: Preços Fixos (definidos manualmente) ou Por Composição (calculados automaticamente pelos materiais).</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+
+              <RadioGroup value={pricingType} onValueChange={setPricingType} className="grid grid-cols-2 gap-3">
+                <label
+                  className={`flex flex-col items-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${
+                    pricingType === 'fixed' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+                  }`}
+                >
+                  <RadioGroupItem value="fixed" className="sr-only" />
+                  <DollarSign className="w-5 h-5 text-muted-foreground" />
+                  <span className="text-xs font-medium text-center">Preços Fixos</span>
+                  <span className="text-[10px] text-muted-foreground text-center">Defina o preço manualmente</span>
+                </label>
+                <label
+                  className={`flex flex-col items-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${
+                    pricingType === 'composition' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+                  }`}
+                >
+                  <RadioGroupItem value="composition" className="sr-only" />
+                  <Calculator className="w-5 h-5 text-muted-foreground" />
+                  <span className="text-xs font-medium text-center">Por Composição</span>
+                  <span className="text-[10px] text-muted-foreground text-center">Calculado por materiais</span>
+                </label>
+              </RadioGroup>
+            </div>
+
+            <Separator />
+
             {/* Preço Base do Produto */}
             <div className="space-y-4">
               <h3 className="text-sm font-medium flex items-center gap-2">
-                <Package className="w-4 h-4" />
-                Preço Base do Produto (Perfis e Componentes)
+                {pricingType === 'fixed' ? (
+                  <><DollarSign className="w-4 h-4" /> Preços Manuais</>
+                ) : (
+                  <><Calculator className="w-4 h-4" /> Valores Referenciais (Base)</>
+                )}
               </h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -154,82 +195,18 @@ export function EditProductPricingDialog({
               </div>
               {(parseFloat(pricePerSqm) > 0 || parseFloat(costPerSqm) > 0) && (
                 <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                  <span className="text-sm text-muted-foreground">Margem base:</span>
+                  <span className="text-sm text-muted-foreground">Margem:</span>
                   <Badge variant={margin >= 30 ? 'default' : margin >= 15 ? 'secondary' : 'destructive'}>
                     {margin.toFixed(1)}%
                   </Badge>
                 </div>
               )}
+              {pricingType === 'composition' && (
+                <p className="text-xs text-muted-foreground bg-primary/5 p-3 rounded-lg border border-primary/10">
+                  <strong>Dica:</strong> Na página de edição do produto, você pode usar o calculador automático para atualizar estes valores baseado nos itens de composição.
+                </p>
+              )}
             </div>
-
-            <Separator />
-
-            {/* Pricing Type Selector */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Label className="text-sm font-medium">Tipo de precificação variável</Label>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="w-4 h-4 text-muted-foreground cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">
-                      <p>Escolha como o preço final deste produto é definido: fixo, pela cor do vidro, ou pela cor do alumínio.</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-
-              <RadioGroup value={pricingType} onValueChange={setPricingType} className="grid grid-cols-3 gap-3">
-                <label
-                  className={`flex flex-col items-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${
-                    pricingType === 'none' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
-                  }`}
-                >
-                  <RadioGroupItem value="none" className="sr-only" />
-                  <Package className="w-5 h-5 text-muted-foreground" />
-                  <span className="text-xs font-medium text-center">Preço Fixo</span>
-                  <span className="text-[10px] text-muted-foreground text-center">Sem variação por cor</span>
-                </label>
-                <label
-                  className={`flex flex-col items-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${
-                    pricingType === 'glass' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
-                  }`}
-                >
-                  <RadioGroupItem value="glass" className="sr-only" />
-                  <GlassWater className="w-5 h-5 text-muted-foreground" />
-                  <span className="text-xs font-medium text-center">Por Vidro</span>
-                  <span className="text-[10px] text-muted-foreground text-center">Varia por cor/espessura do vidro</span>
-                </label>
-                <label
-                  className={`flex flex-col items-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${
-                    pricingType === 'aluminum' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
-                  }`}
-                >
-                  <RadioGroupItem value="aluminum" className="sr-only" />
-                  <Palette className="w-5 h-5 text-muted-foreground" />
-                  <span className="text-xs font-medium text-center">Por Cor do Alumínio</span>
-                  <span className="text-[10px] text-muted-foreground text-center">Porta branca vs preta vs amadeirada</span>
-                </label>
-              </RadioGroup>
-            </div>
-
-            {/* Glass Prices Section */}
-            {pricingType === 'glass' && companyProductId && (
-              <ProductGlassPricesSection
-                companyProductId={companyProductId}
-                productName={productName}
-                usesGlass={true}
-              />
-            )}
-
-            {/* Aluminum Prices Section */}
-            {pricingType === 'aluminum' && companyProductId && (
-              <ProductAluminumPricesSection
-                companyProductId={companyProductId}
-                productName={productName}
-              />
-            )}
           </div>
         )}
 
@@ -241,7 +218,7 @@ export function EditProductPricingDialog({
             {saveMutation.isPending ? (
               <><Loader2 className="w-4 h-4 animate-spin mr-2" />Salvando...</>
             ) : (
-              'Salvar Preços'
+              'Salvar Configuração'
             )}
           </Button>
         </DialogFooter>

@@ -197,9 +197,10 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   ];
 
   // Get pricing type for the product
-  const pricingType = companyProduct?.pricing_type || (companyProduct?.uses_glass ? 'glass' : 'none');
+  const pricingType = companyProduct?.pricing_type || (companyProduct?.uses_glass ? 'glass' : 'fixed');
   const productUsesGlass = pricingType === 'glass';
   const productUsesAluminum = pricingType === 'aluminum';
+  const productUsesComposition = pricingType === 'composition';
   const hasGlassPrices = (productGlassPrices?.length || 0) > 0;
 
   // Fetch aluminum color prices (only when product uses aluminum pricing)
@@ -273,10 +274,10 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
 
   // Calculate prices: use composition when available, otherwise area × price/m²
   const area = width && height ? (width / 1000) * (height / 1000) : 0;
-  const unitPrice = compositionPricing.isReady
+  const unitPrice = (productUsesComposition && compositionPricing.isReady)
     ? compositionPricing.compositionCostPerUnit
     : (area > 0 ? basePrice * area : 0);
-  const totalPrice = compositionPricing.isReady
+  const totalPrice = (productUsesComposition && compositionPricing.isReady)
     ? compositionPricing.totalCost
     : unitPrice * quantity;
 
@@ -311,7 +312,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
       product_template_id: selectedProduct.is_custom ? null : selectedProduct.product_template_id,
       company_product_id: companyProduct?.id,
       name: selectedProduct.name,
-      base_price: compositionPricing.isReady ? compositionPricing.compositionCostPerSqm : basePrice,
+      base_price: (productUsesComposition && compositionPricing.isReady) ? compositionPricing.compositionCostPerSqm : basePrice,
       image_url: selectedProduct.image_url,
       linha: selectedProduct.linha,
       category: selectedProduct.category,
