@@ -57,12 +57,10 @@ export function EditProductPricingDialog({
       setCostPerSqm(String(companyProduct.cost_per_sqm || ''));
       setPricePerSqm(String(companyProduct.price_per_sqm || ''));
       const pt = (companyProduct as any).pricing_type;
-      if (pt && pt !== 'none') {
-        setPricingType(pt);
-      } else if (companyProduct.uses_glass) {
-        setPricingType('glass');
+      if (pt === 'composition') {
+        setPricingType('composition');
       } else {
-        setPricingType('none');
+        setPricingType('fixed');
       }
     }
   }, [companyProduct, open]);
