@@ -712,12 +712,24 @@ export default function EditarProdutoEmpresa() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg border border-border/50">
                 <div className="space-y-2">
                   <Label>Custo Referencial / m² (R$)</Label>
-                  <Input type="number" step="0.01" value={product.cost_per_sqm || 0} readOnly className="bg-muted" />
-                  <p className="text-[10px] text-muted-foreground">Clique em "Editar Preços" no topo ou na lista para alterar</p>
+                  <Input 
+                    type="number" 
+                    step="0.01" 
+                    value={costPerSqm || 0} 
+                    onChange={(e) => setCostPerSqm(Number(e.target.value) || 0)} 
+                  />
+                  <p className="text-[10px] text-muted-foreground">O custo definido manualmente aqui será o usado no orçamento</p>
                 </div>
                 <div className="space-y-2">
                   <Label>Preço de Venda / m² (R$)</Label>
-                  <Input type="number" step="0.01" value={product.price_per_sqm || 0} readOnly className="bg-muted font-bold text-primary" />
+                  <Input 
+                    type="number" 
+                    step="0.01" 
+                    value={pricePerSqm || 0} 
+                    onChange={(e) => setPricePerSqm(Number(e.target.value) || 0)} 
+                    className="font-bold text-primary" 
+                  />
+                  <p className="text-[10px] text-muted-foreground">O preço de venda por m² usado no orçamento</p>
                 </div>
               </div>
             )}
