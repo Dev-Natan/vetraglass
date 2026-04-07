@@ -162,52 +162,42 @@ export function EditProductPricingDialog({
 
             <Separator />
 
-            {/* Pricing Type Selector */}
+            {/* Tipo de Precificação */}
             <div className="space-y-3">
               <div className="flex items-center gap-2">
-                <Label className="text-sm font-medium">Tipo de precificação variável</Label>
+                <Label className="text-sm font-medium">Forma de Precificação</Label>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Info className="w-4 h-4 text-muted-foreground cursor-help" />
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
-                      <p>Escolha como o preço final deste produto é definido: fixo, pela cor do vidro, ou pela cor do alumínio.</p>
+                      <p>Escolha como o preço deste produto é definido: Preços Fixos (definidos manualmente) ou Por Composição (calculados automaticamente pelos materiais).</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </div>
 
-              <RadioGroup value={pricingType} onValueChange={setPricingType} className="grid grid-cols-3 gap-3">
+              <RadioGroup value={pricingType} onValueChange={setPricingType} className="grid grid-cols-2 gap-3">
                 <label
                   className={`flex flex-col items-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${
-                    pricingType === 'none' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+                    pricingType === 'fixed' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
                   }`}
                 >
-                  <RadioGroupItem value="none" className="sr-only" />
-                  <Package className="w-5 h-5 text-muted-foreground" />
-                  <span className="text-xs font-medium text-center">Preço Fixo</span>
-                  <span className="text-[10px] text-muted-foreground text-center">Sem variação por cor</span>
+                  <RadioGroupItem value="fixed" className="sr-only" />
+                  <DollarSign className="w-5 h-5 text-muted-foreground" />
+                  <span className="text-xs font-medium text-center">Preços Fixos</span>
+                  <span className="text-[10px] text-muted-foreground text-center">Defina o preço manualmente</span>
                 </label>
                 <label
                   className={`flex flex-col items-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${
-                    pricingType === 'glass' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+                    pricingType === 'composition' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
                   }`}
                 >
-                  <RadioGroupItem value="glass" className="sr-only" />
-                  <GlassWater className="w-5 h-5 text-muted-foreground" />
-                  <span className="text-xs font-medium text-center">Por Vidro</span>
-                  <span className="text-[10px] text-muted-foreground text-center">Varia por cor/espessura do vidro</span>
-                </label>
-                <label
-                  className={`flex flex-col items-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${
-                    pricingType === 'aluminum' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
-                  }`}
-                >
-                  <RadioGroupItem value="aluminum" className="sr-only" />
-                  <Palette className="w-5 h-5 text-muted-foreground" />
-                  <span className="text-xs font-medium text-center">Por Cor do Alumínio</span>
-                  <span className="text-[10px] text-muted-foreground text-center">Porta branca vs preta vs amadeirada</span>
+                  <RadioGroupItem value="composition" className="sr-only" />
+                  <Calculator className="w-5 h-5 text-muted-foreground" />
+                  <span className="text-xs font-medium text-center">Por Composição</span>
+                  <span className="text-[10px] text-muted-foreground text-center">Calculado por materiais</span>
                 </label>
               </RadioGroup>
             </div>
