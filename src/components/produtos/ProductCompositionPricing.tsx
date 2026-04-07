@@ -14,6 +14,7 @@ import { useState } from 'react';
 
 interface ProductCompositionPricingProps {
   productId: string;
+  onSuccess?: (cost: number, price: number) => void;
   productItems: Array<{
     id: string;
     item_template_id: string | null;
