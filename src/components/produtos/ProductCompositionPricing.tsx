@@ -334,7 +334,11 @@ export function ProductCompositionPricing({
               </div>
               <Button
                 size="sm"
-                onClick={() => savePricingMutation.mutate()}
+                onClick={() => {
+                  if (confirm('Isso irá sobrescrever o preço de venda atual do produto. Deseja continuar?')) {
+                    savePricingMutation.mutate();
+                  }
+                }}
                 disabled={savePricingMutation.isPending}
                 className="gap-2"
               >
