@@ -36,7 +36,7 @@ export function EditProductPricingDialog({
   const queryClient = useQueryClient();
   const [costPerSqm, setCostPerSqm] = useState<string>('');
   const [pricePerSqm, setPricePerSqm] = useState<string>('');
-  const [pricingType, setPricingType] = useState<string>('none');
+  const [pricingType, setPricingType] = useState<string>('fixed');
 
   const { data: companyProduct, isLoading: loadingProduct } = useQuery({
     queryKey: ['company-product-pricing', companyProductId],
