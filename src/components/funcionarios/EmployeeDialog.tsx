@@ -506,7 +506,7 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
                         type={showPassword ? 'text' : 'password'}
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        placeholder="Mínimo 6 caracteres"
+                        placeholder="Mínimo 10 caracteres"
                         autoComplete="new-password"
                         className="pr-10"
                       />
@@ -524,6 +524,9 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
                         )}
                       </Button>
                     </div>
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      Deve conter 10+ caracteres, letra maiúscula, minúscula, número e símbolo.
+                    </p>
                   </div>
 
                   <div className="space-y-2">
