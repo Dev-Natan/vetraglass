@@ -192,8 +192,20 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
         setPasswordError('Senha é obrigatória');
         return false;
       }
-      if (formData.password.length < 6) {
-        setPasswordError('Senha deve ter pelo menos 6 caracteres');
+      if (formData.password.length < 8) {
+        setPasswordError('Senha deve ter pelo menos 8 caracteres');
+        return false;
+      }
+      if (!/[A-Z]/.test(formData.password)) {
+        setPasswordError('Senha deve conter pelo menos uma letra maiúscula');
+        return false;
+      }
+      if (!/[a-z]/.test(formData.password)) {
+        setPasswordError('Senha deve conter pelo menos uma letra minúscula');
+        return false;
+      }
+      if (!/[0-9]/.test(formData.password)) {
+        setPasswordError('Senha deve conter pelo menos um número');
         return false;
       }
       if (formData.password !== formData.confirmPassword) {
