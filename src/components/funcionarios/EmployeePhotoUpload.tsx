@@ -119,7 +119,10 @@ export function EmployeePhotoUpload({
     setUploading(true);
 
     try {
-      const path = photoUrl.split('/employee-photos/')[1];
+      // Support both legacy full URLs and new path-based storage
+      const path = photoUrl.startsWith('http')
+        ? photoUrl.split('/employee-photos/')[1]
+        : photoUrl;
       if (path) {
         await supabase.storage.from('employee-photos').remove([path]);
       }
