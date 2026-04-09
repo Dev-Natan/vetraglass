@@ -76,12 +76,8 @@ export function EmployeePhotoUpload({
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('employee-photos')
-        .getPublicUrl(fileName);
-
-      onPhotoChange(publicUrl);
+      // Store the file path (not public URL since bucket is private)
+      onPhotoChange(fileName);
       toast.success('Foto atualizada!');
     } catch (error: any) {
       console.error('Error uploading photo:', error);

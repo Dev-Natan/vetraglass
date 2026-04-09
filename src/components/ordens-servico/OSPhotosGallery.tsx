@@ -201,8 +201,11 @@ export function OSPhotosGallery({ ordemServicoId }: OSPhotosGalleryProps) {
     }
   };
 
-  const getPhotoUrl = (filePath: string) => {
-    return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/os-photos/${filePath}`;
+  const getPhotoUrl = async (filePath: string) => {
+    const { data } = await supabase.storage
+      .from('os-photos')
+      .createSignedUrl(filePath, 3600);
+    return data?.signedUrl || '';
   };
 
   const handleDownload = (photo: OSPhoto) => {
