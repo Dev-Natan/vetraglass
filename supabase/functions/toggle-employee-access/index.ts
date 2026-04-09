@@ -19,6 +19,14 @@ serve(async (req: Request): Promise<Response> => {
   }
 
   try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Não autorizado" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
     const { employeeId, userId, isActive }: ToggleEmployeeAccessRequest = await req.json();
 
     if (!employeeId || !userId) {
@@ -33,16 +41,71 @@ serve(async (req: Request): Promise<Response> => {
 
     console.log(`Toggling access for employee ${employeeId}, user ${userId}, isActive: ${isActive}`);
 
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+    // 1. Identify requester and verify permissions
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+      auth: { persistSession: false },
+    });
+
+    const { data: { user }, error: userError } = await userClient.auth.getUser();
+    if (userError || !user) {
+      return new Response(JSON.stringify({ error: "Sessão inválida. Faça login novamente." }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+
+    // 2. Get company for this employee to check requester's permission
+    const { data: employeeData, error: employeeError } = await supabaseAdmin
+      .from("employees")
+      .select("company_id")
+      .eq("id", employeeId)
+      .maybeSingle();
+
+    if (employeeError || !employeeData) {
+      return new Response(JSON.stringify({ error: "Funcionário não encontrado." }), {
+        status: 404,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    // 3. Check if requester has admin/manager permissions in that company
+    const { data: userCompany, error: checkError } = await supabaseAdmin
+      .from("user_companies")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("company_id", employeeData.company_id)
+      .eq("is_active", true)
+      .in("role", ["admin", "manager"])
+      .maybeSingle();
+
+    if (checkError || !userCompany) {
+      // Check if they are a SaaS Admin
+      const { data: saasAdmin } = await supabaseAdmin
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "saas_admin")
+        .maybeSingle();
+
+      if (!saasAdmin) {
+        return new Response(JSON.stringify({ error: "Você não tem permissão para gerenciar este funcionário." }), {
+          status: 403,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
       }
-    );
+    }
 
     // Update user_companies to reflect active status
     const { error: userCompanyError } = await supabaseAdmin
