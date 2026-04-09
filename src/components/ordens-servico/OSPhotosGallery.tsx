@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -201,12 +201,36 @@ export function OSPhotosGallery({ ordemServicoId }: OSPhotosGalleryProps) {
     }
   };
 
+  // Generate signed URLs for all photos
+  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!photos || photos.length === 0) return;
+    const generateUrls = async () => {
+      const urls: Record<string, string> = {};
+      for (const photo of photos) {
+        const { data } = await supabase.storage
+          .from('os-photos')
+          .createSignedUrl(photo.file_path, 3600);
+        if (data?.signedUrl) urls[photo.file_path] = data.signedUrl;
+      }
+      setSignedUrls(urls);
+    };
+    generateUrls();
+  }, [photos]);
+
   const getPhotoUrl = (filePath: string) => {
-    return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/os-photos/${filePath}`;
+    return signedUrls[filePath] || '';
   };
 
-  const handleDownload = (photo: OSPhoto) => {
-    const url = getPhotoUrl(photo.file_path);
+  const handleDownload = async (photo: OSPhoto) => {
+    let url = signedUrls[photo.file_path];
+    if (!url) {
+      const { data } = await supabase.storage
+        .from('os-photos')
+        .createSignedUrl(photo.file_path, 3600);
+      url = data?.signedUrl || '';
+    }
     const link = document.createElement('a');
     link.href = url;
     link.download = photo.file_name;

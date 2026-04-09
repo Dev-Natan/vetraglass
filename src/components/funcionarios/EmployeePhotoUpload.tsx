@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Camera, Trash2, Loader2, User } from 'lucide-react';
@@ -24,7 +24,29 @@ export function EmployeePhotoUpload({
   disabled = false,
 }: EmployeePhotoUploadProps) {
   const [uploading, setUploading] = useState(false);
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Generate signed URL for display when photoUrl is a storage path (not a full URL)
+  useEffect(() => {
+    if (!photoUrl) {
+      setSignedUrl(null);
+      return;
+    }
+    // If it's already a full URL (legacy), use it directly
+    if (photoUrl.startsWith('http')) {
+      setSignedUrl(photoUrl);
+      return;
+    }
+    // Otherwise generate a signed URL
+    const generateSignedUrl = async () => {
+      const { data } = await supabase.storage
+        .from('employee-photos')
+        .createSignedUrl(photoUrl, 3600);
+      if (data?.signedUrl) setSignedUrl(data.signedUrl);
+    };
+    generateSignedUrl();
+  }, [photoUrl]);
 
   const getInitials = (name: string) => {
     return name
@@ -76,12 +98,8 @@ export function EmployeePhotoUpload({
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('employee-photos')
-        .getPublicUrl(fileName);
-
-      onPhotoChange(publicUrl);
+      // Store the file path (not public URL since bucket is private)
+      onPhotoChange(fileName);
       toast.success('Foto atualizada!');
     } catch (error: any) {
       console.error('Error uploading photo:', error);
@@ -101,7 +119,10 @@ export function EmployeePhotoUpload({
     setUploading(true);
 
     try {
-      const path = photoUrl.split('/employee-photos/')[1];
+      // Support both legacy full URLs and new path-based storage
+      const path = photoUrl.startsWith('http')
+        ? photoUrl.split('/employee-photos/')[1]
+        : photoUrl;
       if (path) {
         await supabase.storage.from('employee-photos').remove([path]);
       }
@@ -127,7 +148,7 @@ export function EmployeePhotoUpload({
       />
       
       <Avatar className="w-24 h-24 border-2 border-border">
-        <AvatarImage src={photoUrl || undefined} alt={employeeName} className="object-cover" />
+        <AvatarImage src={signedUrl || undefined} alt={employeeName} className="object-cover" />
         <AvatarFallback className="text-lg bg-primary/10 text-primary">
           {employeeName ? getInitials(employeeName) : <User className="w-8 h-8" />}
         </AvatarFallback>
