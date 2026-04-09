@@ -410,8 +410,35 @@ export async function generateQuotePdf(
     y = cardBodyStartY + cardBodyHeight + 8;
   }
   
+  // ========== OBSERVATIONS AND PAYMENT TERMS ==========
+  if (quote.notes || quote.payment_terms) {
+    if (y + 30 > pageHeight - 30) {
+      doc.addPage();
+      y = 15;
+    }
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(...textColor);
+    doc.text('OBSERVAÇÕES DO ORÇAMENTO', marginLeft, y);
+    y += 5;
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...mutedColor);
+    
+    const obsText = [];
+    if (quote.notes) obsText.push(quote.notes);
+    if (quote.payment_terms) obsText.push(`Condições de pagamento: ${quote.payment_terms}`);
+    
+    const fullText = obsText.join('\n\n');
+    const lines = doc.splitTextToSize(fullText, contentWidth);
+    doc.text(lines, marginLeft, y);
+    y += (lines.length * 5) + 10;
+  }
+
   // ========== TOTALS AND PAYMENT SECTION ==========
-  if (y + 50 > pageHeight - 15) {
+  if (y + 60 > pageHeight - 15) {
     doc.addPage();
     y = 15;
   }
