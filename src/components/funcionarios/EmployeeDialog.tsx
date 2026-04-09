@@ -192,8 +192,8 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
         setPasswordError('Senha é obrigatória');
         return false;
       }
-      if (formData.password.length < 8) {
-        setPasswordError('Senha deve ter pelo menos 8 caracteres');
+      if (formData.password.length < 10) {
+        setPasswordError('Senha deve ter pelo menos 10 caracteres');
         return false;
       }
       if (!/[A-Z]/.test(formData.password)) {
@@ -206,6 +206,10 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
       }
       if (!/[0-9]/.test(formData.password)) {
         setPasswordError('Senha deve conter pelo menos um número');
+        return false;
+      }
+      if (!/[!@#$%^&*(),.?":{}|<>]/.test(formData.password)) {
+        setPasswordError('Senha deve conter pelo menos um caractere especial (!@#$%^&*)');
         return false;
       }
       if (formData.password !== formData.confirmPassword) {
@@ -502,7 +506,7 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
                         type={showPassword ? 'text' : 'password'}
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        placeholder="Mínimo 6 caracteres"
+                        placeholder="Mínimo 10 caracteres"
                         autoComplete="new-password"
                         className="pr-10"
                       />
@@ -520,6 +524,9 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
                         )}
                       </Button>
                     </div>
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      Deve conter 10+ caracteres, letra maiúscula, minúscula, número e símbolo.
+                    </p>
                   </div>
 
                   <div className="space-y-2">

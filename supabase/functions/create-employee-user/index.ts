@@ -62,9 +62,9 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     // Validate password strength
-    if (password.length < 8) {
+    if (password.length < 10) {
       return new Response(
-        JSON.stringify({ error: "Senha deve ter pelo menos 8 caracteres" }),
+        JSON.stringify({ error: "Senha deve ter pelo menos 10 caracteres" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
@@ -83,6 +83,12 @@ serve(async (req: Request): Promise<Response> => {
     if (!/[0-9]/.test(password)) {
       return new Response(
         JSON.stringify({ error: "Senha deve conter pelo menos um número" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      return new Response(
+        JSON.stringify({ error: "Senha deve conter pelo menos um caractere especial (!@#$%^&*)" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
