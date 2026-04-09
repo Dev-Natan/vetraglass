@@ -95,17 +95,58 @@ serve(async (req: Request): Promise<Response> => {
 
     console.log(`Creating user for employee ${employeeName} (login: ${generatedLogin})`);
 
-    // Create admin client with service role key
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+    // 1. Identify requester and verify permissions
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+      auth: { persistSession: false },
+    });
+
+    const { data: { user }, error: userError } = await userClient.auth.getUser();
+    if (userError || !user) {
+      return new Response(JSON.stringify({ error: "Sessão inválida. Faça login novamente." }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    // 2. Admin client for privileged operations
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRole, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+
+    // 3. Check if requester has admin/manager permissions in the target company
+    const { data: userCompany, error: checkError } = await supabaseAdmin
+      .from("user_companies")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("company_id", companyId)
+      .eq("is_active", true)
+      .in("role", ["admin", "manager"])
+      .maybeSingle();
+
+    if (checkError || !userCompany) {
+      // Also check if they are a SaaS Admin
+      const { data: saasAdmin } = await supabaseAdmin
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "saas_admin")
+        .maybeSingle();
+
+      if (!saasAdmin) {
+        return new Response(JSON.stringify({ error: "Você não tem permissão para criar usuários nesta empresa." }), {
+          status: 403,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
       }
-    );
+    }
 
     // Generate internal email from generated login
     // Format: joaovetra@internal.vetra (simplificado e único)
