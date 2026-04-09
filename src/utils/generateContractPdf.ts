@@ -241,6 +241,11 @@ export async function generateContractPdf(
   
   writeParagraph('4.4 Fica eleito o foro de domicílio da contratada para discussão dos termos do presente contrato e cobrança dos valores dele derivados.');
 
+  // OBSERVATIONS
+  if (quote.notes) {
+    writeSection('OBSERVAÇÕES', quote.notes);
+  }
+
   // Closing
   checkPageBreak(30);
   yPos += 5;
