@@ -190,6 +190,7 @@ export default function ProductTemplates() {
   const [selectedItemToAdd, setSelectedItemToAdd] = useState("");
   const [quantityFormula, setQuantityFormula] = useState("1");
   const [piecesQuantity, setPiecesQuantity] = useState(1);
+  const [piecesFormula, setPiecesFormula] = useState<string | null>(null);
   const [widthFormula, setWidthFormula] = useState("");
   const [heightFormula, setHeightFormula] = useState("");
   const [glassName, setGlassName] = useState("");
@@ -632,6 +633,7 @@ export default function ProductTemplates() {
       item_template_id: string; 
       quantity_formula: string; 
       pieces_quantity: number;
+      pieces_formula?: string | null;
       cut_angle: number;
       is_optional: boolean;
       notes: string;
