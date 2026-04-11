@@ -62,8 +62,13 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedProductId, setSelectedProductId] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [width, setWidth] = useState<number>(0);
-  const [height, setHeight] = useState<number>(0);
+  const [width, setWidth] = useState<number>(0); // Produto
+  const [height, setHeight] = useState<number>(0); // Produto
+  const [vaoWidth, setVaoWidth] = useState<number>(0);
+  const [vaoHeight, setVaoHeight] = useState<number>(0);
+  const [folgaWidth, setFolgaWidth] = useState<number>(0);
+  const [folgaHeight, setFolgaHeight] = useState<number>(0);
+  const [useVao, setUseVao] = useState<boolean>(true);
   const [quantity, setQuantity] = useState<number>(1);
   const [customPrice, setCustomPrice] = useState<number | null>(null);
   const [hasGlass, setHasGlass] = useState<boolean>(true);
