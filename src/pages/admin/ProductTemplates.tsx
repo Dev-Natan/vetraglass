@@ -194,6 +194,7 @@ export default function ProductTemplates() {
   const [heightFormula, setHeightFormula] = useState("");
   const [glassName, setGlassName] = useState("");
   const [cutAngle, setCutAngle] = useState(90);
+  const [compositionSide, setCompositionSide] = useState<string>("");
   
   const [editingItem, setEditingItem] = useState<ProductTemplateItem | null>(null);
   const [isEditItemDialogOpen, setIsEditItemDialogOpen] = useState(false);
@@ -204,6 +205,7 @@ export default function ProductTemplates() {
   const [editHeightFormula, setEditHeightFormula] = useState("");
   const [editGlassName, setEditGlassName] = useState("");
   const [editCutAngle, setEditCutAngle] = useState(90);
+  const [editSide, setEditSide] = useState<string>("");
   
   const currentLinha = linhaParam ? decodeURIComponent(linhaParam) : null;
 
