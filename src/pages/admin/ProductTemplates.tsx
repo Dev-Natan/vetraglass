@@ -114,6 +114,11 @@ type ProductTemplateItem = {
   };
 };
 
+type DefaultFormula = {
+  formula: string;
+  position: string;
+};
+
 type ItemTemplate = {
   id: string;
   name: string;
@@ -256,7 +261,7 @@ export default function ProductTemplates() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("item_templates")
-        .select("id, name, type, unit, linha, image_url")
+        .select("id, name, type, unit, linha, image_url, default_formulas")
         .eq("is_active", true)
         .order("name");
       if (error) throw error;
@@ -533,7 +538,6 @@ export default function ProductTemplates() {
         .single();
       if (error) throw error;
       
-      // Copy items
       if (compositionItems) {
         const itemsToCopy = compositionItems.map(item => ({
           product_template_id: data.id,
