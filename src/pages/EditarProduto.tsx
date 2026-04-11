@@ -1138,6 +1138,11 @@ export default function EditarProduto() {
                     heightFormula={heightFormula}
                     onWidthFormulaChange={setWidthFormula}
                     onHeightFormulaChange={setHeightFormula}
+                    showPiecesQuantity={true}
+                    piecesQuantity={piecesQuantity}
+                    onPiecesChange={setPiecesQuantity}
+                    piecesFormula={piecesFormula}
+                    onPiecesFormulaChange={setPiecesFormula}
                   />
 
                   <FormulaEditor

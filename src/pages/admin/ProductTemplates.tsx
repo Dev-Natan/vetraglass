@@ -402,6 +402,7 @@ export default function ProductTemplates() {
     setSelectedItemToAdd("");
     setQuantityFormula("1");
     setPiecesQuantity(1);
+    setPiecesFormula(null);
     setWidthFormula("");
     setHeightFormula("");
     setGlassName("");
@@ -1256,6 +1257,11 @@ export default function ProductTemplates() {
                         heightFormula={heightFormula}
                         onWidthFormulaChange={setWidthFormula}
                         onHeightFormulaChange={setHeightFormula}
+                        showPiecesQuantity={true}
+                        piecesQuantity={piecesQuantity}
+                        onPiecesChange={setPiecesQuantity}
+                        piecesFormula={piecesFormula}
+                        onPiecesFormulaChange={setPiecesFormula}
                       />
                     </>
                   ) : (
@@ -1265,6 +1271,8 @@ export default function ProductTemplates() {
                       showPiecesQuantity={compositionActiveTab === 'profile'}
                       piecesQuantity={piecesQuantity}
                       onPiecesChange={setPiecesQuantity}
+                      piecesFormula={piecesFormula}
+                      onPiecesFormulaChange={setPiecesFormula}
                     />
                   )}
 
