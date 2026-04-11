@@ -205,6 +205,10 @@ export default function ProductTemplates() {
   
   const currentLinha = linhaParam ? decodeURIComponent(linhaParam) : null;
 
+  const [formImageFile, setFormImageFile] = useState<File | null>(null);
+  const [formImagePreview, setFormImagePreview] = useState<string | null>(null);
+  const [isUploadingFormImage, setIsUploadingFormImage] = useState(false);
+
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -216,6 +220,11 @@ export default function ProductTemplates() {
     max_height: "",
     is_active: true,
     is_ready: false,
+    base_price: "",
+    ncm: "",
+    cest: "",
+    cfop_venda: "",
+    origem: "",
   });
 
   const clearCompositionDraft = () => {
@@ -395,6 +404,8 @@ export default function ProductTemplates() {
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
     setEditingTemplate(null);
+    setFormImageFile(null);
+    setFormImagePreview(null);
     setFormData({
       name: "",
       description: "",
@@ -406,11 +417,18 @@ export default function ProductTemplates() {
       max_height: "",
       is_active: true,
       is_ready: false,
+      base_price: "",
+      ncm: "",
+      cest: "",
+      cfop_venda: "",
+      origem: "",
     });
   };
 
   const handleEdit = (template: ProductTemplate) => {
     setEditingTemplate(template);
+    setFormImageFile(null);
+    setFormImagePreview(resolveImageUrl(template.image_url) || null);
     setFormData({
       name: template.name,
       description: (template.description || "").replace("[PRONTO]", "").trim(),
@@ -422,6 +440,11 @@ export default function ProductTemplates() {
       max_height: template.max_height?.toString() || "",
       is_active: template.is_active,
       is_ready: template.description?.includes("[PRONTO]") || false,
+      base_price: (template as any).base_price?.toString() || "",
+      ncm: (template as any).ncm || "",
+      cest: (template as any).cest || "",
+      cfop_venda: (template as any).cfop_venda || "",
+      origem: (template as any).origem || "",
     });
     setIsDialogOpen(true);
   };
@@ -456,7 +479,14 @@ export default function ProductTemplates() {
         min_height: data.min_height ? parseFloat(data.min_height) : null,
         max_height: data.max_height ? parseFloat(data.max_height) : null,
         is_active: data.is_active,
+        base_price: data.base_price ? parseFloat(data.base_price) : null,
+        ncm: data.ncm || null,
+        cest: data.cest || null,
+        cfop_venda: data.cfop_venda || null,
+        origem: data.origem || null,
       };
+
+      let savedId = data.id;
 
       if (data.id) {
         const { error } = await supabase
@@ -465,8 +495,22 @@ export default function ProductTemplates() {
           .eq("id", data.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("product_templates").insert(payload as never);
+        const { data: inserted, error } = await supabase.from("product_templates").insert(payload as never).select("id").single();
         if (error) throw error;
+        savedId = inserted.id;
+      }
+
+      // Upload image if a new file was selected
+      if (formImageFile && savedId) {
+        const processedFile = await processFileWithWhiteBackground(formImageFile);
+        const fileName = `${savedId}.png`;
+        const { error: uploadError } = await supabase.storage
+          .from('product-templates')
+          .upload(fileName, processedFile, { upsert: true, contentType: 'image/png', cacheControl: '0' });
+        if (uploadError) throw uploadError;
+        const { data: urlData } = supabase.storage.from('product-templates').getPublicUrl(fileName);
+        const newUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+        await supabase.from('product_templates').update({ image_url: newUrl }).eq('id', savedId);
       }
     },
     onSuccess: () => {
