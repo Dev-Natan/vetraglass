@@ -1117,7 +1117,7 @@ export default function ProductTemplates() {
               </details>
 
               {/* Toggles */}
-              <div className="flex gap-6 pt-2 border-t">
+              <div className="flex flex-wrap gap-6 pt-2 border-t">
                 <div className="flex items-center space-x-2">
                   <Switch
                     id="is_active"
@@ -1135,6 +1135,17 @@ export default function ProductTemplates() {
                   <Label htmlFor="is_ready" className="text-sm flex items-center gap-1">
                     <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                     Pronto/Completo
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="has_multiple_sides"
+                    checked={formData.has_multiple_sides}
+                    onCheckedChange={(checked) => setFormData({ ...formData, has_multiple_sides: checked })}
+                  />
+                  <Label htmlFor="has_multiple_sides" className="text-sm flex items-center gap-1">
+                    <Layers className="w-4 h-4 text-primary" />
+                    Múltiplos Lados (ex: Box de Canto)
                   </Label>
                 </div>
               </div>
