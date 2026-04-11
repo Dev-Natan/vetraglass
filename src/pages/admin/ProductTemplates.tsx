@@ -932,33 +932,167 @@ export default function ProductTemplates() {
 
         {/* Product Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingTemplate ? "Editar Produto" : "Novo Produto"}</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nome *</Label>
-                  <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Image + Basic Info */}
+              <div className="flex gap-6">
+                {/* Image upload */}
+                <div className="shrink-0">
+                  <Label className="text-xs text-muted-foreground mb-1.5 block">Imagem</Label>
+                  <label className="relative w-32 h-32 rounded-xl border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 transition-colors cursor-pointer flex items-center justify-center overflow-hidden bg-muted/30 group">
+                    {formImagePreview ? (
+                      <img src={formImagePreview} alt="Preview" className="w-full h-full object-contain p-2" />
+                    ) : (
+                      <div className="flex flex-col items-center gap-1 text-muted-foreground">
+                        <ImageUp className="w-8 h-8" />
+                        <span className="text-[10px]">Adicionar</span>
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <Upload className="w-6 h-6 text-white" />
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setFormImageFile(file);
+                        const reader = new FileReader();
+                        reader.onload = (ev) => setFormImagePreview(ev.target?.result as string);
+                        reader.readAsDataURL(file);
+                        e.target.value = '';
+                      }}
+                    />
+                  </label>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="linha">Linha</Label>
-                  <Input id="linha" value={formData.linha} onChange={(e) => setFormData({ ...formData, linha: e.target.value })} />
+
+                {/* Basic fields */}
+                <div className="flex-1 space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="name" className="text-xs">Nome *</Label>
+                      <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="category" className="text-xs">Categoria *</Label>
+                      <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v })}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categoriesList.map(c => (
+                            <SelectItem key={c} value={c}>{categoryLabels[c] || c}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="linha" className="text-xs">Linha</Label>
+                      {availableLines.length > 0 ? (
+                        <Select value={formData.linha || "none"} onValueChange={(v) => setFormData({ ...formData, linha: v === "none" ? "" : v })}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Nenhuma</SelectItem>
+                            {availableLines.map(l => (
+                              <SelectItem key={l} value={l}>{l}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input id="linha" value={formData.linha} onChange={(e) => setFormData({ ...formData, linha: e.target.value })} placeholder="Ex: Suprema" />
+                      )}
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="base_price" className="text-xs">Preço Base (R$)</Label>
+                      <Input id="base_price" type="number" step="0.01" value={formData.base_price} onChange={(e) => setFormData({ ...formData, base_price: e.target.value })} placeholder="0,00" />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="description" className="text-xs">Descrição</Label>
+                    <Textarea id="description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={2} />
+                  </div>
                 </div>
               </div>
+
+              {/* Dimensions */}
               <div className="space-y-2">
-                <Label htmlFor="description">Descrição</Label>
-                <Textarea id="description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} />
+                <Label className="text-xs font-semibold flex items-center gap-1.5">
+                  <Ruler className="w-3.5 h-3.5" />
+                  Dimensões Permitidas (mm)
+                </Label>
+                <div className="grid grid-cols-4 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-[10px] text-muted-foreground">Larg. Mín.</Label>
+                    <Input type="number" value={formData.min_width} onChange={(e) => setFormData({ ...formData, min_width: e.target.value })} placeholder="0" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] text-muted-foreground">Larg. Máx.</Label>
+                    <Input type="number" value={formData.max_width} onChange={(e) => setFormData({ ...formData, max_width: e.target.value })} placeholder="0" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] text-muted-foreground">Alt. Mín.</Label>
+                    <Input type="number" value={formData.min_height} onChange={(e) => setFormData({ ...formData, min_height: e.target.value })} placeholder="0" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] text-muted-foreground">Alt. Máx.</Label>
+                    <Input type="number" value={formData.max_height} onChange={(e) => setFormData({ ...formData, max_height: e.target.value })} placeholder="0" />
+                  </div>
+                </div>
               </div>
-              <div className="flex gap-4">
+
+              {/* Fiscal Info */}
+              <details className="group">
+                <summary className="text-xs font-semibold cursor-pointer flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
+                  <Layers className="w-3.5 h-3.5" />
+                  Dados Fiscais (opcional)
+                  <span className="text-[10px] ml-auto text-muted-foreground group-open:hidden">clique para expandir</span>
+                </summary>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+                  <div className="space-y-1">
+                    <Label className="text-[10px] text-muted-foreground">NCM</Label>
+                    <Input value={formData.ncm} onChange={(e) => setFormData({ ...formData, ncm: e.target.value })} placeholder="0000.00.00" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] text-muted-foreground">CEST</Label>
+                    <Input value={formData.cest} onChange={(e) => setFormData({ ...formData, cest: e.target.value })} placeholder="00.000.00" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] text-muted-foreground">CFOP Venda</Label>
+                    <Input value={formData.cfop_venda} onChange={(e) => setFormData({ ...formData, cfop_venda: e.target.value })} placeholder="5102" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] text-muted-foreground">Origem</Label>
+                    <Select value={formData.origem || "none"} onValueChange={(v) => setFormData({ ...formData, origem: v === "none" ? "" : v })}>
+                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">-</SelectItem>
+                        <SelectItem value="0">0 - Nacional</SelectItem>
+                        <SelectItem value="1">1 - Estrangeira (Imp. Direta)</SelectItem>
+                        <SelectItem value="2">2 - Estrangeira (Mercado Interno)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </details>
+
+              {/* Toggles */}
+              <div className="flex gap-6 pt-2 border-t">
                 <div className="flex items-center space-x-2">
                   <Switch
                     id="is_active"
                     checked={formData.is_active}
                     onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
                   />
-                  <Label htmlFor="is_active">Produto ativo</Label>
+                  <Label htmlFor="is_active" className="text-sm">Produto ativo</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Switch
@@ -966,15 +1100,18 @@ export default function ProductTemplates() {
                     checked={formData.is_ready}
                     onCheckedChange={(checked) => setFormData({ ...formData, is_ready: checked })}
                   />
-                  <Label htmlFor="is_ready" className="flex items-center gap-1">
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
+                  <Label htmlFor="is_ready" className="text-sm flex items-center gap-1">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                     Pronto/Completo
                   </Label>
                 </div>
               </div>
+
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={handleCloseDialog}>Cancelar</Button>
-                <Button type="submit" disabled={saveMutation.isPending}>Salvar</Button>
+                <Button type="submit" disabled={saveMutation.isPending}>
+                  {saveMutation.isPending ? "Salvando..." : "Salvar"}
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>
