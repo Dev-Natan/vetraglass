@@ -180,8 +180,8 @@ export default function ProductTemplates() {
   const [selectedTemplate, setSelectedTemplate] = useState<ProductTemplate | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState<string>("all");
-  const [filterLinha, setFilterLinha] = useState<string>("all");
   const [showInactive, setShowInactive] = useState(false);
+  const [showReady, setShowReady] = useState(true);
   const [uploadingImageId, setUploadingImageId] = useState<string | null>(null);
   
   const [compositionActiveTab, setCompositionActiveTab] = useState("glass");
@@ -347,9 +347,9 @@ export default function ProductTemplates() {
     const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           template.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = filterCategory === "all" || template.category === filterCategory;
-    const matchesLinha = filterLinha === "all" || template.linha === filterLinha;
     const matchesActive = showInactive || template.is_active;
-    return matchesSearch && matchesCategory && matchesLinha && matchesActive;
+    const matchesReady = showReady || !template.description?.includes("[PRONTO]");
+    return matchesSearch && matchesCategory && matchesActive && matchesReady;
   });
 
   const sortedItemTemplates = itemTemplates?.slice().sort((a, b) => {
@@ -737,6 +737,15 @@ export default function ProductTemplates() {
               {categoriesList.map(c => <SelectItem key={c} value={c}>{categoryLabels[c] || c}</SelectItem>)}
             </SelectContent>
           </Select>
+          
+          <Button
+            variant={showReady ? "outline" : "secondary"}
+            onClick={() => setShowReady(!showReady)}
+            className="gap-2"
+          >
+            {showReady ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+            {showReady ? "Ocultar Prontos" : "Mostrar Prontos"}
+          </Button>
         </div>
 
         <Table>
