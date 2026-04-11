@@ -172,6 +172,7 @@ export default function EditarProdutoEmpresa() {
   const [formData, setFormData] = useState({
     commercial_name: '',
     description: '',
+    composition_finished: false,
   });
 
   const [configData, setConfigData] = useState<ProductConfigData>({
