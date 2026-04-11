@@ -75,6 +75,8 @@ interface QuoteItem {
   description: string;
   width?: number;
   height?: number;
+  vao_width?: number;
+  vao_height?: number;
   quantity: number;
   base_price_m2: number;
   unit_price: number;
