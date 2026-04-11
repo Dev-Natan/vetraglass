@@ -37,6 +37,8 @@ interface AddProductPanelProps {
     category?: string;
     width: number;
     height: number;
+    vao_width?: number;
+    vao_height?: number;
     quantity: number;
     unit_price: number;
     total_price: number;
