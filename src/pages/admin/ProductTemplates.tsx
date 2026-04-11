@@ -1211,6 +1211,28 @@ export default function ProductTemplates() {
                           Duplicar
                         </DropdownMenuItem>
                         <DropdownMenuItem 
+                          onClick={() => {
+                            const isReady = template.description?.includes("[PRONTO]");
+                            toggleReadyMutation.mutate({
+                              id: template.id,
+                              description: template.description,
+                              is_ready: !isReady
+                            });
+                          }}
+                        >
+                          {template.description?.includes("[PRONTO]") ? (
+                            <>
+                              <XCircle className="w-4 h-4 mr-2 text-destructive" />
+                              Desmarcar como Pronto
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle2 className="w-4 h-4 mr-2 text-green-500" />
+                              Marcar como Pronto
+                            </>
+                          )}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
                           onClick={() => toggleActiveMutation.mutate({ 
                             id: template.id, 
                             is_active: !template.is_active 
@@ -1252,6 +1274,12 @@ export default function ProductTemplates() {
                     </Badge>
                     {!template.is_active && (
                       <Badge variant="secondary">Inativo</Badge>
+                    )}
+                    {template.description?.includes("[PRONTO]") && (
+                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                        <CheckCircle2 className="w-3 h-3 mr-1" />
+                        Pronto
+                      </Badge>
                     )}
                   </div>
                 </CardHeader>
