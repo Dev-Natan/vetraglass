@@ -80,9 +80,10 @@ export function ImageUploadField({
         .from(bucket)
         .getPublicUrl(fileName);
 
-      // Store clean URL in database - cache buster only for preview
-      const cleanUrl = urlData.publicUrl;
-      onImageChange(cleanUrl);
+      // Store URL with cache buster to force browsers to reload it
+      const timestamp = Date.now();
+      const urlWithBuster = `${urlData.publicUrl}?t=${timestamp}`;
+      onImageChange(urlWithBuster);
       toast.success('Imagem enviada com sucesso!');
     } catch (error: any) {
       console.error('Upload error:', error);
