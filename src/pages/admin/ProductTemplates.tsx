@@ -748,60 +748,143 @@ export default function ProductTemplates() {
           </Button>
         </div>
 
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>Categoria</TableHead>
-              <TableHead>Linha</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Pronto</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow><TableCell colSpan={6}>Carregando...</TableCell></TableRow>
-            ) : filteredTemplates?.map(template => (
-              <TableRow key={template.id}>
-                <TableCell className="font-medium">{template.name}</TableCell>
-                <TableCell>
-                  <Badge variant="outline">{categoryLabels[template.category] || template.category}</Badge>
-                </TableCell>
-                <TableCell>{template.linha || '-'}</TableCell>
-                <TableCell>
-                  <Switch 
-                    checked={template.is_active} 
-                    onCheckedChange={(checked) => toggleActiveMutation.mutate({ id: template.id, is_active: checked })}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Switch 
-                    checked={template.description?.includes("[PRONTO]")} 
-                    onCheckedChange={(checked) => toggleReadyMutation.mutate({ id: template.id, description: template.description, is_ready: checked })}
-                  />
-                </TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon"><MoreVertical className="w-4 h-4" /></Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleEdit(template)}><Pencil className="w-4 h-4 mr-2" /> Editar</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => copyMutation.mutate(template)}><Copy className="w-4 h-4 mr-2" /> Duplicar</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => {
-                        setSelectedTemplate(template);
-                        setIsCompositionDialogOpen(true);
-                      }}><Settings2 className="w-4 h-4 mr-2" /> Composição</DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive" onClick={() => deleteMutation.mutate(template.id)}><Trash2 className="w-4 h-4 mr-2" /> Excluir</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        {isLoading ? (
+          <div className="text-center py-12 text-muted-foreground">Carregando...</div>
+        ) : filteredTemplates?.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <Package className="w-12 h-12 mx-auto mb-3 opacity-40" />
+            <p>Nenhum produto encontrado</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            {filteredTemplates?.map(template => {
+              const imgUrl = resolveImageUrl(template.image_url);
+              const isReady = template.description?.includes("[PRONTO]");
+              return (
+                <Card 
+                  key={template.id} 
+                  className={cn(
+                    "group relative overflow-hidden transition-all hover:shadow-lg border-2",
+                    !template.is_active && "opacity-50",
+                    isReady ? "border-emerald-300 dark:border-emerald-700" : "border-transparent hover:border-primary/30"
+                  )}
+                >
+                  {/* Ready badge */}
+                  {isReady && (
+                    <div className="absolute top-2 left-2 z-10">
+                      <div className="bg-emerald-500 text-white rounded-full p-1 shadow-md">
+                        <CheckCircle2 className="w-4 h-4" />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Actions menu */}
+                  <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="secondary" size="icon" className="h-7 w-7 shadow-sm">
+                          <MoreVertical className="w-3.5 h-3.5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleEdit(template)}>
+                          <Pencil className="w-4 h-4 mr-2" /> Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => copyMutation.mutate(template)}>
+                          <Copy className="w-4 h-4 mr-2" /> Duplicar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => {
+                          setSelectedTemplate(template);
+                          setIsCompositionDialogOpen(true);
+                        }}>
+                          <Settings2 className="w-4 h-4 mr-2" /> Composição
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => toggleReadyMutation.mutate({ id: template.id, description: template.description, is_ready: !isReady })}>
+                          {isReady ? (
+                            <><XCircle className="w-4 h-4 mr-2 text-destructive" /> Desmarcar Pronto</>
+                          ) : (
+                            <><CheckCircle2 className="w-4 h-4 mr-2 text-emerald-500" /> Marcar Pronto</>
+                          )}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-destructive" onClick={() => deleteMutation.mutate(template.id)}>
+                          <Trash2 className="w-4 h-4 mr-2" /> Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+
+                  {/* Image area */}
+                  <div className="aspect-square bg-muted/50 flex items-center justify-center p-3 relative overflow-hidden">
+                    {imgUrl ? (
+                      <img src={imgUrl} alt={template.name} className="w-full h-full object-contain" />
+                    ) : (
+                      <Package className="w-10 h-10 text-muted-foreground/30" />
+                    )}
+                    {/* Upload overlay */}
+                    <label className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                      <div className="flex flex-col items-center text-white gap-1">
+                        <ImageUp className="w-6 h-6" />
+                        <span className="text-xs font-medium">Trocar imagem</span>
+                      </div>
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          try {
+                            const processedFile = await processFileWithWhiteBackground(file);
+                            const fileName = `${template.id}.png`;
+                            const { error: uploadError } = await supabase.storage
+                              .from('product-templates')
+                              .upload(fileName, processedFile, { upsert: true, contentType: 'image/png', cacheControl: '0' });
+                            if (uploadError) throw uploadError;
+                            const { data: urlData } = supabase.storage.from('product-templates').getPublicUrl(fileName);
+                            const newUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+                            await supabase.from('product_templates').update({ image_url: newUrl }).eq('id', template.id);
+                            queryClient.invalidateQueries({ queryKey: ['product-templates'] });
+                            toast.success('Imagem atualizada!');
+                          } catch (err: any) {
+                            toast.error('Erro ao enviar imagem: ' + err.message);
+                          }
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
+                  </div>
+
+                  {/* Info area */}
+                  <div className="p-3 space-y-1.5">
+                    <h3 className="font-semibold text-sm leading-tight truncate" title={template.name}>
+                      {template.name}
+                    </h3>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                        {categoryLabels[template.category] || template.category}
+                      </Badge>
+                      {template.linha && (
+                        <span className="text-[10px] text-muted-foreground truncate">{template.linha}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between pt-1">
+                      <Switch 
+                        checked={template.is_active} 
+                        onCheckedChange={(checked) => toggleActiveMutation.mutate({ id: template.id, is_active: checked })}
+                        className="scale-75 origin-left"
+                      />
+                      <span className={cn("text-[10px] font-medium", template.is_active ? "text-emerald-600" : "text-muted-foreground")}>
+                        {template.is_active ? "Ativo" : "Inativo"}
+                      </span>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        )}
 
         {/* Product Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
