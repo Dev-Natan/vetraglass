@@ -6,7 +6,7 @@ import { type ProfileCutItem } from '@/components/plano-corte/ProfileCutsTable';
 import { type GlassCutItem } from '@/components/plano-corte/GlassCutsTable';
 import { type GlassPanelData } from '@/pages/Producao';
 import { Hole, Cutout } from '@/components/projeto-vidro/HoleCutoutEditor';
-import { Layers, Square, Ruler, Scale } from 'lucide-react';
+import { Layers, Square, Ruler, Scale, CheckCircle2 } from 'lucide-react';
 
 interface UnifiedProductionViewProps {
   profileCuts: ProfileCutItem[];
@@ -154,8 +154,15 @@ export function UnifiedProductionView({
                 </div>
                 <Progress value={progressPercent} className="h-2" />
               </div>
-              <div className="text-2xl font-bold text-primary min-w-[60px] text-right">
-                {progressPercent}%
+              <div className="flex items-center gap-3">
+                <div className="text-2xl font-bold text-primary min-w-[60px] text-right">
+                  {progressPercent}%
+                </div>
+                {progressPercent === 100 && (
+                  <div className="bg-emerald-500 text-white rounded-full p-1 animate-in zoom-in duration-300">
+                    <CheckCircle2 className="w-5 h-5" />
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
