@@ -64,20 +64,13 @@ export function ImageUploadField({
       // Generate unique filename
       const fileName = `${path}.png`;
 
-      // Delete existing file if any
-      if (imageUrl) {
-        const oldPath = imageUrl.split(`/${bucket}/`)[1];
-        if (oldPath) {
-          await supabase.storage.from(bucket).remove([oldPath]);
-        }
-      }
-
-      // Upload new file
+      // Upload new file with upsert: true (handles overwrite automatically)
       const { error: uploadError } = await supabase.storage
         .from(bucket)
         .upload(fileName, processedFile, {
           upsert: true,
           contentType: 'image/png',
+          cacheControl: '0', // Disable cache for the upload
         });
 
       if (uploadError) throw uploadError;
@@ -87,9 +80,10 @@ export function ImageUploadField({
         .from(bucket)
         .getPublicUrl(fileName);
 
-      // Store clean URL in database - cache buster only for preview
-      const cleanUrl = urlData.publicUrl;
-      onImageChange(cleanUrl);
+      // Store URL with cache buster to force browsers to reload it
+      const timestamp = Date.now();
+      const urlWithBuster = `${urlData.publicUrl}?t=${timestamp}`;
+      onImageChange(urlWithBuster);
       toast.success('Imagem enviada com sucesso!');
     } catch (error: any) {
       console.error('Upload error:', error);

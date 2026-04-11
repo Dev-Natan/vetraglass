@@ -6,6 +6,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { ArrowLeft, Upload, MoreHorizontal, Plus, ChevronRight, Home, Package, CheckCircle2, Circle, CircleDot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { processFileWithWhiteBackground } from '@/utils/imageBackgroundProcessor';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -167,38 +168,52 @@ export default function EditarProduto() {
     const file = e.target.files?.[0];
     if (!file || !id) return;
 
-    // Validar tipo de arquivo
-    if (!['image/png', 'image/jpeg', 'image/jpg'].includes(file.type)) {
-      toast.error('Apenas arquivos PNG, JPEG ou JPG são permitidos');
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Formato inválido. Use PNG, JPEG, JPG ou WebP.');
       return;
     }
 
     setIsUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${id}.${fileExt}`;
+      const processedFile = await processFileWithWhiteBackground(file);
+      const fileName = `${id}.png`;
 
       // Upload para o bucket product-templates
       const { error: uploadError } = await supabase.storage
         .from('product-templates')
-        .upload(fileName, file, { upsert: true });
+        .upload(fileName, processedFile, { 
+          upsert: true,
+          contentType: 'image/png',
+          cacheControl: '0'
+        });
 
       if (uploadError) throw uploadError;
+
+      // Get public URL with timestamp for cache busting
+      const { data: urlData } = supabase.storage
+        .from('product-templates')
+        .getPublicUrl(fileName);
+
+      const timestamp = Date.now();
+      const urlWithBuster = `${urlData.publicUrl}?t=${timestamp}`;
 
       // Atualizar o registro com a nova URL
       const { error: updateError } = await supabase
         .from('product_templates')
-        .update({ image_url: fileName })
+        .update({ image_url: urlWithBuster })
         .eq('id', id);
 
       if (updateError) throw updateError;
 
       queryClient.invalidateQueries({ queryKey: ['product-template', id] });
-      toast.success('Imagem atualizada!');
+      toast.success('Imagem atualizada com sucesso!');
     } catch (error: any) {
+      console.error('Upload error:', error);
       toast.error('Erro ao enviar imagem: ' + error.message);
     } finally {
       setIsUploading(false);
+      if (e.target) e.target.value = '';
     }
   };
 
