@@ -556,6 +556,30 @@ export default function ProductTemplates() {
     },
   });
 
+  // Toggle ready mutation
+  const toggleReadyMutation = useMutation({
+    mutationFn: async ({ id, description, is_ready }: { id: string; description: string | null; is_ready: boolean }) => {
+      let newDescription = (description || "").trim();
+      if (is_ready) {
+        if (!newDescription.includes("[PRONTO]")) {
+          newDescription = `[PRONTO] ${newDescription}`.trim();
+        }
+      } else {
+        newDescription = newDescription.replace("[PRONTO]", "").trim();
+      }
+
+      const { error } = await supabase
+        .from("product_templates")
+        .update({ description: newDescription })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["product-templates"] });
+      toast.success("Status de finalização atualizado!");
+    },
+  });
+
   // Copy product mutation
   const copyMutation = useMutation({
     mutationFn: async (template: ProductTemplate) => {
