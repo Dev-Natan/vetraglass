@@ -332,6 +332,8 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
       category: selectedProduct.category,
       width,
       height,
+      vao_width: useVao ? vaoWidth : undefined,
+      vao_height: useVao ? vaoHeight : undefined,
       quantity,
       unit_price: unitPrice,
       total_price: totalPrice,
