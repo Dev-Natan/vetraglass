@@ -30,6 +30,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Card,
@@ -75,6 +76,7 @@ import { cn } from "@/lib/utils";
 import { useProductCategoryLabels } from "@/hooks/useProductCategories";
 import { useItemTypeLabels } from "@/hooks/useItemTypes";
 import { useProductLinhas } from "@/hooks/useProductLinhas";
+import { Textarea } from "@/components/ui/textarea";
 
 type ProductTemplate = {
   id: string;
@@ -186,6 +188,7 @@ export default function ProductTemplates() {
   const [glassName, setGlassName] = useState("");
   const [cutAngle, setCutAngle] = useState(90);
   
+  const [editingItem, setEditingItem] = useState<ProductTemplateItem | null>(null);
   const [isEditItemDialogOpen, setIsEditItemDialogOpen] = useState(false);
   const [editQuantityFormula, setEditQuantityFormula] = useState("1");
   const [editPiecesQuantity, setEditPiecesQuantity] = useState(1);
