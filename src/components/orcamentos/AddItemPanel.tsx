@@ -56,6 +56,8 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
   const [selectedItemId, setSelectedItemId] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [quantity, setQuantity] = useState<number>(1);
+  const [width, setWidth] = useState<number>(0);
+  const [height, setHeight] = useState<number>(0);
   const [customPrice, setCustomPrice] = useState<number | null>(null);
   const [isCreatingItem, setIsCreatingItem] = useState(false);
 
