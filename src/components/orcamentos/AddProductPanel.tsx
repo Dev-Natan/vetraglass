@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Package, Check, ArrowLeft, Ruler, DollarSign, Sparkles, Info, GlassWater, Layers, Palette, Frame } from 'lucide-react';
+import { Search, Package, Check, ArrowLeft, Ruler, DollarSign, Sparkles, Info, GlassWater, Layers, Palette, Frame, Maximize2 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
