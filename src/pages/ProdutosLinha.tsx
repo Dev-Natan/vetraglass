@@ -99,7 +99,7 @@ export default function ProdutosLinha() {
         .eq('company_id', currentCompany.id);
       
       if (error) throw error;
-      return data || [];
+      return (data || []) as any[];
     },
     enabled: !!currentCompany?.id,
   });
@@ -117,7 +117,7 @@ export default function ProdutosLinha() {
         .eq('is_custom', true);
       
       if (error) throw error;
-      return (data || []) as CustomProduct[];
+      return (data || []) as any[];
     },
     enabled: !!currentCompany?.id && !!currentLinha,
   });
