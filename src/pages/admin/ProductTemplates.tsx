@@ -757,7 +757,13 @@ export default function ProductTemplates() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Product Templates</h1>
-            <p className="text-muted-foreground">Gerencie os modelos globais de produtos</p>
+            <div className="flex gap-2 text-muted-foreground text-sm">
+              <p>Gerencie os modelos globais de produtos</p>
+              <span>•</span>
+              <p>{templates?.filter(t => t.is_active).length || 0} ativos</p>
+              <span>•</span>
+              <p>{templates?.filter(t => !t.is_active).length || 0} inativos</p>
+            </div>
           </div>
           <Button onClick={() => setIsDialogOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
@@ -789,6 +795,15 @@ export default function ProductTemplates() {
           >
             {showReady ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
             {showReady ? "Ocultar Prontos" : "Mostrar Prontos"}
+          </Button>
+
+          <Button
+            variant={showInactive ? "secondary" : "outline"}
+            onClick={() => setShowInactive(!showInactive)}
+            className="gap-2"
+          >
+            {showInactive ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+            {showInactive ? "Ocultar Inativos" : "Mostrar Inativos"}
           </Button>
         </div>
 
