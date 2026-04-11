@@ -228,15 +228,22 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     }
   }, [aluminumPriceOptions, selectedAluminumColor, productUsesAluminum]);
 
-  // Reset selections when product changes
+  // Sync Vão - Folga = Produto
   useEffect(() => {
-    setSelectedGlassPriceId('');
-    setSelectedAluminumColor('');
-    setHasGlass(productUsesGlass);
-    // Aluminum-priced products always have acabamento (it's the aluminum color itself)
-    setHasAcabamento(productUsesAluminum);
-    setExcludedOptionalIds([]);
-  }, [companyProduct?.id, productUsesGlass, productUsesAluminum]);
+    if (useVao) {
+      setWidth(Math.max(0, vaoWidth - folgaWidth));
+      setHeight(Math.max(0, vaoHeight - folgaHeight));
+    }
+  }, [vaoWidth, vaoHeight, folgaWidth, folgaHeight, useVao]);
+
+  // Set default dimensions from vao if not using vao input directly
+  useEffect(() => {
+    if (!useVao) {
+      setVaoWidth(width + folgaWidth);
+      setVaoHeight(height + folgaHeight);
+    }
+  }, [width, height, folgaWidth, folgaHeight, !useVao]);
+
 
   // Get selected glass price details
   const selectedGlassPrice = productGlassPrices?.find(p => p.id === selectedGlassPriceId);
