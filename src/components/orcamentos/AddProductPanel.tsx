@@ -325,7 +325,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     onAdd({
       product_template_id: selectedProduct.is_custom ? null : selectedProduct.product_template_id,
       company_product_id: companyProduct?.id,
-      name: selectedProduct.name,
+      name: useVao ? `${selectedProduct.name} [Vão: ${vaoWidth}x${vaoHeight}mm]` : selectedProduct.name,
       base_price: (productUsesComposition && compositionPricing.isReady) ? compositionPricing.compositionCostPerSqm : basePrice,
       image_url: selectedProduct.image_url,
       linha: selectedProduct.linha,
