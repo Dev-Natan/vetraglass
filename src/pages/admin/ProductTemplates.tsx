@@ -635,6 +635,7 @@ export default function ProductTemplates() {
       notes: string;
       width_formula?: string;
       height_formula?: string;
+      side?: string;
     }) => {
       if (!selectedTemplate) throw new Error("Nenhum template selecionado");
       const { error } = await supabase.from("product_template_items").insert({
@@ -647,7 +648,8 @@ export default function ProductTemplates() {
         notes: data.notes || null,
         width_formula: data.width_formula || null,
         height_formula: data.height_formula || null,
-      });
+        side: data.side || null,
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -677,6 +679,7 @@ export default function ProductTemplates() {
       notes?: string;
       width_formula?: string;
       height_formula?: string;
+      side?: string;
     }) => {
       const { error } = await supabase
         .from("product_template_items")
@@ -688,6 +691,7 @@ export default function ProductTemplates() {
           width_formula: data.width_formula || null,
           height_formula: data.height_formula || null,
           pieces_formula: data.pieces_formula || null,
+          side: data.side || null,
         } as any)
         .eq("id", data.id);
       if (error) throw error;
@@ -712,6 +716,7 @@ export default function ProductTemplates() {
       notes: compositionActiveTab === 'glass' ? glassName : "",
       width_formula: compositionActiveTab === 'glass' ? widthFormula : undefined,
       height_formula: compositionActiveTab === 'glass' ? heightFormula : undefined,
+      side: selectedTemplate?.has_multiple_sides ? compositionSide : undefined,
     }, {
       onSuccess: () => {
         resetCompositionForm();
@@ -733,6 +738,7 @@ export default function ProductTemplates() {
       notes: itemType === 'glass' ? editGlassName : undefined,
       width_formula: itemType === 'glass' ? editWidthFormula : undefined,
       height_formula: itemType === 'glass' ? editHeightFormula : undefined,
+      side: selectedTemplate?.has_multiple_sides ? editSide : undefined,
     });
   };
 
@@ -745,6 +751,7 @@ export default function ProductTemplates() {
     setEditHeightFormula(item.height_formula || "");
     setEditGlassName(item.notes || "");
     setEditCutAngle(item.cut_angle || 90);
+    setEditSide((item as any).side || "");
     setIsEditItemDialogOpen(true);
   };
 
