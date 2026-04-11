@@ -57,6 +57,10 @@ export interface FormulaContext {
   height: number;
   folgaLargura?: number;
   folgaAltura?: number;
+  /** Width of side B for multi-side products (e.g. corner shower box) */
+  widthB?: number;
+  /** Height of side B (if different from main height) */
+  heightB?: number;
 }
 
 /**
@@ -76,7 +80,9 @@ export interface FormulaContext {
 export function evaluateFormula(
   formula: string, 
   widthOrContext: number | FormulaContext, 
-  height?: number
+  height?: number,
+  /** Which side this component belongs to: null/A uses main width, B uses widthB */
+  side?: string | null
 ): number {
   try {
     if (!formula || formula.trim() === '') return 0;
@@ -84,8 +90,14 @@ export function evaluateFormula(
     let w: number, h: number, fl: number, fa: number;
     
     if (typeof widthOrContext === 'object') {
-      w = widthOrContext.width;
-      h = widthOrContext.height;
+      // When side is 'B', use widthB/heightB dimensions
+      if (side === 'B') {
+        w = widthOrContext.widthB ?? widthOrContext.width;
+        h = widthOrContext.heightB ?? widthOrContext.height;
+      } else {
+        w = widthOrContext.width;
+        h = widthOrContext.height;
+      }
       fl = widthOrContext.folgaLargura ?? 0;
       fa = widthOrContext.folgaAltura ?? 0;
     } else {
