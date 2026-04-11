@@ -192,14 +192,13 @@ export default function EditarProdutoEmpresa() {
         .from('company_products')
         .select(`
           *,
-          composition_finished,
           product_template:product_templates(id, name, image_url, linha)
         `)
         .eq('id', id!)
         .maybeSingle();
       
       if (error) throw error;
-      return data as CompanyProduct | null;
+      return data as any;
     },
     enabled: !!id,
   });
@@ -263,6 +262,7 @@ export default function EditarProdutoEmpresa() {
       setFormData({
         commercial_name: product.commercial_name || '',
         description: product.description || '',
+        composition_finished: (product as any).composition_finished || false,
       });
       setConfigData({
         acabamento: (product as any).acabamento || '',
@@ -320,6 +320,7 @@ export default function EditarProdutoEmpresa() {
         .update({
           commercial_name: formData.commercial_name,
           description: formData.description,
+          composition_finished: formData.composition_finished,
           acabamento: configData.acabamento || null,
           cor_componentes: configData.cor_componentes || null,
           reforco: configData.reforco || null,
