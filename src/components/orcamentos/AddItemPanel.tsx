@@ -37,6 +37,8 @@ interface AddItemPanelProps {
     unit_price: number;
     quantity: number;
     total_price: number;
+    width?: number;
+    height?: number;
     image_url?: string | null;
     linha?: string | null;
     type?: string;
