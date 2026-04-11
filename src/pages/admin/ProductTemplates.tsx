@@ -245,7 +245,7 @@ export default function ProductTemplates() {
       
       const { data, error } = await query.order("name");
       if (error) throw error;
-      return data as ProductTemplate[];
+      return data as unknown as ProductTemplate[];
     },
   });
 
@@ -337,6 +337,7 @@ export default function ProductTemplates() {
       heightFormula,
       glassName,
       cutAngle,
+      side: compositionSide,
       isOpen: true,
     };
 
