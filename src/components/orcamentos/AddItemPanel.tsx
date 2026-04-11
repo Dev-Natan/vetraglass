@@ -240,6 +240,8 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
         unit: selectedItem.unit,
         unit_price: unitPrice,
         quantity,
+        width: isM2 ? width : undefined,
+        height: isM2 ? height : undefined,
         total_price: totalPrice,
         image_url: selectedItem.image_url,
         linha: selectedItem.linha,
