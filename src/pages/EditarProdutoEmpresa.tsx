@@ -825,7 +825,7 @@ export default function EditarProdutoEmpresa() {
                 </div>
               </ScrollArea>
             </div>
-            {addItemSection === 'glass' ? <GlassFormulaEditor widthFormula={widthFormula} heightFormula={heightFormula} onWidthFormulaChange={setWidthFormula} onHeightFormulaChange={setHeightFormula} showPiecesQuantity={true} piecesQuantity={piecesQuantity} onPiecesChange={setPiecesQuantity} /> : <FormulaEditor value={quantityFormula} onChange={setQuantityFormula} showPiecesQuantity={true} piecesQuantity={piecesQuantity} onPiecesChange={setPiecesQuantity} />}
+            {addItemSection === 'glass' ? <GlassFormulaEditor widthFormula={widthFormula} heightFormula={heightFormula} onWidthFormulaChange={setWidthFormula} onHeightFormulaChange={setHeightFormula} showPiecesQuantity={true} piecesQuantity={piecesQuantity} onPiecesChange={setPiecesQuantity} piecesFormula={piecesFormula} onPiecesFormulaChange={setPiecesFormula} /> : <FormulaEditor value={quantityFormula} onChange={setQuantityFormula} showPiecesQuantity={true} piecesQuantity={piecesQuantity} onPiecesChange={setPiecesQuantity} piecesFormula={piecesFormula} onPiecesFormulaChange={setPiecesFormula} />}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddItemDialogOpen(false)}>Cancelar</Button>
