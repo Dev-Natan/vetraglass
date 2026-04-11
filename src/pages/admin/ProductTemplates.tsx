@@ -1256,6 +1256,34 @@ export default function ProductTemplates() {
                       onPiecesChange={setPiecesQuantity}
                     />
                   )}
+
+                  {/* Side selector for multi-side products */}
+                  {selectedTemplate?.has_multiple_sides && (
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Lado do Produto</Label>
+                      <div className="flex gap-2">
+                        {[
+                          { value: "", label: "Ambos", color: "bg-muted" },
+                          { value: "A", label: "Lado A", color: "bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700" },
+                          { value: "B", label: "Lado B", color: "bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700" },
+                        ].map((opt) => (
+                          <Button
+                            key={opt.value}
+                            type="button"
+                            variant={compositionSide === opt.value ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setCompositionSide(opt.value)}
+                            className="flex-1"
+                          >
+                            {opt.label}
+                          </Button>
+                        ))}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Defina a qual lado este item pertence. As fórmulas usarão a largura do lado correspondente.
+                      </p>
+                    </div>
+                  )}
                   
                   <div className="flex justify-end">
                     <Button 
@@ -1410,6 +1438,31 @@ export default function ProductTemplates() {
                 </>
               )}
               
+              {/* Side selector for multi-side products in edit mode */}
+              {selectedTemplate?.has_multiple_sides && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Lado do Produto</Label>
+                  <div className="flex gap-2">
+                    {[
+                      { value: "", label: "Ambos" },
+                      { value: "A", label: "Lado A" },
+                      { value: "B", label: "Lado B" },
+                    ].map((opt) => (
+                      <Button
+                        key={opt.value}
+                        type="button"
+                        variant={editSide === opt.value ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setEditSide(opt.value)}
+                        className="flex-1"
+                      >
+                        {opt.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="flex justify-end gap-2 pt-4 border-t">
                 <Button variant="outline" onClick={() => setIsEditItemDialogOpen(false)}>
                   Cancelar
