@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FormulaEditor } from '@/components/produtos/FormulaEditor';
 import { GlassFormulaEditor } from '@/components/produtos/GlassFormulaEditor';
@@ -79,6 +80,7 @@ type CompanyProduct = {
   pricing_type: string | null;
   is_active: boolean;
   is_custom: boolean | null;
+  composition_finished: boolean | null;
   linha: string | null;
   image_url: string | null;
   product_template?: {
@@ -171,6 +173,7 @@ export default function EditarProdutoEmpresa() {
   const [formData, setFormData] = useState({
     commercial_name: '',
     description: '',
+    composition_finished: false,
   });
 
   const [configData, setConfigData] = useState<ProductConfigData>({
@@ -196,7 +199,7 @@ export default function EditarProdutoEmpresa() {
         .maybeSingle();
       
       if (error) throw error;
-      return data as CompanyProduct | null;
+      return data as any;
     },
     enabled: !!id,
   });
@@ -260,6 +263,7 @@ export default function EditarProdutoEmpresa() {
       setFormData({
         commercial_name: product.commercial_name || '',
         description: product.description || '',
+        composition_finished: (product as any).composition_finished || false,
       });
       setConfigData({
         acabamento: (product as any).acabamento || '',
@@ -317,6 +321,7 @@ export default function EditarProdutoEmpresa() {
         .update({
           commercial_name: formData.commercial_name,
           description: formData.description,
+          composition_finished: formData.composition_finished,
           acabamento: configData.acabamento || null,
           cor_componentes: configData.cor_componentes || null,
           reforco: configData.reforco || null,
@@ -651,7 +656,19 @@ export default function EditarProdutoEmpresa() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Nome do produto:</Label>
-                <Input value={formData.commercial_name} onChange={(e) => setFormData({ ...formData, commercial_name: e.target.value })} placeholder="Nome comercial" />
+                <div className="flex items-center gap-3">
+                  <Input value={formData.commercial_name} onChange={(e) => setFormData({ ...formData, commercial_name: e.target.value })} placeholder="Nome comercial" />
+                  <div className="flex items-center gap-2 border rounded-md px-3 h-10 bg-muted/20 shrink-0">
+                    <Checkbox 
+                      id="composition-finished" 
+                      checked={formData.composition_finished} 
+                      onCheckedChange={(checked) => setFormData({ ...formData, composition_finished: checked === true })}
+                    />
+                    <Label htmlFor="composition-finished" className="text-xs font-medium cursor-pointer whitespace-nowrap">
+                      Concluído
+                    </Label>
+                  </div>
+                </div>
               </div>
               {product.product_template_id && (
                 <div className="space-y-2">

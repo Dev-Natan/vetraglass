@@ -50,6 +50,7 @@ type DisplayProduct = {
   is_custom: boolean;
   base_price?: number | null;
   companyProductId?: string; // ID in company_products table for pricing
+  composition_finished?: boolean;
 };
 
 export default function ProdutosLinha() {
@@ -94,11 +95,11 @@ export default function ProdutosLinha() {
       if (!currentCompany?.id) return [];
       const { data, error } = await supabase
         .from('company_products')
-        .select('id, product_template_id, is_active, commercial_name')
+        .select('id, product_template_id, is_active, commercial_name, composition_finished')
         .eq('company_id', currentCompany.id);
       
       if (error) throw error;
-      return data || [];
+      return (data || []) as any[];
     },
     enabled: !!currentCompany?.id,
   });
@@ -110,13 +111,13 @@ export default function ProdutosLinha() {
       if (!currentCompany?.id) return [];
       const { data, error } = await supabase
         .from('company_products')
-        .select('id, commercial_name, description, category, linha, image_url, is_active, is_custom, base_price')
+        .select('id, commercial_name, description, category, linha, image_url, is_active, is_custom, base_price, composition_finished')
         .eq('company_id', currentCompany.id)
         .eq('linha', currentLinha)
         .eq('is_custom', true);
       
       if (error) throw error;
-      return (data || []) as CustomProduct[];
+      return (data || []) as any[];
     },
     enabled: !!currentCompany?.id && !!currentLinha,
   });
@@ -286,6 +287,7 @@ export default function ProdutosLinha() {
           is_active: companyProduct?.is_active ?? false,
           is_custom: false,
           companyProductId: companyProduct?.id,
+          composition_finished: (companyProduct as any)?.composition_finished || false,
         };
       });
 
@@ -308,6 +310,7 @@ export default function ProdutosLinha() {
         is_custom: true,
         base_price: p.base_price,
         companyProductId: p.id, // For custom products, id IS the company_product_id
+        composition_finished: (p as any).composition_finished || false,
       }));
 
     return [...templateFiltered, ...customFiltered];
@@ -423,6 +426,12 @@ export default function ProdutosLinha() {
                       {product.is_custom && (
                         <Badge variant="secondary" className="text-[10px] mt-1 bg-purple-100 text-purple-700">
                           Personalizado
+                        </Badge>
+                      )}
+                      {product.composition_finished && (
+                        <Badge variant="secondary" className="text-[10px] mt-1 bg-green-100 text-green-700 border-green-200">
+                          <Check className="w-3 h-3 mr-1" />
+                          Composição OK
                         </Badge>
                       )}
                     </div>
@@ -555,6 +564,12 @@ export default function ProdutosLinha() {
                       {product.is_custom && (
                         <Badge variant="secondary" className="w-fit text-[10px] mt-0.5 bg-purple-100 text-purple-700">
                           Personalizado
+                        </Badge>
+                      )}
+                      {product.composition_finished && (
+                        <Badge variant="secondary" className="w-fit text-[10px] mt-0.5 bg-green-100 text-green-700 border-green-200">
+                          <Check className="w-3 h-3 mr-1" />
+                          Composição OK
                         </Badge>
                       )}
                     </div>
