@@ -190,7 +190,12 @@ function ProfilesSection({ items, onAdd, onEdit, onRemove }: {
                     <tr key={item.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors cursor-pointer" onClick={() => onEdit(item)}>
                       <td className="py-2 px-4"><ItemImage item={item} /></td>
                       <td className="py-2 px-2"><ItemCode item={item} /></td>
-                      <td className="py-2 px-2 font-medium text-primary">{itemData?.name}</td>
+                      <td className="py-2 px-2 font-medium text-primary">
+                        <div className="flex items-center gap-1.5">
+                          {itemData?.name}
+                          <SideBadge side={(item as any).side} />
+                        </div>
+                      </td>
                       <td className="py-2 px-2 text-center">
                         {(item as any).pieces_formula ? (
                           <div className="flex flex-col items-center">
@@ -262,7 +267,12 @@ function ComponentsSection({ items, onAdd, onEdit, onRemove }: {
                     <tr key={item.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors cursor-pointer" onClick={() => onEdit(item)}>
                       <td className="py-2 px-4"><ItemImage item={item} /></td>
                       <td className="py-2 px-2"><ItemCode item={item} /></td>
-                      <td className="py-2 px-2 font-medium text-primary">{itemData?.name}</td>
+                      <td className="py-2 px-2 font-medium text-primary">
+                        <div className="flex items-center gap-1.5">
+                          {itemData?.name}
+                          <SideBadge side={(item as any).side} />
+                        </div>
+                      </td>
                       <td className="py-2 px-2 text-center">
                         <span>{item.quantity_formula}</span>
                         <span className="text-xs text-muted-foreground ml-1">{itemData?.unit === 'metro' ? 'm' : itemData?.unit === 'barra' ? 'br' : 'pç'}</span>
