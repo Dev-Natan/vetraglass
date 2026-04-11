@@ -516,6 +516,40 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
           </div>
         )}
 
+        {isM2 && (
+          <div className="grid grid-cols-2 gap-4 bg-muted/30 p-3 rounded-lg border border-dashed animate-in fade-in slide-in-from-top-2">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-medium text-muted-foreground uppercase flex items-center gap-1">
+                <Ruler className="w-3 h-3" /> Largura (mm)
+              </label>
+              <Input
+                type="number"
+                min="0"
+                value={width || ''}
+                onChange={(e) => setWidth(Number(e.target.value))}
+                className="h-10"
+                placeholder="Ex: 1000"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-medium text-muted-foreground uppercase flex items-center gap-1">
+                <Ruler className="w-3 h-3 rotate-90" /> Altura (mm)
+              </label>
+              <Input
+                type="number"
+                min="0"
+                value={height || ''}
+                onChange={(e) => setHeight(Number(e.target.value))}
+                className="h-10"
+                placeholder="Ex: 1000"
+              />
+            </div>
+            <div className="col-span-2 text-[10px] text-muted-foreground text-center">
+              Item vendido por m². Área calculada: <span className="font-bold">{(area).toFixed(2)} m²</span>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
@@ -533,7 +567,7 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
           </div>
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-              <DollarSign className="w-3 h-3" /> Preço Unitário
+              <DollarSign className="w-3 h-3" /> Preço {isM2 ? 'por m²' : 'Unitário'}
             </label>
             <Input
               type="number"
@@ -556,6 +590,7 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
             </span>
           </div>
         )}
+
 
         {/* Actions */}
         <div className="flex gap-3">
