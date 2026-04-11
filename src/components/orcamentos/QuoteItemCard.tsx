@@ -201,6 +201,13 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {item.vao_width && item.vao_height && (
+                <div className="col-span-full bg-primary/5 p-2 rounded border border-primary/20 text-[10px] text-primary font-medium flex items-center gap-2">
+                  <Maximize2 className="w-3.5 h-3.5" />
+                  Vão original: {item.vao_width} x {item.vao_height} mm
+                </div>
+              )}
+
               <div>
                 <label className="text-xs text-muted-foreground">Largura (mm)</label>
                 <Input
