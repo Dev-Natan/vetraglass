@@ -3,7 +3,7 @@ import { resolveImageUrl } from '@/utils/imageUrl';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Package, Layers, Palette } from 'lucide-react';
+import { Trash2, Package, Layers, Palette, Maximize2 } from 'lucide-react';
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
 import { useItemTypes } from '@/hooks/useItemTypes';
 
