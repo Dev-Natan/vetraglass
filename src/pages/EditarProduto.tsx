@@ -406,6 +406,7 @@ export default function EditarProduto() {
       setSelectedItemToAdd('');
       setQuantityFormula('1');
       setPiecesQuantity(1);
+      setPiecesFormula(null);
       setWidthFormula('');
       setHeightFormula('');
       setGlassName('');
@@ -448,9 +449,11 @@ export default function EditarProduto() {
         updateData.notes = glassName || null;
         updateData.quantity_formula = quantityFormula || '1';
         updateData.pieces_quantity = piecesQuantity;
+        updateData.pieces_formula = piecesFormula || null;
       } else {
         updateData.quantity_formula = quantityFormula;
         updateData.pieces_quantity = piecesQuantity;
+        updateData.pieces_formula = piecesFormula || null;
         updateData.cut_angle = cutAngle;
       }
       
@@ -1062,6 +1065,8 @@ export default function EditarProduto() {
                     showPiecesQuantity={true}
                     piecesQuantity={piecesQuantity}
                     onPiecesChange={setPiecesQuantity}
+                    piecesFormula={piecesFormula}
+                    onPiecesFormulaChange={setPiecesFormula}
                   />
                 </>
               ) : (
@@ -1071,6 +1076,8 @@ export default function EditarProduto() {
                   showPiecesQuantity={activeTab === 'profile'}
                   piecesQuantity={piecesQuantity}
                   onPiecesChange={setPiecesQuantity}
+                  piecesFormula={piecesFormula}
+                  onPiecesFormulaChange={setPiecesFormula}
                 />
               )}
               
