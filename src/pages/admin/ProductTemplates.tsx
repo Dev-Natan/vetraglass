@@ -224,6 +224,7 @@ export default function ProductTemplates() {
     max_height: "",
     is_active: true,
     is_ready: false,
+    has_multiple_sides: false,
     base_price: "",
     ncm: "",
     cest: "",
