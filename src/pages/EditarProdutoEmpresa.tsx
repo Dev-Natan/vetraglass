@@ -284,8 +284,9 @@ export default function EditarProdutoEmpresa() {
     const file = e.target.files?.[0];
     if (!file || !id || !currentCompany?.id) return;
 
-    if (!['image/png', 'image/jpeg', 'image/jpg'].includes(file.type)) {
-      toast.error('Apenas arquivos PNG, JPEG ou JPG são permitidos');
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Formato inválido. Use PNG, JPEG, JPG ou WebP.');
       return;
     }
 
@@ -293,23 +294,39 @@ export default function EditarProdutoEmpresa() {
     try {
       const processedFile = await processFileWithWhiteBackground(file);
       const fileName = `${currentCompany.id}/${id}.png`;
+      
       const { error: uploadError } = await supabase.storage
         .from('company-product-images')
-        .upload(fileName, processedFile, { upsert: true });
+        .upload(fileName, processedFile, { 
+          upsert: true,
+          contentType: 'image/png',
+          cacheControl: '0'
+        });
 
       if (uploadError) throw uploadError;
+      
+      const { data: urlData } = supabase.storage
+        .from('company-product-images')
+        .getPublicUrl(fileName);
+
+      const timestamp = Date.now();
+      const urlWithBuster = `${urlData.publicUrl}?t=${timestamp}`;
+
       const { error: updateError } = await supabase
         .from('company_products')
-        .update({ image_url: fileName })
+        .update({ image_url: urlWithBuster })
         .eq('id', id);
 
       if (updateError) throw updateError;
+      
       queryClient.invalidateQueries({ queryKey: ['company-product', id] });
-      toast.success('Imagem atualizada!');
+      toast.success('Imagem atualizada com sucesso!');
     } catch (error: any) {
+      console.error('Upload error:', error);
       toast.error('Erro ao enviar imagem: ' + error.message);
     } finally {
       setIsUploading(false);
+      if (e.target) e.target.value = '';
     }
   };
 
