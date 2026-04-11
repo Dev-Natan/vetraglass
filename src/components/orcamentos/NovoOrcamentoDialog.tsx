@@ -326,11 +326,15 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
     image_url?: string | null;
     linha?: string | null;
     type?: string;
+    width?: number;
+    height?: number;
   }) => {
     const newItem: QuoteItem = {
       company_item_id: item.company_item_id,
       item_type: 'item',
       description: item.name,
+      width: item.width,
+      height: item.height,
       quantity: item.quantity,
       base_price_m2: item.unit_price,
       unit_price: item.unit_price,
