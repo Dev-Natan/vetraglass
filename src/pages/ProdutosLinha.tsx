@@ -407,8 +407,8 @@ export default function ProdutosLinha() {
                   className="bg-card border rounded-lg p-3 space-y-3"
                 >
                   {/* Product header */}
-                  <div className="flex items-center gap-3">
-                    <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center shrink-0 p-1">
+                  <div className="flex items-center gap-3 relative">
+                    <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center shrink-0 p-1 relative">
                       {product.image_url ? (
                         <img 
                           src={getImageUrl(product.image_url, product.is_custom) || ''} 
@@ -417,6 +417,11 @@ export default function ProdutosLinha() {
                         />
                       ) : (
                         <span className="text-2xl">{getCategoryIcon(product.category)}</span>
+                      )}
+                      {product.composition_finished && (
+                        <div className="absolute -top-1 -right-1 bg-emerald-500 text-white rounded-full p-0.5 shadow-sm border border-white">
+                          <Check className="w-3 h-3" />
+                        </div>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -546,7 +551,7 @@ export default function ProdutosLinha() {
                 >
                   {/* Product info */}
                   <div className="col-span-5 flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center shrink-0 p-1">
+                    <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center shrink-0 p-1 relative">
                       {product.image_url ? (
                         <img 
                           src={getImageUrl(product.image_url, product.is_custom) || ''} 
@@ -555,6 +560,11 @@ export default function ProdutosLinha() {
                         />
                       ) : (
                         <span className="text-xl">{getCategoryIcon(product.category)}</span>
+                      )}
+                      {product.composition_finished && (
+                        <div className="absolute -top-1 -right-1 bg-emerald-500 text-white rounded-full p-0.5 shadow-sm border border-white">
+                          <Check className="w-4 h-4" />
+                        </div>
                       )}
                     </div>
                     <div className="flex flex-col">
