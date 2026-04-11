@@ -21,6 +21,7 @@ interface CompositionItem {
   sort_order: number | null;
   section?: string | null;
   is_optional?: boolean | null;
+  side?: string | null;
   item_template?: {
     id: string;
     name: string;
