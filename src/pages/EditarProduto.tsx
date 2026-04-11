@@ -128,6 +128,7 @@ export default function EditarProduto() {
     name: '',
     description: '',
     unit: 'm2',
+    composition_finished: false,
     is_ready_product: false,
     has_glass: true,
     gap_type: 'normal',
@@ -291,6 +292,7 @@ export default function EditarProduto() {
       setFormData({
         name: product.name || '',
         description: product.description || '',
+        composition_finished: (product as any).composition_finished || false,
         unit: 'm2',
         is_ready_product: false,
         has_glass: true,
@@ -316,6 +318,7 @@ export default function EditarProduto() {
       const updateData: Record<string, any> = {
         name: formData.name,
         description: formData.description,
+        composition_finished: formData.composition_finished,
         base_price: formData.base_price ? parseFloat(formData.base_price) : 0,
       };
 
