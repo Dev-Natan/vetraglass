@@ -79,6 +79,7 @@ type CompanyProduct = {
   pricing_type: string | null;
   is_active: boolean;
   is_custom: boolean | null;
+  composition_finished: boolean | null;
   linha: string | null;
   image_url: string | null;
   product_template?: {
