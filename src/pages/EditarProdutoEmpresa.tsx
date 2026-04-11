@@ -413,6 +413,7 @@ export default function EditarProdutoEmpresa() {
         company_item_id: companyItemId,
         quantity_formula: quantityFormula,
         pieces_quantity: piecesQuantity,
+        pieces_formula: piecesFormula,
         is_optional: isContramarco ? true : false,
         cut_angle: cutAngle,
         width_formula: addItemSection === 'glass' ? (widthFormula || null) : null,
@@ -468,9 +469,11 @@ export default function EditarProdutoEmpresa() {
         updateData.notes = glassName || null;
         updateData.quantity_formula = quantityFormula || '1';
         updateData.pieces_quantity = piecesQuantity;
+        updateData.pieces_formula = piecesFormula || null;
       } else {
         updateData.quantity_formula = quantityFormula;
         updateData.pieces_quantity = piecesQuantity;
+        updateData.pieces_formula = piecesFormula || null;
         updateData.cut_angle = cutAngle;
       }
       const { error } = await supabase

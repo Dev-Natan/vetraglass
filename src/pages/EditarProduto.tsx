@@ -373,6 +373,7 @@ export default function EditarProduto() {
         item_template_id: string;
         quantity_formula: string;
         pieces_quantity: number;
+        pieces_formula?: string | null;
         is_optional: boolean;
         company_id?: string;
         width_formula?: string | null;
@@ -383,6 +384,7 @@ export default function EditarProduto() {
         item_template_id: selectedItemToAdd,
         quantity_formula: quantityFormula,
         pieces_quantity: piecesQuantity,
+        pieces_formula: piecesFormula,
         is_optional: false,
         width_formula: activeTab === 'glass' ? (widthFormula || null) : null,
         height_formula: activeTab === 'glass' ? (heightFormula || null) : null,
