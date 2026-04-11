@@ -119,6 +119,7 @@ type ItemTemplate = {
   unit: string;
   linha: string | null;
   image_url: string | null;
+  default_formulas: DefaultFormula[] | null;
 };
 
 type CompositionDraft = {
@@ -136,7 +137,6 @@ type CompositionDraft = {
 
 const COMPOSITION_DRAFT_STORAGE_KEY = "admin-product-template-composition-draft";
 
-// Item type tabs for the dialog - derived from itemTypes hook
 const getItemTypeTabs = (itemTypes: { slug: string; name: string }[] | undefined) => {
   const defaultTabs = [
     { value: 'glass', label: 'VIDROS', dbType: 'glass' },
@@ -156,7 +156,6 @@ const getItemTypeTabs = (itemTypes: { slug: string; name: string }[] | undefined
 export default function ProductTemplates() {
   const { linha: linhaParam } = useParams<{ linha?: string }>();
   
-  // Dynamic categories, item types and linhas from hooks
   const { labels: categoryLabels, colors: categoryColors, categories: productCategories } = useProductCategoryLabels();
   const { labels: typeLabels, colors: typeColors, itemTypes } = useItemTypeLabels();
   const { data: productLinhas } = useProductLinhas();
@@ -178,7 +177,6 @@ export default function ProductTemplates() {
   const [showInactive, setShowInactive] = useState(false);
   const [uploadingImageId, setUploadingImageId] = useState<string | null>(null);
   
-  // Composition dialog states
   const [compositionActiveTab, setCompositionActiveTab] = useState("glass");
   const [selectedItemToAdd, setSelectedItemToAdd] = useState("");
   const [quantityFormula, setQuantityFormula] = useState("1");
@@ -188,8 +186,6 @@ export default function ProductTemplates() {
   const [glassName, setGlassName] = useState("");
   const [cutAngle, setCutAngle] = useState(90);
   
-  // Edit item dialog states
-  const [editingItem, setEditingItem] = useState<ProductTemplateItem | null>(null);
   const [isEditItemDialogOpen, setIsEditItemDialogOpen] = useState(false);
   const [editQuantityFormula, setEditQuantityFormula] = useState("1");
   const [editPiecesQuantity, setEditPiecesQuantity] = useState(1);
@@ -199,7 +195,6 @@ export default function ProductTemplates() {
   const [editGlassName, setEditGlassName] = useState("");
   const [editCutAngle, setEditCutAngle] = useState(90);
   
-  // Bulk upload state
   const [bulkUploadDialogOpen, setBulkUploadDialogOpen] = useState(false);
   const [bulkUploadProgress, setBulkUploadProgress] = useState<{
     total: number;
@@ -227,6 +222,7 @@ export default function ProductTemplates() {
     min_height: "",
     max_height: "",
     is_active: true,
+    is_ready: false,
   });
 
   const clearCompositionDraft = () => {
@@ -234,7 +230,6 @@ export default function ProductTemplates() {
     window.sessionStorage.removeItem(COMPOSITION_DRAFT_STORAGE_KEY);
   };
 
-  // Fetch product templates with composition count
   const { data: templates, isLoading } = useQuery({
     queryKey: ["product-templates", currentLinha],
     queryFn: async () => {
@@ -250,7 +245,6 @@ export default function ProductTemplates() {
     },
   });
 
-  // Fetch composition counts for all templates
   const { data: compositionCounts } = useQuery({
     queryKey: ["product-template-items-counts"],
     queryFn: async () => {
@@ -267,9 +261,6 @@ export default function ProductTemplates() {
     },
   });
 
-  // availableLines is now provided by useProductLinhas hook above
-
-  // Fetch item templates for composition
   const { data: itemTemplates } = useQuery({
     queryKey: ["item-templates-active", currentLinha],
     queryFn: async () => {
@@ -283,7 +274,6 @@ export default function ProductTemplates() {
     },
   });
 
-  // Fetch composition items for selected template
   const { data: compositionItems } = useQuery({
     queryKey: ["product-template-items", selectedTemplate?.id],
     queryFn: async () => {
@@ -376,7 +366,6 @@ export default function ProductTemplates() {
     cutAngle,
   ]);
 
-  // Filter templates
   const filteredTemplates = templates?.filter((template) => {
     const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           template.description?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -386,7 +375,6 @@ export default function ProductTemplates() {
     return matchesSearch && matchesCategory && matchesLinha && matchesActive;
   });
 
-  // Sort item templates - prioritize items from the selected template's linha
   const sortedItemTemplates = itemTemplates?.slice().sort((a, b) => {
     const templateLinha = selectedTemplate?.linha;
     if (!templateLinha) return a.name.localeCompare(b.name);
@@ -397,31 +385,26 @@ export default function ProductTemplates() {
     if (aMatchesLinha && !bMatchesLinha) return -1;
     if (!aMatchesLinha && bMatchesLinha) return 1;
     
-    // Secondary sort by linha name, then by item name
     if (a.linha !== b.linha) {
       return (a.linha || 'ZZZ').localeCompare(b.linha || 'ZZZ');
     }
     return a.name.localeCompare(b.name);
   });
 
-  // Get items filtered by type for composition dialog
   const getItemsByTypeForAdd = (tabValue: string) => {
     const currentTab = itemTypeTabs.find(t => t.value === tabValue);
     const dbType = currentTab?.dbType;
     return sortedItemTemplates?.filter((item) => item.type === dbType) || [];
   };
 
-  // Get items already in composition by type
   const getCompositionItemsByType = (tabValue: string) => {
     const currentTab = itemTypeTabs.find(t => t.value === tabValue);
     const dbType = currentTab?.dbType;
     return compositionItems?.filter((item) => item.item_template?.type === dbType) || [];
   };
 
-  // Helper to get storage URL
   const getStorageUrl = (path: string | null, bucket: 'item-templates' | 'product-templates' = 'item-templates') => resolveImageUrl(path, bucket);
 
-  // Reset composition form
   const resetCompositionForm = () => {
     setSelectedItemToAdd("");
     setQuantityFormula("1");
@@ -432,58 +415,58 @@ export default function ProductTemplates() {
     setCutAngle(90);
   };
 
-  // Handle add composition item
-  const handleAddCompositionItem = () => {
-    if (!selectedItemToAdd) return;
-    
-    addCompositionMutation.mutate({
-      item_template_id: selectedItemToAdd,
-      quantity_formula: quantityFormula,
-      pieces_quantity: piecesQuantity,
-      cut_angle: cutAngle,
-      is_optional: false,
-      notes: compositionActiveTab === 'glass' ? glassName : "",
-      width_formula: compositionActiveTab === 'glass' ? widthFormula : undefined,
-      height_formula: compositionActiveTab === 'glass' ? heightFormula : undefined,
-    }, {
-      onSuccess: () => {
-        resetCompositionForm();
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+    setEditingTemplate(null);
+    setFormData({
+      name: "",
+      description: "",
+      category: categoriesList[0] || "janelas",
+      linha: currentLinha || "",
+      min_width: "",
+      max_width: "",
+      min_height: "",
+      max_height: "",
+      is_active: true,
+      is_ready: false,
+    });
+  };
+
+  const handleEdit = (template: ProductTemplate) => {
+    setEditingTemplate(template);
+    setFormData({
+      name: template.name,
+      description: (template.description || "").replace("[PRONTO]", "").trim(),
+      category: template.category,
+      linha: template.linha || "",
+      min_width: template.min_width?.toString() || "",
+      max_width: template.max_width?.toString() || "",
+      min_height: template.min_height?.toString() || "",
+      max_height: template.max_height?.toString() || "",
+      is_active: template.is_active,
+      is_ready: template.description?.includes("[PRONTO]") || false,
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    let finalDescription = formData.description.trim();
+    if (formData.is_ready) {
+      if (!finalDescription.includes("[PRONTO]")) {
+        finalDescription = `[PRONTO] ${finalDescription}`.trim();
       }
+    } else {
+      finalDescription = finalDescription.replace("[PRONTO]", "").trim();
+    }
+    
+    saveMutation.mutate({ 
+      ...formData, 
+      description: finalDescription,
+      id: editingTemplate?.id 
     });
   };
 
-  // Handle edit item - open dialog with item data
-  const handleEditItem = (item: ProductTemplateItem) => {
-    setEditingItem(item);
-    setEditQuantityFormula(item.quantity_formula || "1");
-    setEditPiecesQuantity(item.pieces_quantity || 1);
-    setEditPiecesFormula((item as any).pieces_formula || null);
-    setEditWidthFormula(item.width_formula || "");
-    setEditHeightFormula(item.height_formula || "");
-    setEditGlassName(item.notes || "");
-    setEditCutAngle(item.cut_angle || 90);
-    setIsEditItemDialogOpen(true);
-  };
-
-  // Handle update item
-  const handleUpdateItem = () => {
-    if (!editingItem) return;
-    
-    const itemType = editingItem.item_template?.type;
-    
-    updateCompositionMutation.mutate({
-      id: editingItem.id,
-      quantity_formula: editQuantityFormula,
-      pieces_quantity: editPiecesQuantity,
-      pieces_formula: editPiecesFormula,
-      cut_angle: editCutAngle,
-      notes: itemType === 'glass' ? editGlassName : undefined,
-      width_formula: itemType === 'glass' ? editWidthFormula : undefined,
-      height_formula: itemType === 'glass' ? editHeightFormula : undefined,
-    });
-  };
-
-  // Create/Update mutation
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData & { id?: string }) => {
       const payload: Record<string, unknown> = {
@@ -511,8 +494,6 @@ export default function ProductTemplates() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["product-templates"] });
-      queryClient.invalidateQueries({ queryKey: ["admin-product-linhas"] });
-      queryClient.invalidateQueries({ queryKey: ["available-lines"] });
       toast.success(editingTemplate ? "Produto atualizado!" : "Produto criado!");
       handleCloseDialog();
     },
@@ -521,118 +502,18 @@ export default function ProductTemplates() {
     },
   });
 
-  // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      // First delete composition items from template
       await supabase.from("product_template_items").delete().eq("product_template_id", id);
-      
-      // company_products are automatically unlinked via ON DELETE SET NULL
       const { error } = await supabase.from("product_templates").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["product-templates"] });
-      queryClient.invalidateQueries({ queryKey: ["product-template-items-counts"] });
       toast.success("Produto excluído!");
     },
-    onError: (error) => {
-      toast.error("Erro ao excluir: " + error.message);
-    },
   });
 
-  // Toggle active mutation
-  const toggleActiveMutation = useMutation({
-    mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
-      const { error } = await supabase
-        .from("product_templates")
-        .update({ is_active })
-        .eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["product-templates"] });
-      toast.success("Status atualizado!");
-    },
-  });
-
-  // Toggle ready mutation
-  const toggleReadyMutation = useMutation({
-    mutationFn: async ({ id, description, is_ready }: { id: string; description: string | null; is_ready: boolean }) => {
-      let newDescription = (description || "").trim();
-      if (is_ready) {
-        if (!newDescription.includes("[PRONTO]")) {
-          newDescription = `[PRONTO] ${newDescription}`.trim();
-        }
-      } else {
-        newDescription = newDescription.replace("[PRONTO]", "").trim();
-      }
-
-      const { error } = await supabase
-        .from("product_templates")
-        .update({ description: newDescription })
-        .eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["product-templates"] });
-      toast.success("Status de finalização atualizado!");
-    },
-  });
-
-  // Copy product mutation
-  const copyMutation = useMutation({
-    mutationFn: async (template: ProductTemplate) => {
-      // Create copy of product
-      const { data: newProduct, error: productError } = await supabase
-        .from("product_templates")
-        .insert([{
-          name: `${template.name} (Cópia)`,
-          description: template.description,
-          category: template.category,
-          linha: template.linha,
-          min_width: template.min_width,
-          max_width: template.max_width,
-          min_height: template.min_height,
-          max_height: template.max_height,
-          is_active: false,
-        }])
-        .select()
-        .single();
-      if (productError) throw productError;
-
-      // Copy composition items
-      const { data: items } = await supabase
-        .from("product_template_items")
-        .select("*")
-        .eq("product_template_id", template.id);
-
-      if (items && items.length > 0) {
-        const newItems = items.map((item) => ({
-          product_template_id: newProduct.id,
-          item_template_id: item.item_template_id,
-          quantity_formula: item.quantity_formula,
-          pieces_quantity: item.pieces_quantity,
-          cut_angle: item.cut_angle,
-          is_optional: item.is_optional,
-          notes: item.notes,
-        }));
-        await supabase.from("product_template_items").insert(newItems);
-      }
-
-      return newProduct;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["product-templates"] });
-      queryClient.invalidateQueries({ queryKey: ["product-template-items-counts"] });
-      toast.success("Produto duplicado!");
-    },
-    onError: (error) => {
-      toast.error("Erro ao duplicar: " + error.message);
-    },
-  });
-
-  // Add composition item mutation
   const addCompositionMutation = useMutation({
     mutationFn: async (data: { 
       item_template_id: string; 
@@ -660,15 +541,10 @@ export default function ProductTemplates() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["product-template-items", selectedTemplate?.id] });
-      queryClient.invalidateQueries({ queryKey: ["product-template-items-counts"] });
       toast.success("Item adicionado!");
-    },
-    onError: (error) => {
-      toast.error("Erro ao adicionar: " + error.message);
     },
   });
 
-  // Remove composition item mutation
   const removeCompositionMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("product_template_items").delete().eq("id", id);
@@ -676,15 +552,10 @@ export default function ProductTemplates() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["product-template-items", selectedTemplate?.id] });
-      queryClient.invalidateQueries({ queryKey: ["product-template-items-counts"] });
       toast.success("Item removido!");
-    },
-    onError: (error) => {
-      toast.error("Erro ao remover: " + error.message);
     },
   });
 
-  // Update composition item mutation
   const updateCompositionMutation = useMutation({
     mutationFn: async (data: { 
       id: string;
@@ -715,186 +586,7 @@ export default function ProductTemplates() {
       setIsEditItemDialogOpen(false);
       setEditingItem(null);
     },
-    onError: (error) => {
-      toast.error("Erro ao atualizar: " + error.message);
-    },
   });
-
-  // Quick image upload mutation
-  const quickImageUploadMutation = useMutation({
-    mutationFn: async ({ templateId, file }: { templateId: string; file: File }) => {
-      setUploadingImageId(templateId);
-      
-      // Process image to have white background
-      const processedFile = await processFileWithWhiteBackground(file);
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.png`;
-      const filePath = `products/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('product-templates')
-        .upload(filePath, processedFile);
-
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage
-        .from('product-templates')
-        .getPublicUrl(filePath);
-
-      const { error } = await supabase
-        .from('product_templates')
-        .update({ image_url: urlData.publicUrl })
-        .eq('id', templateId);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['product-templates'] });
-      toast.success('Imagem atualizada!');
-      setUploadingImageId(null);
-    },
-    onError: (error) => {
-      toast.error('Erro ao atualizar imagem: ' + error.message);
-      setUploadingImageId(null);
-    },
-  });
-
-  const handleQuickImageUpload = (templateId: string) => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) {
-        quickImageUploadMutation.mutate({ templateId, file });
-      }
-    };
-    input.click();
-  };
-
-  // Bulk image upload handler
-  const handleBulkImageUpload = async (files: FileList) => {
-    if (!templates) return;
-    
-    setBulkUploadProgress({
-      total: files.length,
-      processed: 0,
-      matched: 0,
-      notMatched: [],
-      isUploading: true,
-    });
-    setBulkUploadDialogOpen(true);
-
-    const notMatchedFiles: string[] = [];
-    let matchedCount = 0;
-
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const fileName = file.name.replace(/\.[^/.]+$/, ''); // Remove extension
-      
-      // Try to find matching template by name (case-insensitive, ignoring spaces/dashes)
-      const normalizedFileName = fileName.toLowerCase().replace(/[-_\s]+/g, '-');
-      const matchingTemplate = templates.find(template => {
-        const normalizedTemplateName = template.name.toLowerCase().replace(/[-_\s]+/g, '-');
-        return normalizedTemplateName === normalizedFileName;
-      });
-
-      if (matchingTemplate) {
-        try {
-          const fileExt = file.name.split('.').pop();
-          const storageName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-          const filePath = `products/${storageName}`;
-
-          const { error: uploadError } = await supabase.storage
-            .from('product-templates')
-            .upload(filePath, file);
-
-          if (!uploadError) {
-            const { data: urlData } = supabase.storage
-              .from('product-templates')
-              .getPublicUrl(filePath);
-
-            await supabase
-              .from('product_templates')
-              .update({ image_url: urlData.publicUrl })
-              .eq('id', matchingTemplate.id);
-            
-            matchedCount++;
-          }
-        } catch (err) {
-          console.error('Error uploading:', err);
-          notMatchedFiles.push(fileName + ' (erro)');
-        }
-      } else {
-        notMatchedFiles.push(fileName);
-      }
-
-      setBulkUploadProgress(prev => ({
-        ...prev,
-        processed: i + 1,
-        matched: matchedCount,
-        notMatched: notMatchedFiles,
-      }));
-    }
-
-    setBulkUploadProgress(prev => ({ ...prev, isUploading: false }));
-    queryClient.invalidateQueries({ queryKey: ['product-templates'] });
-    
-    if (matchedCount > 0) {
-      toast.success(`${matchedCount} imagens atualizadas!`);
-    }
-  };
-
-  const openBulkUploadDialog = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.multiple = true;
-    input.onchange = (e) => {
-      const files = (e.target as HTMLInputElement).files;
-      if (files && files.length > 0) {
-        handleBulkImageUpload(files);
-      }
-    };
-    input.click();
-  };
-
-  const handleCloseDialog = () => {
-    setIsDialogOpen(false);
-    setEditingTemplate(null);
-    setFormData({
-      name: "",
-      description: "",
-      category: categoriesList[0] || "janelas",
-      linha: currentLinha || "",
-      min_width: "",
-      max_width: "",
-      min_height: "",
-      max_height: "",
-      is_active: true,
-    });
-  };
-
-  const handleEdit = (template: ProductTemplate) => {
-    setEditingTemplate(template);
-    setFormData({
-      name: template.name,
-      description: template.description || "",
-      category: template.category,
-      linha: template.linha || "",
-      min_width: template.min_width?.toString() || "",
-      max_width: template.max_width?.toString() || "",
-      min_height: template.min_height?.toString() || "",
-      max_height: template.max_height?.toString() || "",
-      is_active: template.is_active,
-    });
-    setIsDialogOpen(true);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    saveMutation.mutate({ ...formData, id: editingTemplate?.id });
-  };
-
 
   if (!isSaasAdmin) {
     return (
@@ -902,9 +594,7 @@ export default function ProductTemplates() {
         <Card className="w-96">
           <CardHeader>
             <CardTitle>Acesso Negado</CardTitle>
-            <CardDescription>
-              Você não tem permissão para acessar esta página.
-            </CardDescription>
+            <CardDescription>Você não tem permissão para acessar esta página.</CardDescription>
           </CardHeader>
         </Card>
       </div>
@@ -914,159 +604,109 @@ export default function ProductTemplates() {
   return (
     <AdminLayout>
       <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-4">
-            {currentLinha && (
-              <Button variant="ghost" size="icon" onClick={() => navigate('/admin/linhas')}>
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-            )}
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">
-                {currentLinha ? `Produtos - ${currentLinha}` : 'Produtos Templates'}
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                {filteredTemplates?.length || 0} produtos 
-                {currentLinha ? ` na linha ${currentLinha}` : ' cadastrados'}
-              </p>
-            </div>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Product Templates</h1>
+            <p className="text-muted-foreground">Gerencie os modelos globais de produtos</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={openBulkUploadDialog}>
-              <ImageUp className="w-4 h-4 mr-2" />
-              Upload em Lote
-            </Button>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={() => handleCloseDialog()}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Novo Produto
-                </Button>
-              </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>
-                  {editingTemplate ? "Editar Produto" : "Novo Produto"}
-                </DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Nome *</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="Ex: Janela 2 Folhas"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="linha">Linha</Label>
-                    <Select
-                      value={formData.linha}
-                      onValueChange={(value) => setFormData({ ...formData, linha: value })}
-                      disabled={!!currentLinha}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione uma linha" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableLines?.map((line) => (
-                          <SelectItem key={line} value={line}>
-                            {line}
-                          </SelectItem>
-                        ))}
-                        <SelectItem value="new">+ Nova Linha</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {formData.linha === "new" && (
-                      <Input
-                        value=""
-                        onChange={(e) => setFormData({ ...formData, linha: e.target.value })}
-                        placeholder="Nome da nova linha"
-                        className="mt-2"
-                      />
-                    )}
-                  </div>
-                </div>
+          <Button onClick={() => setIsDialogOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Novo Produto
+          </Button>
+        </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="category">Categoria *</Label>
-                    <Select
-                      value={formData.category}
-                      onValueChange={(value) => setFormData({ ...formData, category: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categoriesList.map((cat) => (
-                          <SelectItem key={cat} value={cat}>
-                            {categoryLabels[cat] || cat}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Descrição</Label>
-                    <Input
-                      id="description"
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      placeholder="Descrição do produto"
-                    />
-                  </div>
-                </div>
+        <div className="flex gap-4">
+          <Input
+            placeholder="Buscar..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-sm"
+          />
+          <Select value={filterCategory} onValueChange={setFilterCategory}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Categoria" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas</SelectItem>
+              {categoriesList.map(c => <SelectItem key={c} value={c}>{categoryLabels[c] || c}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
 
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nome</TableHead>
+              <TableHead>Categoria</TableHead>
+              <TableHead>Linha</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              <TableRow><TableCell colSpan={5}>Carregando...</TableCell></TableRow>
+            ) : filteredTemplates?.map(template => (
+              <TableRow key={template.id}>
+                <TableCell className="font-medium">
+                  {template.name}
+                  {template.description?.includes("[PRONTO]") && (
+                    <Badge variant="outline" className="ml-2 bg-green-50 text-green-700">Pronto</Badge>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline">{categoryLabels[template.category] || template.category}</Badge>
+                </TableCell>
+                <TableCell>{template.linha || '-'}</TableCell>
+                <TableCell>
+                  <Switch 
+                    checked={template.is_active} 
+                    onCheckedChange={(checked) => toggleActiveMutation.mutate({ id: template.id, is_active: checked })}
+                  />
+                </TableCell>
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon"><MoreVertical className="w-4 h-4" /></Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleEdit(template)}><Pencil className="w-4 h-4 mr-2" /> Editar</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => {
+                        setSelectedTemplate(template);
+                        setIsCompositionDialogOpen(true);
+                      }}><Settings2 className="w-4 h-4 mr-2" /> Composição</DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem className="text-destructive" onClick={() => deleteMutation.mutate(template.id)}><Trash2 className="w-4 h-4 mr-2" /> Excluir</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+
+        {/* Product Dialog */}
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>{editingTemplate ? "Editar Produto" : "Novo Produto"}</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <Ruler className="w-4 h-4" />
-                    Dimensões (mm)
-                  </Label>
-                  <div className="grid grid-cols-4 gap-4">
-                    <div className="space-y-1">
-                      <span className="text-xs text-muted-foreground">Larg. Mín</span>
-                      <Input
-                        type="number"
-                        value={formData.min_width}
-                        onChange={(e) => setFormData({ ...formData, min_width: e.target.value })}
-                        placeholder="500"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <span className="text-xs text-muted-foreground">Larg. Máx</span>
-                      <Input
-                        type="number"
-                        value={formData.max_width}
-                        onChange={(e) => setFormData({ ...formData, max_width: e.target.value })}
-                        placeholder="2000"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <span className="text-xs text-muted-foreground">Alt. Mín</span>
-                      <Input
-                        type="number"
-                        value={formData.min_height}
-                        onChange={(e) => setFormData({ ...formData, min_height: e.target.value })}
-                        placeholder="500"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <span className="text-xs text-muted-foreground">Alt. Máx</span>
-                      <Input
-                        type="number"
-                        value={formData.max_height}
-                        onChange={(e) => setFormData({ ...formData, max_height: e.target.value })}
-                        placeholder="2200"
-                      />
-                    </div>
-                  </div>
+                  <Label htmlFor="name">Nome *</Label>
+                  <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
                 </div>
-
+                <div className="space-y-2">
+                  <Label htmlFor="linha">Linha</Label>
+                  <Input id="linha" value={formData.linha} onChange={(e) => setFormData({ ...formData, linha: e.target.value })} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">Descrição</Label>
+                <Textarea id="description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} />
+              </div>
+              <div className="flex gap-4">
                 <div className="flex items-center space-x-2">
                   <Switch
                     id="is_active"
@@ -1075,268 +715,25 @@ export default function ProductTemplates() {
                   />
                   <Label htmlFor="is_active">Produto ativo</Label>
                 </div>
-
-                <div className="flex justify-end gap-2 pt-4 border-t">
-                  <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                    Cancelar
-                  </Button>
-                  <Button type="submit" disabled={saveMutation.isPending}>
-                    {saveMutation.isPending ? "Salvando..." : "Salvar"}
-                  </Button>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="is_ready"
+                    checked={formData.is_ready}
+                    onCheckedChange={(checked) => setFormData({ ...formData, is_ready: checked })}
+                  />
+                  <Label htmlFor="is_ready" className="flex items-center gap-1">
+                    <CheckCircle2 className="w-4 h-4 text-green-500" />
+                    Pronto/Completo
+                  </Label>
                 </div>
-              </form>
-            </DialogContent>
-            </Dialog>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-center">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar produtos..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          <Select value={filterLinha} onValueChange={setFilterLinha}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Linha" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas Linhas</SelectItem>
-              {availableLines?.map((line) => (
-                <SelectItem key={line} value={line}>
-                  {line}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={filterCategory} onValueChange={setFilterCategory}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Categoria" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas Categorias</SelectItem>
-              {categoriesList.map((cat) => (
-                <SelectItem key={cat} value={cat}>
-                  {categoryLabels[cat]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            variant={showInactive ? "secondary" : "outline"}
-            size="sm"
-            onClick={() => setShowInactive(!showInactive)}
-          >
-            {showInactive ? <Eye className="w-4 h-4 mr-2" /> : <EyeOff className="w-4 h-4 mr-2" />}
-            {showInactive ? "Todos" : "Só ativos"}
-          </Button>
-        </div>
-
-        {/* Products Grid */}
-        {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1, 2, 3].map((i) => (
-              <Card key={i} className="animate-pulse">
-                <CardContent className="h-40" />
-              </Card>
-            ))}
-          </div>
-        ) : filteredTemplates?.length === 0 ? (
-          <Card className="border-dashed">
-            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-              <Package className="w-12 h-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium">Nenhum produto encontrado</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                {searchTerm ? "Tente outro termo de busca" : "Clique em 'Novo Produto' para começar"}
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredTemplates?.map((template) => (
-              <Card 
-                key={template.id} 
-                className={`group relative transition-all hover:shadow-md ${
-                  !template.is_active ? "opacity-60" : ""
-                }`}
-              >
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-base font-semibold truncate">
-                        {template.name}
-                      </CardTitle>
-                      {template.description && (
-                        <CardDescription className="text-xs mt-1 line-clamp-1">
-                          {template.description}
-                        </CardDescription>
-                      )}
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreVertical className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleEdit(template)}>
-                          <Pencil className="w-4 h-4 mr-2" />
-                          Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => {
-                          setSelectedTemplate(template);
-                          setIsCompositionDialogOpen(true);
-                        }}>
-                          <Settings2 className="w-4 h-4 mr-2" />
-                          Composição
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => handleQuickImageUpload(template.id)}
-                          disabled={uploadingImageId === template.id}
-                        >
-                          <Upload className="w-4 h-4 mr-2" />
-                          {uploadingImageId === template.id 
-                            ? "Enviando..." 
-                            : template.image_url 
-                              ? "Trocar Imagem" 
-                              : "Adicionar Imagem"}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => copyMutation.mutate(template)}>
-                          <Copy className="w-4 h-4 mr-2" />
-                          Duplicar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => {
-                            const isReady = template.description?.includes("[PRONTO]");
-                            toggleReadyMutation.mutate({
-                              id: template.id,
-                              description: template.description,
-                              is_ready: !isReady
-                            });
-                          }}
-                        >
-                          {template.description?.includes("[PRONTO]") ? (
-                            <>
-                              <XCircle className="w-4 h-4 mr-2 text-destructive" />
-                              Desmarcar como Pronto
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle2 className="w-4 h-4 mr-2 text-green-500" />
-                              Marcar como Pronto
-                            </>
-                          )}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => toggleActiveMutation.mutate({ 
-                            id: template.id, 
-                            is_active: !template.is_active 
-                          })}
-                        >
-                          {template.is_active ? (
-                            <>
-                              <EyeOff className="w-4 h-4 mr-2" />
-                              Desativar
-                            </>
-                          ) : (
-                            <>
-                              <Eye className="w-4 h-4 mr-2" />
-                              Ativar
-                            </>
-                          )}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem 
-                          className="text-destructive"
-                          onClick={() => {
-                            if (confirm("Excluir este produto e sua composição?")) {
-                              deleteMutation.mutate(template.id);
-                            }
-                          }}
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                  <div className="flex items-center gap-2 mt-2">
-                    <Badge 
-                      variant="outline" 
-                      className={categoryColors[template.category] || categoryColors.other}
-                    >
-                      {categoryLabels[template.category] || template.category}
-                    </Badge>
-                    {!template.is_active && (
-                      <Badge variant="secondary">Inativo</Badge>
-                    )}
-                    {template.description?.includes("[PRONTO]") && (
-                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                        <CheckCircle2 className="w-3 h-3 mr-1" />
-                        Pronto
-                      </Badge>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0 space-y-3">
-                  {/* Image thumbnail */}
-                  {template.image_url ? (
-                    <div className="relative aspect-square rounded-md overflow-hidden bg-muted">
-                      <img 
-                        src={template.image_url} 
-                        alt={template.name}
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
-                  ) : (
-                    <div className="relative aspect-square rounded-md overflow-hidden bg-muted flex items-center justify-center">
-                      <Package className="w-8 h-8 text-muted-foreground/50" />
-                    </div>
-                  )}
-
-                  {/* Dimensions */}
-                  {(template.min_width || template.max_width || template.min_height || template.max_height) && (
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Ruler className="w-3 h-3" />
-                      <span>
-                        L: {template.min_width || "?"} - {template.max_width || "?"} mm
-                      </span>
-                      <span>•</span>
-                      <span>
-                        A: {template.min_height || "?"} - {template.max_height || "?"} mm
-                      </span>
-                    </div>
-                  )}
-                  
-                  {/* Composition count */}
-                  <div className="flex items-center justify-between pt-2 border-t">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Layers className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">
-                        {compositionCounts?.[template.id] || 0} itens na composição
-                      </span>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedTemplate(template);
-                        setIsCompositionDialogOpen(true);
-                      }}
-                    >
-                      <Settings2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={handleCloseDialog}>Cancelar</Button>
+                <Button type="submit" disabled={saveMutation.isPending}>Salvar</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
 
         {/* Composition Dialog */}
         <Dialog open={isCompositionDialogOpen} onOpenChange={(open) => {
@@ -1351,14 +748,10 @@ export default function ProductTemplates() {
               <DialogTitle className="flex items-center gap-2">
                 <Settings2 className="w-5 h-5" />
                 Composição: {selectedTemplate?.name}
-                {selectedTemplate?.linha && (
-                  <Badge variant="secondary">{selectedTemplate.linha}</Badge>
-                )}
               </DialogTitle>
             </DialogHeader>
             
             <div className="space-y-6">
-              {/* Tab Navigation */}
               <div className="flex gap-1 p-1 bg-muted rounded-lg">
                 {itemTypeTabs.map((tab) => (
                   <button
@@ -1379,7 +772,6 @@ export default function ProductTemplates() {
                 ))}
               </div>
 
-              {/* Add Item Section */}
               <Card className="border-primary/20">
                 <CardHeader className="py-3 bg-primary/5">
                   <CardTitle className="text-sm flex items-center gap-2">
@@ -1388,130 +780,41 @@ export default function ProductTemplates() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-4 space-y-4">
-                  {/* Item Selection with images */}
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium">
-                      Selecione o item:
-                      {selectedTemplate?.linha && (
-                        <span className="ml-2 text-xs text-primary font-normal">
-                          (Itens da linha "{selectedTemplate.linha}" aparecem primeiro)
-                        </span>
-                      )}
-                    </Label>
+                    <Label className="text-sm font-medium">Selecione o item:</Label>
                     <Select value={selectedItemToAdd} onValueChange={setSelectedItemToAdd}>
-                      <SelectTrigger className="h-auto min-h-[3.5rem] py-2">
-                        {selectedItemToAdd ? (
-                          (() => {
-                            const sel = getItemsByTypeForAdd(compositionActiveTab).find(i => i.id === selectedItemToAdd);
-                            if (!sel) return <SelectValue placeholder="Clique para escolher um item" />;
-                            return (
-                              <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 rounded-md bg-muted flex-shrink-0 overflow-hidden border border-border">
-                                  {sel.image_url ? (
-                                    <img src={getStorageUrl(sel.image_url)} alt={sel.name} className="w-full h-full object-contain p-0.5" />
-                                  ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">—</div>
-                                  )}
-                                </div>
-                                <div className="flex flex-col min-w-0 text-left">
-                                  <span className="font-medium truncate text-sm">{sel.name}</span>
-                                  {sel.linha && <span className="text-xs text-muted-foreground">{sel.linha}</span>}
-                                </div>
-                              </div>
-                            );
-                          })()
-                        ) : (
-                          <SelectValue placeholder="Clique para escolher um item" />
-                        )}
+                      <SelectTrigger className="h-12">
+                        <SelectValue placeholder="Clique para escolher um item" />
                       </SelectTrigger>
                       <SelectContent className="max-h-[400px]">
-                        {getItemsByTypeForAdd(compositionActiveTab).map((item, index) => {
-                          const isProductLinha = item.linha === selectedTemplate?.linha;
-                          const prevItem = index > 0 ? getItemsByTypeForAdd(compositionActiveTab)[index - 1] : null;
-                          const showSeparator = prevItem && prevItem.linha !== item.linha;
-                          const isFirstOfProductLinha = isProductLinha && (!prevItem || prevItem.linha !== item.linha);
-                          
-                          return (
-                            <div key={item.id}>
-                              {isFirstOfProductLinha && (
-                                <div className="px-2 py-1.5 text-xs font-semibold text-primary bg-primary/10 border-b">
-                                  ⭐ Itens da linha {selectedTemplate?.linha}
-                                </div>
-                              )}
-                              {showSeparator && !isFirstOfProductLinha && (
-                                <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground bg-muted/50 border-y">
-                                  {item.linha || 'Sem Linha'}
-                                </div>
-                              )}
-                              <SelectItem 
-                                value={item.id} 
-                                className={cn(
-                                  "py-2",
-                                  isProductLinha && "bg-primary/5"
+                        {getItemsByTypeForAdd(compositionActiveTab).map((item) => (
+                          <SelectItem key={item.id} value={item.id}>
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+                                {item.image_url ? (
+                                  <img src={getStorageUrl(item.image_url)} alt={item.name} className="w-full h-full object-contain p-0.5" />
+                                ) : (
+                                  <Package className="w-5 h-5 text-muted-foreground/50" />
                                 )}
-                              >
-                                <div className="flex items-center gap-3">
-                                  {/* Item image - larger with contain */}
-                                  <div className="w-12 h-12 rounded-md bg-muted flex-shrink-0 overflow-hidden border border-border">
-                                    {item.image_url ? (
-                                      <img 
-                                        src={getStorageUrl(item.image_url)}
-                                        alt={item.name}
-                                        className="w-full h-full object-contain p-0.5"
-                                        onError={(e) => {
-                                          (e.target as HTMLImageElement).style.display = 'none';
-                                        }}
-                                      />
-                                    ) : (
-                                      <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
-                                        —
-                                      </div>
-                                    )}
-                                  </div>
-                                  {/* Item info */}
-                                  <div className="flex flex-col min-w-0">
-                                    <span className="font-medium truncate">{item.name}</span>
-                                    {item.linha && (
-                                      <span className={cn(
-                                        "text-xs",
-                                        isProductLinha 
-                                          ? "text-primary font-medium"
-                                          : "text-muted-foreground"
-                                      )}>
-                                        {item.linha}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              </SelectItem>
+                              </div>
+                              <span className="font-medium">{item.name}</span>
                             </div>
-                          );
-                        })}
-                        {getItemsByTypeForAdd(compositionActiveTab).length === 0 && (
-                          <div className="p-4 text-sm text-muted-foreground text-center">
-                            Nenhum item disponível para esta categoria
-                          </div>
-                        )}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
                   
-                  {/* Show GlassFormulaEditor for glass items, FormulaEditor for others */}
                   {compositionActiveTab === 'glass' ? (
                     <>
-                      {/* Glass Name Input */}
                       <div className="space-y-2">
                         <Label>Nome do Vidro (opcional)</Label>
                         <Input
-                          placeholder="Ex: Vidro Fixo, Vidro Móvel, Bandeira..."
+                          placeholder="Ex: Vidro Fixo, Vidro Móvel..."
                           value={glassName}
                           onChange={(e) => setGlassName(e.target.value)}
                         />
-                        <p className="text-xs text-muted-foreground">
-                          Identifique o vidro para facilitar no plano de corte
-                        </p>
                       </div>
-                      
                       <GlassFormulaEditor
                         widthFormula={widthFormula}
                         heightFormula={heightFormula}
@@ -1520,47 +823,13 @@ export default function ProductTemplates() {
                       />
                     </>
                   ) : (
-                    <>
-                      <FormulaEditor
-                        value={quantityFormula}
-                        onChange={setQuantityFormula}
-                        showPiecesQuantity={compositionActiveTab === 'profile'}
-                        piecesQuantity={piecesQuantity}
-                        onPiecesChange={setPiecesQuantity}
-                      />
-                      
-                      {compositionActiveTab === 'profile' && (
-                        <div className="space-y-2">
-                          <Label>Ângulo de corte (graus)</Label>
-                          <div className="flex gap-2">
-                            <Button
-                              type="button"
-                              variant={cutAngle === 90 ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => setCutAngle(90)}
-                            >
-                              90°
-                            </Button>
-                            <Button
-                              type="button"
-                              variant={cutAngle === 45 ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => setCutAngle(45)}
-                            >
-                              45°
-                            </Button>
-                            <Input
-                              type="number"
-                              value={cutAngle}
-                              onChange={(e) => setCutAngle(Number(e.target.value))}
-                              className="w-24"
-                              min={0}
-                              max={90}
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </>
+                    <FormulaEditor
+                      value={quantityFormula}
+                      onChange={setQuantityFormula}
+                      showPiecesQuantity={compositionActiveTab === 'profile'}
+                      piecesQuantity={piecesQuantity}
+                      onPiecesChange={setPiecesQuantity}
+                    />
                   )}
                   
                   <div className="flex justify-end">
@@ -1575,7 +844,6 @@ export default function ProductTemplates() {
                 </CardContent>
               </Card>
 
-              {/* Items Grid by Type */}
               <div className="space-y-3">
                 <h4 className="text-sm font-medium text-muted-foreground">
                   Itens adicionados ({getCompositionItemsByType(compositionActiveTab).length})
@@ -1585,9 +853,7 @@ export default function ProductTemplates() {
                   <Card className="border-dashed">
                     <CardContent className="flex flex-col items-center justify-center py-8 text-center">
                       <Layers className="w-10 h-10 text-muted-foreground/50 mb-2" />
-                      <p className="text-sm text-muted-foreground">
-                        Nenhum item desta categoria na composição
-                      </p>
+                      <p className="text-sm text-muted-foreground">Nenhum item desta categoria na composição</p>
                     </CardContent>
                   </Card>
                 ) : (
@@ -1598,7 +864,6 @@ export default function ProductTemplates() {
                         className="bg-card border rounded-lg p-3 relative group hover:shadow-md transition-shadow cursor-pointer hover:border-primary/50"
                         onClick={() => handleEditItem(item)}
                       >
-                        {/* Delete button */}
                         <Button
                           variant="ghost"
                           size="icon"
@@ -1611,12 +876,6 @@ export default function ProductTemplates() {
                           <Trash2 className="w-3 h-3 text-destructive" />
                         </Button>
 
-                        {/* Edit indicator */}
-                        <div className="absolute top-1 left-1 w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Pencil className="w-2.5 h-2.5 text-primary" />
-                        </div>
-
-                        {/* Item image */}
                         <div className="aspect-square bg-muted rounded-lg mb-2 flex items-center justify-center overflow-hidden">
                           {item.item_template?.image_url ? (
                             <img
@@ -1629,56 +888,14 @@ export default function ProductTemplates() {
                           )}
                         </div>
 
-                        {/* Item info */}
-                        {compositionActiveTab === 'glass' && item.notes && (
-                          <h4 className="font-bold text-xs text-foreground truncate text-center mb-0.5">
-                            {item.notes}
-                          </h4>
-                        )}
-                        <h4 className={cn(
-                          "font-medium text-[11px] truncate text-center",
-                          compositionActiveTab === 'glass' && item.notes ? 'text-muted-foreground' : 'text-primary'
-                        )}>
+                        <h4 className="font-medium text-[11px] truncate text-center text-primary">
                           {item.item_template?.name}
                         </h4>
                         
-                        {/* Glass formulas display */}
-                        {compositionActiveTab === 'glass' && (item.width_formula || item.height_formula) && (
-                          <div className="mt-1.5 space-y-0.5">
-                            {item.width_formula && (
-                              <div className="flex items-center justify-center">
-                                <span className="text-[9px] px-1.5 py-0.5 rounded-full font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
-                                  L: {item.width_formula}
-                                </span>
-                              </div>
-                            )}
-                            {item.height_formula && (
-                              <div className="flex items-center justify-center">
-                                <span className="text-[9px] px-1.5 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                                  A: {item.height_formula}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        
-                        {/* Formula for non-glass items */}
                         {compositionActiveTab !== 'glass' && (
                           <p className="text-[10px] text-muted-foreground text-center mt-1 font-mono">
                             {item.quantity_formula}
                           </p>
-                        )}
-
-                        {/* Pieces and angle for profiles */}
-                        {compositionActiveTab === 'profile' && (
-                          <div className="flex justify-center gap-1 mt-1.5">
-                            <span className="text-[9px] font-medium text-foreground bg-primary/10 px-1.5 py-0.5 rounded">
-                              {item.pieces_quantity || 1}x
-                            </span>
-                            <span className="text-[9px] font-medium text-foreground bg-muted px-1.5 py-0.5 rounded">
-                              {item.cut_angle || 90}°
-                            </span>
-                          </div>
                         )}
                       </div>
                     ))}
@@ -1703,35 +920,12 @@ export default function ProductTemplates() {
             </DialogHeader>
             
             <div className="space-y-4">
-              {/* Item preview */}
-              <div className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
-                <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
-                  {editingItem?.item_template?.image_url ? (
-                    <img
-                      src={getStorageUrl(editingItem.item_template.image_url)}
-                      alt={editingItem.item_template.name}
-                      className="w-full h-full object-contain"
-                    />
-                  ) : (
-                    <div className="text-2xl text-muted-foreground/30">📦</div>
-                  )}
-                </div>
-                <div>
-                  <h4 className="font-medium">{editingItem?.item_template?.name}</h4>
-                  <p className="text-sm text-muted-foreground capitalize">
-                    {editingItem?.item_template?.type} • {editingItem?.item_template?.linha || 'Sem linha'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Show GlassFormulaEditor for glass items, FormulaEditor for others */}
-              {editingItem?.item_template?.type === 'glass' ? (
+              {(editingItem?.item_template?.type === 'glass') ? (
                 <>
-                  {/* Glass Name Input */}
                   <div className="space-y-2">
                     <Label>Nome do Vidro (opcional)</Label>
                     <Input
-                      placeholder="Ex: Vidro Fixo, Vidro Móvel, Bandeira..."
+                      placeholder="Ex: Vidro Fixo, Vidro Móvel..."
                       value={editGlassName}
                       onChange={(e) => setEditGlassName(e.target.value)}
                     />
@@ -1765,30 +959,17 @@ export default function ProductTemplates() {
                     <div className="space-y-2">
                       <Label>Ângulo de corte (graus)</Label>
                       <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          variant={editCutAngle === 90 ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setEditCutAngle(90)}
-                        >
-                          90°
-                        </Button>
-                        <Button
-                          type="button"
-                          variant={editCutAngle === 45 ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setEditCutAngle(45)}
-                        >
-                          45°
-                        </Button>
-                        <Input
-                          type="number"
-                          value={editCutAngle}
-                          onChange={(e) => setEditCutAngle(Number(e.target.value))}
-                          className="w-24"
-                          min={0}
-                          max={90}
-                        />
+                        {[45, 90].map((angle) => (
+                          <Button
+                            key={angle}
+                            type="button"
+                            variant={editCutAngle === angle ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setEditCutAngle(angle)}
+                          >
+                            {angle}°
+                          </Button>
+                        ))}
                       </div>
                     </div>
                   )}
@@ -1799,72 +980,8 @@ export default function ProductTemplates() {
                 <Button variant="outline" onClick={() => setIsEditItemDialogOpen(false)}>
                   Cancelar
                 </Button>
-                <Button 
-                  onClick={handleUpdateItem}
-                  disabled={updateCompositionMutation.isPending}
-                >
-                  {updateCompositionMutation.isPending ? 'Salvando...' : 'Salvar Alterações'}
-                </Button>
+                <Button onClick={handleUpdateItem}>Salvar Alterações</Button>
               </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* Bulk Upload Progress Dialog */}
-        <Dialog open={bulkUploadDialogOpen} onOpenChange={setBulkUploadDialogOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <ImageUp className="w-5 h-5" />
-                Upload de Imagens em Lote
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Progresso</span>
-                  <span>{bulkUploadProgress.processed} / {bulkUploadProgress.total}</span>
-                </div>
-                <Progress 
-                  value={(bulkUploadProgress.processed / bulkUploadProgress.total) * 100} 
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-green-500" />
-                  <span>{bulkUploadProgress.matched} associadas</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <XCircle className="w-4 h-4 text-red-500" />
-                  <span>{bulkUploadProgress.notMatched.length} não encontradas</span>
-                </div>
-              </div>
-
-              {bulkUploadProgress.notMatched.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    <AlertCircle className="w-4 h-4 text-amber-500" />
-                    Arquivos sem correspondência:
-                  </div>
-                  <div className="max-h-32 overflow-y-auto bg-muted rounded-md p-2">
-                    {bulkUploadProgress.notMatched.map((file, i) => (
-                      <div key={i} className="text-xs text-muted-foreground truncate">
-                        {file}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {!bulkUploadProgress.isUploading && (
-                <Button 
-                  className="w-full" 
-                  onClick={() => setBulkUploadDialogOpen(false)}
-                >
-                  Fechar
-                </Button>
-              )}
             </div>
           </DialogContent>
         </Dialog>
