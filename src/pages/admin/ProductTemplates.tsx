@@ -195,27 +195,12 @@ export default function ProductTemplates() {
   const [editGlassName, setEditGlassName] = useState("");
   const [editCutAngle, setEditCutAngle] = useState(90);
   
-  const [bulkUploadDialogOpen, setBulkUploadDialogOpen] = useState(false);
-  const [bulkUploadProgress, setBulkUploadProgress] = useState<{
-    total: number;
-    processed: number;
-    matched: number;
-    notMatched: string[];
-    isUploading: boolean;
-  }>({
-    total: 0,
-    processed: 0,
-    matched: 0,
-    notMatched: [],
-    isUploading: false,
-  });
-  
   const currentLinha = linhaParam ? decodeURIComponent(linhaParam) : null;
 
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    category: "janelas",
+    category: categoriesList[0] || "janelas",
     linha: currentLinha || "",
     min_width: "",
     max_width: "",
@@ -245,35 +230,6 @@ export default function ProductTemplates() {
     },
   });
 
-  const { data: compositionCounts } = useQuery({
-    queryKey: ["product-template-items-counts"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("product_template_items")
-        .select("product_template_id");
-      if (error) throw error;
-      
-      const counts: Record<string, number> = {};
-      data.forEach((item) => {
-        counts[item.product_template_id] = (counts[item.product_template_id] || 0) + 1;
-      });
-      return counts;
-    },
-  });
-
-  const { data: itemTemplates } = useQuery({
-    queryKey: ["item-templates-active", currentLinha],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("item_templates")
-        .select("id, name, type, unit, linha, image_url")
-        .eq("is_active", true)
-        .order("name");
-      if (error) throw error;
-      return data as ItemTemplate[];
-    },
-  });
-
   const { data: compositionItems } = useQuery({
     queryKey: ["product-template-items", selectedTemplate?.id],
     queryFn: async () => {
@@ -290,6 +246,19 @@ export default function ProductTemplates() {
       return data as ProductTemplateItem[];
     },
     enabled: !!selectedTemplate,
+  });
+
+  const { data: itemTemplates } = useQuery({
+    queryKey: ["item-templates-active", currentLinha],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("item_templates")
+        .select("id, name, type, unit, linha, image_url")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data as ItemTemplate[];
+    },
   });
 
   useEffect(() => {
@@ -502,6 +471,87 @@ export default function ProductTemplates() {
     },
   });
 
+  const toggleActiveMutation = useMutation({
+    mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
+      const { error } = await supabase
+        .from("product_templates")
+        .update({ is_active })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["product-templates"] });
+      toast.success("Status atualizado!");
+    },
+    onError: (error) => {
+      toast.error("Erro ao atualizar: " + error.message);
+    },
+  });
+
+  const toggleReadyMutation = useMutation({
+    mutationFn: async ({ id, description, is_ready }: { id: string; description: string | null; is_ready: boolean }) => {
+      let newDescription = (description || "").trim();
+      if (is_ready) {
+        if (!newDescription.includes("[PRONTO]")) {
+          newDescription = `[PRONTO] ${newDescription}`.trim();
+        }
+      } else {
+        newDescription = newDescription.replace("[PRONTO]", "").trim();
+      }
+
+      const { error } = await supabase
+        .from("product_templates")
+        .update({ description: newDescription })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["product-templates"] });
+      toast.success("Status de finalização atualizado!");
+    },
+    onError: (error) => {
+      toast.error("Erro ao atualizar: " + error.message);
+    },
+  });
+
+  const copyMutation = useMutation({
+    mutationFn: async (template: ProductTemplate) => {
+      const { data, error } = await supabase
+        .from("product_templates")
+        .insert({
+          name: `${template.name} (cópia)`,
+          description: template.description,
+          category: template.category,
+          linha: template.linha,
+          image_url: template.image_url,
+          is_active: false,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      
+      // Copy items
+      if (compositionItems) {
+        const itemsToCopy = compositionItems.map(item => ({
+          product_template_id: data.id,
+          item_template_id: item.item_template_id,
+          quantity_formula: item.quantity_formula,
+          pieces_quantity: item.pieces_quantity,
+          cut_angle: item.cut_angle,
+          is_optional: item.is_optional,
+          notes: item.notes,
+          width_formula: item.width_formula,
+          height_formula: item.height_formula,
+        }));
+        await supabase.from("product_template_items").insert(itemsToCopy);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["product-templates"] });
+      toast.success("Produto duplicado!");
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       await supabase.from("product_template_items").delete().eq("product_template_id", id);
@@ -576,6 +626,7 @@ export default function ProductTemplates() {
           notes: data.notes || null,
           width_formula: data.width_formula || null,
           height_formula: data.height_formula || null,
+          pieces_formula: data.pieces_formula || null,
         } as any)
         .eq("id", data.id);
       if (error) throw error;
@@ -587,6 +638,56 @@ export default function ProductTemplates() {
       setEditingItem(null);
     },
   });
+
+  const handleAddCompositionItem = () => {
+    addCompositionMutation.mutate({
+      item_template_id: selectedItemToAdd,
+      quantity_formula: quantityFormula,
+      pieces_quantity: piecesQuantity,
+      cut_angle: cutAngle,
+      is_optional: false,
+      notes: compositionActiveTab === 'glass' ? glassName : '',
+      width_formula: compositionActiveTab === 'glass' ? widthFormula : undefined,
+      height_formula: compositionActiveTab === 'glass' ? heightFormula : undefined,
+    });
+    setIsCompositionDialogOpen(false);
+    resetCompositionForm();
+  };
+
+  const handleUpdateItem = () => {
+    if (!editingItem) return;
+    updateCompositionMutation.mutate({
+      id: editingItem.id,
+      quantity_formula: editQuantityFormula,
+      pieces_quantity: editPiecesQuantity,
+      pieces_formula: editPiecesFormula,
+      cut_angle: editCutAngle,
+      notes: editGlassName,
+      width_formula: editWidthFormula,
+      height_formula: editHeightFormula,
+    });
+  };
+
+  const handleEditItem = (item: ProductTemplateItem) => {
+    setEditingItem(item);
+    const itemType = item.item_template?.type;
+    
+    if (itemType === 'glass') {
+      setEditWidthFormula(item.width_formula || '');
+      setEditHeightFormula(item.height_formula || '');
+      setEditGlassName(item.notes || '');
+      setEditQuantityFormula(item.quantity_formula || '1');
+      setEditPiecesQuantity(item.pieces_quantity || 1);
+      setEditPiecesFormula((item as any).pieces_formula || null);
+    } else {
+      setEditQuantityFormula(item.quantity_formula || '1');
+      setEditPiecesQuantity(item.pieces_quantity || 1);
+      setEditPiecesFormula((item as any).pieces_formula || null);
+      setEditCutAngle(item.cut_angle || 90);
+    }
+    
+    setIsEditItemDialogOpen(true);
+  };
 
   if (!isSaasAdmin) {
     return (
@@ -640,20 +741,16 @@ export default function ProductTemplates() {
               <TableHead>Categoria</TableHead>
               <TableHead>Linha</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Pronto</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={5}>Carregando...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6}>Carregando...</TableCell></TableRow>
             ) : filteredTemplates?.map(template => (
               <TableRow key={template.id}>
-                <TableCell className="font-medium">
-                  {template.name}
-                  {template.description?.includes("[PRONTO]") && (
-                    <Badge variant="outline" className="ml-2 bg-green-50 text-green-700">Pronto</Badge>
-                  )}
-                </TableCell>
+                <TableCell className="font-medium">{template.name}</TableCell>
                 <TableCell>
                   <Badge variant="outline">{categoryLabels[template.category] || template.category}</Badge>
                 </TableCell>
@@ -664,6 +761,12 @@ export default function ProductTemplates() {
                     onCheckedChange={(checked) => toggleActiveMutation.mutate({ id: template.id, is_active: checked })}
                   />
                 </TableCell>
+                <TableCell>
+                  <Switch 
+                    checked={template.description?.includes("[PRONTO]")} 
+                    onCheckedChange={(checked) => toggleReadyMutation.mutate({ id: template.id, description: template.description, is_ready: checked })}
+                  />
+                </TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -671,6 +774,7 @@ export default function ProductTemplates() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => handleEdit(template)}><Pencil className="w-4 h-4 mr-2" /> Editar</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => copyMutation.mutate(template)}><Copy className="w-4 h-4 mr-2" /> Duplicar</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => {
                         setSelectedTemplate(template);
                         setIsCompositionDialogOpen(true);
@@ -884,7 +988,7 @@ export default function ProductTemplates() {
                               className="w-full h-full object-contain"
                             />
                           ) : (
-                            <div className="text-2xl text-muted-foreground/30">📦</div>
+                            <div className="text-2xl text-muted-foreground/30 bg-muted w-full h-full flex items-center justify-center">📦</div>
                           )}
                         </div>
 
@@ -913,9 +1017,17 @@ export default function ProductTemplates() {
         }}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Pencil className="w-5 h-5" />
-                Editar Item: {editingItem?.item_template?.name}
+              <DialogTitle className="flex items-center gap-3">
+                {editingItem?.item_template?.image_url && (
+                  <div className="w-10 h-10 rounded bg-muted overflow-hidden shrink-0">
+                    <img
+                      src={getStorageUrl(editingItem.item_template.image_url)}
+                      alt={editingItem.item_template.name}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                )}
+                Editar {editingItem?.item_template?.name}
               </DialogTitle>
             </DialogHeader>
             
@@ -966,6 +1078,7 @@ export default function ProductTemplates() {
                             variant={editCutAngle === angle ? 'default' : 'outline'}
                             size="sm"
                             onClick={() => setEditCutAngle(angle)}
+                            className="flex-1"
                           >
                             {angle}°
                           </Button>
