@@ -145,9 +145,33 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
 
           {/* Dimensions & Quantity - Different layout for items vs products */}
           {isItem ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {item.unit === 'm2' && (
+                <>
+                  <div>
+                    <label className="text-xs text-muted-foreground">Largura (mm)</label>
+                    <Input
+                      type="number"
+                      value={item.width || ''}
+                      onChange={(e) => onUpdate(index, 'width', Number(e.target.value))}
+                      placeholder="1000"
+                      className="h-9"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">Altura (mm)</label>
+                    <Input
+                      type="number"
+                      value={item.height || ''}
+                      onChange={(e) => onUpdate(index, 'height', Number(e.target.value))}
+                      placeholder="1000"
+                      className="h-9"
+                    />
+                  </div>
+                </>
+              )}
               <div>
-                <label className="text-xs text-muted-foreground">Quantidade ({item.unit || 'un'})</label>
+                <label className="text-xs text-muted-foreground">Qtd ({item.unit || 'un'})</label>
                 <Input
                   type="number"
                   value={item.quantity}
@@ -157,7 +181,7 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
                 />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground">Preço Unit.</label>
+                <label className="text-xs text-muted-foreground">Preço {item.unit === 'm2' ? 'm²' : 'Unit.'}</label>
                 <Input
                   type="number"
                   value={item.unit_price || ''}
@@ -165,14 +189,13 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
                     const newPrice = Number(e.target.value);
                     onUpdate(index, 'unit_price', newPrice);
                     onUpdate(index, 'base_price_m2', newPrice);
-                    onUpdate(index, 'total_price', newPrice * item.quantity);
+                    onUpdate(index, 'total_price', newPrice * (item.width && item.height ? (item.width/1000)*(item.height/1000) : 1) * item.quantity);
                   }}
                   min={0}
                   step={0.01}
                   className="h-9"
                 />
               </div>
-              <div className="hidden sm:block" />
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
