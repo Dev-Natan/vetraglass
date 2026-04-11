@@ -90,6 +90,7 @@ type ProductTemplate = {
   max_width: number | null;
   min_height: number | null;
   max_height: number | null;
+  has_multiple_sides: boolean;
   created_at: string;
 };
 
@@ -139,6 +140,7 @@ type CompositionDraft = {
   heightFormula: string;
   glassName: string;
   cutAngle: number;
+  side: string;
   isOpen: boolean;
 };
 
