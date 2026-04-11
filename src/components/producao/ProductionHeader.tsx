@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Scissors, Tag, Ruler, Settings2, Layers } from 'lucide-react';
+import { Scissors, Tag, Ruler, Settings2, Layers, CheckCircle2 } from 'lucide-react';
 import { CuttingPlanFilters } from '@/components/plano-corte/CuttingPlanFilters';
 
 interface ProductionHeaderProps {
@@ -46,6 +46,7 @@ interface ProductionHeaderProps {
   onCalcular: () => void;
   productImageUrl: string | null;
   productName: string | null;
+  isFullyCompleted?: boolean;
 }
 
 const ACABAMENTO_OPTIONS = [
@@ -137,7 +138,8 @@ export function ProductionHeader({
   onEspessuraVidroChange,
   onCalcular,
   productImageUrl,
-  productName
+  productName,
+  isFullyCompleted
 }: ProductionHeaderProps) {
   const selectedProductData = filteredProducts.find(p => p.id === selectedProduct);
   const minW = selectedProductData?.min_width || 0;
@@ -172,8 +174,16 @@ export function ProductionHeader({
           {/* LEFT COLUMN - Product Card + Line Info */}
           <div className="space-y-4">
             {/* Product Preview Card */}
-            <Card className="border shadow-sm overflow-hidden">
-              <div className="aspect-[4/3] bg-gradient-to-br from-primary/5 to-primary/10 flex items-center justify-center p-6">
+            <Card className="border shadow-sm overflow-hidden relative">
+              {isFullyCompleted && (
+                <div className="absolute top-3 right-3 z-10 animate-in zoom-in duration-300">
+                  <div className="bg-emerald-500 text-white rounded-full p-1.5 shadow-lg border-2 border-white dark:border-slate-900 flex items-center gap-1.5 px-3">
+                    <CheckCircle2 className="w-5 h-5" />
+                    <span className="text-xs font-bold uppercase tracking-wider">Pronto</span>
+                  </div>
+                </div>
+              )}
+              <div className="aspect-[4/3] bg-gradient-to-br from-primary/5 to-primary/10 flex items-center justify-center p-6 relative">
                 {productImageUrl ? (
                   <img
                     src={productImageUrl}

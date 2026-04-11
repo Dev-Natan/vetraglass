@@ -690,6 +690,10 @@ export default function Producao() {
     toast.success('PDF exportado com sucesso!');
   };
 
+  const totalItemsCount = calculatedCuts.length + calculatedGlassCuts.length;
+  const completedCount = completedItems.size;
+  const isFullyCompleted = totalItemsCount > 0 && completedCount >= totalItemsCount;
+
   const hasData = calculatedCuts.length > 0 || calculatedGlassCuts.length > 0;
 
   return (
@@ -750,6 +754,7 @@ export default function Producao() {
           onCalcular={() => setCalculated(true)}
           productImageUrl={getStorageUrl(selectedProductData?.image_url || null)}
           productName={selectedProductData?.name || null}
+          isFullyCompleted={isFullyCompleted}
         />
 
         {/* Unified Production View */}
