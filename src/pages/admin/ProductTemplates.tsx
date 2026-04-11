@@ -797,7 +797,7 @@ export default function ProductTemplates() {
             className="gap-2"
           >
             {showInactive ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-            {showInactive ? "Mostrar Inativos" : "Ocultar Inativos"}
+            {showInactive ? "Ocultar Inativos" : "Mostrar Inativos"}
           </Button>
         </div>
 
