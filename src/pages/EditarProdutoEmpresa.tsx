@@ -191,6 +191,7 @@ export default function EditarProdutoEmpresa() {
         .from('company_products')
         .select(`
           *,
+          composition_finished,
           product_template:product_templates(id, name, image_url, linha)
         `)
         .eq('id', id!)
