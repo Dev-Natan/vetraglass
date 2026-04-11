@@ -90,6 +90,7 @@ type ProductTemplate = {
   max_width: number | null;
   min_height: number | null;
   max_height: number | null;
+  has_multiple_sides: boolean;
   created_at: string;
 };
 
@@ -139,6 +140,7 @@ type CompositionDraft = {
   heightFormula: string;
   glassName: string;
   cutAngle: number;
+  side: string;
   isOpen: boolean;
 };
 
@@ -192,6 +194,7 @@ export default function ProductTemplates() {
   const [heightFormula, setHeightFormula] = useState("");
   const [glassName, setGlassName] = useState("");
   const [cutAngle, setCutAngle] = useState(90);
+  const [compositionSide, setCompositionSide] = useState<string>("");
   
   const [editingItem, setEditingItem] = useState<ProductTemplateItem | null>(null);
   const [isEditItemDialogOpen, setIsEditItemDialogOpen] = useState(false);
@@ -202,6 +205,7 @@ export default function ProductTemplates() {
   const [editHeightFormula, setEditHeightFormula] = useState("");
   const [editGlassName, setEditGlassName] = useState("");
   const [editCutAngle, setEditCutAngle] = useState(90);
+  const [editSide, setEditSide] = useState<string>("");
   
   const currentLinha = linhaParam ? decodeURIComponent(linhaParam) : null;
 
@@ -220,6 +224,7 @@ export default function ProductTemplates() {
     max_height: "",
     is_active: true,
     is_ready: false,
+    has_multiple_sides: false,
     base_price: "",
     ncm: "",
     cest: "",
@@ -243,7 +248,7 @@ export default function ProductTemplates() {
       
       const { data, error } = await query.order("name");
       if (error) throw error;
-      return data as ProductTemplate[];
+      return data as unknown as ProductTemplate[];
     },
   });
 
@@ -335,6 +340,7 @@ export default function ProductTemplates() {
       heightFormula,
       glassName,
       cutAngle,
+      side: compositionSide,
       isOpen: true,
     };
 
@@ -399,6 +405,7 @@ export default function ProductTemplates() {
     setHeightFormula("");
     setGlassName("");
     setCutAngle(90);
+    setCompositionSide("");
   };
 
   const handleCloseDialog = () => {
@@ -417,6 +424,7 @@ export default function ProductTemplates() {
       max_height: "",
       is_active: true,
       is_ready: false,
+      has_multiple_sides: false,
       base_price: "",
       ncm: "",
       cest: "",
@@ -440,6 +448,7 @@ export default function ProductTemplates() {
       max_height: template.max_height?.toString() || "",
       is_active: template.is_active,
       is_ready: template.description?.includes("[PRONTO]") || false,
+      has_multiple_sides: template.has_multiple_sides || false,
       base_price: (template as any).base_price?.toString() || "",
       ncm: (template as any).ncm || "",
       cest: (template as any).cest || "",
@@ -479,6 +488,7 @@ export default function ProductTemplates() {
         min_height: data.min_height ? parseFloat(data.min_height) : null,
         max_height: data.max_height ? parseFloat(data.max_height) : null,
         is_active: data.is_active,
+        has_multiple_sides: data.has_multiple_sides,
         base_price: data.base_price ? parseFloat(data.base_price) : null,
         ncm: data.ncm || null,
         cest: data.cest || null,
@@ -577,7 +587,8 @@ export default function ProductTemplates() {
           linha: template.linha,
           image_url: template.image_url,
           is_active: false,
-        })
+          has_multiple_sides: template.has_multiple_sides,
+        } as any)
         .select()
         .single();
       if (error) throw error;
@@ -593,8 +604,9 @@ export default function ProductTemplates() {
           notes: item.notes,
           width_formula: item.width_formula,
           height_formula: item.height_formula,
+          side: (item as any).side || null,
         }));
-        await supabase.from("product_template_items").insert(itemsToCopy);
+        await supabase.from("product_template_items").insert(itemsToCopy as any);
       }
     },
     onSuccess: () => {
@@ -625,6 +637,7 @@ export default function ProductTemplates() {
       notes: string;
       width_formula?: string;
       height_formula?: string;
+      side?: string;
     }) => {
       if (!selectedTemplate) throw new Error("Nenhum template selecionado");
       const { error } = await supabase.from("product_template_items").insert({
@@ -637,7 +650,8 @@ export default function ProductTemplates() {
         notes: data.notes || null,
         width_formula: data.width_formula || null,
         height_formula: data.height_formula || null,
-      });
+        side: data.side || null,
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -667,6 +681,7 @@ export default function ProductTemplates() {
       notes?: string;
       width_formula?: string;
       height_formula?: string;
+      side?: string;
     }) => {
       const { error } = await supabase
         .from("product_template_items")
@@ -678,6 +693,7 @@ export default function ProductTemplates() {
           width_formula: data.width_formula || null,
           height_formula: data.height_formula || null,
           pieces_formula: data.pieces_formula || null,
+          side: data.side || null,
         } as any)
         .eq("id", data.id);
       if (error) throw error;
@@ -702,6 +718,7 @@ export default function ProductTemplates() {
       notes: compositionActiveTab === 'glass' ? glassName : "",
       width_formula: compositionActiveTab === 'glass' ? widthFormula : undefined,
       height_formula: compositionActiveTab === 'glass' ? heightFormula : undefined,
+      side: selectedTemplate?.has_multiple_sides ? compositionSide : undefined,
     }, {
       onSuccess: () => {
         resetCompositionForm();
@@ -723,6 +740,7 @@ export default function ProductTemplates() {
       notes: itemType === 'glass' ? editGlassName : undefined,
       width_formula: itemType === 'glass' ? editWidthFormula : undefined,
       height_formula: itemType === 'glass' ? editHeightFormula : undefined,
+      side: selectedTemplate?.has_multiple_sides ? editSide : undefined,
     });
   };
 
@@ -735,6 +753,7 @@ export default function ProductTemplates() {
     setEditHeightFormula(item.height_formula || "");
     setEditGlassName(item.notes || "");
     setEditCutAngle(item.cut_angle || 90);
+    setEditSide((item as any).side || "");
     setIsEditItemDialogOpen(true);
   };
 
@@ -927,6 +946,11 @@ export default function ProductTemplates() {
                       {template.linha && (
                         <span className="text-[10px] text-muted-foreground truncate">{template.linha}</span>
                       )}
+                      {template.has_multiple_sides && (
+                        <Badge variant="outline" className="text-[9px] px-1 py-0 bg-primary/10 border-primary/30 text-primary">
+                          2 Lados
+                        </Badge>
+                      )}
                     </div>
                     <div className="flex items-center justify-between pt-1">
                       <Switch 
@@ -1100,7 +1124,7 @@ export default function ProductTemplates() {
               </details>
 
               {/* Toggles */}
-              <div className="flex gap-6 pt-2 border-t">
+              <div className="flex flex-wrap gap-6 pt-2 border-t">
                 <div className="flex items-center space-x-2">
                   <Switch
                     id="is_active"
@@ -1118,6 +1142,17 @@ export default function ProductTemplates() {
                   <Label htmlFor="is_ready" className="text-sm flex items-center gap-1">
                     <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                     Pronto/Completo
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="has_multiple_sides"
+                    checked={formData.has_multiple_sides}
+                    onCheckedChange={(checked) => setFormData({ ...formData, has_multiple_sides: checked })}
+                  />
+                  <Label htmlFor="has_multiple_sides" className="text-sm flex items-center gap-1">
+                    <Layers className="w-4 h-4 text-primary" />
+                    Múltiplos Lados (ex: Box de Canto)
                   </Label>
                 </div>
               </div>
@@ -1227,6 +1262,34 @@ export default function ProductTemplates() {
                       piecesQuantity={piecesQuantity}
                       onPiecesChange={setPiecesQuantity}
                     />
+                  )}
+
+                  {/* Side selector for multi-side products */}
+                  {selectedTemplate?.has_multiple_sides && (
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Lado do Produto</Label>
+                      <div className="flex gap-2">
+                        {[
+                          { value: "", label: "Ambos", color: "bg-muted" },
+                          { value: "A", label: "Lado A", color: "bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700" },
+                          { value: "B", label: "Lado B", color: "bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700" },
+                        ].map((opt) => (
+                          <Button
+                            key={opt.value}
+                            type="button"
+                            variant={compositionSide === opt.value ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setCompositionSide(opt.value)}
+                            className="flex-1"
+                          >
+                            {opt.label}
+                          </Button>
+                        ))}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Defina a qual lado este item pertence. As fórmulas usarão a largura do lado correspondente.
+                      </p>
+                    </div>
                   )}
                   
                   <div className="flex justify-end">
@@ -1382,6 +1445,31 @@ export default function ProductTemplates() {
                 </>
               )}
               
+              {/* Side selector for multi-side products in edit mode */}
+              {selectedTemplate?.has_multiple_sides && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Lado do Produto</Label>
+                  <div className="flex gap-2">
+                    {[
+                      { value: "", label: "Ambos" },
+                      { value: "A", label: "Lado A" },
+                      { value: "B", label: "Lado B" },
+                    ].map((opt) => (
+                      <Button
+                        key={opt.value}
+                        type="button"
+                        variant={editSide === opt.value ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setEditSide(opt.value)}
+                        className="flex-1"
+                      >
+                        {opt.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="flex justify-end gap-2 pt-4 border-t">
                 <Button variant="outline" onClick={() => setIsEditItemDialogOpen(false)}>
                   Cancelar
