@@ -132,6 +132,24 @@ function ItemCode({ item }: { item: CompositionItem }) {
   );
 }
 
+function SideBadge({ side }: { side?: string | null }) {
+  if (!side) return null;
+  const isA = side === 'A';
+  return (
+    <Badge 
+      variant="outline" 
+      className={cn(
+        "text-[9px] px-1 py-0 font-bold",
+        isA 
+          ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700" 
+          : "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700"
+      )}
+    >
+      {isA ? "Lado A" : "Lado B"}
+    </Badge>
+  );
+}
+
 // ==================== PERFIS SECTION ====================
 function ProfilesSection({ items, onAdd, onEdit, onRemove }: {
   items: CompositionItem[];
