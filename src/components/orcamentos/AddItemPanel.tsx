@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Package, Check, ArrowLeft, Hash, DollarSign, Layers, Plus } from 'lucide-react';
+import { Search, Package, Check, ArrowLeft, Hash, DollarSign, Layers, Plus, Ruler } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useItemTypes } from '@/hooks/useItemTypes';
 import { useProductLinhas } from '@/hooks/useProductLinhas';
