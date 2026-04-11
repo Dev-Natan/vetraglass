@@ -587,7 +587,8 @@ export default function ProductTemplates() {
           linha: template.linha,
           image_url: template.image_url,
           is_active: false,
-        })
+          has_multiple_sides: template.has_multiple_sides,
+        } as any)
         .select()
         .single();
       if (error) throw error;
@@ -603,8 +604,9 @@ export default function ProductTemplates() {
           notes: item.notes,
           width_formula: item.width_formula,
           height_formula: item.height_formula,
+          side: (item as any).side || null,
         }));
-        await supabase.from("product_template_items").insert(itemsToCopy);
+        await supabase.from("product_template_items").insert(itemsToCopy as any);
       }
     },
     onSuccess: () => {
