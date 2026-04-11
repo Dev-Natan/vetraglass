@@ -647,52 +647,50 @@ export default function ProductTemplates() {
   });
 
   const handleAddCompositionItem = () => {
+    if (!selectedItemToAdd) return;
+    
     addCompositionMutation.mutate({
       item_template_id: selectedItemToAdd,
       quantity_formula: quantityFormula,
       pieces_quantity: piecesQuantity,
       cut_angle: cutAngle,
       is_optional: false,
-      notes: compositionActiveTab === 'glass' ? glassName : '',
+      notes: compositionActiveTab === 'glass' ? glassName : "",
       width_formula: compositionActiveTab === 'glass' ? widthFormula : undefined,
       height_formula: compositionActiveTab === 'glass' ? heightFormula : undefined,
+    }, {
+      onSuccess: () => {
+        resetCompositionForm();
+      }
     });
-    setIsCompositionDialogOpen(false);
-    resetCompositionForm();
   };
 
   const handleUpdateItem = () => {
     if (!editingItem) return;
+    
+    const itemType = editingItem.item_template?.type;
+    
     updateCompositionMutation.mutate({
       id: editingItem.id,
       quantity_formula: editQuantityFormula,
       pieces_quantity: editPiecesQuantity,
       pieces_formula: editPiecesFormula,
       cut_angle: editCutAngle,
-      notes: editGlassName,
-      width_formula: editWidthFormula,
-      height_formula: editHeightFormula,
+      notes: itemType === 'glass' ? editGlassName : undefined,
+      width_formula: itemType === 'glass' ? editWidthFormula : undefined,
+      height_formula: itemType === 'glass' ? editHeightFormula : undefined,
     });
   };
 
   const handleEditItem = (item: ProductTemplateItem) => {
     setEditingItem(item);
-    const itemType = item.item_template?.type;
-    
-    if (itemType === 'glass') {
-      setEditWidthFormula(item.width_formula || '');
-      setEditHeightFormula(item.height_formula || '');
-      setEditGlassName(item.notes || '');
-      setEditQuantityFormula(item.quantity_formula || '1');
-      setEditPiecesQuantity(item.pieces_quantity || 1);
-      setEditPiecesFormula((item as any).pieces_formula || null);
-    } else {
-      setEditQuantityFormula(item.quantity_formula || '1');
-      setEditPiecesQuantity(item.pieces_quantity || 1);
-      setEditPiecesFormula((item as any).pieces_formula || null);
-      setEditCutAngle(item.cut_angle || 90);
-    }
-    
+    setEditQuantityFormula(item.quantity_formula || "1");
+    setEditPiecesQuantity(item.pieces_quantity || 1);
+    setEditPiecesFormula((item as any).pieces_formula || null);
+    setEditWidthFormula(item.width_formula || "");
+    setEditHeightFormula(item.height_formula || "");
+    setEditGlassName(item.notes || "");
+    setEditCutAngle(item.cut_angle || 90);
     setIsEditItemDialogOpen(true);
   };
 
