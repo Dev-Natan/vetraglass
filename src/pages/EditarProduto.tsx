@@ -6,6 +6,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { ArrowLeft, Upload, MoreHorizontal, Plus, ChevronRight, Home, Package, CheckCircle2, Circle, CircleDot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { processFileWithWhiteBackground } from '@/utils/imageBackgroundProcessor';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
