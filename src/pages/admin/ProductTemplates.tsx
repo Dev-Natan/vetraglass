@@ -405,6 +405,7 @@ export default function ProductTemplates() {
     setHeightFormula("");
     setGlassName("");
     setCutAngle(90);
+    setCompositionSide("");
   };
 
   const handleCloseDialog = () => {
