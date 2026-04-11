@@ -295,6 +295,8 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
       description: product.name,
       width: product.width,
       height: product.height,
+      vao_width: product.vao_width,
+      vao_height: product.vao_height,
       quantity: product.quantity,
       base_price_m2: product.base_price,
       unit_price: product.unit_price,
