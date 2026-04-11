@@ -487,6 +487,7 @@ export default function ProductTemplates() {
         min_height: data.min_height ? parseFloat(data.min_height) : null,
         max_height: data.max_height ? parseFloat(data.max_height) : null,
         is_active: data.is_active,
+        has_multiple_sides: data.has_multiple_sides,
         base_price: data.base_price ? parseFloat(data.base_price) : null,
         ncm: data.ncm || null,
         cest: data.cest || null,
