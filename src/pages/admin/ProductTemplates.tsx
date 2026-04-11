@@ -946,6 +946,11 @@ export default function ProductTemplates() {
                       {template.linha && (
                         <span className="text-[10px] text-muted-foreground truncate">{template.linha}</span>
                       )}
+                      {template.has_multiple_sides && (
+                        <Badge variant="outline" className="text-[9px] px-1 py-0 bg-primary/10 border-primary/30 text-primary">
+                          2 Lados
+                        </Badge>
+                      )}
                     </div>
                     <div className="flex items-center justify-between pt-1">
                       <Switch 
