@@ -618,11 +618,23 @@ export default function EditarProduto() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Nome do produto:</Label>
-                <Input
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Nome do produto"
-                />
+                <div className="flex items-center gap-3">
+                  <Input
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Nome do produto"
+                  />
+                  <div className="flex items-center gap-2 border rounded-md px-3 h-10 bg-muted/20 shrink-0">
+                    <Checkbox 
+                      id="composition-finished" 
+                      checked={formData.composition_finished} 
+                      onCheckedChange={(checked) => setFormData({ ...formData, composition_finished: checked === true })}
+                    />
+                    <Label htmlFor="composition-finished" className="text-xs font-medium cursor-pointer whitespace-nowrap">
+                      Concluído
+                    </Label>
+                  </div>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label>Unidade de venda:</Label>
