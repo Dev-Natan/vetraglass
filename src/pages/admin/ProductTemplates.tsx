@@ -790,6 +790,15 @@ export default function ProductTemplates() {
             {showReady ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
             {showReady ? "Ocultar Prontos" : "Mostrar Prontos"}
           </Button>
+
+          <Button
+            variant={showInactive ? "secondary" : "outline"}
+            onClick={() => setShowInactive(!showInactive)}
+            className="gap-2"
+          >
+            {showInactive ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+            {showInactive ? "Mostrar Inativos" : "Ocultar Inativos"}
+          </Button>
         </div>
 
         {isLoading ? (
