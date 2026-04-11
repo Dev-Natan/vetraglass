@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Package, Check, ArrowLeft, Ruler, DollarSign, Sparkles, Info, GlassWater, Layers, Palette, Frame } from 'lucide-react';
+import { Search, Package, Check, ArrowLeft, Ruler, DollarSign, Sparkles, Info, GlassWater, Layers, Palette, Frame, Maximize2 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
@@ -37,6 +37,8 @@ interface AddProductPanelProps {
     category?: string;
     width: number;
     height: number;
+    vao_width?: number;
+    vao_height?: number;
     quantity: number;
     unit_price: number;
     total_price: number;
@@ -62,8 +64,13 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedProductId, setSelectedProductId] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [width, setWidth] = useState<number>(0);
-  const [height, setHeight] = useState<number>(0);
+  const [width, setWidth] = useState<number>(0); // Produto
+  const [height, setHeight] = useState<number>(0); // Produto
+  const [vaoWidth, setVaoWidth] = useState<number>(0);
+  const [vaoHeight, setVaoHeight] = useState<number>(0);
+  const [folgaWidth, setFolgaWidth] = useState<number>(0);
+  const [folgaHeight, setFolgaHeight] = useState<number>(0);
+  const [useVao, setUseVao] = useState<boolean>(true);
   const [quantity, setQuantity] = useState<number>(1);
   const [customPrice, setCustomPrice] = useState<number | null>(null);
   const [hasGlass, setHasGlass] = useState<boolean>(true);
@@ -223,15 +230,22 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     }
   }, [aluminumPriceOptions, selectedAluminumColor, productUsesAluminum]);
 
-  // Reset selections when product changes
+  // Sync Vão - Folga = Produto
   useEffect(() => {
-    setSelectedGlassPriceId('');
-    setSelectedAluminumColor('');
-    setHasGlass(productUsesGlass);
-    // Aluminum-priced products always have acabamento (it's the aluminum color itself)
-    setHasAcabamento(productUsesAluminum);
-    setExcludedOptionalIds([]);
-  }, [companyProduct?.id, productUsesGlass, productUsesAluminum]);
+    if (useVao) {
+      setWidth(Math.max(0, vaoWidth - folgaWidth));
+      setHeight(Math.max(0, vaoHeight - folgaHeight));
+    }
+  }, [vaoWidth, vaoHeight, folgaWidth, folgaHeight, useVao]);
+
+  // Set default dimensions from vao if not using vao input directly
+  useEffect(() => {
+    if (!useVao) {
+      setVaoWidth(width + folgaWidth);
+      setVaoHeight(height + folgaHeight);
+    }
+  }, [width, height, folgaWidth, folgaHeight, !useVao]);
+
 
   // Get selected glass price details
   const selectedGlassPrice = productGlassPrices?.find(p => p.id === selectedGlassPriceId);
@@ -311,13 +325,15 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     onAdd({
       product_template_id: selectedProduct.is_custom ? null : selectedProduct.product_template_id,
       company_product_id: companyProduct?.id,
-      name: selectedProduct.name,
+      name: useVao ? `${selectedProduct.name} [Vão: ${vaoWidth}x${vaoHeight}mm]` : selectedProduct.name,
       base_price: (productUsesComposition && compositionPricing.isReady) ? compositionPricing.compositionCostPerSqm : basePrice,
       image_url: selectedProduct.image_url,
       linha: selectedProduct.linha,
       category: selectedProduct.category,
       width,
       height,
+      vao_width: useVao ? vaoWidth : undefined,
+      vao_height: useVao ? vaoHeight : undefined,
       quantity,
       unit_price: unitPrice,
       total_price: totalPrice,
@@ -741,54 +757,119 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
         )}
 
         {/* Dimensions, Price & Quantity */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-              <Ruler className="w-3 h-3" />
-              Largura (mm)
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+              <Ruler className="w-3.5 h-3.5" />
+              Configuração de Dimensões
             </label>
-            <Input
-              type="number"
-              value={width || ''}
-              onChange={(e) => setWidth(Number(e.target.value))}
-              placeholder="0"
-              min={0}
-              className="bg-background h-10"
-            />
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-muted-foreground">Usar Vão</span>
+              <Switch checked={useVao} onCheckedChange={setUseVao} />
+            </div>
           </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-              <Ruler className="w-3 h-3 rotate-90" />
-              Altura (mm)
-            </label>
-            <Input
-              type="number"
-              value={height || ''}
-              onChange={(e) => setHeight(Number(e.target.value))}
-              placeholder="0"
-              min={0}
-              className="bg-background h-10"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-              <DollarSign className="w-3 h-3" />
-              Preço/m²
-              <Tooltip>
-                  <TooltipTrigger>
-                    <Info className="w-3 h-3 text-muted-foreground" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="text-xs">
-                      {compositionPricing.isReady
-                        ? `Preço por composição: ${formatCurrency(compositionPricing.compositionCostPerSqm)}/m²`
-                        : hasGlass && productUsesGlass && glassPricePerSqm > 0 
-                          ? `Preço do vidro: ${formatCurrency(glassPricePerSqm)}/m²`
-                          : `Preço base: ${formatCurrency(productBasePricePerSqm)}/m²`
-                      }
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
+
+          {useVao ? (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-muted/30 p-3 rounded-lg border border-dashed">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-medium text-muted-foreground uppercase">Vão Largura (mm)</label>
+                <Input
+                  type="number"
+                  value={vaoWidth || ''}
+                  onChange={(e) => setVaoWidth(Number(e.target.value))}
+                  placeholder="0"
+                  className="bg-background h-10 border-primary/20 focus:border-primary"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-medium text-muted-foreground uppercase">Vão Altura (mm)</label>
+                <Input
+                  type="number"
+                  value={vaoHeight || ''}
+                  onChange={(e) => setVaoHeight(Number(e.target.value))}
+                  placeholder="0"
+                  className="bg-background h-10 border-primary/20 focus:border-primary"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-medium text-muted-foreground uppercase">Folga L (mm)</label>
+                <Input
+                  type="number"
+                  value={folgaWidth || ''}
+                  onChange={(e) => setFolgaWidth(Number(e.target.value))}
+                  placeholder="0"
+                  className="bg-background h-10 border-orange-200"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-medium text-muted-foreground uppercase">Folga A (mm)</label>
+                <Input
+                  type="number"
+                  value={folgaHeight || ''}
+                  onChange={(e) => setFolgaHeight(Number(e.target.value))}
+                  placeholder="0"
+                  className="bg-background h-10 border-orange-200"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-2 gap-3 bg-muted/30 p-3 rounded-lg border">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-medium text-muted-foreground uppercase">Largura Final (mm)</label>
+                <Input
+                  type="number"
+                  value={width || ''}
+                  onChange={(e) => setWidth(Number(e.target.value))}
+                  placeholder="0"
+                  className="bg-background h-10 font-bold"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-medium text-muted-foreground uppercase">Altura Final (mm)</label>
+                <Input
+                  type="number"
+                  value={height || ''}
+                  onChange={(e) => setHeight(Number(e.target.value))}
+                  placeholder="0"
+                  className="bg-background h-10 font-bold"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Resulting Product Dimensions Info (Visible when using Vão) */}
+          {useVao && (vaoWidth > 0 || vaoHeight > 0) && (
+            <div className="flex items-center justify-between px-3 py-2 bg-primary/5 border border-primary/20 rounded-lg">
+              <span className="text-xs font-medium text-primary flex items-center gap-1.5">
+                <Maximize2 className="w-3.5 h-3.5" />
+                Medida do Produto:
+              </span>
+              <span className="text-sm font-bold text-primary">
+                {width} x {height} mm
+              </span>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-medium text-muted-foreground uppercase">Qtd</label>
+              <Input
+                type="number"
+                value={quantity}
+                onChange={(e) => setQuantity(Number(e.target.value))}
+                min={1}
+                className="bg-background h-10"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-medium text-muted-foreground uppercase">Área</label>
+              <div className="h-10 px-3 rounded-md border bg-muted/50 flex items-center justify-center font-medium text-sm">
+                {area.toFixed(2)} m²
+              </div>
+            </div>
+            <div className="col-span-2 space-y-1.5">
+              <label className="text-[10px] font-medium text-muted-foreground uppercase flex items-center gap-1">
+                <DollarSign className="w-3 h-3" /> Preço/m²
               </label>
               <Input
                 type="number"
@@ -797,26 +878,12 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                 placeholder="0.00"
                 min={0}
                 step="0.01"
-              className="bg-background h-10"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Qtd</label>
-            <Input
-              type="number"
-              value={quantity}
-              onChange={(e) => setQuantity(Number(e.target.value))}
-              min={1}
-              className="bg-background h-10"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Área</label>
-            <div className="h-10 px-3 rounded-md border bg-muted/50 flex items-center justify-center font-medium text-sm">
-              {area.toFixed(2)} m²
+                className="bg-background h-10 font-mono"
+              />
             </div>
           </div>
         </div>
+
 
         {/* Price Summary & Actions */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-4 rounded-xl bg-gradient-to-r from-primary/10 to-primary/5 border">

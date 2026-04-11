@@ -75,6 +75,8 @@ interface QuoteItem {
   description: string;
   width?: number;
   height?: number;
+  vao_width?: number;
+  vao_height?: number;
   quantity: number;
   base_price_m2: number;
   unit_price: number;
@@ -86,6 +88,7 @@ interface QuoteItem {
   has_glass?: boolean;
   glass_color?: string;
   glass_thickness?: string;
+  aluminum_color?: string;
   include_contramarco?: boolean;
   excluded_optional_ids?: string[];
 }
@@ -276,6 +279,8 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
     category?: string;
     width: number;
     height: number;
+    vao_width?: number;
+    vao_height?: number;
     quantity: number;
     unit_price: number;
     total_price: number;
@@ -291,6 +296,8 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
       description: product.name,
       width: product.width,
       height: product.height,
+      vao_width: product.vao_width,
+      vao_height: product.vao_height,
       quantity: product.quantity,
       base_price_m2: product.base_price,
       unit_price: product.unit_price,
@@ -319,11 +326,15 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
     image_url?: string | null;
     linha?: string | null;
     type?: string;
+    width?: number;
+    height?: number;
   }) => {
     const newItem: QuoteItem = {
       company_item_id: item.company_item_id,
       item_type: 'item',
       description: item.name,
+      width: item.width,
+      height: item.height,
       quantity: item.quantity,
       base_price_m2: item.unit_price,
       unit_price: item.unit_price,
