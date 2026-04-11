@@ -201,7 +201,9 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
   const selectedItem = filteredItems?.find(item => item.id === selectedItemId);
   
   const unitPrice = customPrice !== null ? customPrice : (selectedItem?.sale_price || 0);
-  const totalPrice = unitPrice * quantity;
+  const isM2 = selectedItem?.unit === 'm2';
+  const area = isM2 && width > 0 && height > 0 ? (width / 1000) * (height / 1000) : 1;
+  const totalPrice = unitPrice * area * quantity;
 
   const getTypeLabel = (type: string) => {
     const found = itemTypes?.find(t => t.slug === type);
