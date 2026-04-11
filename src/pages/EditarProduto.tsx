@@ -373,6 +373,7 @@ export default function EditarProduto() {
         item_template_id: string;
         quantity_formula: string;
         pieces_quantity: number;
+        pieces_formula?: string | null;
         is_optional: boolean;
         company_id?: string;
         width_formula?: string | null;
@@ -383,6 +384,7 @@ export default function EditarProduto() {
         item_template_id: selectedItemToAdd,
         quantity_formula: quantityFormula,
         pieces_quantity: piecesQuantity,
+        pieces_formula: piecesFormula,
         is_optional: false,
         width_formula: activeTab === 'glass' ? (widthFormula || null) : null,
         height_formula: activeTab === 'glass' ? (heightFormula || null) : null,
@@ -406,6 +408,7 @@ export default function EditarProduto() {
       setSelectedItemToAdd('');
       setQuantityFormula('1');
       setPiecesQuantity(1);
+      setPiecesFormula(null);
       setWidthFormula('');
       setHeightFormula('');
       setGlassName('');
@@ -448,9 +451,11 @@ export default function EditarProduto() {
         updateData.notes = glassName || null;
         updateData.quantity_formula = quantityFormula || '1';
         updateData.pieces_quantity = piecesQuantity;
+        updateData.pieces_formula = piecesFormula || null;
       } else {
         updateData.quantity_formula = quantityFormula;
         updateData.pieces_quantity = piecesQuantity;
+        updateData.pieces_formula = piecesFormula || null;
         updateData.cut_angle = cutAngle;
       }
       
@@ -1054,6 +1059,11 @@ export default function EditarProduto() {
                     heightFormula={heightFormula}
                     onWidthFormulaChange={setWidthFormula}
                     onHeightFormulaChange={setHeightFormula}
+                    showPiecesQuantity={true}
+                    piecesQuantity={piecesQuantity}
+                    onPiecesChange={setPiecesQuantity}
+                    piecesFormula={piecesFormula}
+                    onPiecesFormulaChange={setPiecesFormula}
                   />
 
                   <FormulaEditor
@@ -1062,6 +1072,8 @@ export default function EditarProduto() {
                     showPiecesQuantity={true}
                     piecesQuantity={piecesQuantity}
                     onPiecesChange={setPiecesQuantity}
+                    piecesFormula={piecesFormula}
+                    onPiecesFormulaChange={setPiecesFormula}
                   />
                 </>
               ) : (
@@ -1071,6 +1083,8 @@ export default function EditarProduto() {
                   showPiecesQuantity={activeTab === 'profile'}
                   piecesQuantity={piecesQuantity}
                   onPiecesChange={setPiecesQuantity}
+                  piecesFormula={piecesFormula}
+                  onPiecesFormulaChange={setPiecesFormula}
                 />
               )}
               
@@ -1129,6 +1143,11 @@ export default function EditarProduto() {
                     heightFormula={heightFormula}
                     onWidthFormulaChange={setWidthFormula}
                     onHeightFormulaChange={setHeightFormula}
+                    showPiecesQuantity={true}
+                    piecesQuantity={piecesQuantity}
+                    onPiecesChange={setPiecesQuantity}
+                    piecesFormula={piecesFormula}
+                    onPiecesFormulaChange={setPiecesFormula}
                   />
 
                   <FormulaEditor

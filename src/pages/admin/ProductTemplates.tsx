@@ -190,6 +190,7 @@ export default function ProductTemplates() {
   const [selectedItemToAdd, setSelectedItemToAdd] = useState("");
   const [quantityFormula, setQuantityFormula] = useState("1");
   const [piecesQuantity, setPiecesQuantity] = useState(1);
+  const [piecesFormula, setPiecesFormula] = useState<string | null>(null);
   const [widthFormula, setWidthFormula] = useState("");
   const [heightFormula, setHeightFormula] = useState("");
   const [glassName, setGlassName] = useState("");
@@ -401,6 +402,7 @@ export default function ProductTemplates() {
     setSelectedItemToAdd("");
     setQuantityFormula("1");
     setPiecesQuantity(1);
+    setPiecesFormula(null);
     setWidthFormula("");
     setHeightFormula("");
     setGlassName("");
@@ -632,6 +634,7 @@ export default function ProductTemplates() {
       item_template_id: string; 
       quantity_formula: string; 
       pieces_quantity: number;
+      pieces_formula?: string | null;
       cut_angle: number;
       is_optional: boolean;
       notes: string;
@@ -645,6 +648,7 @@ export default function ProductTemplates() {
         item_template_id: data.item_template_id,
         quantity_formula: data.quantity_formula,
         pieces_quantity: data.pieces_quantity,
+        pieces_formula: data.pieces_formula || null,
         cut_angle: data.cut_angle,
         is_optional: data.is_optional,
         notes: data.notes || null,
@@ -713,6 +717,7 @@ export default function ProductTemplates() {
       item_template_id: selectedItemToAdd,
       quantity_formula: quantityFormula,
       pieces_quantity: piecesQuantity,
+      pieces_formula: piecesFormula,
       cut_angle: cutAngle,
       is_optional: false,
       notes: compositionActiveTab === 'glass' ? glassName : "",
@@ -1252,6 +1257,11 @@ export default function ProductTemplates() {
                         heightFormula={heightFormula}
                         onWidthFormulaChange={setWidthFormula}
                         onHeightFormulaChange={setHeightFormula}
+                        showPiecesQuantity={true}
+                        piecesQuantity={piecesQuantity}
+                        onPiecesChange={setPiecesQuantity}
+                        piecesFormula={piecesFormula}
+                        onPiecesFormulaChange={setPiecesFormula}
                       />
                     </>
                   ) : (
@@ -1261,6 +1271,8 @@ export default function ProductTemplates() {
                       showPiecesQuantity={compositionActiveTab === 'profile'}
                       piecesQuantity={piecesQuantity}
                       onPiecesChange={setPiecesQuantity}
+                      piecesFormula={piecesFormula}
+                      onPiecesFormulaChange={setPiecesFormula}
                     />
                   )}
 
