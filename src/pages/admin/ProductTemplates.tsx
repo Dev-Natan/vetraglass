@@ -651,7 +651,6 @@ export default function ProductTemplates() {
         item_template_id: data.item_template_id,
         quantity_formula: data.quantity_formula,
         pieces_quantity: data.pieces_quantity,
-        pieces_formula: data.pieces_formula || null,
         cut_angle: data.cut_angle,
         is_optional: data.is_optional,
         notes: data.notes || null,
@@ -699,7 +698,6 @@ export default function ProductTemplates() {
           notes: data.notes || null,
           width_formula: data.width_formula || null,
           height_formula: data.height_formula || null,
-          pieces_formula: data.pieces_formula || null,
           side: data.side || null,
         } as any)
         .eq("id", data.id);
