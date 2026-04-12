@@ -591,7 +591,7 @@ export default function ProductTemplates() {
           linha: template.linha,
           image_url: template.image_url,
           is_active: false,
-          // // has_multiple_sides: template.has_multiple_sides, // Temporarily disabled // Temporarily disabled
+          has_multiple_sides: template.has_multiple_sides,
         } as any)
         .select()
         .single();
@@ -608,7 +608,7 @@ export default function ProductTemplates() {
           notes: item.notes,
           width_formula: item.width_formula,
           height_formula: item.height_formula,
-          // side: (item as any).side || null, // Temporarily disabled due to missing DB column
+          side: (item as any).side || null,
         }));
         await supabase.from("product_template_items").insert(itemsToCopy as any);
       }
@@ -725,7 +725,7 @@ export default function ProductTemplates() {
       notes: compositionActiveTab === 'glass' ? glassName : "",
       width_formula: compositionActiveTab === 'glass' ? widthFormula : undefined,
       height_formula: compositionActiveTab === 'glass' ? heightFormula : undefined,
-      // side: selectedTemplate?.has_multiple_sides ? compositionSide : undefined, // Temporarily disabled due to missing DB column
+      side: selectedTemplate?.has_multiple_sides ? compositionSide : undefined,
     }, {
       onSuccess: () => {
         resetCompositionForm();
