@@ -1,46 +1,61 @@
 
-## Plano: Suporte a Produtos com Múltiplos Lados (Ex: Box de Canto)
 
-### Problema
-Produtos como **Box de Canto** têm dois lados com dimensões independentes (ex: Lado A = 1000mm, Lado B = 950mm). Hoje o sistema só aceita **uma largura (L) e uma altura (A)**, impossibilitando definir composições com fórmulas distintas para cada lado.
+## Plano: Resolver erro "Could not find 'has_multiple_sides' column"
 
-### Solução Proposta: Campo `side` na Composição
+### Diagnóstico
 
-A abordagem mais simples e escalável é adicionar um campo **`side`** (lado) na tabela `product_template_items`, que indica a qual lado do produto aquele componente pertence. As fórmulas continuam usando `L` e `A`, mas o sistema substitui `L` pela dimensão do lado correto.
+Confirmei via inspeção direta do banco de dados que as colunas **não existem** nas tabelas reais:
 
-#### 1. Banco de Dados
-- Adicionar coluna `side` (TEXT, nullable, default `null`) em `product_template_items` e `company_product_items`
-  - `null` = componente usa as dimensões padrão (L × A) — comportamento atual
-  - `'A'` = componente usa Largura do Lado A × Altura
-  - `'B'` = componente usa Largura do Lado B × Altura
-- Adicionar coluna `has_multiple_sides` (BOOLEAN, default `false`) em `product_templates` — marca quais produtos são "multi-lado"
-- Adicionar colunas `width_b` e `height_b` (nullable) em `quote_items` — para armazenar as dimensões do segundo lado no orçamento
+- `product_templates` **NÃO TEM** `has_multiple_sides`
+- `product_template_items` **NÃO TEM** `side`
+- `company_products` **NÃO TEM** `has_multiple_sides`
+- `company_product_items` **NÃO TEM** `side`
+- `quote_items` **NÃO TEM** `width_b` / `height_b`
 
-#### 2. Composição (Admin - ProductTemplates)
-- Quando `has_multiple_sides = true`, exibir um **seletor de lado (A/B/Ambos)** ao adicionar/editar itens da composição
-- Os itens ficam visualmente agrupados por lado com badges coloridos (ex: 🟦 Lado A / 🟩 Lado B)
-- As seções existentes (Perfis, Componentes, Vidros, Contramarco) continuam funcionando normalmente, apenas com o filtro de lado adicional
+Existem 3 arquivos de migração no repositório tentando adicionar essas colunas, mas **nenhum foi aplicado ao banco de dados**. Arquivos `.sql` criados manualmente via `code--write` ou `code--exec` não são automaticamente executados pelo sistema de migração do Lovable Cloud.
 
-#### 3. Orçamento (NovoOrcamentoDialog)
-- Quando o produto selecionado tem `has_multiple_sides = true`, exibir **dois campos de largura** (Largura Lado A e Largura Lado B) em vez de um único
-- A altura pode ser compartilhada ou independente conforme necessidade
+### Causa Raiz
 
-#### 4. Motor de Cálculo (Produção e OS)
-- No `evaluateFormula`, quando `side = 'B'`, substituir `L` pela largura do Lado B
-- No `generateOSDocuments`, iterar a composição respeitando o lado de cada componente
-- Na página de **Produção**, exibir dois campos de largura quando o produto selecionado tiver múltiplos lados
+O sistema de migração do Lovable Cloud requer que as migrações sejam criadas através da **ferramenta de migração de banco de dados** (database migration tool), não simplesmente escrevendo arquivos `.sql` no diretório `supabase/migrations/`.
 
-#### 5. Fluxo do Usuário (Exemplo Box de Canto)
-1. Admin marca o produto "Box de Canto" como `has_multiple_sides = true`
-2. Na composição, adiciona perfis do **Lado A** (ex: montante lado A com fórmula `A - 20`) e perfis do **Lado B** (ex: montante lado B com fórmula `A - 20`, trilho lado B com `L - 30`)
-3. No orçamento, o vendedor informa: Lado A = 1000mm, Lado B = 950mm, Altura = 1900mm
-4. O sistema calcula cada componente usando a largura do lado correspondente
+### Plano de Resolução
 
-### Resumo das Alterações
-| Área | Arquivos | Alteração |
-|------|----------|-----------|
-| **Banco** | Migration | `side` em `product_template_items`/`company_product_items`, `has_multiple_sides` em `product_templates`, `width_b`/`height_b` em `quote_items` |
-| **Admin** | `ProductTemplates.tsx`, `CompositionSections.tsx` | Toggle multi-lado, seletor de lado nos itens |
-| **Orçamento** | `NovoOrcamentoDialog.tsx`, `AddProductPanel.tsx` | Campos de dimensão por lado |
-| **Produção** | `Producao.tsx`, `ProductionHeader.tsx`, `generateOSDocuments.ts` | Cálculo e exibição por lado |
-| **Motor** | `safeFormulaEvaluator.ts` | Suporte a contexto com `widthB` |
+#### Passo 1: Limpar migrações órfãs
+Remover os 3 arquivos de migração que nunca foram aplicados para evitar conflitos futuros:
+- `supabase/migrations/20260315143000_add_has_multiple_sides_to_product_templates.sql`
+- `supabase/migrations/20260317143000_add_has_multiple_sides_to_product_templates.sql`
+- `supabase/migrations/20260412203000_f2a66cfd-c4a8-4a3f-9e45-55886f8e2a2a.sql`
+- `supabase/migrations/20260413000000_fix_multi_side_columns.sql`
+
+#### Passo 2: Aplicar migração corretamente via ferramenta de migração
+Usar a ferramenta correta de migração do Lovable Cloud para executar:
+
+```sql
+ALTER TABLE public.product_templates 
+  ADD COLUMN IF NOT EXISTS has_multiple_sides BOOLEAN DEFAULT false;
+
+ALTER TABLE public.company_products 
+  ADD COLUMN IF NOT EXISTS has_multiple_sides BOOLEAN DEFAULT false;
+
+ALTER TABLE public.product_template_items 
+  ADD COLUMN IF NOT EXISTS side TEXT;
+
+ALTER TABLE public.company_product_items 
+  ADD COLUMN IF NOT EXISTS side TEXT;
+
+ALTER TABLE public.quote_items 
+  ADD COLUMN IF NOT EXISTS width_b NUMERIC;
+
+ALTER TABLE public.quote_items 
+  ADD COLUMN IF NOT EXISTS height_b NUMERIC;
+```
+
+#### Passo 3: Aguardar regeneração do `types.ts`
+Após a migração ser aplicada, o arquivo `src/integrations/supabase/types.ts` será regenerado automaticamente com as novas colunas.
+
+#### Passo 4: Verificar e corrigir referências no código
+Garantir que `ProductTemplates.tsx` e demais arquivos usem as colunas corretamente (já estão usando, só precisam que o banco aceite).
+
+### Resultado Esperado
+Após este plano, salvar um produto com "Múltiplos Lados" ativado vai persistir corretamente no banco de dados.
+
