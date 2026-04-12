@@ -609,7 +609,7 @@ export default function ProductTemplates() {
           notes: item.notes,
           width_formula: item.width_formula,
           height_formula: item.height_formula,
-          side: (item as any).side || null,
+          // side: (item as any).side || null, // Temporarily disabled due to missing DB column
         }));
         await supabase.from("product_template_items").insert(itemsToCopy as any);
       }
