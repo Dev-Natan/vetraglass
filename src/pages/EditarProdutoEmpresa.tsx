@@ -338,7 +338,8 @@ export default function EditarProdutoEmpresa() {
         .update({
           commercial_name: formData.commercial_name,
           description: formData.description,
-          composition_finished: formData.composition_finished,
+          // Temporarily disabled due to missing DB column
+          // composition_finished: formData.composition_finished,
           acabamento: configData.acabamento || null,
           cor_componentes: configData.cor_componentes || null,
           reforco: configData.reforco || null,
