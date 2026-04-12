@@ -495,9 +495,8 @@ export default function ProductTemplates() {
         cest: data.cest || null,
         cfop_venda: data.cfop_venda || null,
         origem: data.origem || null,
+        has_multiple_sides: data.has_multiple_sides,
       };
-
-      // has_multiple_sides: data.has_multiple_sides, // Temporarily disabled due to missing DB column
 
 
 
@@ -748,7 +747,7 @@ export default function ProductTemplates() {
       notes: itemType === 'glass' ? editGlassName : undefined,
       width_formula: itemType === 'glass' ? editWidthFormula : undefined,
       height_formula: itemType === 'glass' ? editHeightFormula : undefined,
-      // side: selectedTemplate?.has_multiple_sides ? editSide : undefined, // Temporarily disabled due to missing DB column
+      side: selectedTemplate?.has_multiple_sides ? editSide : undefined,
     });
   };
 
