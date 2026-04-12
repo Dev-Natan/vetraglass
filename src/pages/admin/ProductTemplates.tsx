@@ -657,7 +657,7 @@ export default function ProductTemplates() {
         notes: data.notes || null,
         width_formula: data.width_formula || null,
         height_formula: data.height_formula || null,
-        side: data.side || null,
+        // side: data.side || null,
       } as any);
       if (error) throw error;
     },
@@ -700,7 +700,7 @@ export default function ProductTemplates() {
           width_formula: data.width_formula || null,
           height_formula: data.height_formula || null,
           pieces_formula: data.pieces_formula || null,
-          side: data.side || null,
+          // side: data.side || null,
         } as any)
         .eq("id", data.id);
       if (error) throw error;
