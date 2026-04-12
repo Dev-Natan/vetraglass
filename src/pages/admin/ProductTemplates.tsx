@@ -490,13 +490,16 @@ export default function ProductTemplates() {
         min_height: data.min_height ? parseFloat(data.min_height) : null,
         max_height: data.max_height ? parseFloat(data.max_height) : null,
         is_active: data.is_active,
-        has_multiple_sides: data.has_multiple_sides,
         base_price: data.base_price ? parseFloat(data.base_price) : null,
         ncm: data.ncm || null,
         cest: data.cest || null,
         cfop_venda: data.cfop_venda || null,
         origem: data.origem || null,
       };
+
+      // has_multiple_sides: data.has_multiple_sides, // Temporarily disabled due to missing DB column
+
+
 
       let savedId = data.id;
 
@@ -589,7 +592,7 @@ export default function ProductTemplates() {
           linha: template.linha,
           image_url: template.image_url,
           is_active: false,
-          has_multiple_sides: template.has_multiple_sides,
+          // // has_multiple_sides: template.has_multiple_sides, // Temporarily disabled // Temporarily disabled
         } as any)
         .select()
         .single();
@@ -606,7 +609,7 @@ export default function ProductTemplates() {
           notes: item.notes,
           width_formula: item.width_formula,
           height_formula: item.height_formula,
-          side: (item as any).side || null,
+          // side: (item as any).side || null, // Temporarily disabled due to missing DB column
         }));
         await supabase.from("product_template_items").insert(itemsToCopy as any);
       }
@@ -654,7 +657,7 @@ export default function ProductTemplates() {
         notes: data.notes || null,
         width_formula: data.width_formula || null,
         height_formula: data.height_formula || null,
-        side: data.side || null,
+        // side: data.side || null,
       } as any);
       if (error) throw error;
     },
@@ -697,7 +700,7 @@ export default function ProductTemplates() {
           width_formula: data.width_formula || null,
           height_formula: data.height_formula || null,
           pieces_formula: data.pieces_formula || null,
-          side: data.side || null,
+          // side: data.side || null,
         } as any)
         .eq("id", data.id);
       if (error) throw error;
@@ -723,7 +726,7 @@ export default function ProductTemplates() {
       notes: compositionActiveTab === 'glass' ? glassName : "",
       width_formula: compositionActiveTab === 'glass' ? widthFormula : undefined,
       height_formula: compositionActiveTab === 'glass' ? heightFormula : undefined,
-      side: selectedTemplate?.has_multiple_sides ? compositionSide : undefined,
+      // side: selectedTemplate?.has_multiple_sides ? compositionSide : undefined, // Temporarily disabled due to missing DB column
     }, {
       onSuccess: () => {
         resetCompositionForm();
@@ -745,7 +748,7 @@ export default function ProductTemplates() {
       notes: itemType === 'glass' ? editGlassName : undefined,
       width_formula: itemType === 'glass' ? editWidthFormula : undefined,
       height_formula: itemType === 'glass' ? editHeightFormula : undefined,
-      side: selectedTemplate?.has_multiple_sides ? editSide : undefined,
+      // side: selectedTemplate?.has_multiple_sides ? editSide : undefined, // Temporarily disabled due to missing DB column
     });
   };
 
