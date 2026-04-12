@@ -1535,6 +1535,7 @@ export type Database = {
           pieces_quantity: number | null
           quantity_formula: string
           section: string | null
+          side: string | null
           sort_order: number | null
           updated_at: string | null
           width_formula: string | null
@@ -1553,6 +1554,7 @@ export type Database = {
           pieces_quantity?: number | null
           quantity_formula?: string
           section?: string | null
+          side?: string | null
           sort_order?: number | null
           updated_at?: string | null
           width_formula?: string | null
@@ -1571,6 +1573,7 @@ export type Database = {
           pieces_quantity?: number | null
           quantity_formula?: string
           section?: string | null
+          side?: string | null
           sort_order?: number | null
           updated_at?: string | null
           width_formula?: string | null
@@ -1613,6 +1616,7 @@ export type Database = {
           cost_per_sqm: number | null
           created_at: string
           description: string | null
+          has_multiple_sides: boolean | null
           id: string
           image_url: string | null
           is_active: boolean
@@ -1643,6 +1647,7 @@ export type Database = {
           cost_per_sqm?: number | null
           created_at?: string
           description?: string | null
+          has_multiple_sides?: boolean | null
           id?: string
           image_url?: string | null
           is_active?: boolean
@@ -1673,6 +1678,7 @@ export type Database = {
           cost_per_sqm?: number | null
           created_at?: string
           description?: string | null
+          has_multiple_sides?: boolean | null
           id?: string
           image_url?: string | null
           is_active?: boolean
@@ -4560,6 +4566,7 @@ export type Database = {
           product_template_id: string
           quantity_formula: string
           section: string | null
+          side: string | null
           width_formula: string | null
         }
         Insert: {
@@ -4576,6 +4583,7 @@ export type Database = {
           product_template_id: string
           quantity_formula?: string
           section?: string | null
+          side?: string | null
           width_formula?: string | null
         }
         Update: {
@@ -4592,6 +4600,7 @@ export type Database = {
           product_template_id?: string
           quantity_formula?: string
           section?: string | null
+          side?: string | null
           width_formula?: string | null
         }
         Relationships: [
@@ -4641,6 +4650,7 @@ export type Database = {
           corte_contramarco: string | null
           created_at: string
           description: string | null
+          has_multiple_sides: boolean | null
           id: string
           image_url: string | null
           is_active: boolean
@@ -4670,6 +4680,7 @@ export type Database = {
           corte_contramarco?: string | null
           created_at?: string
           description?: string | null
+          has_multiple_sides?: boolean | null
           id?: string
           image_url?: string | null
           is_active?: boolean
@@ -4699,6 +4710,7 @@ export type Database = {
           corte_contramarco?: string | null
           created_at?: string
           description?: string | null
+          has_multiple_sides?: boolean | null
           id?: string
           image_url?: string | null
           is_active?: boolean
@@ -5030,6 +5042,7 @@ export type Database = {
           glass_thickness: string | null
           has_glass: boolean | null
           height: number | null
+          height_b: number | null
           id: string
           include_contramarco: boolean | null
           item_type: string | null
@@ -5041,6 +5054,7 @@ export type Database = {
           unit: string | null
           unit_price: number
           width: number | null
+          width_b: number | null
         }
         Insert: {
           aluminum_color?: string | null
@@ -5053,6 +5067,7 @@ export type Database = {
           glass_thickness?: string | null
           has_glass?: boolean | null
           height?: number | null
+          height_b?: number | null
           id?: string
           include_contramarco?: boolean | null
           item_type?: string | null
@@ -5064,6 +5079,7 @@ export type Database = {
           unit?: string | null
           unit_price?: number
           width?: number | null
+          width_b?: number | null
         }
         Update: {
           aluminum_color?: string | null
@@ -5076,6 +5092,7 @@ export type Database = {
           glass_thickness?: string | null
           has_glass?: boolean | null
           height?: number | null
+          height_b?: number | null
           id?: string
           include_contramarco?: boolean | null
           item_type?: string | null
@@ -5087,6 +5104,7 @@ export type Database = {
           unit?: string | null
           unit_price?: number
           width?: number | null
+          width_b?: number | null
         }
         Relationships: [
           {
