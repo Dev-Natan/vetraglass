@@ -1,3 +1,4 @@
+// Product templates admin page
 import { useEffect, useRef, useState } from "react";
 import { resolveImageUrl } from '@/utils/imageUrl';
 import { useParams, useNavigate } from "react-router-dom";
