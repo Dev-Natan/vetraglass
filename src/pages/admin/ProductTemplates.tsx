@@ -497,11 +497,8 @@ export default function ProductTemplates() {
         origem: data.origem || null,
       };
 
-      // Only include has_multiple_sides if it exists in the schema cache to prevent errors
-      // until the database migration is correctly applied
-      if ("has_multiple_sides" in ({} as any)) {
-        payload.has_multiple_sides = data.has_multiple_sides;
-      }
+      // has_multiple_sides: data.has_multiple_sides, // Temporarily disabled due to missing DB column
+
 
 
       let savedId = data.id;
