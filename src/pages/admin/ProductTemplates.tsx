@@ -592,7 +592,7 @@ export default function ProductTemplates() {
           linha: template.linha,
           image_url: template.image_url,
           is_active: false,
-          has_multiple_sides: template.has_multiple_sides,
+          // has_multiple_sides: template.has_multiple_sides, // Temporarily disabled
         } as any)
         .select()
         .single();
@@ -726,7 +726,7 @@ export default function ProductTemplates() {
       notes: compositionActiveTab === 'glass' ? glassName : "",
       width_formula: compositionActiveTab === 'glass' ? widthFormula : undefined,
       height_formula: compositionActiveTab === 'glass' ? heightFormula : undefined,
-      side: selectedTemplate?.has_multiple_sides ? compositionSide : undefined,
+      // side: selectedTemplate?.has_multiple_sides ? compositionSide : undefined, // Temporarily disabled due to missing DB column
     }, {
       onSuccess: () => {
         resetCompositionForm();
@@ -748,7 +748,7 @@ export default function ProductTemplates() {
       notes: itemType === 'glass' ? editGlassName : undefined,
       width_formula: itemType === 'glass' ? editWidthFormula : undefined,
       height_formula: itemType === 'glass' ? editHeightFormula : undefined,
-      side: selectedTemplate?.has_multiple_sides ? editSide : undefined,
+      // side: selectedTemplate?.has_multiple_sides ? editSide : undefined, // Temporarily disabled due to missing DB column
     });
   };
 
