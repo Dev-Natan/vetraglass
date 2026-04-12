@@ -592,7 +592,7 @@ export default function ProductTemplates() {
           linha: template.linha,
           image_url: template.image_url,
           is_active: false,
-          // has_multiple_sides: template.has_multiple_sides, // Temporarily disabled
+          // // has_multiple_sides: template.has_multiple_sides, // Temporarily disabled // Temporarily disabled
         } as any)
         .select()
         .single();
