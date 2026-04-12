@@ -13,7 +13,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.admin-delete-item-template]
-verify_jwt = true
+verify_jwt = false
 
 [functions.focusnfe]
 verify_jwt = true
