@@ -490,13 +490,19 @@ export default function ProductTemplates() {
         min_height: data.min_height ? parseFloat(data.min_height) : null,
         max_height: data.max_height ? parseFloat(data.max_height) : null,
         is_active: data.is_active,
-        has_multiple_sides: data.has_multiple_sides,
         base_price: data.base_price ? parseFloat(data.base_price) : null,
         ncm: data.ncm || null,
         cest: data.cest || null,
         cfop_venda: data.cfop_venda || null,
         origem: data.origem || null,
       };
+
+      // Only include has_multiple_sides if it exists in the schema cache to prevent errors
+      // until the database migration is correctly applied
+      if ("has_multiple_sides" in ({} as any)) {
+        payload.has_multiple_sides = data.has_multiple_sides;
+      }
+
 
       let savedId = data.id;
 
