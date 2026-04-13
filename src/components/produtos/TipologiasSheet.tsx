@@ -47,7 +47,7 @@ interface ProductTemplate {
 export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetProps) {
   const { currentCompany } = useAuth();
   const queryClient = useQueryClient();
-  const { labels: categoryLabels } = useProductCategoryLabels();
+  const { labels: categoryLabels, categories } = useProductCategoryLabels();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'todos' | 'ativos'>('todos');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
