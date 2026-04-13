@@ -151,17 +151,16 @@ export default function Produtos() {
       const linhaName = cp.linha || 'Personalizado';
       const existing = linhasMap.get(linhaName);
       if (existing) {
-          existing.productCount += 1;
-        } else {
-          linhasMap.set(linhaName, {
-            linha: linhaName,
-            productCount: 1,
-            isFromCompanyLinhas: false,
-            categories: new Set(cp.category ? [cp.category] : []),
-          });
-        } else if (cp.category) {
-          existing.categories.add(cp.category);
-        }
+        existing.productCount += 1;
+        if (cp.category) existing.categories.add(cp.category);
+      } else {
+        linhasMap.set(linhaName, {
+          linha: linhaName,
+          productCount: 1,
+          isFromCompanyLinhas: false,
+          categories: new Set(cp.category ? [cp.category] : []),
+        });
+      }
     });
 
     // 3. Convert to array and filter
