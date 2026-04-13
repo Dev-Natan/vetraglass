@@ -85,20 +85,6 @@ import { useProductLinhas } from "@/hooks/useProductLinhas";
 import { Textarea } from "@/components/ui/textarea";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { FormulaEditor } from "@/components/produtos/FormulaEditor";
-import { GlassFormulaEditor } from "@/components/produtos/GlassFormulaEditor";
-import { cn } from "@/lib/utils";
-import { useProductCategoryLabels } from "@/hooks/useProductCategories";
-import { useItemTypeLabels } from "@/hooks/useItemTypes";
-import { useProductLinhas } from "@/hooks/useProductLinhas";
-import { Textarea } from "@/components/ui/textarea";
 
 type ProductTemplate = {
   id: string;
@@ -925,7 +911,7 @@ export default function ProductTemplates() {
 
             <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
               <Button 
-                variant={viewMode === 'grid' ? 'background' : 'ghost'} 
+                variant={viewMode === 'grid' ? 'secondary' : 'ghost'} 
                 size="sm" 
                 className={cn("h-8 px-2", viewMode === 'grid' && "bg-background shadow-sm")}
                 onClick={() => setViewMode('grid')}
@@ -933,7 +919,7 @@ export default function ProductTemplates() {
                 <LayoutGrid className="w-4 h-4 mr-1" /> Grid
               </Button>
               <Button 
-                variant={viewMode === 'table' ? 'background' : 'ghost'} 
+                variant={viewMode === 'table' ? 'secondary' : 'ghost'} 
                 size="sm" 
                 className={cn("h-8 px-2", viewMode === 'table' && "bg-background shadow-sm")}
                 onClick={() => setViewMode('table')}
@@ -941,7 +927,7 @@ export default function ProductTemplates() {
                 <LayoutList className="w-4 h-4 mr-1" /> Lista
               </Button>
               <Button 
-                variant={viewMode === 'grouped' ? 'background' : 'ghost'} 
+                variant={viewMode === 'grouped' ? 'secondary' : 'ghost'} 
                 size="sm" 
                 className={cn("h-8 px-2", viewMode === 'grouped' && "bg-background shadow-sm")}
                 onClick={() => setViewMode('grouped')}
@@ -949,6 +935,7 @@ export default function ProductTemplates() {
                 <Layers className="w-4 h-4 mr-1" /> Linhas
               </Button>
             </div>
+
           </div>
 
           <div className="flex items-center gap-2">
@@ -1182,8 +1169,8 @@ export default function ProductTemplates() {
                               <Switch 
                                 checked={template.is_active} 
                                 onCheckedChange={(checked) => toggleActiveMutation.mutate({ id: template.id, is_active: checked })}
-                                size="sm"
                               />
+
                               <span className={cn("text-xs font-medium", template.is_active ? "text-emerald-600" : "text-muted-foreground")}>
                                 {template.is_active ? "Ativo" : "Inativo"}
                               </span>
