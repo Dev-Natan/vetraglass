@@ -1,5 +1,5 @@
 // Product templates admin page
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { resolveImageUrl } from '@/utils/imageUrl';
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -62,7 +62,12 @@ import {
   ImageUp,
   CheckCircle2,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  LayoutGrid,
+  LayoutList,
+  ChevronDown,
+  ChevronRight,
+  Image as ImageIcon
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -78,6 +83,8 @@ import { useProductCategoryLabels } from "@/hooks/useProductCategories";
 import { useItemTypeLabels } from "@/hooks/useItemTypes";
 import { useProductLinhas } from "@/hooks/useProductLinhas";
 import { Textarea } from "@/components/ui/textarea";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+
 
 type ProductTemplate = {
   id: string;
@@ -186,6 +193,8 @@ export default function ProductTemplates() {
   const [showInactive, setShowInactive] = useState(false);
   const [showReady, setShowReady] = useState(true);
   const [uploadingImageId, setUploadingImageId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'table' | 'grouped'>('grouped');
+  const [expandedLinhas, setExpandedLinhas] = useState<Set<string>>(new Set());
   
   const [compositionActiveTab, setCompositionActiveTab] = useState("glass");
   const [selectedItemToAdd, setSelectedItemToAdd] = useState("");
@@ -197,6 +206,7 @@ export default function ProductTemplates() {
   const [glassName, setGlassName] = useState("");
   const [cutAngle, setCutAngle] = useState(90);
   const [compositionSide, setCompositionSide] = useState<string>("");
+
   
   const [editingItem, setEditingItem] = useState<ProductTemplateItem | null>(null);
   const [isEditItemDialogOpen, setIsEditItemDialogOpen] = useState(false);
@@ -384,6 +394,40 @@ export default function ProductTemplates() {
     }
     return a.name.localeCompare(b.name);
   });
+
+  const groupedTemplates = useMemo(() => {
+    if (!filteredTemplates) return new Map<string, ProductTemplate[]>();
+    const groups = new Map<string, ProductTemplate[]>();
+    for (const t of filteredTemplates) {
+      const key = t.linha || 'Sem Linha';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(t);
+    }
+    return new Map([...groups.entries()].sort(([a], [b]) => a.localeCompare(b)));
+  }, [filteredTemplates]);
+
+  const qualityStats = useMemo(() => {
+    if (!templates) return { total: 0, semImagem: 0, inativos: 0, prontos: 0 };
+    return {
+      total: templates.length,
+      semImagem: templates.filter(t => !t.image_url).length,
+      inativos: templates.filter(t => !t.is_active).length,
+      prontos: templates.filter(t => t.description?.includes("[PRONTO]")).length,
+    };
+  }, [templates]);
+
+  const toggleLinha = (linha: string) => {
+    setExpandedLinhas(prev => {
+      const next = new Set(prev);
+      if (next.has(linha)) next.delete(linha);
+      else next.add(linha);
+      return next;
+    });
+  };
+
+  const expandAll = () => setExpandedLinhas(new Set(groupedTemplates.keys()));
+  const collapseAll = () => setExpandedLinhas(new Set());
+
 
   const getItemsByTypeForAdd = (tabValue: string) => {
     const currentTab = itemTypeTabs.find(t => t.value === tabValue);
@@ -782,65 +826,163 @@ export default function ProductTemplates() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Product Templates</h1>
-            <div className="flex gap-2 text-muted-foreground text-sm">
-              <p>Gerencie os modelos globais de produtos</p>
-              <span>•</span>
-              <p>{templates?.filter(t => t.is_active).length || 0} ativos</p>
-              <span>•</span>
-              <p>{templates?.filter(t => !t.is_active).length || 0} inativos</p>
-            </div>
+            <p className="text-muted-foreground">Gerencie os modelos globais de produtos e suas composições</p>
           </div>
-          <Button onClick={() => setIsDialogOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Novo Produto
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate("/admin/item-templates")} className="gap-2">
+              <Package className="w-4 h-4" />
+              Itens
+            </Button>
+            <Button onClick={() => setIsDialogOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Novo Produto
+            </Button>
+          </div>
         </div>
 
-        <div className="flex gap-4">
-          <Input
-            placeholder="Buscar..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-sm"
-          />
-          <Select value={filterCategory} onValueChange={setFilterCategory}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Categoria" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas</SelectItem>
-              {categoriesList.map(c => <SelectItem key={c} value={c}>{categoryLabels[c] || c}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          
-          <Button
-            variant={showReady ? "outline" : "secondary"}
-            onClick={() => setShowReady(!showReady)}
-            className="gap-2"
-          >
-            {showReady ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-            {showReady ? "Ocultar Prontos" : "Mostrar Prontos"}
-          </Button>
-
-          <Button
-            variant={showInactive ? "secondary" : "outline"}
-            onClick={() => setShowInactive(!showInactive)}
-            className="gap-2"
-          >
-            {showInactive ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-            {showInactive ? "Ocultar Inativos" : "Mostrar Inativos"}
-          </Button>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg"><Package className="w-5 h-5 text-primary" /></div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total de Produtos</p>
+                  <p className="text-2xl font-bold">{qualityStats.total}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg"><CheckCircle2 className="w-5 h-5 text-emerald-600" /></div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Prontos</p>
+                  <p className="text-2xl font-bold">{qualityStats.prontos}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg"><ImageIcon className="w-5 h-5 text-amber-600" /></div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Sem Imagem</p>
+                  <p className="text-2xl font-bold">{qualityStats.semImagem}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-muted rounded-lg"><EyeOff className="w-5 h-5 text-muted-foreground" /></div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Inativos</p>
+                  <p className="text-2xl font-bold">{qualityStats.inativos}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
+
+        <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
+          <div className="flex flex-wrap gap-3 flex-1 w-full md:w-auto">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar produtos..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Select value={filterCategory} onValueChange={setFilterCategory}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas Categorias</SelectItem>
+                {categoriesList.map(c => <SelectItem key={c} value={c}>{categoryLabels[c] || c}</SelectItem>)}
+              </SelectContent>
+            </Select>
+
+            <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
+              <Button 
+                variant={viewMode === 'grid' ? 'secondary' : 'ghost'} 
+                size="sm" 
+                className={cn("h-8 px-2", viewMode === 'grid' && "bg-background shadow-sm")}
+                onClick={() => setViewMode('grid')}
+              >
+                <LayoutGrid className="w-4 h-4 mr-1" /> Grid
+              </Button>
+              <Button 
+                variant={viewMode === 'table' ? 'secondary' : 'ghost'} 
+                size="sm" 
+                className={cn("h-8 px-2", viewMode === 'table' && "bg-background shadow-sm")}
+                onClick={() => setViewMode('table')}
+              >
+                <LayoutList className="w-4 h-4 mr-1" /> Lista
+              </Button>
+              <Button 
+                variant={viewMode === 'grouped' ? 'secondary' : 'ghost'} 
+                size="sm" 
+                className={cn("h-8 px-2", viewMode === 'grouped' && "bg-background shadow-sm")}
+                onClick={() => setViewMode('grouped')}
+              >
+                <Layers className="w-4 h-4 mr-1" /> Linhas
+              </Button>
+            </div>
+
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowReady(!showReady)}
+              className={cn("gap-2", !showReady && "bg-primary/10 border-primary/30")}
+            >
+              {showReady ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+              {showReady ? "Ocultar Prontos" : "Mostrar Prontos"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowInactive(!showInactive)}
+              className={cn("gap-2", showInactive && "bg-primary/10 border-primary/30")}
+            >
+              {showInactive ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+              {showInactive ? "Ocultar Inativos" : "Mostrar Inativos"}
+            </Button>
+          </div>
+        </div>
+
+        {viewMode === 'grouped' && filteredTemplates && filteredTemplates.length > 0 && (
+          <div className="flex gap-2 mb-2">
+            <Button variant="ghost" size="sm" onClick={expandAll} className="text-xs h-7">Expandir todas</Button>
+            <Button variant="ghost" size="sm" onClick={collapseAll} className="text-xs h-7">Recolher todas</Button>
+          </div>
+        )}
 
         {isLoading ? (
-          <div className="text-center py-12 text-muted-foreground">Carregando...</div>
+          <div className="text-center py-12">
+            <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Carregando produtos...</p>
+          </div>
         ) : filteredTemplates?.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            <Package className="w-12 h-12 mx-auto mb-3 opacity-40" />
-            <p>Nenhum produto encontrado</p>
+          <div className="text-center py-20 bg-muted/20 rounded-xl border-2 border-dashed">
+            <Package className="w-12 h-12 mx-auto mb-3 opacity-20" />
+            <h3 className="text-lg font-medium">Nenhum produto encontrado</h3>
+            <p className="text-muted-foreground max-w-xs mx-auto">Tente ajustar seus filtros ou busque por outro termo.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+          <div className="space-y-4">
+            {viewMode === 'grid' ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+
             {filteredTemplates?.map(template => {
               const imgUrl = resolveImageUrl(template.image_url);
               const isReady = template.description?.includes("[PRONTO]");
@@ -972,8 +1114,241 @@ export default function ProductTemplates() {
                 </Card>
               );
             })}
+              </div>
+            ) : viewMode === 'table' ? (
+              <Card>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12"></TableHead>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Categoria</TableHead>
+                      <TableHead>Linha</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredTemplates?.map(template => {
+                      const imgUrl = resolveImageUrl(template.image_url);
+                      const isReady = template.description?.includes("[PRONTO]");
+                      return (
+                        <TableRow key={template.id} className={cn(!template.is_active && "opacity-50")}>
+                          <TableCell>
+                            <div className="w-10 h-10 bg-muted rounded flex items-center justify-center overflow-hidden">
+                              {imgUrl ? (
+                                <img src={imgUrl} alt={template.name} className="w-full h-full object-contain" />
+                              ) : (
+                                <Package className="w-5 h-5 text-muted-foreground/30" />
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span className="font-medium flex items-center gap-2">
+                                {template.name}
+                                {isReady && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
+                              </span>
+                              {template.description && (
+                                <span className="text-xs text-muted-foreground truncate max-w-[300px]">
+                                  {template.description.replace("[PRONTO]", "").trim()}
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="text-[10px]">
+                              {categoryLabels[template.category] || template.category}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {template.linha || "—"}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Switch 
+                                checked={template.is_active} 
+                                onCheckedChange={(checked) => toggleActiveMutation.mutate({ id: template.id, is_active: checked })}
+                              />
+
+                              <span className={cn("text-xs font-medium", template.is_active ? "text-emerald-600" : "text-muted-foreground")}>
+                                {template.is_active ? "Ativo" : "Inativo"}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreVertical className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleEdit(template)}><Pencil className="w-4 h-4 mr-2" /> Editar</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => copyMutation.mutate(template)}><Copy className="w-4 h-4 mr-2" /> Duplicar</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => { setSelectedTemplate(template); setIsCompositionDialogOpen(true); }}>
+                                  <Settings2 className="w-4 h-4 mr-2" /> Composição
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => toggleReadyMutation.mutate({ id: template.id, description: template.description, is_ready: !isReady })}>
+                                  {isReady ? (
+                                    <><XCircle className="w-4 h-4 mr-2 text-destructive" /> Desmarcar Pronto</>
+                                  ) : (
+                                    <><CheckCircle2 className="w-4 h-4 mr-2 text-emerald-500" /> Marcar Pronto</>
+                                  )}
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem className="text-destructive" onClick={() => deleteMutation.mutate(template.id)}><Trash2 className="w-4 h-4 mr-2" /> Excluir</DropdownMenuItem>
+                              </DropdownMenuContent>
+
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {[...groupedTemplates.entries()].map(([linha, templates]) => (
+                  <Collapsible 
+                    key={linha} 
+                    open={expandedLinhas.has(linha)} 
+                    onOpenChange={() => toggleLinha(linha)}
+                    className="border rounded-xl bg-card overflow-hidden transition-all shadow-sm"
+                  >
+                    <CollapsibleTrigger className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "p-2 rounded-lg transition-colors",
+                          expandedLinhas.has(linha) ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
+                        )}>
+                          <Layers className="w-5 h-5" />
+                        </div>
+                        <div className="text-left">
+                          <h3 className="font-bold text-lg">{linha}</h3>
+                          <p className="text-xs text-muted-foreground">{templates.length} produtos nesta linha</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Badge variant="outline" className="hidden sm:inline-flex">{templates.filter(t => t.is_active).length} ativos</Badge>
+                        {expandedLinhas.has(linha) ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                      </div>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="p-4 border-t bg-muted/10">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                          {templates.map(template => {
+                            const imgUrl = resolveImageUrl(template.image_url);
+                            const isReady = template.description?.includes("[PRONTO]");
+                            return (
+                              <Card 
+                                key={template.id} 
+                                className={cn(
+                                  "group relative overflow-hidden transition-all hover:shadow-lg border-2",
+                                  !template.is_active && "opacity-50",
+                                  isReady ? "border-emerald-300 dark:border-emerald-700" : "border-transparent hover:border-primary/30"
+                                )}
+                              >
+                                {isReady && (
+                                  <div className="absolute top-2 left-2 z-10">
+                                    <div className="bg-emerald-500 text-white rounded-full p-1 shadow-md">
+                                      <CheckCircle2 className="w-4 h-4" />
+                                    </div>
+                                  </div>
+                                )}
+                                <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="secondary" size="icon" className="h-7 w-7 shadow-sm">
+                                        <MoreVertical className="w-3.5 h-3.5" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={() => handleEdit(template)}><Pencil className="w-4 h-4 mr-2" /> Editar</DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => copyMutation.mutate(template)}><Copy className="w-4 h-4 mr-2" /> Duplicar</DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => { setSelectedTemplate(template); setIsCompositionDialogOpen(true); }}>
+                                        <Settings2 className="w-4 h-4 mr-2" /> Composição
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem onClick={() => toggleReadyMutation.mutate({ id: template.id, description: template.description, is_ready: !isReady })}>
+                                        {isReady ? (
+                                          <><XCircle className="w-4 h-4 mr-2 text-destructive" /> Desmarcar Pronto</>
+                                        ) : (
+                                          <><CheckCircle2 className="w-4 h-4 mr-2 text-emerald-500" /> Marcar Pronto</>
+                                        )}
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem className="text-destructive" onClick={() => deleteMutation.mutate(template.id)}><Trash2 className="w-4 h-4 mr-2" /> Excluir</DropdownMenuItem>
+                                    </DropdownMenuContent>
+
+                                  </DropdownMenu>
+                                </div>
+                                <div className="aspect-square bg-muted/50 flex items-center justify-center p-3 relative overflow-hidden">
+                                  {imgUrl ? (
+                                    <img src={imgUrl} alt={template.name} className="w-full h-full object-contain" />
+                                  ) : (
+                                    <Package className="w-10 h-10 text-muted-foreground/30" />
+                                  )}
+                                  <label className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                                    <div className="flex flex-col items-center text-white gap-1">
+                                      <ImageUp className="w-6 h-6" />
+                                      <span className="text-xs font-medium">Trocar imagem</span>
+                                    </div>
+                                    <input 
+                                      type="file" 
+                                      accept="image/*" 
+                                      className="hidden"
+                                      onChange={async (e) => {
+                                        const file = e.target.files?.[0];
+                                        if (!file) return;
+                                        try {
+                                          const processedFile = await processFileWithWhiteBackground(file);
+                                          const fileName = `${template.id}.png`;
+                                          const { error: uploadError } = await supabase.storage
+                                            .from('product-templates')
+                                            .upload(fileName, processedFile, { upsert: true, contentType: 'image/png', cacheControl: '0' });
+                                          if (uploadError) throw uploadError;
+                                          const { data: urlData } = supabase.storage.from('product-templates').getPublicUrl(fileName);
+                                          const newUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+                                          await supabase.from('product_templates').update({ image_url: newUrl }).eq('id', template.id);
+                                          queryClient.invalidateQueries({ queryKey: ['product-templates'] });
+                                          toast.success('Imagem atualizada!');
+                                        } catch (err: any) {
+                                          toast.error('Erro ao enviar imagem: ' + err.message);
+                                        }
+                                        e.target.value = '';
+                                      }}
+                                    />
+                                  </label>
+                                </div>
+                                <div className="p-3 space-y-1.5">
+                                  <h3 className="font-semibold text-sm leading-tight truncate" title={template.name}>{template.name}</h3>
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">{categoryLabels[template.category] || template.category}</Badge>
+                                    {template.has_multiple_sides && <Badge variant="outline" className="text-[9px] px-1 py-0 bg-primary/10 border-primary/30 text-primary">2 Lados</Badge>}
+                                  </div>
+                                  <div className="flex items-center justify-between pt-1">
+                                    <Switch checked={template.is_active} onCheckedChange={(checked) => toggleActiveMutation.mutate({ id: template.id, is_active: checked })} className="scale-75 origin-left" />
+                                    <span className={cn("text-[10px] font-medium", template.is_active ? "text-emerald-600" : "text-muted-foreground")}>
+                                      {template.is_active ? "Ativo" : "Inativo"}
+                                    </span>
+                                  </div>
+                                </div>
+                              </Card>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                ))}
+              </div>
+            )}
           </div>
         )}
+
 
         {/* Product Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
