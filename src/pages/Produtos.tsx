@@ -25,12 +25,14 @@ export default function Produtos() {
   useModuleTutorialTrigger('produtos');
   
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [tipologiasSheetOpen, setTipologiasSheetOpen] = useState(false);
   const [selectedLinhaForDownload, setSelectedLinhaForDownload] = useState<string | null>(null);
   const [addLinhaSheetOpen, setAddLinhaSheetOpen] = useState(false);
   const [createCustomDialogOpen, setCreateCustomDialogOpen] = useState(false);
   const [createLinhaDialogOpen, setCreateLinhaDialogOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const { labels: categoryLabels, categories } = useProductCategoryLabels();
 
   // Fetch company linhas (linhas criadas pela empresa)
   const { data: companyLinhas = [] } = useQuery({
@@ -95,7 +97,7 @@ export default function Produtos() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('product_templates')
-        .select('id, linha')
+        .select('id, linha, category')
         .eq('is_active', true);
       
       if (error) throw error;
@@ -105,7 +107,7 @@ export default function Produtos() {
 
   // Build combined linhas list (company_linhas + linhas with products)
   const filteredLinhas = useMemo(() => {
-    const linhasMap = new Map<string, { linha: string; productCount: number; isFromCompanyLinhas: boolean }>();
+    const linhasMap = new Map<string, { linha: string; productCount: number; isFromCompanyLinhas: boolean; categories: Set<string> }>();
     
     // 1. Add all company_linhas first (user-created lines)
     companyLinhas.forEach((cl) => {
@@ -113,6 +115,7 @@ export default function Produtos() {
         linha: cl.name,
         productCount: 0,
         isFromCompanyLinhas: true,
+        categories: new Set(),
       });
     });
 
@@ -128,11 +131,13 @@ export default function Produtos() {
         const existing = linhasMap.get(linhaName);
         if (existing) {
           existing.productCount += 1;
+          existing.categories.add(p.category);
         } else {
           linhasMap.set(linhaName, {
             linha: linhaName,
             productCount: 1,
             isFromCompanyLinhas: false,
+            categories: new Set([p.category]),
           });
         }
       }
@@ -143,14 +148,15 @@ export default function Produtos() {
       const linhaName = cp.linha || 'Personalizado';
       const existing = linhasMap.get(linhaName);
       if (existing) {
-        existing.productCount += 1;
-      } else {
-        linhasMap.set(linhaName, {
-          linha: linhaName,
-          productCount: 1,
-          isFromCompanyLinhas: false,
-        });
-      }
+          existing.productCount += 1;
+        } else {
+          linhasMap.set(linhaName, {
+            linha: linhaName,
+            productCount: 1,
+            isFromCompanyLinhas: false,
+            categories: new Set(),
+          });
+        }
     });
 
     // 3. Convert to array and filter
@@ -161,6 +167,11 @@ export default function Produtos() {
       result = result.filter(item => 
         item.linha.toLowerCase().includes(searchTerm.toLowerCase())
       );
+    }
+
+    // Filter by category
+    if (selectedCategory) {
+      result = result.filter(item => item.categories.has(selectedCategory));
     }
     
     // Sort alphabetically
@@ -264,6 +275,33 @@ export default function Produtos() {
             />
           </div>
         )}
+
+        {/* Categories Bar */}
+        <div className="section-card p-3 sm:p-4 mb-4">
+          <ScrollArea className="w-full whitespace-nowrap">
+            <div className="flex gap-2">
+              <Button
+                variant={selectedCategory === null ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedCategory(null)}
+                className="rounded-full h-8 text-xs"
+              >
+                Todas Linhas
+              </Button>
+              {categories?.map((cat) => (
+                <Button
+                  key={cat.id}
+                  variant={selectedCategory === cat.slug ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSelectedCategory(selectedCategory === cat.slug ? null : cat.slug)}
+                  className="rounded-full h-8 text-xs whitespace-nowrap"
+                >
+                  {cat.name}
+                </Button>
+              ))}
+            </div>
+          </ScrollArea>
+        </div>
 
         {/* Products Grid */}
         <div className="section-card p-3 sm:p-4">
