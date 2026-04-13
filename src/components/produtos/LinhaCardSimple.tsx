@@ -8,13 +8,17 @@ interface LinhaCardSimpleProps {
   onViewProducts: () => void;
   onRemove?: () => void;
   isRemovable?: boolean;
+  categories?: string[];
+  categoryLabels?: Record<string, string>;
 }
 
 export const LinhaCardSimple = memo(function LinhaCardSimple({ 
   linha, 
   onViewProducts,
   onRemove,
-  isRemovable = true
+  isRemovable = true,
+  categories = [],
+  categoryLabels = {},
 }: LinhaCardSimpleProps) {
   return (
     <Card className="relative bg-card border border-border rounded-lg overflow-hidden hover:border-primary/30 transition-colors">
@@ -34,6 +38,21 @@ export const LinhaCardSimple = memo(function LinhaCardSimple({
         <h3 className="font-semibold text-foreground uppercase text-xs sm:text-sm tracking-wide leading-tight line-clamp-2">
           {linha}
         </h3>
+
+        {categories.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {categories.slice(0, 2).map(catSlug => (
+              <span key={catSlug} className="text-[9px] sm:text-[10px] bg-muted px-1.5 py-0.5 rounded-sm text-muted-foreground whitespace-nowrap">
+                {categoryLabels[catSlug] || catSlug}
+              </span>
+            ))}
+            {categories.length > 2 && (
+              <span className="text-[9px] sm:text-[10px] bg-muted px-1.5 py-0.5 rounded-sm text-muted-foreground">
+                +{categories.length - 2}
+              </span>
+            )}
+          </div>
+        )}
 
         <Button onClick={onViewProducts} className="w-full h-8 sm:h-9 text-xs sm:text-sm" size="sm">
           Ver produtos
