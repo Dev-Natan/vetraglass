@@ -50,6 +50,7 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
   const { labels: categoryLabels } = useProductCategoryLabels();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'todos' | 'ativos'>('todos');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   // Fetch products for this linha
   const { data: products, isLoading } = useQuery({
@@ -105,12 +106,12 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
       );
     }
 
-    if (activeTab === 'ativos') {
-      filtered = filtered.filter((p) => isProductActivated(p.id));
+    if (selectedCategory) {
+      filtered = filtered.filter((p) => p.category === selectedCategory);
     }
-
+    
     return filtered;
-  }, [products, searchTerm, activeTab, companyProducts]);
+  }, [products, searchTerm, activeTab, companyProducts, selectedCategory]);
 
   // Group products by category
   const groupedProducts = useMemo(() => {
@@ -201,6 +202,38 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
                 </TabsTrigger>
               </TabsList>
             </Tabs>
+
+            {/* Category Filter */}
+            {categories && categories.length > 0 && (
+              <ScrollArea className="w-full whitespace-nowrap mt-4">
+                <div className="flex gap-2 pb-2">
+                  <Button
+                    variant={selectedCategory === null ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedCategory(null)}
+                    className="rounded-full h-8 text-xs"
+                  >
+                    Todas Categorias
+                  </Button>
+                  {categories.map((cat) => {
+                    const countInLinha = products?.filter(p => p.category === cat.slug).length || 0;
+                    if (countInLinha === 0) return null;
+                    
+                    return (
+                      <Button
+                        key={cat.id}
+                        variant={selectedCategory === cat.slug ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setSelectedCategory(selectedCategory === cat.slug ? null : cat.slug)}
+                        className="rounded-full h-8 text-xs whitespace-nowrap"
+                      >
+                        {cat.name} ({countInLinha})
+                      </Button>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            )}
           </SheetHeader>
 
           {/* Products List */}
