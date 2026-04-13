@@ -61,7 +61,7 @@ export default function Produtos() {
       if (!currentCompany?.id) return [];
       const { data, error } = await supabase
         .from('company_products')
-        .select('product_template_id, is_active, linha, is_custom')
+        .select('product_template_id, is_active, linha, is_custom, category')
         .eq('company_id', currentCompany.id)
         .eq('is_active', true);
       
@@ -157,8 +157,10 @@ export default function Produtos() {
             linha: linhaName,
             productCount: 1,
             isFromCompanyLinhas: false,
-            categories: new Set(),
+            categories: new Set(cp.category ? [cp.category] : []),
           });
+        } else if (cp.category) {
+          existing.categories.add(cp.category);
         }
     });
 
