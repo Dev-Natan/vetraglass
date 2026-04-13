@@ -1190,8 +1190,17 @@ export default function ProductTemplates() {
                                   <Settings2 className="w-4 h-4 mr-2" /> Composição
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => toggleReadyMutation.mutate({ id: template.id, description: template.description, is_ready: !isReady })}>
+                                  {isReady ? (
+                                    <><XCircle className="w-4 h-4 mr-2 text-destructive" /> Desmarcar Pronto</>
+                                  ) : (
+                                    <><CheckCircle2 className="w-4 h-4 mr-2 text-emerald-500" /> Marcar Pronto</>
+                                  )}
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
                                 <DropdownMenuItem className="text-destructive" onClick={() => deleteMutation.mutate(template.id)}><Trash2 className="w-4 h-4 mr-2" /> Excluir</DropdownMenuItem>
                               </DropdownMenuContent>
+
                             </DropdownMenu>
                           </TableCell>
                         </TableRow>
@@ -1263,8 +1272,17 @@ export default function ProductTemplates() {
                                         <Settings2 className="w-4 h-4 mr-2" /> Composição
                                       </DropdownMenuItem>
                                       <DropdownMenuSeparator />
+                                      <DropdownMenuItem onClick={() => toggleReadyMutation.mutate({ id: template.id, description: template.description, is_ready: !isReady })}>
+                                        {isReady ? (
+                                          <><XCircle className="w-4 h-4 mr-2 text-destructive" /> Desmarcar Pronto</>
+                                        ) : (
+                                          <><CheckCircle2 className="w-4 h-4 mr-2 text-emerald-500" /> Marcar Pronto</>
+                                        )}
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
                                       <DropdownMenuItem className="text-destructive" onClick={() => deleteMutation.mutate(template.id)}><Trash2 className="w-4 h-4 mr-2" /> Excluir</DropdownMenuItem>
                                     </DropdownMenuContent>
+
                                   </DropdownMenu>
                                 </div>
                                 <div className="aspect-square bg-muted/50 flex items-center justify-center p-3 relative overflow-hidden">
