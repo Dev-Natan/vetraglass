@@ -332,6 +332,8 @@ export default function Produtos() {
                     onViewProducts={() => handleViewProducts(item.linha)}
                     onRemove={() => handleRemoveLinha(item.linha)}
                     isRemovable={true}
+                    categories={Array.from(item.categories)}
+                    categoryLabels={categoryLabels}
                   />
                 </div>
               ))}
