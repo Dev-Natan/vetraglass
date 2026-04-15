@@ -666,13 +666,27 @@ export default function ProductTemplates() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
+      // 1. First remove any company products links to this template
+      await supabase.from("company_products").delete().eq("product_template_id", id);
+      
+      // 2. Remove composition items
       await supabase.from("product_template_items").delete().eq("product_template_id", id);
+      
+      // 3. Finally remove the template itself
       const { error } = await supabase.from("product_templates").delete().eq("id", id);
+      
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["product-templates"] });
-      toast.success("Produto excluído!");
+      toast.success("Produto excluído permanentemente!");
+    },
+    onError: (error) => {
+      if (error.message.includes('foreign key constraint')) {
+        toast.error('Este produto não pode ser excluído pois já foi utilizado em orçamentos ou pedidos. Você pode apenas desativá-lo.');
+      } else {
+        toast.error('Erro ao excluir: ' + error.message);
+      }
     },
   });
 
@@ -1034,7 +1048,11 @@ export default function ProductTemplates() {
                           )}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive" onClick={() => deleteMutation.mutate(template.id)}>
+                        <DropdownMenuItem className="text-destructive" onClick={() => {
+                          if (confirm(`Deseja EXCLUIR DEFINITIVAMENTE o produto "${template.name}"? Esta ação não pode ser desfeita.`)) {
+                            deleteMutation.mutate(template.id);
+                          }
+                        }}>
                           <Trash2 className="w-4 h-4 mr-2" /> Excluir
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -1198,7 +1216,11 @@ export default function ProductTemplates() {
                                   )}
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-destructive" onClick={() => deleteMutation.mutate(template.id)}><Trash2 className="w-4 h-4 mr-2" /> Excluir</DropdownMenuItem>
+                                <DropdownMenuItem className="text-destructive" onClick={() => {
+                                  if (confirm(`Deseja EXCLUIR DEFINITIVAMENTE o produto "${template.name}"? Esta ação não pode ser desfeita.`)) {
+                                    deleteMutation.mutate(template.id);
+                                  }
+                                }}><Trash2 className="w-4 h-4 mr-2" /> Excluir</DropdownMenuItem>
                               </DropdownMenuContent>
 
                             </DropdownMenu>

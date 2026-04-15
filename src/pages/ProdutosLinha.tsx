@@ -200,6 +200,34 @@ export default function ProdutosLinha() {
     },
   });
 
+  // Hard remove product for company
+  const removeCompanyProductMutation = useMutation({
+    mutationFn: async (productId: string) => {
+      if (!currentCompany?.id) throw new Error('Empresa não selecionada');
+      
+      const { error } = await supabase
+        .from('company_products')
+        .delete()
+        .eq('company_id', currentCompany.id)
+        .eq('id', productId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-products'] });
+      queryClient.invalidateQueries({ queryKey: ['custom-products'] });
+      queryClient.invalidateQueries({ queryKey: ['company-products-with-templates'] });
+      toast.success('Produto removido definitivamente!');
+    },
+    onError: (error) => {
+      if (error.message.includes('foreign key constraint')) {
+        toast.error('Este produto não pode ser excluído pois está em uso em orçamentos ou ordens de serviço. Você pode apenas desativá-lo.');
+      } else {
+        toast.error('Erro ao remover: ' + error.message);
+      }
+    },
+  });
+
   // Reactivate custom product
   const reactivateCustomProductMutation = useMutation({
     mutationFn: async (productId: string) => {
@@ -484,22 +512,38 @@ export default function ProdutosLinha() {
                         </Button>
                       </>
                     ) : (
-                      // Product is inactive - show activate button
-                      <Button
-                        size="sm"
-                        className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium text-xs h-9"
-                        onClick={() => {
-                          if (product.is_custom) {
-                            reactivateCustomProductMutation.mutate(product.id);
-                          } else {
-                            // For template products, use the RPC function
-                            activateProductMutation.mutate(product.id);
-                          }
-                        }}
-                        disabled={activateProductMutation.isPending || reactivateCustomProductMutation.isPending}
-                      >
-                        Habilitar
-                      </Button>
+                      // Product is inactive - show activate and delete buttons
+                      <>
+                        <Button
+                          size="sm"
+                          className="flex-1 bg-green-500 hover:bg-green-600 text-white font-medium text-xs h-9"
+                          onClick={() => {
+                            if (product.is_custom) {
+                              reactivateCustomProductMutation.mutate(product.id);
+                            } else {
+                              // For template products, use the RPC function
+                              activateProductMutation.mutate(product.id);
+                            }
+                          }}
+                          disabled={activateProductMutation.isPending || reactivateCustomProductMutation.isPending}
+                        >
+                          Habilitar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="flex-1 font-medium text-xs h-9"
+                          onClick={() => {
+                            if (confirm(`Deseja excluir permanentemente o produto "${product.name}"?`)) {
+                              removeCompanyProductMutation.mutate(product.companyProductId || product.id);
+                            }
+                          }}
+                          disabled={removeCompanyProductMutation.isPending}
+                        >
+                          <Trash2 className="w-3.5 h-3.5 mr-1" />
+                          Excluir
+                        </Button>
+                      </>
                     )}
                     
                     <Button
@@ -631,22 +675,37 @@ export default function ProdutosLinha() {
                         </Button>
                       </>
                     ) : (
-                      // Product is inactive - show activate button
-                      <Button
-                        size="sm"
-                        className="bg-green-500 hover:bg-green-600 text-white font-medium"
-                        onClick={() => {
-                          if (product.is_custom) {
-                            reactivateCustomProductMutation.mutate(product.id);
-                          } else {
-                            // For template products, use the RPC function
-                            activateProductMutation.mutate(product.id);
-                          }
-                        }}
-                        disabled={activateProductMutation.isPending || reactivateCustomProductMutation.isPending}
-                      >
-                        Habilitar
-                      </Button>
+                      // Product is inactive - show activate and delete buttons
+                      <>
+                        <Button
+                          size="sm"
+                          className="bg-green-500 hover:bg-green-600 text-white font-medium"
+                          onClick={() => {
+                            if (product.is_custom) {
+                              reactivateCustomProductMutation.mutate(product.id);
+                            } else {
+                              // For template products, use the RPC function
+                              activateProductMutation.mutate(product.id);
+                            }
+                          }}
+                          disabled={activateProductMutation.isPending || reactivateCustomProductMutation.isPending}
+                        >
+                          Habilitar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => {
+                            if (confirm(`Deseja excluir permanentemente o produto "${product.name}"?`)) {
+                              removeCompanyProductMutation.mutate(product.companyProductId || product.id);
+                            }
+                          }}
+                          disabled={removeCompanyProductMutation.isPending}
+                        >
+                          <Trash2 className="w-4 h-4 mr-1" />
+                          Excluir
+                        </Button>
+                      </>
                     )}
 
 
