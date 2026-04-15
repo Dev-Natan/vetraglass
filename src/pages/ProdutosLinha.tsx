@@ -230,7 +230,27 @@ export default function ProdutosLinha() {
 
   // Reactivate custom product
   const reactivateCustomProductMutation = useMutation({
-...
+    mutationFn: async (productId: string) => {
+      if (!currentCompany?.id) throw new Error('Empresa não selecionada');
+      
+      const { error } = await supabase
+        .from('company_products')
+        .update({ is_active: true, updated_at: new Date().toISOString() })
+        .eq('company_id', currentCompany.id)
+        .eq('id', productId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-products'] });
+      queryClient.invalidateQueries({ queryKey: ['custom-products'] });
+      queryClient.invalidateQueries({ queryKey: ['company-products-with-templates'] });
+      toast.success('Produto personalizado reativado!');
+    },
+    onError: (error) => {
+      toast.error('Erro ao reativar: ' + error.message);
+    },
+  });
 
   // Toggle active mutation (for templates - admin only)
   const toggleActiveMutation = useMutation({
