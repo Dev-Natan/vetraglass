@@ -545,11 +545,6 @@ export default function ProdutosLinha() {
                         </Button>
                       </>
                     )}
-                        disabled={activateProductMutation.isPending || reactivateCustomProductMutation.isPending}
-                      >
-                        Habilitar
-                      </Button>
-                    )}
                     
                     <Button
                       size="sm"
@@ -711,11 +706,6 @@ export default function ProdutosLinha() {
                           Excluir
                         </Button>
                       </>
-                    )}
-                        disabled={activateProductMutation.isPending || reactivateCustomProductMutation.isPending}
-                      >
-                        Habilitar
-                      </Button>
                     )}
 
 
