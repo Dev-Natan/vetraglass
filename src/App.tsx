@@ -16,8 +16,6 @@ import Auth from "./pages/Auth";
 
 // Lazy loaded pages - all core pages loaded on demand
 const Index = lazy(() => import("./pages/Index"));
-const Produtos = lazy(() => import("./pages/Produtos"));
-const ProdutosLinha = lazy(() => import("./pages/ProdutosLinha"));
 const Orcamentos = lazy(() => import("./pages/Orcamentos"));
 const OrdensServico = lazy(() => import("./pages/OrdensServico"));
 const Clientes = lazy(() => import("./pages/Clientes"));
