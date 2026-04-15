@@ -235,15 +235,6 @@ function AppRoutes() {
       <Route path="/admin/item-templates" element={
         <ProtectedRoute><LazyRoute><ItemTemplates /></LazyRoute></ProtectedRoute>
       } />
-      <Route path="/admin/product-templates" element={
-        <ProtectedRoute><LazyRoute><ProductTemplates /></LazyRoute></ProtectedRoute>
-      } />
-      <Route path="/admin/linhas" element={
-        <ProtectedRoute><LazyRoute><AdminLinhas /></LazyRoute></ProtectedRoute>
-      } />
-      <Route path="/admin/linhas/:linha" element={
-        <ProtectedRoute><LazyRoute><ProductTemplates /></LazyRoute></ProtectedRoute>
-      } />
       <Route path="/admin/companies" element={
         <ProtectedRoute><LazyRoute><AdminCompanies /></LazyRoute></ProtectedRoute>
       } />
