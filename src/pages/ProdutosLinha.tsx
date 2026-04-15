@@ -313,7 +313,7 @@ export default function ProdutosLinha() {
         composition_finished: (p as any).composition_finished || false,
       }));
 
-    return [];
+    return [...templateFiltered, ...customFiltered];
   }, [products, customProducts, searchTerm, selectedCategory, companyProducts, showActive]);
 
   const getImageUrl = (path: string | null, isCustom: boolean) => {

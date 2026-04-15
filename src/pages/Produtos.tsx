@@ -164,7 +164,7 @@ export default function Produtos() {
     });
 
     // 3. Convert to array and filter
-    let result: any[] = [];
+    let result = Array.from(linhasMap.values());
     
     // Filter by search
     if (searchTerm) {
