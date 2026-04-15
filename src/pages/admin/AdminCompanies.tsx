@@ -178,7 +178,9 @@ export default function AdminCompanies() {
     }
   };
 
+  const filteredCompanies = companies.filter(company => {
     const searchLower = searchTerm.toLowerCase();
+
     return (
       company.name.toLowerCase().includes(searchLower) ||
       company.cnpj?.includes(searchTerm) ||
@@ -547,12 +549,22 @@ export default function AdminCompanies() {
                               <Button
                                 variant="ghost"
                                 size="icon"
+                                className="h-8 w-8 text-orange-500 hover:text-orange-600 hover:bg-orange-50"
+                                onClick={() => handleClearProducts(company)}
+                                title="Apagar todos os produtos"
+                              >
+                                <Package className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
                                 className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                                 onClick={() => setCompanyToDelete(company)}
                                 title="Excluir empresa"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
+
                             </div>
                           </TableCell>
                         </TableRow>
