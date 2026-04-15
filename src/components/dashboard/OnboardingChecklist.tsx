@@ -54,14 +54,6 @@ export function OnboardingChecklist() {
       icon: Users,
     },
     {
-      id: 'products',
-      label: 'Importe produtos para sua empresa',
-      description: 'Adicione produtos ao seu catálogo',
-      completed: hasProducts,
-      path: '/produtos',
-      icon: Package,
-    },
-    {
       id: 'quote',
       label: 'Crie seu primeiro orçamento',
       description: 'Gere um orçamento para um cliente',
