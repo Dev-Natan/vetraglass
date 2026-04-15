@@ -34,6 +34,16 @@ import { useProductCategories } from '@/hooks/useProductCategories';
 import { useProductLinhas } from '@/hooks/useProductLinhas';
 import { useItemTypeLabels } from '@/hooks/useItemTypes';
 
+export interface FiscalFieldsData {
+  ncm: string;
+  cfop_venda: string;
+  cfop_venda_interestadual: string;
+  cest: string;
+  origem: string;
+  codigo_servico: string;
+  aliquota_iss: string;
+}
+
 interface AddStockDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
