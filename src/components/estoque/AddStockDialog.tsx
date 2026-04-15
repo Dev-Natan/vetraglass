@@ -883,12 +883,7 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="pt-3">
-                <FiscalFieldsCard 
-                  data={fiscalData} 
-                  onChange={setFiscalData}
-                  type="item"
-                  itemType={category as 'glass' | 'profile' | 'accessory' | 'service'}
-                />
+                {/* Fiscal fields removed */}
               </CollapsibleContent>
             </Collapsible>
           </div>

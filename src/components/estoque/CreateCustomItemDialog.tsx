@@ -443,11 +443,7 @@ export function CreateCustomItemDialog({
                 Dados Fiscais (Opcional)
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-2">
-                <FiscalFieldsCard
-                  data={fiscalData}
-                  onChange={setFiscalData}
-                  itemType={category as 'profile' | 'glass' | 'accessory' | 'service' | undefined}
-                />
+                {/* Fiscal fields removed */}
               </CollapsibleContent>
             </Collapsible>
           </div>
