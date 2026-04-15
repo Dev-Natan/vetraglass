@@ -54,8 +54,6 @@ const ConfiguracoesDados = lazy(() => import("./pages/ConfiguracoesDados"));
 // Admin pages - lazy loaded (only for SaaS admins)
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const ItemTemplates = lazy(() => import("./pages/admin/ItemTemplates"));
-const ProductTemplates = lazy(() => import("./pages/admin/ProductTemplates"));
-const AdminLinhas = lazy(() => import("./pages/admin/AdminLinhas"));
 const AdminCompanies = lazy(() => import("./pages/admin/AdminCompanies"));
 const ImportProducts = lazy(() => import("./pages/admin/ImportProducts"));
 const ImportExcelProducts = lazy(() => import("./pages/admin/ImportExcelProducts"));
