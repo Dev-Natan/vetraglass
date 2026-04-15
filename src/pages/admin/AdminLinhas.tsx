@@ -4,8 +4,6 @@ import { AdminLayout } from '@/components/layout/AdminLayout';
 import { Package, Search, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { LinhaCard } from '@/components/produtos/LinhaCard';
-import { AddLinhaCard } from '@/components/produtos/AddLinhaCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import {

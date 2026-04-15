@@ -22,7 +22,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Package, Check, Search, X, ShoppingCart, ChevronDown, Receipt, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { FiscalFieldsCard, type FiscalFieldsData } from '@/components/produtos/FiscalFieldsCard';
+// Fiscal fields removed because products module was deleted
 import { useItemTypeLabels } from '@/hooks/useItemTypes';
 import { ItemPricingFields, defaultPricingData, type ItemPricingData } from './ItemPricingFields';
 

@@ -28,7 +28,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Sparkles, ChevronDown, Info } from 'lucide-react';
-import { FiscalFieldsCard, type FiscalFieldsData } from '@/components/produtos/FiscalFieldsCard';
+// Fiscal fields removed because products module was deleted
 import { useItemTypes } from '@/hooks/useItemTypes';
 import { ImageUploadField } from '@/components/common/ImageUploadField';
 import { useProductLinhas } from '@/hooks/useProductLinhas';
