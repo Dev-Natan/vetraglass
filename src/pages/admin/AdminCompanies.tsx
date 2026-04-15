@@ -148,7 +148,36 @@ export default function AdminCompanies() {
     },
   });
 
-  const filteredCompanies = companies.filter(company => {
+  const clearProductsMutation = useMutation({
+    mutationFn: async (companyId: string) => {
+      const { error } = await supabase
+        .from('company_products')
+        .delete()
+        .eq('company_id', companyId);
+      
+      if (error) throw error;
+      
+      // Also clear company_linhas
+      await supabase
+        .from('company_linhas')
+        .delete()
+        .eq('company_id', companyId);
+    },
+    onSuccess: () => {
+      toast.success('Produtos da empresa apagados com sucesso');
+      queryClient.invalidateQueries({ queryKey: ['admin-companies'] });
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Erro ao apagar produtos');
+    },
+  });
+
+  const handleClearProducts = (company: Company) => {
+    if (confirm(`Tem certeza que deseja APAGAR TODOS os produtos da empresa "${company.name}"? Esta ação não pode ser desfeita.`)) {
+      clearProductsMutation.mutate(company.id);
+    }
+  };
+
     const searchLower = searchTerm.toLowerCase();
     return (
       company.name.toLowerCase().includes(searchLower) ||
