@@ -26,8 +26,6 @@ const Producao = lazy(() => import("./pages/Producao"));
 const RecuperarSenha = lazy(() => import("./pages/RecuperarSenha"));
 const RedefinirSenha = lazy(() => import("./pages/RedefinirSenha"));
 const CompanySetup = lazy(() => import("./pages/CompanySetup"));
-const EditarProduto = lazy(() => import("./pages/EditarProduto"));
-const EditarProdutoEmpresa = lazy(() => import("./pages/EditarProdutoEmpresa"));
 
 const OrdemServicoDetalhes = lazy(() => import("./pages/OrdemServicoDetalhes"));
 const Financeiro = lazy(() => import("./pages/Financeiro"));
