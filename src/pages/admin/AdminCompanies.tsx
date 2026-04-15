@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Loader2, Search, Building2, Users, Phone, Mail, MapPin, Trash2, 
   Eye, CreditCard, Calendar, Clock, AlertTriangle, CheckCircle2, 
-  XCircle, Edit, Crown, Shield
+  XCircle, Edit, Crown, Shield, Package, Trash
 } from 'lucide-react';
 import { format, differenceInDays, addMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -148,8 +148,59 @@ export default function AdminCompanies() {
     },
   });
 
+  const clearProductsMutation = useMutation({
+    mutationFn: async (companyId: string) => {
+      const { error } = await supabase
+        .from('company_products')
+        .delete()
+        .eq('company_id', companyId);
+      
+      if (error) throw error;
+      
+      // Also clear company_linhas
+      await supabase
+        .from('company_linhas')
+        .delete()
+        .eq('company_id', companyId);
+    },
+    onSuccess: () => {
+      toast.success('Produtos da empresa apagados com sucesso');
+      queryClient.invalidateQueries({ queryKey: ['admin-companies'] });
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Erro ao apagar produtos');
+    },
+  });
+
+  const handleClearProducts = (company: Company) => {
+    if (confirm(`Tem certeza que deseja APAGAR TODOS os produtos da empresa "${company.name}"? Esta ação não pode ser desfeita.`)) {
+      clearProductsMutation.mutate(company.id);
+    }
+  };
+
+  const handleClearAllCompaniesProducts = async () => {
+    if (confirm('Deseja APAGAR TODOS os produtos de TODAS as empresas cadastradas?')) {
+      if (confirm('ESTA AÇÃO É IRREVERSÍVEL. Tem certeza que deseja prosseguir com a limpeza geral?')) {
+        const { error } = await supabase
+          .from('company_products')
+          .delete()
+          .not('id', 'is', null);
+        
+        if (error) {
+          toast.error('Erro ao apagar produtos: ' + error.message);
+        } else {
+          // Also clear company_linhas
+          await supabase.from('company_linhas').delete().not('id', 'is', null);
+          toast.success('Todos os produtos de todas as empresas foram apagados');
+          queryClient.invalidateQueries({ queryKey: ['admin-companies'] });
+        }
+      }
+    }
+  };
+
   const filteredCompanies = companies.filter(company => {
     const searchLower = searchTerm.toLowerCase();
+
     return (
       company.name.toLowerCase().includes(searchLower) ||
       company.cnpj?.includes(searchTerm) ||
@@ -284,10 +335,21 @@ export default function AdminCompanies() {
             <h1 className="font-display font-bold text-3xl text-foreground">Empresas</h1>
             <p className="text-muted-foreground">Gerencie empresas, assinaturas e acessos</p>
           </div>
-          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-            <Shield className="h-3 w-3 mr-1" />
-            SaaS Admin
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+              <Shield className="h-3 w-3 mr-1" />
+              SaaS Admin
+            </Badge>
+            <Button 
+              variant="destructive" 
+              size="sm" 
+              onClick={handleClearAllCompaniesProducts}
+              className="gap-2"
+            >
+              <Trash className="h-4 w-4" />
+              Limpar Produtos (Geral)
+            </Button>
+          </div>
         </div>
 
         {/* Stats */}
@@ -518,6 +580,15 @@ export default function AdminCompanies() {
                               <Button
                                 variant="ghost"
                                 size="icon"
+                                className="h-8 w-8 text-orange-500 hover:text-orange-600 hover:bg-orange-50"
+                                onClick={() => handleClearProducts(company)}
+                                title="Apagar todos os produtos"
+                              >
+                                <Package className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
                                 className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                                 onClick={() => setCompanyToDelete(company)}
                                 title="Excluir empresa"
@@ -618,10 +689,18 @@ export default function AdminCompanies() {
                   )}
                 </div>
 
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => { setSelectedCompany(null); openSubDialog(selectedCompany); }}>
+                <DialogFooter className="flex flex-col sm:flex-row gap-2">
+                  <Button variant="outline" className="sm:flex-1" onClick={() => { setSelectedCompany(null); openSubDialog(selectedCompany); }}>
                     <CreditCard className="h-4 w-4 mr-2" />
                     Gerenciar Assinatura
+                  </Button>
+                  <Button 
+                    variant="destructive" 
+                    className="sm:flex-1"
+                    onClick={() => { setSelectedCompany(null); handleClearProducts(selectedCompany); }}
+                  >
+                    <Trash className="h-4 w-4 mr-2" />
+                    Apagar Produtos
                   </Button>
                 </DialogFooter>
               </div>
