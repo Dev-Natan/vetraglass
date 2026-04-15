@@ -176,6 +176,24 @@ export default function AdminCompanies() {
     if (confirm(`Tem certeza que deseja APAGAR TODOS os produtos da empresa "${company.name}"? Esta ação não pode ser desfeita.`)) {
       clearProductsMutation.mutate(company.id);
     }
+  const handleClearAllCompaniesProducts = async () => {
+    if (confirm('Deseja APAGAR TODOS os produtos de TODAS as empresas cadastradas?')) {
+      if (confirm('ESTA AÇÃO É IRREVERSÍVEL. Tem certeza que deseja prosseguir com a limpeza geral?')) {
+        const { error } = await supabase
+          .from('company_products')
+          .delete()
+          .not('id', 'is', null);
+        
+        if (error) {
+          toast.error('Erro ao apagar produtos: ' + error.message);
+        } else {
+          // Also clear company_linhas
+          await supabase.from('company_linhas').delete().not('id', 'is', null);
+          toast.success('Todos os produtos de todas as empresas foram apagados');
+          queryClient.invalidateQueries({ queryKey: ['admin-companies'] });
+        }
+      }
+    }
   };
 
   const filteredCompanies = companies.filter(company => {
@@ -319,6 +337,16 @@ export default function AdminCompanies() {
             <Shield className="h-3 w-3 mr-1" />
             SaaS Admin
           </Badge>
+          <Button 
+            variant="destructive" 
+            size="sm" 
+            onClick={handleClearAllCompaniesProducts}
+            className="gap-2"
+          >
+            <Trash className="h-4 w-4" />
+            Limpar Produtos (Geral)
+          </Button>
+
         </div>
 
         {/* Stats */}
