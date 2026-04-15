@@ -184,56 +184,56 @@ export default function Produtos() {
     return result;
   }, [companyLinhas, companyProducts, allProducts, searchTerm]);
 
-  // Deactivate/remove a linha
-  const deactivateLinhaMutation = useMutation({
+  const removeLinhaPermanentlyMutation = useMutation({
     mutationFn: async (linha: string) => {
       if (!currentCompany?.id) throw new Error('Empresa não selecionada');
       
-      // 1. Deactivate company_linha if exists
-      await supabase
-        .from('company_linhas')
-        .update({ is_active: false })
-        .eq('company_id', currentCompany.id)
-        .eq('name', linha);
-
-      // 2. Get product template IDs for this linha
+      // 1. Get ALL products (templates and custom) for this linha
       const templateIds = allProducts
         .filter(p => p.linha === linha)
         .map(p => p.id);
       
+      // 2. Delete from company_products (both templates and custom)
+      let query = supabase
+        .from('company_products')
+        .delete()
+        .eq('company_id', currentCompany.id);
+
       if (templateIds.length > 0) {
-        const { error } = await supabase
-          .from('company_products')
-          .update({ is_active: false })
-          .eq('company_id', currentCompany.id)
-          .in('product_template_id', templateIds);
-        
+        // Remove both template matches and direct linha matches (for custom products)
+        const { error } = await query.or(`product_template_id.in.(${templateIds.join(',')}),linha.eq."${linha}"`);
+        if (error) throw error;
+      } else {
+        const { error } = await query.eq('linha', linha);
         if (error) throw error;
       }
 
-      // 3. Also deactivate custom products with this linha
-      const { error: customError } = await supabase
-        .from('company_products')
-        .update({ is_active: false })
+      // 3. Delete from company_linhas
+      const { error: linhaError } = await supabase
+        .from('company_linhas')
+        .delete()
         .eq('company_id', currentCompany.id)
-        .eq('linha', linha)
-        .eq('is_custom', true);
+        .eq('name', linha);
 
-      if (customError) throw customError;
+      if (linhaError) throw linhaError;
     },
     onSuccess: (_, linha) => {
       queryClient.invalidateQueries({ queryKey: ['company-linhas'] });
       queryClient.invalidateQueries({ queryKey: ['company-products'] });
-      toast.success(`Linha "${linha}" removida`);
+      toast.success(`Linha "${linha}" e seus produtos foram excluídos permanentemente!`);
     },
     onError: (error) => {
-      toast.error('Erro ao remover linha: ' + error.message);
+      if (error.message.includes('foreign key constraint')) {
+        toast.error('Alguns produtos desta linha não podem ser excluídos pois estão em uso em orçamentos ou pedidos. Você pode apenas desativá-los.');
+      } else {
+        toast.error('Erro ao remover linha: ' + error.message);
+      }
     },
   });
 
   const handleRemoveLinha = (linha: string) => {
-    if (confirm(`Deseja remover todos os produtos da linha "${linha}"?`)) {
-      deactivateLinhaMutation.mutate(linha);
+    if (confirm(`Deseja EXCLUIR DEFINITIVAMENTE a linha "${linha}" e todos os seus produtos? Esta ação não pode ser desfeita.`)) {
+      removeLinhaPermanentlyMutation.mutate(linha);
     }
   };
 
