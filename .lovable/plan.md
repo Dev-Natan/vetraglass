@@ -1,61 +1,44 @@
 
+## Plano: Excluir todos os produtos templates do banco de dados
 
-## Plano: Resolver erro "Could not find 'has_multiple_sides' column"
+### Objetivo
+Apagar todos os registros de `product_templates` e dados relacionados **sem alterar nenhum arquivo de código/página**.
 
-### Diagnóstico
+### Situação Atual
+- Já existe uma migração anterior (`20260515000000_delete_all_product_templates.sql`) que tenta fazer isso, mas ela também apaga `item_templates` — o que pode não ser desejado.
+- A migração mais recente (`20260415200000_create_janela_2f_suprema.sql`) criou a "Janela de Correr 02 Folhas" na linha Suprema.
+- As páginas `Produtos.tsx` e `ProdutosLinha.tsx` já foram esvaziadas no código anteriormente (retornam arrays vazios), então **nenhuma alteração de página é necessária**.
 
-Confirmei via inspeção direta do banco de dados que as colunas **não existem** nas tabelas reais:
-
-- `product_templates` **NÃO TEM** `has_multiple_sides`
-- `product_template_items` **NÃO TEM** `side`
-- `company_products` **NÃO TEM** `has_multiple_sides`
-- `company_product_items` **NÃO TEM** `side`
-- `quote_items` **NÃO TEM** `width_b` / `height_b`
-
-Existem 3 arquivos de migração no repositório tentando adicionar essas colunas, mas **nenhum foi aplicado ao banco de dados**. Arquivos `.sql` criados manualmente via `code--write` ou `code--exec` não são automaticamente executados pelo sistema de migração do Lovable Cloud.
-
-### Causa Raiz
-
-O sistema de migração do Lovable Cloud requer que as migrações sejam criadas através da **ferramenta de migração de banco de dados** (database migration tool), não simplesmente escrevendo arquivos `.sql` no diretório `supabase/migrations/`.
-
-### Plano de Resolução
-
-#### Passo 1: Limpar migrações órfãs
-Remover os 3 arquivos de migração que nunca foram aplicados para evitar conflitos futuros:
-- `supabase/migrations/20260315143000_add_has_multiple_sides_to_product_templates.sql`
-- `supabase/migrations/20260317143000_add_has_multiple_sides_to_product_templates.sql`
-- `supabase/migrations/20260412203000_f2a66cfd-c4a8-4a3f-9e45-55886f8e2a2a.sql`
-- `supabase/migrations/20260413000000_fix_multi_side_columns.sql`
-
-#### Passo 2: Aplicar migração corretamente via ferramenta de migração
-Usar a ferramenta correta de migração do Lovable Cloud para executar:
+### Ação: Executar DELETE via insert tool (dados, não schema)
+Usar a ferramenta de inserção de dados para executar os seguintes DELETEs na ordem correta de dependências:
 
 ```sql
-ALTER TABLE public.product_templates 
-  ADD COLUMN IF NOT EXISTS has_multiple_sides BOOLEAN DEFAULT false;
+-- 1. Fórmulas de vidro por linha
+DELETE FROM public.glass_line_formulas;
 
-ALTER TABLE public.company_products 
-  ADD COLUMN IF NOT EXISTS has_multiple_sides BOOLEAN DEFAULT false;
+-- 2. Composição de produtos da empresa
+DELETE FROM public.company_product_items;
 
-ALTER TABLE public.product_template_items 
-  ADD COLUMN IF NOT EXISTS side TEXT;
+-- 3. Nullificar referências em projetos de vidro e orçamentos
+UPDATE public.glass_projects SET product_template_id = NULL;
+UPDATE public.quote_items SET product_template_id = NULL;
 
-ALTER TABLE public.company_product_items 
-  ADD COLUMN IF NOT EXISTS side TEXT;
+-- 4. Produtos da empresa
+DELETE FROM public.company_products;
 
-ALTER TABLE public.quote_items 
-  ADD COLUMN IF NOT EXISTS width_b NUMERIC;
+-- 5. Composição dos templates
+DELETE FROM public.product_template_items;
 
-ALTER TABLE public.quote_items 
-  ADD COLUMN IF NOT EXISTS height_b NUMERIC;
+-- 6. Templates de produtos
+DELETE FROM public.product_templates;
 ```
 
-#### Passo 3: Aguardar regeneração do `types.ts`
-Após a migração ser aplicada, o arquivo `src/integrations/supabase/types.ts` será regenerado automaticamente com as novas colunas.
+> **Nota:** NÃO vou apagar `item_templates` (perfis, vidros, acessórios) — apenas os **produtos templates**. Os itens (perfis SU-001, etc.) serão preservados para uso futuro.
 
-#### Passo 4: Verificar e corrigir referências no código
-Garantir que `ProductTemplates.tsx` e demais arquivos usem as colunas corretamente (já estão usando, só precisam que o banco aceite).
+### O que NÃO será alterado
+- Nenhum arquivo `.tsx` ou `.ts`
+- Nenhuma página de produtos
+- `item_templates` (perfis e materiais permanecem intactos)
 
-### Resultado Esperado
-Após este plano, salvar um produto com "Múltiplos Lados" ativado vai persistir corretamente no banco de dados.
-
+### Resultado
+Todas as tabelas de product templates estarão vazias, e a página de produtos continuará funcionando normalmente (já retorna lista vazia).
