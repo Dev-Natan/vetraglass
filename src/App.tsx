@@ -180,12 +180,6 @@ function AppRoutes() {
       <Route path="/producao" element={<ProtectedRoute><ModuleGuard moduleKey="producao"><LazyRoute><Producao /></LazyRoute></ModuleGuard></ProtectedRoute>} />
       
       {/* Lazy loaded routes */}
-      <Route path="/produtos/editar/:id" element={
-        <ProtectedRoute><LazyRoute><EditarProduto /></LazyRoute></ProtectedRoute>
-      } />
-      <Route path="/produtos/empresa/editar/:id" element={
-        <ProtectedRoute><LazyRoute><EditarProdutoEmpresa /></LazyRoute></ProtectedRoute>
-      } />
       <Route path="/ordens-servico/:id" element={
         <ProtectedRoute><LazyRoute><OrdemServicoDetalhes /></LazyRoute></ProtectedRoute>
       } />
