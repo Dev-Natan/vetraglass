@@ -16,6 +16,8 @@ import Auth from "./pages/Auth";
 
 // Lazy loaded pages - all core pages loaded on demand
 const Index = lazy(() => import("./pages/Index"));
+const Produtos = lazy(() => import("./pages/Produtos"));
+const ProdutosLinha = lazy(() => import("./pages/ProdutosLinha"));
 const Orcamentos = lazy(() => import("./pages/Orcamentos"));
 const OrdensServico = lazy(() => import("./pages/OrdensServico"));
 const Clientes = lazy(() => import("./pages/Clientes"));
@@ -26,6 +28,8 @@ const Producao = lazy(() => import("./pages/Producao"));
 const RecuperarSenha = lazy(() => import("./pages/RecuperarSenha"));
 const RedefinirSenha = lazy(() => import("./pages/RedefinirSenha"));
 const CompanySetup = lazy(() => import("./pages/CompanySetup"));
+const EditarProduto = lazy(() => import("./pages/EditarProduto"));
+const EditarProdutoEmpresa = lazy(() => import("./pages/EditarProdutoEmpresa"));
 
 const OrdemServicoDetalhes = lazy(() => import("./pages/OrdemServicoDetalhes"));
 const Financeiro = lazy(() => import("./pages/Financeiro"));
@@ -54,6 +58,8 @@ const ConfiguracoesDados = lazy(() => import("./pages/ConfiguracoesDados"));
 // Admin pages - lazy loaded (only for SaaS admins)
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const ItemTemplates = lazy(() => import("./pages/admin/ItemTemplates"));
+const ProductTemplates = lazy(() => import("./pages/admin/ProductTemplates"));
+const AdminLinhas = lazy(() => import("./pages/admin/AdminLinhas"));
 const AdminCompanies = lazy(() => import("./pages/admin/AdminCompanies"));
 const ImportProducts = lazy(() => import("./pages/admin/ImportProducts"));
 const ImportExcelProducts = lazy(() => import("./pages/admin/ImportExcelProducts"));
@@ -165,6 +171,8 @@ function AppRoutes() {
       {/* Dashboard - protected */}
       <Route path="/dashboard" element={<ProtectedRoute><IndexRedirect /></ProtectedRoute>} />
       <Route path="/clientes" element={<ProtectedRoute><ModuleGuard moduleKey="clientes"><LazyRoute><Clientes /></LazyRoute></ModuleGuard></ProtectedRoute>} />
+      <Route path="/produtos" element={<ProtectedRoute><ModuleGuard moduleKey="produtos"><LazyRoute><Produtos /></LazyRoute></ModuleGuard></ProtectedRoute>} />
+      <Route path="/produtos/linha/:linha" element={<ProtectedRoute><ModuleGuard moduleKey="produtos"><LazyRoute><ProdutosLinha /></LazyRoute></ModuleGuard></ProtectedRoute>} />
       <Route path="/orcamentos" element={<ProtectedRoute><ModuleGuard moduleKey="orcamentos"><LazyRoute><Orcamentos /></LazyRoute></ModuleGuard></ProtectedRoute>} />
       <Route path="/ordens-servico" element={<ProtectedRoute><ModuleGuard moduleKey="ordens_servico"><LazyRoute><OrdensServico /></LazyRoute></ModuleGuard></ProtectedRoute>} />
       <Route path="/estoque" element={<ProtectedRoute><ModuleGuard moduleKey="estoque"><LazyRoute><Estoque /></LazyRoute></ModuleGuard></ProtectedRoute>} />
@@ -174,6 +182,12 @@ function AppRoutes() {
       <Route path="/producao" element={<ProtectedRoute><ModuleGuard moduleKey="producao"><LazyRoute><Producao /></LazyRoute></ModuleGuard></ProtectedRoute>} />
       
       {/* Lazy loaded routes */}
+      <Route path="/produtos/editar/:id" element={
+        <ProtectedRoute><LazyRoute><EditarProduto /></LazyRoute></ProtectedRoute>
+      } />
+      <Route path="/produtos/empresa/editar/:id" element={
+        <ProtectedRoute><LazyRoute><EditarProdutoEmpresa /></LazyRoute></ProtectedRoute>
+      } />
       <Route path="/ordens-servico/:id" element={
         <ProtectedRoute><LazyRoute><OrdemServicoDetalhes /></LazyRoute></ProtectedRoute>
       } />
@@ -234,6 +248,15 @@ function AppRoutes() {
       } />
       <Route path="/admin/item-templates" element={
         <ProtectedRoute><LazyRoute><ItemTemplates /></LazyRoute></ProtectedRoute>
+      } />
+      <Route path="/admin/product-templates" element={
+        <ProtectedRoute><LazyRoute><ProductTemplates /></LazyRoute></ProtectedRoute>
+      } />
+      <Route path="/admin/linhas" element={
+        <ProtectedRoute><LazyRoute><AdminLinhas /></LazyRoute></ProtectedRoute>
+      } />
+      <Route path="/admin/linhas/:linha" element={
+        <ProtectedRoute><LazyRoute><ProductTemplates /></LazyRoute></ProtectedRoute>
       } />
       <Route path="/admin/companies" element={
         <ProtectedRoute><LazyRoute><AdminCompanies /></LazyRoute></ProtectedRoute>

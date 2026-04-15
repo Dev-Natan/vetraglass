@@ -29,7 +29,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Package, Check, Search, X, ShoppingCart, ChevronDown, Receipt, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { type FiscalFieldsData } from '@/types/fiscal';
+import { FiscalFieldsCard, type FiscalFieldsData } from '@/components/produtos/FiscalFieldsCard';
 import { useProductCategories } from '@/hooks/useProductCategories';
 import { useProductLinhas } from '@/hooks/useProductLinhas';
 import { useItemTypeLabels } from '@/hooks/useItemTypes';
@@ -883,7 +883,12 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
                 </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="pt-3">
-                {/* Fiscal fields removed */}
+                <FiscalFieldsCard 
+                  data={fiscalData} 
+                  onChange={setFiscalData}
+                  type="item"
+                  itemType={category as 'glass' | 'profile' | 'accessory' | 'service'}
+                />
               </CollapsibleContent>
             </Collapsible>
           </div>

@@ -21,7 +21,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Sparkles, ChevronDown, Info } from 'lucide-react';
-import { type FiscalFieldsData } from '@/types/fiscal';
+import { FiscalFieldsCard, type FiscalFieldsData } from '@/components/produtos/FiscalFieldsCard';
 import { useItemTypes } from '@/hooks/useItemTypes';
 import { ImageUploadField } from '@/components/common/ImageUploadField';
 import { useProductLinhas } from '@/hooks/useProductLinhas';
@@ -227,7 +227,7 @@ export function CreateCustomItemContent({ onClose }: CreateCustomItemContentProp
             Dados Fiscais (Opcional)
           </CollapsibleTrigger>
           <CollapsibleContent className="mt-2">
-            {/* Fiscal fields removed */}
+            <FiscalFieldsCard data={fiscalData} onChange={setFiscalData} itemType={category as 'profile' | 'glass' | 'accessory' | 'service' | undefined} />
           </CollapsibleContent>
         </Collapsible>
       </div>
