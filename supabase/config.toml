@@ -1,4 +1,4 @@
-project_id = "ozghdguhibqssyfbgomh"
+project_id = "wjoqmguhgjvywlwjqsyj"
 
 [functions.validate-cnpj]
 verify_jwt = true
