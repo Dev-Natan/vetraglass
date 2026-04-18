@@ -200,6 +200,9 @@ export async function generateMaterialConsumption(
               calculatedQty = formulaResult * piecesQty * qty;
             }
           }
+        } else if (itemInfo.unit === 'm²' || itemInfo.unit === 'm2') {
+          // Fallback: if no formula, calculate area based on dimensions (m²)
+          calculatedQty = ((width * height) / 1000000) * piecesQty * qty;
         }
 
         // Skip zero quantities
