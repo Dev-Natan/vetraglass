@@ -216,7 +216,9 @@ export function ActivateProductDialog({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company-products'] });
+      queryClient.invalidateQueries({ queryKey: ['linha-products'] });
       queryClient.invalidateQueries({ queryKey: ['company-stock'] });
+      queryClient.invalidateQueries({ queryKey: ['product-template-items'] });
       toast.success('Produto ativado com sucesso!', {
         description: `${selectedComponents.size} componentes adicionados ao estoque`,
       });
