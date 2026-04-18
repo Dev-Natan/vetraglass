@@ -14,7 +14,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { ActivateProductDialog } from './ActivateProductDialog';
 import {
   Download,
   ShoppingCart,
@@ -51,6 +52,8 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'todos' | 'ativos'>('todos');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [activateDialogOpen, setActivateDialogOpen] = useState(false);
+  const [selectedProductForActivation, setSelectedProductForActivation] = useState<{ id: string; name: string } | null>(null);
 
   // Fetch products for this linha
   const { data: products, isLoading } = useQuery({
@@ -161,7 +164,8 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
   });
 
   const handleActivateClick = (product: ProductTemplate) => {
-    activateProductMutation.mutate(product.id);
+    setSelectedProductForActivation({ id: product.id, name: product.name });
+    setActivateDialogOpen(true);
   };
 
   const getProductImage = resolveProductImageUrl;
@@ -341,6 +345,19 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
           </div>
         </SheetContent>
       </Sheet>
+      
+      {selectedProductForActivation && (
+        <ActivateProductDialog
+          open={activateDialogOpen}
+          onOpenChange={setActivateDialogOpen}
+          productTemplateId={selectedProductForActivation.id}
+          productName={selectedProductForActivation.name}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['company-products'] });
+            queryClient.invalidateQueries({ queryKey: ['linha-products'] });
+          }}
+        />
+      )}
 
     </>
   );
