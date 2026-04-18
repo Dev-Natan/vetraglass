@@ -539,12 +539,35 @@ export default function ProdutosLinha() {
               );
             })
           ) : (
-            <div className="p-8 text-center text-muted-foreground text-sm">
-              {searchTerm 
-                ? 'Nenhum produto encontrado.'
-                : showActive 
-                  ? 'Nenhum produto habilitado.'
-                  : 'Nenhum produto desabilitado.'}
+            <div className="p-12 flex flex-col items-center justify-center text-center space-y-4">
+              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center text-muted-foreground opacity-50">
+                <ShoppingCart className="w-8 h-8" />
+              </div>
+              <div className="max-w-[280px] space-y-2">
+                <p className="font-medium text-foreground">
+                  {searchTerm 
+                    ? 'Nenhum produto encontrado.'
+                    : showActive 
+                      ? 'Nenhum produto habilitado.'
+                      : 'Nenhum produto desabilitado.'}
+                </p>
+                {!searchTerm && showActive && (
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      Você ainda não ativou nenhum produto desta linha para venda.
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="mt-2 text-sky-600 border-sky-200 hover:bg-sky-50"
+                      onClick={() => setTipologiasSheetOpen(true)}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Baixar produtos da linha
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
           )}
         </div>
