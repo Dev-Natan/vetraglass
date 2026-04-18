@@ -454,6 +454,13 @@ export function ActivateWithCompositionDialog({
 
       if (activateError) throw activateError;
 
+      // Ensure the product is set to active in company_products
+      await supabase
+        .from('company_products')
+        .update({ is_active: true, updated_at: new Date().toISOString() })
+        .eq('company_id', currentCompany.id)
+        .eq('product_template_id', productTemplateId);
+
       // 2. Update company product with pricing
       if (activatedProduct) {
         const { error: priceError } = await supabase
