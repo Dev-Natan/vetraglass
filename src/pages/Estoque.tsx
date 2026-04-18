@@ -111,9 +111,9 @@ export default function Estoque() {
 
   const toggleActiveMutation = useMutation({
     mutationFn: async ({ stockId, isActive }: { stockId: string; isActive: boolean }) => {
-      const { error } = await supabase.from('company_stock').update({ is_active: isActive }).eq('id', stockId);
-      if (error) throw error;
+      return estoqueService.toggleActive(stockId, isActive);
     },
+
     onSuccess: (_, { isActive }) => {
       queryClient.invalidateQueries({ queryKey: ['company-stock'] });
       toast.success(isActive ? 'Item ativado' : 'Item desativado');

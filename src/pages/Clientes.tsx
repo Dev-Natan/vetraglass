@@ -89,15 +89,10 @@ export default function Clientes() {
 
   const createMutation = useMutation({
     mutationFn: async (client: Omit<Client, 'id' | 'company_id' | 'is_active' | 'created_at' | 'latitude' | 'longitude'>) => {
-      const { error } = await supabase
-        .from('clients')
-        .insert({
-          ...client,
-          company_id: currentCompany!.id,
-        });
-      
-      if (error) throw error;
+      if (!currentCompany?.id) throw new Error('Empresa não selecionada');
+      return clientService.createClient(currentCompany.id, client);
     },
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       toast.success('Cliente cadastrado com sucesso!');
@@ -111,13 +106,9 @@ export default function Clientes() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, ...client }: Partial<Client> & { id: string }) => {
-      const { error } = await supabase
-        .from('clients')
-        .update(client)
-        .eq('id', id);
-      
-      if (error) throw error;
+      return clientService.updateClient(id, client);
     },
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       toast.success('Cliente atualizado com sucesso!');
@@ -131,13 +122,10 @@ export default function Clientes() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('clients')
-        .update({ is_active: false })
-        .eq('id', id);
-      
-      if (error) throw error;
+      if (!currentCompany?.id) throw new Error('Empresa não selecionada');
+      return clientService.toggleClientStatus(id, currentCompany.id, false);
     },
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       toast.success('Cliente removido com sucesso!');

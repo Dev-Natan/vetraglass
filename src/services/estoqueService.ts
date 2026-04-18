@@ -42,5 +42,15 @@ export const estoqueService = {
 
     if (error) throw error;
     return data || [];
+  },
+
+  async toggleActive(stockId: string, isActive: boolean): Promise<void> {
+    const { error } = await supabase
+      .from('company_stock')
+      .update({ is_active: isActive })
+      .eq('id', stockId);
+
+    if (error) throw error;
   }
 };
+

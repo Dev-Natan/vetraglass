@@ -32,5 +32,26 @@ export const clientService = {
       .eq('company_id', companyId);
 
     if (error) throw error;
+  },
+
+  async createClient(companyId: string, client: Omit<Client, 'id' | 'company_id' | 'is_active' | 'created_at' | 'latitude' | 'longitude'>): Promise<void> {
+    const { error } = await supabase
+      .from('clients')
+      .insert({
+        ...client,
+        company_id: companyId,
+      });
+
+    if (error) throw error;
+  },
+
+  async updateClient(clientId: string, client: Partial<Client>): Promise<void> {
+    const { error } = await supabase
+      .from('clients')
+      .update(client)
+      .eq('id', clientId);
+
+    if (error) throw error;
   }
 };
+
