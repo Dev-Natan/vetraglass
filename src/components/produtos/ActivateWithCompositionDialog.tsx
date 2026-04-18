@@ -1072,7 +1072,7 @@ export function ActivateWithCompositionDialog({
                       }));
                       setWizardStep('pricing');
                     }}
-                    disabled={localItems.length === 0}
+                    disabled={false}
                     className="gap-1"
                   >
                     <span className="hidden sm:inline">Próximo: Preços</span>
