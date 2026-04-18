@@ -2,7 +2,7 @@ import { memo } from 'react';
 import { Package, AlertTriangle, Power, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import type { StockItem } from '@/hooks/useStockData';
+import type { StockItem } from '@/types/estoque';
 
 interface StockGridViewProps {
   items: StockItem[];

@@ -13,7 +13,9 @@ import { StockItemCard } from '@/components/estoque/StockItemCard';
 import { StockKPIs } from '@/components/estoque/StockKPIs';
 import { StockFilters, type StockStatus, type StockSortBy, type ViewMode } from '@/components/estoque/StockFilters';
 import { StockGridView } from '@/components/estoque/StockGridView';
-import { useStockData, type StockItem } from '@/hooks/useStockData';
+import { useStockData } from '@/hooks/useStockData';
+import type { StockItem } from '@/types/estoque';
+
 import { useItemTypes } from '@/hooks/useItemTypes';
 import { useProductLinhas } from '@/hooks/useProductLinhas';
 
