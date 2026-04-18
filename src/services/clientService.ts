@@ -10,7 +10,8 @@ export const clientService = {
       .order('name', { ascending: true });
 
     if (error) throw error;
-    return data || [];
+    return (data || []) as Client[];
+
   },
 
   async deleteClient(clientId: string, companyId: string): Promise<void> {
