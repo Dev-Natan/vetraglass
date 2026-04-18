@@ -75,12 +75,19 @@ export default function ProdutosLinha() {
   const { data: products, isLoading } = useQuery({
     queryKey: ['linha-products', currentLinha],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('product_templates')
         .select('*')
-        .eq('linha', currentLinha)
-        .eq('is_active', true) // Templates globalmente ativos
-        .order('name');
+        .eq('is_active', true);
+      
+      // Handle the "Sem Linha" case where database value might be NULL
+      if (currentLinha === 'Sem Linha') {
+        query = query.or('linha.is.null,linha.eq.""');
+      } else {
+        query = query.eq('linha', currentLinha);
+      }
+      
+      const { data, error } = await query.order('name');
       
       if (error) throw error;
       return data as ProductTemplate[];
@@ -109,12 +116,19 @@ export default function ProdutosLinha() {
     queryKey: ['custom-products', currentCompany?.id, currentLinha],
     queryFn: async () => {
       if (!currentCompany?.id) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from('company_products')
         .select('id, commercial_name, description, category, linha, image_url, is_active, is_custom, base_price, composition_finished')
         .eq('company_id', currentCompany.id)
-        .eq('linha', currentLinha)
         .eq('is_custom', true);
+      
+      if (currentLinha === 'Personalizado') {
+        query = query.or('linha.is.null,linha.eq.""');
+      } else {
+        query = query.eq('linha', currentLinha);
+      }
+      
+      const { data, error } = await query;
       
       if (error) throw error;
       return (data || []) as any[];
