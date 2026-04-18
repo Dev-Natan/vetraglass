@@ -1,7 +1,10 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { financeiroService } from '@/services/financeiroService';
+import type { Sale, PaymentFilter, StatusFilter } from '@/types/financeiro';
 import { useAuth } from '@/contexts/AuthContext';
+
 import { MainLayout } from '@/components/layout/MainLayout';
 import { 
   DollarSign, 
@@ -56,25 +59,8 @@ import { calculateFormulaQuantity } from '@/utils/safeFormulaEvaluator';
 import { MonthSelector, getMonthDateRange } from '@/components/common/MonthSelector';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 
-type PaymentFilter = 'all' | 'dinheiro' | 'cartao' | 'pix';
-type StatusFilter = 'all' | 'paid' | 'pending' | 'cancelled';
+// Types moved to @/types/financeiro
 
-interface Sale {
-  id: string;
-  sale_number: number;
-  customer_name: string | null;
-  total_amount: number;
-  subtotal: number;
-  discount_amount: number | null;
-  discount_percent: number | null;
-  payment_method: string;
-  payment_status: string;
-  sale_type: string | null;
-  created_at: string;
-  notes: string | null;
-  ordem_servico_id: string | null;
-  quote_id: string | null;
-}
 
 const paymentMethodConfig = {
   dinheiro: { label: 'Dinheiro', icon: DollarSign, color: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' },
@@ -115,19 +101,10 @@ export default function Financeiro() {
     queryKey: ['sales-financeiro', currentCompany?.id, selectedMonth.getMonth(), selectedMonth.getFullYear()],
     queryFn: async () => {
       if (!currentCompany?.id) return [];
-
-      const { data, error } = await supabase
-        .from('sales')
-        .select('*')
-        .eq('company_id', currentCompany.id)
-        .gte('created_at', dateRange.start.toISOString())
-        .lte('created_at', dateRange.end.toISOString())
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data || [];
+      return financeiroService.fetchSales(currentCompany.id, dateRange.start, dateRange.end);
     },
     enabled: !!currentCompany?.id,
+
   });
 
   // Apply client-side filters
