@@ -75,12 +75,19 @@ export default function ProdutosLinha() {
   const { data: products, isLoading } = useQuery({
     queryKey: ['linha-products', currentLinha],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('product_templates')
         .select('*')
-        .eq('linha', currentLinha)
-        .eq('is_active', true) // Templates globalmente ativos
-        .order('name');
+        .eq('is_active', true);
+      
+      // Handle the "Sem Linha" case where database value might be NULL
+      if (currentLinha === 'Sem Linha') {
+        query = query.or('linha.is.null,linha.eq.""');
+      } else {
+        query = query.eq('linha', currentLinha);
+      }
+      
+      const { data, error } = await query.order('name');
       
       if (error) throw error;
       return data as ProductTemplate[];
@@ -109,12 +116,19 @@ export default function ProdutosLinha() {
     queryKey: ['custom-products', currentCompany?.id, currentLinha],
     queryFn: async () => {
       if (!currentCompany?.id) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from('company_products')
         .select('id, commercial_name, description, category, linha, image_url, is_active, is_custom, base_price, composition_finished')
         .eq('company_id', currentCompany.id)
-        .eq('linha', currentLinha)
         .eq('is_custom', true);
+      
+      if (currentLinha === 'Personalizado') {
+        query = query.or('linha.is.null,linha.eq.""');
+      } else {
+        query = query.eq('linha', currentLinha);
+      }
+      
+      const { data, error } = await query;
       
       if (error) throw error;
       return (data || []) as any[];
@@ -525,12 +539,35 @@ export default function ProdutosLinha() {
               );
             })
           ) : (
-            <div className="p-8 text-center text-muted-foreground text-sm">
-              {searchTerm 
-                ? 'Nenhum produto encontrado.'
-                : showActive 
-                  ? 'Nenhum produto habilitado.'
-                  : 'Nenhum produto desabilitado.'}
+            <div className="p-12 flex flex-col items-center justify-center text-center space-y-4">
+              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center text-muted-foreground opacity-50">
+                <ShoppingCart className="w-8 h-8" />
+              </div>
+              <div className="max-w-[280px] space-y-2">
+                <p className="font-medium text-foreground">
+                  {searchTerm 
+                    ? 'Nenhum produto encontrado.'
+                    : showActive 
+                      ? 'Nenhum produto habilitado.'
+                      : 'Nenhum produto desabilitado.'}
+                </p>
+                {!searchTerm && showActive && (
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      Você ainda não ativou nenhum produto desta linha para venda.
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="mt-2 text-sky-600 border-sky-200 hover:bg-sky-50"
+                      onClick={() => setTipologiasSheetOpen(true)}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Baixar produtos da linha
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
           )}
         </div>

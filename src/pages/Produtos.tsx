@@ -122,33 +122,11 @@ export default function Produtos() {
       });
     });
 
-    // 2. Count products per linha (from company_products)
-    const activatedTemplateIds = new Set(
-      companyProducts.filter(cp => cp.product_template_id).map(cp => cp.product_template_id)
-    );
-    
-    // Count activated template products per linha
-    allProducts.forEach((p) => {
-      if (activatedTemplateIds.has(p.id)) {
-        const linhaName = p.linha || 'Sem Linha';
-        const existing = linhasMap.get(linhaName);
-        if (existing) {
-          existing.productCount += 1;
-          existing.categories.add(p.category);
-        } else {
-          linhasMap.set(linhaName, {
-            linha: linhaName,
-            productCount: 1,
-            isFromCompanyLinhas: false,
-            categories: new Set([p.category]),
-          });
-        }
-      }
-    });
-
-    // Count custom products per linha
-    companyProducts.filter(cp => cp.is_custom).forEach((cp) => {
-      const linhaName = cp.linha || 'Personalizado';
+    // 2. Process all company products (templates + custom)
+    companyProducts.forEach((cp) => {
+      // Use the linha name from the company product record itself
+      const linhaName = cp.linha || (cp.is_custom ? 'Personalizado' : 'Sem Linha');
+      
       const existing = linhasMap.get(linhaName);
       if (existing) {
         existing.productCount += 1;
@@ -182,7 +160,7 @@ export default function Produtos() {
     result.sort((a, b) => a.linha.localeCompare(b.linha));
     
     return result;
-  }, [companyLinhas, companyProducts, allProducts, searchTerm]);
+  }, [companyLinhas, companyProducts, searchTerm, selectedCategory]);
 
   // Deactivate/remove a linha
   const deactivateLinhaMutation = useMutation({
