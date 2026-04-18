@@ -2,7 +2,9 @@ import { useState, useMemo, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { supabase } from '@/integrations/supabase/client';
+import { estoqueService } from '@/services/estoqueService';
 import { useAuth } from '@/contexts/AuthContext';
+
 import { Boxes, TrendingDown, TrendingUp, History, Plus, PackageCheck, PackageX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UnifiedAddItemDialog } from '@/components/estoque/UnifiedAddItemDialog';
