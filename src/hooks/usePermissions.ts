@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { PermissionService } from '@/services/permissionService';
 
 // Legacy support - re-export from new hook
 export type AppRole = 'admin' | 'manager' | 'employee';
@@ -70,7 +71,6 @@ export function usePermissions() {
   });
 
   // Fallback to legacy role_permissions table
-  // NOTE: enabled must NOT depend on `profile` to avoid hooks order issues
   const shouldFetchLegacy = !!currentCompany?.id && currentRole !== 'admin';
   const { data: permissions = [], isLoading } = useQuery({
     queryKey: ['role-permissions', currentCompany?.id, currentRole],
@@ -98,65 +98,8 @@ export function usePermissions() {
   const isManager = currentRole === 'manager' || profile?.profile_type === 'gerente';
   const isEmployee = currentRole === 'employee' || ['vendedor', 'caixa', 'almoxarifado', 'producao', 'instalador', 'financeiro'].includes(profile?.profile_type || '');
 
-  const getPermission = (module: Module): Permission | null => {
-    // Check new profile system first
-    if (profile?.permissions) {
-      const perms = typeof profile.permissions === 'string' 
-        ? JSON.parse(profile.permissions) 
-        : profile.permissions;
-      const modulePerm = perms[module];
-      if (modulePerm) {
-        return {
-          module,
-          can_view: modulePerm.view ?? false,
-          can_create: modulePerm.create ?? false,
-          can_edit: modulePerm.edit ?? false,
-          can_delete: modulePerm.delete ?? false,
-        };
-      }
-    }
-    return permissions.find(p => p.module === module) || null;
-  };
-
-  const canAccess = (module: Module): boolean => {
-    if (isAdmin) return true;
-    const permission = getPermission(module);
-    return permission?.can_view ?? false;
-  };
-
-  const canCreate = (module: Module): boolean => {
-    if (isAdmin) return true;
-    const permission = getPermission(module);
-    return permission?.can_create ?? false;
-  };
-
-  const canEdit = (module: Module): boolean => {
-    if (isAdmin) return true;
-    const permission = getPermission(module);
-    return permission?.can_edit ?? false;
-  };
-
-  const canDelete = (module: Module): boolean => {
-    if (isAdmin) return true;
-    const permission = getPermission(module);
-    return permission?.can_delete ?? false;
-  };
-
-  // New permission checks from profile system
-  const canSeePrices = (): boolean => {
-    if (isAdmin) return true;
-    return !profile?.hide_prices;
-  };
-
-  const canSeeCosts = (): boolean => {
-    if (isAdmin) return true;
-    return !profile?.hide_costs;
-  };
-
-  const canOperateCash = (): boolean => {
-    if (isAdmin) return true;
-    return profile?.can_operate_cash ?? false;
-  };
+  // Instantiate service
+  const permissionService = new PermissionService(isAdmin, profile, permissions);
 
   return {
     role: currentRole || null,
@@ -166,14 +109,14 @@ export function usePermissions() {
     isAdmin,
     isManager,
     isEmployee,
-    canAccess,
-    canCreate,
-    canEdit,
-    canDelete,
-    getPermission,
+    canAccess: (module: Module) => permissionService.canAccess(module),
+    canCreate: (module: Module) => permissionService.canCreate(module),
+    canEdit: (module: Module) => permissionService.canEdit(module),
+    canDelete: (module: Module) => permissionService.canDelete(module),
+    getPermission: (module: Module) => permissionService.getPermission(module),
     // New methods
-    canSeePrices,
-    canSeeCosts,
-    canOperateCash,
+    canSeePrices: () => permissionService.canSeePrices(),
+    canSeeCosts: () => permissionService.canSeeCosts(),
+    canOperateCash: () => permissionService.canOperateCash(),
   };
 }
