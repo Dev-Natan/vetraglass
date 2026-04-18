@@ -1084,7 +1084,7 @@ export function ActivateWithCompositionDialog({
                   <Button
                     size="sm"
                     onClick={() => activateMutation.mutate()}
-                    disabled={activateMutation.isPending || localItems.length === 0}
+                    disabled={activateMutation.isPending}
                     className="bg-success hover:bg-success/90 gap-1"
                   >
                     {activateMutation.isPending ? (
