@@ -185,10 +185,11 @@ export default function EditarProdutoEmpresa() {
     arremate: '',
   });
 
-  // Fetch company product
+  // Fetch company product (with fallback: if id is actually a product_template_id, redirect)
   const { data: product, isLoading: productLoading, error: productError } = useQuery({
-    queryKey: ['company-product', id],
+    queryKey: ['company-product', id, currentCompany?.id],
     queryFn: async () => {
+      // 1) Try as company_products.id
       const { data, error } = await supabase
         .from('company_products')
         .select(`
@@ -199,7 +200,29 @@ export default function EditarProdutoEmpresa() {
         .maybeSingle();
       
       if (error) throw error;
-      return data as any;
+      if (data) return data as any;
+
+      // 2) Fallback: maybe `id` is a product_template_id for this company
+      if (currentCompany?.id) {
+        const { data: byTemplate, error: tplError } = await supabase
+          .from('company_products')
+          .select(`
+            *,
+            product_template:product_templates(id, name, image_url, linha)
+          `)
+          .eq('product_template_id', id!)
+          .eq('company_id', currentCompany.id)
+          .maybeSingle();
+        
+        if (tplError) throw tplError;
+        if (byTemplate) {
+          // Redirect to canonical URL using company_products.id
+          navigate(`/produtos/empresa/editar/${(byTemplate as any).id}`, { replace: true });
+          return byTemplate as any;
+        }
+      }
+
+      return null;
     },
     enabled: !!id,
   });

@@ -293,7 +293,9 @@ export default function ProdutosLinha() {
         return matchesSearch && matchesCategory && matchesActiveStatus && matchesLinha;
       })
       .map((cp): DisplayProduct => ({
-        id: cp.product_template_id || cp.id,
+        // Always use company_products.id as the canonical id for active products
+        // so navigation goes to /produtos/empresa/editar/<companyProductId>
+        id: cp.id,
         name: cp.commercial_name,
         description: cp.description,
         category: cp.category || 'other',
@@ -525,9 +527,12 @@ export default function ProdutosLinha() {
                       size="sm"
                       className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-medium text-xs h-9"
                       onClick={() => {
-                        const editId = product.companyProductId || product.id;
-                        console.log('[ProdutosLinha] Navigating to edit. companyProductId:', product.companyProductId, 'product.id:', product.id, 'using:', editId, 'is_custom:', product.is_custom);
-                        navigate(`/produtos/empresa/editar/${editId}`);
+                        if (!product.companyProductId) {
+                          toast.error('Ative o produto antes de editar.');
+                          queryClient.invalidateQueries({ queryKey: ['company-products'] });
+                          return;
+                        }
+                        navigate(`/produtos/empresa/editar/${product.companyProductId}`);
                       }}
                     >
                       Editar
@@ -696,7 +701,12 @@ export default function ProdutosLinha() {
                       size="sm"
                       className="bg-orange-500 hover:bg-orange-600 text-white font-medium"
                       onClick={() => {
-                        navigate(`/produtos/empresa/editar/${product.companyProductId || product.id}`);
+                        if (!product.companyProductId) {
+                          toast.error('Ative o produto antes de editar.');
+                          queryClient.invalidateQueries({ queryKey: ['company-products'] });
+                          return;
+                        }
+                        navigate(`/produtos/empresa/editar/${product.companyProductId}`);
                       }}
                     >
                       Editar produto
