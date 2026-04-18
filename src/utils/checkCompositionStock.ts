@@ -118,8 +118,8 @@ export async function checkCompositionStockAvailability(
       }
 
       // Calculate quantity needed
-      const piecesQty = component.pieces_formula 
-        ? evaluateFormula(component.pieces_formula, width, height)
+      const piecesQty = (component as any).pieces_formula 
+        ? evaluateFormula((component as any).pieces_formula, width, height)
         : (component.pieces_quantity || 1);
       let calculatedQty = piecesQty * qty;
 
@@ -129,14 +129,14 @@ export async function checkCompositionStockAvailability(
           if (itemInfo.unit === 'm' || itemInfo.unit === 'metro' || itemInfo.unit === 'metros') {
             calculatedQty = (formulaResult / 1000) * piecesQty * qty;
           } else if (itemInfo.unit === 'm²' || itemInfo.unit === 'm2') {
-            // Respect the formula result for area too
+            // Fix: Use the formula result if available, otherwise fallback to dimensions
             calculatedQty = (formulaResult / 1000000) * piecesQty * qty;
           } else {
             calculatedQty = formulaResult * piecesQty * qty;
           }
         }
       } else if (itemInfo.unit === 'm²' || itemInfo.unit === 'm2') {
-        // Standard area calculation if no formula
+        // Fallback for area if no formula
         calculatedQty = ((width * height) / 1000000) * piecesQty * qty;
       }
 

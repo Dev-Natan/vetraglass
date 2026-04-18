@@ -29,7 +29,6 @@ interface ProductCompositionItem {
   width_formula: string | null;
   height_formula: string | null;
   pieces_quantity: number | null;
-  pieces_formula: string | null;
   company_items?: {
     id: string;
     name: string;
@@ -103,7 +102,6 @@ export async function generateMaterialConsumption(
             width_formula,
             height_formula,
             pieces_quantity,
-            pieces_formula,
             company_items (
               id,
               name,
@@ -136,7 +134,6 @@ export async function generateMaterialConsumption(
             width_formula,
             height_formula,
             pieces_quantity,
-            pieces_formula,
             item_templates (
               id,
               name,
@@ -182,8 +179,8 @@ export async function generateMaterialConsumption(
         }
 
         // Evaluate the quantity formula
-        const piecesQty = component.pieces_formula 
-          ? evaluateFormula(component.pieces_formula, width, height)
+        const piecesQty = (component as any).pieces_formula 
+          ? evaluateFormula((component as any).pieces_formula, width, height)
           : (component.pieces_quantity || 1);
         let calculatedQty = piecesQty * qty;
 
