@@ -263,7 +263,7 @@ export function AprovarOrcamentoDialog({
       // 4. If there's an entry, create deposit record and partial sale
       if (hasEntry) {
         // 4.1 Create quote_deposits record
-        const { error: depositError } = await supabase
+        const { data: quoteDeposit, error: depositError } = await supabase
           .from('quote_deposits')
           .insert({
             company_id: currentCompany.id,
@@ -276,7 +276,9 @@ export function AprovarOrcamentoDialog({
             status: isCaixaAberto ? 'received' : 'pending',
             cash_register_id: isCaixaAberto ? openCashRegister?.id : null,
             created_by: user.id,
-          });
+          })
+          .select('id')
+          .single();
 
         if (depositError) {
           console.error('Error creating deposit:', depositError);
@@ -344,12 +346,11 @@ export function AprovarOrcamentoDialog({
           }
 
           // Atualizar quote_deposit com o cash_movement_id
-          if (cashMovement?.id) {
+          if (cashMovement?.id && quoteDeposit?.id) {
             await supabase
               .from('quote_deposits')
               .update({ cash_movement_id: cashMovement.id })
-              .eq('quote_id', quote.id)
-              .eq('status', 'received');
+              .eq('id', quoteDeposit.id);
           }
 
           // Criar venda parcial (para rastreamento, sem duplicar movimento de caixa)

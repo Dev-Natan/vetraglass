@@ -192,14 +192,17 @@ export async function generateMaterialConsumption(
             if (itemInfo.unit === 'm' || itemInfo.unit === 'metro' || itemInfo.unit === 'metros') {
               calculatedQty = (formulaResult / 1000) * piecesQty * qty;
             } else if (itemInfo.unit === 'm²' || itemInfo.unit === 'm2') {
-              // For area items (glass), result might be in mm², convert to m²
-              const areaInMm2 = (width * height);
-              calculatedQty = (areaInMm2 / 1000000) * piecesQty * qty;
+              // For area items (glass), result is in mm², convert to m²
+              // If there's a formula, it might be the area itself
+              calculatedQty = (formulaResult / 1000000) * piecesQty * qty;
             } else {
               // For units/pieces, use the formula result directly
               calculatedQty = formulaResult * piecesQty * qty;
             }
           }
+        } else if (itemInfo.unit === 'm²' || itemInfo.unit === 'm2') {
+          // Fallback: if no formula, calculate area based on dimensions (m²)
+          calculatedQty = ((width * height) / 1000000) * piecesQty * qty;
         }
 
         // Skip zero quantities
