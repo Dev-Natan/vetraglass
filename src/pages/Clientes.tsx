@@ -80,17 +80,9 @@ export default function Clientes() {
     queryKey: queryKeys.clients.all(currentCompany?.id || ''),
     queryFn: async () => {
       if (!currentCompany?.id) return [];
-      
-      const { data, error } = await supabase
-        .from('clients')
-        .select('id, company_id, name, document, document_type, email, phone, address, city, state, zip_code, notes, is_active, created_at, latitude, longitude')
-        .eq('company_id', currentCompany.id)
-        .eq('is_active', true)
-        .order('name');
-      
-      if (error) throw error;
-      return data as Client[];
+      return clientService.fetchClients(currentCompany.id);
     },
+
     enabled: !!currentCompany?.id,
     // Zero cache - sempre dados frescos
   });
