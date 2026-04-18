@@ -8,7 +8,10 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { clientService } from '@/services/clientService';
+import type { Client } from '@/types/clientes';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+
 import { toast } from 'sonner';
 import { Client360Dialog } from '@/components/clientes/Client360Dialog';
 import { ClientsCardView } from '@/components/clientes/ClientsCardView';
@@ -29,24 +32,8 @@ import { queryKeys } from '@/lib/queryConfig';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 
-interface Client {
-  id: string;
-  company_id: string;
-  name: string;
-  document: string | null;
-  document_type: 'CPF' | 'CNPJ' | null;
-  email: string | null;
-  phone: string | null;
-  address: string | null;
-  city: string | null;
-  state: string | null;
-  zip_code: string | null;
-  notes: string | null;
-  is_active: boolean;
-  created_at: string;
-  latitude: number | null;
-  longitude: number | null;
-}
+// Type moved to @/types/clientes
+
 
 export default function Clientes() {
   const { currentCompany } = useAuth();
