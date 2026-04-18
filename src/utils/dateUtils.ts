@@ -1,3 +1,6 @@
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale/pt-BR';
+
 /**
  * Get a time-based greeting for the current time.
  */
@@ -22,7 +25,5 @@ export const formatCurrency = (value: number): string => {
  * Format a date string to a localized date.
  */
 export const formatDate = (date: string | Date, formatStr: string = 'dd/MM/yyyy'): string => {
-  const { format } = require('date-fns');
-  const { ptBR } = require('date-fns/locale/pt-BR');
   return format(new Date(date), formatStr, { locale: ptBR });
 };
