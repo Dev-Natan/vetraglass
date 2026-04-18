@@ -285,7 +285,7 @@ export default function ProdutosLinha() {
 
     // If showing "Desabilitados", we also want to show templates that haven't been activated yet
     if (!showActive) {
-      const templateIdsActivated = new Set(companyProducts.filter(cp => cp.is_active).map(cp => cp.product_template_id));
+      const templateIdsActivated = new Set(companyProducts.map(cp => cp.product_template_id));
       const unactivatedTemplates = (products || [])
         .filter(p => {
           const matchesSearch = p.name.toLowerCase().includes(searchLower);
