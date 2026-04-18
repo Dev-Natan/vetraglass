@@ -102,7 +102,7 @@ export default function ProdutosLinha() {
       if (!currentCompany?.id) return [];
       const { data, error } = await supabase
         .from('company_products')
-        .select('id, product_template_id, is_active, commercial_name, composition_finished')
+        .select('id, product_template_id, is_active, commercial_name, description, category, linha, image_url, is_custom, base_price, composition_finished')
         .eq('company_id', currentCompany.id);
       
       if (error) throw error;
@@ -111,30 +111,18 @@ export default function ProdutosLinha() {
     enabled: !!currentCompany?.id,
   });
 
-  // Fetch custom products for this linha (all, we filter by showActive in filteredProducts)
-  const { data: customProducts = [] } = useQuery({
-    queryKey: ['custom-products', currentCompany?.id, currentLinha],
-    queryFn: async () => {
-      if (!currentCompany?.id) return [];
-      let query = supabase
-        .from('company_products')
-        .select('id, commercial_name, description, category, linha, image_url, is_active, is_custom, base_price, composition_finished')
-        .eq('company_id', currentCompany.id)
-        .eq('is_custom', true);
+  // Custom products are now part of companyProducts query
+  const customProducts = useMemo(() => {
+    return companyProducts.filter(cp => {
+      if (!cp.is_custom) return false;
       
-      if (currentLinha === 'Personalizado') {
-        query = query.or('linha.is.null,linha.eq.""');
-      } else {
-        query = query.eq('linha', currentLinha);
-      }
-      
-      const { data, error } = await query;
-      
-      if (error) throw error;
-      return (data || []) as any[];
-    },
-    enabled: !!currentCompany?.id && !!currentLinha,
-  });
+      const matchesLinha = currentLinha === 'Personalizado' 
+        ? (cp.linha === null || cp.linha === '' || cp.linha === 'Sem Linha')
+        : cp.linha === currentLinha;
+        
+      return matchesLinha;
+    });
+  }, [companyProducts, currentLinha]);
 
   // Check if product is activated for this company
   const isProductActivated = (productTemplateId: string) => {
@@ -271,71 +259,73 @@ export default function ProdutosLinha() {
 
   // Combine and filter products based on showActive tab
   const filteredProducts = useMemo((): DisplayProduct[] => {
-    // Filter template products based on company activation status
-    const templateFiltered = (products || [])
-      .map((p) => {
-        const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
+    const searchLower = searchTerm.toLowerCase();
+    
+    // Process all company products (templates + custom)
+    const companyFiltered = companyProducts
+      .filter((cp) => {
+        // Filter by search
+        const matchesSearch = cp.commercial_name?.toLowerCase().includes(searchLower) || 
+                             (products?.find(p => p.id === cp.product_template_id)?.name.toLowerCase().includes(searchLower));
         
-        // Find the company product record for this template
-        const companyProduct = companyProducts.find(cp => cp.product_template_id === p.id);
+        // Filter by category
+        const matchesCategory = selectedCategory === 'all' || cp.category === selectedCategory;
         
-        return {
-          template: p,
-          companyProduct,
-          matchesSearch,
-          matchesCategory,
-        };
-      })
-      .filter(({ companyProduct, matchesSearch, matchesCategory }) => {
-        // Check if matches the current tab (showActive)
-        if (showActive) {
-          // Show only products that are activated for the company
-          return matchesSearch && matchesCategory && companyProduct?.is_active === true;
+        // Filter by active status
+        const matchesActiveStatus = cp.is_active === showActive;
+        
+        // Filter by linha
+        let matchesLinha = false;
+        if (currentLinha === 'Sem Linha' || currentLinha === 'Personalizado') {
+          matchesLinha = (cp.linha === null || cp.linha === '' || cp.linha === 'Sem Linha' || cp.linha === 'Personalizado');
         } else {
-          // Show products that exist in company_products but are deactivated
-          return matchesSearch && matchesCategory && companyProduct && companyProduct.is_active === false;
+          matchesLinha = cp.linha === currentLinha;
         }
+        
+        return matchesSearch && matchesCategory && matchesActiveStatus && matchesLinha;
       })
-      .map(({ template: p, companyProduct }): DisplayProduct => {
-        return {
+      .map((cp): DisplayProduct => ({
+        id: cp.product_template_id || cp.id,
+        name: cp.commercial_name,
+        description: cp.description,
+        category: cp.category || 'other',
+        linha: cp.linha,
+        image_url: cp.image_url,
+        is_active: cp.is_active,
+        is_custom: cp.is_custom || false,
+        base_price: cp.base_price,
+        companyProductId: cp.id,
+        composition_finished: cp.composition_finished || false,
+      }));
+
+    // If showing "Desabilitados", we also want to show templates that haven't been activated yet
+    if (!showActive) {
+      const templateIdsActivated = new Set(companyProducts.map(cp => cp.product_template_id));
+      const unactivatedTemplates = (products || [])
+        .filter(p => {
+          const matchesSearch = p.name.toLowerCase().includes(searchLower);
+          const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
+          const notActivated = !templateIdsActivated.has(p.id);
+          return matchesSearch && matchesCategory && notActivated;
+        })
+        .map((p): DisplayProduct => ({
           id: p.id,
           name: p.name,
           description: p.description,
           category: p.category,
           linha: p.linha,
           image_url: p.image_url,
-          is_active: companyProduct?.is_active ?? false,
+          is_active: false,
           is_custom: false,
-          companyProductId: companyProduct?.id,
-          composition_finished: (companyProduct as any)?.composition_finished || false,
-        };
-      });
+          companyProductId: undefined,
+          composition_finished: false,
+        }));
+      
+      return [...companyFiltered, ...unactivatedTemplates];
+    }
 
-    // Filter custom products based on their is_active status
-    const customFiltered = customProducts
-      .filter((p) => {
-        const matchesSearch = p.commercial_name.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
-        const matchesActiveStatus = p.is_active === showActive;
-        return matchesSearch && matchesCategory && matchesActiveStatus;
-      })
-      .map((p): DisplayProduct => ({
-        id: p.id,
-        name: p.commercial_name,
-        description: p.description,
-        category: p.category || 'other',
-        linha: p.linha,
-        image_url: p.image_url,
-        is_active: p.is_active,
-        is_custom: true,
-        base_price: p.base_price,
-        companyProductId: p.id, // For custom products, id IS the company_product_id
-        composition_finished: (p as any).composition_finished || false,
-      }));
-
-    return [...templateFiltered, ...customFiltered];
-  }, [products, customProducts, searchTerm, selectedCategory, companyProducts, showActive]);
+    return companyFiltered;
+  }, [products, companyProducts, searchTerm, selectedCategory, showActive, currentLinha]);
 
   const getImageUrl = (path: string | null, isCustom: boolean) => {
     if (!path) return null;

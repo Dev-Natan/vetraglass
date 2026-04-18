@@ -109,6 +109,9 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
     if (selectedCategory) {
       filtered = filtered.filter((p) => p.category === selectedCategory);
     }
+    if (activeTab === 'ativos') {
+      filtered = filtered.filter(p => isProductActivated(p.id));
+    }
     
     return filtered;
   }, [products, searchTerm, activeTab, companyProducts, selectedCategory]);
