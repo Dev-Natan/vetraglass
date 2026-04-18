@@ -1,5 +1,5 @@
 import ExcelJS from 'exceljs';
-import type { StockItem } from '@/hooks/useStockData';
+import type { StockItem } from '@/types/estoque';
 
 const itemTypeLabels: Record<string, string> = {
   glass: 'Vidro',

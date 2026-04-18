@@ -1,47 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { estoqueService } from '@/services/estoqueService';
+import type { StockItem } from '@/types/estoque';
 import { useMemo } from 'react';
 
-export interface StockItem {
-  id: string;
-  item_template_id: string | null;
-  company_item_id: string | null;
-  company_id: string;
-  quantity: number;
-  min_quantity: number | null;
-  location: string | null;
-  is_active: boolean;
-  allow_fractional: boolean;
-  updated_at: string;
-  item_template?: {
-    id: string;
-    name: string;
-    type: string;
-    unit: string;
-    image_url: string | null;
-    linha: string | null;
-  } | null;
-  company_item?: {
-    id: string;
-    name: string;
-    type: string;
-    unit: string;
-    image_url: string | null;
-    linha: string | null;
-    is_custom: boolean;
-    cost: number | null;
-    sale_price: number | null;
-    bar_length_mm: number | null;
-    weight_per_meter: number | null;
-    weight_kg: number | null;
-  } | null;
-  priceInfo?: {
-    id: string;
-    item_template_id: string;
-    cost: number | null;
-    price: number;
-  } | null;
-}
+// Type moved to @/types/estoque
+
 
 interface UseStockDataOptions {
   companyId: string | undefined;
@@ -83,16 +47,9 @@ export function useStockData({ companyId }: UseStockDataOptions): StockDataResul
     queryKey: ['company-stock', companyId],
     queryFn: async () => {
       if (!companyId) return [];
-      
-      const { data, error } = await supabase
-        .from('company_stock')
-        .select('id, item_template_id, company_item_id, company_id, quantity, min_quantity, location, is_active, allow_fractional, updated_at')
-        .eq('company_id', companyId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data || [];
+      return estoqueService.fetchStockItems(companyId);
     },
+
     enabled: !!companyId,
     staleTime: 30000, // 30 seconds
   });
@@ -102,16 +59,9 @@ export function useStockData({ companyId }: UseStockDataOptions): StockDataResul
     queryKey: ['company-items', companyId],
     queryFn: async () => {
       if (!companyId) return [];
-      
-      const { data, error } = await supabase
-        .from('company_items')
-        .select('id, name, type, unit, image_url, linha, is_custom, cost, sale_price, bar_length_mm, weight_per_meter, weight_kg')
-        .eq('company_id', companyId)
-        .eq('is_active', true);
-
-      if (error) throw error;
-      return data || [];
+      return estoqueService.fetchCompanyItems(companyId);
     },
+
     enabled: !!companyId,
     staleTime: 30000,
   });
@@ -119,14 +69,9 @@ export function useStockData({ companyId }: UseStockDataOptions): StockDataResul
   const templatesQuery = useQuery({
     queryKey: ['item-templates-stock'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('item_templates')
-        .select('id, name, type, unit, image_url, linha')
-        .eq('is_active', true);
-
-      if (error) throw error;
-      return data || [];
+      return estoqueService.fetchItemTemplates();
     },
+
     staleTime: 60000, // 1 minute (templates change less frequently)
   });
 
@@ -134,15 +79,9 @@ export function useStockData({ companyId }: UseStockDataOptions): StockDataResul
     queryKey: ['company-item-prices', companyId],
     queryFn: async () => {
       if (!companyId) return [];
-      
-      const { data, error } = await supabase
-        .from('company_item_prices')
-        .select('id, item_template_id, cost, price')
-        .eq('company_id', companyId);
-
-      if (error) throw error;
-      return data || [];
+      return estoqueService.fetchItemPrices(companyId);
     },
+
     enabled: !!companyId,
     staleTime: 30000,
   });

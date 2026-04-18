@@ -8,7 +8,10 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { clientService } from '@/services/clientService';
+import type { Client } from '@/types/clientes';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+
 import { toast } from 'sonner';
 import { Client360Dialog } from '@/components/clientes/Client360Dialog';
 import { ClientsCardView } from '@/components/clientes/ClientsCardView';
@@ -29,24 +32,8 @@ import { queryKeys } from '@/lib/queryConfig';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 
-interface Client {
-  id: string;
-  company_id: string;
-  name: string;
-  document: string | null;
-  document_type: 'CPF' | 'CNPJ' | null;
-  email: string | null;
-  phone: string | null;
-  address: string | null;
-  city: string | null;
-  state: string | null;
-  zip_code: string | null;
-  notes: string | null;
-  is_active: boolean;
-  created_at: string;
-  latitude: number | null;
-  longitude: number | null;
-}
+// Type moved to @/types/clientes
+
 
 export default function Clientes() {
   const { currentCompany } = useAuth();
@@ -93,32 +80,19 @@ export default function Clientes() {
     queryKey: queryKeys.clients.all(currentCompany?.id || ''),
     queryFn: async () => {
       if (!currentCompany?.id) return [];
-      
-      const { data, error } = await supabase
-        .from('clients')
-        .select('id, company_id, name, document, document_type, email, phone, address, city, state, zip_code, notes, is_active, created_at, latitude, longitude')
-        .eq('company_id', currentCompany.id)
-        .eq('is_active', true)
-        .order('name');
-      
-      if (error) throw error;
-      return data as Client[];
+      return clientService.fetchClients(currentCompany.id);
     },
+
     enabled: !!currentCompany?.id,
     // Zero cache - sempre dados frescos
   });
 
   const createMutation = useMutation({
     mutationFn: async (client: Omit<Client, 'id' | 'company_id' | 'is_active' | 'created_at' | 'latitude' | 'longitude'>) => {
-      const { error } = await supabase
-        .from('clients')
-        .insert({
-          ...client,
-          company_id: currentCompany!.id,
-        });
-      
-      if (error) throw error;
+      if (!currentCompany?.id) throw new Error('Empresa não selecionada');
+      return clientService.createClient(currentCompany.id, client);
     },
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       toast.success('Cliente cadastrado com sucesso!');
@@ -132,13 +106,9 @@ export default function Clientes() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, ...client }: Partial<Client> & { id: string }) => {
-      const { error } = await supabase
-        .from('clients')
-        .update(client)
-        .eq('id', id);
-      
-      if (error) throw error;
+      return clientService.updateClient(id, client);
     },
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       toast.success('Cliente atualizado com sucesso!');
@@ -152,13 +122,10 @@ export default function Clientes() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('clients')
-        .update({ is_active: false })
-        .eq('id', id);
-      
-      if (error) throw error;
+      if (!currentCompany?.id) throw new Error('Empresa não selecionada');
+      return clientService.toggleClientStatus(id, currentCompany.id, false);
     },
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       toast.success('Cliente removido com sucesso!');

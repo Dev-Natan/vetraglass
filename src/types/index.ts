@@ -23,10 +23,7 @@ export interface DashboardMetrics {
   completedThisMonth: number;
 }
 
-export interface Client {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  address: string;
-}
+export * from './financeiro';
+export * from './clientes';
+export * from './estoque';
+

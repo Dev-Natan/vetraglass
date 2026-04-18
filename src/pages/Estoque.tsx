@@ -2,7 +2,9 @@ import { useState, useMemo, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { supabase } from '@/integrations/supabase/client';
+import { estoqueService } from '@/services/estoqueService';
 import { useAuth } from '@/contexts/AuthContext';
+
 import { Boxes, TrendingDown, TrendingUp, History, Plus, PackageCheck, PackageX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UnifiedAddItemDialog } from '@/components/estoque/UnifiedAddItemDialog';
@@ -13,7 +15,9 @@ import { StockItemCard } from '@/components/estoque/StockItemCard';
 import { StockKPIs } from '@/components/estoque/StockKPIs';
 import { StockFilters, type StockStatus, type StockSortBy, type ViewMode } from '@/components/estoque/StockFilters';
 import { StockGridView } from '@/components/estoque/StockGridView';
-import { useStockData, type StockItem } from '@/hooks/useStockData';
+import { useStockData } from '@/hooks/useStockData';
+import type { StockItem } from '@/types/estoque';
+
 import { useItemTypes } from '@/hooks/useItemTypes';
 import { useProductLinhas } from '@/hooks/useProductLinhas';
 
@@ -109,9 +113,9 @@ export default function Estoque() {
 
   const toggleActiveMutation = useMutation({
     mutationFn: async ({ stockId, isActive }: { stockId: string; isActive: boolean }) => {
-      const { error } = await supabase.from('company_stock').update({ is_active: isActive }).eq('id', stockId);
-      if (error) throw error;
+      return estoqueService.toggleActive(stockId, isActive);
     },
+
     onSuccess: (_, { isActive }) => {
       queryClient.invalidateQueries({ queryKey: ['company-stock'] });
       toast.success(isActive ? 'Item ativado' : 'Item desativado');

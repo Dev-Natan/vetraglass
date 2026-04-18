@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import type { StockItem } from '@/hooks/useStockData';
+import type { StockItem } from '@/types/estoque';
 
 const itemTypeLabels: Record<string, string> = {
   glass: 'Vidro',
