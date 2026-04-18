@@ -254,10 +254,13 @@ export default function ProdutosLinha() {
         
         // Filter by linha
         let matchesLinha = false;
+        const template = products?.find(p => p.id === cp.product_template_id);
+        const effectiveLinha = cp.linha || template?.linha;
+        
         if (currentLinha === 'Sem Linha' || currentLinha === 'Personalizado') {
-          matchesLinha = (cp.linha === null || cp.linha === '' || cp.linha === 'Sem Linha' || cp.linha === 'Personalizado');
+          matchesLinha = (!effectiveLinha || effectiveLinha === 'Sem Linha' || effectiveLinha === 'Personalizado');
         } else {
-          matchesLinha = cp.linha === currentLinha;
+          matchesLinha = effectiveLinha === currentLinha;
         }
         
         return matchesSearch && matchesCategory && matchesActiveStatus && matchesLinha;
