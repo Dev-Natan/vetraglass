@@ -182,7 +182,7 @@ export default function Produtos() {
     result.sort((a, b) => a.linha.localeCompare(b.linha));
     
     return result;
-  }, [companyLinhas, companyProducts, allProducts, searchTerm]);
+  }, [companyLinhas, companyProducts, allProducts, searchTerm, selectedCategory]);
 
   // Deactivate/remove a linha
   const deactivateLinhaMutation = useMutation({
