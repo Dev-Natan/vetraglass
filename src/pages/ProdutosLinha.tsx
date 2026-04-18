@@ -90,7 +90,7 @@ export default function ProdutosLinha() {
 
   // Fetch company products with their activation status
   const { data: companyProducts = [] } = useQuery({
-    queryKey: ['company-products', currentCompany?.id],
+    queryKey: ['company-products', currentCompany?.id, 'detailed'],
     queryFn: async () => {
       if (!currentCompany?.id) return [];
       const { data, error } = await supabase
@@ -259,13 +259,21 @@ export default function ProdutosLinha() {
   const filteredProducts = useMemo((): DisplayProduct[] => {
     // Filter template products based on company activation status
     const templateFiltered = (products || [])
-      .filter((p) => {
+      .map((p) => {
         const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
         
         // Find the company product record for this template
         const companyProduct = companyProducts.find(cp => cp.product_template_id === p.id);
         
+        return {
+          template: p,
+          companyProduct,
+          matchesSearch,
+          matchesCategory,
+        };
+      })
+      .filter(({ companyProduct, matchesSearch, matchesCategory }) => {
         // Check if matches the current tab (showActive)
         if (showActive) {
           // Show only products that are activated for the company
@@ -275,8 +283,7 @@ export default function ProdutosLinha() {
           return matchesSearch && matchesCategory && companyProduct && companyProduct.is_active === false;
         }
       })
-      .map((p): DisplayProduct => {
-        const companyProduct = companyProducts.find(cp => cp.product_template_id === p.id);
+      .map(({ template: p, companyProduct }): DisplayProduct => {
         return {
           id: p.id,
           name: p.name,
