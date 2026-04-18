@@ -151,43 +151,40 @@ export function Sidebar() {
 
       {/* Sidebar */}
       <aside className={cn(
-        "fixed left-0 top-0 h-screen w-60 bg-sidebar flex flex-col z-40 transition-transform duration-300",
-        "lg:translate-x-0",
+        "fixed left-0 top-0 h-screen w-64 bg-sidebar flex flex-col z-40 transition-all duration-300 ease-in-out shadow-2xl",
+        "lg:translate-x-0 lg:shadow-none",
         isMobileOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         {/* Logo */}
-        <div className="p-5 border-b border-sidebar-border" data-tutorial="logo">
+        <div className="p-6 border-b border-sidebar-border/30" data-tutorial="logo">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+              <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center backdrop-blur-md border border-white/20">
                 <span className="text-white text-xl font-bold">V</span>
               </div>
               <div>
-                <h1 className="font-display font-bold text-lg text-sidebar-foreground">Vetra</h1>
-                <p className="text-xs text-sidebar-foreground/50">Sistema de Gestão</p>
+                <h1 className="font-display font-bold text-lg text-sidebar-foreground tracking-tight">Vetra</h1>
+                <p className="text-[10px] text-sidebar-foreground/50 uppercase font-semibold tracking-wider">Gestão Inteligente</p>
               </div>
             </div>
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setSupportOpen(true)}
-              className="relative text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+              className="relative text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-white/10"
             >
               <Headphones className="h-5 w-5" />
               {openTicketsCount > 0 && (
-                <Badge 
-                  variant="destructive" 
-                  className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px]"
-                >
-                  {openTicketsCount}
-                </Badge>
+                <span 
+                  className="absolute top-2 right-2 h-2 w-2 rounded-full bg-destructive animate-pulse"
+                />
               )}
             </Button>
           </div>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10">
           {visibleMenuItems.map((item) => {
             const isActive = location.pathname === item.path;
 
@@ -198,14 +195,20 @@ export function Sidebar() {
                 onClick={() => setIsMobileOpen(false)}
                 data-tutorial={item.tutorialId}
                 className={cn(
-                  "flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200",
+                  "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 group relative",
                   isActive 
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium" 
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                    ? "bg-white/15 text-white shadow-sm ring-1 ring-white/20" 
+                    : "text-sidebar-foreground/70 hover:bg-white/5 hover:text-sidebar-foreground"
                 )}
               >
-                <item.icon className="w-5 h-5" />
-                <span className="text-sm">{item.label}</span>
+                <item.icon className={cn(
+                  "w-5 h-5 transition-transform duration-200 group-hover:scale-110",
+                  isActive ? "text-white" : "text-sidebar-foreground/60"
+                )} />
+                <span className="text-sm font-medium">{item.label}</span>
+                {isActive && (
+                  <div className="absolute right-2 w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_white]" />
+                )}
               </Link>
             );
           })}
