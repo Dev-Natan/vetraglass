@@ -168,18 +168,22 @@ export default function Auth() {
   const isBlocked = rateLimitStatus?.isBlocked ?? false;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sidebar via-background to-background p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-sidebar via-background to-background p-4 relative overflow-hidden">
+      {/* Decorative blobs */}
+      <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px] animate-pulse" />
+      <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px]" />
+
+      <div className="w-full max-w-md relative z-10 animate-fade-in">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-primary mx-auto flex items-center justify-center mb-4">
-            <span className="font-display font-bold text-2xl text-primary-foreground">V</span>
+          <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary to-primary/80 mx-auto flex items-center justify-center mb-6 shadow-xl shadow-primary/20 ring-4 ring-background">
+            <span className="font-display font-bold text-3xl text-primary-foreground">V</span>
           </div>
-          <h1 className="font-display font-bold text-3xl text-foreground">Vetra</h1>
-          <p className="text-muted-foreground mt-1">Sistema de Gestão para Vidraçarias</p>
+          <h1 className="font-display font-bold text-4xl text-foreground tracking-tight">Vetra</h1>
+          <p className="text-muted-foreground mt-2 font-medium">Sistema de Gestão para Vidraçarias</p>
         </div>
 
-        <Card className="border-border/50 shadow-xl">
+        <Card className="border-border/40 shadow-2xl backdrop-blur-sm bg-card/95 rounded-3xl overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <CardHeader className="pb-4">
               <TabsList className="grid w-full grid-cols-1">

@@ -7,7 +7,7 @@
 
 @layer base {
   html {
-    font-size: 80%;
+    font-size: 93.75%; /* 15px base for a good balance between data density and readability */
   }
 
   :root {
@@ -58,8 +58,9 @@
     /* Custom tokens */
     --glass-bg: 0 0% 100% / 0.85;
     --glass-border: 210 20% 90% / 0.5;
-    --shadow-card: 0 4px 24px -4px hsl(215 25% 20% / 0.08);
-    --shadow-action: 0 8px 24px -4px hsl(207 90% 54% / 0.25);
+    --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-action: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-glow: 0 0 20px -5px hsl(var(--primary) / 0.3);
 
     --sidebar-background: 207 85% 45%;
     --sidebar-foreground: 0 0% 100%;

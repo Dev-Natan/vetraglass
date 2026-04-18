@@ -147,13 +147,13 @@ export default function Landing() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-xl font-display">V</span>
+      <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/70 backdrop-blur-xl transition-all duration-300">
+        <div className="container flex h-20 items-center justify-between px-6">
+          <div className="flex items-center gap-3 group cursor-pointer">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform">
+              <span className="text-primary-foreground font-bold text-2xl font-display">V</span>
             </div>
-            <span className="font-display text-2xl font-bold text-foreground">Vetra</span>
+            <span className="font-display text-2xl font-bold text-foreground tracking-tight">Vetra</span>
           </div>
           
           <nav className="hidden md:flex items-center gap-6">
@@ -184,21 +184,21 @@ export default function Landing() {
 
       {/* Hero Section */}
       <main>
-      <section className="relative overflow-hidden py-20 md:py-32" aria-label="Apresentação">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/10" />
-        <div className="container relative">
-          <div className="mx-auto max-w-3xl text-center animate-fade-in">
-            <Badge variant="secondary" className="mb-4">
-              <Zap className="w-3 h-3 mr-1" />
-              Sistema completo para vidraçarias
+      <section className="relative overflow-hidden py-24 md:py-40" aria-label="Apresentação">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-primary/5" />
+        <div className="container relative px-6">
+          <div className="mx-auto max-w-4xl text-center animate-fade-in">
+            <Badge variant="outline" className="mb-6 py-1.5 px-4 bg-primary/5 text-primary border-primary/20 rounded-full font-semibold uppercase tracking-wider text-[10px]">
+              <Zap className="w-3.5 h-3.5 mr-2 animate-pulse" />
+              Gestão inteligente para vidraceiros
             </Badge>
-            <h1 className="font-display text-4xl md:text-6xl font-bold tracking-tight text-foreground mb-6">
+            <h1 className="font-display text-5xl md:text-7xl font-bold tracking-tight text-foreground mb-8 leading-[1.1]">
               Gerencie sua vidraçaria com{' '}
-              <span className="text-primary">inteligência</span>
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">tecnologia</span>
             </h1>
-            <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Orçamentos, plano de corte, estoque, financeiro e muito mais. 
-              Tudo que você precisa para crescer seu negócio em uma única plataforma.
+            <p className="text-lg md:text-2xl text-muted-foreground/90 mb-12 max-w-2xl mx-auto leading-relaxed">
+              Orçamentos automáticos, plano de corte otimizado e controle financeiro total. 
+              A plataforma definitiva para escalar sua produtividade.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button size="lg" asChild className="w-full sm:w-auto">
@@ -274,12 +274,12 @@ export default function Landing() {
             {features.map((feature, index) => (
               <Card 
                 key={feature.title} 
-                className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 animate-fade-in"
+                className="group hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 animate-fade-in border-none bg-card/50 backdrop-blur-sm"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
-                <CardHeader>
-                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
-                    <feature.icon className="w-6 h-6 text-primary" />
+                <CardHeader className="p-8">
+                  <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300 shadow-inner">
+                    <feature.icon className="w-7 h-7" />
                   </div>
                   <CardTitle className="text-xl">{feature.title}</CardTitle>
                   <CardDescription className="text-base">
