@@ -186,8 +186,9 @@ export default function Auth() {
         <Card className="border-border/40 shadow-2xl backdrop-blur-sm bg-card/95 rounded-3xl overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <CardHeader className="pb-4">
-              <TabsList className="grid w-full grid-cols-1">
+              <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Entrar</TabsTrigger>
+                <TabsTrigger value="signup">Criar Conta</TabsTrigger>
               </TabsList>
             </CardHeader>
             
@@ -257,12 +258,73 @@ export default function Auth() {
               </TabsContent>
               
               <TabsContent value="signup" className="mt-0">
-                <Alert className="mb-4">
-                  <ShieldAlert className="h-4 w-4" />
-                  <AlertDescription>
-                    A criação de novas contas está temporariamente suspensa. Entre em contato com o administrador para mais informações.
-                  </AlertDescription>
-                </Alert>
+                <form onSubmit={handleSignup} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-fullname">Nome Completo</Label>
+                    <Input
+                      id="signup-fullname"
+                      type="text"
+                      placeholder="Seu nome"
+                      value={signupFullName}
+                      onChange={(e) => setSignupFullName(e.target.value)}
+                      disabled={isLoading}
+                    />
+                    {errors.fullName && (
+                      <p className="text-sm text-destructive">{errors.fullName}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-email">Email</Label>
+                    <Input
+                      id="signup-email"
+                      type="email"
+                      placeholder="seu@email.com"
+                      value={signupEmail}
+                      onChange={(e) => setSignupEmail(e.target.value)}
+                      disabled={isLoading}
+                    />
+                    {errors.email && (
+                      <p className="text-sm text-destructive">{errors.email}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-password">Senha</Label>
+                    <PasswordInput
+                      id="signup-password"
+                      placeholder="••••••••"
+                      value={signupPassword}
+                      onChange={(e) => setSignupPassword(e.target.value)}
+                      disabled={isLoading}
+                    />
+                    <PasswordStrengthIndicator password={signupPassword} />
+                    {errors.password && (
+                      <p className="text-sm text-destructive">{errors.password}</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-confirm-password">Confirmar Senha</Label>
+                    <PasswordInput
+                      id="signup-confirm-password"
+                      placeholder="••••••••"
+                      value={signupConfirmPassword}
+                      onChange={(e) => setSignupConfirmPassword(e.target.value)}
+                      disabled={isLoading}
+                    />
+                    {errors.confirmPassword && (
+                      <p className="text-sm text-destructive">{errors.confirmPassword}</p>
+                    )}
+                  </div>
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Criando conta...
+                      </>
+                    ) : (
+                      'Criar Conta'
+                    )}
+                  </Button>
+                </form>
               </TabsContent>
             </CardContent>
           </Tabs>
