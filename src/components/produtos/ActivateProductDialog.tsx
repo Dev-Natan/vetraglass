@@ -238,10 +238,6 @@ export function ActivateProductDialog({
   });
 
   const handleActivate = () => {
-    if (selectedComponents.size === 0) {
-      toast.error('Selecione pelo menos um componente');
-      return;
-    }
     activateMutation.mutate();
   };
 
