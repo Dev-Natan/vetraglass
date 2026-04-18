@@ -132,36 +132,6 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
     return groups;
   }, [filteredProducts]);
 
-  const activateProductMutation = useMutation({
-    mutationFn: async (productTemplateId: string) => {
-      if (!currentCompany?.id) throw new Error('Empresa não selecionada');
-      const { data, error } = await supabase.rpc('activate_product_template_for_company', {
-        _company_id: currentCompany.id,
-        _product_template_id: productTemplateId,
-      });
-      
-      if (error) throw error;
-
-      // Ensure the product is set to active in company_products
-      await supabase
-        .from('company_products')
-        .update({ is_active: true, updated_at: new Date().toISOString() })
-        .eq('company_id', currentCompany.id)
-        .eq('product_template_id', productTemplateId);
-
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['company-products'] });
-      queryClient.invalidateQueries({ queryKey: ['linha-products'] });
-      queryClient.invalidateQueries({ queryKey: ['company-items'] });
-      queryClient.invalidateQueries({ queryKey: ['company-stock'] });
-      toast.success('Produto ativado para venda!');
-    },
-    onError: (error) => {
-      toast.error('Erro ao ativar: ' + error.message);
-    },
-  });
 
   const handleActivateClick = (product: ProductTemplate) => {
     setSelectedProductForActivation({ id: product.id, name: product.name });

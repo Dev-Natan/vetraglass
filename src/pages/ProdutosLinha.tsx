@@ -487,7 +487,7 @@ export default function ProdutosLinha() {
                             setActivateDialogOpen(true);
                           }
                         }}
-                        disabled={activateProductMutation.isPending || reactivateCustomProductMutation.isPending}
+                        disabled={reactivateCustomProductMutation.isPending}
                       >
                         Habilitar
                       </Button>
@@ -660,7 +660,7 @@ export default function ProdutosLinha() {
                             setActivateDialogOpen(true);
                           }
                         }}
-                        disabled={activateProductMutation.isPending || reactivateCustomProductMutation.isPending}
+                        disabled={reactivateCustomProductMutation.isPending}
                       >
                         Habilitar
                       </Button>
