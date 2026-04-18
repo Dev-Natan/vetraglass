@@ -90,7 +90,7 @@ export default function ProdutosLinha() {
 
   // Fetch company products with their activation status
   const { data: companyProducts = [] } = useQuery({
-    queryKey: ['company-products', currentCompany?.id],
+    queryKey: ['company-products', currentCompany?.id, 'detailed'],
     queryFn: async () => {
       if (!currentCompany?.id) return [];
       const { data, error } = await supabase
