@@ -111,30 +111,18 @@ export default function ProdutosLinha() {
     enabled: !!currentCompany?.id,
   });
 
-  // Fetch custom products for this linha (all, we filter by showActive in filteredProducts)
-  const { data: customProducts = [] } = useQuery({
-    queryKey: ['custom-products', currentCompany?.id, currentLinha],
-    queryFn: async () => {
-      if (!currentCompany?.id) return [];
-      let query = supabase
-        .from('company_products')
-        .select('id, commercial_name, description, category, linha, image_url, is_active, is_custom, base_price, composition_finished')
-        .eq('company_id', currentCompany.id)
-        .eq('is_custom', true);
+  // Custom products are now part of companyProducts query
+  const customProducts = useMemo(() => {
+    return companyProducts.filter(cp => {
+      if (!cp.is_custom) return false;
       
-      if (currentLinha === 'Personalizado') {
-        query = query.or('linha.is.null,linha.eq.""');
-      } else {
-        query = query.eq('linha', currentLinha);
-      }
-      
-      const { data, error } = await query;
-      
-      if (error) throw error;
-      return (data || []) as any[];
-    },
-    enabled: !!currentCompany?.id && !!currentLinha,
-  });
+      const matchesLinha = currentLinha === 'Personalizado' 
+        ? (cp.linha === null || cp.linha === '' || cp.linha === 'Sem Linha')
+        : cp.linha === currentLinha;
+        
+      return matchesLinha;
+    });
+  }, [companyProducts, currentLinha]);
 
   // Check if product is activated for this company
   const isProductActivated = (productTemplateId: string) => {
