@@ -1,31 +1,27 @@
 
-User wants to start a new, cleaner, lighter project with all current configurations. They've been migrating to external Supabase and dealing with 196 migration files. Now they want a fresh start.
+## Causa raiz
 
-Key considerations:
-1. They have a working production app (vetraglass.com) with 196 migrations, complex schema, edge functions, storage, auth users.
-2. They want "cleaner and lighter" — implies removing accumulated cruft.
-3. They want to keep all current configurations/functionality.
+**Erro 1 (principal):** Coluna `composition_finished` não existe em `company_products`. Query 400 → `companyProducts = []` → nenhum produto aparece como ativado, `companyProductId` fica `undefined`, e ao navegar usa o ID do template (que não existe em `company_products`).
 
-Best strategies (present as options to choose):
+**Erro 2:** Quando `companyProductId` falta, o código cai no fallback `id: cp.product_template_id || cp.id` e navega para `/produtos/empresa/editar/<template_id>` → "Produto não encontrado".
 
-**Option A: Fork + Squash (clone do projeto atual + limpeza)**
-- Duplicar o projeto Lovable atual
-- No clone: fazer squash das migrations (1 baseline), limpar código morto, reorganizar
-- Manter o banco apontando para o mesmo Supabase OU criar novo Supabase com dump
-- Vantagem: preserva 100% do código e funcionalidades
-- Desvantagem: ainda carrega o histórico de decisões
+## Correções
 
-**Option B: Novo projeto Lovable + import seletivo**
-- Criar projeto Lovable novo do zero
-- Importar apenas: schema baseline (1 arquivo SQL), edge functions essenciais, componentes core
-- Recriar configs (Cloud, secrets, domínio)
-- Vantagem: realmente limpo, leve, sem cruft
-- Desvantagem: trabalho manual de copiar código
+**1. Migração de schema** (adicionar coluna ausente)
+```sql
+ALTER TABLE company_products 
+ADD COLUMN IF NOT EXISTS composition_finished boolean NOT NULL DEFAULT false;
+```
 
-**Option C: Novo projeto + Supabase Externo já migrado**
-- Como já está migrando para Supabase Externo, criar projeto Lovable novo apontando para esse Supabase
-- Copiar código essencial via cross_project tools
-- Vantagem: aproveita migração em andamento, separa frontend de backend
-- Desvantagem: precisa configurar conexão Supabase externo no novo Lovable
+**2. `src/pages/ProdutosLinha.tsx`** — tornar a UI resiliente:
+- No card do produto, `id` deve ser sempre o `companyProductId` quando existir (não o template_id), evitando navegação errada.
+- Botão "Habilitar/Desabilitar/Preços" deve usar exclusivamente `product.companyProductId`. Se ausente após ativação, refazer fetch antes de navegar.
+- Adicionar guard: ao clicar em editar, se `companyProductId` faltar, invalidar query e abortar com toast claro (em vez de cair em template_id).
 
-I should ask which approach they prefer. Keep concise.
+**3. `src/pages/EditarProdutoEmpresa.tsx`** — fallback robusto:
+- Se a busca por `id` retornar vazio, tentar uma segunda busca por `product_template_id = id AND company_id = currentCompany.id`. Se encontrar, redirecionar para a URL canônica `/produtos/empresa/editar/<companyProductId>`.
+- Mensagem de erro só após ambas as tentativas falharem.
+
+**4. `src/pages/Produtos.tsx` e `TipologiasSheet.tsx`** — remover `composition_finished` do select caso ainda gere 400 antes da migração rodar (ou deixar somente após a migração).
+
+Pronto para aplicar essas mudanças assim que aprovado.
