@@ -10,6 +10,7 @@ import { TutorialOverlay } from '@/components/tutorial/TutorialOverlay';
 import { ModuleTutorialProvider } from '@/contexts/ModuleTutorialContext';
 import { ModuleTutorialOverlay } from '@/components/tutorial/ModuleTutorialOverlay';
 import { useSessionTimeout } from '@/hooks/useSessionTimeout';
+import { getTimeBasedGreeting } from '@/utils/dateUtils';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -20,13 +21,6 @@ export function MainLayout({ children }: MainLayoutProps) {
   
   // Ativa monitoramento de timeout de sessão por inatividade
   useSessionTimeout();
-
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Bom dia';
-    if (hour < 18) return 'Boa tarde';
-    return 'Boa noite';
-  };
 
   return (
     <TutorialProvider>
