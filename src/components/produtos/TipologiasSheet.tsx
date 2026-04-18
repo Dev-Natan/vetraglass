@@ -136,7 +136,16 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
         _company_id: currentCompany.id,
         _product_template_id: productTemplateId,
       });
+      
       if (error) throw error;
+
+      // Ensure the product is set to active in company_products
+      await supabase
+        .from('company_products')
+        .update({ is_active: true, updated_at: new Date().toISOString() })
+        .eq('company_id', currentCompany.id)
+        .eq('product_template_id', productTemplateId);
+
       return data;
     },
     onSuccess: () => {
