@@ -1,4 +1,5 @@
 import { MainLayout } from '@/components/layout/MainLayout';
+import { cn } from '@/lib/utils';
 import { DayOverviewCards } from '@/components/dashboard/DayOverviewCards';
 import { TodaySchedule } from '@/components/dashboard/TodaySchedule';
 import { TodayReceivables } from '@/components/dashboard/TodayReceivables';
@@ -46,13 +47,21 @@ export default function Index() {
     <MainLayout>
       <div className="space-y-6 max-w-7xl mx-auto">
         {/* Header com data */}
-        <header className="animate-fade-in">
-          <h1 className="text-2xl font-bold text-foreground capitalize">
-            {formattedDate}
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Visão geral do seu dia
-          </p>
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 animate-fade-in">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground tracking-tight capitalize">
+              {formattedDate}
+            </h1>
+            <p className="text-muted-foreground text-base mt-1">
+              Bem-vindo ao seu painel de controle.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="px-3 py-1.5 bg-success/10 text-success text-xs font-bold rounded-full flex items-center gap-2 border border-success/20">
+              <span className="h-2 w-2 rounded-full bg-success animate-pulse" />
+              SISTEMA ONLINE
+            </div>
+          </div>
         </header>
 
         {/* Onboarding - só aparece para novos usuários */}
