@@ -131,36 +131,6 @@ export default function ProdutosLinha() {
     );
   };
 
-  // Activate product for company
-  const activateProductMutation = useMutation({
-    mutationFn: async (productTemplateId: string) => {
-      if (!currentCompany?.id) throw new Error('Empresa não selecionada');
-      
-      const { data, error } = await supabase.rpc('activate_product_template_for_company', {
-        _company_id: currentCompany.id,
-        _product_template_id: productTemplateId,
-      });
-      
-      if (error) throw error;
-
-      // Ensure the product is set to active in company_products
-      await supabase
-        .from('company_products')
-        .update({ is_active: true, updated_at: new Date().toISOString() })
-        .eq('company_id', currentCompany.id)
-        .eq('product_template_id', productTemplateId);
-
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['company-products'] });
-      queryClient.invalidateQueries({ queryKey: ['company-products-with-templates'] });
-      toast.success('Produto ativado para venda!');
-    },
-    onError: (error) => {
-      toast.error('Erro ao ativar: ' + error.message);
-    },
-  });
 
   // Deactivate product for company (template products)
   const deactivateProductMutation = useMutation({
@@ -513,11 +483,11 @@ export default function ProdutosLinha() {
                           if (product.is_custom) {
                             reactivateCustomProductMutation.mutate(product.id);
                           } else {
-                            // For template products, use the RPC function
-                            activateProductMutation.mutate(product.id);
+                            setSelectedProductForActivation({ id: product.id, name: product.name });
+                            setActivateDialogOpen(true);
                           }
                         }}
-                        disabled={activateProductMutation.isPending || reactivateCustomProductMutation.isPending}
+                        disabled={reactivateCustomProductMutation.isPending}
                       >
                         Habilitar
                       </Button>
@@ -686,11 +656,11 @@ export default function ProdutosLinha() {
                           if (product.is_custom) {
                             reactivateCustomProductMutation.mutate(product.id);
                           } else {
-                            // For template products, use the RPC function
-                            activateProductMutation.mutate(product.id);
+                            setSelectedProductForActivation({ id: product.id, name: product.name });
+                            setActivateDialogOpen(true);
                           }
                         }}
-                        disabled={activateProductMutation.isPending || reactivateCustomProductMutation.isPending}
+                        disabled={reactivateCustomProductMutation.isPending}
                       >
                         Habilitar
                       </Button>
@@ -791,6 +761,7 @@ export default function ProdutosLinha() {
             productName={selectedProductForActivation.name}
             onSuccess={() => {
               queryClient.invalidateQueries({ queryKey: ['company-products'] });
+              queryClient.invalidateQueries({ queryKey: ['linha-products'] });
             }}
           />
         )}

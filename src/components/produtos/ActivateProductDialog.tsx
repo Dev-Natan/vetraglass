@@ -145,12 +145,16 @@ export function ActivateProductDialog({
 
       if (activateError) throw activateError;
 
-      // Ensure the product is set to active in company_products
-      await supabase
+      // 2. Ensure the product is set to active in company_products (redundant but safe)
+      const { error: updateError } = await supabase
         .from('company_products')
         .update({ is_active: true, updated_at: new Date().toISOString() })
         .eq('company_id', currentCompany.id)
         .eq('product_template_id', productTemplateId);
+
+      if (updateError) {
+        console.warn('Non-critical update error:', updateError);
+      }
 
       // 2. Get selected components
       const selectedItems = components.filter(c => selectedComponents.has(c.id));
@@ -216,7 +220,9 @@ export function ActivateProductDialog({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company-products'] });
+      queryClient.invalidateQueries({ queryKey: ['linha-products'] });
       queryClient.invalidateQueries({ queryKey: ['company-stock'] });
+      queryClient.invalidateQueries({ queryKey: ['product-template-items'] });
       toast.success('Produto ativado com sucesso!', {
         description: `${selectedComponents.size} componentes adicionados ao estoque`,
       });

@@ -14,7 +14,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { ActivateProductDialog } from './ActivateProductDialog';
 import {
   Download,
   ShoppingCart,
@@ -51,6 +52,8 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'todos' | 'ativos'>('todos');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [activateDialogOpen, setActivateDialogOpen] = useState(false);
+  const [selectedProductForActivation, setSelectedProductForActivation] = useState<{ id: string; name: string } | null>(null);
 
   // Fetch products for this linha
   const { data: products, isLoading } = useQuery({
@@ -129,39 +132,10 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
     return groups;
   }, [filteredProducts]);
 
-  const activateProductMutation = useMutation({
-    mutationFn: async (productTemplateId: string) => {
-      if (!currentCompany?.id) throw new Error('Empresa não selecionada');
-      const { data, error } = await supabase.rpc('activate_product_template_for_company', {
-        _company_id: currentCompany.id,
-        _product_template_id: productTemplateId,
-      });
-      
-      if (error) throw error;
-
-      // Ensure the product is set to active in company_products
-      await supabase
-        .from('company_products')
-        .update({ is_active: true, updated_at: new Date().toISOString() })
-        .eq('company_id', currentCompany.id)
-        .eq('product_template_id', productTemplateId);
-
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['company-products'] });
-      queryClient.invalidateQueries({ queryKey: ['linha-products'] });
-      queryClient.invalidateQueries({ queryKey: ['company-items'] });
-      queryClient.invalidateQueries({ queryKey: ['company-stock'] });
-      toast.success('Produto ativado para venda!');
-    },
-    onError: (error) => {
-      toast.error('Erro ao ativar: ' + error.message);
-    },
-  });
 
   const handleActivateClick = (product: ProductTemplate) => {
-    activateProductMutation.mutate(product.id);
+    setSelectedProductForActivation({ id: product.id, name: product.name });
+    setActivateDialogOpen(true);
   };
 
   const getProductImage = resolveProductImageUrl;
@@ -341,6 +315,19 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
           </div>
         </SheetContent>
       </Sheet>
+      
+      {selectedProductForActivation && (
+        <ActivateProductDialog
+          open={activateDialogOpen}
+          onOpenChange={setActivateDialogOpen}
+          productTemplateId={selectedProductForActivation.id}
+          productName={selectedProductForActivation.name}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['company-products'] });
+            queryClient.invalidateQueries({ queryKey: ['linha-products'] });
+          }}
+        />
+      )}
 
     </>
   );
