@@ -61,7 +61,7 @@ export default function Produtos() {
       if (!currentCompany?.id) return [];
       const { data, error } = await supabase
         .from('company_products')
-        .select('product_template_id, is_active, linha, is_custom, category')
+        .select('id, product_template_id, is_active, linha, is_custom, category')
         .eq('company_id', currentCompany.id)
         .eq('is_active', true);
       
