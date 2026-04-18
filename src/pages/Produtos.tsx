@@ -124,19 +124,27 @@ export default function Produtos() {
 
     // 2. Process all company products (templates + custom)
     companyProducts.forEach((cp) => {
-      // Use the linha name from the company product record itself
-      const linhaName = cp.linha || (cp.is_custom ? 'Personalizado' : 'Sem Linha');
+      // Find template if available
+      const template = allProducts.find(p => p.id === cp.product_template_id);
+      
+      // Use the linha name from the company product record itself, then template, then fallback
+      const linhaName = cp.linha || template?.linha || (cp.is_custom ? 'Personalizado' : 'Sem Linha');
       
       const existing = linhasMap.get(linhaName);
       if (existing) {
         existing.productCount += 1;
         if (cp.category) existing.categories.add(cp.category);
+        else if (template?.category) existing.categories.add(template.category);
       } else {
+        const categories = new Set<string>();
+        if (cp.category) categories.add(cp.category);
+        else if (template?.category) categories.add(template.category);
+
         linhasMap.set(linhaName, {
           linha: linhaName,
           productCount: 1,
           isFromCompanyLinhas: false,
-          categories: new Set(cp.category ? [cp.category] : []),
+          categories,
         });
       }
     });
