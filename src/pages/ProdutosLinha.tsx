@@ -513,8 +513,8 @@ export default function ProdutosLinha() {
                           if (product.is_custom) {
                             reactivateCustomProductMutation.mutate(product.id);
                           } else {
-                            // For template products, use the RPC function
-                            activateProductMutation.mutate(product.id);
+                            setSelectedProductForActivation({ id: product.id, name: product.name });
+                            setActivateDialogOpen(true);
                           }
                         }}
                         disabled={activateProductMutation.isPending || reactivateCustomProductMutation.isPending}
@@ -686,8 +686,8 @@ export default function ProdutosLinha() {
                           if (product.is_custom) {
                             reactivateCustomProductMutation.mutate(product.id);
                           } else {
-                            // For template products, use the RPC function
-                            activateProductMutation.mutate(product.id);
+                            setSelectedProductForActivation({ id: product.id, name: product.name });
+                            setActivateDialogOpen(true);
                           }
                         }}
                         disabled={activateProductMutation.isPending || reactivateCustomProductMutation.isPending}
@@ -791,6 +791,7 @@ export default function ProdutosLinha() {
             productName={selectedProductForActivation.name}
             onSuccess={() => {
               queryClient.invalidateQueries({ queryKey: ['company-products'] });
+              queryClient.invalidateQueries({ queryKey: ['linha-products'] });
             }}
           />
         )}
