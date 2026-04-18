@@ -52,16 +52,6 @@ const adminMenuItems = [
     icon: Tags,
   },
   {
-    title: "Importar JSON",
-    path: "/admin/import-products",
-    icon: Upload,
-  },
-  {
-    title: "Importar Excel",
-    path: "/admin/import-excel",
-    icon: FileSpreadsheet,
-  },
-  {
     title: "Empresas",
     path: "/admin/companies",
     icon: Users,
