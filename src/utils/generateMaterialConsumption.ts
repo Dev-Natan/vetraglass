@@ -29,6 +29,7 @@ interface ProductCompositionItem {
   width_formula: string | null;
   height_formula: string | null;
   pieces_quantity: number | null;
+  pieces_formula: string | null;
   company_items?: {
     id: string;
     name: string;
@@ -102,6 +103,7 @@ export async function generateMaterialConsumption(
             width_formula,
             height_formula,
             pieces_quantity,
+            pieces_formula,
             company_items (
               id,
               name,
@@ -134,6 +136,7 @@ export async function generateMaterialConsumption(
             width_formula,
             height_formula,
             pieces_quantity,
+            pieces_formula,
             item_templates (
               id,
               name,
@@ -179,8 +182,8 @@ export async function generateMaterialConsumption(
         }
 
         // Evaluate the quantity formula
-        const piecesQty = (component as any).pieces_formula 
-          ? evaluateFormula((component as any).pieces_formula, width, height)
+        const piecesQty = component.pieces_formula 
+          ? evaluateFormula(component.pieces_formula, width, height)
           : (component.pieces_quantity || 1);
         let calculatedQty = piecesQty * qty;
 
@@ -192,9 +195,9 @@ export async function generateMaterialConsumption(
             if (itemInfo.unit === 'm' || itemInfo.unit === 'metro' || itemInfo.unit === 'metros') {
               calculatedQty = (formulaResult / 1000) * piecesQty * qty;
             } else if (itemInfo.unit === 'm²' || itemInfo.unit === 'm2') {
-              // For area items (glass), result might be in mm², convert to m²
-              const areaInMm2 = (width * height);
-              calculatedQty = (areaInMm2 / 1000000) * piecesQty * qty;
+              // For area items (glass), result is in mm², convert to m²
+              // If there's a formula, it might be the area itself
+              calculatedQty = (formulaResult / 1000000) * piecesQty * qty;
             } else {
               // For units/pieces, use the formula result directly
               calculatedQty = formulaResult * piecesQty * qty;

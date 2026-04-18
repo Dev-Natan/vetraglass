@@ -118,7 +118,9 @@ export async function checkCompositionStockAvailability(
       }
 
       // Calculate quantity needed
-      const piecesQty = component.pieces_quantity || 1;
+      const piecesQty = component.pieces_formula 
+        ? evaluateFormula(component.pieces_formula, width, height)
+        : (component.pieces_quantity || 1);
       let calculatedQty = piecesQty * qty;
 
       if (component.quantity_formula && component.quantity_formula.trim() !== '' && component.quantity_formula !== '1') {
@@ -127,11 +129,15 @@ export async function checkCompositionStockAvailability(
           if (itemInfo.unit === 'm' || itemInfo.unit === 'metro' || itemInfo.unit === 'metros') {
             calculatedQty = (formulaResult / 1000) * piecesQty * qty;
           } else if (itemInfo.unit === 'm²' || itemInfo.unit === 'm2') {
-            calculatedQty = ((width * height) / 1000000) * piecesQty * qty;
+            // Respect the formula result for area too
+            calculatedQty = (formulaResult / 1000000) * piecesQty * qty;
           } else {
             calculatedQty = formulaResult * piecesQty * qty;
           }
         }
+      } else if (itemInfo.unit === 'm²' || itemInfo.unit === 'm2') {
+        // Standard area calculation if no formula
+        calculatedQty = ((width * height) / 1000000) * piecesQty * qty;
       }
 
       if (calculatedQty <= 0) continue;
