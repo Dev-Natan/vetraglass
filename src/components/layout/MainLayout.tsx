@@ -67,7 +67,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                         {currentCompany.name}
                       </h1>
                       <p className="text-sm text-muted-foreground">
-                        {getGreeting()}, <span className="font-medium text-foreground">{profile?.full_name || 'Usuário'}</span>
+                        {getTimeBasedGreeting()}, <span className="font-medium text-foreground">{profile?.full_name || 'Usuário'}</span>
                       </p>
                     </div>
                   </div>
