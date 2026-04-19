@@ -181,6 +181,30 @@ export default function ProdutosLinha() {
     },
   });
 
+  // Reactivate product for company (template products)
+  const reactivateProductMutation = useMutation({
+    mutationFn: async (productTemplateId: string) => {
+      if (!currentCompany?.id) throw new Error('Empresa não selecionada');
+      
+      const { error } = await supabase
+        .from('company_products')
+        .update({ is_active: true, updated_at: new Date().toISOString() })
+        .eq('company_id', currentCompany.id)
+        .eq('product_template_id', productTemplateId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-products'] });
+      queryClient.invalidateQueries({ queryKey: ['custom-products'] });
+      queryClient.invalidateQueries({ queryKey: ['company-products-with-templates'] });
+      toast.success('Produto reabilitado!');
+    },
+    onError: (error) => {
+      toast.error('Erro ao reativar: ' + error.message);
+    },
+  });
+
   // Reactivate custom product
   const reactivateCustomProductMutation = useMutation({
     mutationFn: async (productId: string) => {
