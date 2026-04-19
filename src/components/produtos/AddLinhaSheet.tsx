@@ -31,6 +31,7 @@ export function AddLinhaSheet({
   activatedLinhas,
 }: AddLinhaSheetProps) {
   const { currentCompany } = useAuth();
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const { labels: categoryLabels, categories } = useProductCategoryLabels();
