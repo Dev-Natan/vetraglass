@@ -497,8 +497,8 @@ export default function ProdutosLinha() {
                           onClick={() => {
                             if (product.is_custom) {
                               deactivateCustomProductMutation.mutate(product.id);
-                            } else {
-                              deactivateProductMutation.mutate(product.id);
+                            } else if (product.productTemplateId) {
+                              deactivateProductMutation.mutate(product.productTemplateId);
                             }
                           }}
                           disabled={deactivateProductMutation.isPending || deactivateCustomProductMutation.isPending}
@@ -514,12 +514,16 @@ export default function ProdutosLinha() {
                         onClick={() => {
                           if (product.is_custom) {
                             reactivateCustomProductMutation.mutate(product.id);
-                          } else {
-                            setSelectedProductForActivation({ id: product.id, name: product.name });
+                          } else if (product.companyProductId && product.productTemplateId) {
+                            // If it already has a company product ID, just reactivate it
+                            reactivateProductMutation.mutate(product.productTemplateId);
+                          } else if (product.productTemplateId) {
+                            // If it's a new template, show the activation dialog
+                            setSelectedProductForActivation({ id: product.productTemplateId, name: product.name });
                             setActivateDialogOpen(true);
                           }
                         }}
-                        disabled={reactivateCustomProductMutation.isPending}
+                        disabled={reactivateCustomProductMutation.isPending || reactivateProductMutation.isPending}
                       >
                         Habilitar
                       </Button>
