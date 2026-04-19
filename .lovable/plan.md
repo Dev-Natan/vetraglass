@@ -1,27 +1,33 @@
 
 ## Causa raiz
 
-**Erro 1 (principal):** Coluna `composition_finished` não existe em `company_products`. Query 400 → `companyProducts = []` → nenhum produto aparece como ativado, `companyProductId` fica `undefined`, e ao navegar usa o ID do template (que não existe em `company_products`).
+A função `activate_all_products_for_company` é **chamada no botão "Habilitar Todos"** (`src/pages/Produtos.tsx`), mas **não existe no banco de dados**. Verifiquei a lista de funções RPC disponíveis e só existe `activate_product_template_for_company` (singular, ativa um por vez).
 
-**Erro 2:** Quando `companyProductId` falta, o código cai no fallback `id: cp.product_template_id || cp.id` e navega para `/produtos/empresa/editar/<template_id>` → "Produto não encontrado".
+Resultado: o RPC retorna erro 404/PGRST202, o `toast.promise` cai no `error` e nada é ativado. O mesmo vale para `activate_all_linhas_for_company` (também não existe).
 
-## Correções
+Adicionalmente, o botão "Baixar Tudo" no `AddLinhaSheet.tsx` chama `activate_product_template_for_company` em loop no cliente — funciona, mas é lento e não cria entrada em `company_linhas` antes da ativação, então a linha pode não aparecer corretamente após a operação.
 
-**1. Migração de schema** (adicionar coluna ausente)
-```sql
-ALTER TABLE company_products 
-ADD COLUMN IF NOT EXISTS composition_finished boolean NOT NULL DEFAULT false;
-```
+## Correção
 
-**2. `src/pages/ProdutosLinha.tsx`** — tornar a UI resiliente:
-- No card do produto, `id` deve ser sempre o `companyProductId` quando existir (não o template_id), evitando navegação errada.
-- Botão "Habilitar/Desabilitar/Preços" deve usar exclusivamente `product.companyProductId`. Se ausente após ativação, refazer fetch antes de navegar.
-- Adicionar guard: ao clicar em editar, se `companyProductId` faltar, invalidar query e abortar com toast claro (em vez de cair em template_id).
+**1. Criar função SQL `activate_all_products_for_company`** (migração)
+- Itera sobre todos `product_templates` ativos.
+- Para cada um, executa a mesma lógica de `activate_product_template_for_company` (cria/reativa `company_products`, copia composição, garante `company_items` e `company_stock`).
+- Retorna `INTEGER` com a contagem de produtos ativados.
+- `SECURITY DEFINER`, valida `user_belongs_to_company`.
 
-**3. `src/pages/EditarProdutoEmpresa.tsx`** — fallback robusto:
-- Se a busca por `id` retornar vazio, tentar uma segunda busca por `product_template_id = id AND company_id = currentCompany.id`. Se encontrar, redirecionar para a URL canônica `/produtos/empresa/editar/<companyProductId>`.
-- Mensagem de erro só após ambas as tentativas falharem.
+**2. Criar função SQL `activate_all_linhas_for_company`** (migração)
+- Faz `INSERT ... ON CONFLICT DO NOTHING` em `company_linhas` para todas as linhas distintas existentes em `product_templates` ativos.
+- Marca `is_active = true`.
 
-**4. `src/pages/Produtos.tsx` e `TipologiasSheet.tsx`** — remover `composition_finished` do select caso ainda gere 400 antes da migração rodar (ou deixar somente após a migração).
+**3. Ajustar `src/pages/Produtos.tsx`**
+- Garantir que o `success` do `toast.promise` use o retorno corretamente (já está OK, só depende das funções existirem).
 
-Pronto para aplicar essas mudanças assim que aprovado.
+**4. Ajustar `src/components/produtos/AddLinhaSheet.tsx`** (opcional, melhora performance)
+- Substituir o loop de RPCs no cliente por uma nova função `activate_linha_products_for_company(_company_id, _linha)` que faz tudo em uma única transação no banco.
+
+## Arquivos afetados
+- Nova migração SQL com 2-3 funções RPC.
+- `src/pages/Produtos.tsx` (sem mudança de lógica, apenas valida que o RPC existe).
+- `src/components/produtos/AddLinhaSheet.tsx` (refatorar para usar novo RPC).
+
+Aprova para eu aplicar a migração e ajustar o frontend?
