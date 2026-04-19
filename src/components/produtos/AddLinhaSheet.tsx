@@ -107,6 +107,51 @@ export function AddLinhaSheet({
 
   const handleSelectLinha = (linha: string) => {
     onSelectLinha(linha);
+  };
+
+  const handleDownloadAll = async (linha: string) => {
+    if (!currentCompany?.id) return;
+
+    // Get all products for this linha
+    const { data: products, error } = await supabase
+      .from('product_templates')
+      .select('id')
+      .eq('linha', linha)
+      .eq('is_active', true);
+
+    if (error) {
+      toast.error('Erro ao buscar produtos da linha');
+      return;
+    }
+
+    if (!products || products.length === 0) {
+      toast.error('Nenhum produto encontrado nesta linha');
+      return;
+    }
+
+    toast.promise(
+      Promise.all(products.map(async (product) => {
+        return supabase.rpc('activate_product_template_for_company', {
+          _company_id: currentCompany.id,
+          _product_template_id: product.id,
+        });
+      })),
+      {
+        loading: `Baixando todos os produtos da linha ${linha}...`,
+        success: `Linha ${linha} baixada com sucesso!`,
+        error: `Erro ao baixar produtos da linha ${linha}`,
+      }
+    );
+    
+    // Create company_linha if it doesn't exist
+    await supabase.from('company_linhas').upsert({
+      company_id: currentCompany.id,
+      name: linha,
+      is_active: true
+    }, { onConflict: 'company_id,name' });
+
+    queryClient.invalidateQueries({ queryKey: ['company-products'] });
+    queryClient.invalidateQueries({ queryKey: ['company-linhas'] });
     onOpenChange(false);
   };
 
