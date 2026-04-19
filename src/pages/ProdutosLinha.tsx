@@ -50,6 +50,7 @@ type DisplayProduct = {
   is_custom: boolean;
   base_price?: number | null;
   companyProductId?: string; // ID in company_products table for pricing
+  productTemplateId?: string; // ID of the template
   composition_finished?: boolean;
 };
 
