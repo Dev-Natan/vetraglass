@@ -338,9 +338,19 @@ export default function Produtos() {
                   if (!currentCompany?.id) return;
                   
                   toast.promise(
-                    supabase.rpc('activate_all_products_for_company', {
-                      _company_id: currentCompany.id
-                    }),
+                    (async () => {
+                      const { data, error } = await supabase.rpc('activate_all_products_for_company', {
+                        _company_id: currentCompany.id
+                      });
+                      if (error) throw error;
+                      
+                      // Also activate all lines
+                      await supabase.rpc('activate_all_linhas_for_company', {
+                        _company_id: currentCompany.id
+                      });
+                      
+                      return data;
+                    })(),
                     {
                       loading: 'Habilitando todos os produtos do sistema...',
                       success: (count) => {
