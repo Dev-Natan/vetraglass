@@ -50,6 +50,7 @@ type DisplayProduct = {
   is_custom: boolean;
   base_price?: number | null;
   companyProductId?: string; // ID in company_products table for pricing
+  productTemplateId?: string; // ID of the template
   composition_finished?: boolean;
 };
 
@@ -180,6 +181,30 @@ export default function ProdutosLinha() {
     },
   });
 
+  // Reactivate product for company (template products)
+  const reactivateProductMutation = useMutation({
+    mutationFn: async (productTemplateId: string) => {
+      if (!currentCompany?.id) throw new Error('Empresa não selecionada');
+      
+      const { error } = await supabase
+        .from('company_products')
+        .update({ is_active: true, updated_at: new Date().toISOString() })
+        .eq('company_id', currentCompany.id)
+        .eq('product_template_id', productTemplateId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-products'] });
+      queryClient.invalidateQueries({ queryKey: ['custom-products'] });
+      queryClient.invalidateQueries({ queryKey: ['company-products-with-templates'] });
+      toast.success('Produto reabilitado!');
+    },
+    onError: (error) => {
+      toast.error('Erro ao reativar: ' + error.message);
+    },
+  });
+
   // Reactivate custom product
   const reactivateCustomProductMutation = useMutation({
     mutationFn: async (productId: string) => {
@@ -279,13 +304,14 @@ export default function ProdutosLinha() {
           is_custom: cp.is_custom || false,
           base_price: cp.base_price,
           companyProductId: cp.id,
+          productTemplateId: cp.product_template_id || undefined,
           composition_finished: cp.composition_finished || false,
         };
       });
 
     // If showing "Desabilitados", we also want to show templates that haven't been activated yet
     if (!showActive) {
-      const templateIdsActivated = new Set(companyProducts.map(cp => cp.product_template_id));
+      const templateIdsActivated = new Set(companyProducts.map(cp => cp.product_template_id).filter(Boolean));
       const unactivatedTemplates = (products || [])
         .filter(p => {
           const matchesSearch = p.name.toLowerCase().includes(searchLower);
@@ -303,6 +329,7 @@ export default function ProdutosLinha() {
           is_active: false,
           is_custom: false,
           companyProductId: undefined,
+          productTemplateId: p.id,
           composition_finished: false,
         }));
       
@@ -470,8 +497,8 @@ export default function ProdutosLinha() {
                           onClick={() => {
                             if (product.is_custom) {
                               deactivateCustomProductMutation.mutate(product.id);
-                            } else {
-                              deactivateProductMutation.mutate(product.id);
+                            } else if (product.productTemplateId) {
+                              deactivateProductMutation.mutate(product.productTemplateId);
                             }
                           }}
                           disabled={deactivateProductMutation.isPending || deactivateCustomProductMutation.isPending}
@@ -487,12 +514,16 @@ export default function ProdutosLinha() {
                         onClick={() => {
                           if (product.is_custom) {
                             reactivateCustomProductMutation.mutate(product.id);
-                          } else {
-                            setSelectedProductForActivation({ id: product.id, name: product.name });
+                          } else if (product.companyProductId && product.productTemplateId) {
+                            // If it already has a company product ID, just reactivate it
+                            reactivateProductMutation.mutate(product.productTemplateId);
+                          } else if (product.productTemplateId) {
+                            // If it's a new template, show the activation dialog
+                            setSelectedProductForActivation({ id: product.productTemplateId, name: product.name });
                             setActivateDialogOpen(true);
                           }
                         }}
-                        disabled={reactivateCustomProductMutation.isPending}
+                        disabled={reactivateCustomProductMutation.isPending || reactivateProductMutation.isPending}
                       >
                         Habilitar
                       </Button>
@@ -643,8 +674,8 @@ export default function ProdutosLinha() {
                           onClick={() => {
                             if (product.is_custom) {
                               deactivateCustomProductMutation.mutate(product.id);
-                            } else {
-                              deactivateProductMutation.mutate(product.id);
+                            } else if (product.productTemplateId) {
+                              deactivateProductMutation.mutate(product.productTemplateId);
                             }
                           }}
                           disabled={deactivateProductMutation.isPending || deactivateCustomProductMutation.isPending}
@@ -660,12 +691,16 @@ export default function ProdutosLinha() {
                         onClick={() => {
                           if (product.is_custom) {
                             reactivateCustomProductMutation.mutate(product.id);
-                          } else {
-                            setSelectedProductForActivation({ id: product.id, name: product.name });
+                          } else if (product.companyProductId && product.productTemplateId) {
+                            // If it already has a company product ID, just reactivate it
+                            reactivateProductMutation.mutate(product.productTemplateId);
+                          } else if (product.productTemplateId) {
+                            // If it's a new template, show the activation dialog
+                            setSelectedProductForActivation({ id: product.productTemplateId, name: product.name });
                             setActivateDialogOpen(true);
                           }
                         }}
-                        disabled={reactivateCustomProductMutation.isPending}
+                        disabled={reactivateCustomProductMutation.isPending || reactivateProductMutation.isPending}
                       >
                         Habilitar
                       </Button>
