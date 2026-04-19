@@ -270,15 +270,49 @@ export function AddLinhaSheet({
 
                   {/* Status/Action */}
                   {isActivated ? (
-                    <Badge variant="secondary" className="bg-green-100 text-green-700 shrink-0">
-                      <Check className="w-3 h-3 mr-1" />
-                      Baixada
-                    </Badge>
+                    <div className="flex flex-col gap-2 shrink-0">
+                      <Badge variant="secondary" className="bg-green-100 text-green-700 w-full justify-center">
+                        <Check className="w-3 h-3 mr-1" />
+                        Baixada
+                      </Badge>
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="text-[10px] h-7 px-2"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectLinha(item.linha);
+                        }}
+                      >
+                        Ver produtos
+                      </Button>
+                    </div>
                   ) : (
-                    <Button size="sm" variant="outline" className="shrink-0">
-                      <Download className="w-4 h-4 mr-1" />
-                      Baixar
-                    </Button>
+                    <div className="flex flex-col gap-2 shrink-0">
+                      <Button 
+                        size="sm" 
+                        variant="default" 
+                        className="bg-green-600 hover:bg-green-700"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDownloadAll(item.linha);
+                        }}
+                      >
+                        <Download className="w-4 h-4 mr-1" />
+                        Baixar Tudo
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="text-[10px] h-7 px-2"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectLinha(item.linha);
+                        }}
+                      >
+                        Ver e Escolher
+                      </Button>
+                    </div>
                   )}
                 </div>
               );
