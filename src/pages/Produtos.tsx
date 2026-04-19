@@ -330,7 +330,42 @@ export default function Produtos() {
           {!isLoading && filteredLinhas.length === 0 && (
             <div className="text-center py-8 sm:py-12 text-muted-foreground">
               <p className="text-sm sm:text-base">Nenhuma linha encontrada.</p>
-              <p className="text-xs sm:text-sm mt-1">Clique em "Adicionar" para baixar produtos.</p>
+              <p className="text-xs sm:text-sm mt-1 mb-4">Clique em "Baixar" para adicionar produtos do sistema.</p>
+              <Button 
+                variant="outline" 
+                className="gap-2"
+                onClick={async () => {
+                  if (!currentCompany?.id) return;
+                  
+                  toast.promise(
+                    (async () => {
+                      const { data, error } = await supabase.rpc('activate_all_products_for_company', {
+                        _company_id: currentCompany.id
+                      });
+                      if (error) throw error;
+                      
+                      // Also activate all lines
+                      await supabase.rpc('activate_all_linhas_for_company', {
+                        _company_id: currentCompany.id
+                      });
+                      
+                      return data;
+                    })(),
+                    {
+                      loading: 'Habilitando todos os produtos do sistema...',
+                      success: (count) => {
+                        queryClient.invalidateQueries({ queryKey: ['company-products'] });
+                        queryClient.invalidateQueries({ queryKey: ['company-linhas'] });
+                        return `${count} produtos habilitados com sucesso!`;
+                      },
+                      error: 'Erro ao habilitar produtos',
+                    }
+                  );
+                }}
+              >
+                <Download className="w-4 h-4" />
+                Habilitar Todos os Produtos
+              </Button>
             </div>
           )}
         </div>

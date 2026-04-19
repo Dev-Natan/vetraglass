@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   Sheet,
   SheetContent,
@@ -30,6 +31,7 @@ export function AddLinhaSheet({
   activatedLinhas,
 }: AddLinhaSheetProps) {
   const { currentCompany } = useAuth();
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const { labels: categoryLabels, categories } = useProductCategoryLabels();
@@ -107,6 +109,51 @@ export function AddLinhaSheet({
 
   const handleSelectLinha = (linha: string) => {
     onSelectLinha(linha);
+  };
+
+  const handleDownloadAll = async (linha: string) => {
+    if (!currentCompany?.id) return;
+
+    // Get all products for this linha
+    const { data: products, error } = await supabase
+      .from('product_templates')
+      .select('id')
+      .eq('linha', linha)
+      .eq('is_active', true);
+
+    if (error) {
+      toast.error('Erro ao buscar produtos da linha');
+      return;
+    }
+
+    if (!products || products.length === 0) {
+      toast.error('Nenhum produto encontrado nesta linha');
+      return;
+    }
+
+    toast.promise(
+      Promise.all(products.map(async (product) => {
+        return supabase.rpc('activate_product_template_for_company', {
+          _company_id: currentCompany.id,
+          _product_template_id: product.id,
+        });
+      })),
+      {
+        loading: `Baixando todos os produtos da linha ${linha}...`,
+        success: `Linha ${linha} baixada com sucesso!`,
+        error: `Erro ao baixar produtos da linha ${linha}`,
+      }
+    );
+    
+    // Create company_linha if it doesn't exist
+    await supabase.from('company_linhas').upsert({
+      company_id: currentCompany.id,
+      name: linha,
+      is_active: true
+    }, { onConflict: 'company_id,name' });
+
+    queryClient.invalidateQueries({ queryKey: ['company-products'] });
+    queryClient.invalidateQueries({ queryKey: ['company-linhas'] });
     onOpenChange(false);
   };
 
@@ -223,15 +270,49 @@ export function AddLinhaSheet({
 
                   {/* Status/Action */}
                   {isActivated ? (
-                    <Badge variant="secondary" className="bg-green-100 text-green-700 shrink-0">
-                      <Check className="w-3 h-3 mr-1" />
-                      Baixada
-                    </Badge>
+                    <div className="flex flex-col gap-2 shrink-0">
+                      <Badge variant="secondary" className="bg-green-100 text-green-700 w-full justify-center">
+                        <Check className="w-3 h-3 mr-1" />
+                        Baixada
+                      </Badge>
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="text-[10px] h-7 px-2"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectLinha(item.linha);
+                        }}
+                      >
+                        Ver produtos
+                      </Button>
+                    </div>
                   ) : (
-                    <Button size="sm" variant="outline" className="shrink-0">
-                      <Download className="w-4 h-4 mr-1" />
-                      Baixar
-                    </Button>
+                    <div className="flex flex-col gap-2 shrink-0">
+                      <Button 
+                        size="sm" 
+                        variant="default" 
+                        className="bg-green-600 hover:bg-green-700"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDownloadAll(item.linha);
+                        }}
+                      >
+                        <Download className="w-4 h-4 mr-1" />
+                        Baixar Tudo
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="text-[10px] h-7 px-2"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectLinha(item.linha);
+                        }}
+                      >
+                        Ver e Escolher
+                      </Button>
+                    </div>
                   )}
                 </div>
               );
