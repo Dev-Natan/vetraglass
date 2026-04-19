@@ -157,9 +157,43 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
                   Visualize e ative produtos para venda
                 </SheetDescription>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)}>
-                <X className="w-5 h-5" />
-              </Button>
+              <div className="flex items-center gap-2">
+                {products && products.length > 0 && products.some(p => !isProductActivated(p.id)) && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 border-primary text-primary hover:bg-primary/10"
+                    onClick={async () => {
+                      if (!currentCompany?.id || !products) return;
+                      
+                      const inactiveProducts = products.filter(p => !isProductActivated(p.id));
+                      
+                      toast.promise(
+                        Promise.all(inactiveProducts.map(async (product) => {
+                          return supabase.rpc('activate_product_template_for_company', {
+                            _company_id: currentCompany.id,
+                            _product_template_id: product.id,
+                          });
+                        })),
+                        {
+                          loading: 'Ativando todos os produtos...',
+                          success: 'Todos os produtos foram ativados!',
+                          error: 'Erro ao ativar alguns produtos',
+                        }
+                      );
+                      
+                      // Invalidate queries after all are done
+                      await queryClient.invalidateQueries({ queryKey: ['company-products'] });
+                    }}
+                  >
+                    <Check className="w-4 h-4 mr-1" />
+                    Ativar Todos
+                  </Button>
+                )}
+                <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)}>
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
             </div>
 
             {/* Search */}
