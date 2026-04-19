@@ -169,12 +169,16 @@ export function TipologiasSheet({ open, onOpenChange, linha }: TipologiasSheetPr
                       const inactiveProducts = products.filter(p => !isProductActivated(p.id));
                       
                       toast.promise(
-                        Promise.all(inactiveProducts.map(async (product) => {
-                          return supabase.rpc('activate_product_template_for_company', {
-                            _company_id: currentCompany.id,
-                            _product_template_id: product.id,
-                          });
-                        })),
+                        (async () => {
+                          const results = await Promise.all(inactiveProducts.map(async (product) => {
+                            const { error } = await supabase.rpc('activate_product_template_for_company', {
+                              _company_id: currentCompany.id,
+                              _product_template_id: product.id,
+                            });
+                            if (error) throw error;
+                          }));
+                          return results;
+                        })(),
                         {
                           loading: 'Ativando todos os produtos...',
                           success: 'Todos os produtos foram ativados!',
