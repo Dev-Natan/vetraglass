@@ -280,13 +280,14 @@ export default function ProdutosLinha() {
           is_custom: cp.is_custom || false,
           base_price: cp.base_price,
           companyProductId: cp.id,
+          productTemplateId: cp.product_template_id || undefined,
           composition_finished: cp.composition_finished || false,
         };
       });
 
     // If showing "Desabilitados", we also want to show templates that haven't been activated yet
     if (!showActive) {
-      const templateIdsActivated = new Set(companyProducts.map(cp => cp.product_template_id));
+      const templateIdsActivated = new Set(companyProducts.map(cp => cp.product_template_id).filter(Boolean));
       const unactivatedTemplates = (products || [])
         .filter(p => {
           const matchesSearch = p.name.toLowerCase().includes(searchLower);
@@ -304,6 +305,7 @@ export default function ProdutosLinha() {
           is_active: false,
           is_custom: false,
           companyProductId: undefined,
+          productTemplateId: p.id,
           composition_finished: false,
         }));
       
