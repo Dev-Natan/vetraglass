@@ -103,7 +103,7 @@ export default function ProdutosLinha() {
       if (!currentCompany?.id) return [];
       const { data, error } = await supabase
         .from('company_products')
-        .select('id, product_template_id, is_active, commercial_name, description, category, linha, image_url, is_custom, base_price, composition_finished')
+        .select('id, product_template_id, is_active, commercial_name, description, category, linha, image_url, is_custom, base_price')
         .eq('company_id', currentCompany.id);
       
       if (error) throw error;
