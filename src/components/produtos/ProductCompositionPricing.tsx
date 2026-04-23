@@ -1,4 +1,4 @@
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,10 +7,10 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Calculator, TrendingUp, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Calculator, TrendingUp, AlertTriangle, RefreshCw, Link2, Save, Loader2 } from 'lucide-react';
 import { calculatePricing, DEFAULT_PRICING_POLICY, type CompositionItemInput, type PricingInput } from '@/utils/pricingEngine';
 import { toast } from 'sonner';
-import { useState } from 'react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface ProductCompositionPricingProps {
   productId: string;
@@ -48,6 +48,13 @@ interface ProductCompositionPricingProps {
 const formatBRL = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
 
+type PriceEdits = Record<string, {
+  cost_per_bar?: string;
+  cost_per_kg?: string;
+  cost_per_meter?: string;
+  cost?: string;
+}>;
+
 export function ProductCompositionPricing({
   productId,
   onSuccess,
@@ -61,30 +68,25 @@ export function ProductCompositionPricing({
   const [marginPercent, setMarginPercent] = useState(currentMargin ?? 30);
   const [refWidth, setRefWidth] = useState(1000);
   const [refHeight, setRefHeight] = useState(1000);
+  const [priceEdits, setPriceEdits] = useState<PriceEdits>({});
+  const [savingItemId, setSavingItemId] = useState<string | null>(null);
 
   useEffect(() => {
     if (currentMargin != null) setMarginPercent(currentMargin);
   }, [currentMargin]);
 
-  // Fetch all company_items for this product's composition
   const companyItemIds = useMemo(() => {
-    return productItems
-      .map(pi => pi.company_item_id)
-      .filter(Boolean) as string[];
+    return productItems.map(pi => pi.company_item_id).filter(Boolean) as string[];
   }, [productItems]);
 
   const templateIds = useMemo(() => {
-    return productItems
-      .map(pi => pi.item_template_id)
-      .filter(Boolean) as string[];
+    return productItems.map(pi => pi.item_template_id).filter(Boolean) as string[];
   }, [productItems]);
 
   const { data: companyItems } = useQuery({
     queryKey: ['composition-company-items', currentCompany?.id, companyItemIds, templateIds],
     queryFn: async () => {
       if (!currentCompany?.id) return [];
-
-      // Fetch by company_item_id
       let items: any[] = [];
       if (companyItemIds.length > 0) {
         const { data } = await supabase
@@ -93,12 +95,9 @@ export function ProductCompositionPricing({
           .in('id', companyItemIds);
         if (data) items = [...items, ...data];
       }
-
-      // Also fetch by template_id for items without company_item
       if (templateIds.length > 0) {
         const existingTemplateIds = items.map(i => i.item_template_id).filter(Boolean);
         const missingTemplateIds = templateIds.filter(tid => !existingTemplateIds.includes(tid));
-        
         if (missingTemplateIds.length > 0) {
           const { data } = await supabase
             .from('company_items')
@@ -108,13 +107,11 @@ export function ProductCompositionPricing({
           if (data) items = [...items, ...data];
         }
       }
-
       return items;
     },
     enabled: !!currentCompany?.id && productItems.length > 0,
   });
 
-  // Also fetch item_templates for weight data fallback
   const { data: itemTemplates } = useQuery({
     queryKey: ['composition-templates-weight', templateIds],
     queryFn: async () => {
@@ -128,17 +125,64 @@ export function ProductCompositionPricing({
     enabled: templateIds.length > 0,
   });
 
-  // Build pricing inputs and calculate
-  const pricingResult = useMemo(() => {
-    if (!companyItems || companyItems.length === 0) return null;
+  // Quantos produtos compartilham cada company_item (para mostrar aviso de compartilhamento)
+  const { data: sharedUsage } = useQuery({
+    queryKey: ['company-item-usage', currentCompany?.id, companyItemIds],
+    queryFn: async () => {
+      if (!currentCompany?.id || companyItemIds.length === 0) return {};
+      const { data } = await supabase
+        .from('company_product_items')
+        .select('company_item_id, company_product_id')
+        .in('company_item_id', companyItemIds);
+      const counts: Record<string, Set<string>> = {};
+      (data || []).forEach((row: any) => {
+        if (!row.company_item_id) return;
+        if (!counts[row.company_item_id]) counts[row.company_item_id] = new Set();
+        counts[row.company_item_id].add(row.company_product_id);
+      });
+      const result: Record<string, number> = {};
+      Object.entries(counts).forEach(([k, set]) => { result[k] = set.size; });
+      return result;
+    },
+    enabled: !!currentCompany?.id && companyItemIds.length > 0,
+  });
 
+  // Resolve company_item correspondente a cada productItem
+  const itemMap = useMemo(() => {
+    const map = new Map<string, any>();
+    productItems.forEach(pi => {
+      const ci = companyItems?.find(
+        c => c.id === pi.company_item_id || c.item_template_id === pi.item_template_id
+      );
+      if (ci) map.set(pi.id, ci);
+    });
+    return map;
+  }, [productItems, companyItems]);
+
+  // Aplica edits sobre os company_items para cálculo em tempo real
+  const effectiveCompanyItems = useMemo(() => {
+    if (!companyItems) return [];
+    return companyItems.map(ci => {
+      const edit = priceEdits[ci.id];
+      if (!edit) return ci;
+      return {
+        ...ci,
+        cost_per_bar: edit.cost_per_bar !== undefined ? parseFloat(edit.cost_per_bar) || 0 : ci.cost_per_bar,
+        cost_per_kg: edit.cost_per_kg !== undefined ? parseFloat(edit.cost_per_kg) || 0 : ci.cost_per_kg,
+        cost_per_meter: edit.cost_per_meter !== undefined ? parseFloat(edit.cost_per_meter) || 0 : ci.cost_per_meter,
+        cost: edit.cost !== undefined ? parseFloat(edit.cost) || 0 : ci.cost,
+      };
+    });
+  }, [companyItems, priceEdits]);
+
+  const pricingResult = useMemo(() => {
+    if (!effectiveCompanyItems || effectiveCompanyItems.length === 0) return null;
     const compositionInputs: CompositionItemInput[] = productItems.map(pi => {
-      const ci = companyItems.find(
+      const ci = effectiveCompanyItems.find(
         c => c.id === pi.company_item_id || c.item_template_id === pi.item_template_id
       );
       const tpl = itemTemplates?.find(t => t.id === pi.item_template_id);
       const itemType = (pi.item_template?.type || pi.company_item?.type || 'accessory') as CompositionItemInput['itemType'];
-
       return {
         id: pi.id,
         itemName: pi.item_template?.name || pi.company_item?.name || 'Item',
@@ -146,7 +190,7 @@ export function ProductCompositionPricing({
         unit: pi.item_template?.unit || pi.company_item?.unit || 'un',
         imageUrl: pi.item_template?.image_url || pi.company_item?.image_url,
         widthFormula: pi.width_formula,
-        heightFormula: pi.quantity_formula, // profiles use quantity_formula as dimension
+        heightFormula: pi.quantity_formula,
         quantityFormula: pi.quantity_formula,
         piecesQuantity: pi.pieces_quantity || 1,
         piecesFormula: (pi as any).pieces_formula,
@@ -160,26 +204,19 @@ export function ProductCompositionPricing({
         costPerUnit: ci?.cost || 0,
       };
     });
-
-    const input: PricingInput = {
-      vaoLargura: refWidth,
-      vaoAltura: refHeight,
-      quantity: 1,
-    };
-
+    const input: PricingInput = { vaoLargura: refWidth, vaoAltura: refHeight, quantity: 1 };
     try {
       return calculatePricing(compositionInputs, input, DEFAULT_PRICING_POLICY, marginPercent);
     } catch (e) {
-      console.error('Pricing calculation error:', e);
+      console.error('Pricing calc error', e);
       return null;
     }
-  }, [companyItems, itemTemplates, productItems, marginPercent, refWidth, refHeight]);
+  }, [effectiveCompanyItems, itemTemplates, productItems, marginPercent, refWidth, refHeight]);
 
-  // Count items without pricing
   const itemsWithoutPrice = useMemo(() => {
-    if (!companyItems) return productItems.length;
+    if (!effectiveCompanyItems) return productItems.length;
     return productItems.filter(pi => {
-      const ci = companyItems.find(
+      const ci = effectiveCompanyItems.find(
         c => c.id === pi.company_item_id || c.item_template_id === pi.item_template_id
       );
       if (!ci) return true;
@@ -188,9 +225,72 @@ export function ProductCompositionPricing({
       if (type === 'glass') return !ci.cost_per_meter;
       return !ci.cost && !ci.cost_per_bar;
     }).length;
-  }, [companyItems, productItems]);
+  }, [effectiveCompanyItems, productItems]);
 
-  // Save pricing mutation
+  // Mutation para salvar preço de UM item (sincroniza com todos os produtos)
+  const saveItemPriceMutation = useMutation({
+    mutationFn: async ({ companyItemId, payload }: { companyItemId: string; payload: Record<string, number> }) => {
+      const { error } = await supabase
+        .from('company_items')
+        .update(payload)
+        .eq('id', companyItemId);
+      if (error) throw error;
+    },
+    onSuccess: (_, vars) => {
+      // Limpa edição local desse item
+      setPriceEdits(prev => {
+        const next = { ...prev };
+        delete next[vars.companyItemId];
+        return next;
+      });
+      // Invalida tudo que depende de preços de itens
+      queryClient.invalidateQueries({ queryKey: ['composition-company-items'] });
+      queryClient.invalidateQueries({ queryKey: ['company-items'] });
+      queryClient.invalidateQueries({ queryKey: ['company-stock'] });
+      queryClient.invalidateQueries({ queryKey: ['company-item-prices'] });
+      queryClient.invalidateQueries({ queryKey: ['composition-for-pricing'] });
+      queryClient.invalidateQueries({ queryKey: ['fallback-company-items'] });
+      toast.success('Preço atualizado em todos os produtos que usam este item');
+    },
+    onError: (e: any) => toast.error('Erro ao salvar: ' + e.message),
+    onSettled: () => setSavingItemId(null),
+  });
+
+  const handleSaveItemPrice = (companyItemId: string, itemType: string) => {
+    const edit = priceEdits[companyItemId];
+    if (!edit) return;
+    const payload: Record<string, number> = {};
+    if (itemType === 'profile') {
+      if (edit.cost_per_bar !== undefined) payload.cost_per_bar = parseFloat(edit.cost_per_bar) || 0;
+      if (edit.cost_per_kg !== undefined) payload.cost_per_kg = parseFloat(edit.cost_per_kg) || 0;
+      if (edit.cost_per_meter !== undefined) payload.cost_per_meter = parseFloat(edit.cost_per_meter) || 0;
+    } else if (itemType === 'glass') {
+      if (edit.cost_per_meter !== undefined) payload.cost_per_meter = parseFloat(edit.cost_per_meter) || 0;
+    } else {
+      if (edit.cost !== undefined) payload.cost = parseFloat(edit.cost) || 0;
+    }
+    if (Object.keys(payload).length === 0) return;
+    setSavingItemId(companyItemId);
+    saveItemPriceMutation.mutate({ companyItemId, payload });
+  };
+
+  const updateEdit = (companyItemId: string, field: keyof PriceEdits[string], value: string) => {
+    setPriceEdits(prev => ({
+      ...prev,
+      [companyItemId]: { ...prev[companyItemId], [field]: value },
+    }));
+  };
+
+  const getEditValue = (companyItemId: string, field: keyof PriceEdits[string], fallback: number | null | undefined): string => {
+    const edit = priceEdits[companyItemId]?.[field];
+    if (edit !== undefined) return edit;
+    return fallback != null && fallback !== 0 ? String(fallback) : '';
+  };
+
+  const hasUnsavedEdits = (companyItemId: string) => {
+    return !!priceEdits[companyItemId] && Object.keys(priceEdits[companyItemId]).length > 0;
+  };
+
   const savePricingMutation = useMutation({
     mutationFn: async () => {
       if (!pricingResult) throw new Error('Sem cálculo disponível');
@@ -226,36 +326,18 @@ export function ProductCompositionPricing({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Reference dimensions */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">Largura ref. (mm)</Label>
-            <Input
-              type="number"
-              value={refWidth}
-              onChange={(e) => setRefWidth(Number(e.target.value) || 1000)}
-              className="h-8 text-sm"
-            />
+            <Input type="number" value={refWidth} onChange={(e) => setRefWidth(Number(e.target.value) || 1000)} className="h-8 text-sm" />
           </div>
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">Altura ref. (mm)</Label>
-            <Input
-              type="number"
-              value={refHeight}
-              onChange={(e) => setRefHeight(Number(e.target.value) || 1000)}
-              className="h-8 text-sm"
-            />
+            <Input type="number" value={refHeight} onChange={(e) => setRefHeight(Number(e.target.value) || 1000)} className="h-8 text-sm" />
           </div>
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">Margem (%)</Label>
-            <Input
-              type="number"
-              value={marginPercent}
-              onChange={(e) => setMarginPercent(Number(e.target.value) || 0)}
-              className="h-8 text-sm"
-              min={0}
-              step={1}
-            />
+            <Input type="number" value={marginPercent} onChange={(e) => setMarginPercent(Number(e.target.value) || 0)} className="h-8 text-sm" min={0} step={1} />
           </div>
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">Área (m²)</Label>
@@ -265,18 +347,144 @@ export function ProductCompositionPricing({
           </div>
         </div>
 
-        {/* Warning */}
         {itemsWithoutPrice > 0 && (
           <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 rounded-md px-3 py-2">
             <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-            <span>{itemsWithoutPrice} item(ns) sem preço definido no estoque</span>
+            <span>{itemsWithoutPrice} item(ns) sem preço definido. Edite abaixo.</span>
           </div>
         )}
 
-        {/* Results */}
+        {/* Editor de preços por item */}
+        <div className="border rounded-lg overflow-hidden">
+          <div className="bg-muted/40 px-3 py-2 flex items-center justify-between">
+            <span className="text-xs font-medium">Preços dos Insumos (compartilhados entre produtos)</span>
+            <span className="text-[10px] text-muted-foreground">Editar aqui atualiza todos os produtos que usam o mesmo item</span>
+          </div>
+          <div className="divide-y">
+            {productItems.map(pi => {
+              const ci = itemMap.get(pi.id);
+              const itemType = pi.item_template?.type || pi.company_item?.type || 'accessory';
+              const itemName = pi.item_template?.name || pi.company_item?.name || 'Item';
+              const sharedCount = ci ? (sharedUsage?.[ci.id] || 0) : 0;
+              const calcItem = pricingResult?.items.find(it => it.id === pi.id);
+              const unsaved = ci ? hasUnsavedEdits(ci.id) : false;
+              const isSaving = ci?.id === savingItemId;
+
+              if (!ci) {
+                return (
+                  <div key={pi.id} className="px-3 py-2 text-xs text-destructive">
+                    {itemName} — Item não encontrado no estoque. Adicione-o no estoque primeiro.
+                  </div>
+                );
+              }
+
+              return (
+                <div key={pi.id} className="px-3 py-2.5 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Badge variant="outline" className="text-[9px] uppercase">{itemType === 'profile' ? 'Perfil' : itemType === 'glass' ? 'Vidro' : 'Acess.'}</Badge>
+                      <span className="text-sm font-medium truncate">{itemName}</span>
+                      {sharedCount > 1 && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge variant="secondary" className="gap-1 text-[10px]">
+                                <Link2 className="h-3 w-3" />
+                                {sharedCount} produtos
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-xs">Este item é usado em {sharedCount} produtos. Editar o preço aqui afeta todos.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {calcItem && (
+                        <span className="text-xs text-muted-foreground">{formatBRL(calcItem.totalCost)}</span>
+                      )}
+                      <Button
+                        size="sm"
+                        variant={unsaved ? 'default' : 'outline'}
+                        disabled={!unsaved || isSaving}
+                        onClick={() => handleSaveItemPrice(ci.id, itemType)}
+                        className="h-7 px-2 gap-1"
+                      >
+                        {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+                        Salvar
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {itemType === 'profile' && (
+                      <>
+                        <div className="space-y-0.5">
+                          <Label className="text-[10px] text-muted-foreground">Custo/Barra (R$)</Label>
+                          <Input
+                            type="number" min="0" step="0.01"
+                            value={getEditValue(ci.id, 'cost_per_bar', ci.cost_per_bar)}
+                            onChange={(e) => updateEdit(ci.id, 'cost_per_bar', e.target.value)}
+                            placeholder="0,00"
+                            className="h-7 text-xs"
+                          />
+                        </div>
+                        <div className="space-y-0.5">
+                          <Label className="text-[10px] text-muted-foreground">Custo/Kg (R$)</Label>
+                          <Input
+                            type="number" min="0" step="0.01"
+                            value={getEditValue(ci.id, 'cost_per_kg', ci.cost_per_kg)}
+                            onChange={(e) => updateEdit(ci.id, 'cost_per_kg', e.target.value)}
+                            placeholder="0,00"
+                            className="h-7 text-xs"
+                          />
+                        </div>
+                        <div className="space-y-0.5">
+                          <Label className="text-[10px] text-muted-foreground">Custo/Metro (R$)</Label>
+                          <Input
+                            type="number" min="0" step="0.01"
+                            value={getEditValue(ci.id, 'cost_per_meter', ci.cost_per_meter)}
+                            onChange={(e) => updateEdit(ci.id, 'cost_per_meter', e.target.value)}
+                            placeholder="0,00"
+                            className="h-7 text-xs"
+                          />
+                        </div>
+                      </>
+                    )}
+                    {itemType === 'glass' && (
+                      <div className="space-y-0.5 col-span-full sm:col-span-1">
+                        <Label className="text-[10px] text-muted-foreground">Custo/m² (R$)</Label>
+                        <Input
+                          type="number" min="0" step="0.01"
+                          value={getEditValue(ci.id, 'cost_per_meter', ci.cost_per_meter)}
+                          onChange={(e) => updateEdit(ci.id, 'cost_per_meter', e.target.value)}
+                          placeholder="0,00"
+                          className="h-7 text-xs"
+                        />
+                      </div>
+                    )}
+                    {itemType !== 'profile' && itemType !== 'glass' && (
+                      <div className="space-y-0.5 col-span-full sm:col-span-1">
+                        <Label className="text-[10px] text-muted-foreground">Custo Unit. (R$)</Label>
+                        <Input
+                          type="number" min="0" step="0.01"
+                          value={getEditValue(ci.id, 'cost', ci.cost)}
+                          onChange={(e) => updateEdit(ci.id, 'cost', e.target.value)}
+                          placeholder="0,00"
+                          className="h-7 text-xs"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         {pricingResult && (
           <div className="space-y-3">
-            {/* Cost by type */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {Object.entries(pricingResult.costByType).map(([type, cost]) => (
                 <div key={type} className="rounded-lg bg-muted/50 p-2.5">
@@ -288,7 +496,6 @@ export function ProductCompositionPricing({
               ))}
             </div>
 
-            {/* Summary */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t">
               <div className="rounded-lg bg-muted/50 p-2.5">
                 <div className="text-[10px] text-muted-foreground">Custo Total</div>
@@ -310,25 +517,6 @@ export function ProductCompositionPricing({
               </div>
             </div>
 
-            {/* Item details */}
-            <details className="text-xs">
-              <summary className="cursor-pointer text-muted-foreground hover:text-foreground py-1">
-                Detalhes por item ({pricingResult.items.length})
-              </summary>
-              <div className="mt-2 space-y-1">
-                {pricingResult.items.map(item => (
-                  <div key={item.id} className="flex items-center justify-between py-1 border-b border-muted/50">
-                    <div>
-                      <span className="font-medium">{item.itemName}</span>
-                      <span className="text-muted-foreground ml-2">{item.displayMeasure}</span>
-                    </div>
-                    <span className="font-medium">{formatBRL(item.totalCost)}</span>
-                  </div>
-                ))}
-              </div>
-            </details>
-
-            {/* Save button */}
             <div className="flex items-center justify-between pt-2 border-t">
               <div className="text-xs text-muted-foreground">
                 {currentPricePerSqm ? (
@@ -348,7 +536,7 @@ export function ProductCompositionPricing({
                 className="gap-2"
               >
                 <RefreshCw className={`h-3.5 w-3.5 ${savePricingMutation.isPending ? 'animate-spin' : ''}`} />
-                {savePricingMutation.isPending ? 'Salvando...' : 'Atualizar Preço'}
+                {savePricingMutation.isPending ? 'Salvando...' : 'Atualizar Preço do Produto'}
               </Button>
             </div>
           </div>
