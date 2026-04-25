@@ -239,6 +239,12 @@ export function ProductCompositionPricing({
       if (error) throw error;
     },
     onSuccess: (_, vars) => {
+      // Recalcula preços de produtos que usam este item
+      recalculatePricesForProductsWithItem(null, vars.companyItemId).then(() => {
+        queryClient.invalidateQueries({ queryKey: ['company-products'] });
+        queryClient.invalidateQueries({ queryKey: ['company-product'] });
+      });
+
       // Limpa edição local desse item
       setPriceEdits(prev => {
         const next = { ...prev };
