@@ -297,7 +297,7 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
           quantity: 0,
           min_quantity: 0,
           is_active: true,
-          allow_fractional: false,
+          allow_fractional: tmpl.type === 'profile',
         });
 
       onAdd({
