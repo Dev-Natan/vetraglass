@@ -559,7 +559,7 @@ export default function CaixaVendas() {
           
           stockDeductions.set(item.itemTemplateId, (stockDeductions.get(item.itemTemplateId) || 0) + deductionQty);
         }
-        if (item.isProduct && item.width && item.height) {
+        if (item.isProduct) {
           const companyProductId = item.companyProductId;
           let productTemplateId = item.productTemplateId;
           if (!productTemplateId && companyProductId) {
