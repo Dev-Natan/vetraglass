@@ -124,16 +124,15 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
       });
 
       const templateSpecs = selectedItem.specifications as Record<string, unknown> | null;
-      if (templateSpecs) {
-        setFiscalData(prev => ({
-          ...prev,
-          ncm: (templateSpecs.ncm as string) || prev.ncm,
-          cfop_venda: (templateSpecs.cfop_venda as string) || prev.cfop_venda,
-          cfop_venda_interestadual: (templateSpecs.cfop_venda_interestadual as string) || prev.cfop_venda_interestadual,
-          cest: (templateSpecs.cest as string) || prev.cest,
-          origem: (templateSpecs.origem as string) || prev.origem,
-        }));
-      }
+      setFiscalData({
+        ncm: (selectedItem.ncm as string) || (templateSpecs?.ncm as string) || '',
+        cfop_venda: (selectedItem.cfop_venda as string) || (templateSpecs?.cfop_venda as string) || '',
+        cfop_venda_interestadual: (selectedItem.cfop_venda_interestadual as string) || (templateSpecs?.cfop_venda_interestadual as string) || '',
+        cest: (selectedItem.cest as string) || (templateSpecs?.cest as string) || '',
+        origem: (selectedItem.origem as string) || (templateSpecs?.origem as string) || '',
+        codigo_servico: (selectedItem.codigo_servico as string) || (templateSpecs?.codigo_servico as string) || '',
+        aliquota_iss: (selectedItem.aliquota_iss?.toString()) || (templateSpecs?.aliquota_iss?.toString()) || '',
+      });
     }
   }, [selectedItem]);
 
