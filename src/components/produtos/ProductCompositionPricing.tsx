@@ -120,7 +120,7 @@ export function ProductCompositionPricing({
       if (templateIds.length === 0) return [];
       const { data } = await supabase
         .from('item_templates')
-        .select('id, bar_length_mm, weight_per_bar, weight_per_meter')
+        .select('id, bar_length_mm, weight_per_bar, weight_per_meter, default_cost, default_price')
         .in('id', templateIds);
       return data || [];
     },
@@ -185,14 +185,17 @@ export function ProductCompositionPricing({
       );
       const tpl = itemTemplates?.find(t => t.id === pi.item_template_id);
       const itemType = (pi.item_template?.type || pi.company_item?.type || 'accessory') as CompositionItemInput['itemType'];
+      const unit = pi.item_template?.unit || pi.company_item?.unit || 'un';
+      const baseCost = ci?.cost || tpl?.default_cost || 0;
+
       return {
         id: pi.id,
         itemName: pi.item_template?.name || pi.company_item?.name || 'Item',
         itemType,
-        unit: pi.item_template?.unit || pi.company_item?.unit || 'un',
+        unit,
         imageUrl: pi.item_template?.image_url || pi.company_item?.image_url,
         widthFormula: pi.width_formula,
-        heightFormula: pi.quantity_formula,
+        heightFormula: pi.height_formula || pi.quantity_formula,
         quantityFormula: pi.quantity_formula,
         piecesQuantity: pi.pieces_quantity || 1,
         piecesFormula: (pi as any).pieces_formula,
@@ -200,10 +203,10 @@ export function ProductCompositionPricing({
         lossPercent: 0,
         barLengthMm: ci?.bar_length_mm || tpl?.bar_length_mm || 6000,
         weightPerMeter: ci?.weight_per_meter || tpl?.weight_per_meter || 0,
-        costPerBar: ci?.cost_per_bar || 0,
-        costPerKg: ci?.cost_per_kg || 0,
-        costPerMeter: ci?.cost_per_meter || 0,
-        costPerUnit: ci?.cost || 0,
+        costPerBar: ci?.cost_per_bar || (unit === 'barra' ? baseCost : 0),
+        costPerKg: ci?.cost_per_kg || (unit === 'kg' ? baseCost : 0),
+        costPerMeter: ci?.cost_per_meter || (['m', 'm²'].includes(unit) ? baseCost : 0),
+        costPerUnit: ci?.cost || (['un', 'pç'].includes(unit) ? baseCost : 0),
       };
     });
     const input: PricingInput = { vaoLargura: refWidth, vaoAltura: refHeight, quantity: 1 };
@@ -221,11 +224,16 @@ export function ProductCompositionPricing({
       const ci = effectiveCompanyItems.find(
         c => c.id === pi.company_item_id || c.item_template_id === pi.item_template_id
       );
-      if (!ci) return true;
+      const tpl = itemTemplates?.find(t => t.id === pi.item_template_id);
+      
       const type = pi.item_template?.type || pi.company_item?.type;
-      if (type === 'profile') return !ci.cost_per_bar && !ci.cost_per_kg && !ci.cost_per_meter;
-      if (type === 'glass') return !ci.cost_per_meter;
-      return !ci.cost && !ci.cost_per_bar;
+      const hasTplCost = tpl?.default_cost && tpl.default_cost > 0;
+
+      if (!ci) return !hasTplCost;
+      
+      if (type === 'profile') return !ci.cost_per_bar && !ci.cost_per_kg && !ci.cost_per_meter && !hasTplCost;
+      if (type === 'glass') return !ci.cost_per_meter && !hasTplCost;
+      return !ci.cost && !ci.cost_per_bar && !hasTplCost;
     }).length;
   }, [effectiveCompanyItems, productItems]);
 
