@@ -5,8 +5,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { estoqueService } from '@/services/estoqueService';
 import { useAuth } from '@/contexts/AuthContext';
 
-import { Boxes, TrendingDown, TrendingUp, History, Plus, PackageCheck, PackageX, Trash2 } from 'lucide-react';
+import { Boxes, TrendingDown, TrendingUp, History, Plus, PackageCheck, PackageX, Trash2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { recalculateProductPrice } from '@/utils/productPriceUpdater';
 import { UnifiedAddItemDialog } from '@/components/estoque/UnifiedAddItemDialog';
 import { EditItemPriceDialog } from '@/components/estoque/EditItemPriceDialog';
 import { RegistrarMovimentoDialog } from '@/components/estoque/RegistrarMovimentoDialog';
