@@ -274,13 +274,18 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
           description: tmpl.description,
           type: tmpl.type,
           unit: tmpl.unit,
-          cost: 0,
+          cost: tmpl.default_cost || 0,
           sale_price: tmpl.default_price || 0,
           specifications: tmpl.specifications,
           image_url: tmpl.image_url,
           linha: tmpl.linha,
           is_custom: false,
           is_active: true,
+          bar_length_mm: tmpl.bar_length_mm,
+          weight_kg: tmpl.weight_per_bar,
+          weight_per_meter: tmpl.weight_per_meter,
+          cost_per_bar: tmpl.type === 'profile' ? tmpl.default_cost : null,
+          sale_price_per_bar: tmpl.type === 'profile' ? tmpl.default_price : null,
         })
         .select('id')
         .single();
