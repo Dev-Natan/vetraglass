@@ -276,16 +276,21 @@ export function ProductCompositionPricing({
   };
 
   const updateEdit = (companyItemId: string, field: keyof PriceEdits[string], value: string) => {
+    // Aplica máscara BRL: extrai apenas dígitos e armazena como número (string)
+    const numeric = parseBRLInput(value);
     setPriceEdits(prev => ({
       ...prev,
-      [companyItemId]: { ...prev[companyItemId], [field]: value },
+      [companyItemId]: { ...prev[companyItemId], [field]: numeric > 0 ? numeric.toString() : '' },
     }));
   };
 
   const getEditValue = (companyItemId: string, field: keyof PriceEdits[string], fallback: number | null | undefined): string => {
     const edit = priceEdits[companyItemId]?.[field];
-    if (edit !== undefined) return edit;
-    return fallback != null && fallback !== 0 ? String(fallback) : '';
+    if (edit !== undefined) {
+      const n = parseFloat(edit);
+      return n > 0 ? formatBRLInput(n) : '';
+    }
+    return fallback != null && fallback !== 0 ? formatBRLInput(Number(fallback)) : '';
   };
 
   const hasUnsavedEdits = (companyItemId: string) => {
