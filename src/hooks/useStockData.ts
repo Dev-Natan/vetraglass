@@ -88,19 +88,43 @@ export function useStockData({ companyId }: UseStockDataOptions): StockDataResul
 
   // Combine and memoize stock items with templates, company items, and prices
   const stockItems = useMemo<StockItem[]>(() => {
-    if (!stockQuery.data) return [];
+    if (!templatesQuery.data) return [];
     
-    const templatesMap = new Map(templatesQuery.data?.map(t => [t.id, t]) || []);
+    const templatesMap = new Map(templatesQuery.data.map(t => [t.id, t]));
     const companyItemsMap = new Map(companyItemsQuery.data?.map(ci => [ci.id, ci]) || []);
     const pricesMap = new Map(pricesQuery.data?.map(p => [p.item_template_id, p]) || []);
     
-    return stockQuery.data.map((stock) => ({
+    // Map existing stock items
+    const existingStockItems = (stockQuery.data || []).map((stock) => ({
       ...stock,
       item_template: stock.item_template_id ? templatesMap.get(stock.item_template_id) || null : null,
       company_item: stock.company_item_id ? companyItemsMap.get(stock.company_item_id) || null : null,
       priceInfo: stock.item_template_id ? pricesMap.get(stock.item_template_id) || null : null,
     }));
-  }, [stockQuery.data, templatesQuery.data, companyItemsQuery.data, pricesQuery.data]);
+
+    const existingTemplateIds = new Set(existingStockItems.map(s => s.item_template_id).filter(Boolean));
+
+    // Add templates that are not in stock as virtual items
+    const virtualItems = templatesQuery.data
+      .filter(t => !existingTemplateIds.has(t.id))
+      .map(t => ({
+        id: `virtual-${t.id}`,
+        item_template_id: t.id,
+        company_item_id: null,
+        company_id: companyId || '',
+        quantity: 0,
+        min_quantity: 0,
+        location: null,
+        is_active: true,
+        allow_fractional: t.type === 'profile',
+        updated_at: new Date().toISOString(),
+        item_template: t,
+        company_item: null,
+        priceInfo: null,
+      } as StockItem));
+
+    return [...existingStockItems, ...virtualItems];
+  }, [stockQuery.data, templatesQuery.data, companyItemsQuery.data, pricesQuery.data, companyId]);
 
   // Memoized filtered lists
   const activeItems = useMemo(

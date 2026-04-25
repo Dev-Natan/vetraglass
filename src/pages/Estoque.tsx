@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { estoqueService } from '@/services/estoqueService';
 import { useAuth } from '@/contexts/AuthContext';
 
-import { Boxes, TrendingDown, TrendingUp, History, Plus, PackageCheck, PackageX } from 'lucide-react';
+import { Boxes, TrendingDown, TrendingUp, History, Plus, PackageCheck, PackageX, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UnifiedAddItemDialog } from '@/components/estoque/UnifiedAddItemDialog';
 import { EditItemPriceDialog } from '@/components/estoque/EditItemPriceDialog';
@@ -13,6 +13,17 @@ import { RegistrarMovimentoDialog } from '@/components/estoque/RegistrarMoviment
 import { HistoricoMovimentosTab } from '@/components/estoque/HistoricoMovimentosTab';
 import { StockItemCard } from '@/components/estoque/StockItemCard';
 import { StockKPIs } from '@/components/estoque/StockKPIs';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { StockFilters, type StockStatus, type StockSortBy, type ViewMode } from '@/components/estoque/StockFilters';
 import { StockGridView } from '@/components/estoque/StockGridView';
 import { useStockData } from '@/hooks/useStockData';
@@ -123,6 +134,50 @@ export default function Estoque() {
     onError: (error: Error) => { toast.error('Erro ao atualizar item: ' + error.message); },
   });
 
+  const resetStockMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentCompany?.id) return;
+      
+      // Zero out stock quantities
+      const { error: stockError } = await supabase
+        .from('company_stock')
+        .update({ quantity: 0 })
+        .eq('company_id', currentCompany.id);
+        
+      if (stockError) throw stockError;
+      
+      // Zero out costs in company_items
+      const { error: itemsError } = await supabase
+        .from('company_items')
+        .update({ 
+          cost: 0, 
+          cost_per_bar: 0, 
+          cost_per_kg: 0, 
+          cost_per_meter: 0 
+        })
+        .eq('company_id', currentCompany.id);
+        
+      if (itemsError) throw itemsError;
+
+      // Zero out costs in company_item_prices
+      const { error: pricesError } = await supabase
+        .from('company_item_prices')
+        .update({ cost: 0 })
+        .eq('company_id', currentCompany.id);
+        
+      if (pricesError) throw pricesError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-stock'] });
+      queryClient.invalidateQueries({ queryKey: ['company-items'] });
+      queryClient.invalidateQueries({ queryKey: ['company-item-prices'] });
+      toast.success('Estoque zerado com sucesso!');
+    },
+    onError: (error: Error) => {
+      toast.error('Erro ao zerar estoque: ' + error.message);
+    }
+  });
+
   const { inStockItems, outOfStockItems } = useMemo(() => {
     let items = [...activeItems];
     if (searchTerm) {
@@ -169,6 +224,8 @@ export default function Estoque() {
 
   const handleOpenPriceDialog = useCallback((item: StockItem) => {
     const isCustom = item.company_item?.is_custom ?? false;
+    const isVirtual = item.id.startsWith('virtual-');
+    
     setSelectedItem({
       id: item.item_template_id,
       name: item.company_item?.name ?? item.item_template?.name ?? 'Item',
@@ -176,7 +233,7 @@ export default function Estoque() {
       unit: item.item_template?.unit ?? item.company_item?.unit,
       companyItemId: item.company_item_id,
       isCustomItem: isCustom,
-      stockId: item.id,
+      stockId: isVirtual ? undefined : item.id,
     });
     setPriceDialogOpen(true);
   }, []);
@@ -210,6 +267,29 @@ export default function Estoque() {
             <p className="text-muted-foreground">Controle de entradas e saídas</p>
           </div>
           <div data-tutorial="estoque-acoes" className="flex flex-wrap gap-2">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" className="gap-2 text-destructive hover:text-destructive">
+                  <Trash2 className="w-4 h-4" />
+                  <span className="hidden sm:inline">Zerar Estoque</span>
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Zerar Estoque?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta ação irá definir a quantidade e os custos de TODOS os itens do seu estoque para zero. Esta ação não pode ser desfeita.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => resetStockMutation.mutate()} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Confirmar e Zerar
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            
             <Button variant="outline" className="gap-2" onClick={() => setSaidaDialogOpen(true)}>
               <TrendingDown className="w-4 h-4" />
               <span className="hidden sm:inline">Registrar Saída</span>
