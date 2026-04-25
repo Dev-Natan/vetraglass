@@ -26,7 +26,7 @@ import {
 import { toast } from 'sonner';
 
 // Get storage URL helper
-const getStorageUrl = (path: string | null) => resolveImageUrl(path);
+const getStorageUrl = (path: string | null) => resolveProductImageUrl(path);
 
 export default function PlanoCorte() {
   const navigate = useNavigate();
