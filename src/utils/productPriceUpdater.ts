@@ -22,7 +22,7 @@ export async function recalculateProductPrice(productId: string) {
     .from('company_product_items')
     .select(`
       id, quantity_formula, width_formula, height_formula, pieces_quantity, cut_angle, is_optional, section,
-      item_template:item_templates(id, name, type, unit, bar_length_mm, weight_per_bar, weight_per_meter),
+      item_template:item_templates(id, name, type, unit, bar_length_mm, weight_per_bar, weight_per_meter, default_cost),
       company_item:company_items(id, name, type, unit, cost, cost_per_bar, cost_per_kg, cost_per_meter, bar_length_mm, weight_kg, weight_per_meter)
     `)
     .eq('company_product_id', productId);
@@ -34,19 +34,39 @@ export async function recalculateProductPrice(productId: string) {
 
   if (compositionItems.length === 0) return;
 
-  // 3. For items missing company_item info, fetch from the company's shared stock items
+  // 3. For items missing company_item info, fetch from the company's shared stock items or price overrides
   const missingTemplateIds = compositionItems
     .filter(ci => !ci.company_item && ci.item_template?.id)
     .map(ci => ci.item_template!.id);
 
   let fallbackCompanyItems: any[] = [];
   if (missingTemplateIds.length > 0) {
-    const { data } = await supabase
+    const { data: stockItems } = await supabase
       .from('company_items')
       .select('id, item_template_id, cost, cost_per_bar, cost_per_kg, cost_per_meter, bar_length_mm, weight_kg, weight_per_meter')
       .eq('company_id', product.company_id)
       .in('item_template_id', missingTemplateIds);
-    fallbackCompanyItems = data || [];
+    
+    const { data: priceOverrides } = await supabase
+      .from('company_item_prices')
+      .select('item_template_id, cost, price')
+      .eq('company_id', product.company_id)
+      .in('item_template_id', missingTemplateIds);
+
+    fallbackCompanyItems = stockItems || [];
+    
+    // Merge price overrides
+    priceOverrides?.forEach(po => {
+      const existing = fallbackCompanyItems.find(fi => fi.item_template_id === po.item_template_id);
+      if (existing) {
+        if (!existing.cost) existing.cost = po.cost;
+      } else {
+        fallbackCompanyItems.push({
+          item_template_id: po.item_template_id,
+          cost: po.cost
+        });
+      }
+    });
   }
 
   // 4. Prepare inputs for pricing engine
@@ -55,6 +75,12 @@ export async function recalculateProductPrice(productId: string) {
     const compItem = ci.company_item || fallbackCompanyItems?.find(f => f.item_template_id === tpl?.id);
     const itemType = (tpl?.type || (compItem as any)?.type || 'accessory') as CompositionItemInput['itemType'];
 
+    // Robust cost inheritance logic:
+    // 1. Prefer compItem specialized costs (cost_per_bar, etc)
+    // 2. Fall back to compItem.cost (unit cost)
+    // 3. Fall back to tpl.default_cost (template default)
+    const baseCost = compItem?.cost || tpl?.default_cost || 0;
+
     return {
       id: ci.id,
       itemName: tpl?.name || (compItem as any)?.name || 'Item',
@@ -62,17 +88,17 @@ export async function recalculateProductPrice(productId: string) {
       unit: tpl?.unit || (compItem as any)?.unit || 'un',
       imageUrl: null,
       widthFormula: ci.width_formula,
-      heightFormula: ci.quantity_formula,
+      heightFormula: ci.height_formula, // Fixed: was using quantity_formula twice in original code
       quantityFormula: ci.quantity_formula,
       piecesQuantity: ci.pieces_quantity || 1,
       cutAngle: ci.cut_angle,
       lossPercent: 0,
       barLengthMm: compItem?.bar_length_mm || tpl?.bar_length_mm || 6000,
       weightPerMeter: compItem?.weight_per_meter || tpl?.weight_per_meter || (tpl as any)?.weight_per_bar ? ((tpl as any).weight_per_bar / ((tpl?.bar_length_mm || 6000) / 1000)) : 0,
-      costPerBar: compItem?.cost_per_bar || 0,
-      costPerKg: compItem?.cost_per_kg || 0,
-      costPerMeter: compItem?.cost_per_meter || 0,
-      costPerUnit: compItem?.cost || 0,
+      costPerBar: compItem?.cost_per_bar || (tpl?.unit === 'barra' ? baseCost : 0),
+      costPerKg: compItem?.cost_per_kg || (tpl?.unit === 'kg' ? baseCost : 0),
+      costPerMeter: compItem?.cost_per_meter || (['m', 'm²'].includes(tpl?.unit) ? baseCost : 0),
+      costPerUnit: compItem?.cost || (['un', 'pç'].includes(tpl?.unit) ? baseCost : 0),
     };
   });
 
