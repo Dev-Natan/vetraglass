@@ -134,6 +134,50 @@ export default function Estoque() {
     onError: (error: Error) => { toast.error('Erro ao atualizar item: ' + error.message); },
   });
 
+  const resetStockMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentCompany?.id) return;
+      
+      // Zero out stock quantities
+      const { error: stockError } = await supabase
+        .from('company_stock')
+        .update({ quantity: 0 })
+        .eq('company_id', currentCompany.id);
+        
+      if (stockError) throw stockError;
+      
+      // Zero out costs in company_items
+      const { error: itemsError } = await supabase
+        .from('company_items')
+        .update({ 
+          cost: 0, 
+          cost_per_bar: 0, 
+          cost_per_kg: 0, 
+          cost_per_meter: 0 
+        })
+        .eq('company_id', currentCompany.id);
+        
+      if (itemsError) throw itemsError;
+
+      // Zero out costs in company_item_prices
+      const { error: pricesError } = await supabase
+        .from('company_item_prices')
+        .update({ cost: 0 })
+        .eq('company_id', currentCompany.id);
+        
+      if (pricesError) throw pricesError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-stock'] });
+      queryClient.invalidateQueries({ queryKey: ['company-items'] });
+      queryClient.invalidateQueries({ queryKey: ['company-item-prices'] });
+      toast.success('Estoque zerado com sucesso!');
+    },
+    onError: (error: Error) => {
+      toast.error('Erro ao zerar estoque: ' + error.message);
+    }
+  });
+
   const { inStockItems, outOfStockItems } = useMemo(() => {
     let items = [...activeItems];
     if (searchTerm) {
