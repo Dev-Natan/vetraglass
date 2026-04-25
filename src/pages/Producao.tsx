@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { resolveImageUrl } from '@/utils/imageUrl';
+import { resolveProductImageUrl } from '@/utils/imageUrl';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ArrowLeft, Download, Tags, Save, FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
