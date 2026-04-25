@@ -103,13 +103,27 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
       setCategory(selectedItem.type || '');
       setAllowFractional(selectedItem.type === 'profile');
 
-      // Pre-fill pricing data from template (weight, bar length)
-      setPricingData(prev => ({
-        ...prev,
-        barLengthMm: selectedItem.bar_length_mm?.toString() ?? prev.barLengthMm,
-        weightKg: selectedItem.weight_per_bar?.toString() ?? prev.weightKg,
-        weightPerMeter: selectedItem.weight_per_meter?.toString() ?? prev.weightPerMeter,
-      }));
+      // Pre-fill pricing data from template (weight, bar length, prices)
+      setPricingData(prev => {
+        const isProfile = selectedItem.type === 'profile';
+        const isGlass = selectedItem.type === 'glass';
+        const isUnit = !isProfile && !isGlass;
+
+        return {
+          ...prev,
+          barLengthMm: selectedItem.bar_length_mm?.toString() ?? prev.barLengthMm,
+          weightKg: selectedItem.weight_per_bar?.toString() ?? prev.weightKg,
+          weightPerMeter: selectedItem.weight_per_meter?.toString() ?? prev.weightPerMeter,
+          // Pre-fill cost
+          costPerBar: isProfile ? (selectedItem.default_cost?.toString() ?? prev.costPerBar) : prev.costPerBar,
+          costPerUnit: isUnit ? (selectedItem.default_cost?.toString() ?? prev.costPerUnit) : prev.costPerUnit,
+          costPerSqm: isGlass ? (selectedItem.default_cost?.toString() ?? prev.costPerSqm) : prev.costPerSqm,
+          // Pre-fill sale price
+          salePricePerBar: isProfile ? (selectedItem.default_price?.toString() ?? prev.salePricePerBar) : prev.salePricePerBar,
+          salePricePerUnit: isUnit ? (selectedItem.default_price?.toString() ?? prev.salePricePerUnit) : prev.salePricePerUnit,
+          salePricePerSqm: isGlass ? (selectedItem.default_price?.toString() ?? prev.salePricePerSqm) : prev.salePricePerSqm,
+        };
+      });
 
       const templateSpecs = selectedItem.specifications as Record<string, unknown> | null;
       if (templateSpecs) {

@@ -233,23 +233,27 @@ export function EditItemPriceDialog({
     if (loadingCompanyItem || loadingPrice || loadingTemplate) return;
     
     if (companyItem) {
-      // Use company_item data, but fallback to template for missing weight/length
+      // Use company_item data, but fallback to template for missing weight/length/prices
       const tpl = itemTemplate as any;
+      const isProfile = companyItem.type === 'profile';
+      const isGlass = companyItem.type === 'glass';
+      const isUnit = !isProfile && !isGlass;
+
       setPricingData({
         barLengthMm: companyItem.bar_length_mm?.toString() ?? tpl?.bar_length_mm?.toString() ?? '',
         weightKg: companyItem.weight_kg?.toString() ?? tpl?.weight_per_bar?.toString() ?? '',
         weightPerMeter: companyItem.weight_per_meter?.toString() ?? tpl?.weight_per_meter?.toString() ?? '',
-        costPerBar: companyItem.cost_per_bar?.toString() ?? '',
+        costPerBar: companyItem.cost_per_bar?.toString() ?? (isProfile ? (tpl?.default_cost?.toString() ?? '') : ''),
         costPerKg: companyItem.cost_per_kg?.toString() ?? '',
         costPerMeter: companyItem.cost_per_meter?.toString() ?? '',
-        salePricePerBar: companyItem.sale_price_per_bar?.toString() ?? '',
+        salePricePerBar: companyItem.sale_price_per_bar?.toString() ?? (isProfile ? (tpl?.default_price?.toString() ?? '') : ''),
         salePricePerKg: companyItem.sale_price_per_kg?.toString() ?? '',
         salePricePerMeter: companyItem.sale_price_per_meter?.toString() ?? '',
         saleMarginPercent: companyItem.sale_margin_percent?.toString() ?? '30',
-        costPerUnit: companyItem.cost?.toString() ?? '',
-        salePricePerUnit: companyItem.sale_price?.toString() ?? '',
-        costPerSqm: companyItem.type === 'glass' ? (companyItem.cost_per_meter?.toString() ?? '') : '',
-        salePricePerSqm: companyItem.type === 'glass' ? (companyItem.sale_price_per_meter?.toString() ?? '') : '',
+        costPerUnit: companyItem.cost?.toString() ?? (isUnit ? (tpl?.default_cost?.toString() ?? '') : ''),
+        salePricePerUnit: companyItem.sale_price?.toString() ?? (isUnit ? (tpl?.default_price?.toString() ?? '') : ''),
+        costPerSqm: companyItem.type === 'glass' ? (companyItem.cost_per_meter?.toString() ?? tpl?.default_cost?.toString() ?? '') : '',
+        salePricePerSqm: companyItem.type === 'glass' ? (companyItem.sale_price_per_meter?.toString() ?? tpl?.default_price?.toString() ?? '') : '',
       });
       setItemTypeLocal(companyItem.type || 'profile');
       setLinhaLocal(companyItem.linha || '');
@@ -258,6 +262,25 @@ export function EditItemPriceDialog({
         ...prev,
         costPerBar: existingPrice.cost?.toString() ?? '',
         salePricePerBar: existingPrice.price?.toString() ?? '',
+      }));
+    } else if (itemTemplate) {
+      // Fallback to template defaults if no company-specific data exists
+      const tpl = itemTemplate as any;
+      const isProfile = tpl.type === 'profile';
+      const isGlass = tpl.type === 'glass';
+      const isUnit = !isProfile && !isGlass;
+
+      setPricingData(prev => ({
+        ...prev,
+        barLengthMm: tpl.bar_length_mm?.toString() ?? '',
+        weightKg: tpl.weight_per_bar?.toString() ?? '',
+        weightPerMeter: tpl.weight_per_meter?.toString() ?? '',
+        costPerBar: isProfile ? (tpl.default_cost?.toString() ?? '') : '',
+        salePricePerBar: isProfile ? (tpl.default_price?.toString() ?? '') : '',
+        costPerUnit: isUnit ? (tpl.default_cost?.toString() ?? '') : '',
+        salePricePerUnit: isUnit ? (tpl.default_price?.toString() ?? '') : '',
+        costPerSqm: isGlass ? (tpl.default_cost?.toString() ?? '') : '',
+        salePricePerSqm: isGlass ? (tpl.default_price?.toString() ?? '') : '',
       }));
     }
   }, [companyItem, existingPrice, loadingCompanyItem, loadingPrice, itemTemplate, loadingTemplate]);
