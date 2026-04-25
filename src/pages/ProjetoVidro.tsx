@@ -48,7 +48,7 @@ export interface GlassPanelData {
 }
 
 // Get storage URL helper
-const getStorageUrl = (path: string | null) => resolveImageUrl(path);
+const getStorageUrl = (path: string | null) => resolveProductImageUrl(path);
 
 export default function ProjetoVidro() {
   const navigate = useNavigate();
