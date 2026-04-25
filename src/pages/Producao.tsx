@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { resolveImageUrl } from '@/utils/imageUrl';
+import { resolveProductImageUrl } from '@/utils/imageUrl';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ArrowLeft, Download, Tags, Save, FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -30,7 +30,7 @@ import {
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
 
 // Get storage URL helper
-const getStorageUrl = (path: string | null) => resolveImageUrl(path);
+const getStorageUrl = (path: string | null) => resolveProductImageUrl(path);
 
 export interface GlassPanelData {
   id: string;

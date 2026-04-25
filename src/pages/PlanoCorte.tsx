@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { resolveImageUrl } from '@/utils/imageUrl';
+import { resolveProductImageUrl } from '@/utils/imageUrl';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ArrowLeft, Printer, Download, Tags, BarChart3, Calculator } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -26,7 +26,7 @@ import {
 import { toast } from 'sonner';
 
 // Get storage URL helper
-const getStorageUrl = (path: string | null) => resolveImageUrl(path);
+const getStorageUrl = (path: string | null) => resolveProductImageUrl(path);
 
 export default function PlanoCorte() {
   const navigate = useNavigate();

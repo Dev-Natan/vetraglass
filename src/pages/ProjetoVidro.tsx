@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { resolveImageUrl } from '@/utils/imageUrl';
+import { resolveProductImageUrl } from '@/utils/imageUrl';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ArrowLeft, Printer, Save, FileDown, FolderOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -48,7 +48,7 @@ export interface GlassPanelData {
 }
 
 // Get storage URL helper
-const getStorageUrl = (path: string | null) => resolveImageUrl(path);
+const getStorageUrl = (path: string | null) => resolveProductImageUrl(path);
 
 export default function ProjetoVidro() {
   const navigate = useNavigate();
