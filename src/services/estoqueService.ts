@@ -27,7 +27,7 @@ export const estoqueService = {
   async fetchItemTemplates() {
     const { data, error } = await supabase
       .from('item_templates')
-      .select('id, name, type, unit, image_url, linha')
+      .select('id, name, type, unit, image_url, linha, default_price, default_cost, default_sale_price, bar_length_mm, weight_per_meter, weight_per_bar')
       .eq('is_active', true);
 
     if (error) throw error;
