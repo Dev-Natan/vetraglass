@@ -16,6 +16,12 @@ export interface StockItem {
     unit: string;
     image_url: string | null;
     linha: string | null;
+    default_price: number | null;
+    default_cost: number | null;
+    default_sale_price: number | null;
+    bar_length_mm: number | null;
+    weight_per_meter: number | null;
+    weight_per_bar: number | null;
   } | null;
   company_item?: {
     id: string;
