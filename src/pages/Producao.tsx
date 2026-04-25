@@ -30,7 +30,7 @@ import {
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
 
 // Get storage URL helper
-const getStorageUrl = (path: string | null) => resolveImageUrl(path);
+const getStorageUrl = (path: string | null) => resolveProductImageUrl(path);
 
 export interface GlassPanelData {
   id: string;
