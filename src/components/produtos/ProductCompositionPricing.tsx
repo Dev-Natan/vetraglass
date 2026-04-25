@@ -11,6 +11,7 @@ import { Calculator, TrendingUp, AlertTriangle, RefreshCw, Link2, Save, Loader2 
 import { calculatePricing, DEFAULT_PRICING_POLICY, type CompositionItemInput, type PricingInput } from '@/utils/pricingEngine';
 import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { formatBRLInput, parseBRLInput } from '@/utils/currencyMask';
 
 interface ProductCompositionPricingProps {
   productId: string;
