@@ -120,7 +120,7 @@ export function ProductCompositionPricing({
       if (templateIds.length === 0) return [];
       const { data } = await supabase
         .from('item_templates')
-        .select('id, bar_length_mm, weight_per_bar, weight_per_meter')
+        .select('id, bar_length_mm, weight_per_bar, weight_per_meter, default_cost, default_price')
         .in('id', templateIds);
       return data || [];
     },
