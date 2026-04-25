@@ -119,7 +119,7 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
           costPerUnit: isUnit ? (selectedItem.default_cost?.toString() ?? prev.costPerUnit) : prev.costPerUnit,
           costPerSqm: isGlass ? (selectedItem.default_cost?.toString() ?? prev.costPerSqm) : prev.costPerSqm,
           // Pre-fill sale price
-          salePricePerBar: isProfile ? (selectedItem.default_price?.toString() ?? prev.salePricePerBar) : prev.salePricePerBar,
+          salePricePerBar: isProfile ? ((selectedItem.default_sale_price || selectedItem.default_price)?.toString() ?? prev.salePricePerBar) : prev.salePricePerBar,
           salePricePerUnit: isUnit ? (selectedItem.default_price?.toString() ?? prev.salePricePerUnit) : prev.salePricePerUnit,
           salePricePerSqm: isGlass ? (selectedItem.default_price?.toString() ?? prev.salePricePerSqm) : prev.salePricePerSqm,
         };
