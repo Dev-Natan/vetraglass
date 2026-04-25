@@ -483,7 +483,7 @@ export default function ProductTemplates() {
   const handleEdit = (template: ProductTemplate) => {
     setEditingTemplate(template);
     setFormImageFile(null);
-    setFormImagePreview(resolveImageUrl(template.image_url) || null);
+    setFormImagePreview(resolveProductImageUrl(template.image_url) || null);
     setFormData({
       name: template.name,
       description: (template.description || "").replace("[PRONTO]", "").trim(),
@@ -984,7 +984,7 @@ export default function ProductTemplates() {
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
 
             {filteredTemplates?.map(template => {
-              const imgUrl = resolveImageUrl(template.image_url);
+              const imgUrl = resolveProductImageUrl(template.image_url);
               const isReady = template.description?.includes("[PRONTO]");
               return (
                 <Card 
@@ -1130,7 +1130,7 @@ export default function ProductTemplates() {
                   </TableHeader>
                   <TableBody>
                     {filteredTemplates?.map(template => {
-                      const imgUrl = resolveImageUrl(template.image_url);
+                      const imgUrl = resolveProductImageUrl(template.image_url);
                       const isReady = template.description?.includes("[PRONTO]");
                       return (
                         <TableRow key={template.id} className={cn(!template.is_active && "opacity-50")}>
@@ -1240,7 +1240,7 @@ export default function ProductTemplates() {
                       <div className="p-4 border-t bg-muted/10">
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                           {templates.map(template => {
-                            const imgUrl = resolveImageUrl(template.image_url);
+                            const imgUrl = resolveProductImageUrl(template.image_url);
                             const isReady = template.description?.includes("[PRONTO]");
                             return (
                               <Card 
