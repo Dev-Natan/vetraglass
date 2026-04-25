@@ -207,6 +207,8 @@ export function NovaVendaDialog({
     
     setIsAddingStock(true);
     try {
+      const itemType = availableItems.find(i => i.id === itemTemplateId)?.type;
+      
       const { error } = await supabase
         .from('company_stock')
         .insert({
@@ -215,7 +217,7 @@ export function NovaVendaDialog({
           quantity,
           min_quantity: 0,
           is_active: true,
-          allow_fractional: false,
+          allow_fractional: itemType === 'profile',
         });
       
       if (error) throw error;
