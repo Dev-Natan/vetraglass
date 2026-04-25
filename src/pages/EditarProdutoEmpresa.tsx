@@ -476,6 +476,7 @@ export default function EditarProdutoEmpresa() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company-product-items', id] });
+      if (id) recalculateProductPrice(id);
       toast.success('Item removido!');
     },
     onError: (error) => {
