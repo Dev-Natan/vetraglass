@@ -333,8 +333,7 @@ export default function EditarProduto() {
       const updateData: Record<string, any> = {
         name: formData.name,
         description: formData.description,
-        // Temporarily disabled due to missing DB column
-        // composition_finished: formData.composition_finished,
+        composition_finished: formData.composition_finished,
         base_price: formData.base_price ? parseFloat(formData.base_price) : 0,
       };
 
