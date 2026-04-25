@@ -267,6 +267,29 @@ export default function Estoque() {
             <p className="text-muted-foreground">Controle de entradas e saídas</p>
           </div>
           <div data-tutorial="estoque-acoes" className="flex flex-wrap gap-2">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" className="gap-2 text-destructive hover:text-destructive">
+                  <Trash2 className="w-4 h-4" />
+                  <span className="hidden sm:inline">Zerar Estoque</span>
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Zerar Estoque?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta ação irá definir a quantidade e os custos de TODOS os itens do seu estoque para zero. Esta ação não pode ser desfeita.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => resetStockMutation.mutate()} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Confirmar e Zerar
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            
             <Button variant="outline" className="gap-2" onClick={() => setSaidaDialogOpen(true)}>
               <TrendingDown className="w-4 h-4" />
               <span className="hidden sm:inline">Registrar Saída</span>
