@@ -53,8 +53,10 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
   const { data: itemTypes } = useItemTypes();
   
   const getProductImage = (imageUrl: string | null | undefined) => {
-    const bucket = item.item_type === 'item' ? 'item-templates' : 'product-templates';
-    return resolveImageUrl(imageUrl ?? null, bucket as any);
+    if (item.item_type === 'item') {
+      return resolveImageUrl(imageUrl ?? null, 'item-templates');
+    }
+    return resolveProductImageUrl(imageUrl ?? null);
   };
   
   const getItemTypeLabel = (type: string) => {
