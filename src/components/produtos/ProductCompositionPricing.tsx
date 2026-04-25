@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Calculator, TrendingUp, AlertTriangle, RefreshCw, Link2, Save, Loader2 } from 'lucide-react';
 import { calculatePricing, DEFAULT_PRICING_POLICY, type CompositionItemInput, type PricingInput } from '@/utils/pricingEngine';
+import { recalculatePricesForProductsWithItem } from '@/utils/productPriceUpdater';
 import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatBRLInput, parseBRLInput } from '@/utils/currencyMask';
