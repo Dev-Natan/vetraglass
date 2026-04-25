@@ -169,6 +169,8 @@ export default function Estoque() {
 
   const handleOpenPriceDialog = useCallback((item: StockItem) => {
     const isCustom = item.company_item?.is_custom ?? false;
+    const isVirtual = item.id.startsWith('virtual-');
+    
     setSelectedItem({
       id: item.item_template_id,
       name: item.company_item?.name ?? item.item_template?.name ?? 'Item',
@@ -176,7 +178,7 @@ export default function Estoque() {
       unit: item.item_template?.unit ?? item.company_item?.unit,
       companyItemId: item.company_item_id,
       isCustomItem: isCustom,
-      stockId: item.id,
+      stockId: isVirtual ? undefined : item.id,
     });
     setPriceDialogOpen(true);
   }, []);
