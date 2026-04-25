@@ -313,77 +313,104 @@ export function EditItemPriceDialog({
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!currentCompany?.id) throw new Error('Dados incompletos');
-      if (!itemTemplateId && !companyItem) throw new Error('Dados incompletos');
+      if (!itemTemplateId && !companyItemId) throw new Error('Dados incompletos');
 
-      const costNum = pNum(pricingData.costPerBar) ?? pNum(pricingData.costPerKg) ?? pNum(pricingData.costPerMeter) ?? 0;
-      const salePriceNum = pNum(pricingData.salePricePerBar) ?? pNum(pricingData.salePricePerKg) ?? pNum(pricingData.salePricePerMeter) ?? 0;
+      const costNum = pNum(pricingData.costPerBar) ?? pNum(pricingData.costPerKg) ?? pNum(pricingData.costPerMeter) ?? pNum(pricingData.costPerUnit) ?? 0;
+      const salePriceNum = pNum(pricingData.salePricePerBar) ?? pNum(pricingData.salePricePerKg) ?? pNum(pricingData.salePricePerMeter) ?? pNum(pricingData.salePricePerUnit) ?? 0;
 
-      // Save prices to company_item_prices (only for template-based items)
-      if (itemTemplateId) {
-        const priceData = {
-          company_id: currentCompany.id,
-          item_template_id: itemTemplateId,
-          cost: costNum,
-          price: salePriceNum,
-        };
+      let currentCompanyItemId = companyItemId;
 
-        if (existingPrice) {
-          const { error } = await supabase
-            .from('company_item_prices')
-            .update({ cost: priceData.cost, price: priceData.price })
-            .eq('id', existingPrice.id);
-          if (error) throw error;
-        } else {
-          const { error } = await supabase
-            .from('company_item_prices')
-            .insert(priceData);
-          if (error) throw error;
-        }
-      }
+      // 1. Save/Update company_item
+      const companyItemData = {
+        company_id: currentCompany.id,
+        item_template_id: itemTemplateId || null,
+        name: itemName,
+        type: itemTypeLocal,
+        linha: linhaLocal || null,
+        cost: costNum,
+        sale_price: salePriceNum,
+        bar_length_mm: pNum(pricingData.barLengthMm),
+        weight_kg: pNum(pricingData.weightKg),
+        weight_per_meter: pNum(pricingData.weightPerMeter),
+        cost_per_bar: pNum(pricingData.costPerBar),
+        cost_per_kg: pNum(pricingData.costPerKg),
+        cost_per_meter: pNum(pricingData.costPerMeter),
+        sale_price_per_bar: pNum(pricingData.salePricePerBar),
+        sale_price_per_kg: pNum(pricingData.salePricePerKg),
+        sale_price_per_meter: pNum(pricingData.salePricePerMeter),
+        sale_margin_percent: pNum(pricingData.saleMarginPercent) ?? 0,
+        image_url: currentImageUrl || undefined,
+        is_custom: isCustomItem,
+        is_active: true,
+        unit: itemUnit,
+        ncm: ncm || null,
+        cest: cest || null,
+        cfop_venda: cfopVenda || null,
+        cfop_venda_interestadual: cfopVendaInterestadual || null,
+        origem: origem || null,
+        codigo_servico: codigoServico || null,
+        aliquota_iss: pNum(aliquotaIss),
+      };
 
-      // Save pricing fields to company_items
-      if (companyItem) {
+      if (currentCompanyItemId) {
         const { error: itemError } = await supabase
           .from('company_items')
-          .update({
-            type: itemTypeLocal,
-            linha: linhaLocal || null,
-            cost: costNum,
-            sale_price: salePriceNum,
-            bar_length_mm: pNum(pricingData.barLengthMm),
-            weight_kg: pNum(pricingData.weightKg),
-            weight_per_meter: pNum(pricingData.weightPerMeter),
-            cost_per_bar: pNum(pricingData.costPerBar),
-            cost_per_kg: pNum(pricingData.costPerKg),
-            cost_per_meter: pNum(pricingData.costPerMeter),
-            sale_price_per_bar: pNum(pricingData.salePricePerBar),
-            sale_price_per_kg: pNum(pricingData.salePricePerKg),
-            sale_price_per_meter: pNum(pricingData.salePricePerMeter),
-            sale_margin_percent: pNum(pricingData.saleMarginPercent) ?? 0,
-            image_url: isCustomItem ? currentImageUrl : undefined,
-          })
-          .eq('id', companyItem.id);
+          .update(companyItemData)
+          .eq('id', currentCompanyItemId);
         if (itemError) throw itemError;
+      } else if (itemTemplateId) {
+        const { data: newItem, error: itemError } = await supabase
+          .from('company_items')
+          .upsert({
+            ...companyItemData,
+            item_template_id: itemTemplateId
+          }, { onConflict: 'company_id,item_template_id' })
+          .select()
+          .single();
+        if (itemError) throw itemError;
+        currentCompanyItemId = newItem.id;
       }
 
-      // Save stock
-      if (existingStock) {
+      // 2. Save/Update company_item_prices (legacy/cache table)
+      if (itemTemplateId) {
+        await supabase
+          .from('company_item_prices')
+          .upsert({
+            company_id: currentCompany.id,
+            item_template_id: itemTemplateId,
+            cost: costNum,
+            price: salePriceNum,
+          }, { onConflict: 'company_id,item_template_id' });
+      }
+
+      // 3. Save/Update stock
+      const stockData = {
+        company_id: currentCompany.id,
+        item_template_id: itemTemplateId || null,
+        company_item_id: currentCompanyItemId,
+        quantity: parseFloat(quantity) || 0,
+        min_quantity: parseFloat(minQuantity) || 0,
+        location: location || null,
+        allow_fractional: allowFractional,
+        is_active: isActive,
+      };
+
+      if (existingStock?.id) {
         const { error } = await supabase
           .from('company_stock')
-          .update({
-            quantity: parseFloat(quantity) || 0,
-            min_quantity: parseFloat(minQuantity) || 0,
-            location: location || null,
-            allow_fractional: allowFractional,
-            is_active: isActive,
-          } as any)
+          .update(stockData)
           .eq('id', existingStock.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('company_stock')
+          .insert(stockData);
         if (error) throw error;
       }
 
-      // Save fiscal fields on item template
+      // 4. Update template fiscal data if it's a template item
       if (itemTemplateId) {
-        const { error: fiscalError } = await supabase
+        await supabase
           .from('item_templates')
           .update({
             ncm: ncm || null,
@@ -392,22 +419,12 @@ export function EditItemPriceDialog({
             cfop_venda_interestadual: cfopVendaInterestadual || null,
             origem: origem || null,
             codigo_servico: codigoServico || null,
-            aliquota_iss: parseFloat(aliquotaIss) || null,
-            aliquota_ibs: parseFloat(aliquotaIbs) || null,
-            aliquota_cbs: parseFloat(aliquotaCbs) || null,
-            aliquota_is: parseFloat(aliquotaIs) || null,
+            aliquota_iss: pNum(aliquotaIss),
+            aliquota_ibs: pNum(aliquotaIbs),
+            aliquota_cbs: pNum(aliquotaCbs),
+            aliquota_is: pNum(aliquotaIs),
           })
           .eq('id', itemTemplateId);
-        if (fiscalError) throw fiscalError;
-      }
-
-      // Update image_url for custom items without company_item record
-      if (isCustomItem && companyItemId && !companyItem && currentImageUrl !== itemImageUrl) {
-        const { error: imageError } = await supabase
-          .from('company_items')
-          .update({ image_url: currentImageUrl })
-          .eq('id', companyItemId);
-        if (imageError) throw imageError;
       }
     },
     onSuccess: () => {
