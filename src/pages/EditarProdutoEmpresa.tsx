@@ -66,6 +66,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
+import { recalculateProductPrice } from '@/utils/productPriceUpdater';
 
 type CompanyProduct = {
   id: string;
@@ -454,6 +455,7 @@ export default function EditarProdutoEmpresa() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company-product-items', id] });
+      if (id) recalculateProductPrice(id);
       toast.success('Item adicionado!');
       setIsAddItemDialogOpen(false);
       resetItemForm();
@@ -474,6 +476,7 @@ export default function EditarProdutoEmpresa() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company-product-items', id] });
+      if (id) recalculateProductPrice(id);
       toast.success('Item removido!');
     },
     onError: (error) => {
@@ -508,6 +511,7 @@ export default function EditarProdutoEmpresa() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company-product-items', id] });
+      if (id) recalculateProductPrice(id);
       toast.success('Item atualizado!');
       setIsEditItemDialogOpen(false);
       setEditingItem(null);

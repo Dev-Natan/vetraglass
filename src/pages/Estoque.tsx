@@ -5,8 +5,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { estoqueService } from '@/services/estoqueService';
 import { useAuth } from '@/contexts/AuthContext';
 
-import { Boxes, TrendingDown, TrendingUp, History, Plus, PackageCheck, PackageX, Trash2 } from 'lucide-react';
+import { Boxes, TrendingDown, TrendingUp, History, Plus, PackageCheck, PackageX, Trash2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { recalculateProductPrice } from '@/utils/productPriceUpdater';
 import { UnifiedAddItemDialog } from '@/components/estoque/UnifiedAddItemDialog';
 import { EditItemPriceDialog } from '@/components/estoque/EditItemPriceDialog';
 import { RegistrarMovimentoDialog } from '@/components/estoque/RegistrarMovimentoDialog';
@@ -31,6 +32,7 @@ import type { StockItem } from '@/types/estoque';
 
 import { useItemTypes } from '@/hooks/useItemTypes';
 import { useProductLinhas } from '@/hooks/useProductLinhas';
+import { cn } from '@/lib/utils';
 
 interface RegistrarMovimentoStockItem {
   id: string;
@@ -178,6 +180,41 @@ export default function Estoque() {
     }
   });
 
+  const [isRecalculating, setIsRecalculating] = useState(false);
+  const handleRecalculateAllPrices = async () => {
+    if (!currentCompany?.id) return;
+    setIsRecalculating(true);
+    try {
+      // Get all company products
+      const { data: products, error } = await supabase
+        .from('company_products')
+        .select('id')
+        .eq('company_id', currentCompany.id);
+
+      if (error) throw error;
+      if (!products || products.length === 0) {
+        toast.info('Nenhum produto encontrado para atualizar.');
+        return;
+      }
+
+      toast.info(`Iniciando atualização de ${products.length} produtos...`);
+      
+      // Use chunks to avoid overwhelming the browser/API
+      const CHUNK_SIZE = 5;
+      for (let i = 0; i < products.length; i += CHUNK_SIZE) {
+        const chunk = products.slice(i, i + CHUNK_SIZE);
+        await Promise.all(chunk.map(p => recalculateProductPrice(p.id)));
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['company-products'] });
+      toast.success('Todos os preços de produtos foram atualizados com base nos custos atuais do estoque!');
+    } catch (error: any) {
+      toast.error('Erro ao recalcular preços: ' + error.message);
+    } finally {
+      setIsRecalculating(false);
+    }
+  };
+
   const { inStockItems, outOfStockItems } = useMemo(() => {
     let items = [...activeItems];
     if (searchTerm) {
@@ -289,6 +326,16 @@ export default function Estoque() {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+            
+            <Button 
+              variant="outline" 
+              className="gap-2" 
+              onClick={handleRecalculateAllPrices}
+              disabled={isRecalculating}
+            >
+              <RefreshCw className={cn("w-4 h-4", isRecalculating && "animate-spin")} />
+              <span className="hidden sm:inline">Atualizar Preços Produtos</span>
+            </Button>
             
             <Button variant="outline" className="gap-2" onClick={() => setSaidaDialogOpen(true)}>
               <TrendingDown className="w-4 h-4" />
