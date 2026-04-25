@@ -180,7 +180,7 @@ export function calculateFormulaQuantity(
       return piecesQty;
     }
     
-    return (result / 1000) * piecesQty;
+    return result * piecesQty;
   } catch (error) {
     console.error('Erro ao calcular fórmula:', formula, error);
     return 0;
