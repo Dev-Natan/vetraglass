@@ -179,6 +179,41 @@ export default function Estoque() {
     }
   });
 
+  const [isRecalculating, setIsRecalculating] = useState(false);
+  const handleRecalculateAllPrices = async () => {
+    if (!currentCompany?.id) return;
+    setIsRecalculating(true);
+    try {
+      // Get all company products
+      const { data: products, error } = await supabase
+        .from('company_products')
+        .select('id')
+        .eq('company_id', currentCompany.id);
+
+      if (error) throw error;
+      if (!products || products.length === 0) {
+        toast.info('Nenhum produto encontrado para atualizar.');
+        return;
+      }
+
+      toast.info(`Iniciando atualização de ${products.length} produtos...`);
+      
+      // Use chunks to avoid overwhelming the browser/API
+      const CHUNK_SIZE = 5;
+      for (let i = 0; i < products.length; i += CHUNK_SIZE) {
+        const chunk = products.slice(i, i + CHUNK_SIZE);
+        await Promise.all(chunk.map(p => recalculateProductPrice(p.id)));
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['company-products'] });
+      toast.success('Todos os preços de produtos foram atualizados com base nos custos atuais do estoque!');
+    } catch (error: any) {
+      toast.error('Erro ao recalcular preços: ' + error.message);
+    } finally {
+      setIsRecalculating(false);
+    }
+  };
+
   const { inStockItems, outOfStockItems } = useMemo(() => {
     let items = [...activeItems];
     if (searchTerm) {
