@@ -452,6 +452,12 @@ export function EditItemPriceDialog({
       }
     },
     onSuccess: () => {
+      // Recalcula preços de produtos que usam este item
+      recalculatePricesForProductsWithItem(itemTemplateId, companyItemId).then(() => {
+        queryClient.invalidateQueries({ queryKey: ['company-products'] });
+        queryClient.invalidateQueries({ queryKey: ['company-product'] });
+      });
+
       toast({ title: 'Dados salvos', description: 'As informações foram atualizadas com sucesso.' });
       queryClient.invalidateQueries({ queryKey: ['company-item-prices'] });
       queryClient.invalidateQueries({ queryKey: ['company-item-price'] });
