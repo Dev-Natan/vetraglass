@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/select';
 import { ImageUploadField } from '@/components/common/ImageUploadField';
 import { ItemPricingFields, defaultPricingData, type ItemPricingData } from './ItemPricingFields';
+import { recalculatePricesForProductsWithItem } from '@/utils/productPriceUpdater';
 
 interface TaxCategory {
   id: string;
