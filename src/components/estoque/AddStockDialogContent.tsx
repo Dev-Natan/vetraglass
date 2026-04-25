@@ -104,38 +104,35 @@ export function AddStockDialogContent({ onClose }: AddStockDialogContentProps) {
       setAllowFractional(selectedItem.type === 'profile');
 
       // Pre-fill pricing data from template (weight, bar length, prices)
-      setPricingData(prev => {
-        const isProfile = selectedItem.type === 'profile';
-        const isGlass = selectedItem.type === 'glass';
-        const isUnit = !isProfile && !isGlass;
+      const isProfile = selectedItem.type === 'profile';
+      const isGlass = selectedItem.type === 'glass';
+      const isUnit = !isProfile && !isGlass;
 
-        return {
-          ...prev,
-          barLengthMm: selectedItem.bar_length_mm?.toString() ?? prev.barLengthMm,
-          weightKg: selectedItem.weight_per_bar?.toString() ?? prev.weightKg,
-          weightPerMeter: selectedItem.weight_per_meter?.toString() ?? prev.weightPerMeter,
-          // Pre-fill cost
-          costPerBar: isProfile ? (selectedItem.default_cost?.toString() ?? prev.costPerBar) : prev.costPerBar,
-          costPerUnit: isUnit ? (selectedItem.default_cost?.toString() ?? prev.costPerUnit) : prev.costPerUnit,
-          costPerSqm: isGlass ? (selectedItem.default_cost?.toString() ?? prev.costPerSqm) : prev.costPerSqm,
-          // Pre-fill sale price
-          salePricePerBar: isProfile ? ((selectedItem.default_sale_price || selectedItem.default_price)?.toString() ?? prev.salePricePerBar) : prev.salePricePerBar,
-          salePricePerUnit: isUnit ? (selectedItem.default_price?.toString() ?? prev.salePricePerUnit) : prev.salePricePerUnit,
-          salePricePerSqm: isGlass ? (selectedItem.default_price?.toString() ?? prev.salePricePerSqm) : prev.salePricePerSqm,
-        };
+      setPricingData({
+        ...defaultPricingData,
+        barLengthMm: selectedItem.bar_length_mm?.toString() ?? '',
+        weightKg: selectedItem.weight_per_bar?.toString() ?? '',
+        weightPerMeter: selectedItem.weight_per_meter?.toString() ?? '',
+        // Pre-fill cost
+        costPerBar: isProfile ? (selectedItem.default_cost?.toString() ?? '') : '',
+        costPerUnit: isUnit ? (selectedItem.default_cost?.toString() ?? '') : '',
+        costPerSqm: isGlass ? (selectedItem.default_cost?.toString() ?? '') : '',
+        // Pre-fill sale price
+        salePricePerBar: isProfile ? ((selectedItem.default_sale_price || selectedItem.default_price)?.toString() ?? '') : '',
+        salePricePerUnit: isUnit ? (selectedItem.default_price?.toString() ?? '') : '',
+        salePricePerSqm: isGlass ? (selectedItem.default_price?.toString() ?? '') : '',
       });
 
       const templateSpecs = selectedItem.specifications as Record<string, unknown> | null;
-      if (templateSpecs) {
-        setFiscalData(prev => ({
-          ...prev,
-          ncm: (templateSpecs.ncm as string) || prev.ncm,
-          cfop_venda: (templateSpecs.cfop_venda as string) || prev.cfop_venda,
-          cfop_venda_interestadual: (templateSpecs.cfop_venda_interestadual as string) || prev.cfop_venda_interestadual,
-          cest: (templateSpecs.cest as string) || prev.cest,
-          origem: (templateSpecs.origem as string) || prev.origem,
-        }));
-      }
+      setFiscalData({
+        ncm: (selectedItem.ncm as string) || (templateSpecs?.ncm as string) || '',
+        cfop_venda: (selectedItem.cfop_venda as string) || (templateSpecs?.cfop_venda as string) || '',
+        cfop_venda_interestadual: (selectedItem.cfop_venda_interestadual as string) || (templateSpecs?.cfop_venda_interestadual as string) || '',
+        cest: (selectedItem.cest as string) || (templateSpecs?.cest as string) || '',
+        origem: (selectedItem.origem as string) || (templateSpecs?.origem as string) || '',
+        codigo_servico: (selectedItem.codigo_servico as string) || (templateSpecs?.codigo_servico as string) || '',
+        aliquota_iss: (selectedItem.aliquota_iss?.toString()) || (templateSpecs?.aliquota_iss?.toString()) || '',
+      });
     }
   }, [selectedItem]);
 
