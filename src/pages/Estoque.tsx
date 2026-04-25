@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { estoqueService } from '@/services/estoqueService';
 import { useAuth } from '@/contexts/AuthContext';
 
-import { Boxes, TrendingDown, TrendingUp, History, Plus, PackageCheck, PackageX } from 'lucide-react';
+import { Boxes, TrendingDown, TrendingUp, History, Plus, PackageCheck, PackageX, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UnifiedAddItemDialog } from '@/components/estoque/UnifiedAddItemDialog';
 import { EditItemPriceDialog } from '@/components/estoque/EditItemPriceDialog';
@@ -13,6 +13,17 @@ import { RegistrarMovimentoDialog } from '@/components/estoque/RegistrarMoviment
 import { HistoricoMovimentosTab } from '@/components/estoque/HistoricoMovimentosTab';
 import { StockItemCard } from '@/components/estoque/StockItemCard';
 import { StockKPIs } from '@/components/estoque/StockKPIs';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { StockFilters, type StockStatus, type StockSortBy, type ViewMode } from '@/components/estoque/StockFilters';
 import { StockGridView } from '@/components/estoque/StockGridView';
 import { useStockData } from '@/hooks/useStockData';
