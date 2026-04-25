@@ -224,11 +224,16 @@ export function ProductCompositionPricing({
       const ci = effectiveCompanyItems.find(
         c => c.id === pi.company_item_id || c.item_template_id === pi.item_template_id
       );
-      if (!ci) return true;
+      const tpl = itemTemplates?.find(t => t.id === pi.item_template_id);
+      
       const type = pi.item_template?.type || pi.company_item?.type;
-      if (type === 'profile') return !ci.cost_per_bar && !ci.cost_per_kg && !ci.cost_per_meter;
-      if (type === 'glass') return !ci.cost_per_meter;
-      return !ci.cost && !ci.cost_per_bar;
+      const hasTplCost = tpl?.default_cost && tpl.default_cost > 0;
+
+      if (!ci) return !hasTplCost;
+      
+      if (type === 'profile') return !ci.cost_per_bar && !ci.cost_per_kg && !ci.cost_per_meter && !hasTplCost;
+      if (type === 'glass') return !ci.cost_per_meter && !hasTplCost;
+      return !ci.cost && !ci.cost_per_bar && !hasTplCost;
     }).length;
   }, [effectiveCompanyItems, productItems]);
 
