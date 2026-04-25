@@ -122,8 +122,9 @@ export const StockItemCard = memo(function StockItemCard({
           )}
           <div className="flex items-center gap-3 mt-1 text-xs flex-wrap">
             {(() => {
-              const cost = item.priceInfo?.cost ?? item.company_item?.cost ?? 0;
-              const price = item.priceInfo?.price ?? item.company_item?.sale_price ?? 0;
+              const cost = item.priceInfo?.cost ?? item.company_item?.cost ?? item.item_template?.default_cost ?? 0;
+              const templatePrice = item.item_template?.type === 'profile' ? item.item_template?.default_sale_price : item.item_template?.default_price;
+              const price = item.priceInfo?.price ?? item.company_item?.sale_price ?? templatePrice ?? 0;
               if (cost > 0 || price > 0) {
                 return (
                   <>
@@ -196,6 +197,9 @@ export const StockItemCard = memo(function StockItemCard({
     prevProps.item.priceInfo?.price === nextProps.item.priceInfo?.price &&
     prevProps.item.company_item?.cost === nextProps.item.company_item?.cost &&
     prevProps.item.company_item?.sale_price === nextProps.item.company_item?.sale_price &&
+    prevProps.item.item_template?.default_cost === nextProps.item.item_template?.default_cost &&
+    prevProps.item.item_template?.default_price === nextProps.item.item_template?.default_price &&
+    prevProps.item.item_template?.default_sale_price === nextProps.item.item_template?.default_sale_price &&
     prevProps.item.company_item?.bar_length_mm === nextProps.item.company_item?.bar_length_mm &&
     prevProps.showActivateBtn === nextProps.showActivateBtn
   );
