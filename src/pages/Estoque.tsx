@@ -326,6 +326,16 @@ export default function Estoque() {
               </AlertDialogContent>
             </AlertDialog>
             
+            <Button 
+              variant="outline" 
+              className="gap-2" 
+              onClick={handleRecalculateAllPrices}
+              disabled={isRecalculating}
+            >
+              <RefreshCw className={cn("w-4 h-4", isRecalculating && "animate-spin")} />
+              <span className="hidden sm:inline">Atualizar Preços Produtos</span>
+            </Button>
+            
             <Button variant="outline" className="gap-2" onClick={() => setSaidaDialogOpen(true)}>
               <TrendingDown className="w-4 h-4" />
               <span className="hidden sm:inline">Registrar Saída</span>
