@@ -121,7 +121,7 @@ export function CreateCustomItemContent({ onClose }: CreateCustomItemContentProp
       const { error: stockError } = await supabase.from('company_stock').insert({
         company_id: currentCompany.id, item_template_id: null, company_item_id: companyItem.id,
         quantity: quantityNum, min_quantity: minQty, is_active: true,
-        allow_fractional: unit === 'm' || unit === 'm²' || unit === 'kg' || unit === 'l',
+        allow_fractional: unit === 'm' || unit === 'm²' || unit === 'kg' || unit === 'l' || category === 'profile',
       });
       if (stockError) throw new Error(`Erro ao criar estoque: ${stockError.message}`);
 

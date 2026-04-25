@@ -198,6 +198,8 @@ export function ActivateProductDialog({
           .single();
 
         if (!existing) {
+          const itemType = selectedItems.find(c => c.item_template_id === itemTemplateId)?.item_template.type;
+          
           // Add to stock with zero quantity
           const { error: stockError } = await supabase
             .from('company_stock')
@@ -206,6 +208,7 @@ export function ActivateProductDialog({
               item_template_id: itemTemplateId,
               quantity: 0,
               min_quantity: 0,
+              allow_fractional: itemType === 'profile',
               is_active: true,
             });
 
