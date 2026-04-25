@@ -1,6 +1,6 @@
 // Product templates admin page
 import { useEffect, useRef, useState, useMemo } from "react";
-import { resolveImageUrl } from '@/utils/imageUrl';
+import { resolveImageUrl, resolveProductImageUrl } from '@/utils/imageUrl';
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
