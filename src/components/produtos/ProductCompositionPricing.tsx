@@ -427,59 +427,74 @@ export function ProductCompositionPricing({
                     {itemType === 'profile' && (
                       <>
                         <div className="space-y-0.5">
-                          <Label className="text-[10px] text-muted-foreground">Custo/Barra (R$)</Label>
-                          <Input
-                            type="number" min="0" step="0.01"
-                            value={getEditValue(ci.id, 'cost_per_bar', ci.cost_per_bar)}
-                            onChange={(e) => updateEdit(ci.id, 'cost_per_bar', e.target.value)}
-                            placeholder="0,00"
-                            className="h-7 text-xs"
-                          />
+                          <Label className="text-[10px] text-muted-foreground">Custo/Barra</Label>
+                          <div className="relative">
+                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">R$</span>
+                            <Input
+                              type="text" inputMode="numeric"
+                              value={getEditValue(ci.id, 'cost_per_bar', ci.cost_per_bar)}
+                              onChange={(e) => updateEdit(ci.id, 'cost_per_bar', e.target.value)}
+                              placeholder="0,00"
+                              className="h-7 text-xs pl-7"
+                            />
+                          </div>
                         </div>
                         <div className="space-y-0.5">
-                          <Label className="text-[10px] text-muted-foreground">Custo/Kg (R$)</Label>
-                          <Input
-                            type="number" min="0" step="0.01"
-                            value={getEditValue(ci.id, 'cost_per_kg', ci.cost_per_kg)}
-                            onChange={(e) => updateEdit(ci.id, 'cost_per_kg', e.target.value)}
-                            placeholder="0,00"
-                            className="h-7 text-xs"
-                          />
+                          <Label className="text-[10px] text-muted-foreground">Custo/Kg</Label>
+                          <div className="relative">
+                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">R$</span>
+                            <Input
+                              type="text" inputMode="numeric"
+                              value={getEditValue(ci.id, 'cost_per_kg', ci.cost_per_kg)}
+                              onChange={(e) => updateEdit(ci.id, 'cost_per_kg', e.target.value)}
+                              placeholder="0,00"
+                              className="h-7 text-xs pl-7"
+                            />
+                          </div>
                         </div>
                         <div className="space-y-0.5">
-                          <Label className="text-[10px] text-muted-foreground">Custo/Metro (R$)</Label>
-                          <Input
-                            type="number" min="0" step="0.01"
-                            value={getEditValue(ci.id, 'cost_per_meter', ci.cost_per_meter)}
-                            onChange={(e) => updateEdit(ci.id, 'cost_per_meter', e.target.value)}
-                            placeholder="0,00"
-                            className="h-7 text-xs"
-                          />
+                          <Label className="text-[10px] text-muted-foreground">Custo/Metro</Label>
+                          <div className="relative">
+                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">R$</span>
+                            <Input
+                              type="text" inputMode="numeric"
+                              value={getEditValue(ci.id, 'cost_per_meter', ci.cost_per_meter)}
+                              onChange={(e) => updateEdit(ci.id, 'cost_per_meter', e.target.value)}
+                              placeholder="0,00"
+                              className="h-7 text-xs pl-7"
+                            />
+                          </div>
                         </div>
                       </>
                     )}
                     {itemType === 'glass' && (
                       <div className="space-y-0.5 col-span-full sm:col-span-1">
-                        <Label className="text-[10px] text-muted-foreground">Custo/m² (R$)</Label>
-                        <Input
-                          type="number" min="0" step="0.01"
-                          value={getEditValue(ci.id, 'cost_per_meter', ci.cost_per_meter)}
-                          onChange={(e) => updateEdit(ci.id, 'cost_per_meter', e.target.value)}
-                          placeholder="0,00"
-                          className="h-7 text-xs"
-                        />
+                        <Label className="text-[10px] text-muted-foreground">Custo/m²</Label>
+                        <div className="relative">
+                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">R$</span>
+                          <Input
+                            type="text" inputMode="numeric"
+                            value={getEditValue(ci.id, 'cost_per_meter', ci.cost_per_meter)}
+                            onChange={(e) => updateEdit(ci.id, 'cost_per_meter', e.target.value)}
+                            placeholder="0,00"
+                            className="h-7 text-xs pl-7"
+                          />
+                        </div>
                       </div>
                     )}
                     {itemType !== 'profile' && itemType !== 'glass' && (
                       <div className="space-y-0.5 col-span-full sm:col-span-1">
-                        <Label className="text-[10px] text-muted-foreground">Custo Unit. (R$)</Label>
-                        <Input
-                          type="number" min="0" step="0.01"
-                          value={getEditValue(ci.id, 'cost', ci.cost)}
-                          onChange={(e) => updateEdit(ci.id, 'cost', e.target.value)}
-                          placeholder="0,00"
-                          className="h-7 text-xs"
-                        />
+                        <Label className="text-[10px] text-muted-foreground">Custo Unitário</Label>
+                        <div className="relative">
+                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">R$</span>
+                          <Input
+                            type="text" inputMode="numeric"
+                            value={getEditValue(ci.id, 'cost', ci.cost)}
+                            onChange={(e) => updateEdit(ci.id, 'cost', e.target.value)}
+                            placeholder="0,00"
+                            className="h-7 text-xs pl-7"
+                          />
+                        </div>
                       </div>
                     )}
                   </div>
