@@ -184,6 +184,11 @@ export function Sidebar() {
           </div>
         </div>
 
+        {/* Company Switcher */}
+        <div className="px-4 pt-3">
+          <CompanySwitcher className="w-full justify-start bg-white/5 border-white/10 text-sidebar-foreground hover:bg-white/10" />
+        </div>
+
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10">
           {visibleMenuItems.map((item) => {
