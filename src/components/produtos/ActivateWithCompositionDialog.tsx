@@ -35,6 +35,7 @@ export function ActivateWithCompositionDialog({
   // Wizard / aba
   const [wizardStep, setWizardStep] = useState<WizardStep>('components');
   const [activeTab, setActiveTab] = useState('glass');
+  const [isAddingItem, setIsAddingItem] = useState(false);
 
   // Pricing
   const [pricingData, setPricingData] = useState<ProductPricingData>({
@@ -50,7 +51,7 @@ export function ActivateWithCompositionDialog({
       open,
       productTemplateId,
       activeTab,
-      isAddingItem: false, // sobrescrito abaixo via useEffect-free composition
+      isAddingItem,
     });
 
   // Editor de componentes (form + add/edit/remove)
@@ -58,26 +59,18 @@ export function ActivateWithCompositionDialog({
     setLocalItems,
     availableItems,
     activeTab,
+    isAddingItem,
+    setIsAddingItem,
   });
-
-  // Re-disparar query de availableItems quando abrir add: o hook acima depende
-  // de isAddingItem; aqui chamamos novamente quando o estado muda
-  const { availableItems: availableItemsForAdd } = useActivationData({
-    open,
-    productTemplateId,
-    activeTab,
-    isAddingItem: editor.isAddingItem,
-  });
-  const effectiveAvailableItems = availableItemsForAdd ?? availableItems;
 
   const filteredAvailableItems = useMemo(() => {
-    if (!effectiveAvailableItems) return [];
-    if (!editor.searchTerm) return effectiveAvailableItems;
+    if (!availableItems) return [];
+    if (!editor.searchTerm) return availableItems;
     const q = editor.searchTerm.toLowerCase();
-    return effectiveAvailableItems.filter(
+    return availableItems.filter(
       i => i.name.toLowerCase().includes(q) || i.linha?.toLowerCase().includes(q)
     );
-  }, [effectiveAvailableItems, editor.searchTerm]);
+  }, [availableItems, editor.searchTerm]);
 
   const hasGlassComponents = useMemo(
     () => localItems.some(i => i.item_template?.type === 'glass'),
