@@ -468,6 +468,18 @@ export default function ProdutosLinha() {
                           Composição OK
                         </Badge>
                       )}
+                      {lowStockStatus === 'zero' && (
+                        <Badge variant="destructive" className="text-[10px] mt-1 ml-1 gap-1">
+                          <AlertTriangle className="w-3 h-3" />
+                          Material sem estoque
+                        </Badge>
+                      )}
+                      {lowStockStatus === 'low' && (
+                        <Badge variant="outline" className="text-[10px] mt-1 ml-1 border-amber-500 text-amber-700 dark:text-amber-400 gap-1">
+                          <AlertTriangle className="w-3 h-3" />
+                          Estoque baixo
+                        </Badge>
+                      )}
                     </div>
                   </div>
 
