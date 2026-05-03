@@ -45,14 +45,14 @@ export function useProductLowStockStatus(companyId: string | undefined) {
   // 3) Company-specific composition rows
   const companyCompQuery = useQuery({
     queryKey: ['company-composition-index', companyId],
-    queryFn: async () => {
+    queryFn: async (): Promise<Array<{ company_product_id: string | null; item_template_id: string | null; company_item_id: string | null }>> => {
       if (!companyId) return [];
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('company_product_items')
         .select('company_product_id, item_template_id, company_item_id')
         .eq('company_id', companyId);
       if (error) throw error;
-      return data || [];
+      return (data || []) as any;
     },
     enabled: !!companyId,
     staleTime: 0,
