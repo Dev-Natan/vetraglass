@@ -72,6 +72,7 @@ export default function ProdutosLinha() {
   const [selectedProductForPricing, setSelectedProductForPricing] = useState<{ id: string; name: string; image_url?: string | null } | null>(null);
 
   const currentLinha = linhaParam ? decodeURIComponent(linhaParam) : '';
+  const { getStatus: getLowStockStatus } = useProductLowStockStatus(currentCompany?.id);
 
   // Fetch ALL product templates for this linha (active templates only - global status)
   const { data: products, isLoading } = useQuery({
