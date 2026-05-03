@@ -71,10 +71,19 @@ export const StockItemCard = memo(function StockItemCard({
   showActivateBtn = true,
 }: StockItemCardProps) {
   const qtyDisplay = formatQuantityDisplay(item);
+  const minQty = item.min_quantity ?? 0;
+  const isZeroStock = item.quantity <= 0;
+  const isLowStock = !isZeroStock && minQty > 0 && item.quantity <= minQty;
+
+  const borderClass = isZeroStock
+    ? 'border-destructive/60 bg-destructive/5'
+    : isLowStock
+      ? 'border-amber-500/60 bg-amber-50/50 dark:bg-amber-950/20'
+      : '';
 
   return (
     <div
-      className={`flex items-center justify-between gap-3 p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer ${
+      className={`flex items-center justify-between gap-3 p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer ${borderClass} ${
         item.is_active === false ? 'opacity-60' : ''
       }`}
       onClick={() => onEdit(item)}
