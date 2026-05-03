@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Package, MapPin, DollarSign, Power, Scissors, Sparkles, Clock } from 'lucide-react';
+import { Package, MapPin, DollarSign, Power, Scissors, Sparkles, Clock, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
@@ -71,10 +71,19 @@ export const StockItemCard = memo(function StockItemCard({
   showActivateBtn = true,
 }: StockItemCardProps) {
   const qtyDisplay = formatQuantityDisplay(item);
+  const minQty = item.min_quantity ?? 0;
+  const isZeroStock = item.quantity <= 0;
+  const isLowStock = !isZeroStock && minQty > 0 && item.quantity <= minQty;
+
+  const borderClass = isZeroStock
+    ? 'border-destructive/60 bg-destructive/5'
+    : isLowStock
+      ? 'border-amber-500/60 bg-amber-50/50 dark:bg-amber-950/20'
+      : '';
 
   return (
     <div
-      className={`flex items-center justify-between gap-3 p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer ${
+      className={`flex items-center justify-between gap-3 p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer ${borderClass} ${
         item.is_active === false ? 'opacity-60' : ''
       }`}
       onClick={() => onEdit(item)}
@@ -112,6 +121,18 @@ export const StockItemCard = memo(function StockItemCard({
                 <Scissors className="w-3 h-3" />
                 Fracionado
               </span>
+            )}
+            {isZeroStock && (
+              <Badge variant="destructive" className="text-xs shrink-0 gap-1">
+                <AlertTriangle className="w-3 h-3" />
+                Sem estoque
+              </Badge>
+            )}
+            {isLowStock && (
+              <Badge variant="outline" className="text-xs shrink-0 gap-1 border-amber-500 text-amber-700 dark:text-amber-400">
+                <AlertTriangle className="w-3 h-3" />
+                Estoque baixo
+              </Badge>
             )}
           </div>
           {item.location && (
@@ -160,7 +181,7 @@ export const StockItemCard = memo(function StockItemCard({
 
       <div className="flex items-center gap-3">
         <div className="text-right">
-          <p className="font-semibold text-lg whitespace-nowrap">
+          <p className={`font-semibold text-lg whitespace-nowrap ${isZeroStock ? 'text-destructive' : isLowStock ? 'text-amber-600 dark:text-amber-400' : ''}`}>
             {qtyDisplay.primary}
           </p>
           {qtyDisplay.detail && (
@@ -168,8 +189,10 @@ export const StockItemCard = memo(function StockItemCard({
               {qtyDisplay.detail}
             </p>
           )}
-          {(item.min_quantity ?? 0) > 0 && (
-            <p className="text-xs text-muted-foreground">Mín: {item.min_quantity}</p>
+          {minQty > 0 && (
+            <p className={`text-xs ${isLowStock || isZeroStock ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-muted-foreground'}`}>
+              Mín: {item.min_quantity}
+            </p>
           )}
         </div>
 

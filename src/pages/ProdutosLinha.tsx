@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { ArrowLeft, Search, Trash2, Download, Percent, Plus, Filter, Check, ShoppingCart, Sparkles, DollarSign } from 'lucide-react';
+import { ArrowLeft, Search, Trash2, Download, Percent, Plus, Filter, Check, ShoppingCart, Sparkles, DollarSign, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +16,7 @@ import { CreateCustomProductDialog } from '@/components/produtos/CreateCustomPro
 
 import { EditProductPricingDialog } from '@/components/produtos/EditProductPricingDialog';
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
+import { useProductLowStockStatus } from '@/hooks/useProductLowStockStatus';
 
 type ProductTemplate = {
   id: string;
@@ -71,6 +72,7 @@ export default function ProdutosLinha() {
   const [selectedProductForPricing, setSelectedProductForPricing] = useState<{ id: string; name: string; image_url?: string | null } | null>(null);
 
   const currentLinha = linhaParam ? decodeURIComponent(linhaParam) : '';
+  const { getStatus: getLowStockStatus } = useProductLowStockStatus(currentCompany?.id);
 
   // Fetch ALL product templates for this linha (active templates only - global status)
   const { data: products, isLoading } = useQuery({
@@ -424,10 +426,14 @@ export default function ProdutosLinha() {
             </div>
           ) : filteredProducts && filteredProducts.length > 0 ? (
             filteredProducts.map((product) => {
+              const lowStockStatus = getLowStockStatus(product.productTemplateId, product.companyProductId);
               return (
                 <div
                   key={product.id}
-                  className="bg-card border rounded-lg p-3 space-y-3"
+                  className={`bg-card border rounded-lg p-3 space-y-3 ${
+                    lowStockStatus === 'zero' ? 'border-destructive/60 bg-destructive/5' :
+                    lowStockStatus === 'low' ? 'border-amber-500/60 bg-amber-50/40 dark:bg-amber-950/20' : ''
+                  }`}
                 >
                   {/* Product header */}
                   <div className="flex items-center gap-3 relative">
@@ -460,6 +466,18 @@ export default function ProdutosLinha() {
                         <Badge variant="secondary" className="text-[10px] mt-1 bg-green-100 text-green-700 border-green-200">
                           <Check className="w-3 h-3 mr-1" />
                           Composição OK
+                        </Badge>
+                      )}
+                      {lowStockStatus === 'zero' && (
+                        <Badge variant="destructive" className="text-[10px] mt-1 ml-1 gap-1">
+                          <AlertTriangle className="w-3 h-3" />
+                          Material sem estoque
+                        </Badge>
+                      )}
+                      {lowStockStatus === 'low' && (
+                        <Badge variant="outline" className="text-[10px] mt-1 ml-1 border-amber-500 text-amber-700 dark:text-amber-400 gap-1">
+                          <AlertTriangle className="w-3 h-3" />
+                          Estoque baixo
                         </Badge>
                       )}
                     </div>
@@ -597,10 +615,14 @@ export default function ProdutosLinha() {
           ) : filteredProducts && filteredProducts.length > 0 ? (
             <div className="divide-y">
               {filteredProducts.map((product) => {
+                const lowStockStatus = getLowStockStatus(product.productTemplateId, product.companyProductId);
                 return (
                 <div
                   key={product.id}
-                  className="grid grid-cols-12 gap-4 p-4 items-center hover:bg-muted/20 transition-colors"
+                  className={`grid grid-cols-12 gap-4 p-4 items-center hover:bg-muted/20 transition-colors ${
+                    lowStockStatus === 'zero' ? 'bg-destructive/5 border-l-4 border-l-destructive' :
+                    lowStockStatus === 'low' ? 'bg-amber-50/40 dark:bg-amber-950/20 border-l-4 border-l-amber-500' : ''
+                  }`}
                 >
                   {/* Product info */}
                   <div className="col-span-5 flex items-center gap-3">
@@ -633,6 +655,18 @@ export default function ProdutosLinha() {
                         <Badge variant="secondary" className="w-fit text-[10px] mt-0.5 bg-green-100 text-green-700 border-green-200">
                           <Check className="w-3 h-3 mr-1" />
                           Composição OK
+                        </Badge>
+                      )}
+                      {lowStockStatus === 'zero' && (
+                        <Badge variant="destructive" className="w-fit text-[10px] mt-0.5 gap-1">
+                          <AlertTriangle className="w-3 h-3" />
+                          Material sem estoque
+                        </Badge>
+                      )}
+                      {lowStockStatus === 'low' && (
+                        <Badge variant="outline" className="w-fit text-[10px] mt-0.5 border-amber-500 text-amber-700 dark:text-amber-400 gap-1">
+                          <AlertTriangle className="w-3 h-3" />
+                          Estoque baixo
                         </Badge>
                       )}
                     </div>
