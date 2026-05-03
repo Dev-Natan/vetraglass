@@ -426,10 +426,14 @@ export default function ProdutosLinha() {
             </div>
           ) : filteredProducts && filteredProducts.length > 0 ? (
             filteredProducts.map((product) => {
+              const lowStockStatus = getLowStockStatus(product.productTemplateId, product.companyProductId);
               return (
                 <div
                   key={product.id}
-                  className="bg-card border rounded-lg p-3 space-y-3"
+                  className={`bg-card border rounded-lg p-3 space-y-3 ${
+                    lowStockStatus === 'zero' ? 'border-destructive/60 bg-destructive/5' :
+                    lowStockStatus === 'low' ? 'border-amber-500/60 bg-amber-50/40 dark:bg-amber-950/20' : ''
+                  }`}
                 >
                   {/* Product header */}
                   <div className="flex items-center gap-3 relative">
