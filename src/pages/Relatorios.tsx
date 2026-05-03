@@ -23,7 +23,8 @@ import {
   Download,
   BarChart3,
   PieChart,
-  Activity
+  Activity,
+  AlertTriangle
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -31,6 +32,7 @@ import { RevenueChart } from '@/components/relatorios/RevenueChart';
 import { PaymentMethodsChart } from '@/components/relatorios/PaymentMethodsChart';
 import { SalesEvolutionChart } from '@/components/relatorios/SalesEvolutionChart';
 import { TopProductsChart } from '@/components/relatorios/TopProductsChart';
+import { StockSalesReport } from '@/components/relatorios/StockSalesReport';
 
 type PeriodFilter = 'current_month' | 'last_month' | 'last_3_months' | 'last_6_months' | 'current_year' | 'last_year';
 
@@ -400,7 +402,7 @@ export default function Relatorios() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-6">
+          <TabsList className="grid w-full grid-cols-5 mb-6">
             <TabsTrigger value="geral" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               <span className="hidden sm:inline">Geral</span>
@@ -416,6 +418,10 @@ export default function Relatorios() {
             <TabsTrigger value="pagamentos" className="flex items-center gap-2">
               <PieChart className="h-4 w-4" />
               <span className="hidden sm:inline">Pagamentos</span>
+            </TabsTrigger>
+            <TabsTrigger value="estoque" className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" />
+              <span className="hidden sm:inline">Estoque & Vendas</span>
             </TabsTrigger>
           </TabsList>
 
@@ -630,6 +636,15 @@ export default function Relatorios() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Tab: Estoque & Vendas */}
+          <TabsContent value="estoque" className="space-y-4">
+            <StockSalesReport
+              companyId={currentCompany?.id}
+              sales={sales || []}
+              isLoading={salesLoading}
+            />
           </TabsContent>
         </Tabs>
       </div>
