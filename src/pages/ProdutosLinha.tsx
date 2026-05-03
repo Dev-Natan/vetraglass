@@ -16,6 +16,7 @@ import { CreateCustomProductDialog } from '@/components/produtos/CreateCustomPro
 
 import { EditProductPricingDialog } from '@/components/produtos/EditProductPricingDialog';
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
+import { useProductLowStockStatus } from '@/hooks/useProductLowStockStatus';
 
 type ProductTemplate = {
   id: string;
