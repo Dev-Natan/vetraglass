@@ -637,6 +637,15 @@ export default function Relatorios() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Tab: Estoque & Vendas */}
+          <TabsContent value="estoque" className="space-y-4">
+            <StockSalesReport
+              companyId={currentCompany?.id}
+              sales={sales || []}
+              isLoading={salesLoading}
+            />
+          </TabsContent>
         </Tabs>
       </div>
     </MainLayout>
