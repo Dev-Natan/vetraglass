@@ -181,7 +181,7 @@ export const StockItemCard = memo(function StockItemCard({
 
       <div className="flex items-center gap-3">
         <div className="text-right">
-          <p className="font-semibold text-lg whitespace-nowrap">
+          <p className={`font-semibold text-lg whitespace-nowrap ${isZeroStock ? 'text-destructive' : isLowStock ? 'text-amber-600 dark:text-amber-400' : ''}`}>
             {qtyDisplay.primary}
           </p>
           {qtyDisplay.detail && (
@@ -189,8 +189,10 @@ export const StockItemCard = memo(function StockItemCard({
               {qtyDisplay.detail}
             </p>
           )}
-          {(item.min_quantity ?? 0) > 0 && (
-            <p className="text-xs text-muted-foreground">Mín: {item.min_quantity}</p>
+          {minQty > 0 && (
+            <p className={`text-xs ${isLowStock || isZeroStock ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-muted-foreground'}`}>
+              Mín: {item.min_quantity}
+            </p>
           )}
         </div>
 
