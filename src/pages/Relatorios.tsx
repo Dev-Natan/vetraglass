@@ -23,7 +23,8 @@ import {
   Download,
   BarChart3,
   PieChart,
-  Activity
+  Activity,
+  AlertTriangle
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
