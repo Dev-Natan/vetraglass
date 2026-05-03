@@ -29,6 +29,7 @@ import { SupportSidebar } from '@/components/support/SupportSidebar';
 import { useSupportTickets } from '@/hooks/useSupportTickets';
 import { usePermissions, Module } from '@/hooks/usePermissions';
 import { useEnabledModulesMap } from '@/hooks/useModuleSettings';
+import { CompanySwitcher } from '@/components/layout/CompanySwitcher';
 
 // MenuItem interface moved below imports
 
