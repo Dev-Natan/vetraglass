@@ -31,6 +31,7 @@ import { RevenueChart } from '@/components/relatorios/RevenueChart';
 import { PaymentMethodsChart } from '@/components/relatorios/PaymentMethodsChart';
 import { SalesEvolutionChart } from '@/components/relatorios/SalesEvolutionChart';
 import { TopProductsChart } from '@/components/relatorios/TopProductsChart';
+import { StockSalesReport } from '@/components/relatorios/StockSalesReport';
 
 type PeriodFilter = 'current_month' | 'last_month' | 'last_3_months' | 'last_6_months' | 'current_year' | 'last_year';
 
