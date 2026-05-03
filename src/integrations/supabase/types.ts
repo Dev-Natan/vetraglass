@@ -1322,6 +1322,42 @@ export type Database = {
           },
         ]
       }
+      company_member_audit: {
+        Row: {
+          action: string
+          actor_user_id: string | null
+          company_id: string
+          created_at: string
+          id: string
+          metadata: Json
+          new_role: string | null
+          old_role: string | null
+          target_user_id: string
+        }
+        Insert: {
+          action: string
+          actor_user_id?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          new_role?: string | null
+          old_role?: string | null
+          target_user_id: string
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          new_role?: string | null
+          old_role?: string | null
+          target_user_id?: string
+        }
+        Relationships: []
+      }
       company_notification_settings: {
         Row: {
           company_id: string
@@ -2127,6 +2163,13 @@ export type Database = {
             foreignKeyName: "employee_commissions_employee_id_fkey"
             columns: ["employee_id"]
             isOneToOne: false
+            referencedRelation: "company_members_view"
+            referencedColumns: ["employee_id"]
+          },
+          {
+            foreignKeyName: "employee_commissions_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
             referencedRelation: "employees"
             referencedColumns: ["id"]
           },
@@ -2202,6 +2245,13 @@ export type Database = {
             foreignKeyName: "employee_invites_employee_id_fkey"
             columns: ["employee_id"]
             isOneToOne: false
+            referencedRelation: "company_members_view"
+            referencedColumns: ["employee_id"]
+          },
+          {
+            foreignKeyName: "employee_invites_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
             referencedRelation: "employees"
             referencedColumns: ["id"]
           },
@@ -2237,6 +2287,13 @@ export type Database = {
           permission_profile_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "employee_permission_profiles_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "company_members_view"
+            referencedColumns: ["employee_id"]
+          },
           {
             foreignKeyName: "employee_permission_profiles_employee_id_fkey"
             columns: ["employee_id"]
@@ -2423,6 +2480,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies_safe"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "company_members_view"
+            referencedColumns: ["employee_id"]
           },
           {
             foreignKeyName: "expenses_employee_id_fkey"
@@ -6654,6 +6718,48 @@ export type Database = {
         }
         Relationships: []
       }
+      company_members_view: {
+        Row: {
+          avatar_url: string | null
+          company_id: string | null
+          employee_email: string | null
+          employee_id: string | null
+          employee_name: string | null
+          employee_phone: string | null
+          employee_photo_url: string | null
+          employee_specialty: string | null
+          is_active: boolean | null
+          joined_at: string | null
+          permission_profile_id: string | null
+          profile_name: string | null
+          role: Database["public"]["Enums"]["app_role"] | null
+          user_company_id: string | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employees_permission_profile_id_fkey"
+            columns: ["permission_profile_id"]
+            isOneToOne: false
+            referencedRelation: "permission_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_companies_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_companies_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees_safe: {
         Row: {
           commission_enabled: boolean | null
@@ -7107,6 +7213,14 @@ export type Database = {
         Args: { _ordem_servico_id: string }
         Returns: number
       }
+      change_company_member_role: {
+        Args: {
+          _company_id: string
+          _new_role: Database["public"]["Enums"]["app_role"]
+          _target_user_id: string
+        }
+        Returns: Json
+      }
       check_employee_username_exists: {
         Args: { p_username: string }
         Returns: boolean
@@ -7248,6 +7362,10 @@ export type Database = {
         Args: { _company_id: string }
         Returns: undefined
       }
+      deactivate_company_member: {
+        Args: { _company_id: string; _target_user_id: string }
+        Returns: Json
+      }
       generate_next_recurring_expense: {
         Args: { expense_id: string }
         Returns: string
@@ -7386,6 +7504,10 @@ export type Database = {
         Args: { _company_id: string; _opening_amount: number; _user_id: string }
         Returns: Json
       }
+      reactivate_company_member: {
+        Args: { _company_id: string; _target_user_id: string }
+        Returns: Json
+      }
       record_login_attempt: {
         Args: {
           _email: string
@@ -7474,6 +7596,10 @@ export type Database = {
       }
       submit_cash_closing_for_audit: {
         Args: { _cash_register_id: string; _counts: Json; _notes?: string }
+        Returns: Json
+      }
+      transfer_company_ownership: {
+        Args: { _company_id: string; _new_admin_user_id: string }
         Returns: Json
       }
       update_overdue_receivables: { Args: never; Returns: undefined }
