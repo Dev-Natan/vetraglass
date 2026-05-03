@@ -6,6 +6,8 @@ interface UseComponentEditorParams {
   setLocalItems: React.Dispatch<React.SetStateAction<ComponentItem[]>>;
   availableItems: ItemTemplate[] | undefined;
   activeTab: string;
+  isAddingItem: boolean;
+  setIsAddingItem: (v: boolean) => void;
 }
 
 /**
@@ -17,8 +19,9 @@ export function useComponentEditor({
   setLocalItems,
   availableItems,
   activeTab,
+  isAddingItem,
+  setIsAddingItem,
 }: UseComponentEditorParams) {
-  const [isAddingItem, setIsAddingItem] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
