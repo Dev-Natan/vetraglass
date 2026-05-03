@@ -122,6 +122,18 @@ export const StockItemCard = memo(function StockItemCard({
                 Fracionado
               </span>
             )}
+            {isZeroStock && (
+              <Badge variant="destructive" className="text-xs shrink-0 gap-1">
+                <AlertTriangle className="w-3 h-3" />
+                Sem estoque
+              </Badge>
+            )}
+            {isLowStock && (
+              <Badge variant="outline" className="text-xs shrink-0 gap-1 border-amber-500 text-amber-700 dark:text-amber-400">
+                <AlertTriangle className="w-3 h-3" />
+                Estoque baixo
+              </Badge>
+            )}
           </div>
           {item.location && (
             <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
