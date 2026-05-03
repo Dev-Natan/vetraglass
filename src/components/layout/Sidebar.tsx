@@ -29,6 +29,7 @@ import { SupportSidebar } from '@/components/support/SupportSidebar';
 import { useSupportTickets } from '@/hooks/useSupportTickets';
 import { usePermissions, Module } from '@/hooks/usePermissions';
 import { useEnabledModulesMap } from '@/hooks/useModuleSettings';
+import { CompanySwitcher } from '@/components/layout/CompanySwitcher';
 
 // MenuItem interface moved below imports
 
@@ -181,6 +182,11 @@ export function Sidebar() {
               )}
             </Button>
           </div>
+        </div>
+
+        {/* Company Switcher */}
+        <div className="px-4 pt-3">
+          <CompanySwitcher className="w-full justify-start bg-white/5 border-white/10 text-sidebar-foreground hover:bg-white/10" />
         </div>
 
         {/* Navigation */}
