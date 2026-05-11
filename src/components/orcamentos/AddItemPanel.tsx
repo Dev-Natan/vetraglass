@@ -321,6 +321,7 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
         image_url: selectedItem.image_url,
         linha: selectedItem.linha,
         type: selectedItem.type,
+        notes: notes.trim() || undefined,
       });
 
       toast.success('Item adicionado ao catálogo da empresa automaticamente');
