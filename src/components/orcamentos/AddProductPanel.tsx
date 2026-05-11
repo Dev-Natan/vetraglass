@@ -80,6 +80,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   const [selectedGlassThickness, setSelectedGlassThickness] = useState<string>('');
   const [selectedGlassColor, setSelectedGlassColor] = useState<string>('');
   const [selectedAluminumColor, setSelectedAluminumColor] = useState<string>('');
+  const [customAluminumColor, setCustomAluminumColor] = useState<string>('');
   const [hasAcabamento, setHasAcabamento] = useState<boolean>(true);
   const [excludedOptionalIds, setExcludedOptionalIds] = useState<string[]>([]);
   const [notes, setNotes] = useState<string>('');
