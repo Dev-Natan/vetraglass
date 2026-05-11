@@ -103,13 +103,21 @@ function inferJsPdfImageFormat(dataUrl: string): JsPdfImageFormat {
   return 'JPEG';
 }
 
+export interface QuotePdfOptions {
+  showMeasuresColumn?: boolean;
+  showM2Column?: boolean;
+}
+
 export async function generateQuotePdf(
   quote: Quote, 
   items: QuoteItem[], 
   company: Company | null, 
   mode: 'download' | 'print' = 'download',
-  paymentSettings?: PaymentSettings | null
+  paymentSettings?: PaymentSettings | null,
+  options: QuotePdfOptions = {}
 ) {
+  const showMeasuresColumn = options.showMeasuresColumn !== false;
+  const showM2Column = options.showM2Column !== false;
   // Preload all images in parallel before generating PDF
   const imageUrls = collectQuoteImageUrls(items, company?.logo_url);
   await preloadImages(imageUrls);
