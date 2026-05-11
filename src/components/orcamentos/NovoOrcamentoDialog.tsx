@@ -315,6 +315,12 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
                 <FinalizeStep
                   form={form}
                   finalAmount={totals.finalAmount}
+                  itemsCount={items.length}
+                  customerName={form.watch('customer_name') || ''}
+                  showMedidasColumn={showMedidasColumn}
+                  showM2Column={showM2Column}
+                  onToggleMedidas={setShowMedidasColumn}
+                  onToggleM2={setShowM2Column}
                   formatCurrency={formatCurrency}
                 />
               )}
