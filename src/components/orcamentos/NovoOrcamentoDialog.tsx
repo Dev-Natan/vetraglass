@@ -131,6 +131,8 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
     items,
     totals,
     discountPercent,
+    showMeasuresColumn: showMedidasColumn,
+    showM2Column,
     onClose: () => onOpenChange(false),
   });
 
