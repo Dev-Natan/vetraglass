@@ -61,6 +61,8 @@ export interface Quote {
   payment_terms?: string | null;
   notes?: string | null;
   valid_until: string | null;
+  show_measures_column?: boolean | null;
+  show_m2_column?: boolean | null;
 }
 
 export interface NovoOrcamentoDialogProps {
