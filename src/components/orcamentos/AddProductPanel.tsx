@@ -72,13 +72,15 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   const [vaoHeight, setVaoHeight] = useState<number>(0);
   const [folgaWidth, setFolgaWidth] = useState<number>(0);
   const [folgaHeight, setFolgaHeight] = useState<number>(0);
-  const [useVao, setUseVao] = useState<boolean>(true);
+  const [useVao, setUseVao] = useState<boolean>(false);
   const [quantity, setQuantity] = useState<number>(1);
   const [customPrice, setCustomPrice] = useState<number | null>(null);
   const [hasGlass, setHasGlass] = useState<boolean>(true);
   const [selectedGlassPriceId, setSelectedGlassPriceId] = useState<string>('');
+  const [selectedGlassThickness, setSelectedGlassThickness] = useState<string>('');
+  const [selectedGlassColor, setSelectedGlassColor] = useState<string>('');
   const [selectedAluminumColor, setSelectedAluminumColor] = useState<string>('');
-  const [hasAcabamento, setHasAcabamento] = useState<boolean>(false);
+  const [hasAcabamento, setHasAcabamento] = useState<boolean>(true);
   const [excludedOptionalIds, setExcludedOptionalIds] = useState<string[]>([]);
   const [notes, setNotes] = useState<string>('');
 
@@ -219,12 +221,41 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   );
   const hasAluminumPrices = (aluminumPriceOptions?.length || 0) > 0;
 
-  // Set default glass price when product changes
+  // Unique glass thicknesses and colors derived from the product's glass price catalog
+  const glassThicknessOptions = useMemo(() => {
+    const set = new Set<number>();
+    productGlassPrices?.forEach(gp => set.add(gp.thickness_mm));
+    return Array.from(set).sort((a, b) => a - b);
+  }, [productGlassPrices]);
+
+  const glassColorOptions = useMemo(() => {
+    const set = new Set<string>();
+    productGlassPrices
+      ?.filter(gp => !selectedGlassThickness || String(gp.thickness_mm) === selectedGlassThickness)
+      .forEach(gp => set.add(gp.glass_color));
+    return Array.from(set).sort();
+  }, [productGlassPrices, selectedGlassThickness]);
+
+  // Set defaults when product changes
   useEffect(() => {
     if (productGlassPrices?.length && !selectedGlassPriceId) {
-      setSelectedGlassPriceId(productGlassPrices[0].id);
+      const first = productGlassPrices[0];
+      setSelectedGlassPriceId(first.id);
+      setSelectedGlassThickness(String(first.thickness_mm));
+      setSelectedGlassColor(first.glass_color);
     }
   }, [productGlassPrices, selectedGlassPriceId]);
+
+  // Sync selectedGlassPriceId whenever thickness/color change
+  useEffect(() => {
+    if (!selectedGlassThickness || !selectedGlassColor) return;
+    const match = productGlassPrices?.find(
+      gp => String(gp.thickness_mm) === selectedGlassThickness && gp.glass_color === selectedGlassColor
+    );
+    if (match && match.id !== selectedGlassPriceId) {
+      setSelectedGlassPriceId(match.id);
+    }
+  }, [selectedGlassThickness, selectedGlassColor, productGlassPrices, selectedGlassPriceId]);
 
   // Set default aluminum color when product changes (for aluminum-priced products)
   useEffect(() => {
@@ -306,6 +337,8 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     setSelectedProductId(productId);
     setCustomPrice(null);
     setSelectedGlassPriceId('');
+    setSelectedGlassThickness('');
+    setSelectedGlassColor('');
     setSelectedAluminumColor('');
     // Auto-enable glass for Temperado line products
     const product = filteredProducts?.find(p => p.id === productId);
@@ -530,10 +563,10 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
 
       {/* Fixed Bottom - Dimensions & Pricing */}
       <div className="shrink-0 space-y-4 pt-4 border-t">
-        {/* Selected Product Preview */}
+        {/* Selected Product Header Card (matches reference) */}
         {selectedProduct && (
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/20">
-            <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/40 border">
+            <div className="w-14 h-14 rounded-lg bg-background flex items-center justify-center shrink-0 overflow-hidden border">
               {getProductImage(selectedProduct.image_url) ? (
                 <img
                   src={getProductImage(selectedProduct.image_url)!}
@@ -545,318 +578,50 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm truncate">{selectedProduct.name}</p>
-              <p className="text-xs text-muted-foreground">
-                {selectedProduct.linha} • {categoryLabels[selectedProduct.category] || selectedProduct.category}
-              </p>
-            </div>
-            <Badge variant="secondary" className="shrink-0">
-              {formatCurrency(basePrice)}/m²
-            </Badge>
-          </div>
-        )}
-
-        {/* Glass Options - Only show if product uses glass */}
-        {productUsesGlass && (
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                <GlassWater className="w-3 h-3" />
-                Vidro:
-              </label>
-              <div className="flex gap-2">
-                <Badge
-                  variant={hasGlass ? 'default' : 'outline'}
-                  className="cursor-pointer h-8 px-4"
-                  onClick={() => setHasGlass(true)}
-                >
-                  Com Vidro
-                </Badge>
-                <Badge
-                  variant={!hasGlass ? 'default' : 'outline'}
-                  className={cn(
-                    "cursor-pointer h-8 px-4",
-                    isTemperadoLine && "opacity-50 cursor-not-allowed"
-                  )}
-                  onClick={() => !isTemperadoLine && setHasGlass(false)}
-                  title={isTemperadoLine ? "Produtos da linha Temperado sempre incluem vidro" : undefined}
-                >
-                  Sem Vidro
-                </Badge>
-                {isTemperadoLine && (
-                  <span className="text-xs text-muted-foreground italic ml-2">
-                    (Linha Temperado sempre inclui vidro)
+              <p className="font-semibold text-sm leading-tight truncate">{selectedProduct.name}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {categoryLabels[selectedProduct.category] || selectedProduct.category}
+                {companyProduct?.id && (
+                  <span className="ml-1 font-mono">
+                    · #{String(companyProduct.id).slice(0, 8).toUpperCase()}
                   </span>
                 )}
-              </div>
+              </p>
             </div>
-            
-            {hasGlass && (
-              <div className="space-y-3">
-                {/* Glass Type + Thickness Selector - From product's glass prices */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Tipo e Espessura do Vidro</label>
-                  {hasGlassPrices ? (
-                    <Select value={selectedGlassPriceId} onValueChange={setSelectedGlassPriceId}>
-                      <SelectTrigger className="bg-background h-10">
-                        <SelectValue placeholder="Selecione o vidro..." />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover border shadow-lg z-50">
-                        {productGlassPrices?.map((gp) => (
-                          <SelectItem key={gp.id} value={gp.id}>
-                            <div className="flex items-center justify-between gap-4 w-full">
-                              <span>{gp.glass_type} {gp.glass_color} {gp.thickness_mm}mm</span>
-                              <span className="text-muted-foreground text-xs">
-                                {formatCurrency(gp.price_per_sqm)}/m²
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-warning/10 border border-warning/30">
-                      <Info className="w-4 h-4 text-warning shrink-0" />
-                      <span className="text-xs text-foreground">
-                        Nenhum preço de vidro cadastrado para este produto. Configure em Produtos → Preços.
-                      </span>
-                    </div>
-                  )}
-                </div>
-                
-                {/* Glass Price Info */}
-                {hasGlass && productUsesGlass && glassPricePerSqm > 0 && (
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-accent border border-primary/20">
-                    <GlassWater className="w-4 h-4 text-primary" />
-                    <span className="text-xs text-foreground">
-                      Preço definido pelo vidro {selectedGlassPrice?.glass_color} {selectedGlassPrice?.thickness_mm}mm: 
-                      <strong className="ml-1">{formatCurrency(glassPricePerSqm)}/m²</strong>
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         )}
 
-        {/* Acabamento (Finishing) Toggle + Color Selector */}
+        {/* Largura, Altura, Quantidade */}
         {selectedProduct && (
-          <div className="space-y-3">
-            {/* For aluminum-priced products, acabamento is mandatory (it's the aluminum color itself) */}
-            {!productUsesAluminum && (
-              <div className="flex items-center gap-3">
-                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                  <Palette className="w-3 h-3" />
-                  Acabamento:
-                </label>
-                <div className="flex gap-2">
-                  <Badge
-                    variant={hasAcabamento ? 'default' : 'outline'}
-                    className="cursor-pointer h-8 px-4"
-                    onClick={() => setHasAcabamento(true)}
-                  >
-                    Com Acabamento
-                  </Badge>
-                  <Badge
-                    variant={!hasAcabamento ? 'default' : 'outline'}
-                    className="cursor-pointer h-8 px-4"
-                    onClick={() => {
-                      setHasAcabamento(false);
-                      setSelectedAluminumColor('');
-                    }}
-                  >
-                    Sem Acabamento
-                  </Badge>
-                </div>
-              </div>
-            )}
-
-            {(hasAcabamento || productUsesAluminum) && (
-              <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                    <Palette className="w-3 h-3" />
-                    {productUsesAluminum ? 'Cor do Alumínio' : 'Cor do Acabamento'}
-                  </label>
-                  {productUsesAluminum && hasAluminumPrices ? (
-                    <Select value={selectedAluminumColor} onValueChange={setSelectedAluminumColor}>
-                      <SelectTrigger className="bg-background h-10">
-                        <SelectValue placeholder="Selecione a cor..." />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover border shadow-lg z-50">
-                        {aluminumPriceOptions?.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            <div className="flex items-center justify-between gap-4 w-full">
-                              <span>{opt.label}</span>
-                              <span className="text-muted-foreground text-xs">
-                                {formatCurrency(opt.pricePerSqm)}/m²
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <Select value={selectedAluminumColor} onValueChange={setSelectedAluminumColor}>
-                      <SelectTrigger className="bg-background h-10">
-                        <SelectValue placeholder="Selecione a cor do acabamento..." />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover border shadow-lg z-50">
-                        {defaultAluminumColors.map((color) => (
-                          <SelectItem key={color} value={color}>
-                            {color}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-
-                {/* Show price info for aluminum-priced products */}
-                {productUsesAluminum && selectedAluminumPriceOption && aluminumPricePerSqm > 0 && (
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-accent border border-primary/20">
-                    <Palette className="w-4 h-4 text-primary" />
-                    <span className="text-xs text-foreground">
-                      Preço para {selectedAluminumPriceOption.colorName}: 
-                      <strong className="ml-1">{formatCurrency(aluminumPricePerSqm)}/m²</strong>
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Optional Items (Contramarco) Toggle */}
-        {selectedProduct && optionalItems.length > 0 && (
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-              <Frame className="w-3 h-3" />
-              Itens Opcionais
-            </label>
-            <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
-              {optionalItems.map((item) => {
-                const isExcluded = excludedOptionalIds.includes(item.id);
-                return (
-                  <div key={item.id} className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Frame className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                      <span className="text-sm truncate">{item.name}</span>
-                    </div>
-                    <Switch
-                      checked={!isExcluded}
-                      onCheckedChange={(checked) => {
-                        setExcludedOptionalIds(prev =>
-                          checked
-                            ? prev.filter(id => id !== item.id)
-                            : [...prev, item.id]
-                        );
-                      }}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Dimensions, Price & Quantity */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-              <Ruler className="w-3.5 h-3.5" />
-              Configuração de Dimensões
-            </label>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-muted-foreground">Usar Vão</span>
-              <Switch checked={useVao} onCheckedChange={setUseVao} />
-            </div>
-          </div>
-
-          {useVao ? (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-muted/30 p-3 rounded-lg border border-dashed">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-medium text-muted-foreground uppercase">Vão Largura (mm)</label>
-                <Input
-                  type="number"
-                  value={vaoWidth || ''}
-                  onChange={(e) => setVaoWidth(Number(e.target.value))}
-                  placeholder="0"
-                  className="bg-background h-10 border-primary/20 focus:border-primary"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-medium text-muted-foreground uppercase">Vão Altura (mm)</label>
-                <Input
-                  type="number"
-                  value={vaoHeight || ''}
-                  onChange={(e) => setVaoHeight(Number(e.target.value))}
-                  placeholder="0"
-                  className="bg-background h-10 border-primary/20 focus:border-primary"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-medium text-muted-foreground uppercase">Folga L (mm)</label>
-                <Input
-                  type="number"
-                  value={folgaWidth || ''}
-                  onChange={(e) => setFolgaWidth(Number(e.target.value))}
-                  placeholder="0"
-                  className="bg-background h-10 border-orange-200"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-medium text-muted-foreground uppercase">Folga A (mm)</label>
-                <Input
-                  type="number"
-                  value={folgaHeight || ''}
-                  onChange={(e) => setFolgaHeight(Number(e.target.value))}
-                  placeholder="0"
-                  className="bg-background h-10 border-orange-200"
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-2 gap-3 bg-muted/30 p-3 rounded-lg border">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-medium text-muted-foreground uppercase">Largura Final (mm)</label>
-                <Input
-                  type="number"
-                  value={width || ''}
-                  onChange={(e) => setWidth(Number(e.target.value))}
-                  placeholder="0"
-                  className="bg-background h-10 font-bold"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-medium text-muted-foreground uppercase">Altura Final (mm)</label>
-                <Input
-                  type="number"
-                  value={height || ''}
-                  onChange={(e) => setHeight(Number(e.target.value))}
-                  placeholder="0"
-                  className="bg-background h-10 font-bold"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Resulting Product Dimensions Info (Visible when using Vão) */}
-          {useVao && (vaoWidth > 0 || vaoHeight > 0) && (
-            <div className="flex items-center justify-between px-3 py-2 bg-primary/5 border border-primary/20 rounded-lg">
-              <span className="text-xs font-medium text-primary flex items-center gap-1.5">
-                <Maximize2 className="w-3.5 h-3.5" />
-                Medida do Produto:
-              </span>
-              <span className="text-sm font-bold text-primary">
-                {width} x {height} mm
-              </span>
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-medium text-muted-foreground uppercase">Qtd</label>
+              <label className="text-xs font-medium text-foreground">
+                Largura (mm) <span className="text-destructive">*</span>
+              </label>
+              <Input
+                type="number"
+                value={width || ''}
+                onChange={(e) => setWidth(Number(e.target.value))}
+                placeholder="1000"
+                className="bg-background h-10"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-foreground">
+                Altura (mm) <span className="text-destructive">*</span>
+              </label>
+              <Input
+                type="number"
+                value={height || ''}
+                onChange={(e) => setHeight(Number(e.target.value))}
+                placeholder="2000"
+                className="bg-background h-10"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-foreground">
+                Quantidade <span className="text-destructive">*</span>
+              </label>
               <Input
                 type="number"
                 value={quantity}
@@ -865,28 +630,104 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                 className="bg-background h-10"
               />
             </div>
+          </div>
+        )}
+
+        {/* Espessura do vidro, Cor do vidro, Cor do perfil */}
+        {selectedProduct && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* Espessura do vidro */}
             <div className="space-y-1.5">
-              <label className="text-[10px] font-medium text-muted-foreground uppercase">Área</label>
-              <div className="h-10 px-3 rounded-md border bg-muted/50 flex items-center justify-center font-medium text-sm">
-                {area.toFixed(2)} m²
-              </div>
+              <label className="text-xs font-medium text-foreground">Espessura do vidro</label>
+              <Select
+                value={selectedGlassThickness}
+                onValueChange={(v) => { setSelectedGlassThickness(v); setHasGlass(true); }}
+                disabled={!productUsesGlass || glassThicknessOptions.length === 0}
+              >
+                <SelectTrigger className="bg-background h-10">
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border shadow-lg z-50">
+                  {glassThicknessOptions.map(t => (
+                    <SelectItem key={t} value={String(t)}>{t}mm</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div className="col-span-2 space-y-1.5">
-              <label className="text-[10px] font-medium text-muted-foreground uppercase flex items-center gap-1">
-                <DollarSign className="w-3 h-3" /> Preço/m²
-              </label>
-              <Input
-                type="number"
-                value={customPrice !== null ? customPrice : finalPricePerSqm || ''}
-                onChange={(e) => setCustomPrice(e.target.value ? Number(e.target.value) : null)}
-                placeholder="0.00"
-                min={0}
-                step="0.01"
-                className="bg-background h-10 font-mono"
-              />
+
+            {/* Cor do vidro */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-foreground">Cor do vidro</label>
+              <Select
+                value={selectedGlassColor}
+                onValueChange={(v) => { setSelectedGlassColor(v); setHasGlass(true); }}
+                disabled={!productUsesGlass || glassColorOptions.length === 0}
+              >
+                <SelectTrigger className="bg-background h-10">
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border shadow-lg z-50">
+                  {glassColorOptions.map(c => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Cor do perfil */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-foreground">Cor do perfil</label>
+              {productUsesAluminum && hasAluminumPrices ? (
+                <Select value={selectedAluminumColor} onValueChange={setSelectedAluminumColor}>
+                  <SelectTrigger className="bg-background h-10">
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border shadow-lg z-50">
+                    {aluminumPriceOptions?.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        <div className="flex items-center justify-between gap-4 w-full">
+                          <span>{opt.label}</span>
+                          <span className="text-muted-foreground text-xs">
+                            {formatCurrency(opt.pricePerSqm)}/m²
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Select value={selectedAluminumColor} onValueChange={setSelectedAluminumColor}>
+                  <SelectTrigger className="bg-background h-10">
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border shadow-lg z-50">
+                    {defaultAluminumColors.map((color) => (
+                      <SelectItem key={color} value={color}>{color}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
-        </div>
+        )}
+
+        {/* Valor R$ / m² */}
+        {selectedProduct && (
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-foreground">
+              Valor R$ / m² <span className="text-destructive">*</span>
+            </label>
+            <Input
+              type="number"
+              value={customPrice !== null ? customPrice : finalPricePerSqm || ''}
+              onChange={(e) => setCustomPrice(e.target.value ? Number(e.target.value) : null)}
+              placeholder="0.00"
+              min={0}
+              step="0.01"
+              className="bg-background h-10 font-mono"
+            />
+          </div>
+        )}
 
 
         {/* Observações */}
