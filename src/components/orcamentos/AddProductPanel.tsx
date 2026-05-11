@@ -72,13 +72,15 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   const [vaoHeight, setVaoHeight] = useState<number>(0);
   const [folgaWidth, setFolgaWidth] = useState<number>(0);
   const [folgaHeight, setFolgaHeight] = useState<number>(0);
-  const [useVao, setUseVao] = useState<boolean>(true);
+  const [useVao, setUseVao] = useState<boolean>(false);
   const [quantity, setQuantity] = useState<number>(1);
   const [customPrice, setCustomPrice] = useState<number | null>(null);
   const [hasGlass, setHasGlass] = useState<boolean>(true);
   const [selectedGlassPriceId, setSelectedGlassPriceId] = useState<string>('');
+  const [selectedGlassThickness, setSelectedGlassThickness] = useState<string>('');
+  const [selectedGlassColor, setSelectedGlassColor] = useState<string>('');
   const [selectedAluminumColor, setSelectedAluminumColor] = useState<string>('');
-  const [hasAcabamento, setHasAcabamento] = useState<boolean>(false);
+  const [hasAcabamento, setHasAcabamento] = useState<boolean>(true);
   const [excludedOptionalIds, setExcludedOptionalIds] = useState<string[]>([]);
   const [notes, setNotes] = useState<string>('');
 
