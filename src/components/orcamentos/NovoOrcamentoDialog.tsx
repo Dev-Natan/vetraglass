@@ -29,7 +29,8 @@ import { useQuoteSubmit } from './_novo-orcamento/hooks/useQuoteSubmit';
 import { StepIndicator, steps } from './_novo-orcamento/parts/StepIndicator';
 import { ClientStep } from './_novo-orcamento/parts/ClientStep';
 import { ProductsStep } from './_novo-orcamento/parts/ProductsStep';
-import { ReviewStep } from './_novo-orcamento/parts/ReviewStep';
+import { SummaryStep } from './_novo-orcamento/parts/SummaryStep';
+import { FinalizeStep } from './_novo-orcamento/parts/FinalizeStep';
 import { AddProductDialog, AddItemDialog } from './_novo-orcamento/parts/AddPanels';
 import { WizardFooter } from './_novo-orcamento/parts/WizardFooter';
 
@@ -216,12 +217,14 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
 
   const handleNext = () => {
     if (currentStep === 'client' && canProceedFromClient) setCurrentStep('products');
-    else if (currentStep === 'products' && canProceedFromProducts) setCurrentStep('review');
+    else if (currentStep === 'products' && canProceedFromProducts) setCurrentStep('summary');
+    else if (currentStep === 'summary') setCurrentStep('finalize');
   };
 
   const handleBack = () => {
     if (currentStep === 'products') setCurrentStep('client');
-    else if (currentStep === 'review') setCurrentStep('products');
+    else if (currentStep === 'summary') setCurrentStep('products');
+    else if (currentStep === 'finalize') setCurrentStep('summary');
   };
 
   if (showAddProduct) {
@@ -248,22 +251,22 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
-        <DialogHeader className="p-6 pb-4 shrink-0 border-b">
-          <DialogTitle className="flex items-center gap-2">
-            <ShoppingCart className="w-5 h-5" />
-            {isEditing ? 'Editar Orçamento' : 'Novo Orçamento'}
-          </DialogTitle>
-          <DialogDescription>
-            {currentStep === 'client' && 'Informe os dados do cliente'}
-            {currentStep === 'products' && 'Adicione os produtos do orçamento'}
-            {currentStep === 'review' && 'Revise e finalize o orçamento'}
-          </DialogDescription>
+      <DialogContent className="max-w-4xl max-h-[92vh] flex flex-col p-0 overflow-hidden gap-0">
+        <DialogHeader className="px-6 pt-6 pb-4 shrink-0 border-b bg-gradient-to-br from-background to-muted/30 space-y-4">
+          <div>
+            <DialogTitle className="flex items-center gap-2 text-2xl font-bold">
+              <ShoppingCart className="w-6 h-6 text-primary" />
+              {isEditing ? 'Editar orçamento' : 'Novo orçamento'}
+            </DialogTitle>
+            <DialogDescription className="text-primary/80 mt-1">
+              Monte sua proposta com cálculo automático.
+            </DialogDescription>
+          </div>
 
           <StepIndicator currentStep={currentStep} onStepChange={setCurrentStep} />
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="flex-1 overflow-y-auto px-6 py-5 bg-muted/20">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               {currentStep === 'client' && (
@@ -287,8 +290,8 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
                 />
               )}
 
-              {currentStep === 'review' && (
-                <ReviewStep
+              {currentStep === 'summary' && (
+                <SummaryStep
                   form={form}
                   items={items}
                   totalAmount={totals.totalAmount}
@@ -297,6 +300,14 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
                   finalAmount={totals.finalAmount}
                   onDiscountChange={setDiscountPercent}
                   onStepChange={setCurrentStep}
+                  formatCurrency={formatCurrency}
+                />
+              )}
+
+              {currentStep === 'finalize' && (
+                <FinalizeStep
+                  form={form}
+                  finalAmount={totals.finalAmount}
                   formatCurrency={formatCurrency}
                 />
               )}
@@ -311,6 +322,9 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
           isPending={createMutation.isPending || updateMutation.isPending}
           canProceedFromClient={canProceedFromClient}
           canProceedFromProducts={canProceedFromProducts}
+          itemsCount={items.length}
+          partialTotal={totals.finalAmount}
+          formatCurrency={formatCurrency}
           onCancel={() => onOpenChange(false)}
           onBack={handleBack}
           onNext={handleNext}
