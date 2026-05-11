@@ -10,10 +10,12 @@ interface SubmitParams {
   items: QuoteItem[];
   totals: { totalAmount: number; discountAmount: number; finalAmount: number };
   discountPercent: number;
+  showMeasuresColumn?: boolean;
+  showM2Column?: boolean;
   onClose: () => void;
 }
 
-export function useQuoteSubmit({ companyId, quote, items, totals, discountPercent, onClose }: SubmitParams) {
+export function useQuoteSubmit({ companyId, quote, items, totals, discountPercent, showMeasuresColumn, showM2Column, onClose }: SubmitParams) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -33,6 +35,8 @@ export function useQuoteSubmit({ companyId, quote, items, totals, discountPercen
     discount_percent: discountPercent,
     discount_amount: totals.discountAmount,
     final_amount: totals.finalAmount,
+    show_measures_column: showMeasuresColumn ?? true,
+    show_m2_column: showM2Column ?? true,
   });
 
   const createMutation = useMutation({
