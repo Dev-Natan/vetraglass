@@ -645,13 +645,12 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
               <Select
                 value={selectedGlassThickness}
                 onValueChange={(v) => { setSelectedGlassThickness(v); setHasGlass(true); }}
-                disabled={!productUsesGlass}
               >
                 <SelectTrigger className="bg-background h-10">
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border shadow-lg z-50">
-                  {['3', '4', '6', '8', '10', '12'].map(t => (
+                  {defaultGlassThicknessOptions.map(t => (
                     <SelectItem key={t} value={t}>{t}mm</SelectItem>
                   ))}
                 </SelectContent>
@@ -664,13 +663,12 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
               <Select
                 value={selectedGlassColor}
                 onValueChange={(v) => { setSelectedGlassColor(v); setHasGlass(true); }}
-                disabled={!productUsesGlass}
               >
                 <SelectTrigger className="bg-background h-10">
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border shadow-lg z-50">
-                  {['Incolor', 'Verde', 'Fumê', 'Bronze', 'Jateado', 'Refletivo'].map(c => (
+                  {defaultGlassColorOptions.map(c => (
                     <SelectItem key={c} value={c}>{c}</SelectItem>
                   ))}
                 </SelectContent>
