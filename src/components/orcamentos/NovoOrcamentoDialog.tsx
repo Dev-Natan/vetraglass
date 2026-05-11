@@ -188,6 +188,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
     type?: string;
     width?: number;
     height?: number;
+    notes?: string;
   }) => {
     addItem({
       company_item_id: item.company_item_id,
@@ -203,6 +204,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
       linha: item.linha,
       category: item.type,
       unit: item.unit,
+      notes: item.notes,
     });
     setShowAddItem(false);
     toast({ title: 'Item adicionado!' });
