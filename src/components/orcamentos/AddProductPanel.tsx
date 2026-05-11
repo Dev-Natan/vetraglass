@@ -80,6 +80,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   const [selectedGlassThickness, setSelectedGlassThickness] = useState<string>('');
   const [selectedGlassColor, setSelectedGlassColor] = useState<string>('');
   const [selectedAluminumColor, setSelectedAluminumColor] = useState<string>('');
+  const [customAluminumColor, setCustomAluminumColor] = useState<string>('');
   const [hasAcabamento, setHasAcabamento] = useState<boolean>(true);
   const [excludedOptionalIds, setExcludedOptionalIds] = useState<string[]>([]);
   const [notes, setNotes] = useState<string>('');
@@ -203,9 +204,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
 
   // Common aluminum finish colors (informational, for non-aluminum-priced products)
   const defaultAluminumColors = [
-    'Branco', 'Preto', 'Bronze', 'Champagne', 'Natural',
-    'Amadeirado Ipê', 'Amadeirado Mogno', 'Amadeirado Carvalho', 'Amadeirado Cedro',
-    'Corten', 'Grafite', 'Marrom', 'Brilhante', 'Fosco',
+    'Branco', 'Preto', 'Bronze', 'Natural Fosco', 'Outros'
   ];
 
   // Get pricing type for the product
@@ -340,6 +339,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     setSelectedGlassThickness('');
     setSelectedGlassColor('');
     setSelectedAluminumColor('');
+    setCustomAluminumColor('');
     // Auto-enable glass for Temperado line products
     const product = filteredProducts?.find(p => p.id === productId);
     if (product?.linha?.toLowerCase().includes('temperado')) {
@@ -356,7 +356,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     // For other products, it comes from the simple selector
     const aluminumColorName = productUsesAluminum 
       ? (selectedAluminumPriceOption?.colorName || '') 
-      : selectedAluminumColor;
+      : (selectedAluminumColor === 'Outros' ? customAluminumColor : selectedAluminumColor);
 
     onAdd({
       product_template_id: selectedProduct.is_custom ? null : selectedProduct.product_template_id,
@@ -648,8 +648,8 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border shadow-lg z-50">
-                  {glassThicknessOptions.map(t => (
-                    <SelectItem key={t} value={String(t)}>{t}mm</SelectItem>
+                  {['3', '4', '6', '8', '10', '12'].map(t => (
+                    <SelectItem key={t} value={t}>{t}mm</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -667,7 +667,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border shadow-lg z-50">
-                  {glassColorOptions.map(c => (
+                  {['Incolor', 'Verde', 'Fumê', 'Bronze', 'Jateado', 'Refletivo'].map(c => (
                     <SelectItem key={c} value={c}>{c}</SelectItem>
                   ))}
                 </SelectContent>
@@ -677,36 +677,48 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
             {/* Cor do perfil */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-foreground">Cor do perfil</label>
-              {productUsesAluminum && hasAluminumPrices ? (
-                <Select value={selectedAluminumColor} onValueChange={setSelectedAluminumColor}>
-                  <SelectTrigger className="bg-background h-10">
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover border shadow-lg z-50">
-                    {aluminumPriceOptions?.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        <div className="flex items-center justify-between gap-4 w-full">
-                          <span>{opt.label}</span>
-                          <span className="text-muted-foreground text-xs">
-                            {formatCurrency(opt.pricePerSqm)}/m²
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <Select value={selectedAluminumColor} onValueChange={setSelectedAluminumColor}>
-                  <SelectTrigger className="bg-background h-10">
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover border shadow-lg z-50">
-                    {defaultAluminumColors.map((color) => (
-                      <SelectItem key={color} value={color}>{color}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+              <div className="space-y-2">
+                {productUsesAluminum && hasAluminumPrices ? (
+                  <Select value={selectedAluminumColor} onValueChange={setSelectedAluminumColor}>
+                    <SelectTrigger className="bg-background h-10">
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border shadow-lg z-50">
+                      {aluminumPriceOptions?.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          <div className="flex items-center justify-between gap-4 w-full">
+                            <span>{opt.label}</span>
+                            <span className="text-muted-foreground text-xs">
+                              {formatCurrency(opt.pricePerSqm)}/m²
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="Outros">Outros</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Select value={selectedAluminumColor} onValueChange={setSelectedAluminumColor}>
+                    <SelectTrigger className="bg-background h-10">
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border shadow-lg z-50">
+                      {defaultAluminumColors.map((color) => (
+                        <SelectItem key={color} value={color}>{color}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                
+                {selectedAluminumColor === 'Outros' && (
+                  <Input
+                    placeholder="Digite a cor..."
+                    value={customAluminumColor}
+                    onChange={(e) => setCustomAluminumColor(e.target.value)}
+                    className="bg-background h-10"
+                  />
+                )}
+              </div>
             </div>
           </div>
         )}
