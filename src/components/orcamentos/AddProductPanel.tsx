@@ -221,12 +221,41 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   );
   const hasAluminumPrices = (aluminumPriceOptions?.length || 0) > 0;
 
-  // Set default glass price when product changes
+  // Unique glass thicknesses and colors derived from the product's glass price catalog
+  const glassThicknessOptions = useMemo(() => {
+    const set = new Set<number>();
+    productGlassPrices?.forEach(gp => set.add(gp.thickness_mm));
+    return Array.from(set).sort((a, b) => a - b);
+  }, [productGlassPrices]);
+
+  const glassColorOptions = useMemo(() => {
+    const set = new Set<string>();
+    productGlassPrices
+      ?.filter(gp => !selectedGlassThickness || String(gp.thickness_mm) === selectedGlassThickness)
+      .forEach(gp => set.add(gp.glass_color));
+    return Array.from(set).sort();
+  }, [productGlassPrices, selectedGlassThickness]);
+
+  // Set defaults when product changes
   useEffect(() => {
     if (productGlassPrices?.length && !selectedGlassPriceId) {
-      setSelectedGlassPriceId(productGlassPrices[0].id);
+      const first = productGlassPrices[0];
+      setSelectedGlassPriceId(first.id);
+      setSelectedGlassThickness(String(first.thickness_mm));
+      setSelectedGlassColor(first.glass_color);
     }
   }, [productGlassPrices, selectedGlassPriceId]);
+
+  // Sync selectedGlassPriceId whenever thickness/color change
+  useEffect(() => {
+    if (!selectedGlassThickness || !selectedGlassColor) return;
+    const match = productGlassPrices?.find(
+      gp => String(gp.thickness_mm) === selectedGlassThickness && gp.glass_color === selectedGlassColor
+    );
+    if (match && match.id !== selectedGlassPriceId) {
+      setSelectedGlassPriceId(match.id);
+    }
+  }, [selectedGlassThickness, selectedGlassColor, productGlassPrices, selectedGlassPriceId]);
 
   // Set default aluminum color when product changes (for aluminum-priced products)
   useEffect(() => {
