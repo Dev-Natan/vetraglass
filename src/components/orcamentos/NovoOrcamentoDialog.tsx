@@ -217,12 +217,14 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
 
   const handleNext = () => {
     if (currentStep === 'client' && canProceedFromClient) setCurrentStep('products');
-    else if (currentStep === 'products' && canProceedFromProducts) setCurrentStep('review');
+    else if (currentStep === 'products' && canProceedFromProducts) setCurrentStep('summary');
+    else if (currentStep === 'summary') setCurrentStep('finalize');
   };
 
   const handleBack = () => {
     if (currentStep === 'products') setCurrentStep('client');
-    else if (currentStep === 'review') setCurrentStep('products');
+    else if (currentStep === 'summary') setCurrentStep('products');
+    else if (currentStep === 'finalize') setCurrentStep('summary');
   };
 
   if (showAddProduct) {
