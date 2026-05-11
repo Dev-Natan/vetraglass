@@ -648,8 +648,8 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border shadow-lg z-50">
-                  {glassThicknessOptions.map(t => (
-                    <SelectItem key={t} value={String(t)}>{t}mm</SelectItem>
+                  {['3', '4', '6', '8', '10', '12'].map(t => (
+                    <SelectItem key={t} value={t}>{t}mm</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
