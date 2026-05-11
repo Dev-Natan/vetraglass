@@ -348,6 +348,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
       is_custom: selectedProduct.is_custom,
       include_contramarco: excludedOptionalIds.length === 0,
       excluded_optional_ids: excludedOptionalIds.length > 0 ? excludedOptionalIds : undefined,
+      notes: notes.trim() || undefined,
     });
   };
 
