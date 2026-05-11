@@ -100,6 +100,8 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
         valid_until: quote.valid_until || '',
         notes: quote.notes || '',
       });
+      setShowMedidasColumn(quote.show_measures_column ?? true);
+      setShowM2Column(quote.show_m2_column ?? true);
       setCurrentStep('products');
       setShowAddProduct(false);
     } else if (open && !quote) {
@@ -110,6 +112,8 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
       setShowAddProduct(false);
       setSelectedClientId('');
       setShowAddItem(false);
+      setShowMedidasColumn(true);
+      setShowM2Column(true);
     }
   }, [open, quote, form, setItems]);
 
@@ -127,6 +131,8 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
     items,
     totals,
     discountPercent,
+    showMeasuresColumn: showMedidasColumn,
+    showM2Column,
     onClose: () => onOpenChange(false),
   });
 

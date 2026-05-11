@@ -5303,6 +5303,8 @@ export type Database = {
           payment_terms: string | null
           quote_number: number
           reajuste_aplicado: boolean | null
+          show_m2_column: boolean
+          show_measures_column: boolean
           status: string
           total_amount: number
           updated_at: string
@@ -5336,6 +5338,8 @@ export type Database = {
           payment_terms?: string | null
           quote_number?: number
           reajuste_aplicado?: boolean | null
+          show_m2_column?: boolean
+          show_measures_column?: boolean
           status?: string
           total_amount?: number
           updated_at?: string
@@ -5369,6 +5373,8 @@ export type Database = {
           payment_terms?: string | null
           quote_number?: number
           reajuste_aplicado?: boolean | null
+          show_m2_column?: boolean
+          show_measures_column?: boolean
           status?: string
           total_amount?: number
           updated_at?: string

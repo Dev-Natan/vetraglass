@@ -103,13 +103,21 @@ function inferJsPdfImageFormat(dataUrl: string): JsPdfImageFormat {
   return 'JPEG';
 }
 
+export interface QuotePdfOptions {
+  showMeasuresColumn?: boolean;
+  showM2Column?: boolean;
+}
+
 export async function generateQuotePdf(
   quote: Quote, 
   items: QuoteItem[], 
   company: Company | null, 
   mode: 'download' | 'print' = 'download',
-  paymentSettings?: PaymentSettings | null
+  paymentSettings?: PaymentSettings | null,
+  options: QuotePdfOptions = {}
 ) {
+  const showMeasuresColumn = options.showMeasuresColumn !== false;
+  const showM2Column = options.showM2Column !== false;
   // Preload all images in parallel before generating PDF
   const imageUrls = collectQuoteImageUrls(items, company?.logo_url);
   await preloadImages(imageUrls);
@@ -375,17 +383,25 @@ export async function generateQuotePdf(
     const height = item.height || 0;
     const areaValue = Math.round((width * height) / 1000);
     
+    const headRow: string[] = [];
+    const bodyRow: string[] = [];
+    if (showMeasuresColumn) {
+      headRow.push('Largura', 'Altura');
+      bodyRow.push(width.toString(), height.toString());
+    }
+    headRow.push('Quantidade');
+    bodyRow.push(item.quantity.toString());
+    if (showM2Column) {
+      headRow.push('Área');
+      bodyRow.push(areaValue.toString());
+    }
+    headRow.push('Valor unitário', 'Valor total');
+    bodyRow.push(formatCurrency(item.unit_price), formatCurrencyValue(item.total_price));
+
     autoTable(doc, {
       startY: tableY,
-      head: [['Largura', 'Altura', 'Quantidade', 'Área', 'Valor unitário', 'Valor total']],
-      body: [[
-        width.toString(),
-        height.toString(),
-        item.quantity.toString(),
-        areaValue.toString(),
-        formatCurrency(item.unit_price),
-        formatCurrencyValue(item.total_price)
-      ]],
+      head: [headRow],
+      body: [bodyRow],
       theme: 'grid',
       styles: {
         fontSize: 8,
