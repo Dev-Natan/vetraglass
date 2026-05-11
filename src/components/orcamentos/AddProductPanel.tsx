@@ -337,6 +337,8 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     setSelectedProductId(productId);
     setCustomPrice(null);
     setSelectedGlassPriceId('');
+    setSelectedGlassThickness('');
+    setSelectedGlassColor('');
     setSelectedAluminumColor('');
     // Auto-enable glass for Temperado line products
     const product = filteredProducts?.find(p => p.id === productId);
