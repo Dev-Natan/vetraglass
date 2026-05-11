@@ -42,6 +42,7 @@ interface AddItemPanelProps {
     image_url?: string | null;
     linha?: string | null;
     type?: string;
+    notes?: string;
   }) => void;
   onCancel: () => void;
 }
