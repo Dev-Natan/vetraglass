@@ -43,6 +43,8 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [showAddItem, setShowAddItem] = useState(false);
+  const [showMedidasColumn, setShowMedidasColumn] = useState(true);
+  const [showM2Column, setShowM2Column] = useState(true);
 
   const isEditing = !!quote;
   const { items, setItems, addItem, removeItem, updateItem } = useQuoteItems();
