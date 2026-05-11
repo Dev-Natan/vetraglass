@@ -642,7 +642,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
               <Select
                 value={selectedGlassThickness}
                 onValueChange={(v) => { setSelectedGlassThickness(v); setHasGlass(true); }}
-                disabled={!productUsesGlass || glassThicknessOptions.length === 0}
+                disabled={!productUsesGlass}
               >
                 <SelectTrigger className="bg-background h-10">
                   <SelectValue placeholder="Selecione..." />
@@ -661,7 +661,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
               <Select
                 value={selectedGlassColor}
                 onValueChange={(v) => { setSelectedGlassColor(v); setHasGlass(true); }}
-                disabled={!productUsesGlass || glassColorOptions.length === 0}
+                disabled={!productUsesGlass}
               >
                 <SelectTrigger className="bg-background h-10">
                   <SelectValue placeholder="Selecione..." />
