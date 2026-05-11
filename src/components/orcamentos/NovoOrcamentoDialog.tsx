@@ -43,6 +43,8 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [showAddItem, setShowAddItem] = useState(false);
+  const [showMedidasColumn, setShowMedidasColumn] = useState(true);
+  const [showM2Column, setShowM2Column] = useState(true);
 
   const isEditing = !!quote;
   const { items, setItems, addItem, removeItem, updateItem } = useQuoteItems();
@@ -313,6 +315,12 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
                 <FinalizeStep
                   form={form}
                   finalAmount={totals.finalAmount}
+                  itemsCount={items.length}
+                  customerName={form.watch('customer_name') || ''}
+                  showMedidasColumn={showMedidasColumn}
+                  showM2Column={showM2Column}
+                  onToggleMedidas={setShowMedidasColumn}
+                  onToggleM2={setShowM2Column}
                   formatCurrency={formatCurrency}
                 />
               )}
