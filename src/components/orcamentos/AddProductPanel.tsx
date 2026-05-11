@@ -677,36 +677,48 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
             {/* Cor do perfil */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-foreground">Cor do perfil</label>
-              {productUsesAluminum && hasAluminumPrices ? (
-                <Select value={selectedAluminumColor} onValueChange={setSelectedAluminumColor}>
-                  <SelectTrigger className="bg-background h-10">
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover border shadow-lg z-50">
-                    {aluminumPriceOptions?.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        <div className="flex items-center justify-between gap-4 w-full">
-                          <span>{opt.label}</span>
-                          <span className="text-muted-foreground text-xs">
-                            {formatCurrency(opt.pricePerSqm)}/m²
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <Select value={selectedAluminumColor} onValueChange={setSelectedAluminumColor}>
-                  <SelectTrigger className="bg-background h-10">
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover border shadow-lg z-50">
-                    {defaultAluminumColors.map((color) => (
-                      <SelectItem key={color} value={color}>{color}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+              <div className="space-y-2">
+                {productUsesAluminum && hasAluminumPrices ? (
+                  <Select value={selectedAluminumColor} onValueChange={setSelectedAluminumColor}>
+                    <SelectTrigger className="bg-background h-10">
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border shadow-lg z-50">
+                      {aluminumPriceOptions?.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          <div className="flex items-center justify-between gap-4 w-full">
+                            <span>{opt.label}</span>
+                            <span className="text-muted-foreground text-xs">
+                              {formatCurrency(opt.pricePerSqm)}/m²
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="Outros">Outros</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Select value={selectedAluminumColor} onValueChange={setSelectedAluminumColor}>
+                    <SelectTrigger className="bg-background h-10">
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border shadow-lg z-50">
+                      {defaultAluminumColors.map((color) => (
+                        <SelectItem key={color} value={color}>{color}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                
+                {selectedAluminumColor === 'Outros' && (
+                  <Input
+                    placeholder="Digite a cor..."
+                    value={customAluminumColor}
+                    onChange={(e) => setCustomAluminumColor(e.target.value)}
+                    className="bg-background h-10"
+                  />
+                )}
+              </div>
             </div>
           </div>
         )}
