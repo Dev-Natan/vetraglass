@@ -207,6 +207,9 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     'Branco', 'Preto', 'Bronze', 'Natural Fosco', 'Outros'
   ];
 
+  const defaultGlassThicknessOptions = ['3', '4', '6', '8', '10', '12'];
+  const defaultGlassColorOptions = ['Incolor', 'Verde', 'Fumer', 'Bronze', 'Jateado', 'Refletivo'];
+
   // Get pricing type for the product
   const pricingType = companyProduct?.pricing_type || (companyProduct?.uses_glass ? 'glass' : 'fixed');
   const productUsesGlass = pricingType === 'glass';
@@ -373,10 +376,10 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
       quantity,
       unit_price: unitPrice,
       total_price: totalPrice,
-      has_glass: hasGlass && productUsesGlass,
+      has_glass: hasGlass && (!!selectedGlassThickness || !!selectedGlassColor || productUsesGlass),
       glass_type: hasGlass && selectedGlassPrice ? selectedGlassPrice.glass_type : undefined,
-      glass_color: hasGlass && selectedGlassPrice ? selectedGlassPrice.glass_color : undefined,
-      glass_thickness: hasGlass && selectedGlassPrice ? `${selectedGlassPrice.thickness_mm}mm` : undefined,
+      glass_color: hasGlass ? (selectedGlassPrice?.glass_color || selectedGlassColor || undefined) : undefined,
+      glass_thickness: hasGlass ? (selectedGlassPrice ? `${selectedGlassPrice.thickness_mm}mm` : (selectedGlassThickness ? `${selectedGlassThickness}mm` : undefined)) : undefined,
       glass_price_per_sqm: hasGlass ? glassPricePerSqm : undefined,
       aluminum_color: aluminumColorName || undefined,
       is_custom: selectedProduct.is_custom,
