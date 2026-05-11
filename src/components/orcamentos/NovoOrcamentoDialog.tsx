@@ -304,6 +304,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
                   finalAmount={totals.finalAmount}
                   onDiscountChange={setDiscountPercent}
                   onStepChange={setCurrentStep}
+                  onRemoveItem={removeItem}
                   formatCurrency={formatCurrency}
                 />
               )}
