@@ -68,7 +68,7 @@ export interface NovoOrcamentoDialogProps {
   quote?: Quote | null;
 }
 
-export type Step = 'client' | 'products' | 'review';
+export type Step = 'client' | 'products' | 'summary' | 'finalize';
 
 export const DEFAULT_FORM_VALUES: QuoteFormData = {
   customer_name: '',
