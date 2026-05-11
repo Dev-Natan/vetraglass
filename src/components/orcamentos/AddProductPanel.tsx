@@ -667,7 +667,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border shadow-lg z-50">
-                  {glassColorOptions.map(c => (
+                  {['Incolor', 'Verde', 'Fumê', 'Bronze', 'Jateado', 'Refletivo'].map(c => (
                     <SelectItem key={c} value={c}>{c}</SelectItem>
                   ))}
                 </SelectContent>
