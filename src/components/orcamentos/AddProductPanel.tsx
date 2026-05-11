@@ -356,7 +356,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     // For other products, it comes from the simple selector
     const aluminumColorName = productUsesAluminum 
       ? (selectedAluminumPriceOption?.colorName || '') 
-      : selectedAluminumColor;
+      : (selectedAluminumColor === 'Outros' ? customAluminumColor : selectedAluminumColor);
 
     onAdd({
       product_template_id: selectedProduct.is_custom ? null : selectedProduct.product_template_id,
