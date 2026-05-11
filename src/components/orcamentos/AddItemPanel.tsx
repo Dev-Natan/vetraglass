@@ -61,6 +61,7 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
   const [height, setHeight] = useState<number>(0);
   const [customPrice, setCustomPrice] = useState<number | null>(null);
   const [isCreatingItem, setIsCreatingItem] = useState(false);
+  const [notes, setNotes] = useState<string>('');
 
   // Fetch company items with stock data
   const { data: companyItems, isLoading: loadingCompanyItems } = useQuery({
