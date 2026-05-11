@@ -370,7 +370,10 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
     }));
     
     toast({ title: 'Gerando PDF...' });
-    await generateQuotePdf(quote, itemsForPdf, company, 'download', getPaymentSettings());
+    await generateQuotePdf(quote, itemsForPdf, company, 'download', getPaymentSettings(), {
+      showMeasuresColumn: (quote as any).show_measures_column ?? true,
+      showM2Column: (quote as any).show_m2_column ?? true,
+    });
     toast({ title: 'PDF gerado com sucesso!' });
   };
 
