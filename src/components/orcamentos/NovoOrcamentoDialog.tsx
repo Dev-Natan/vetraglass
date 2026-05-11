@@ -29,7 +29,8 @@ import { useQuoteSubmit } from './_novo-orcamento/hooks/useQuoteSubmit';
 import { StepIndicator, steps } from './_novo-orcamento/parts/StepIndicator';
 import { ClientStep } from './_novo-orcamento/parts/ClientStep';
 import { ProductsStep } from './_novo-orcamento/parts/ProductsStep';
-import { ReviewStep } from './_novo-orcamento/parts/ReviewStep';
+import { SummaryStep } from './_novo-orcamento/parts/SummaryStep';
+import { FinalizeStep } from './_novo-orcamento/parts/FinalizeStep';
 import { AddProductDialog, AddItemDialog } from './_novo-orcamento/parts/AddPanels';
 import { WizardFooter } from './_novo-orcamento/parts/WizardFooter';
 
