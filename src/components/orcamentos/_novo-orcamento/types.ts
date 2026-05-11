@@ -44,6 +44,7 @@ export interface QuoteItem {
   aluminum_color?: string;
   include_contramarco?: boolean;
   excluded_optional_ids?: string[];
+  notes?: string;
 }
 
 export interface Quote {

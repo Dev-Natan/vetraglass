@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Package, Check, ArrowLeft, Hash, DollarSign, Layers, Plus, Ruler } from 'lucide-react';
+import { Search, Package, Check, ArrowLeft, Hash, DollarSign, Layers, Plus, Ruler, FileText } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { useItemTypes } from '@/hooks/useItemTypes';
 import { useProductLinhas } from '@/hooks/useProductLinhas';
@@ -42,6 +43,7 @@ interface AddItemPanelProps {
     image_url?: string | null;
     linha?: string | null;
     type?: string;
+    notes?: string;
   }) => void;
   onCancel: () => void;
 }
@@ -60,6 +62,7 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
   const [height, setHeight] = useState<number>(0);
   const [customPrice, setCustomPrice] = useState<number | null>(null);
   const [isCreatingItem, setIsCreatingItem] = useState(false);
+  const [notes, setNotes] = useState<string>('');
 
   // Fetch company items with stock data
   const { data: companyItems, isLoading: loadingCompanyItems } = useQuery({
@@ -246,6 +249,7 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
         image_url: selectedItem.image_url,
         linha: selectedItem.linha,
         type: selectedItem.type,
+        notes: notes.trim() || undefined,
       });
       return;
     }
@@ -317,6 +321,7 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
         image_url: selectedItem.image_url,
         linha: selectedItem.linha,
         type: selectedItem.type,
+        notes: notes.trim() || undefined,
       });
 
       toast.success('Item adicionado ao catálogo da empresa automaticamente');
@@ -586,43 +591,57 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
           </div>
         </div>
 
-        {/* Total */}
+        {/* Observações */}
         {selectedItem && (
-          <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20">
-            <span className="text-sm font-medium text-muted-foreground">Total do Item</span>
-            <span className="text-2xl font-bold text-primary">
-              {formatCurrency(totalPrice)}
-            </span>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+              <FileText className="w-3.5 h-3.5" />
+              Observações
+            </label>
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Detalhes adicionais sobre este item..."
+              rows={3}
+              className="bg-background resize-none"
+            />
           </div>
         )}
 
-
-        {/* Actions */}
-        <div className="flex gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onCancel}
-            className="flex-1"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Voltar
-          </Button>
-          <Button
-            type="button"
-            onClick={handleAdd}
-            disabled={!canAdd}
-            className="flex-1"
-          >
-            {isCreatingItem ? (
-              <span className="animate-pulse">Adicionando...</span>
-            ) : (
-              <>
-                <Check className="w-4 h-4 mr-2" />
-                Adicionar Item
-              </>
-            )}
-          </Button>
+        {/* Sticky total bar + Actions */}
+        <div className="overflow-hidden rounded-xl border shadow-sm">
+          <div className="flex items-center justify-between gap-3 px-4 py-3 bg-gradient-to-r from-primary/95 to-primary text-primary-foreground">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              {isM2 ? (
+                <>
+                  <span>{area.toFixed(2)} m²</span>
+                  <span className="opacity-70">×</span>
+                </>
+              ) : null}
+              <span>{quantity} {selectedItem?.unit || 'un'}</span>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] uppercase tracking-wider opacity-80">Total</p>
+              <p className="text-xl font-bold leading-tight">{formatCurrency(totalPrice)}</p>
+            </div>
+          </div>
+          <div className="flex items-center justify-end gap-2 bg-card px-4 py-3 border-t">
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleAdd}
+              disabled={!canAdd}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground px-6"
+            >
+              {isCreatingItem ? (
+                <span className="animate-pulse">Adicionando...</span>
+              ) : (
+                'Adicionar ao orçamento'
+              )}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

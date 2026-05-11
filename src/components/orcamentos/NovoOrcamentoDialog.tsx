@@ -148,6 +148,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
     glass_thickness?: string;
     include_contramarco?: boolean;
     excluded_optional_ids?: string[];
+    notes?: string;
   }) => {
     addItem({
       product_template_id: product.product_template_id,
@@ -169,6 +170,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
       glass_thickness: product.glass_thickness,
       include_contramarco: product.include_contramarco,
       excluded_optional_ids: product.excluded_optional_ids,
+      notes: product.notes,
     });
     setShowAddProduct(false);
     toast({ title: 'Produto adicionado!' });
@@ -186,6 +188,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
     type?: string;
     width?: number;
     height?: number;
+    notes?: string;
   }) => {
     addItem({
       company_item_id: item.company_item_id,
@@ -201,6 +204,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
       linha: item.linha,
       category: item.type,
       unit: item.unit,
+      notes: item.notes,
     });
     setShowAddItem(false);
     toast({ title: 'Item adicionado!' });
