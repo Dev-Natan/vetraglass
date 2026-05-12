@@ -368,5 +368,6 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
   prev.item.total_price === next.item.total_price &&
   prev.item.quantity === next.item.quantity &&
   prev.item.unit_price === next.item.unit_price &&
-  prev.item.aluminum_color === next.item.aluminum_color
+  prev.item.aluminum_color === next.item.aluminum_color &&
+  JSON.stringify(prev.item.components) === JSON.stringify(next.item.components)
 );
