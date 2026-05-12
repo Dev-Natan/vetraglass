@@ -157,6 +157,11 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
     include_contramarco?: boolean;
     excluded_optional_ids?: string[];
     notes?: string;
+    components?: Array<{
+      description: string;
+      quantity: number;
+      unit_price: number;
+    }>;
   }) => {
     addItem({
       product_template_id: product.product_template_id,
