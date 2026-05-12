@@ -309,6 +309,9 @@ export default function Financeiro() {
           </div>
         </div>
 
+        {/* Dashboard de Saúde Financeira */}
+        <FinancialDashboard />
+
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid">
