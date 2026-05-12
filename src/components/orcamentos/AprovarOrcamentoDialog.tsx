@@ -151,6 +151,7 @@ export function AprovarOrcamentoDialog({
               state={formState}
               onChange={updateField}
               formasPagamento={formasPagamento}
+              condicoesPagamento={condicoesPagamento}
               hasPaymentOptions={hasPaymentOptions}
               onInitializeDefaults={() => initializeDefaults.mutate()}
               isInitializingDefaults={initializeDefaults.isPending}
