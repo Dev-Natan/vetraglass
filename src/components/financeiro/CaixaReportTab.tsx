@@ -340,6 +340,10 @@ export function CaixaReportTab({ selectedMonth: externalMonth, onMonthChange }: 
                 <Download className="h-4 w-4 mr-2" />
                 Exportar CSV
               </Button>
+              <Button variant="default" size="sm" onClick={handleExportDRE} className="bg-blue-600 hover:bg-blue-700">
+                <BarChart3 className="h-4 w-4 mr-2" />
+                DRE Simplificado
+              </Button>
             </div>
           </div>
         </CardContent>
