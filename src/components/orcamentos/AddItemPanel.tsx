@@ -205,8 +205,11 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
   
   const unitPrice = customPrice !== null ? customPrice : (selectedItem?.sale_price || 0);
   const isM2 = selectedItem?.unit === 'm2';
+  const isLinear = selectedItem?.unit === 'm' || selectedItem?.type === 'profile';
+  
   const area = isM2 && width > 0 && height > 0 ? (width / 1000) * (height / 1000) : 1;
-  const totalPrice = unitPrice * area * quantity;
+  const linearFactor = isLinear && width > 0 ? width / 1000 : 1;
+  const totalPrice = unitPrice * (isM2 ? area : linearFactor) * quantity;
 
   const getTypeLabel = (type: string) => {
     const found = itemTypes?.find(t => t.slug === type);
