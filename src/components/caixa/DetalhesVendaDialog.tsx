@@ -51,6 +51,7 @@ interface CashMovement {
   type: string;
   category: string;
   description: string;
+  payment_method?: string;
   created_at: string;
   origem: string | null;
 }
