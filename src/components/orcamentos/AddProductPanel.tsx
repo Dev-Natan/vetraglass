@@ -853,10 +853,14 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                   <AddItemPanel 
                     onCancel={() => setShowAddComponent(false)}
                     onAdd={(item) => {
+                      // Use total_price/quantity as unit price so it captures area for m2 items
+                      const effectiveUnitPrice = item.quantity > 0
+                        ? (item.total_price ?? item.unit_price * item.quantity) / item.quantity
+                        : item.unit_price;
                       setComponents([...components, {
                         description: item.name,
                         quantity: item.quantity,
-                        unit_price: item.unit_price
+                        unit_price: effectiveUnitPrice,
                       }]);
                       setShowAddComponent(false);
                     }}
