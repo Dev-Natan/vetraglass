@@ -318,7 +318,11 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
 
       onAdd({
         company_item_id: newItem.id,
-        name: (width > 0 && height > 0) ? `${selectedItem.name} [Medida: ${width}x${height}mm]` : selectedItem.name,
+        name: isM2 && width > 0 && height > 0 
+          ? `${selectedItem.name} [Medida: ${width}x${height}mm]` 
+          : isLinear && width > 0 
+            ? `${selectedItem.name} [Medida: ${width}mm]`
+            : selectedItem.name,
         unit: selectedItem.unit,
         unit_price: unitPrice,
         quantity,
