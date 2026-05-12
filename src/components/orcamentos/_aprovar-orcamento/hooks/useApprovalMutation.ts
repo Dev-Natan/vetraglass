@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { format, addDays } from 'date-fns';
+import { format, addDays, addMonths } from 'date-fns';
 import { generateOSDocuments } from '@/utils/generateOSDocuments';
 import { generateMaterialConsumption, linkReservationsToConsumption } from '@/utils/generateMaterialConsumption';
 import { parseAmount } from '../utils';
