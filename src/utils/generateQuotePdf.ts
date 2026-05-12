@@ -119,8 +119,8 @@ export async function generateQuotePdf(
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   
-  const textColor: [number, number, number] = [40, 40, 40];
-  const mutedColor: [number, number, number] = [100, 100, 100];
+  const textColor = { r: 40, g: 40, b: 40 };
+  const mutedColor = { r: 100, g: 100, b: 100 };
   const dividerColor: [number, number, number] = [220, 220, 220];
   
   let y = 15;
