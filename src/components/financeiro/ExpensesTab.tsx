@@ -282,13 +282,42 @@ export function ExpensesTab({ selectedMonth: externalMonth, onMonthChange }: Exp
   // Mark as paid mutation - also generates next recurring expense
   const markAsPaidMutation = useMutation({
     mutationFn: async (expense: Expense) => {
+      if (!currentCompany?.id) throw new Error('Empresa não encontrada');
+
       // First, mark as paid
       const { error: updateError } = await supabase
         .from('expenses')
-        .update({ status: 'paid', paid_date: new Date().toISOString().split('T')[0] })
+        .update({ 
+          status: 'paid', 
+          paid_date: new Date().toISOString().split('T')[0] 
+        })
         .eq('id', expense.id);
       if (updateError) throw updateError;
       
+      // Check for open cash register
+      const { data: openRegister } = await supabase
+        .from('cash_registers')
+        .select('id')
+        .eq('company_id', currentCompany.id)
+        .eq('status', 'open')
+        .maybeSingle();
+
+      if (openRegister) {
+        // Create cash movement for the payment
+        await supabase
+          .from('cash_movements')
+          .insert({
+            company_id: currentCompany.id,
+            cash_register_id: openRegister.id,
+            type: 'saida',
+            category: 'despesa',
+            amount: expense.amount,
+            description: `Pagamento de despesa: ${expense.description}`,
+            expense_id: expense.id,
+            created_by: (await supabase.auth.getUser()).data.user?.id,
+          });
+      }
+
       // If it's a recurring expense, generate the next one
       if (expense.recurrence && expense.recurrence !== 'none') {
         const { data: nextExpenseId, error: rpcError } = await supabase
@@ -296,7 +325,6 @@ export function ExpensesTab({ selectedMonth: externalMonth, onMonthChange }: Exp
         
         if (rpcError) {
           console.error('Error generating next expense:', rpcError);
-          // Don't throw - the main payment was successful
         }
         
         return { nextExpenseId };
