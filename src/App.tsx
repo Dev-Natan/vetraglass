@@ -35,7 +35,7 @@ const OrdemServicoDetalhes = lazy(() => import("./pages/OrdemServicoDetalhes"));
 const Financeiro = lazy(() => import("./pages/Financeiro"));
 const Funcionarios = lazy(() => import("./pages/Funcionarios"));
 const ProjetoVidro = lazy(() => import("./pages/ProjetoVidro"));
-const NotasFiscais = lazy(() => import("./pages/NotasFiscais"));
+
 const Agenda = lazy(() => import("./pages/Agenda"));
 const Medicoes = lazy(() => import("./pages/Medicoes"));
 const Relatorios = lazy(() => import("./pages/Relatorios"));
@@ -47,7 +47,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Settings pages - lazy loaded
 const Configuracoes = lazy(() => import("./pages/Configuracoes"));
-const ConfiguracoesFiscais = lazy(() => import("./pages/ConfiguracoesFiscais"));
+
 const ConfiguracoesUsuarios = lazy(() => import("./pages/ConfiguracoesUsuarios"));
 const ConfiguracoesPerfis = lazy(() => import("./pages/ConfiguracoesPerfis"));
 const ConfiguracoesNotificacoes = lazy(() => import("./pages/ConfiguracoesNotificacoes"));
@@ -198,9 +198,6 @@ function AppRoutes() {
         <ProtectedRoute><ModuleGuard moduleKey="funcionarios"><LazyRoute><Funcionarios /></LazyRoute></ModuleGuard></ProtectedRoute>
       } />
       <Route path="/projeto-vidro" element={<Navigate to="/producao?tab=vidros" replace />} />
-      <Route path="/notas-fiscais" element={
-        <ProtectedRoute><ModuleGuard moduleKey="notas_fiscais"><LazyRoute><NotasFiscais /></LazyRoute></ModuleGuard></ProtectedRoute>
-      } />
       <Route path="/pedidos-compra" element={
         <ProtectedRoute><ModuleGuard moduleKey="pedidos_compra"><LazyRoute><PedidosCompra /></LazyRoute></ModuleGuard></ProtectedRoute>
       } />
@@ -219,9 +216,6 @@ function AppRoutes() {
       {/* Settings routes - all lazy */}
       <Route path="/configuracoes" element={
         <ProtectedRoute><LazyRoute><Configuracoes /></LazyRoute></ProtectedRoute>
-      } />
-      <Route path="/configuracoes/fiscal" element={
-        <ProtectedRoute><LazyRoute><ConfiguracoesFiscais /></LazyRoute></ProtectedRoute>
       } />
       <Route path="/configuracoes/usuarios" element={
         <ProtectedRoute><LazyRoute><ConfiguracoesUsuarios /></LazyRoute></ProtectedRoute>
