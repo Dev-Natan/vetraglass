@@ -62,7 +62,7 @@ export function generateFinancialReport(data: FinancialData, company: Company | 
     head: [['Descrição', 'Valor']],
     body: revenueRows,
     theme: 'striped',
-    headStyles: { fillStyle: 'DF', fillColor: [34, 197, 94] },
+    headStyles: { fillColor: [34, 197, 94] },
     columnStyles: { 1: { halign: 'right' } },
   });
   
