@@ -400,6 +400,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
       include_contramarco: excludedOptionalIds.length === 0,
       excluded_optional_ids: excludedOptionalIds.length > 0 ? excludedOptionalIds : undefined,
       notes: notes.trim() || undefined,
+      components: components.length > 0 ? components : undefined,
     });
   };
 
