@@ -85,6 +85,8 @@ interface Quote {
   discount_amount?: number | null;
   final_amount: number;
   valid_until: string | null;
+  show_measures_column?: boolean | null;
+  show_m2_column?: boolean | null;
   created_at: string;
 }
 
@@ -135,7 +137,7 @@ export default function Orcamentos() {
       if (!currentCompany?.id) return [];
       const { data, error } = await supabase
         .from('quotes')
-        .select('id, quote_number, customer_name, customer_phone, customer_email, customer_address, customer_document, customer_document_type, customer_profession, customer_marital_status, payment_terms, notes, status, total_amount, discount_percent, discount_amount, final_amount, valid_until, created_at')
+        .select('id, quote_number, customer_name, customer_phone, customer_email, customer_address, customer_document, customer_document_type, customer_profession, customer_marital_status, payment_terms, notes, status, total_amount, discount_percent, discount_amount, final_amount, valid_until, show_measures_column, show_m2_column, created_at')
         .eq('company_id', currentCompany.id)
         .order('created_at', { ascending: false });
       
@@ -358,6 +360,8 @@ export default function Orcamentos() {
         discount_amount: quote.discount_amount,
         final_amount: quote.final_amount,
         status: 'pending',
+        show_measures_column: quote.show_measures_column,
+        show_m2_column: quote.show_m2_column,
       })
       .select()
       .single();
