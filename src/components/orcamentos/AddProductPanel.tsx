@@ -91,6 +91,12 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   const [hasAcabamento, setHasAcabamento] = useState<boolean>(true);
   const [excludedOptionalIds, setExcludedOptionalIds] = useState<string[]>([]);
   const [notes, setNotes] = useState<string>('');
+  const [showAddComponent, setShowAddComponent] = useState(false);
+  const [components, setComponents] = useState<Array<{
+    description: string;
+    quantity: number;
+    unit_price: number;
+  }>>([]);
 
   // Fetch active company products with template data
   const { data: companyProducts, isLoading } = useQuery({
