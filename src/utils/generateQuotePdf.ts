@@ -9,6 +9,12 @@ import {
   collectQuoteImageUrls 
 } from './pdfImageLoader';
 
+interface QuoteComponent {
+  description: string;
+  quantity: number;
+  unit_price: number;
+}
+
 interface QuoteItem {
   description: string;
   width: number | null;
@@ -25,6 +31,7 @@ interface QuoteItem {
   aluminum_color?: string | null;
   notes?: string | null;
   location?: string | null;
+  components?: QuoteComponent[];
 }
 
 interface Quote {
@@ -249,18 +256,26 @@ export async function generateQuotePdf(
     let description = `${item.description}`;
     let details = [];
     if (item.linha) details.push(`Linha: ${item.linha}`);
-    if (item.has_glass !== false && item.glass_thickness) {
+    if (item.has_glass && item.glass_thickness) {
       details.push(`Vidro: ${item.glass_color || ''} ${item.glass_thickness}`);
     }
     if (item.aluminum_color) details.push(`Acabamento: ${item.aluminum_color}`);
     
     const detailsStr = details.length > 0 ? `\n${details.join('  |  ')}` : '';
+    
+    let componentsStr = '';
+    if (item.components && item.components.length > 0) {
+      componentsStr = '\nComponentes: ' + item.components.map(c => 
+        `${c.description} (${c.quantity} un x ${formatCurrencyValue(c.unit_price)})`
+      ).join(', ');
+    }
+
     const obsStr = item.notes ? `\nObs: ${item.notes}` : '';
 
     return [
       (index + 1).toString(),
       '', 
-      `${description}${detailsStr}${obsStr}`,
+      `${description}${detailsStr}${componentsStr}${obsStr}`,
       ...(showMeasuresColumn ? [`${item.width || 0} x ${item.height || 0}`] : []),
       ...(showM2Column ? [`${areaValue.toFixed(2)} m²`] : []),
       item.quantity.toString(),
