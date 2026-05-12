@@ -110,12 +110,8 @@ const ChartTooltipContent = React.forwardRef<
       hideIndicator = false,
       label,
       labelFormatter,
-      labelClassName,
-      formatter,
-      color,
-      nameKey,
-      labelKey,
-    },
+...
+    }: any,
     ref,
   ) => {
     const { config } = useChart();
