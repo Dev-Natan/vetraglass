@@ -2606,6 +2606,105 @@ export type Database = {
           },
         ]
       }
+      financial_audit_logs: {
+        Row: {
+          action: string
+          changed_by: string | null
+          company_id: string | null
+          created_at: string | null
+          id: string
+          new_data: Json | null
+          old_data: Json | null
+          record_id: string
+          table_name: string
+        }
+        Insert: {
+          action: string
+          changed_by?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          record_id: string
+          table_name: string
+        }
+        Update: {
+          action?: string
+          changed_by?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          record_id?: string
+          table_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_audit_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_audit_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_periods: {
+        Row: {
+          closed_at: string | null
+          closed_by: string | null
+          company_id: string | null
+          created_at: string | null
+          id: string
+          is_closed: boolean | null
+          month: number
+          year: number
+        }
+        Insert: {
+          closed_at?: string | null
+          closed_by?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_closed?: boolean | null
+          month: number
+          year: number
+        }
+        Update: {
+          closed_at?: string | null
+          closed_by?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_closed?: boolean | null
+          month?: number
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_periods_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_periods_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       formas_pagamento: {
         Row: {
           company_id: string
@@ -7492,6 +7591,10 @@ export type Database = {
           _user_agent?: string
         }
         Returns: undefined
+      }
+      is_financial_admin: {
+        Args: { _company_id: string; _user_id: string }
+        Returns: boolean
       }
       is_module_enabled: { Args: { _module_key: string }; Returns: boolean }
       is_saas_admin: { Args: { _user_id: string }; Returns: boolean }
