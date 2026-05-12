@@ -369,17 +369,40 @@ export async function generateQuotePdf(
 
   drawTotalLine('VALOR TOTAL:', formatCurrency(quote.final_amount), true);
   
-  y += 8;
+  y += 10;
+  
+  // Payment options logic
   const methods = paymentSettings?.methods || [];
+  
+  // 1. Credit Card Option (usually without the standard discount)
+  // We show the total amount before the quote discount if applicable, 
+  // or just the total amount clearly labeled for card.
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(60, 60, 60);
+  doc.text('OPÇÕES DE PAGAMENTO:', marginRight, y, { align: 'right' });
+  y += 6;
+  
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(80, 80, 80);
+  doc.text(`Cartão de Crédito: ${formatCurrency(quote.total_amount)} (sem desconto)`, marginRight, y, { align: 'right' });
+  y += 5;
+
+  // 2. Cash Option (with discount)
   const cashMethods = methods.filter(m => m.enabled && m.discountPercent && m.discountPercent > 0);
   const maxDiscount = cashMethods.length > 0 ? Math.max(...cashMethods.map(m => m.discountPercent || 0)) : 0;
   
-  if (maxDiscount > 0) {
-    const cashValue = quote.final_amount * (1 - maxDiscount / 100);
+  if (maxDiscount > 0 || quote.discount_amount) {
+    // If quote already has a discount, we use final_amount as the "discounted" price
+    // If not, we calculate based on maxDiscount from settings
+    const cashValue = quote.final_amount; 
+    const discountLabel = quote.discount_percent ? `${quote.discount_percent}%` : `${maxDiscount}%`;
+    
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
     doc.setTextColor(34, 139, 34);
-    doc.text(`Pagamento à vista (${maxDiscount}% desc): ${formatCurrency(cashValue)}`, marginRight, y, { align: 'right' });
+    doc.text(`Pagamento à Vista: ${formatCurrency(cashValue)}`, marginRight, y, { align: 'right' });
   }
 
   const customerSlug = quote.customer_name
