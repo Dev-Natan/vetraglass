@@ -92,6 +92,11 @@ export default function Financeiro() {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState(() => sessionStorage.getItem('financeiro-active-tab') || 'caixa-empresa');
   
+  // Dialogs
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
