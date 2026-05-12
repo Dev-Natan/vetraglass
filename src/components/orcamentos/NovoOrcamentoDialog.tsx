@@ -187,7 +187,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
       components: product.components,
     });
     setShowAddProduct(false);
-    toast({ title: 'Produto adicionado!' });
+    
   };
 
   const handleAddItem = (item: {
@@ -221,7 +221,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
       notes: item.notes,
     });
     setShowAddItem(false);
-    toast({ title: 'Item adicionado!' });
+    
   };
 
   const onSubmit = (data: QuoteFormData) => {
