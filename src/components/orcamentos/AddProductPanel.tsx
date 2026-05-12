@@ -55,6 +55,11 @@ interface AddProductPanelProps {
     include_contramarco?: boolean;
     excluded_optional_ids?: string[];
     notes?: string;
+    components?: Array<{
+      description: string;
+      quantity: number;
+      unit_price: number;
+    }>;
   }) => void;
   onCancel: () => void;
 }
