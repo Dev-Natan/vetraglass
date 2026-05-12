@@ -602,7 +602,7 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
           </div>
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-              <DollarSign className="w-3 h-3" /> Preço {isM2 ? 'por m²' : 'Unitário'}
+              <DollarSign className="w-3 h-3" /> Preço {isM2 ? 'por m²' : isLinear ? 'por metro' : 'Unitário'}
             </label>
             <Input
               type="number"
