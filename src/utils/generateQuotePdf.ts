@@ -127,19 +127,35 @@ export async function generateQuotePdf(
   
   // ========== SLIM HEADER ==========
   let logoHeight = 0;
+  let logoRenderedWidth = 0;
+  const maxLogoBox = company?.logo_size || 35;
   if (logoUrl) {
     const logoBase64 = getCachedImage(logoUrl);
     if (logoBase64) {
-      const logoWidth = company.logo_size || 35;
-      logoHeight = logoWidth * 0.625;
-      doc.addImage(logoBase64, inferJsPdfImageFormat(logoBase64), marginLeft, y, logoWidth, logoHeight);
+      try {
+        const props = (doc as any).getImageProperties(logoBase64);
+        const ratio = props.width / props.height;
+        // Fit within a square box of side `maxLogoBox`, preserving aspect ratio
+        if (ratio >= 1) {
+          logoRenderedWidth = maxLogoBox;
+          logoHeight = maxLogoBox / ratio;
+        } else {
+          logoHeight = maxLogoBox;
+          logoRenderedWidth = maxLogoBox * ratio;
+        }
+        doc.addImage(logoBase64, inferJsPdfImageFormat(logoBase64), marginLeft, y, logoRenderedWidth, logoHeight);
+      } catch {
+        logoRenderedWidth = maxLogoBox;
+        logoHeight = maxLogoBox * 0.625;
+        doc.addImage(logoBase64, inferJsPdfImageFormat(logoBase64), marginLeft, y, logoRenderedWidth, logoHeight);
+      }
     }
   }
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
   doc.setTextColor(40, 40, 40);
-  const companyInfoX = company?.logo_url ? marginLeft + (company.logo_size || 35) + 8 : marginLeft;
+  const companyInfoX = logoRenderedWidth > 0 ? marginLeft + logoRenderedWidth + 8 : marginLeft;
   
   doc.text(company?.name || '', companyInfoX, y + 5);
   doc.setFont('helvetica', 'normal');
