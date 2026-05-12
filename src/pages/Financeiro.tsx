@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { financeiroService } from '@/services/financeiroService';
+
 import type { Sale, PaymentFilter, StatusFilter } from '@/types/financeiro';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -101,7 +101,16 @@ export default function Financeiro() {
     queryKey: ['sales-financeiro', currentCompany?.id, selectedMonth.getMonth(), selectedMonth.getFullYear()],
     queryFn: async () => {
       if (!currentCompany?.id) return [];
-      return financeiroService.fetchSales(currentCompany.id, dateRange.start, dateRange.end);
+      const { data, error } = await supabase
+        .from('sales')
+        .select('*')
+        .eq('company_id', currentCompany.id)
+        .gte('created_at', dateRange.start.toISOString())
+        .lte('created_at', dateRange.end.toISOString())
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data as Sale[];
     },
     enabled: !!currentCompany?.id,
 
