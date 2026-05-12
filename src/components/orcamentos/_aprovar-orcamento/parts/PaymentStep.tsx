@@ -28,6 +28,7 @@ interface Props {
   state: ApprovalFormState;
   onChange: <K extends keyof ApprovalFormState>(key: K, value: ApprovalFormState[K]) => void;
   formasPagamento: FormaPagamento[];
+  condicoesPagamento: any[];
   hasPaymentOptions: boolean;
   onInitializeDefaults: () => void;
   isInitializingDefaults: boolean;
@@ -36,7 +37,7 @@ interface Props {
 }
 
 export function PaymentStep({
-  state, onChange, formasPagamento, hasPaymentOptions,
+  state, onChange, formasPagamento, condicoesPagamento, hasPaymentOptions,
   onInitializeDefaults, isInitializingDefaults, isCaixaAberto, valorFinal,
 }: Props) {
   const entryValue = parseAmount(state.entryAmount);
