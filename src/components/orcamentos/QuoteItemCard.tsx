@@ -143,14 +143,6 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
                     {isItem ? getItemTypeLabel(item.category) : (categoryLabels[item.category] || item.category)}
                   </Badge>
                 )}
-                {!isItem && item.has_glass !== undefined && (
-                  <Badge 
-                    variant={item.has_glass ? 'default' : 'outline'} 
-                    className="text-xs"
-                  >
-                    {item.has_glass ? 'Com Vidro' : 'Sem Vidro'}
-                  </Badge>
-                )}
                 {item.has_glass && item.glass_color && (
                   <Badge variant="outline" className="text-xs bg-primary/10 border-primary/30 text-primary">
                     {glassColorLabels[item.glass_color] || item.glass_color}
