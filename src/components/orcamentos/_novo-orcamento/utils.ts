@@ -27,6 +27,7 @@ export const mapItemForInsert = (item: QuoteItem, quoteId: string) => ({
   has_glass: item.has_glass ?? false,
   glass_color: item.glass_color || null,
   glass_thickness: item.glass_thickness || null,
+  aluminum_color: item.aluminum_color || null,
   include_contramarco: item.include_contramarco ?? true,
   excluded_optional_ids: item.excluded_optional_ids || [],
   notes: item.notes || null,

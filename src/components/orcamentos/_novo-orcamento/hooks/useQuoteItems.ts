@@ -13,14 +13,25 @@ export function useQuoteItems() {
 
       const updated = { ...item, [field]: value } as QuoteItem;
 
-      if (field === 'width' || field === 'height' || field === 'quantity' || field === 'base_price_m2') {
+      // Only auto-calculate prices for products or m2 items when dimensions/quantity/base_price change
+      if (field === 'width' || field === 'height' || field === 'quantity' || field === 'base_price_m2' || field === 'unit_price') {
+        const isProduct = updated.item_type !== 'item';
+        const isM2Item = updated.item_type === 'item' && updated.unit === 'm2';
+        
         const width = field === 'width' ? (value as number) : updated.width || 0;
         const height = field === 'height' ? (value as number) : updated.height || 0;
         const quantity = field === 'quantity' ? (value as number) : updated.quantity || 1;
-        const basePriceM2 = field === 'base_price_m2' ? (value as number) : updated.base_price_m2 || 0;
+        
+        let unitPrice = updated.unit_price;
+        
+        if (isProduct || isM2Item) {
+          const basePriceM2 = field === 'base_price_m2' ? (value as number) : updated.base_price_m2 || 0;
+          const areaM2 = (width / 1000) * (height / 1000);
+          unitPrice = areaM2 * basePriceM2;
+        } else if (field === 'unit_price') {
+          unitPrice = value as number;
+        }
 
-        const areaM2 = (width / 1000) * (height / 1000);
-        const unitPrice = areaM2 * basePriceM2;
         const totalPrice = unitPrice * quantity;
 
         return {
@@ -28,7 +39,6 @@ export function useQuoteItems() {
           width,
           height,
           quantity,
-          base_price_m2: basePriceM2,
           unit_price: unitPrice,
           total_price: totalPrice,
         };
