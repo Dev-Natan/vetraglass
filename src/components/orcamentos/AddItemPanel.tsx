@@ -642,6 +642,11 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
                   <span>{area.toFixed(2)} m²</span>
                   <span className="opacity-70">×</span>
                 </>
+              ) : isLinear ? (
+                <>
+                  <span>{(width / 1000).toFixed(2)} m</span>
+                  <span className="opacity-70">×</span>
+                </>
               ) : null}
               <span>{quantity} {selectedItem?.unit || 'un'}</span>
             </div>
