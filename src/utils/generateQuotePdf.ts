@@ -342,7 +342,11 @@ export async function generateQuotePdf(
   const drawTotalLine = (label: string, value: string, isBold = false) => {
     doc.setFont('helvetica', isBold ? 'bold' : 'normal');
     doc.setFontSize(isBold ? 10 : 9);
-    doc.setTextColor(isBold ? [0, 0, 0] : [80, 80, 80]);
+    if (isBold) {
+      doc.setTextColor(0, 0, 0);
+    } else {
+      doc.setTextColor(80, 80, 80);
+    }
     doc.text(label, totalsX, y);
     doc.text(value, marginRight, y, { align: 'right' });
     y += 6;
