@@ -112,7 +112,8 @@ export async function generateQuotePdf(
   const showMeasuresColumn = options.showMeasuresColumn !== false;
   const showM2Column = options.showM2Column !== false;
   
-  const imageUrls = collectQuoteImageUrls(items, company?.logo_url);
+  const logoUrl = company?.logo_url ? getProductImageUrl(company.logo_url) : null;
+  const imageUrls = collectQuoteImageUrls(items, logoUrl);
   await preloadImages(imageUrls);
 
   const doc = new jsPDF();
@@ -126,8 +127,8 @@ export async function generateQuotePdf(
   
   // ========== SLIM HEADER ==========
   let logoHeight = 0;
-  if (company?.logo_url) {
-    const logoBase64 = getCachedImage(company.logo_url);
+  if (logoUrl) {
+    const logoBase64 = getCachedImage(logoUrl);
     if (logoBase64) {
       const logoWidth = company.logo_size || 35;
       logoHeight = logoWidth * 0.625;
@@ -167,9 +168,12 @@ export async function generateQuotePdf(
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(100, 100, 100);
-  doc.text(`Emissão: ${format(new Date(quote.created_at), "dd/MM/yyyy", { locale: ptBR })}`, marginRight, y + 10, { align: 'right' });
-  if (quote.valid_until) {
-    doc.text(`Validade: ${format(new Date(quote.valid_until), "dd/MM/yyyy", { locale: ptBR })}`, marginRight, y + 14, { align: 'right' });
+  const emissionDate = quote.created_at ? new Date(quote.created_at) : new Date();
+  const validUntilDate = quote.valid_until ? new Date(quote.valid_until) : null;
+
+  doc.text(`Emissão: ${format(emissionDate, "dd/MM/yyyy", { locale: ptBR })}`, marginRight, y + 10, { align: 'right' });
+  if (validUntilDate && !isNaN(validUntilDate.getTime())) {
+    doc.text(`Validade: ${format(validUntilDate, "dd/MM/yyyy", { locale: ptBR })}`, marginRight, y + 14, { align: 'right' });
   }
 
   y = Math.max(y + logoHeight, companyInfoY) + 10;
@@ -224,7 +228,7 @@ export async function generateQuotePdf(
   ];
 
   const tableBody = items.map((item, index) => {
-    const areaValue = Math.round(((item.width || 0) * (item.height || 0)) / 1000);
+    const areaValue = ((item.width || 0) * (item.height || 0)) / 1_000_000;
     
     let description = `${item.description}`;
     let details = [];
@@ -242,7 +246,7 @@ export async function generateQuotePdf(
       '', 
       `${description}${detailsStr}${obsStr}`,
       ...(showMeasuresColumn ? [`${item.width || 0} x ${item.height || 0}`] : []),
-      ...(showM2Column ? [`${areaValue} m²`] : []),
+      ...(showM2Column ? [`${areaValue.toFixed(2)} m²`] : []),
       item.quantity.toString(),
       formatCurrencyValue(item.unit_price),
       formatCurrencyValue(item.total_price)
@@ -294,7 +298,7 @@ export async function generateQuotePdf(
     },
   });
 
-  y = (doc as any).lastAutoTable.cursor.y + 10;
+  y = ((doc as any).lastAutoTable.finalY || y) + 10;
 
   // ========== OBSERVATIONS ==========
   if (quote.notes || quote.payment_terms) {
