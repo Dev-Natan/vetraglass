@@ -51,7 +51,7 @@ export function AprovarOrcamentoDialog({
   const [formState, setFormState] = useState<ApprovalFormState>(DEFAULT_FORM_STATE);
   const [stockCheckResult, setStockCheckResult] = useState<CompositionStockResult | null>(null);
 
-  const { formasPagamento, hasPaymentOptions, initializeDefaults } = usePaymentOptions();
+  const { formasPagamento, condicoesPagamento, hasPaymentOptions, initializeDefaults } = usePaymentOptions();
 
   const totalOriginal = items.reduce((sum, item) => sum + item.total_price, 0);
   const valorFinal = useMemo(() => quote?.final_amount || totalOriginal, [totalOriginal, quote]);
