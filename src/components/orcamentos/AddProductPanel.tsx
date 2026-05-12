@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useCompositionPricing } from '@/hooks/useCompositionPricing';
-import { resolveProductImageUrl } from '@/utils/imageUrl';
+import { resolveProductImageUrl, resolveItemImageUrl } from '@/utils/imageUrl';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Package, Check, ArrowLeft, Ruler, DollarSign, Sparkles, Info, GlassWater, Layers, Palette, Frame, Maximize2, FileText } from 'lucide-react';
+import { Search, Package, Check, ArrowLeft, Ruler, DollarSign, Sparkles, Info, GlassWater, Layers, Palette, Frame, Maximize2, FileText, Plus, X } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
@@ -17,6 +17,8 @@ import { useProductCategoryLabels } from '@/hooks/useProductCategories';
 import { useProductLinhas } from '@/hooks/useProductLinhas';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useProductAluminumPriceOptions } from '@/hooks/useProductAluminumPrices';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AddItemPanel } from './AddItemPanel';
 
 interface ProductGlassPrice {
   id: string;
