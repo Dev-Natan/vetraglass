@@ -87,8 +87,8 @@ export function SummaryStep({
                   const m2 = ((w * h) / 1_000_000) * (item.quantity || 1);
                   const componentsTotal = item.components?.reduce((s, c) => s + (c.unit_price * c.quantity), 0) || 0;
                   return (
-                    <>
-                      <tr key={index} className="border-t hover:bg-muted/20 transition-colors">
+                    <Fragment key={index}>
+                      <tr className="border-t hover:bg-muted/20 transition-colors">
                         <td className="px-3 py-2">
                           <div className="w-12 h-12 rounded-md border bg-muted/40 flex items-center justify-center overflow-hidden">
                             {item.image_url ? (
