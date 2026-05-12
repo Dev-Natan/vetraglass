@@ -436,10 +436,6 @@ export default function Configuracoes() {
         </div>
       </div>
 
-      <EditarDadosFiscaisDialog 
-        open={editDialogOpen} 
-        onOpenChange={setEditDialogOpen} 
-      />
     </MainLayout>
   );
 }
