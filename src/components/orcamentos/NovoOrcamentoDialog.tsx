@@ -184,6 +184,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
       include_contramarco: product.include_contramarco,
       excluded_optional_ids: product.excluded_optional_ids,
       notes: product.notes,
+      components: product.components,
     });
     setShowAddProduct(false);
     toast({ title: 'Produto adicionado!' });
