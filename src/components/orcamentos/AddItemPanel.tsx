@@ -239,12 +239,12 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
     if (selectedItem.source === 'company') {
       onAdd({
         company_item_id: selectedItem.id,
-        name: isM2 && width > 0 && height > 0 ? `${selectedItem.name} [Medida: ${width}x${height}mm]` : selectedItem.name,
+        name: (width > 0 && height > 0) ? `${selectedItem.name} [Medida: ${width}x${height}mm]` : selectedItem.name,
         unit: selectedItem.unit,
         unit_price: unitPrice,
         quantity,
-        width: isM2 ? width : undefined,
-        height: isM2 ? height : undefined,
+        width: width > 0 ? width : undefined,
+        height: height > 0 ? height : undefined,
         total_price: totalPrice,
         image_url: selectedItem.image_url,
         linha: selectedItem.linha,
@@ -311,12 +311,12 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
 
       onAdd({
         company_item_id: newItem.id,
-        name: isM2 && width > 0 && height > 0 ? `${selectedItem.name} [Medida: ${width}x${height}mm]` : selectedItem.name,
+        name: (width > 0 && height > 0) ? `${selectedItem.name} [Medida: ${width}x${height}mm]` : selectedItem.name,
         unit: selectedItem.unit,
         unit_price: unitPrice,
         quantity,
-        width: isM2 ? width : undefined,
-        height: isM2 ? height : undefined,
+        width: width > 0 ? width : undefined,
+        height: height > 0 ? height : undefined,
         total_price: totalPrice,
         image_url: selectedItem.image_url,
         linha: selectedItem.linha,
@@ -337,7 +337,7 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   };
 
-  const canAdd = selectedItemId && quantity > 0 && unitPrice > 0 && !isCreatingItem;
+  const canAdd = selectedItemId && quantity > 0 && unitPrice >= 0 && !isCreatingItem;
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -526,7 +526,7 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
           </div>
         )}
 
-        {isM2 && (
+        {selectedItem && (selectedItem.type === 'profile' || selectedItem.type === 'glass') && (
           <div className="grid grid-cols-2 gap-4 bg-muted/30 p-3 rounded-lg border border-dashed animate-in fade-in slide-in-from-top-2">
             <div className="space-y-1.5">
               <label className="text-[10px] font-medium text-muted-foreground uppercase flex items-center gap-1">
@@ -554,9 +554,12 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
                 placeholder="Ex: 1000"
               />
             </div>
-            <div className="col-span-2 text-[10px] text-muted-foreground text-center">
-              Item vendido por m². Área calculada: <span className="font-bold">{(area).toFixed(2)} m²</span>
-            </div>
+          </div>
+        )}
+
+        {isM2 && (
+          <div className="bg-muted/30 p-2 rounded-lg border border-dashed text-[10px] text-muted-foreground text-center">
+            Item vendido por m². Área calculada: <span className="font-bold">{(area).toFixed(2)} m²</span>
           </div>
         )}
 
