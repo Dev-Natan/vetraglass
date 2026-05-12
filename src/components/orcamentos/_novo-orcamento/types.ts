@@ -19,6 +19,13 @@ export const quoteSchema = z.object({
 
 export type QuoteFormData = z.infer<typeof quoteSchema>;
 
+export interface QuoteComponent {
+  id?: string;
+  description: string;
+  quantity: number;
+  unit_price: number;
+}
+
 export interface QuoteItem {
   id?: string;
   company_product_id?: string;
@@ -45,6 +52,7 @@ export interface QuoteItem {
   include_contramarco?: boolean;
   excluded_optional_ids?: string[];
   notes?: string;
+  components?: QuoteComponent[];
 }
 
 export interface Quote {

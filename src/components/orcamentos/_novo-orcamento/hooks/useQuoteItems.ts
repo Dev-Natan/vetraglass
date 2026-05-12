@@ -13,8 +13,8 @@ export function useQuoteItems() {
 
       const updated = { ...item, [field]: value } as QuoteItem;
 
-      // Only auto-calculate prices for products or m2 items when dimensions/quantity/base_price change
-      if (field === 'width' || field === 'height' || field === 'quantity' || field === 'base_price_m2' || field === 'unit_price') {
+      // Only auto-calculate prices for products or m2 items when dimensions/quantity/base_price/components change
+      if (field === 'width' || field === 'height' || field === 'quantity' || field === 'base_price_m2' || field === 'unit_price' || field === 'components') {
         const isProduct = updated.item_type !== 'item';
         const isM2Item = updated.item_type === 'item' && updated.unit === 'm2';
         
@@ -32,7 +32,8 @@ export function useQuoteItems() {
           unitPrice = value as number;
         }
 
-        const totalPrice = unitPrice * quantity;
+        const componentsTotal = updated.components?.reduce((sum, c) => sum + (c.unit_price * c.quantity), 0) || 0;
+        const totalPrice = (unitPrice * quantity) + componentsTotal;
 
         return {
           ...updated,

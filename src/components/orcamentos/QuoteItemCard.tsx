@@ -3,9 +3,16 @@ import { resolveImageUrl, resolveProductImageUrl } from '@/utils/imageUrl';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Package, Layers, Palette, Maximize2 } from 'lucide-react';
+import { Trash2, Package, Layers, Palette, Maximize2, Plus, X } from 'lucide-react';
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
 import { useItemTypes } from '@/hooks/useItemTypes';
+
+interface QuoteComponent {
+  id?: string;
+  description: string;
+  quantity: number;
+  unit_price: number;
+}
 
 interface QuoteItem {
   id?: string;
@@ -32,6 +39,7 @@ interface QuoteItem {
   aluminum_color?: string;
   include_contramarco?: boolean;
   excluded_optional_ids?: string[];
+  components?: QuoteComponent[];
 }
 
 const glassColorLabels: Record<string, string> = {
@@ -67,6 +75,31 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
   const imageUrl = getProductImage(item.image_url);
   const area = item.width && item.height ? ((item.width / 1000) * (item.height / 1000)).toFixed(2) : null;
   const isItem = item.item_type === 'item';
+
+  const addComponent = () => {
+    const components = [...(item.components || [])];
+    components.push({
+      description: '',
+      quantity: 1,
+      unit_price: 0
+    });
+    onUpdate(index, 'components', components);
+  };
+
+  const removeComponent = (compIndex: number) => {
+    const components = item.components?.filter((_, i) => i !== compIndex);
+    onUpdate(index, 'components', components);
+  };
+
+  const updateComponent = (compIndex: number, field: keyof QuoteComponent, value: any) => {
+    const components = item.components?.map((comp, i) => {
+      if (i === compIndex) {
+        return { ...comp, [field]: value };
+      }
+      return comp;
+    });
+    onUpdate(index, 'components', components);
+  };
 
   return (
     <div className="border rounded-xl p-4 bg-card hover:shadow-md transition-shadow">
@@ -255,6 +288,71 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
               </div>
             </div>
           )}
+
+          {/* Components / Accessories */}
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between">
+              <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Componentes / Acessórios</h5>
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm" 
+                className="h-7 text-[10px]"
+                onClick={addComponent}
+              >
+                <Plus className="w-3 h-3 mr-1" />
+                Adicionar
+              </Button>
+            </div>
+            
+            {item.components && item.components.length > 0 && (
+              <div className="space-y-2">
+                {item.components.map((comp, compIndex) => (
+                  <div key={compIndex} className="flex gap-2 items-end bg-muted/30 p-2 rounded-lg border border-dashed">
+                    <div className="flex-1">
+                      <label className="text-[10px] text-muted-foreground block mb-1">Descrição</label>
+                      <Input
+                        value={comp.description}
+                        onChange={(e) => updateComponent(compIndex, 'description', e.target.value)}
+                        placeholder="Ex: Puxador, Motor..."
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                    <div className="w-16">
+                      <label className="text-[10px] text-muted-foreground block mb-1">Qtd</label>
+                      <Input
+                        type="number"
+                        value={comp.quantity}
+                        onChange={(e) => updateComponent(compIndex, 'quantity', Number(e.target.value))}
+                        min={1}
+                        className="h-8 text-xs px-1"
+                      />
+                    </div>
+                    <div className="w-24">
+                      <label className="text-[10px] text-muted-foreground block mb-1">Preço Unit.</label>
+                      <Input
+                        type="number"
+                        value={comp.unit_price}
+                        onChange={(e) => updateComponent(compIndex, 'unit_price', Number(e.target.value))}
+                        min={0}
+                        step={0.01}
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeComponent(compIndex)}
+                      className="h-8 w-8 text-destructive hover:text-destructive shrink-0"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Price Summary */}
           <div className="flex items-center justify-between pt-2 border-t">
