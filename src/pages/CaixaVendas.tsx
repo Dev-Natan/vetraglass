@@ -5,7 +5,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, Lock, Plus, Unlock, TrendingUp, TrendingDown, FileText, ClipboardList, DollarSign } from 'lucide-react';
+import { ShoppingCart, Lock, Plus, Unlock, TrendingUp, TrendingDown, FileText, ClipboardList, DollarSign, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -826,7 +826,8 @@ export default function CaixaVendas() {
     setReceivePaymentOpen(true);
   };
 
-  const isCashOpen = !!openCashRegister;
+  const isCashOpen = !!openCashRegister && openCashRegister.status === 'open';
+  const isPendingAudit = !!openCashRegister && openCashRegister.status === 'pending_audit';
 
   const handleExportDailyPdf = () => {
     if (!openCashRegister) return;
@@ -871,25 +872,29 @@ export default function CaixaVendas() {
               </p>
             )}
           </div>
-          {isCashOpen && (
+          {(isCashOpen || isPendingAudit) && (
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={handleExportDailyPdf}>
                 <FileText className="mr-2 h-4 w-4" />
                 Relatório PDF
               </Button>
-              <Button variant="outline" size="sm" onClick={() => setMovimentacaoCaixaOpen(true)}>
-                <TrendingUp className="mr-1 h-4 w-4" />
-                <TrendingDown className="mr-2 h-4 w-4" />
-                Movimentação
-              </Button>
-              <Button variant="outline" onClick={() => setFecharCaixaOpen(true)}>
-                <Lock className="mr-2 h-4 w-4" />
-                Fechar Caixa
-              </Button>
-              <Button onClick={() => setNovaVendaOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Nova Venda
-              </Button>
+              {isCashOpen && (
+                <>
+                  <Button variant="outline" size="sm" onClick={() => setMovimentacaoCaixaOpen(true)}>
+                    <TrendingUp className="mr-1 h-4 w-4" />
+                    <TrendingDown className="mr-2 h-4 w-4" />
+                    Movimentação
+                  </Button>
+                  <Button variant="outline" onClick={() => setFecharCaixaOpen(true)}>
+                    <Lock className="mr-2 h-4 w-4" />
+                    Fechar Caixa
+                  </Button>
+                  <Button onClick={() => setNovaVendaOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Nova Venda
+                  </Button>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -899,8 +904,24 @@ export default function CaixaVendas() {
           <div className="h-40 flex items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
           </div>
-        ) : isCashOpen ? (
+        ) : (isCashOpen || isPendingAudit) ? (
           <>
+            {isPendingAudit && (
+              <Card className="border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/20 mb-6">
+                <CardContent className="py-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-amber-100 dark:bg-amber-900 p-2 rounded-full">
+                      <Loader2 className="h-5 w-5 text-amber-600 animate-spin" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-amber-900 dark:text-amber-100">Fechamento em Auditoria</p>
+                      <p className="text-sm text-amber-700 dark:text-amber-400">Os valores foram congelados. Aguarde a aprovação do gerente.</p>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="border-amber-500 text-amber-600">Pendente</Badge>
+                </CardContent>
+              </Card>
+            )}
             <CaixaResumo
               openingAmount={cashSummary.openingAmount}
               totalDinheiro={cashSummary.totalDinheiro}
