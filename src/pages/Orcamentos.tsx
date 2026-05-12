@@ -159,7 +159,7 @@ export default function Orcamentos() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
-      toast({ title: 'Orçamento excluído com sucesso' });
+      
       setQuoteToDelete(null);
     },
     onError: () => {
