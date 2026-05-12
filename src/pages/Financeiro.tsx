@@ -337,7 +337,7 @@ export default function Financeiro() {
         <FinancialDashboard />
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid">
             <TabsTrigger value="caixa-empresa" className="gap-2">
               <DollarSign className="w-4 h-4 hidden sm:inline" />
