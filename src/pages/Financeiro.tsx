@@ -90,32 +90,51 @@ export default function Financeiro() {
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState('caixa-empresa');
+  const [activeTab, setActiveTab] = useState(() => sessionStorage.getItem('financeiro-active-tab') || 'caixa-empresa');
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
-  // Dialogs
-  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
-  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  // Sync active tab to sessionStorage
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    sessionStorage.setItem('financeiro-active-tab', value);
+    setCurrentPage(1); // Reset page on tab change
+  };
 
-  // Fetch all sales with month filter
-  const { data: sales = [], isLoading } = useQuery({
-    queryKey: ['sales-financeiro', currentCompany?.id, selectedMonth.getMonth(), selectedMonth.getFullYear()],
+  // Fetch sales with pagination and month filter
+  const { data: salesData = { items: [], totalCount: 0 }, isLoading } = useQuery({
+    queryKey: ['sales-financeiro', currentCompany?.id, selectedMonth.getMonth(), selectedMonth.getFullYear(), currentPage, pageSize],
     queryFn: async () => {
-      if (!currentCompany?.id) return [];
-      const { data, error } = await supabase
+      if (!currentCompany?.id) return { items: [], totalCount: 0 };
+      
+      let query = supabase
         .from('sales')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('company_id', currentCompany.id)
         .gte('created_at', dateRange.start.toISOString())
-        .lte('created_at', dateRange.end.toISOString())
-        .order('created_at', { ascending: false });
+        .lte('created_at', dateRange.end.toISOString());
+
+      // Apply pagination only for "vendas" tab
+      if (activeTab === 'vendas') {
+        const from = (currentPage - 1) * pageSize;
+        const to = from + pageSize - 1;
+        query = query.range(from, to).order('created_at', { ascending: false });
+      } else {
+        query = query.order('created_at', { ascending: false });
+      }
+      
+      const { data, error, count } = await query;
       
       if (error) throw error;
-      return data as Sale[];
+      return { items: (data as Sale[]) || [], totalCount: count || 0 };
     },
     enabled: !!currentCompany?.id,
-
   });
+
+  const sales = salesData.items;
+  const totalSalesCount = salesData.totalCount;
 
   // Apply client-side filters
   const filteredSales = useMemo(() => {
