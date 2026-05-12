@@ -537,11 +537,14 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
           </div>
         )}
 
-        {selectedItem && (selectedItem.type === 'profile' || selectedItem.type === 'glass') && (
-          <div className="grid grid-cols-2 gap-4 bg-muted/30 p-3 rounded-lg border border-dashed animate-in fade-in slide-in-from-top-2">
+        {selectedItem && (isM2 || isLinear) && (
+          <div className={cn(
+            "grid gap-4 bg-muted/30 p-3 rounded-lg border border-dashed animate-in fade-in slide-in-from-top-2",
+            isM2 ? "grid-cols-2" : "grid-cols-1"
+          )}>
             <div className="space-y-1.5">
               <label className="text-[10px] font-medium text-muted-foreground uppercase flex items-center gap-1">
-                <Ruler className="w-3 h-3" /> Largura (mm)
+                <Ruler className="w-3 h-3" /> {isM2 ? 'Largura (mm)' : 'Tamanho (mm)'}
               </label>
               <Input
                 type="number"
@@ -549,28 +552,36 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
                 value={width || ''}
                 onChange={(e) => setWidth(Number(e.target.value))}
                 className="h-10"
-                placeholder="Ex: 1000"
+                placeholder={isM2 ? "Ex: 1000" : "Ex: 6000"}
               />
             </div>
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-medium text-muted-foreground uppercase flex items-center gap-1">
-                <Ruler className="w-3 h-3 rotate-90" /> Altura (mm)
-              </label>
-              <Input
-                type="number"
-                min="0"
-                value={height || ''}
-                onChange={(e) => setHeight(Number(e.target.value))}
-                className="h-10"
-                placeholder="Ex: 1000"
-              />
-            </div>
+            {isM2 && (
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-medium text-muted-foreground uppercase flex items-center gap-1">
+                  <Ruler className="w-3 h-3 rotate-90" /> Altura (mm)
+                </label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={height || ''}
+                  onChange={(e) => setHeight(Number(e.target.value))}
+                  className="h-10"
+                  placeholder="Ex: 1000"
+                />
+              </div>
+            )}
           </div>
         )}
 
         {isM2 && (
           <div className="bg-muted/30 p-2 rounded-lg border border-dashed text-[10px] text-muted-foreground text-center">
             Item vendido por m². Área calculada: <span className="font-bold">{(area).toFixed(2)} m²</span>
+          </div>
+        )}
+
+        {isLinear && (
+          <div className="bg-muted/30 p-2 rounded-lg border border-dashed text-[10px] text-muted-foreground text-center">
+            Item vendido por metro. Tamanho: <span className="font-bold">{(width / 1000).toFixed(2)} m</span>
           </div>
         )}
 
