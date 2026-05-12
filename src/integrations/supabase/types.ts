@@ -590,6 +590,7 @@ export type Database = {
         Row: {
           actual_amount: number | null
           audit_notes: string | null
+          audit_status: string | null
           audited_at: string | null
           audited_by: string | null
           closed_at: string | null
@@ -616,6 +617,7 @@ export type Database = {
         Insert: {
           actual_amount?: number | null
           audit_notes?: string | null
+          audit_status?: string | null
           audited_at?: string | null
           audited_by?: string | null
           closed_at?: string | null
@@ -642,6 +644,7 @@ export type Database = {
         Update: {
           actual_amount?: number | null
           audit_notes?: string | null
+          audit_status?: string | null
           audited_at?: string | null
           audited_by?: string | null
           closed_at?: string | null
