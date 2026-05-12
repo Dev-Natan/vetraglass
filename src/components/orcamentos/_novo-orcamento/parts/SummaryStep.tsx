@@ -158,7 +158,7 @@ export function SummaryStep({
                           <td></td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   );
                 })}
               </tbody>
