@@ -168,9 +168,12 @@ export async function generateQuotePdf(
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(100, 100, 100);
-  doc.text(`Emissão: ${format(new Date(quote.created_at), "dd/MM/yyyy", { locale: ptBR })}`, marginRight, y + 10, { align: 'right' });
-  if (quote.valid_until) {
-    doc.text(`Validade: ${format(new Date(quote.valid_until), "dd/MM/yyyy", { locale: ptBR })}`, marginRight, y + 14, { align: 'right' });
+  const emissionDate = quote.created_at ? new Date(quote.created_at) : new Date();
+  const validUntilDate = quote.valid_until ? new Date(quote.valid_until) : null;
+
+  doc.text(`Emissão: ${format(emissionDate, "dd/MM/yyyy", { locale: ptBR })}`, marginRight, y + 10, { align: 'right' });
+  if (validUntilDate && !isNaN(validUntilDate.getTime())) {
+    doc.text(`Validade: ${format(validUntilDate, "dd/MM/yyyy", { locale: ptBR })}`, marginRight, y + 14, { align: 'right' });
   }
 
   y = Math.max(y + logoHeight, companyInfoY) + 10;
@@ -295,7 +298,7 @@ export async function generateQuotePdf(
     },
   });
 
-  y = (doc as any).lastAutoTable.cursor.y + 10;
+  y = ((doc as any).lastAutoTable.finalY || y) + 10;
 
   // ========== OBSERVATIONS ==========
   if (quote.notes || quote.payment_terms) {
