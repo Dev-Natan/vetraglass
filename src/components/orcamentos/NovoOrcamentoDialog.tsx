@@ -221,7 +221,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
       notes: item.notes,
     });
     setShowAddItem(false);
-    toast({ title: 'Item adicionado!' });
+    
   };
 
   const onSubmit = (data: QuoteFormData) => {
