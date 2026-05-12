@@ -612,6 +612,18 @@ export default function Financeiro() {
                     </Table>
                   </div>
                 )}
+                {totalSalesCount > pageSize && (
+                  <div className="mt-6 border-t pt-4">
+                    <PaginationControls
+                      currentPage={currentPage}
+                      totalPages={Math.ceil(totalSalesCount / pageSize)}
+                      totalItems={totalSalesCount}
+                      pageSize={pageSize}
+                      onPageChange={setCurrentPage}
+                      onPageSizeChange={setPageSize}
+                    />
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
