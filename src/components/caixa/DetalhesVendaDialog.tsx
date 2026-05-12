@@ -266,23 +266,30 @@ export function DetalhesVendaDialog({ open, onOpenChange, sale, onPrint }: Detal
                   Histórico de Pagamentos
                 </h4>
                 <div className="space-y-2">
-                  {paymentHistory.map((payment) => (
-                    <div key={payment.id} className="flex justify-between items-center text-sm p-2 rounded bg-muted/50">
-                      <div>
-                        <span className="text-muted-foreground">
-                          {format(new Date(payment.created_at), 'dd/MM HH:mm', { locale: ptBR })}
+                  {paymentHistory.map((payment) => {
+                    const payConfig = paymentMethodConfig[payment.payment_method as keyof typeof paymentMethodConfig] || paymentMethodConfig.dinheiro;
+                    const PayIcon = payConfig.icon;
+                    return (
+                      <div key={payment.id} className="flex justify-between items-center text-sm p-2 rounded bg-muted/50">
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground whitespace-nowrap">
+                            {format(new Date(payment.created_at), 'dd/MM HH:mm', { locale: ptBR })}
+                          </span>
+                          {payment.origem && (
+                            <Badge variant="outline" className="text-[10px] h-4 px-1 uppercase tracking-tighter">
+                              {payment.origem === 'orcamento' ? 'Entrada' : 'Faturamento'}
+                            </Badge>
+                          )}
+                          <div className={`p-1 rounded-full ${payConfig.color}`}>
+                            <PayIcon className="h-3 w-3" />
+                          </div>
+                        </div>
+                        <span className="text-green-600 dark:text-green-400 font-medium">
+                          +{formatCurrency(payment.amount)}
                         </span>
-                        {payment.origem && (
-                          <Badge variant="outline" className="ml-2 text-xs">
-                            {payment.origem === 'orcamento' ? 'Entrada' : 'Faturamento'}
-                          </Badge>
-                        )}
                       </div>
-                      <span className="text-green-600 dark:text-green-400 font-medium">
-                        +{formatCurrency(payment.amount)}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </>
