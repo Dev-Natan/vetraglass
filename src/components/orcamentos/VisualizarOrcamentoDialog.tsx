@@ -67,6 +67,8 @@ interface Quote {
   final_amount: number;
   notes?: string | null;
   valid_until: string | null;
+  show_measures_column?: boolean | null;
+  show_m2_column?: boolean | null;
   created_at: string;
 }
 
@@ -333,8 +335,8 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
     
     toast({ title: 'Preparando impressão...' });
     await generateQuotePdf(quote, itemsForPdf, company, 'print', getPaymentSettings(), {
-      showMeasuresColumn: (quote as any).show_measures_column ?? true,
-      showM2Column: (quote as any).show_m2_column ?? true,
+      showMeasuresColumn: quote.show_measures_column ?? true,
+      showM2Column: quote.show_m2_column ?? true,
     });
   };
 
@@ -371,8 +373,8 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
     
     toast({ title: 'Gerando PDF...' });
     await generateQuotePdf(quote, itemsForPdf, company, 'download', getPaymentSettings(), {
-      showMeasuresColumn: (quote as any).show_measures_column ?? true,
-      showM2Column: (quote as any).show_m2_column ?? true,
+      showMeasuresColumn: quote.show_measures_column ?? true,
+      showM2Column: quote.show_m2_column ?? true,
     });
     toast({ title: 'PDF gerado com sucesso!' });
   };
