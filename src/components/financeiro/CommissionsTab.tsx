@@ -232,6 +232,12 @@ export function CommissionsTab({ selectedMonth: externalMonth, onMonthChange }: 
         c => c.employee_id === employeeId && c.status === 'pending'
       );
       
+      if (pendingCommissions.length === 0) return;
+
+      const totalAmount = pendingCommissions.reduce((sum, c) => sum + Number(c.commission_amount), 0);
+      const employeeName = pendingCommissions[0].employee?.name || 'Funcionário';
+
+      // 1. Mark all as paid
       for (const commission of pendingCommissions) {
         await supabase
           .from('employee_commissions')
@@ -241,6 +247,28 @@ export function CommissionsTab({ selectedMonth: externalMonth, onMonthChange }: 
             notes: 'Pagamento em lote',
           })
           .eq('id', commission.id);
+      }
+
+      // 2. Register cash movement
+      const { data: openRegister } = await supabase
+        .from('cash_registers')
+        .select('id')
+        .eq('company_id', currentCompany?.id)
+        .eq('status', 'open')
+        .maybeSingle();
+
+      if (openRegister) {
+        await supabase
+          .from('cash_movements')
+          .insert({
+            company_id: currentCompany?.id,
+            cash_register_id: openRegister.id,
+            type: 'saida',
+            category: 'comissao',
+            amount: totalAmount,
+            description: `Pagamento de comissões - ${employeeName}`,
+            created_by: (await supabase.auth.getUser()).data.user?.id,
+          });
       }
     },
     onSuccess: () => {

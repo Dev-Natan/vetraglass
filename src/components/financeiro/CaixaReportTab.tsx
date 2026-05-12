@@ -40,6 +40,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { generateCaixaReportPdf } from '@/utils/generateCaixaReportPdf';
+import { generateFinancialReport } from '@/utils/generateFinancialReport';
 
 type MovementTypeFilter = 'all' | 'entrada' | 'saida';
 
@@ -220,6 +221,76 @@ export function CaixaReportTab({ selectedMonth: externalMonth, onMonthChange }: 
     link.click();
   };
 
+  const handleExportDRE = async () => {
+    // 1. Get commissions paid in the month
+    const { data: commissions } = await supabase
+      .from('employee_commissions')
+      .select('commission_amount')
+      .eq('company_id', currentCompany?.id)
+      .eq('status', 'paid')
+      .gte('paid_at', dateRange.start.toISOString())
+      .lte('paid_at', dateRange.end.toISOString());
+
+    const totalCommissions = commissions?.reduce((sum, c) => sum + Number(c.commission_amount), 0) || 0;
+
+    // 2. Group expenses by category
+    const { data: expenses } = await supabase
+      .from('expenses')
+      .select('amount, category')
+      .eq('company_id', currentCompany?.id)
+      .eq('status', 'paid')
+      .gte('paid_date', dateRange.start.toISOString().split('T')[0])
+      .lte('paid_date', dateRange.end.toISOString().split('T')[0]);
+
+    const expenseCategories: Record<string, number> = {};
+    expenses?.forEach(e => {
+      expenseCategories[e.category] = (expenseCategories[e.category] || 0) + Number(e.amount);
+    });
+
+    const totalExpenses = expenses?.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
+
+    // 3. Get total revenue from sales (paid in month)
+    const { data: sales } = await supabase
+      .from('sales')
+      .select('total_amount')
+      .eq('company_id', currentCompany?.id)
+      .eq('payment_status', 'paid')
+      .gte('created_at', dateRange.start.toISOString())
+      .lte('created_at', dateRange.end.toISOString());
+
+    const totalSales = sales?.reduce((sum, s) => sum + Number(s.total_amount), 0) || 0;
+
+    // 4. Get total revenue from receivables (paid in month)
+    const { data: receivables } = await supabase
+      .from('accounts_receivable')
+      .select('paid_amount')
+      .eq('company_id', currentCompany?.id)
+      .eq('status', 'paid')
+      .gte('paid_date', dateRange.start.toISOString().split('T')[0])
+      .lte('paid_date', dateRange.end.toISOString().split('T')[0]);
+
+    const totalReceivables = receivables?.reduce((sum, r) => sum + Number(r.paid_amount), 0) || 0;
+
+    const reportData = {
+      month: selectedMonth,
+      revenue: {
+        sales: totalSales,
+        receivables: totalReceivables,
+        total: totalSales + totalReceivables,
+      },
+      expenses: {
+        byCategory: expenseCategories,
+        total: totalExpenses,
+      },
+      commissions: {
+        total: totalCommissions,
+      },
+      netProfit: (totalSales + totalReceivables) - (totalExpenses + totalCommissions),
+    };
+
+    generateFinancialReport(reportData, currentCompany ? { name: currentCompany.name, cnpj: currentCompany.cnpj } : null);
+  };
+
   const isLoading = loadingMovements || loadingRegisters;
 
   return (
@@ -268,6 +339,10 @@ export function CaixaReportTab({ selectedMonth: externalMonth, onMonthChange }: 
               <Button variant="outline" size="sm" onClick={handleExportCSV}>
                 <Download className="h-4 w-4 mr-2" />
                 Exportar CSV
+              </Button>
+              <Button variant="default" size="sm" onClick={handleExportDRE} className="bg-blue-600 hover:bg-blue-700">
+                <BarChart3 className="h-4 w-4 mr-2" />
+                DRE Simplificado
               </Button>
             </div>
           </div>

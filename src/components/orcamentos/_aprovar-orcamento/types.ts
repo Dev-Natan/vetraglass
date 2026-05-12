@@ -41,6 +41,7 @@ export type Priority = 'low' | 'normal' | 'high' | 'urgent';
 
 export interface ApprovalFormState {
   selectedFormaId: string | null;
+  selectedCondicaoId: string | null;
   entryAmount: string;
   entryPaymentMethod: EntryPaymentMethod;
   cardActualReceived: string;

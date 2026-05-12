@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { format, addDays } from 'date-fns';
+import { format, addDays, addMonths } from 'date-fns';
 import { generateOSDocuments } from '@/utils/generateOSDocuments';
 import { generateMaterialConsumption, linkReservationsToConsumption } from '@/utils/generateMaterialConsumption';
 import { parseAmount } from '../utils';
@@ -32,7 +32,7 @@ export function useApprovalMutation({
       if (!quote || !companyId || !userId) throw new Error('Dados incompletos');
 
       const {
-        selectedFormaId, entryAmount, entryPaymentMethod, cardActualReceived,
+        selectedFormaId, selectedCondicaoId, entryAmount, entryPaymentMethod, cardActualReceived,
         balanceDueDate, receiveOnCompletion, estimatedEnd, priority, notes,
       } = formState;
 
@@ -214,30 +214,51 @@ export function useApprovalMutation({
         }
       }
 
-      // 4. Pending receivable
+      // 4. Pending receivables
       if (pendingAmount > 0) {
-        const { error: receivablesError } = await supabase
-          .from('accounts_receivable')
-          .insert({
-            company_id: companyId,
-            ordem_servico_id: ordemServico.id,
-            quote_id: quote.id,
-            sale_id: saleId,
-            customer_name: quote.customer_name,
-            description: receiveOnCompletion
-              ? `OS #${ordemServico.os_number} - Receber na conclusão`
-              : `OS #${ordemServico.os_number} - Saldo a receber`,
-            total_amount: pendingAmount,
-            installment_number: 1,
-            total_installments: 1,
-            due_date: receiveOnCompletion
-              ? (estimatedEnd ? format(estimatedEnd, 'yyyy-MM-dd') : format(addDays(new Date(), 30), 'yyyy-MM-dd'))
-              : (balanceDueDate ? format(balanceDueDate, 'yyyy-MM-dd') : format(addDays(new Date(), 30), 'yyyy-MM-dd')),
-            status: 'pending',
-            created_by: userId,
-            receivable_type: receiveOnCompletion ? 'saldo_conclusao' : 'saldo_final',
-          });
-        if (receivablesError) console.error('Error creating receivables:', receivablesError);
+        let numInstallments = 1;
+        let daysBetween = 30;
+        let condicaoNome = '';
+
+        if (selectedCondicaoId && selectedCondicaoId !== 'none') {
+          const { data: condicao } = await supabase
+            .from('condicoes_pagamento')
+            .select('*')
+            .eq('id', selectedCondicaoId)
+            .single();
+          
+          if (condicao) {
+            numInstallments = condicao.parcelas || 1;
+            daysBetween = condicao.dias_entre_parcelas || 30;
+            condicaoNome = condicao.nome;
+          }
+        }
+
+        const installmentAmount = Math.round((pendingAmount / numInstallments) * 100) / 100;
+
+        for (let i = 1; i <= numInstallments; i++) {
+          const dueDate = receiveOnCompletion
+            ? (estimatedEnd ? addDays(estimatedEnd, (i - 1) * daysBetween) : addDays(new Date(), 30 + (i - 1) * daysBetween))
+            : (balanceDueDate ? addDays(balanceDueDate, (i - 1) * daysBetween) : addDays(new Date(), 30 + (i - 1) * daysBetween));
+
+          await supabase
+            .from('accounts_receivable')
+            .insert({
+              company_id: companyId,
+              ordem_servico_id: ordemServico.id,
+              quote_id: quote.id,
+              sale_id: saleId,
+              customer_name: quote.customer_name,
+              description: `OS #${ordemServico.os_number} - ${condicaoNome || 'Saldo'} (${i}/${numInstallments})`,
+              total_amount: i === numInstallments ? (pendingAmount - (installmentAmount * (numInstallments - 1))) : installmentAmount,
+              installment_number: i,
+              total_installments: numInstallments,
+              due_date: format(dueDate, 'yyyy-MM-dd'),
+              status: 'pending',
+              created_by: userId,
+              receivable_type: receiveOnCompletion ? 'saldo_conclusao' : 'saldo_final',
+            });
+        }
       }
 
       // 5. Documents

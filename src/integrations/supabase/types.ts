@@ -2321,6 +2321,7 @@ export type Database = {
         Row: {
           commission_enabled: boolean | null
           commission_percent: number | null
+          commission_trigger: string | null
           commission_type: string | null
           company_id: string
           created_at: string
@@ -2342,6 +2343,7 @@ export type Database = {
         Insert: {
           commission_enabled?: boolean | null
           commission_percent?: number | null
+          commission_trigger?: string | null
           commission_type?: string | null
           company_id: string
           created_at?: string
@@ -2363,6 +2365,7 @@ export type Database = {
         Update: {
           commission_enabled?: boolean | null
           commission_percent?: number | null
+          commission_trigger?: string | null
           commission_type?: string | null
           company_id?: string
           created_at?: string

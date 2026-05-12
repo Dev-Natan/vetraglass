@@ -55,6 +55,7 @@ import { ContasReceberTab } from '@/components/financeiro/ContasReceberTab';
 import { CaixaEmpresaTab } from '@/components/financeiro/CaixaEmpresaTab';
 import { CaixaReportTab } from '@/components/financeiro/CaixaReportTab';
 import { CashFlowProjection } from '@/components/financeiro/CashFlowProjection';
+import { FinancialDashboard } from '@/components/financeiro/FinancialDashboard';
 import { calculateFormulaQuantity } from '@/utils/safeFormulaEvaluator';
 import { MonthSelector, getMonthDateRange } from '@/components/common/MonthSelector';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
@@ -307,6 +308,9 @@ export default function Financeiro() {
             <p className="text-muted-foreground">Gestão de vendas, caixa e movimentações financeiras</p>
           </div>
         </div>
+
+        {/* Dashboard de Saúde Financeira */}
+        <FinancialDashboard />
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

@@ -28,6 +28,7 @@ interface Props {
   state: ApprovalFormState;
   onChange: <K extends keyof ApprovalFormState>(key: K, value: ApprovalFormState[K]) => void;
   formasPagamento: FormaPagamento[];
+  condicoesPagamento: any[];
   hasPaymentOptions: boolean;
   onInitializeDefaults: () => void;
   isInitializingDefaults: boolean;
@@ -36,7 +37,7 @@ interface Props {
 }
 
 export function PaymentStep({
-  state, onChange, formasPagamento, hasPaymentOptions,
+  state, onChange, formasPagamento, condicoesPagamento, hasPaymentOptions,
   onInitializeDefaults, isInitializingDefaults, isCaixaAberto, valorFinal,
 }: Props) {
   const entryValue = parseAmount(state.entryAmount);
@@ -87,6 +88,26 @@ export function PaymentStep({
                     </div>
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+
+            <Label className="mt-4 block">Condição de Pagamento (Saldo)</Label>
+            <Select
+              value={state.selectedCondicaoId || ''}
+              onValueChange={(v) => onChange('selectedCondicaoId', v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione a condição do saldo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">À vista / Personalizado</SelectItem>
+                {condicoesPagamento
+                  .filter(c => !state.selectedFormaId || c.forma_pagamento_id === state.selectedFormaId)
+                  .map(condicao => (
+                    <SelectItem key={condicao.id} value={condicao.id}>
+                      {condicao.nome} ({condicao.parcelas}x)
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>

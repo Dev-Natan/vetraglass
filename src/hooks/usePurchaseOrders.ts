@@ -284,6 +284,19 @@ export function useReceivePurchaseOrderItems() {
         })
         .eq('id', purchaseOrderId);
       
+      // Create an expense for the received materials
+      await supabase
+        .from('expenses')
+        .insert({
+          company_id: purchaseOrder.company_id,
+          category: 'materiais',
+          description: `Compra de materiais - Pedido #${purchaseOrderId.split('-')[0]}`,
+          amount: totalActual,
+          due_date: new Date().toISOString().split('T')[0],
+          status: 'pending',
+          notes: `Referente ao Pedido de Compra #${purchaseOrderId}`,
+        });
+
       // Update glass projects procurement status
       const receivedItemIds = items.map(i => i.id);
       const { data: itemsWithGlass } = await supabase

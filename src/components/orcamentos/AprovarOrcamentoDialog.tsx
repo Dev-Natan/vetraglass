@@ -27,6 +27,7 @@ import { ApprovalFooter } from './_aprovar-orcamento/parts/ApprovalFooter';
 
 const DEFAULT_FORM_STATE: ApprovalFormState = {
   selectedFormaId: null,
+  selectedCondicaoId: null,
   entryAmount: '',
   entryPaymentMethod: 'pix',
   cardActualReceived: '',
@@ -50,7 +51,7 @@ export function AprovarOrcamentoDialog({
   const [formState, setFormState] = useState<ApprovalFormState>(DEFAULT_FORM_STATE);
   const [stockCheckResult, setStockCheckResult] = useState<CompositionStockResult | null>(null);
 
-  const { formasPagamento, hasPaymentOptions, initializeDefaults } = usePaymentOptions();
+  const { formasPagamento, condicoesPagamento, hasPaymentOptions, initializeDefaults } = usePaymentOptions();
 
   const totalOriginal = items.reduce((sum, item) => sum + item.total_price, 0);
   const valorFinal = useMemo(() => quote?.final_amount || totalOriginal, [totalOriginal, quote]);
@@ -150,6 +151,7 @@ export function AprovarOrcamentoDialog({
               state={formState}
               onChange={updateField}
               formasPagamento={formasPagamento}
+              condicoesPagamento={condicoesPagamento}
               hasPaymentOptions={hasPaymentOptions}
               onInitializeDefaults={() => initializeDefaults.mutate()}
               isInitializingDefaults={initializeDefaults.isPending}
