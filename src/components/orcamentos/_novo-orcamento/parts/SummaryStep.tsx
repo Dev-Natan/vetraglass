@@ -86,6 +86,7 @@ export function SummaryStep({
                   const h = Number(item.height) || 0;
                   const m2 = ((w * h) / 1_000_000) * (item.quantity || 1);
                   const componentsTotal = item.components?.reduce((s, c) => s + (c.unit_price * c.quantity), 0) || 0;
+                  const productOnlyTotal = (item.total_price || 0) - componentsTotal;
                   return (
                     <Fragment key={index}>
                       <tr className="border-t hover:bg-muted/20 transition-colors">
@@ -110,7 +111,7 @@ export function SummaryStep({
                         <td className="px-3 py-2 text-right tabular-nums">{m2.toFixed(2)}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{item.quantity}</td>
                         <td className="px-3 py-2 text-right font-semibold whitespace-nowrap">
-                          {formatCurrency(item.total_price)}
+                          {formatCurrency(productOnlyTotal)}
                         </td>
                         <td className="px-3 py-2">
                           <div className="flex justify-end gap-1">
@@ -152,6 +153,10 @@ export function SummaryStep({
                               <div className="flex justify-between text-xs font-semibold border-t border-dashed pt-1 mt-1">
                                 <span>Subtotal componentes</span>
                                 <span className="tabular-nums text-primary">{formatCurrency(componentsTotal)}</span>
+                              </div>
+                              <div className="flex justify-between text-xs font-bold pt-1">
+                                <span>Total do item (produto + componentes)</span>
+                                <span className="tabular-nums text-primary">{formatCurrency(item.total_price)}</span>
                               </div>
                             </div>
                           </td>
