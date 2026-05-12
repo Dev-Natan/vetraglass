@@ -90,6 +90,26 @@ export function PaymentStep({
                 ))}
               </SelectContent>
             </Select>
+
+            <Label className="mt-4 block">Condição de Pagamento (Saldo)</Label>
+            <Select
+              value={state.selectedCondicaoId || ''}
+              onValueChange={(v) => onChange('selectedCondicaoId', v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione a condição do saldo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">À vista / Personalizado</SelectItem>
+                {condicoesPagamento
+                  .filter(c => !state.selectedFormaId || c.forma_pagamento_id === state.selectedFormaId)
+                  .map(condicao => (
+                    <SelectItem key={condicao.id} value={condicao.id}>
+                      {condicao.nome} ({condicao.parcelas}x)
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="p-4 border rounded-xl bg-card space-y-4">
