@@ -826,7 +826,8 @@ export default function CaixaVendas() {
     setReceivePaymentOpen(true);
   };
 
-  const isCashOpen = !!openCashRegister;
+  const isCashOpen = !!openCashRegister && openCashRegister.status === 'open';
+  const isPendingAudit = !!openCashRegister && openCashRegister.status === 'pending_audit';
 
   const handleExportDailyPdf = () => {
     if (!openCashRegister) return;
