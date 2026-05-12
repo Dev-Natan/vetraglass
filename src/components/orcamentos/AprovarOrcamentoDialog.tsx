@@ -27,6 +27,7 @@ import { ApprovalFooter } from './_aprovar-orcamento/parts/ApprovalFooter';
 
 const DEFAULT_FORM_STATE: ApprovalFormState = {
   selectedFormaId: null,
+  selectedCondicaoId: null,
   entryAmount: '',
   entryPaymentMethod: 'pix',
   cardActualReceived: '',
