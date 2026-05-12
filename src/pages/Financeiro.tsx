@@ -59,6 +59,7 @@ import { FinancialDashboard } from '@/components/financeiro/FinancialDashboard';
 import { calculateFormulaQuantity } from '@/utils/safeFormulaEvaluator';
 import { MonthSelector, getMonthDateRange } from '@/components/common/MonthSelector';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
+import { PaginationControls } from '@/components/common/PaginationControls';
 
 // Types moved to @/types/financeiro
 
