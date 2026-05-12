@@ -337,7 +337,7 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   };
 
-  const canAdd = selectedItemId && quantity > 0 && unitPrice > 0 && !isCreatingItem;
+  const canAdd = selectedItemId && quantity > 0 && unitPrice >= 0 && !isCreatingItem;
 
   return (
     <div className="flex flex-col h-full min-h-0">
