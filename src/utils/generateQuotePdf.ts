@@ -119,10 +119,6 @@ export async function generateQuotePdf(
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   
-  const textColor = { r: 40, g: 40, b: 40 };
-  const mutedColor = { r: 100, g: 100, b: 100 };
-  const dividerColor: [number, number, number] = [220, 220, 220];
-  
   let y = 15;
   const marginLeft = 15;
   const marginRight = pageWidth - 15;
@@ -141,13 +137,13 @@ export async function generateQuotePdf(
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
-  doc.setTextColor(...textColor);
+  doc.setTextColor(40, 40, 40);
   const companyInfoX = company?.logo_url ? marginLeft + (company.logo_size || 35) + 8 : marginLeft;
   
   doc.text(company?.name || '', companyInfoX, y + 5);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  doc.setTextColor(...mutedColor);
+  doc.setTextColor(100, 100, 100);
   
   let companyInfoY = y + 9;
   if (company?.cnpj) {
@@ -170,7 +166,7 @@ export async function generateQuotePdf(
   
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  doc.setTextColor(...mutedColor);
+  doc.setTextColor(100, 100, 100);
   doc.text(`Emissão: ${format(new Date(quote.created_at), "dd/MM/yyyy", { locale: ptBR })}`, marginRight, y + 10, { align: 'right' });
   if (quote.valid_until) {
     doc.text(`Validade: ${format(new Date(quote.valid_until), "dd/MM/yyyy", { locale: ptBR })}`, marginRight, y + 14, { align: 'right' });
@@ -178,7 +174,7 @@ export async function generateQuotePdf(
 
   y = Math.max(y + logoHeight, companyInfoY) + 10;
 
-  doc.setDrawColor(...dividerColor);
+  doc.setDrawColor(220, 220, 220);
   doc.setLineWidth(0.1);
   doc.line(marginLeft, y, marginRight, y);
   y += 8;
@@ -186,18 +182,18 @@ export async function generateQuotePdf(
   // ========== CUSTOMER INFO ==========
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
-  doc.setTextColor(...mutedColor);
+  doc.setTextColor(100, 100, 100);
   doc.text('DADOS DO CLIENTE', marginLeft, y);
   y += 5;
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
-  doc.setTextColor(...textColor);
+  doc.setTextColor(40, 40, 40);
   doc.text(quote.customer_name.toUpperCase(), marginLeft, y);
   
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  doc.setTextColor(...mutedColor);
+  doc.setTextColor(100, 100, 100);
   
   let customerDetails = [];
   if (quote.customer_phone) customerDetails.push(`Tel: ${quote.customer_phone}`);
@@ -215,7 +211,7 @@ export async function generateQuotePdf(
 
   y += 10;
 
-  // ========== ITEMS TABLE (SLIM SINGLE TABLE) ==========
+  // ========== ITEMS TABLE ==========
   const tableHead = [
     '#',
     'Imagem',
@@ -309,13 +305,13 @@ export async function generateQuotePdf(
     
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
-    doc.setTextColor(...mutedColor);
+    doc.setTextColor(100, 100, 100);
     doc.text('OBSERVAÇÕES', marginLeft, y);
     y += 5;
     
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
-    doc.setTextColor(...textColor);
+    doc.setTextColor(40, 40, 40);
     
     const obsText = [];
     if (quote.notes) obsText.push(quote.notes);
@@ -335,7 +331,7 @@ export async function generateQuotePdf(
 
   const totalsX = marginRight - 80;
   
-  doc.setDrawColor(...dividerColor);
+  doc.setDrawColor(220, 220, 220);
   doc.line(totalsX, y, marginRight, y);
   y += 6;
 
