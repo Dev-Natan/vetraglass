@@ -92,7 +92,7 @@ const categoryConfig: Record<string, { label: string; icon: React.ElementType; c
   energia: { label: 'Energia', icon: Zap, color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300' },
   agua: { label: 'Água', icon: Droplets, color: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900 dark:text-cyan-300' },
   internet: { label: 'Internet', icon: Wifi, color: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' },
-  impostos: { label: 'Impostos', icon: Receipt, color: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' },
+  
   manutencao: { label: 'Manutenção', icon: Wrench, color: 'bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-300' },
   materiais: { label: 'Materiais', icon: Package, color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300' },
   outros: { label: 'Outros', icon: MoreHorizontal, color: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' },
