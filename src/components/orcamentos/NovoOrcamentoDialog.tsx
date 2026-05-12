@@ -187,7 +187,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
       components: product.components,
     });
     setShowAddProduct(false);
-    toast({ title: 'Produto adicionado!' });
+    
   };
 
   const handleAddItem = (item: {
