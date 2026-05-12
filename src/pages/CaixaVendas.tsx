@@ -872,25 +872,29 @@ export default function CaixaVendas() {
               </p>
             )}
           </div>
-          {isCashOpen && (
+          {(isCashOpen || isPendingAudit) && (
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={handleExportDailyPdf}>
                 <FileText className="mr-2 h-4 w-4" />
                 Relatório PDF
               </Button>
-              <Button variant="outline" size="sm" onClick={() => setMovimentacaoCaixaOpen(true)}>
-                <TrendingUp className="mr-1 h-4 w-4" />
-                <TrendingDown className="mr-2 h-4 w-4" />
-                Movimentação
-              </Button>
-              <Button variant="outline" onClick={() => setFecharCaixaOpen(true)}>
-                <Lock className="mr-2 h-4 w-4" />
-                Fechar Caixa
-              </Button>
-              <Button onClick={() => setNovaVendaOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Nova Venda
-              </Button>
+              {isCashOpen && (
+                <>
+                  <Button variant="outline" size="sm" onClick={() => setMovimentacaoCaixaOpen(true)}>
+                    <TrendingUp className="mr-1 h-4 w-4" />
+                    <TrendingDown className="mr-2 h-4 w-4" />
+                    Movimentação
+                  </Button>
+                  <Button variant="outline" onClick={() => setFecharCaixaOpen(true)}>
+                    <Lock className="mr-2 h-4 w-4" />
+                    Fechar Caixa
+                  </Button>
+                  <Button onClick={() => setNovaVendaOpen(true)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Nova Venda
+                  </Button>
+                </>
+              )}
             </div>
           )}
         </div>
