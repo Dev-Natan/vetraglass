@@ -205,8 +205,11 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
   
   const unitPrice = customPrice !== null ? customPrice : (selectedItem?.sale_price || 0);
   const isM2 = selectedItem?.unit === 'm2';
+  const isLinear = selectedItem?.unit === 'm' || selectedItem?.type === 'profile';
+  
   const area = isM2 && width > 0 && height > 0 ? (width / 1000) * (height / 1000) : 1;
-  const totalPrice = unitPrice * area * quantity;
+  const linearFactor = isLinear && width > 0 ? width / 1000 : 1;
+  const totalPrice = unitPrice * (isM2 ? area : linearFactor) * quantity;
 
   const getTypeLabel = (type: string) => {
     const found = itemTypes?.find(t => t.slug === type);
@@ -239,7 +242,11 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
     if (selectedItem.source === 'company') {
       onAdd({
         company_item_id: selectedItem.id,
-        name: (width > 0 && height > 0) ? `${selectedItem.name} [Medida: ${width}x${height}mm]` : selectedItem.name,
+        name: isM2 && width > 0 && height > 0 
+          ? `${selectedItem.name} [Medida: ${width}x${height}mm]` 
+          : isLinear && width > 0 
+            ? `${selectedItem.name} [Medida: ${width}mm]`
+            : selectedItem.name,
         unit: selectedItem.unit,
         unit_price: unitPrice,
         quantity,
@@ -311,7 +318,11 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
 
       onAdd({
         company_item_id: newItem.id,
-        name: (width > 0 && height > 0) ? `${selectedItem.name} [Medida: ${width}x${height}mm]` : selectedItem.name,
+        name: isM2 && width > 0 && height > 0 
+          ? `${selectedItem.name} [Medida: ${width}x${height}mm]` 
+          : isLinear && width > 0 
+            ? `${selectedItem.name} [Medida: ${width}mm]`
+            : selectedItem.name,
         unit: selectedItem.unit,
         unit_price: unitPrice,
         quantity,
@@ -526,11 +537,14 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
           </div>
         )}
 
-        {selectedItem && (selectedItem.type === 'profile' || selectedItem.type === 'glass') && (
-          <div className="grid grid-cols-2 gap-4 bg-muted/30 p-3 rounded-lg border border-dashed animate-in fade-in slide-in-from-top-2">
+        {selectedItem && (isM2 || isLinear) && (
+          <div className={cn(
+            "grid gap-4 bg-muted/30 p-3 rounded-lg border border-dashed animate-in fade-in slide-in-from-top-2",
+            isM2 ? "grid-cols-2" : "grid-cols-1"
+          )}>
             <div className="space-y-1.5">
               <label className="text-[10px] font-medium text-muted-foreground uppercase flex items-center gap-1">
-                <Ruler className="w-3 h-3" /> Largura (mm)
+                <Ruler className="w-3 h-3" /> {isM2 ? 'Largura (mm)' : 'Tamanho (mm)'}
               </label>
               <Input
                 type="number"
@@ -538,28 +552,36 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
                 value={width || ''}
                 onChange={(e) => setWidth(Number(e.target.value))}
                 className="h-10"
-                placeholder="Ex: 1000"
+                placeholder={isM2 ? "Ex: 1000" : "Ex: 6000"}
               />
             </div>
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-medium text-muted-foreground uppercase flex items-center gap-1">
-                <Ruler className="w-3 h-3 rotate-90" /> Altura (mm)
-              </label>
-              <Input
-                type="number"
-                min="0"
-                value={height || ''}
-                onChange={(e) => setHeight(Number(e.target.value))}
-                className="h-10"
-                placeholder="Ex: 1000"
-              />
-            </div>
+            {isM2 && (
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-medium text-muted-foreground uppercase flex items-center gap-1">
+                  <Ruler className="w-3 h-3 rotate-90" /> Altura (mm)
+                </label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={height || ''}
+                  onChange={(e) => setHeight(Number(e.target.value))}
+                  className="h-10"
+                  placeholder="Ex: 1000"
+                />
+              </div>
+            )}
           </div>
         )}
 
         {isM2 && (
           <div className="bg-muted/30 p-2 rounded-lg border border-dashed text-[10px] text-muted-foreground text-center">
             Item vendido por m². Área calculada: <span className="font-bold">{(area).toFixed(2)} m²</span>
+          </div>
+        )}
+
+        {isLinear && (
+          <div className="bg-muted/30 p-2 rounded-lg border border-dashed text-[10px] text-muted-foreground text-center">
+            Item vendido por metro. Tamanho: <span className="font-bold">{(width / 1000).toFixed(2)} m</span>
           </div>
         )}
 
@@ -580,7 +602,7 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
           </div>
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-              <DollarSign className="w-3 h-3" /> Preço {isM2 ? 'por m²' : 'Unitário'}
+              <DollarSign className="w-3 h-3" /> Preço {isM2 ? 'por m²' : isLinear ? 'por metro' : 'Unitário'}
             </label>
             <Input
               type="number"
@@ -618,6 +640,11 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
               {isM2 ? (
                 <>
                   <span>{area.toFixed(2)} m²</span>
+                  <span className="opacity-70">×</span>
+                </>
+              ) : isLinear ? (
+                <>
+                  <span>{(width / 1000).toFixed(2)} m</span>
                   <span className="opacity-70">×</span>
                 </>
               ) : null}
