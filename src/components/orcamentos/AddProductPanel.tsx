@@ -865,6 +865,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
               </DialogContent>
             </Dialog>
           </div>
+        )}
 
 
         {/* Observações */}
