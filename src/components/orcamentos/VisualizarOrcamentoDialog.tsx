@@ -67,6 +67,8 @@ interface Quote {
   final_amount: number;
   notes?: string | null;
   valid_until: string | null;
+  show_measures_column?: boolean | null;
+  show_m2_column?: boolean | null;
   created_at: string;
 }
 
