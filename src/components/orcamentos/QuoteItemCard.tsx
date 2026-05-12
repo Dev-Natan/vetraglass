@@ -363,10 +363,4 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
       </div>
     </div>
   );
-}, (prev, next) => 
-  prev.item.id === next.item.id && 
-  prev.item.total_price === next.item.total_price &&
-  prev.item.quantity === next.item.quantity &&
-  prev.item.unit_price === next.item.unit_price &&
-  prev.item.aluminum_color === next.item.aluminum_color
-);
+});

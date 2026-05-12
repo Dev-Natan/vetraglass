@@ -47,7 +47,7 @@ export function ProductsStep({ items, onAddProduct, onAddItem, onUpdateItem, onR
     <div className="space-y-3">
       {items.map((item, index) => (
         <QuoteItemCard
-          key={item.id || index}
+          key={index}
           item={item}
           index={index}
           onUpdate={onUpdateItem}
