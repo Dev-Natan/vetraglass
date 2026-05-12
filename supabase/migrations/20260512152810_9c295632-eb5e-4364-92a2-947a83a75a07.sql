@@ -1,0 +1,2 @@
+ALTER TABLE public.cash_registers DROP CONSTRAINT IF EXISTS cash_registers_status_check;
+ALTER TABLE public.cash_registers ADD CONSTRAINT cash_registers_status_check CHECK (status = ANY (ARRAY['open'::text, 'closed'::text, 'pending_audit'::text]));
