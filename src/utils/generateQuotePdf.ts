@@ -275,7 +275,7 @@ export async function generateQuotePdf(
     },
     columnStyles: {
       0: { cellWidth: 8, halign: 'center' },
-      1: { cellWidth: 22 }, 
+      1: { cellWidth: 20, minCellHeight: 18 }, 
       2: { cellWidth: 'auto' }, 
       [tableHead.indexOf('Qtd')]: { cellWidth: 10, halign: 'center' },
       [tableHead.indexOf('V. Unit')]: { cellWidth: 20, halign: 'right' },
@@ -288,7 +288,9 @@ export async function generateQuotePdf(
         if (imageUrl) {
           const base64 = getCachedImage(imageUrl);
           if (base64) {
-            const imgSize = 16;
+            const padding = 1.5;
+            const maxSize = Math.min(data.cell.width, data.cell.height) - padding * 2;
+            const imgSize = Math.max(6, Math.min(14, maxSize));
             const x = data.cell.x + (data.cell.width - imgSize) / 2;
             const y = data.cell.y + (data.cell.height - imgSize) / 2;
             doc.addImage(base64, inferJsPdfImageFormat(base64), x, y, imgSize, imgSize);
