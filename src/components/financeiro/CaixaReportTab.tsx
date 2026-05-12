@@ -40,6 +40,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { generateCaixaReportPdf } from '@/utils/generateCaixaReportPdf';
+import { generateFinancialReport } from '@/utils/generateFinancialReport';
 
 type MovementTypeFilter = 'all' | 'entrada' | 'saida';
 
