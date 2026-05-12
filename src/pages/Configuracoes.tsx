@@ -220,9 +220,6 @@ export default function Configuracoes() {
                 <p className="text-sm text-muted-foreground">Informações básicas e identidade visual para PDFs</p>
               </div>
             </div>
-              <Button onClick={() => setEditDialogOpen(true)}>
-                Editar Dados
-              </Button>
           </div>
 
           {/* Logo Section */}
