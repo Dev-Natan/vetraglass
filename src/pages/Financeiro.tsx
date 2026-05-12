@@ -55,6 +55,7 @@ import { ContasReceberTab } from '@/components/financeiro/ContasReceberTab';
 import { CaixaEmpresaTab } from '@/components/financeiro/CaixaEmpresaTab';
 import { CaixaReportTab } from '@/components/financeiro/CaixaReportTab';
 import { CashFlowProjection } from '@/components/financeiro/CashFlowProjection';
+import { FinancialDashboard } from '@/components/financeiro/FinancialDashboard';
 import { calculateFormulaQuantity } from '@/utils/safeFormulaEvaluator';
 import { MonthSelector, getMonthDateRange } from '@/components/common/MonthSelector';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
