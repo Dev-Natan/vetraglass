@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Building2, Users, Bell, Shield, Database, Upload, ImageIcon, Trash2, KeyRound, Save, Loader2, CreditCard } from 'lucide-react';
-import EditarDadosFiscaisDialog from "@/components/configuracoes/EditarDadosFiscaisDialog";
+
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
@@ -79,8 +79,6 @@ export default function Configuracoes() {
     enabled: !!currentCompany?.id,
   });
 
-  const modoFiscalAtivo = !!(company as any)?.modo_fiscal_ativo;
-  const hasCertificate = !!(company as any)?.certificado_digital_url;
 
   const uploadLogoMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -222,9 +220,6 @@ export default function Configuracoes() {
                 <p className="text-sm text-muted-foreground">Informações básicas e identidade visual para PDFs</p>
               </div>
             </div>
-            <Button onClick={() => setEditDialogOpen(true)}>
-              Editar Dados
-            </Button>
           </div>
 
           {/* Logo Section */}
@@ -438,10 +433,6 @@ export default function Configuracoes() {
         </div>
       </div>
 
-      <EditarDadosFiscaisDialog 
-        open={editDialogOpen} 
-        onOpenChange={setEditDialogOpen} 
-      />
     </MainLayout>
   );
 }

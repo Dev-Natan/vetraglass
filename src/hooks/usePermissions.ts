@@ -19,7 +19,7 @@ export type Module =
   | 'estoque'
   | 'caixa-vendas'
   | 'financeiro'
-  | 'notas-fiscais'
+  
   | 'funcionarios'
   | 'configuracoes';
 
