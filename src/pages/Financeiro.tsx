@@ -258,7 +258,50 @@ export default function Financeiro() {
         }
       }
 
-      // 3. Update sale status
+      // 3. Cancelar contas a receber vinculadas
+      await supabase.from('accounts_receivable')
+        .update({ status: 'cancelled' })
+        .eq('sale_id', saleId);
+
+      // 4. Cancelar registros de entrada vinculados (cash_movements)
+      const { data: removedMovements } = await supabase.from('cash_movements')
+        .select('*')
+        .eq('sale_id', saleId)
+        .eq('type', 'entrada');
+
+      await supabase.from('cash_movements')
+        .delete()
+        .eq('sale_id', saleId)
+        .eq('type', 'entrada');
+
+      // 5. Registrar Auditoria de Cancelamento
+      const { data: currentSale } = await supabase.from('sales')
+        .select('sale_number, customer_name, total_amount')
+        .eq('id', saleId)
+        .single();
+
+      const { data: cancelledReceivables } = await supabase.from('accounts_receivable')
+        .select('*')
+        .eq('sale_id', saleId);
+
+      await supabase.from('audit_logs').insert({
+        company_id: currentCompany.id,
+        user_id: user?.id,
+        action: 'CANCEL_SALE',
+        table_name: 'sales',
+        record_id: saleId,
+        metadata: {
+          reason,
+          sale_number: currentSale?.sale_number,
+          customer_name: currentSale?.customer_name,
+          total_amount: currentSale?.total_amount,
+          removed_cash_movements: removedMovements,
+          cancelled_accounts_receivable: cancelledReceivables,
+          stock_restorations: Array.from(stockRestorations.entries()).map(([id, qty]) => ({ item_id: id, quantity: qty }))
+        }
+      });
+
+      // 6. Update sale status
       const { data: sale, error: saleError } = await supabase
         .from('sales')
         .update({
