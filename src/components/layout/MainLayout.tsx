@@ -29,18 +29,17 @@ export function MainLayout({ children }: MainLayoutProps) {
           <Sidebar />
           <main className="lg:pl-64 min-h-screen overflow-y-auto transition-all duration-300">
             {/* Top Header */}
-            <header className="fixed top-0 right-0 left-0 lg:left-64 z-30 bg-background/80 backdrop-blur-xl border-b border-border/50 shadow-sm transition-all duration-300">
-              <div className="flex items-center justify-between px-4 sm:px-8 py-3 max-w-7xl mx-auto w-full">
-                <div className="pl-12 lg:pl-0 flex items-center gap-3">
-                  <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-                  <h2 className="text-xs font-bold text-muted-foreground/60 tracking-widest uppercase">
-                    Vetra Cloud Console
+            <header className="fixed top-0 right-0 left-0 lg:left-64 z-30 bg-background/60 backdrop-blur-md border-b border-border/50">
+              <div className="flex items-center justify-between px-8 py-3.5">
+                <div className="pl-12 lg:pl-0">
+                  <h2 className="text-sm font-semibold text-muted-foreground/80 tracking-wide uppercase">
+                    Vetra Cloud
                   </h2>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                   <OverdueOrdersNotification />
-                  <div className="h-6 w-px bg-border/60 mx-1 hidden sm:block" />
-                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-xl transition-all">
+                  <div className="h-4 w-[1px] bg-border mx-1 hidden sm:block" />
+                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground rounded-full">
                     <Settings className="w-5 h-5" />
                   </Button>
                 </div>
