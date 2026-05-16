@@ -96,14 +96,22 @@ export function ConfirmStep({
           <div className="p-6 border-2 border-primary/30 rounded-xl bg-gradient-to-br from-primary/10 to-transparent">
             <h3 className="font-semibold text-lg mb-4">Financeiro</h3>
             <div className="space-y-3">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">Modalidade</span>
+                <Badge variant="outline" className="capitalize">
+                  {selectedForma?.tipo === 'avista' ? 'À Vista' : 'Cartão (Parcelado)'}
+                </Badge>
+              </div>
+
               {hasEntry && (
                 <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-950/30 rounded-lg">
-                  <span className="text-green-700 dark:text-green-300 font-medium">Entrada a receber</span>
+                  <span className="text-green-700 dark:text-green-300 font-medium">Entrada (Confirmada)</span>
                   <span className="text-xl font-bold text-green-600">{formatCurrency(entryValue)}</span>
                 </div>
               )}
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Saldo na entrega</span>
+              
+              <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg border border-dashed">
+                <span className="text-muted-foreground font-medium">Saldo Final a Receber</span>
                 <span className="text-xl font-bold">{formatCurrency(pendingAmount)}</span>
               </div>
             </div>
