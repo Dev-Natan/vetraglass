@@ -18,6 +18,14 @@ import { PaymentConfig } from '@/components/caixa/InstallmentPaymentSheet';
 import { calculateFormulaQuantity } from '@/utils/safeFormulaEvaluator';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 
+// Importações refatoradas
+import { useCaixa } from '@/hooks/useCaixa';
+import { useSales } from '@/hooks/useSales';
+import { caixaService } from '@/services/caixaService';
+import { saleService } from '@/services/saleService';
+import { ordemServicoService } from '@/services/ordemServicoService';
+
+
 import { FecharCaixaDialog } from '@/components/caixa/FecharCaixaDialog';
 import { AbrirCaixaDialog } from '@/components/caixa/AbrirCaixaDialog';
 import { NovaVendaDialog, VendaItem } from '@/components/caixa/NovaVendaDialog';
@@ -109,233 +117,71 @@ export default function CaixaVendas() {
     status: string;
   } | null>(null);
 
-  // Buscar caixa da empresa (usado para abrir/fechar caixa)
-  const { data: companyCash } = useQuery({
-    queryKey: ['company-cash', currentCompany?.id],
-    queryFn: async () => {
-      if (!currentCompany?.id) return null;
-      const { data, error } = await supabase
-        .from('company_cash')
-        .select('*')
-        .eq('company_id', currentCompany.id)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!currentCompany?.id,
-  });
+  // Hooks de serviço refatorados
+  const { 
+    companyCash, 
+    openCashRegister, 
+    isLoading: loadingCashRegister,
+    openCash,
+    isOpening
+  } = useCaixa();
 
-  // Buscar caixa aberto DO USUÁRIO ATUAL (sistema multiusuário)
-  const { data: openCashRegister, isLoading: loadingCashRegister } = useQuery({
-    queryKey: ['cash-register-open', currentCompany?.id, user?.id],
-    queryFn: async () => {
-      if (!currentCompany?.id || !user?.id) return null;
-      
-      // Usar função RPC que busca apenas o caixa do usuário logado
-      const { data, error } = await supabase.rpc('get_user_open_cash_register', {
-        _company_id: currentCompany.id,
-      });
-      
-      if (error) throw error;
-      
-      // A função retorna uma tabela, pegar o primeiro registro
-      if (data && data.length > 0) {
-        // Buscar dados completos do caixa
-        const { data: fullRegister, error: fullError } = await supabase
-          .from('cash_registers')
-          .select('*')
-          .eq('id', data[0].id)
-          .single();
-        if (fullError) throw fullError;
-        return fullRegister;
-      }
-      
-      return null;
-    },
-    enabled: !!currentCompany?.id && !!user?.id,
-  });
+  const {
+    createSale,
+    cancelSale,
+    isCreating,
+    isCancelling
+  } = useSales();
 
-  useEffect(() => {
-    if (searchParams.get('novo') === 'true') {
-      setPendingOpenNewSale(true);
-      searchParams.delete('novo');
-      setSearchParams(searchParams, { replace: true });
-    }
-  }, [searchParams, setSearchParams]);
 
-  useEffect(() => {
-    if (pendingOpenNewSale && openCashRegister) {
-      setNovaVendaOpen(true);
-      setPendingOpenNewSale(false);
-    }
-  }, [pendingOpenNewSale, openCashRegister]);
-
-  // Buscar vendas do caixa atual
   const { data: todaySales = [] } = useQuery({
     queryKey: ['sales-today', openCashRegister?.id],
-    queryFn: async () => {
-      if (!openCashRegister?.id) return [];
-      const { data, error } = await supabase
-        .from('sales')
-        .select('*')
-        .eq('cash_register_id', openCashRegister.id)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => saleService.fetchTodaySales(openCashRegister!.id),
     enabled: !!openCashRegister?.id,
   });
 
-  // Buscar movimentações do caixa atual
   const { data: cashMovements = [] } = useQuery({
     queryKey: ['cash-movements', openCashRegister?.id],
-    queryFn: async () => {
-      if (!openCashRegister?.id) return [];
-      const { data, error } = await supabase
-        .from('cash_movements')
-        .select('*')
-        .eq('cash_register_id', openCashRegister.id)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => caixaService.fetchCashMovements(openCashRegister!.id),
     enabled: !!openCashRegister?.id,
   });
 
-  // Buscar despesas com vencimento hoje
   const { data: expensesDueToday = [] } = useQuery({
     queryKey: ['expenses-due-today', currentCompany?.id],
-    queryFn: async () => {
-      if (!currentCompany?.id) return [];
-      const today = format(new Date(), 'yyyy-MM-dd');
-      const { data, error } = await supabase
-        .from('expenses')
-        .select('*')
-        .eq('company_id', currentCompany.id)
-        .eq('due_date', today)
-        .eq('status', 'pending')
-        .order('amount', { ascending: false });
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => caixaService.fetchExpensesDueToday(currentCompany!.id),
     enabled: !!currentCompany?.id,
   });
 
-  // Buscar parcelas a receber hoje
   const { data: receivablesDueToday = [] } = useQuery({
     queryKey: ['receivables-due-today', currentCompany?.id],
-    queryFn: async () => {
-      if (!currentCompany?.id) return [];
-      const today = format(new Date(), 'yyyy-MM-dd');
-      const { data, error } = await supabase
-        .from('accounts_receivable')
-        .select('*, sales!left(payment_status)')
-        .eq('company_id', currentCompany.id)
-        .eq('due_date', today)
-        .eq('status', 'pending')
-        .order('total_amount', { ascending: false });
-
-      if (error) throw error;
-      
-      // Filtrar parcelas de vendas canceladas
-      return (data || []).filter(r => (r as any).sales?.payment_status !== 'cancelled');
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => caixaService.fetchReceivablesDueToday(currentCompany!.id),
     enabled: !!currentCompany?.id,
   });
 
-  // Buscar OS concluídas pendentes de faturamento
   const { data: completedOSPendingBilling = [] } = useQuery({
     queryKey: ['completed-os-pending-billing', currentCompany?.id],
-    queryFn: async () => {
-      if (!currentCompany?.id) return [];
-      const { data, error } = await supabase
-        .from('ordens_servico')
-        .select('id, os_number, customer_name, total_amount, paid_amount, pending_amount, quote_id, status, estimated_end, created_at')
-        .eq('company_id', currentCompany.id)
-        .eq('status', 'completed')
-        .is('sale_id', null) // Ainda não foi faturada
-        .gt('pending_amount', 0) // Tem saldo pendente
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => ordemServicoService.fetchCompletedOSPendingBilling(currentCompany!.id),
     enabled: !!currentCompany?.id,
   });
-  // Removed getDateRange and filteredSales - CaixaVendas now shows only current cash register data
-  // Historical sales reports are available in Financeiro > Relatórios
 
   const { data: availableItems = [] } = useQuery({
     queryKey: ['available-items', currentCompany?.id],
-    queryFn: async () => {
-      if (!currentCompany?.id) return [];
-      const { data: allItems, error: itemsError } = await supabase.from('item_templates').select('id, name, unit, type, linha, default_price').eq('is_active', true);
-      if (itemsError) throw itemsError;
-      const { data: companyPrices, error: pricesError } = await supabase.from('company_item_prices').select('item_template_id, price').eq('company_id', currentCompany.id);
-      if (pricesError) throw pricesError;
-      const priceMap = new Map<string, number>();
-      (companyPrices || []).forEach(cp => { if (cp.item_template_id && cp.price !== null) priceMap.set(cp.item_template_id, cp.price); });
-      return (allItems || []).map(item => ({ id: item.id, name: item.name, unit: item.unit, type: item.type, linha: item.linha, price: priceMap.get(item.id) ?? (item.default_price || 0), isDefaultPrice: !priceMap.has(item.id) }));
-    },
+    queryFn: () => saleService.fetchAvailableItems(currentCompany!.id),
     enabled: !!currentCompany?.id,
   });
 
   const { data: availableProducts = [] } = useQuery({
     queryKey: ['available-products', currentCompany?.id],
-    queryFn: async () => {
-      if (!currentCompany?.id) return [];
-      const { data, error } = await supabase.from('company_products').select(`id, commercial_name, base_price, product_template_id, product_template:product_templates (name, category, linha)`).eq('company_id', currentCompany.id).eq('is_active', true);
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => saleService.fetchAvailableProducts(currentCompany!.id),
     enabled: !!currentCompany?.id,
   });
 
-  // Buscar orçamentos aprovados com status financeiro (usando VIEW)
   const { data: approvedQuotesWithFinancial = [] } = useQuery({
     queryKey: ['approved-quotes-financial', currentCompany?.id],
-    queryFn: async () => {
-      if (!currentCompany?.id) return [];
-      
-      // Buscar status financeiro da VIEW
-      const { data: financialData, error: financialError } = await supabase
-        .from('quote_financial_status')
-        .select('*')
-        .eq('company_id', currentCompany.id)
-        .gt('pending_amount', 0) // Apenas orçamentos com saldo pendente
-        .order('created_at', { ascending: false });
-      
-      if (financialError) throw financialError;
-      if (!financialData?.length) return [];
-      
-      // Buscar os itens dos orçamentos
-      const quoteIds = financialData.map(q => q.quote_id);
-      const { data: quotesWithItems, error: itemsError } = await supabase
-        .from('quotes')
-        .select(`
-          id, quote_number, customer_name, total_amount, final_amount, status, created_at,
-          quote_items (id, description, quantity, unit_price, total_price, width, height, company_product_id, product_template_id)
-        `)
-        .in('id', quoteIds);
-      
-      if (itemsError) throw itemsError;
-      
-      // Mesclar dados financeiros com itens
-      return (quotesWithItems || []).map(quote => {
-        const financial = financialData.find(f => f.quote_id === quote.id);
-        return {
-          ...quote,
-          total_deposits: financial?.total_deposits || 0,
-          total_sold: financial?.total_sold || 0,
-          pending_amount: financial?.pending_amount || quote.final_amount,
-          financial_status: financial?.financial_status || 'pending',
-        };
-      });
-    },
+    queryFn: () => saleService.fetchApprovedQuotesFinancial(currentCompany!.id),
     enabled: !!currentCompany?.id,
   });
+
 
   // Calcular resumo do caixa
   const cashSummary = useMemo(() => {
@@ -361,30 +207,11 @@ export default function CaixaVendas() {
     return { openingAmount, totalDinheiro, totalCartao, totalPix, totalVendas, expectedAmount, totalEntradas, totalSaidas };
   }, [openCashRegister, todaySales, cashMovements]);
 
-  // Abrir caixa usando o fixed_fund
-  const openCashMutation = useMutation({
-    mutationFn: async (openingAmount: number) => {
-      if (!currentCompany?.id || !user?.id) throw new Error('Dados inválidos');
-      const { data, error } = await supabase.rpc('open_daily_cash', {
-        _company_id: currentCompany.id,
-        _opening_amount: openingAmount,
-        _user_id: user.id,
-      });
-      if (error) throw error;
-      const result = data as { success: boolean; error?: string; cash_register_id?: string };
-      if (!result.success) {
-        throw new Error(result.error || 'Erro ao abrir caixa');
-      }
-      return result;
-    },
-    onSuccess: () => {
-      toast.success('Caixa aberto com sucesso!');
-      queryClient.invalidateQueries({ queryKey: ['cash-register-open'] });
-      queryClient.invalidateQueries({ queryKey: ['company-cash'] });
-      setAbrirCaixaOpen(false);
-    },
-    onError: (error: Error) => toast.error(`Erro ao abrir caixa: ${error.message}`),
-  });
+  // handleOpenCash está usando useCaixa hook
+  const handleOpenCash = async (openingAmount: number) => {
+    openCash(openingAmount);
+    setAbrirCaixaOpen(false);
+  };
 
   // Submeter fechamento para auditoria (não fecha diretamente)
   const handleSubmitForAudit = async (counts: Array<{ payment_method: string; amount: number }>, notes: string) => {
@@ -399,310 +226,6 @@ export default function CaixaVendas() {
     setFecharCaixaOpen(false);
     queryClient.invalidateQueries({ queryKey: ['cash-register-open'] });
   };
-
-  // Mutation: Nova venda com suporte a parcelamento
-  const newSaleMutation = useMutation({
-    mutationFn: async (data: { items: VendaItem[]; customerName: string; paymentConfig: PaymentConfig; discountPercent: number; discountAmount: number; subtotal: number; total: number; quoteId?: string }) => {
-      if (!openCashRegister?.id || !currentCompany?.id || !user?.id) throw new Error('Caixa não está aberto');
-      
-      const { paymentConfig } = data;
-
-      // CORREÇÃO: Quando a venda vem de um orçamento, verificar entradas já recebidas
-      let depositsTotalReceived = 0;
-      let existingDeposits: Array<{ id: string; amount: number; cash_movement_id: string | null }> = [];
-      let existingPartialSale: { id: string } | null = null;
-
-      if (data.quoteId) {
-        // Buscar depósitos já recebidos do orçamento
-        const { data: deposits } = await supabase
-          .from('quote_deposits')
-          .select('id, amount, cash_movement_id')
-          .eq('quote_id', data.quoteId)
-          .eq('status', 'received');
-
-        existingDeposits = deposits || [];
-        depositsTotalReceived = existingDeposits.reduce((sum, d) => sum + Number(d.amount), 0);
-
-        // Buscar venda parcial existente
-        const { data: partialSale } = await supabase
-          .from('sales')
-          .select('id')
-          .eq('quote_id', data.quoteId)
-          .eq('sale_type', 'partial')
-          .maybeSingle();
-
-        existingPartialSale = partialSale;
-      }
-
-      // Calcular valor real a cobrar (total - entradas já recebidas)
-      const saldoRestante = Math.max(0, data.total - depositsTotalReceived);
-      const totalPaidNow = paymentConfig.paidAmount;
-      // O paid_amount total inclui as entradas anteriores + o que está sendo pago agora
-      const totalPaidAmount = depositsTotalReceived + Math.min(totalPaidNow, saldoRestante);
-      const pendingAfterSale = Math.max(0, data.total - totalPaidAmount);
-      const isPaidInFull = pendingAfterSale <= 0;
-      const paymentStatus = isPaidInFull ? 'paid' : 'partial';
-      
-      let sale: any;
-
-      if (data.quoteId && existingPartialSale) {
-        // Atualizar venda parcial existente para venda completa
-        const { data: updatedSale, error: updateError } = await supabase.from('sales')
-          .update({
-            total_amount: data.total,
-            subtotal: data.subtotal,
-            discount_percent: data.discountPercent,
-            discount_amount: data.discountAmount,
-            paid_amount: totalPaidAmount,
-            pending_amount: pendingAfterSale,
-            payment_method: paymentConfig.method,
-            payment_status: paymentStatus,
-            sale_type: isPaidInFull ? 'full' : 'partial',
-          })
-          .eq('id', existingPartialSale.id)
-          .select()
-          .single();
-        if (updateError) throw updateError;
-        sale = updatedSale;
-      } else {
-        // Criar nova venda
-        const { data: newSale, error: saleError } = await supabase.from('sales').insert({ 
-          company_id: currentCompany.id, 
-          cash_register_id: openCashRegister.id, 
-          customer_name: data.customerName || null, 
-          subtotal: data.subtotal, 
-          discount_percent: data.discountPercent, 
-          discount_amount: data.discountAmount, 
-          total_amount: data.total, 
-          payment_method: paymentConfig.method, 
-          payment_status: paymentStatus,
-          paid_amount: totalPaidAmount,
-          pending_amount: pendingAfterSale,
-          sold_by: user.id,
-          quote_id: data.quoteId || null,
-          sale_type: data.quoteId ? (isPaidInFull ? 'full' : 'partial') : undefined,
-        }).select().single();
-        
-        if (saleError) throw saleError;
-        sale = newSale;
-      }
-
-      // Se houve entradas de orçamento, transferir vínculos e marcar como faturadas
-      if (data.quoteId && existingDeposits.length > 0) {
-        // Transferir cash_movements das entradas para a venda
-        for (const deposit of existingDeposits) {
-          if (deposit.cash_movement_id) {
-            await supabase.from('cash_movements')
-              .update({ origem: 'venda', sale_id: sale.id })
-              .eq('id', deposit.cash_movement_id);
-          }
-        }
-        // Marcar depósitos como faturados
-        await supabase.from('quote_deposits')
-          .update({ status: 'billed' })
-          .eq('quote_id', data.quoteId)
-          .eq('status', 'received');
-      }
-      
-      // Create sale items
-      const saleItems = data.items.map((item) => ({ sale_id: sale.id, item_template_id: item.itemTemplateId || null, company_product_id: item.companyProductId || null, item_name: item.name, item_unit: item.unit, quantity: item.quantity, unit_price: item.unitPrice, total_price: item.totalPrice, width: item.width || null, height: item.height || null }));
-      await supabase.from('sale_items').insert(saleItems);
-      
-      // Create accounts_receivable if there are installments
-      if (paymentConfig.installments.length > 0) {
-        const installmentsToInsert = paymentConfig.installments.map((inst) => ({
-          company_id: currentCompany.id,
-          sale_id: sale.id,
-          customer_name: data.customerName || 'Cliente não identificado',
-          description: `Venda #${String(sale.sale_number).padStart(4, '0')} - Parcela ${inst.number}/${paymentConfig.installments.length}`,
-          total_amount: inst.amount,
-          installment_number: inst.number,
-          total_installments: paymentConfig.installments.length,
-          due_date: format(inst.dueDate, 'yyyy-MM-dd'),
-          status: 'pending',
-          payment_method: paymentConfig.method,
-          created_by: user.id,
-        }));
-        
-        const { error: receivablesError } = await supabase.from('accounts_receivable').insert(installmentsToInsert);
-        if (receivablesError) {
-          console.error('Error creating receivables:', receivablesError);
-          // Don't throw - sale was created, just log the error
-        }
-      }
-      
-      // Stock deductions - só executa na venda total (evita baixa duplicada em vendas parciais de orçamento)
-      const isPartialQuoteSale = data.quoteId && !isPaidInFull;
-      
-      // Se for venda parcial de orçamento, verificar se OS já consumiu materiais
-      let osAlreadyConsumed = false;
-      if (data.quoteId) {
-        const { data: osData } = await supabase
-          .from('ordens_servico')
-          .select('id')
-          .eq('quote_id', data.quoteId)
-          .in('status', ['completed'])
-          .limit(1);
-        if (osData && osData.length > 0) {
-          const { data: consumed } = await supabase
-            .from('material_consumption')
-            .select('id')
-            .eq('ordem_servico_id', osData[0].id)
-            .eq('status', 'consumed')
-            .limit(1);
-          osAlreadyConsumed = !!(consumed && consumed.length > 0);
-        }
-      }
-      
-      const shouldDeductStock = !isPartialQuoteSale && !osAlreadyConsumed;
-      const stockDeductions: Map<string, number> = new Map();
-      for (const item of data.items) {
-        if (item.itemTemplateId && !item.isProduct) {
-          // Verificar se é um item de área (m²) - vidro, chaparia, etc.
-          const template = availableItems.find(t => t.id === item.itemTemplateId);
-          let deductionQty = item.quantity;
-          
-          if ((template?.unit === 'm²' || template?.unit === 'm2') && item.width && item.height) {
-            // Calcular área em m²: (largura_mm × altura_mm) / 1.000.000
-            const areaM2 = (item.width / 1000) * (item.height / 1000) * item.quantity;
-            deductionQty = areaM2;
-          }
-          
-          stockDeductions.set(item.itemTemplateId, (stockDeductions.get(item.itemTemplateId) || 0) + deductionQty);
-        }
-        if (item.isProduct) {
-          const companyProductId = item.companyProductId;
-          let productTemplateId = item.productTemplateId;
-          if (!productTemplateId && companyProductId) {
-            const product = availableProducts.find(p => p.id === companyProductId);
-            productTemplateId = product?.product_template_id;
-          }
-          
-          // 1. Buscar composição da empresa (company_product_items) - prioridade
-          let hasCompanyComposition = false;
-          if (companyProductId) {
-            const { data: companyItems } = await supabase
-              .from('company_product_items')
-              .select('item_template_id, company_item_id, quantity_formula, pieces_quantity, width_formula, height_formula')
-              .eq('company_product_id', companyProductId);
-            
-            if (companyItems && companyItems.length > 0) {
-              hasCompanyComposition = true;
-              for (const ci of companyItems) {
-                if (ci.quantity_formula) {
-                  const qty = calculateFormulaQuantity(ci.quantity_formula, item.width, item.height, ci.pieces_quantity || 1) * item.quantity;
-                  if (qty > 0) {
-                    // Suporta tanto item_template_id quanto company_item_id
-                    const key = ci.item_template_id || `ci:${ci.company_item_id}`;
-                    stockDeductions.set(key, (stockDeductions.get(key) || 0) + qty);
-                  }
-                }
-              }
-            }
-          }
-          
-          // 2. Fallback: composição do template global (product_template_items)
-          if (!hasCompanyComposition && productTemplateId) {
-            const { data: templateItems } = await supabase.from('product_template_items').select('item_template_id, quantity_formula, pieces_quantity').eq('product_template_id', productTemplateId).or(`company_id.is.null,company_id.eq.${currentCompany.id}`);
-            for (const ti of templateItems || []) {
-              if (ti.item_template_id && ti.quantity_formula) {
-                const qty = calculateFormulaQuantity(ti.quantity_formula, item.width, item.height, ti.pieces_quantity || 1) * item.quantity;
-                if (qty > 0) stockDeductions.set(ti.item_template_id, (stockDeductions.get(ti.item_template_id) || 0) + qty);
-              }
-            }
-          }
-        }
-      }
-      // Deduzir estoque e registrar movimentações (apenas se não for venda parcial e OS não consumiu)
-      if (!shouldDeductStock) {
-        console.log('Baixa de estoque ignorada:', isPartialQuoteSale ? 'venda parcial de orçamento' : 'materiais já consumidos pela OS');
-      }
-      for (const [key, deductionQty] of shouldDeductStock ? stockDeductions : new Map()) {
-        let stockItem;
-        const isCompanyItem = key.startsWith('ci:');
-        
-        if (isCompanyItem) {
-          const companyItemId = key.replace('ci:', '');
-          const { data } = await supabase.from('company_stock').select('id, quantity, company_item_id, item_template_id').eq('company_id', currentCompany.id).eq('company_item_id', companyItemId).maybeSingle();
-          stockItem = data;
-        } else {
-          const { data } = await supabase.from('company_stock').select('id, quantity, company_item_id, item_template_id').eq('company_id', currentCompany.id).eq('item_template_id', key).maybeSingle();
-          stockItem = data;
-        }
-        
-        if (stockItem) {
-          await supabase.from('company_stock').update({ quantity: Math.max(0, stockItem.quantity - deductionQty) }).eq('id', stockItem.id);
-          
-          await supabase.from('stock_movements').insert({
-            company_id: currentCompany.id,
-            company_item_id: stockItem.company_item_id,
-            item_template_id: stockItem.item_template_id || (isCompanyItem ? null : key),
-            type: 'saida',
-            category: 'venda_direta',
-            quantity: deductionQty,
-            unit_cost: 0,
-            description: `Venda #${String(sale.sale_number).padStart(4, '0')}`,
-            reference_id: sale.id,
-            reference_type: 'sale',
-            created_by: user.id,
-          });
-        }
-      }
-      if (data.quoteId) await supabase.from('quotes').update({ status: 'invoiced' }).eq('id', data.quoteId);
-      const { data: sellerEmployee } = await supabase.from('employees').select('id, commission_enabled').eq('company_id', currentCompany.id).eq('user_id', user.id).eq('commission_enabled', true).maybeSingle();
-      if (sellerEmployee?.commission_enabled) await supabase.rpc('calculate_sale_commission', { _sale_id: sale.id, _employee_id: sellerEmployee.id });
-      return sale;
-    },
-    onSuccess: (sale) => { 
-      toast.success(`Venda #${String(sale.sale_number).padStart(4, '0')} registrada!`); 
-      queryClient.invalidateQueries({ queryKey: ['sales-today'] }); 
-      queryClient.invalidateQueries({ queryKey: ['company-stock'] }); 
-      queryClient.invalidateQueries({ queryKey: ['approved-quotes'] }); 
-      queryClient.invalidateQueries({ queryKey: ['accounts-receivable'] });
-      queryClient.invalidateQueries({ queryKey: ['receivables-due-today'] });
-      queryClient.invalidateQueries({ queryKey: ['pending-deposits'] });
-      queryClient.invalidateQueries({ queryKey: ['quote-deposits'] });
-      setNovaVendaOpen(false); 
-    },
-    onError: (error: Error) => toast.error(`Erro ao registrar venda: ${error.message}`),
-  });
-
-  // Mutation: Cancelar venda (mantido igual, resumido)
-  const cancelSaleMutation = useMutation({
-    mutationFn: async ({ saleId, reason }: { saleId: string; reason: string }) => {
-      if (!currentCompany?.id || !user?.id) throw new Error('Dados incompletos para cancelamento');
-      
-      // Chamar a função RPC para cancelamento atômico (transação no banco)
-      const { data, error } = await supabase.rpc('cancel_sale', {
-        p_sale_id: saleId,
-        p_company_id: currentCompany.id,
-        p_user_id: user.id,
-        p_reason: reason
-      });
-
-      if (error) throw error;
-      
-      const result = data as { success: boolean; error?: string; sale_number?: number };
-      if (!result.success) throw new Error(result.error || 'Erro ao cancelar venda');
-
-      return result;
-    },
-    onSuccess: (result) => { 
-      toast.success(`Venda #${String(result.sale_number).padStart(4, '0')} cancelada com sucesso! O orçamento voltou ao status "Pendente" e a Ordem de Serviço foi removida para reprocessamento.`);
-      queryClient.invalidateQueries({ queryKey: ['sales-today'] }); 
-      queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
-      queryClient.invalidateQueries({ queryKey: ['accounts-receivable'] });
-      queryClient.invalidateQueries({ queryKey: ['receivables-due-today'] });
-      queryClient.invalidateQueries({ queryKey: ['company-stock'] }); 
-      queryClient.invalidateQueries({ queryKey: ['quotes'] });
-      queryClient.invalidateQueries({ queryKey: ['approved-quotes-financial'] });
-      queryClient.invalidateQueries({ queryKey: ['completed-os-pending-billing'] });
-      queryClient.invalidateQueries({ queryKey: ['ordens-servico'] });
-      setCancelarVendaOpen(false); 
-      setSelectedSale(null); 
-    },
-    onError: (error: Error) => toast.error(`Erro ao cancelar venda: ${error.message}`),
-  });
 
   const handleCancelSale = (sale: Sale) => { setSelectedSale(sale); setCancelarVendaOpen(true); };
   const handlePrintReceipt = async (sale: Sale) => {
@@ -786,6 +309,7 @@ export default function CaixaVendas() {
     });
     setReceivePaymentOpen(true);
   };
+
 
   const isCashOpen = !!openCashRegister && openCashRegister.status === 'open';
   const isPendingAudit = !!openCashRegister && openCashRegister.status === 'pending_audit';
@@ -1010,14 +534,15 @@ export default function CaixaVendas() {
       <AbrirCaixaDialog 
         open={abrirCaixaOpen} 
         onOpenChange={setAbrirCaixaOpen} 
-        onConfirm={(amount) => openCashMutation.mutateAsync(amount)} 
+        onConfirm={handleOpenCash} 
         companyCash={companyCash} 
-        isLoading={openCashMutation.isPending} 
+        isLoading={isOpening} 
       />
       <FecharCaixaDialog open={fecharCaixaOpen} onOpenChange={setFecharCaixaOpen} onConfirm={handleSubmitForAudit} summary={cashSummary} companyCash={companyCash} cashRegisterId={openCashRegister?.id} isLoading={isSubmittingForAudit} />
-      <NovaVendaDialog open={novaVendaOpen} onOpenChange={setNovaVendaOpen} onConfirm={(data) => newSaleMutation.mutateAsync(data)} availableItems={availableItems} approvedQuotes={approvedQuotesWithFinancial} isLoading={newSaleMutation.isPending} />
-      <CancelarVendaDialog open={cancelarVendaOpen} onOpenChange={setCancelarVendaOpen} sale={selectedSale} onConfirm={(saleId, reason) => cancelSaleMutation.mutateAsync({ saleId, reason })} isLoading={cancelSaleMutation.isPending} />
+      <NovaVendaDialog open={novaVendaOpen} onOpenChange={setNovaVendaOpen} onConfirm={(data) => createSale({ ...data, cashRegisterId: openCashRegister!.id, companyId: currentCompany!.id, userId: user!.id, availableItems, availableProducts })} availableItems={availableItems} approvedQuotes={approvedQuotesWithFinancial} isLoading={isCreating} />
+      <CancelarVendaDialog open={cancelarVendaOpen} onOpenChange={setCancelarVendaOpen} sale={selectedSale} onConfirm={(saleId, reason) => cancelSale({ saleId, companyId: currentCompany!.id, userId: user!.id, reason })} isLoading={isCancelling} />
       <DetalhesVendaDialog open={detalhesVendaOpen} onOpenChange={setDetalhesVendaOpen} sale={selectedSale} onPrint={handlePrintReceipt} />
+
 
       {/* Dialog Movimentação Caixa do Dia */}
       {openCashRegister && (

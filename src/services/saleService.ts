@@ -1,0 +1,150 @@
+import { supabase } from '@/integrations/supabase/client';
+import { VendaItem } from '@/components/caixa/NovaVendaDialog';
+import { PaymentConfig } from '@/components/caixa/InstallmentPaymentSheet';
+
+export const saleService = {
+  async fetchTodaySales(cashRegisterId: string) {
+    const { data, error } = await supabase
+      .from('sales')
+      .select('*')
+      .eq('cash_register_id', cashRegisterId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  },
+
+  async fetchAvailableItems(companyId: string) {
+    const { data: allItems, error: itemsError } = await supabase
+      .from('item_templates')
+      .select('id, name, unit, type, linha, default_price')
+      .eq('is_active', true);
+    if (itemsError) throw itemsError;
+
+    const { data: companyPrices, error: pricesError } = await supabase
+      .from('company_item_prices')
+      .select('item_template_id, price')
+      .eq('company_id', companyId);
+    if (pricesError) throw pricesError;
+
+    const priceMap = new Map<string, number>();
+    (companyPrices || []).forEach(cp => {
+      if (cp.item_template_id && cp.price !== null) priceMap.set(cp.item_template_id, cp.price);
+    });
+
+    return (allItems || []).map(item => ({
+      id: item.id,
+      name: item.name,
+      unit: item.unit,
+      type: item.type,
+      linha: item.linha,
+      price: priceMap.get(item.id) ?? (item.default_price || 0),
+      isDefaultPrice: !priceMap.has(item.id)
+    }));
+  },
+
+  async fetchAvailableProducts(companyId: string) {
+    const { data, error } = await supabase
+      .from('company_products')
+      .select(`id, commercial_name, base_price, product_template_id, product_template:product_templates (name, category, linha)`)
+      .eq('company_id', companyId)
+      .eq('is_active', true);
+    if (error) throw error;
+    return data || [];
+  },
+
+  async fetchApprovedQuotesFinancial(companyId: string) {
+    const { data: financialData, error: financialError } = await supabase
+      .from('quote_financial_status')
+      .select('*')
+      .eq('company_id', companyId)
+      .gt('pending_amount', 0)
+      .order('created_at', { ascending: false });
+
+    if (financialError) throw financialError;
+    if (!financialData?.length) return [];
+
+    const quoteIds = financialData.map(q => q.quote_id);
+    const { data: quotesWithItems, error: itemsError } = await supabase
+      .from('quotes')
+      .select(`
+        id, quote_number, customer_name, total_amount, final_amount, status, created_at,
+        quote_items (id, description, quantity, unit_price, total_price, width, height, company_product_id, product_template_id)
+      `)
+      .in('id', quoteIds);
+
+    if (itemsError) throw itemsError;
+
+    return (quotesWithItems || []).map(quote => {
+      const financial = financialData.find(f => f.quote_id === quote.id);
+      return {
+        ...quote,
+        total_deposits: financial?.total_deposits || 0,
+        total_sold: financial?.total_sold || 0,
+        pending_amount: financial?.pending_amount || quote.final_amount,
+        financial_status: financial?.financial_status || 'pending',
+      };
+    });
+  },
+
+  async processNewSale(params: {
+    companyId: string;
+    userId: string;
+    cashRegisterId: string;
+    items: VendaItem[];
+    customerName: string;
+    paymentConfig: PaymentConfig;
+    discountPercent: number;
+    discountAmount: number;
+    subtotal: number;
+    total: number;
+    quoteId?: string;
+  }) {
+    const { companyId, userId, cashRegisterId, items, customerName, paymentConfig, discountPercent, discountAmount, subtotal, total, quoteId } = params;
+
+    let depositsTotalReceived = 0;
+    if (quoteId) {
+      const { data: deposits } = await supabase
+        .from('quote_deposits')
+        .select('amount')
+        .eq('quote_id', quoteId)
+        .eq('status', 'received');
+      depositsTotalReceived = (deposits || []).reduce((sum, d) => sum + d.amount, 0);
+    }
+
+    const { data: sale, error: saleError } = await supabase.from('sales').insert({ 
+      company_id: companyId, 
+      cash_register_id: cashRegisterId, 
+      customer_name: customerName || null, 
+      subtotal: subtotal, 
+      discount_percent: discountPercent, 
+      discount_amount: discountAmount, 
+      total_amount: total, 
+      payment_method: paymentConfig.method, 
+      payment_status: 'paid',
+      paid_amount: total,
+      pending_amount: 0,
+      sold_by: userId,
+      quote_id: quoteId || null
+    }).select().single();
+    
+    if (saleError) throw saleError;
+    
+    const saleItems = items.map((item) => ({ 
+      sale_id: sale.id, 
+      item_template_id: item.itemTemplateId || null, 
+      company_product_id: item.companyProductId || null, 
+      item_name: item.name, 
+      item_unit: item.unit, 
+      quantity: item.quantity, 
+      unit_price: item.unitPrice, 
+      total_price: item.totalPrice, 
+      width: item.width || null, 
+      height: item.height || null 
+    }));
+    
+    const { error: itemsError } = await supabase.from('sale_items').insert(saleItems);
+    if (itemsError) throw itemsError;
+
+    return sale;
+  }
+};
