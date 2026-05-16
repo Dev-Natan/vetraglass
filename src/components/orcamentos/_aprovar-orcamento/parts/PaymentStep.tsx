@@ -44,6 +44,8 @@ export function PaymentStep({
   const entryValue = parseAmount(state.entryAmount);
   const hasEntry = entryValue > 0;
   const pendingAmount = valorFinal - entryValue;
+  const formasFiltradas = formasPagamento.filter(f => f.tipo === 'avista' || f.tipo === 'parcelado');
+  const labelForma = (tipo: string) => tipo === 'avista' ? 'À vista' : 'Cartão (parcelado)';
 
   return (
     <div className="space-y-6 px-1">
