@@ -1,29 +1,10 @@
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
+import { Database } from '@/integrations/supabase/types';
 
-export interface CompanyCash {
-  id: string;
-  company_id: string;
-  fixed_fund: number;
-  current_balance: number;
-  last_opening_at: string | null;
-  last_closing_at: string | null;
-  status: string;
-}
-
-export interface CashRegister {
-  id: string;
-  company_id: string;
-  user_id: string;
-  opening_amount: number;
-  closing_amount: number | null;
-  expected_amount: number | null;
-  difference: number | null;
-  status: 'open' | 'closed' | 'auditing';
-  opened_at: string;
-  closed_at: string | null;
-  notes: string | null;
-}
+export type CompanyCash = Database['public']['Tables']['company_cash']['Row'];
+export type CashRegister = Database['public']['Tables']['cash_registers']['Row'];
+export type CashMovement = Database['public']['Tables']['cash_movements']['Row'];
 
 export const caixaService = {
   async fetchCompanyCash(companyId: string): Promise<CompanyCash | null> {
@@ -36,7 +17,7 @@ export const caixaService = {
     return data;
   },
 
-  async getOpenCashRegister(companyId: string, userId: string): Promise<CashRegister | null> {
+  async getOpenCashRegister(companyId: string): Promise<CashRegister | null> {
     const { data, error } = await supabase.rpc('get_user_open_cash_register', {
       _company_id: companyId,
     });
@@ -46,10 +27,10 @@ export const caixaService = {
       const { data: fullRegister, error: fullError } = await supabase
         .from('cash_registers')
         .select('*')
-        .eq('id', data[0].id)
+        .eq('id', (data[0] as any).id)
         .single();
       if (fullError) throw fullError;
-      return fullRegister as CashRegister;
+      return fullRegister;
     }
     return null;
   },
@@ -64,7 +45,7 @@ export const caixaService = {
     return data as { success: boolean; error?: string; cash_register_id?: string };
   },
 
-  async fetchCashMovements(cashRegisterId: string) {
+  async fetchCashMovements(cashRegisterId: string): Promise<CashMovement[]> {
     const { data, error } = await supabase
       .from('cash_movements')
       .select('*')
