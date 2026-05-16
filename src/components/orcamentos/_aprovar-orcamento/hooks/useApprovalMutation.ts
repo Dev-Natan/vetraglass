@@ -155,6 +155,8 @@ export function useApprovalMutation({
               payment_method: entryPaymentMethod,
               created_by: userId,
               origem: 'orcamento',
+              quote_id: quote.id,
+              ordem_servico_id: ordemServico.id,
             })
             .select('id')
             .single();
