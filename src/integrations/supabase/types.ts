@@ -7365,6 +7365,15 @@ export type Database = {
         Args: { _ordem_servico_id: string }
         Returns: number
       }
+      cancel_sale: {
+        Args: {
+          p_company_id: string
+          p_reason: string
+          p_sale_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       change_company_member_role: {
         Args: {
           _company_id: string
