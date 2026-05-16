@@ -188,135 +188,24 @@ export default function Financeiro() {
   // Cancel sale mutation
   const cancelSaleMutation = useMutation({
     mutationFn: async ({ saleId, reason }: { saleId: string; reason: string }) => {
-      if (!currentCompany?.id) throw new Error('Empresa não encontrada');
-
-      // 1. Get sale items to restore stock
-      const { data: saleItems, error: itemsError } = await supabase
-        .from('sale_items')
-        .select('id, item_template_id, company_product_id, quantity, width, height')
-        .eq('sale_id', saleId);
-
-      if (itemsError) throw itemsError;
-
-      // 2. Restore stock
-      const stockRestorations: Map<string, number> = new Map();
-
-      for (const item of saleItems || []) {
-        if (item.item_template_id && !item.company_product_id) {
-          const currentQty = stockRestorations.get(item.item_template_id) || 0;
-          stockRestorations.set(item.item_template_id, currentQty + item.quantity);
-        }
-      }
-
-      for (const item of saleItems || []) {
-        if (item.company_product_id && item.width && item.height) {
-          const { data: companyProduct } = await supabase
-            .from('company_products')
-            .select('product_template_id')
-            .eq('id', item.company_product_id)
-            .single();
-
-          if (!companyProduct?.product_template_id) continue;
-
-          const { data: templateItems } = await supabase
-            .from('product_template_items')
-            .select('item_template_id, quantity_formula, pieces_quantity')
-            .eq('product_template_id', companyProduct.product_template_id)
-            .or(`company_id.is.null,company_id.eq.${currentCompany.id}`);
-
-          for (const templateItem of templateItems || []) {
-            if (!templateItem.item_template_id || !templateItem.quantity_formula) continue;
-
-            const componentQty = calculateFormulaQuantity(
-              templateItem.quantity_formula,
-              item.width,
-              item.height,
-              templateItem.pieces_quantity || 1
-            ) * item.quantity;
-
-            if (componentQty > 0) {
-              const currentQty = stockRestorations.get(templateItem.item_template_id) || 0;
-              stockRestorations.set(templateItem.item_template_id, currentQty + componentQty);
-            }
-          }
-        }
-      }
-
-      for (const [itemTemplateId, restoreQty] of stockRestorations) {
-        const { data: stockItem } = await supabase
-          .from('company_stock')
-          .select('id, quantity')
-          .eq('company_id', currentCompany.id)
-          .eq('item_template_id', itemTemplateId)
-          .maybeSingle();
-
-        if (stockItem) {
-          await supabase
-            .from('company_stock')
-            .update({ quantity: stockItem.quantity + restoreQty })
-            .eq('id', stockItem.id);
-        }
-      }
-
-      // 3. Cancelar contas a receber vinculadas
-      await supabase.from('accounts_receivable')
-        .update({ status: 'cancelled' })
-        .eq('sale_id', saleId);
-
-      // 4. Cancelar registros de entrada vinculados (cash_movements)
-      const { data: removedMovements } = await supabase.from('cash_movements')
-        .select('*')
-        .eq('sale_id', saleId)
-        .eq('type', 'entrada');
-
-      await supabase.from('cash_movements')
-        .delete()
-        .eq('sale_id', saleId)
-        .eq('type', 'entrada');
-
-      // 5. Registrar Auditoria de Cancelamento
-      const { data: currentSale } = await supabase.from('sales')
-        .select('sale_number, customer_name, total_amount')
-        .eq('id', saleId)
-        .single();
-
-      const { data: cancelledReceivables } = await supabase.from('accounts_receivable')
-        .select('*')
-        .eq('sale_id', saleId);
-
-      await supabase.from('audit_logs').insert({
-        company_id: currentCompany.id,
-        user_id: user?.id,
-        action: 'CANCEL_SALE',
-        table_name: 'sales',
-        record_id: saleId,
-        metadata: {
-          reason,
-          sale_number: currentSale?.sale_number,
-          customer_name: currentSale?.customer_name,
-          total_amount: currentSale?.total_amount,
-          removed_cash_movements: removedMovements,
-          cancelled_accounts_receivable: cancelledReceivables,
-          stock_restorations: Array.from(stockRestorations.entries()).map(([id, qty]) => ({ item_id: id, quantity: qty }))
-        }
+      if (!currentCompany?.id || !user?.id) throw new Error('Dados incompletos para cancelamento');
+      
+      const { data, error } = await supabase.rpc('cancel_sale', {
+        p_sale_id: saleId,
+        p_company_id: currentCompany.id,
+        p_user_id: user.id,
+        p_reason: reason
       });
 
-      // 6. Update sale status
-      const { data: sale, error: saleError } = await supabase
-        .from('sales')
-        .update({
-          payment_status: 'cancelled',
-          notes: reason ? `Cancelado: ${reason}` : 'Venda cancelada',
-        })
-        .eq('id', saleId)
-        .select()
-        .single();
+      if (error) throw error;
+      
+      const result = data as { success: boolean; error?: string; sale_number?: number };
+      if (!result.success) throw new Error(result.error || 'Erro ao cancelar venda');
 
-      if (saleError) throw saleError;
-      return sale;
+      return result;
     },
-    onSuccess: (sale) => {
-      toast.success(`Venda #${String(sale.sale_number).padStart(4, '0')} cancelada!`);
+    onSuccess: (result) => {
+      toast.success(`Venda #${String(result.sale_number).padStart(4, '0')} cancelada!`);
       queryClient.invalidateQueries({ queryKey: ['sales-financeiro'] });
       queryClient.invalidateQueries({ queryKey: ['company-stock'] });
       setCancelDialogOpen(false);
