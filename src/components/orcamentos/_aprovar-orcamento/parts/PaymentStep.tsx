@@ -285,7 +285,7 @@ export function PaymentStep({
                       {state.estimatedEnd ? format(state.estimatedEnd, 'dd/MM/yyyy') : 'Selecionar'}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
+                  <PopoverContent className="w-auto p-0 z-[9999]" align="start">
                     <Calendar
                       mode="single"
                       selected={state.estimatedEnd}
