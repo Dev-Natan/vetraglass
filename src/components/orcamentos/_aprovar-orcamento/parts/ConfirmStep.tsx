@@ -14,11 +14,12 @@ interface Props {
   companyId: string | undefined;
   valorFinal: number;
   isCaixaAberto: boolean;
+  selectedForma?: { tipo: string };
   onStockCheck: (result: CompositionStockResult | null) => void;
 }
 
 export function ConfirmStep({
-  quote, items, state, companyId, valorFinal, isCaixaAberto, onStockCheck,
+  quote, items, state, companyId, valorFinal, isCaixaAberto, selectedForma, onStockCheck,
 }: Props) {
   const entryValue = parseAmount(state.entryAmount);
   const hasEntry = entryValue > 0;
@@ -51,10 +52,17 @@ export function ConfirmStep({
                 <span>{formatCurrency(quote.total_amount)}</span>
               </div>
 
-              {quote.discount_percent && quote.discount_percent > 0 && (
+              {selectedForma?.tipo === 'avista' && quote.discount_percent && quote.discount_percent > 0 && (
                 <div className="flex justify-between text-green-600 dark:text-green-400">
-                  <span>Desconto do orçamento ({quote.discount_percent}%)</span>
+                  <span>Desconto aplicado ({quote.discount_percent}%)</span>
                   <span>-{formatCurrency(quote.discount_amount || 0)}</span>
+                </div>
+              )}
+
+              {selectedForma?.tipo !== 'avista' && quote.discount_percent && quote.discount_percent > 0 && (
+                <div className="flex justify-between text-muted-foreground italic">
+                  <span>Desconto de à vista removido</span>
+                  <span>{formatCurrency(0)}</span>
                 </div>
               )}
 
