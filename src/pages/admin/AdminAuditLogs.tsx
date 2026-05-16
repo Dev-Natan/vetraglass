@@ -65,6 +65,7 @@ const actionLabels: Record<string, { label: string; color: string }> = {
   DELETE: { label: "Exclusão", color: "bg-red-500" },
   LOGIN: { label: "Login", color: "bg-purple-500" },
   LOGOUT: { label: "Logout", color: "bg-gray-500" },
+  CANCEL_SALE: { label: "Cancelamento de Venda", color: "bg-orange-500" },
 };
 
 const tableLabels: Record<string, string> = {
