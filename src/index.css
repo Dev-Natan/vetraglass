@@ -15,118 +15,94 @@ a[href*="lovable.dev"][target="_blank"] {
 
 @layer base {
   html {
-    font-size: 93.75%; /* 15px base for a good balance between data density and readability */
+    font-size: 93.75%; /* 15px base */
+    scroll-behavior: smooth;
   }
 
   :root {
-    --background: 210 20% 98%;
-    --foreground: 215 25% 20%;
+    --background: 210 20% 99%;
+    --foreground: 220 30% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 215 25% 20%;
+    --card-foreground: 220 30% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 20%;
+    --popover-foreground: 220 30% 12%;
 
-    --primary: 207 90% 54%;
+    --primary: 215 90% 48%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 20% 96%;
-    --secondary-foreground: 215 25% 30%;
+    --secondary: 210 20% 97%;
+    --secondary-foreground: 215 25% 25%;
 
-    --muted: 210 15% 94%;
-    --muted-foreground: 215 15% 50%;
+    --muted: 210 15% 95%;
+    --muted-foreground: 215 15% 45%;
 
-    --accent: 207 90% 54%;
+    --accent: 215 90% 48%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 75% 55%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 210 20% 90%;
-    --input: 210 20% 90%;
-    --ring: 207 90% 54%;
+    --border: 214 20% 93%;
+    --input: 214 20% 93%;
+    --ring: 215 90% 48%;
 
-    --radius: 0.75rem;
+    --radius: 1rem;
 
-    /* Action colors */
-    --action-green: 145 65% 50%;
-    --action-blue: 207 90% 54%;
-    --action-purple: 270 65% 55%;
-    --action-orange: 35 95% 55%;
+    /* Semantic Shadows */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
     
-    /* Warning tokens */
-    --warning: 38 92% 50%;
-    --warning-foreground: 38 92% 20%;
-    
-    /* Success tokens */
-    --success: 145 65% 42%;
-    --success-foreground: 145 65% 95%;
-
-    /* Custom tokens */
-    --glass-bg: 0 0% 100% / 0.85;
-    --glass-border: 210 20% 90% / 0.5;
-    --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-    --shadow-action: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-    --shadow-glow: 0 0 20px -5px hsl(var(--primary) / 0.3);
-
-    --sidebar-background: 207 85% 45%;
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 0 0% 100%;
-    --sidebar-primary-foreground: 207 85% 45%;
-    --sidebar-accent: 207 85% 52%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 207 80% 55%;
-    --sidebar-ring: 0 0% 100%;
+    --sidebar-background: 217 33% 17%;
+    --sidebar-foreground: 210 20% 98%;
+    --sidebar-primary: 215 90% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 217 33% 25%;
+    --sidebar-accent-foreground: 210 20% 98%;
+    --sidebar-border: 217 33% 22%;
+    --sidebar-ring: 215 90% 48%;
   }
 
   .dark {
-    --background: 215 25% 10%;
-    --foreground: 210 20% 95%;
+    --background: 222 47% 7%;
+    --foreground: 210 20% 98%;
 
-    --card: 215 25% 14%;
-    --card-foreground: 210 20% 95%;
+    --card: 222 47% 10%;
+    --card-foreground: 210 20% 98%;
 
-    --popover: 215 25% 14%;
-    --popover-foreground: 210 20% 95%;
+    --popover: 222 47% 10%;
+    --popover-foreground: 210 20% 98%;
 
-    --primary: 207 90% 54%;
+    --primary: 215 90% 55%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 215 25% 18%;
-    --secondary-foreground: 210 20% 90%;
+    --secondary: 217 33% 15%;
+    --secondary-foreground: 210 20% 98%;
 
-    --muted: 215 25% 16%;
-    --muted-foreground: 210 15% 60%;
+    --muted: 217 33% 15%;
+    --muted-foreground: 215 20% 65%;
 
-    --accent: 207 90% 54%;
+    --accent: 215 90% 55%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 70% 50%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    
-    /* Warning tokens dark */
-    --warning: 38 92% 50%;
-    --warning-foreground: 38 92% 90%;
-    
-    /* Success tokens dark */
-    --success: 145 65% 50%;
-    --success-foreground: 145 65% 95%;
 
-    --border: 215 25% 22%;
-    --input: 215 25% 22%;
-    --ring: 207 90% 54%;
+    --border: 217 33% 18%;
+    --input: 217 33% 18%;
+    --ring: 215 90% 55%;
 
-    --shadow-card: 0 4px 24px -4px hsl(0 0% 0% / 0.3);
-
-    --sidebar-background: 215 30% 12%;
-    --sidebar-foreground: 210 20% 95%;
-    --sidebar-primary: 207 90% 54%;
+    --sidebar-background: 222 47% 4%;
+    --sidebar-foreground: 210 20% 98%;
+    --sidebar-primary: 215 90% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 215 25% 18%;
-    --sidebar-accent-foreground: 210 20% 95%;
-    --sidebar-border: 215 25% 18%;
-    --sidebar-ring: 207 90% 54%;
+    --sidebar-accent: 222 47% 10%;
+    --sidebar-accent-foreground: 210 20% 98%;
+    --sidebar-border: 222 47% 12%;
+    --sidebar-ring: 215 90% 55%;
   }
 }
 
@@ -136,11 +112,12 @@ a[href*="lovable.dev"][target="_blank"] {
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-background text-foreground antialiased selection:bg-primary/20 selection:text-primary;
     font-family: 'Inter', system-ui, sans-serif;
   }
 
   h1, h2, h3, h4, h5, h6 {
+    @apply font-display tracking-tight text-foreground/90;
     font-family: 'Outfit', system-ui, sans-serif;
   }
 }
