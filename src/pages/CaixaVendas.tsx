@@ -18,6 +18,12 @@ import { PaymentConfig } from '@/components/caixa/InstallmentPaymentSheet';
 import { calculateFormulaQuantity } from '@/utils/safeFormulaEvaluator';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 
+// Importações refatoradas
+import { useCaixa } from '@/hooks/useCaixa';
+import { caixaService } from '@/services/caixaService';
+import { saleService } from '@/services/saleService';
+import { ordemServicoService } from '@/services/ordemServicoService';
+
 import { FecharCaixaDialog } from '@/components/caixa/FecharCaixaDialog';
 import { AbrirCaixaDialog } from '@/components/caixa/AbrirCaixaDialog';
 import { NovaVendaDialog, VendaItem } from '@/components/caixa/NovaVendaDialog';
@@ -147,188 +153,24 @@ export default function CaixaVendas() {
     enabled: !!currentCompany?.id,
   });
 
-
-  useEffect(() => {
-    if (searchParams.get('novo') === 'true') {
-      setPendingOpenNewSale(true);
-      searchParams.delete('novo');
-      setSearchParams(searchParams, { replace: true });
-    }
-  }, [searchParams, setSearchParams]);
-
-  useEffect(() => {
-    if (pendingOpenNewSale && openCashRegister) {
-      setNovaVendaOpen(true);
-      setPendingOpenNewSale(false);
-    }
-  }, [pendingOpenNewSale, openCashRegister]);
-
-  // Buscar vendas do caixa atual
-  const { data: todaySales = [] } = useQuery({
-    queryKey: ['sales-today', openCashRegister?.id],
-    queryFn: async () => {
-      if (!openCashRegister?.id) return [];
-      const { data, error } = await supabase
-        .from('sales')
-        .select('*')
-        .eq('cash_register_id', openCashRegister.id)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!openCashRegister?.id,
-  });
-
-  // Buscar movimentações do caixa atual
-  const { data: cashMovements = [] } = useQuery({
-    queryKey: ['cash-movements', openCashRegister?.id],
-    queryFn: async () => {
-      if (!openCashRegister?.id) return [];
-      const { data, error } = await supabase
-        .from('cash_movements')
-        .select('*')
-        .eq('cash_register_id', openCashRegister.id)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!openCashRegister?.id,
-  });
-
-  // Buscar despesas com vencimento hoje
-  const { data: expensesDueToday = [] } = useQuery({
-    queryKey: ['expenses-due-today', currentCompany?.id],
-    queryFn: async () => {
-      if (!currentCompany?.id) return [];
-      const today = format(new Date(), 'yyyy-MM-dd');
-      const { data, error } = await supabase
-        .from('expenses')
-        .select('*')
-        .eq('company_id', currentCompany.id)
-        .eq('due_date', today)
-        .eq('status', 'pending')
-        .order('amount', { ascending: false });
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!currentCompany?.id,
-  });
-
-  // Buscar parcelas a receber hoje
-  const { data: receivablesDueToday = [] } = useQuery({
-    queryKey: ['receivables-due-today', currentCompany?.id],
-    queryFn: async () => {
-      if (!currentCompany?.id) return [];
-      const today = format(new Date(), 'yyyy-MM-dd');
-      const { data, error } = await supabase
-        .from('accounts_receivable')
-        .select('*, sales!left(payment_status)')
-        .eq('company_id', currentCompany.id)
-        .eq('due_date', today)
-        .eq('status', 'pending')
-        .order('total_amount', { ascending: false });
-
-      if (error) throw error;
-      
-      // Filtrar parcelas de vendas canceladas
-      return (data || []).filter(r => (r as any).sales?.payment_status !== 'cancelled');
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!currentCompany?.id,
-  });
-
-  // Buscar OS concluídas pendentes de faturamento
-  const { data: completedOSPendingBilling = [] } = useQuery({
-    queryKey: ['completed-os-pending-billing', currentCompany?.id],
-    queryFn: async () => {
-      if (!currentCompany?.id) return [];
-      const { data, error } = await supabase
-        .from('ordens_servico')
-        .select('id, os_number, customer_name, total_amount, paid_amount, pending_amount, quote_id, status, estimated_end, created_at')
-        .eq('company_id', currentCompany.id)
-        .eq('status', 'completed')
-        .is('sale_id', null) // Ainda não foi faturada
-        .gt('pending_amount', 0) // Tem saldo pendente
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!currentCompany?.id,
-  });
-  // Removed getDateRange and filteredSales - CaixaVendas now shows only current cash register data
-  // Historical sales reports are available in Financeiro > Relatórios
-
   const { data: availableItems = [] } = useQuery({
     queryKey: ['available-items', currentCompany?.id],
-    queryFn: async () => {
-      if (!currentCompany?.id) return [];
-      const { data: allItems, error: itemsError } = await supabase.from('item_templates').select('id, name, unit, type, linha, default_price').eq('is_active', true);
-      if (itemsError) throw itemsError;
-      const { data: companyPrices, error: pricesError } = await supabase.from('company_item_prices').select('item_template_id, price').eq('company_id', currentCompany.id);
-      if (pricesError) throw pricesError;
-      const priceMap = new Map<string, number>();
-      (companyPrices || []).forEach(cp => { if (cp.item_template_id && cp.price !== null) priceMap.set(cp.item_template_id, cp.price); });
-      return (allItems || []).map(item => ({ id: item.id, name: item.name, unit: item.unit, type: item.type, linha: item.linha, price: priceMap.get(item.id) ?? (item.default_price || 0), isDefaultPrice: !priceMap.has(item.id) }));
-    },
+    queryFn: () => saleService.fetchAvailableItems(currentCompany!.id),
     enabled: !!currentCompany?.id,
   });
 
   const { data: availableProducts = [] } = useQuery({
     queryKey: ['available-products', currentCompany?.id],
-    queryFn: async () => {
-      if (!currentCompany?.id) return [];
-      const { data, error } = await supabase.from('company_products').select(`id, commercial_name, base_price, product_template_id, product_template:product_templates (name, category, linha)`).eq('company_id', currentCompany.id).eq('is_active', true);
-      if (error) throw error;
-      return data || [];
-    },
+    queryFn: () => saleService.fetchAvailableProducts(currentCompany!.id),
     enabled: !!currentCompany?.id,
   });
 
-  // Buscar orçamentos aprovados com status financeiro (usando VIEW)
   const { data: approvedQuotesWithFinancial = [] } = useQuery({
     queryKey: ['approved-quotes-financial', currentCompany?.id],
-    queryFn: async () => {
-      if (!currentCompany?.id) return [];
-      
-      // Buscar status financeiro da VIEW
-      const { data: financialData, error: financialError } = await supabase
-        .from('quote_financial_status')
-        .select('*')
-        .eq('company_id', currentCompany.id)
-        .gt('pending_amount', 0) // Apenas orçamentos com saldo pendente
-        .order('created_at', { ascending: false });
-      
-      if (financialError) throw financialError;
-      if (!financialData?.length) return [];
-      
-      // Buscar os itens dos orçamentos
-      const quoteIds = financialData.map(q => q.quote_id);
-      const { data: quotesWithItems, error: itemsError } = await supabase
-        .from('quotes')
-        .select(`
-          id, quote_number, customer_name, total_amount, final_amount, status, created_at,
-          quote_items (id, description, quantity, unit_price, total_price, width, height, company_product_id, product_template_id)
-        `)
-        .in('id', quoteIds);
-      
-      if (itemsError) throw itemsError;
-      
-      // Mesclar dados financeiros com itens
-      return (quotesWithItems || []).map(quote => {
-        const financial = financialData.find(f => f.quote_id === quote.id);
-        return {
-          ...quote,
-          total_deposits: financial?.total_deposits || 0,
-          total_sold: financial?.total_sold || 0,
-          pending_amount: financial?.pending_amount || quote.final_amount,
-          financial_status: financial?.financial_status || 'pending',
-        };
-      });
-    },
+    queryFn: () => saleService.fetchApprovedQuotesFinancial(currentCompany!.id),
     enabled: !!currentCompany?.id,
   });
+
 
   // Calcular resumo do caixa
   const cashSummary = useMemo(() => {
@@ -354,30 +196,12 @@ export default function CaixaVendas() {
     return { openingAmount, totalDinheiro, totalCartao, totalPix, totalVendas, expectedAmount, totalEntradas, totalSaidas };
   }, [openCashRegister, todaySales, cashMovements]);
 
-  // Abrir caixa usando o fixed_fund
-  const openCashMutation = useMutation({
-    mutationFn: async (openingAmount: number) => {
-      if (!currentCompany?.id || !user?.id) throw new Error('Dados inválidos');
-      const { data, error } = await supabase.rpc('open_daily_cash', {
-        _company_id: currentCompany.id,
-        _opening_amount: openingAmount,
-        _user_id: user.id,
-      });
-      if (error) throw error;
-      const result = data as { success: boolean; error?: string; cash_register_id?: string };
-      if (!result.success) {
-        throw new Error(result.error || 'Erro ao abrir caixa');
-      }
-      return result;
-    },
-    onSuccess: () => {
-      toast.success('Caixa aberto com sucesso!');
-      queryClient.invalidateQueries({ queryKey: ['cash-register-open'] });
-      queryClient.invalidateQueries({ queryKey: ['company-cash'] });
-      setAbrirCaixaOpen(false);
-    },
-    onError: (error: Error) => toast.error(`Erro ao abrir caixa: ${error.message}`),
-  });
+  // handleOpenCash está usando useCaixa hook
+  const handleOpenCash = (openingAmount: number) => {
+    openCash(openingAmount);
+    setAbrirCaixaOpen(false);
+  };
+
 
   // Submeter fechamento para auditoria (não fecha diretamente)
   const handleSubmitForAudit = async (counts: Array<{ payment_method: string; amount: number }>, notes: string) => {
