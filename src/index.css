@@ -155,12 +155,12 @@ a[href*="lovable.dev"][target="_blank"] {
   }
 
   .section-card {
-    @apply bg-card rounded-3xl border border-border/40 p-8 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1.5;
+    @apply bg-card rounded-2xl sm:rounded-3xl border border-border/40 p-5 sm:p-8 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1.5;
     box-shadow: 0 10px 40px -10px rgba(0,0,0,0.05);
   }
 
   .action-card {
-    @apply rounded-[2.5rem] p-8 flex flex-col items-center justify-center gap-4 transition-all duration-500 cursor-pointer relative overflow-hidden group;
+    @apply rounded-[1.5rem] sm:rounded-[2.5rem] p-6 sm:p-8 flex flex-col items-center justify-center gap-4 transition-all duration-500 cursor-pointer relative overflow-hidden group;
     box-shadow: 0 20px 40px -15px rgba(0,0,0,0.1);
   }
 
@@ -196,7 +196,7 @@ a[href*="lovable.dev"][target="_blank"] {
 
   /* Hero Action Card - Nova Venda */
   .action-card-hero {
-    @apply rounded-[2.5rem] p-6 flex items-center justify-between transition-all duration-500 cursor-pointer text-white relative overflow-hidden group;
+    @apply rounded-[1.5rem] sm:rounded-[2.5rem] p-5 sm:p-6 flex items-center justify-between transition-all duration-500 cursor-pointer text-white relative overflow-hidden group;
     background: linear-gradient(135deg, #3b82f6, #1d4ed8);
     box-shadow: 0 25px 50px -12px rgba(59, 130, 246, 0.4);
   }
