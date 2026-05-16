@@ -7,7 +7,8 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Building2, Users, Bell, Shield, Database, Upload, ImageIcon, Trash2, KeyRound, Save, Loader2, CreditCard } from 'lucide-react';
+import { Building2, Users, Bell, Shield, Database, Upload, ImageIcon, Trash2, KeyRound, Save, Loader2, CreditCard, Pencil } from 'lucide-react';
+import { EditCompanyDialog } from "@/components/configuracoes/EditCompanyDialog";
 
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -220,6 +221,15 @@ export default function Configuracoes() {
                 <p className="text-sm text-muted-foreground">Informações básicas e identidade visual para PDFs</p>
               </div>
             </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setEditDialogOpen(true)}
+              className="gap-2"
+            >
+              <Pencil className="w-4 h-4" />
+              Editar Dados
+            </Button>
           </div>
 
           {/* Logo Section */}
@@ -433,6 +443,11 @@ export default function Configuracoes() {
         </div>
       </div>
 
+      <EditCompanyDialog 
+        open={editDialogOpen} 
+        onOpenChange={setEditDialogOpen} 
+        company={company}
+      />
     </MainLayout>
   );
 }
