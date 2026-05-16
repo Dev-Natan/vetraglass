@@ -688,6 +688,9 @@ export default function CaixaVendas() {
       queryClient.invalidateQueries({ queryKey: ['accounts-receivable'] });
       queryClient.invalidateQueries({ queryKey: ['receivables-due-today'] });
       queryClient.invalidateQueries({ queryKey: ['company-stock'] }); 
+      queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      queryClient.invalidateQueries({ queryKey: ['approved-quotes'] });
+      queryClient.invalidateQueries({ queryKey: ['ordens-servico'] });
       setCancelarVendaOpen(false); 
       setSelectedSale(null); 
     },
