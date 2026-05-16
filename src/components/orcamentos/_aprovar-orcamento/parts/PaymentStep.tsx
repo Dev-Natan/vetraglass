@@ -34,11 +34,12 @@ interface Props {
   isInitializingDefaults: boolean;
   isCaixaAberto: boolean;
   valorFinal: number;
+  quote: any;
 }
 
 export function PaymentStep({
   state, onChange, formasPagamento, condicoesPagamento, hasPaymentOptions,
-  onInitializeDefaults, isInitializingDefaults, isCaixaAberto, valorFinal,
+  onInitializeDefaults, isInitializingDefaults, isCaixaAberto, valorFinal, quote,
 }: Props) {
   const entryValue = parseAmount(state.entryAmount);
   const hasEntry = entryValue > 0;
@@ -236,35 +237,40 @@ export function PaymentStep({
               Resumo do Pagamento
             </h3>
 
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="font-medium">Valor do Orçamento</span>
-                <div className="flex flex-col items-end">
-                  <span className="text-2xl font-bold text-primary">{formatCurrency(valorFinal)}</span>
-                  {state.selectedFormaId && (
-                    <span className="text-xs text-muted-foreground mt-1">
-                      {formasPagamento.find(f => f.id === state.selectedFormaId)?.tipo === 'avista' 
-                        ? 'Valor com desconto à vista' 
-                        : 'Valor sem desconto (parcelado)'}
-                    </span>
-                  )}
+            <div className="space-y-4">
+              <div className="flex justify-between items-center bg-muted/30 p-3 rounded-lg border border-dashed">
+                <div className="flex flex-col">
+                  <span className="text-sm text-muted-foreground">Subtotal Original</span>
+                  <span className="font-medium line-through decoration-destructive/50">
+                    {formatCurrency(valorFinal === quote?.final_amount ? (quote?.total_amount || valorFinal) : valorFinal)}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs font-medium px-2 py-1 bg-primary/10 text-primary rounded-full uppercase">
+                    {formasPagamento.find(f => f.id === state.selectedFormaId)?.tipo === 'avista' ? 'À Vista (c/ Desconto)' : 'Parcelado (s/ Desconto)'}
+                  </span>
                 </div>
               </div>
 
+              <div className="flex justify-between items-center p-4 bg-primary/5 rounded-xl border-2 border-primary/20">
+                <div>
+                  <span className="block text-sm font-medium text-primary/80">Valor Final para OS</span>
+                  <p className="text-xs text-muted-foreground mt-0.5">Este valor será gravado nas Contas a Receber</p>
+                </div>
+                <span className="text-3xl font-black text-primary tracking-tight">{formatCurrency(valorFinal)}</span>
+              </div>
+
               {hasEntry && (
-                <>
-                  <Separator />
-                  <div className="flex justify-between text-sm bg-green-50 dark:bg-green-950/30 p-2 rounded">
-                    <span className="text-green-700 dark:text-green-300">Entrada</span>
-                    <span className="text-green-700 dark:text-green-300 font-medium">
-                      -{formatCurrency(entryValue)}
-                    </span>
+                <div className="space-y-2 mt-2">
+                  <div className="flex justify-between text-sm px-1">
+                    <span className="text-green-600 font-medium">Entrada (Confirmada)</span>
+                    <span className="text-green-600 font-bold">-{formatCurrency(entryValue)}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="font-medium">Saldo na Entrega</span>
-                    <span className="text-xl font-bold">{formatCurrency(pendingAmount)}</span>
+                  <div className="flex justify-between text-lg font-bold border-t pt-2 px-1">
+                    <span>Saldo a Parcelar</span>
+                    <span>{formatCurrency(pendingAmount)}</span>
                   </div>
-                </>
+                </div>
               )}
             </div>
           </div>
