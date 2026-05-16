@@ -346,8 +346,14 @@ export default function CaixaVendas() {
     const totalPix = activeSales.filter((s) => s.payment_method === 'pix').reduce((sum, s) => sum + (s.total_amount || 0), 0);
     const totalVendas = totalDinheiro + totalCartao + totalPix;
     
-    // Movimentações do caixa do dia
-    const totalEntradas = cashMovements.filter(m => m.type === 'entrada').reduce((sum, m) => sum + (m.amount || 0), 0);
+    // Movimentações do caixa do dia (EXCLUI entradas vinculadas a vendas/orçamentos,
+    // pois essas já estão contabilizadas em totalDinheiro/Cartao/Pix via 'todaySales')
+    const isSaleLinked = (m: any) =>
+      m.sale_id || m.quote_id || m.ordem_servico_id ||
+      m.category === 'entrada_orcamento' || m.category === 'venda' || m.category === 'venda_dinheiro';
+    const totalEntradas = cashMovements
+      .filter(m => m.type === 'entrada' && !isSaleLinked(m))
+      .reduce((sum, m) => sum + (m.amount || 0), 0);
     const totalSaidas = cashMovements.filter(m => m.type === 'saida').reduce((sum, m) => sum + (m.amount || 0), 0);
     
     const expectedAmount = openingAmount + totalDinheiro + totalEntradas - totalSaidas;
