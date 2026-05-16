@@ -23,6 +23,7 @@ interface Receivable {
   status: string;
   installment_number: number;
   total_installments: number;
+  sale_id?: string | null;
 }
 
 interface CaixaAlertasHojeProps {
