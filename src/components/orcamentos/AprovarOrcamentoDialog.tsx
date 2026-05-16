@@ -95,10 +95,11 @@ export function AprovarOrcamentoDialog({
     }
   }, [open]);
 
-  // Auto-select first payment option
+  // Auto-select first valid payment option (avista or parcelado only)
   useEffect(() => {
     if (formasPagamento.length > 0 && !formState.selectedFormaId) {
-      setFormState(prev => ({ ...prev, selectedFormaId: formasPagamento[0].id }));
+      const firstValid = formasPagamento.find(f => f.tipo === 'avista' || f.tipo === 'parcelado');
+      if (firstValid) setFormState(prev => ({ ...prev, selectedFormaId: firstValid.id }));
     }
   }, [formasPagamento, formState.selectedFormaId]);
 
