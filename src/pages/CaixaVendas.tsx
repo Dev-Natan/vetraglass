@@ -760,7 +760,16 @@ export default function CaixaVendas() {
       if (error) throw error;
       return sale;
     },
-    onSuccess: (sale) => { toast.success(`Venda #${String(sale.sale_number).padStart(4, '0')} cancelada!`); queryClient.invalidateQueries({ queryKey: ['sales-today'] }); queryClient.invalidateQueries({ queryKey: ['company-stock'] }); setCancelarVendaOpen(false); setSelectedSale(null); },
+    onSuccess: (sale) => { 
+      toast.success(`Venda #${String(sale.sale_number).padStart(4, '0')} cancelada!`); 
+      queryClient.invalidateQueries({ queryKey: ['sales-today'] }); 
+      queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts-receivable'] });
+      queryClient.invalidateQueries({ queryKey: ['receivables-due-today'] });
+      queryClient.invalidateQueries({ queryKey: ['company-stock'] }); 
+      setCancelarVendaOpen(false); 
+      setSelectedSale(null); 
+    },
     onError: (error: Error) => toast.error(`Erro ao cancelar venda: ${error.message}`),
   });
 
