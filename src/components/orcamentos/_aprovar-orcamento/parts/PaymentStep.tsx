@@ -62,10 +62,6 @@ export function PaymentStep({
         </div>
       )}
 
-      {(() => {
-        const formasFiltradas = formasPagamento.filter(f => f.tipo === 'avista' || f.tipo === 'parcelado');
-        const labelForma = (tipo: string) => tipo === 'avista' ? 'À vista' : 'Cartão (parcelado)';
-        return (
       <div className="grid md:grid-cols-2 gap-6">
         {/* Left */}
         <div className="space-y-4">
