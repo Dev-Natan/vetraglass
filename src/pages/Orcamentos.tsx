@@ -520,63 +520,64 @@ export default function Orcamentos() {
               const StatusIcon = status.icon;
               
               return (
-                <div
-                  key={quote.id}
-                  className="bg-card border rounded-xl overflow-hidden hover:shadow-lg transition-shadow"
-                >
-                  {/* Card Header */}
-                  <div className="p-4 pb-3">
-                    <div className="flex items-start justify-between mb-3">
-                      <h3 className="text-lg font-bold text-foreground">
-                        ORÇAMENTO {quote.quote_number}
-                      </h3>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="text-muted-foreground hover:text-destructive gap-1 h-8 px-2"
-                        onClick={() => setQuoteToDelete(quote)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        Excluir
-                      </Button>
-                    </div>
-
-                    {/* Customer Info */}
-                    <div className="space-y-1.5 text-sm">
-                      <div className="flex items-center gap-2 text-foreground font-medium">
-                        <User className="w-4 h-4 text-muted-foreground shrink-0" />
-                        <span className="truncate">{quote.customer_name}</span>
-                      </div>
-                      {quote.customer_address && (
-                        <div className="flex items-start gap-2 text-primary">
-                          <MapPin className="w-4 h-4 shrink-0 mt-0.5" />
-                          <span className="line-clamp-2">{quote.customer_address}</span>
+                  <div 
+                    key={quote.id} 
+                    className="group bg-card rounded-[2.5rem] border-2 border-border/40 overflow-hidden hover:border-primary/40 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 flex flex-col relative"
+                  >
+                    {/* Header do Card */}
+                    <div className="p-8">
+                      <div className="flex items-start justify-between gap-4 mb-6">
+                        <div className="space-y-1">
+                          <h3 className="text-xl font-black text-foreground tracking-tighter leading-tight group-hover:text-primary transition-colors">
+                            {quote.customer_name}
+                          </h3>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">
+                              ORÇAMENTO #{String(quote.quote_number).padStart(4, '0')}
+                            </span>
+                          </div>
                         </div>
-                      )}
-                      {quote.customer_phone && (
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Phone className="w-4 h-4 shrink-0" />
-                          <span>{quote.customer_phone}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Price and Date */}
-                    <div className="flex items-center justify-between mt-3 pt-3 border-t">
-                      <div className="flex items-center gap-2">
-                        <Badge variant={status.variant} className="gap-1">
-                          <StatusIcon className="w-3 h-3" />
-                          {status.label}
+                        <Badge variant={status.variant} className="px-3 py-1 font-black shrink-0">
+                          {status.label.toUpperCase()}
                         </Badge>
-                        <span className="text-lg font-bold text-green-600">
-                          {formatCurrency(quote.final_amount)}
-                        </span>
                       </div>
-                      <span className="text-xs text-muted-foreground">
-                        {format(new Date(quote.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                      </span>
+
+                      {/* Informações de Contato */}
+                      <div className="space-y-3 mb-8">
+                        {quote.customer_address && (
+                          <div className="flex items-center gap-3 text-sm font-bold text-muted-foreground group-hover:text-foreground transition-colors">
+                            <div className="p-2 bg-muted rounded-xl">
+                              <MapPin className="w-4 h-4 text-primary" />
+                            </div>
+                            <span className="line-clamp-1">{quote.customer_address}</span>
+                          </div>
+                        )}
+                        {quote.customer_phone && (
+                          <div className="flex items-center gap-3 text-sm font-bold text-muted-foreground group-hover:text-foreground transition-colors">
+                            <div className="p-2 bg-muted rounded-xl">
+                              <Phone className="w-4 h-4 text-primary" />
+                            </div>
+                            <span>{quote.customer_phone}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Valor e Data */}
+                      <div className="flex items-end justify-between pt-6 border-t border-border/40">
+                        <div className="space-y-1">
+                          <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Investimento Total</p>
+                          <span className="text-2xl font-black text-foreground tracking-tighter group-hover:text-primary transition-colors">
+                            {formatCurrency(quote.final_amount)}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Emitido em</p>
+                          <span className="text-xs font-bold text-muted-foreground/60">
+                            {format(new Date(quote.created_at), "dd MMM yyyy", { locale: ptBR })}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
 
                   {/* Quick Actions */}
                   <div className="px-4 py-3 bg-muted/30 border-t">
