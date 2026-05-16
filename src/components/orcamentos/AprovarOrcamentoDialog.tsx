@@ -54,7 +54,23 @@ export function AprovarOrcamentoDialog({
   const { formasPagamento, condicoesPagamento, hasPaymentOptions, initializeDefaults } = usePaymentOptions();
 
   const totalOriginal = items.reduce((sum, item) => sum + item.total_price, 0);
-  const valorFinal = useMemo(() => quote?.final_amount || totalOriginal, [totalOriginal, quote]);
+  
+  const selectedForma = useMemo(() => 
+    formasPagamento.find(f => f.id === formState.selectedFormaId),
+    [formasPagamento, formState.selectedFormaId]
+  );
+
+  const valorFinal = useMemo(() => {
+    if (!quote) return totalOriginal;
+    
+    // Se for à vista, usa o valor com desconto (final_amount)
+    // Se for parcelado ou outro, usa o valor cheio (total_amount)
+    if (selectedForma?.tipo === 'avista') {
+      return quote.final_amount;
+    }
+    
+    return quote.total_amount || totalOriginal;
+  }, [quote, totalOriginal, selectedForma]);
 
   const entryValue = parseAmount(formState.entryAmount);
   const hasEntry = entryValue > 0;
@@ -131,7 +147,7 @@ export function AprovarOrcamentoDialog({
               </DialogTitle>
               <DialogDescription className="flex items-center gap-3 mt-1 ml-10">
                 <span className="truncate">{quote.customer_name}</span>
-                <span className="text-primary font-semibold">{formatCurrency(quote.final_amount)}</span>
+                <span className="text-primary font-semibold">{formatCurrency(valorFinal)}</span>
                 {isOldQuote && (
                   <Badge variant="destructive" className="gap-1 flex-shrink-0">
                     <AlertTriangle className="w-3 h-3" />
@@ -168,6 +184,7 @@ export function AprovarOrcamentoDialog({
               companyId={currentCompany?.id}
               valorFinal={valorFinal}
               isCaixaAberto={isCaixaAberto}
+              selectedForma={selectedForma}
               onStockCheck={setStockCheckResult}
             />
           )}
