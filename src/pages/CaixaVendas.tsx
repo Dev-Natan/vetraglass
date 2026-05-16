@@ -682,7 +682,7 @@ export default function CaixaVendas() {
       return result;
     },
     onSuccess: (result) => { 
-      toast.success(`Venda #${String(result.sale_number).padStart(4, '0')} cancelada!`);
+      toast.success(`Venda #${String(result.sale_number).padStart(4, '0')} cancelada com sucesso! O orçamento voltou ao status "Pendente" e a Ordem de Serviço foi removida para reprocessamento.`);
       queryClient.invalidateQueries({ queryKey: ['sales-today'] }); 
       queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
       queryClient.invalidateQueries({ queryKey: ['accounts-receivable'] });
