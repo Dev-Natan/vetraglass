@@ -103,6 +103,19 @@ export function ReceivePaymentDialog({
         throw new Error('Dados incompletos');
       }
 
+      // Validar se a venda vinculada está cancelada
+      if (receivable.sale_id) {
+        const { data: saleData } = await supabase
+          .from('sales')
+          .select('payment_status')
+          .eq('id', receivable.sale_id)
+          .single();
+        
+        if (saleData?.payment_status === 'cancelled') {
+          throw new Error('Esta venda está cancelada e não pode receber novos pagamentos.');
+        }
+      }
+
       if (amountToPay <= 0) {
         throw new Error('Valor deve ser maior que zero');
       }
