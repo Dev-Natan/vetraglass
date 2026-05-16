@@ -174,65 +174,11 @@ export function ContasReceberTab() {
     };
   }, [receivables]);
 
-  // Receive payment mutation
-  const receivePaymentMutation = useMutation({
-    mutationFn: async (receivable: Receivable) => {
-      if (!currentCompany?.id || !user?.id) throw new Error('Dados inválidos');
-
-      // Update receivable
-      const { error: updateError } = await supabase
-        .from('accounts_receivable')
-        .update({
-          status: 'paid',
-          paid_date: new Date().toISOString(),
-          paid_amount: receivable.total_amount,
-          payment_method: receivePaymentMethod,
-        })
-        .eq('id', receivable.id);
-
-      if (updateError) throw updateError;
-
-      // Check if there's an open cash register to add movement
-      const { data: openRegister } = await supabase
-        .from('cash_registers')
-        .select('id')
-        .eq('company_id', currentCompany.id)
-        .eq('status', 'open')
-        .maybeSingle();
-
-      if (openRegister) {
-        // Create cash movement for the received payment
-        const { error: movementError } = await supabase
-          .from('cash_movements')
-          .insert({
-            company_id: currentCompany.id,
-            cash_register_id: openRegister.id,
-            type: 'entrada',
-            category: 'recebimento_parcela',
-            amount: receivable.total_amount,
-            description: `Recebimento parcela ${receivable.installment_number}/${receivable.total_installments} - ${receivable.customer_name}`,
-            payment_method: receivePaymentMethod,
-            receivable_id: receivable.id,
-            sale_id: receivable.sale_id,
-            created_by: user.id,
-          });
-
-        if (movementError) console.error('Error creating cash movement:', movementError);
-      }
-
-      return receivable;
-    },
-    onSuccess: (receivable) => {
-      toast.success(`Pagamento de ${receivable.customer_name} registrado!`);
-      queryClient.invalidateQueries({ queryKey: ['accounts-receivable'] });
-      queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
-      setReceiveDialogOpen(false);
-      setSelectedReceivable(null);
-    },
-    onError: (error: Error) => {
-      toast.error(`Erro ao registrar pagamento: ${error.message}`);
-    },
-  });
+  // Operational receive payment mutation removed from Financeiro audit view.
+  // Payments must be received through the Caixa module for proper cash tracking.
+  const handleReceiveClick = (receivable: Receivable) => {
+    toast.info('O recebimento de parcelas deve ser realizado através do módulo de Caixa para registro correto no fluxo diário.');
+  };
 
   const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
