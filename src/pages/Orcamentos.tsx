@@ -399,15 +399,41 @@ export default function Orcamentos() {
 
   return (
     <MainLayout>
-      <div className="space-y-6 animate-fade-in pb-24">
-        {/* Header */}
-        <div data-tutorial="orcamentos-header" className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-display font-bold text-foreground flex items-center gap-2">
-              <FileText className="w-7 h-7 text-primary" />
+      <div className="space-y-8 animate-slide-up pb-32">
+        {/* Header Profissional */}
+        <div data-tutorial="orcamentos-header" className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8 p-8 bg-card rounded-[2.5rem] border border-border/40 shadow-xl overflow-hidden relative group">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32 transition-transform duration-1000 group-hover:scale-150" />
+          <div className="relative">
+            <h1 className="text-4xl font-black text-foreground tracking-tighter flex items-center gap-4 sm:text-5xl">
+              <div className="p-3 bg-primary/10 rounded-2xl shadow-inner border border-primary/20">
+                <FileText className="w-10 h-10 text-primary" />
+              </div>
               Orçamentos
             </h1>
-            <p className="text-muted-foreground">Gerencie todos os orçamentos da sua vidraçaria.</p>
+            <p className="text-muted-foreground text-lg mt-3 font-medium">
+              Gestão de propostas e <span className="text-primary font-black uppercase tracking-widest text-xs">Fluxo Comercial</span>
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 relative">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsPaymentDialogOpen(true)}
+              className="h-14 rounded-2xl border-2 font-black uppercase tracking-tighter text-xs"
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              Configurações
+            </Button>
+            <Button 
+              size="lg" 
+              onClick={() => {
+                setSelectedQuote(null);
+                setIsNewDialogOpen(true);
+              }}
+              className="h-14 rounded-2xl font-black uppercase tracking-tighter text-xs shadow-xl shadow-primary/20 group"
+            >
+              <Plus className="w-5 h-5 mr-2 transition-transform group-hover:rotate-90" />
+              Nova Proposta
+            </Button>
           </div>
         </div>
 
