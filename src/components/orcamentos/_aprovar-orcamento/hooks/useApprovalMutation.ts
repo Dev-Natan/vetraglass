@@ -32,7 +32,7 @@ export function useApprovalMutation({
       if (!quote || !companyId || !userId) throw new Error('Dados incompletos');
 
       const {
-        selectedFormaId, selectedCondicaoId, entryAmount, entryPaymentMethod, cardActualReceived,
+        selectedFormaId, entryAmount, entryPaymentMethod, cardActualReceived,
         balanceDueDate, receiveOnCompletion, estimatedEnd, priority, notes,
       } = formState;
 
@@ -52,7 +52,7 @@ export function useApprovalMutation({
         .update({
           status: 'approved',
           forma_pagamento_id: selectedFormaId,
-          condicao_pagamento_id: selectedCondicaoId === 'none' ? null : selectedCondicaoId,
+          condicao_pagamento_id: null,
           valor_original: totalOriginal,
           valor_final_aprovado: valorFinal,
           approved_at: new Date().toISOString(),
@@ -220,23 +220,10 @@ export function useApprovalMutation({
       if (pendingAmount > 0) {
         let numInstallments = 1;
         let daysBetween = 30;
-        let condicaoNome = '';
+        let condicaoNome = 'Saldo';
 
-        if (selectedCondicaoId && selectedCondicaoId !== 'none') {
-          const { data: condicao } = await supabase
-            .from('condicoes_pagamento')
-            .select('*')
-            .eq('id', selectedCondicaoId)
-            .single();
-          
-          if (condicao) {
-            numInstallments = condicao.parcelas || 1;
-            daysBetween = condicao.dias_entre_parcelas || 30;
-            condicaoNome = condicao.nome;
-          }
-        }
-
-        const installmentAmount = Math.round((pendingAmount / numInstallments) * 100) / 100;
+        // Sempre 1 parcela pois removemos as condições de parcelamento complexas no aprovar
+        const installmentAmount = pendingAmount;
 
         for (let i = 1; i <= numInstallments; i++) {
           const dueDate = receiveOnCompletion
