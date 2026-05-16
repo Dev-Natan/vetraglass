@@ -58,114 +58,122 @@ export const OSAttentionList = memo(function OSAttentionList({ items }: OSAttent
   const todayItems = items.filter(i => i.daysOverdue === 0);
 
   return (
-    <Card className="border-none shadow-sm overflow-hidden group">
-      <div className="absolute top-0 left-0 w-1 h-full bg-destructive group-hover:w-2 transition-all duration-300" />
-      <CardHeader className="pb-4 px-6 pt-6">
+    <Card className="border-border/40 shadow-sm overflow-hidden rounded-[2.5rem] relative group">
+      <div className="absolute top-0 left-0 w-1.5 h-full bg-destructive transition-all duration-500 group-hover:w-3" />
+      <CardHeader className="pb-4 pt-8 px-8 border-b border-border/40">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-bold flex items-center gap-3">
+          <CardTitle className="text-lg font-black tracking-tight flex items-center gap-3">
             <div className="p-2 rounded-xl bg-destructive/10">
               <AlertTriangle className="h-5 w-5 text-destructive" />
             </div>
-            Atenção Necessária
+            Prioridades de Produção
           </CardTitle>
-          <Badge variant="destructive" className="px-3 py-1 rounded-full text-xs font-bold animate-pulse">
-            {items.length} pendentes
+          <Badge variant="destructive" className="px-3 py-1 font-black animate-pulse">
+            {items.length} ALERTA(S)
           </Badge>
         </div>
       </CardHeader>
-      <CardContent className="px-6 pb-6 space-y-6">
-        {overdueItems.length > 0 && (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 px-1">
-              <div className="h-1.5 w-1.5 rounded-full bg-destructive" />
-              <p className="text-sm font-bold text-destructive uppercase tracking-wider">
-                Atrasadas ({overdueItems.length})
-              </p>
-            </div>
-            <div className="grid gap-2.5">
-              {overdueItems.slice(0, 4).map(os => (
+      <CardContent className="p-0">
+        <div className="divide-y divide-border/40">
+          {overdueItems.length > 0 && (
+            <div className="bg-destructive/[0.02]">
+              <div className="px-8 py-3 bg-destructive/5 border-y border-destructive/10 flex items-center justify-between">
+                <p className="text-[10px] font-black text-destructive uppercase tracking-widest flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
+                  Prazos Expirados ({overdueItems.length})
+                </p>
+              </div>
+              {overdueItems.slice(0, 5).map(os => (
                 <Link 
                   key={os.id} 
                   to={`/ordens-servico/${os.id}`}
-                  className="flex items-center justify-between p-4 rounded-2xl bg-destructive/5 border border-destructive/10 hover:bg-destructive/10 hover:border-destructive/20 hover:scale-[1.01] transition-all duration-300 group/item"
+                  className="flex items-center justify-between p-8 hover:bg-destructive/[0.04] transition-all group/item"
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-3">
-                      <span className="text-sm font-bold text-foreground group-hover/item:text-destructive transition-colors">
+                      <span className="text-base font-black text-foreground group-hover/item:text-destructive transition-colors tracking-tight">
                         OS #{String(os.os_number).padStart(4, '0')}
                       </span>
-                      <span className="text-[10px] font-bold bg-destructive text-destructive-foreground px-2 py-0.5 rounded-full">
+                      <span className="text-[10px] font-black bg-destructive text-white px-2 py-0.5 rounded-md uppercase tracking-tighter">
                         {os.daysOverdue}D ATRASO
                       </span>
                     </div>
-                    <p className="text-xs text-muted-foreground truncate mt-1.5 font-medium">
-                      {os.customer_name}
+                    <div className="flex items-center gap-2 mt-2">
+                      <p className="text-sm text-muted-foreground font-bold tracking-tight">
+                        {os.customer_name}
+                      </p>
                       {os.current_stage && (
-                        <span className="flex items-center gap-1.5 mt-1">
+                        <div className="flex items-center gap-2">
                           <span className="h-1 w-1 rounded-full bg-muted-foreground/30" />
-                          {stageLabels[os.current_stage] || os.current_stage}
-                        </span>
+                          <span className="text-xs font-black text-primary/80 uppercase tracking-widest">
+                            {stageLabels[os.current_stage] || os.current_stage}
+                          </span>
+                        </div>
                       )}
-                    </p>
+                    </div>
                   </div>
-                  <div className="h-8 w-8 rounded-full bg-destructive/10 flex items-center justify-center opacity-0 group-hover/item:opacity-100 transition-all">
-                    <ArrowRight className="h-4 w-4 text-destructive" />
+                  <div className="h-10 w-10 rounded-2xl bg-destructive/10 flex items-center justify-center opacity-0 group-hover/item:opacity-100 transition-all shadow-sm">
+                    <ArrowRight className="h-5 w-5 text-destructive" />
                   </div>
                 </Link>
               ))}
             </div>
-          </div>
-        )}
+          )}
 
-        {todayItems.length > 0 && (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 px-1">
-              <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-              <p className="text-sm font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
-                Vencendo Hoje ({todayItems.length})
-              </p>
-            </div>
-            <div className="grid gap-2.5">
-              {todayItems.slice(0, 4).map(os => (
+          {todayItems.length > 0 && (
+            <div>
+              <div className="px-8 py-3 bg-amber-500/5 border-y border-amber-500/10 flex items-center justify-between">
+                <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                  Vencimento Hoje ({todayItems.length})
+                </p>
+              </div>
+              {todayItems.slice(0, 5).map(os => (
                 <Link 
                   key={os.id} 
                   to={`/ordens-servico/${os.id}`}
-                  className="flex items-center justify-between p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10 hover:bg-amber-500/10 hover:border-amber-500/20 hover:scale-[1.01] transition-all duration-300 group/item"
+                  className="flex items-center justify-between p-8 hover:bg-amber-500/[0.04] transition-all group/item"
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-3">
-                      <span className="text-sm font-bold text-foreground">
+                      <span className="text-base font-black text-foreground group-hover/item:text-amber-600 transition-colors tracking-tight">
                         OS #{String(os.os_number).padStart(4, '0')}
                       </span>
-                      <span className="text-[10px] font-bold bg-amber-500 text-white px-2 py-0.5 rounded-full">
+                      <span className="text-[10px] font-black bg-amber-500 text-white px-2 py-0.5 rounded-md uppercase tracking-tighter">
                         HOJE
                       </span>
                     </div>
-                    <p className="text-xs text-muted-foreground truncate mt-1.5 font-medium">
-                      {os.customer_name}
+                    <div className="flex items-center gap-2 mt-2">
+                      <p className="text-sm text-muted-foreground font-bold tracking-tight">
+                        {os.customer_name}
+                      </p>
                       {os.current_stage && (
-                        <span className="flex items-center gap-1.5 mt-1">
+                        <div className="flex items-center gap-2">
                           <span className="h-1 w-1 rounded-full bg-muted-foreground/30" />
-                          {stageLabels[os.current_stage] || os.current_stage}
-                        </span>
+                          <span className="text-xs font-black text-amber-600 uppercase tracking-widest">
+                            {stageLabels[os.current_stage] || os.current_stage}
+                          </span>
+                        </div>
                       )}
-                    </p>
+                    </div>
                   </div>
-                  <div className="h-8 w-8 rounded-full bg-amber-500/10 flex items-center justify-center opacity-0 group-hover/item:opacity-100 transition-all">
-                    <ArrowRight className="h-4 w-4 text-amber-600" />
+                  <div className="h-10 w-10 rounded-2xl bg-amber-500/10 flex items-center justify-center opacity-0 group-hover/item:opacity-100 transition-all shadow-sm">
+                    <ArrowRight className="h-5 w-5 text-amber-600" />
                   </div>
                 </Link>
               ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
-        <Button asChild variant="ghost" size="lg" className="w-full mt-2 rounded-2xl hover:bg-accent text-primary font-bold transition-all hover:gap-3">
-          <Link to="/ordens-servico">
-            Explorar todas as ordens
-            <ArrowRight className="h-5 w-5 ml-2 transition-transform group-hover:translate-x-1" />
-          </Link>
-        </Button>
+        <div className="p-6 bg-muted/30 border-t border-border/40">
+          <Button asChild variant="outline" className="w-full h-12 rounded-2xl border-2 font-black uppercase tracking-tighter text-xs group">
+            <Link to="/ordens-servico">
+              Visualizar Painel de Produção
+              <ArrowRight className="h-4 w-4 ml-2 transition-transform group-hover:translate-x-1" />
+            </Link>
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
