@@ -508,60 +508,48 @@ export default function Orcamentos() {
               return (
                   <div 
                     key={quote.id} 
-                    className="group bg-card rounded-[1.5rem] sm:rounded-[2.5rem] border-2 border-border/40 overflow-hidden hover:border-primary/40 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 flex flex-col relative"
+                    className="bg-card rounded-xl border shadow-sm overflow-hidden hover:shadow-md transition-shadow flex flex-col"
                   >
-                    {/* Header do Card */}
-                    <div className="p-5 sm:p-8">
-                      <div className="flex items-start justify-between gap-4 mb-6">
-                        <div className="space-y-1">
-                          <h3 className="text-xl font-black text-foreground tracking-tighter leading-tight group-hover:text-primary transition-colors">
-                            {quote.customer_name}
-                          </h3>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">
-                              ORÇAMENTO #{String(quote.quote_number).padStart(4, '0')}
-                            </span>
-                          </div>
-                        </div>
-                        <Badge variant={status.variant} className="px-3 py-1 font-black shrink-0">
-                          {status.label.toUpperCase()}
-                        </Badge>
+                    <div className="p-4 flex-1">
+                      <div className="flex items-start justify-between mb-2">
+                        <h3 className="font-display font-semibold text-foreground truncate max-w-[70%]">
+                          {quote.customer_name}
+                        </h3>
+                        <span className="text-xs font-mono text-muted-foreground">
+                          #{String(quote.quote_number).padStart(4, '0')}
+                        </span>
                       </div>
 
                       {/* Informações de Contato */}
-                      <div className="space-y-3 mb-8">
+                      <div className="space-y-1.5 mb-3 text-xs">
                         {quote.customer_address && (
-                          <div className="flex items-center gap-3 text-sm font-bold text-muted-foreground group-hover:text-foreground transition-colors">
-                            <div className="p-2 bg-muted rounded-xl">
-                              <MapPin className="w-4 h-4 text-primary" />
-                            </div>
-                            <span className="line-clamp-1">{quote.customer_address}</span>
+                          <div className="flex items-start gap-2 text-primary">
+                            <MapPin className="w-4 h-4 shrink-0 mt-0.5" />
+                            <span className="line-clamp-2">{quote.customer_address}</span>
                           </div>
                         )}
                         {quote.customer_phone && (
-                          <div className="flex items-center gap-3 text-sm font-bold text-muted-foreground group-hover:text-foreground transition-colors">
-                            <div className="p-2 bg-muted rounded-xl">
-                              <Phone className="w-4 h-4 text-primary" />
-                            </div>
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Phone className="w-4 h-4 shrink-0" />
                             <span>{quote.customer_phone}</span>
                           </div>
                         )}
                       </div>
 
                       {/* Valor e Data */}
-                      <div className="flex items-end justify-between pt-6 border-t border-border/40">
-                        <div className="space-y-1">
-                          <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Investimento Total</p>
-                          <span className="text-2xl font-black text-foreground tracking-tighter group-hover:text-primary transition-colors">
+                      <div className="flex items-center justify-between mt-3 pt-3 border-t">
+                        <div className="flex items-center gap-2">
+                          <Badge variant={status.variant} className="gap-1">
+                            <StatusIcon className="w-3 h-3" />
+                            {status.label}
+                          </Badge>
+                          <span className="text-lg font-bold text-green-600">
                             {formatCurrency(quote.final_amount)}
                           </span>
                         </div>
-                        <div className="text-right">
-                          <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Emitido em</p>
-                          <span className="text-xs font-bold text-muted-foreground/60">
-                            {format(new Date(quote.created_at), "dd MMM yyyy", { locale: ptBR })}
-                          </span>
-                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          {format(new Date(quote.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                        </span>
                       </div>
                     </div>
 
