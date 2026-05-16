@@ -109,9 +109,9 @@ export const DayOverviewCards = memo(function DayOverviewCards({ data }: DayOver
                   {card.label}
                 </h3>
                 <div className={cn(
-                  "text-2xl font-bold tracking-tight transition-colors duration-300",
+                  "text-xl sm:text-2xl font-bold tracking-tight transition-colors duration-300",
                   card.alert ? card.color : "text-foreground",
-                  card.isMonetary ? "text-xl sm:text-2xl" : "text-3xl"
+                  card.isMonetary ? "text-lg sm:text-xl lg:text-2xl" : "text-2xl sm:text-3xl"
                 )}>
                   {card.value}
                 </div>

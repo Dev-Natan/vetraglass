@@ -86,21 +86,21 @@ export function OnboardingChecklist() {
 
   return (
     <Card 
-      className="border-primary/20 bg-gradient-to-br from-primary/10 via-background to-background animate-slide-up rounded-[2.5rem] shadow-xl overflow-hidden relative group"
+      className="border-primary/20 bg-gradient-to-br from-primary/10 via-background to-background animate-slide-up rounded-2xl sm:rounded-[2.5rem] shadow-xl overflow-hidden relative group"
       data-tutorial="onboarding-checklist"
     >
       <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-1000" />
       
-      <CardHeader className="pb-6 px-8 pt-8">
+      <CardHeader className="pb-4 sm:pb-6 px-4 sm:px-8 pt-6 sm:pt-8">
         <div className="flex items-start justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-[1.5rem] bg-primary/10 flex items-center justify-center border-2 border-primary/20 shadow-lg shadow-primary/5 transition-transform group-hover:rotate-6 duration-500">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-[1.5rem] bg-primary/10 flex items-center justify-center border-2 border-primary/20 shadow-lg shadow-primary/5 transition-transform group-hover:rotate-6 duration-500">
               <Sparkles className="w-7 h-7 text-primary" />
             </div>
             <div>
-              <CardTitle className="text-2xl font-black tracking-tight">Primeiros Passos 👋</CardTitle>
-              <p className="text-muted-foreground text-sm mt-1 font-medium">
-                Siga o roteiro para configurar seu <span className="text-primary font-black uppercase tracking-widest text-[10px]">Vetra Console</span>
+              <CardTitle className="text-lg sm:text-2xl font-black tracking-tight">Primeiros Passos 👋</CardTitle>
+              <p className="text-muted-foreground text-xs sm:text-sm mt-0.5 sm:mt-1 font-medium">
+                Siga o roteiro para configurar seu <span className="text-primary font-black uppercase tracking-widest text-[8px] sm:text-[10px]">Vetra Console</span>
               </p>
             </div>
           </div>
@@ -137,8 +137,8 @@ export function OnboardingChecklist() {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="px-8 pb-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <CardContent className="px-4 sm:px-8 pb-6 sm:pb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           {items.map((item) => {
             const Icon = item.icon;
             return (
@@ -146,7 +146,7 @@ export function OnboardingChecklist() {
                 key={item.id}
                 to={item.completed ? '#' : item.path}
                 className={cn(
-                  "flex items-center gap-5 p-6 rounded-[2rem] border-2 transition-all duration-500 relative overflow-hidden group/item",
+                  "flex items-center gap-3 sm:gap-5 p-4 sm:p-6 rounded-2xl sm:rounded-[2rem] border-2 transition-all duration-500 relative overflow-hidden group/item",
                   item.completed 
                     ? 'bg-muted/40 border-transparent opacity-50 cursor-default scale-95' 
                     : 'bg-card border-border hover:border-primary/40 hover:shadow-xl hover:-translate-y-1'
@@ -158,7 +158,7 @@ export function OnboardingChecklist() {
                 )}
                 
                 <div className={cn(
-                  "w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-sm transition-all duration-500 group-hover/item:rotate-12",
+                  "w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0 shadow-sm transition-all duration-500 group-hover/item:rotate-12",
                   item.completed 
                     ? 'bg-green-500 text-white' 
                     : 'bg-primary/5 text-primary group-hover/item:bg-primary group-hover/item:text-white group-hover/item:shadow-lg group-hover/item:shadow-primary/20'

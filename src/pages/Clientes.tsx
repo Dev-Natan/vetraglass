@@ -173,10 +173,10 @@ export default function Clientes() {
     <MainLayout>
       <div className="pb-32 space-y-4">
         {/* Header */}
-        <div data-tutorial="clientes-header" className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div data-tutorial="clientes-header" className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold">Clientes</h1>
-            <p className="text-muted-foreground text-sm">
+            <h1 className="text-xl sm:text-2xl font-bold">Clientes</h1>
+            <p className="text-muted-foreground text-xs sm:text-sm">
               {clients.length} clientes cadastrados
             </p>
           </div>
@@ -203,10 +203,10 @@ export default function Clientes() {
                 setSelectedClient(null);
                 setDialogOpen(true);
               }}
-              className="gap-2"
+              className="gap-2 h-10 sm:h-11 px-4"
             >
               <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">Novo Cliente</span>
+              <span className="inline">Novo Cliente</span>
             </Button>
           </div>
         </div>

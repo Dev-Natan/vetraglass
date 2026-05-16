@@ -32,7 +32,7 @@ export const OSAttentionList = memo(function OSAttentionList({ items }: OSAttent
     return (
       <Card className="border-none shadow-sm overflow-hidden group">
         <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500/50 group-hover:w-2 transition-all duration-300" />
-        <CardHeader className="pb-3 px-6 pt-6">
+        <CardHeader className="pb-3 px-4 sm:px-6 pt-5 sm:pt-6">
           <CardTitle className="text-lg font-bold flex items-center gap-3">
             <div className="p-2 rounded-xl bg-emerald-500/10">
               <CheckCircle className="h-5 w-5 text-emerald-600" />
@@ -40,8 +40,8 @@ export const OSAttentionList = memo(function OSAttentionList({ items }: OSAttent
             OS em Dia
           </CardTitle>
         </CardHeader>
-        <CardContent className="px-6 pb-6 pt-2">
-          <div className="text-center py-10 bg-emerald-50/30 dark:bg-emerald-500/5 rounded-2xl border border-emerald-500/10">
+        <CardContent className="px-4 sm:px-6 pb-6 pt-2">
+          <div className="text-center py-6 sm:py-10 bg-emerald-50/30 dark:bg-emerald-500/5 rounded-2xl border border-emerald-500/10">
             <div className="relative inline-block mb-4">
               <CheckCircle className="h-14 w-14 text-emerald-500 animate-bounce" />
               <div className="absolute -top-1 -right-1 h-4 w-4 bg-emerald-500 rounded-full border-4 border-background" />
@@ -60,7 +60,7 @@ export const OSAttentionList = memo(function OSAttentionList({ items }: OSAttent
   return (
     <Card className="border-none shadow-sm overflow-hidden group">
       <div className="absolute top-0 left-0 w-1 h-full bg-destructive group-hover:w-2 transition-all duration-300" />
-      <CardHeader className="pb-4 px-6 pt-6">
+      <CardHeader className="pb-4 px-4 sm:px-6 pt-5 sm:pt-6">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-bold flex items-center gap-3">
             <div className="p-2 rounded-xl bg-destructive/10">
@@ -73,7 +73,7 @@ export const OSAttentionList = memo(function OSAttentionList({ items }: OSAttent
           </Badge>
         </div>
       </CardHeader>
-      <CardContent className="px-6 pb-6 space-y-6">
+      <CardContent className="px-4 sm:px-6 pb-6 space-y-6">
         {overdueItems.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center gap-2 px-1">
@@ -87,7 +87,7 @@ export const OSAttentionList = memo(function OSAttentionList({ items }: OSAttent
                 <Link 
                   key={os.id} 
                   to={`/ordens-servico/${os.id}`}
-                  className="flex items-center justify-between p-4 rounded-2xl bg-destructive/5 border border-destructive/10 hover:bg-destructive/10 hover:border-destructive/20 hover:scale-[1.01] transition-all duration-300 group/item"
+                  className="flex items-center justify-between p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-destructive/5 border border-destructive/10 hover:bg-destructive/10 hover:border-destructive/20 hover:scale-[1.01] transition-all duration-300 group/item"
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-3">

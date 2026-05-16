@@ -266,18 +266,18 @@ export default function OrdensServico() {
     <MainLayout>
       <div className="space-y-6 animate-fade-in">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
-            <h1 className="font-display font-bold text-2xl text-foreground flex items-center gap-2">
-              <ClipboardList className="w-7 h-7 text-primary" />
+            <h1 className="font-display font-bold text-xl sm:text-2xl text-foreground flex items-center gap-2">
+              <ClipboardList className="w-6 h-6 sm:w-7 sm:h-7 text-primary" />
               Ordens de Serviço
             </h1>
-            <p className="text-muted-foreground">Gerencie suas ordens de serviço e agendamentos</p>
+            <p className="text-xs sm:text-sm text-muted-foreground">Gerencie suas ordens de serviço e agendamentos</p>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
           <Card className="bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-amber-200 dark:border-amber-900">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
