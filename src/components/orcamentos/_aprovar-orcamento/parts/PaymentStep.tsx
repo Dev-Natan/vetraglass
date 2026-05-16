@@ -133,7 +133,7 @@ export function PaymentStep({
                       <div key={method} className="flex items-center space-x-2 p-2 border rounded-lg flex-1">
                         <RadioGroupItem value={method} id={`entry-${method}`} />
                         <Label htmlFor={`entry-${method}`} className="cursor-pointer capitalize">
-                          {method === 'cartao' ? 'Cartão' : method.charAt(0).toUpperCase() + method.slice(1)}
+                          {method === 'cartao' ? 'Cartão' : method === 'pix' ? 'Pix / Transferência' : 'Dinheiro'}
                         </Label>
                       </div>
                     ))}
