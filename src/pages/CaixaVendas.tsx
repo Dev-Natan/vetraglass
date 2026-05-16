@@ -20,9 +20,11 @@ import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 
 // Importações refatoradas
 import { useCaixa } from '@/hooks/useCaixa';
+import { useSales } from '@/hooks/useSales';
 import { caixaService } from '@/services/caixaService';
 import { saleService } from '@/services/saleService';
 import { ordemServicoService } from '@/services/ordemServicoService';
+
 
 import { FecharCaixaDialog } from '@/components/caixa/FecharCaixaDialog';
 import { AbrirCaixaDialog } from '@/components/caixa/AbrirCaixaDialog';
@@ -120,8 +122,17 @@ export default function CaixaVendas() {
     companyCash, 
     openCashRegister, 
     isLoading: loadingCashRegister,
-    openCash
+    openCash,
+    isOpening
   } = useCaixa();
+
+  const {
+    createSale,
+    cancelSale,
+    isCreating,
+    isCancelling
+  } = useSales();
+
 
   const { data: todaySales = [] } = useQuery({
     queryKey: ['sales-today', openCashRegister?.id],
@@ -197,10 +208,11 @@ export default function CaixaVendas() {
   }, [openCashRegister, todaySales, cashMovements]);
 
   // handleOpenCash está usando useCaixa hook
-  const handleOpenCash = (openingAmount: number) => {
+  const handleOpenCash = async (openingAmount: number) => {
     openCash(openingAmount);
     setAbrirCaixaOpen(false);
   };
+
 
 
   // Submeter fechamento para auditoria (não fecha diretamente)
