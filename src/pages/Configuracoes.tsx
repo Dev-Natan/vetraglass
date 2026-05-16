@@ -7,7 +7,8 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Building2, Users, Bell, Shield, Database, Upload, ImageIcon, Trash2, KeyRound, Save, Loader2, CreditCard } from 'lucide-react';
+import { Building2, Users, Bell, Shield, Database, Upload, ImageIcon, Trash2, KeyRound, Save, Loader2, CreditCard, Pencil } from 'lucide-react';
+import { EditCompanyDialog } from "@/components/configuracoes/EditCompanyDialog";
 
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
