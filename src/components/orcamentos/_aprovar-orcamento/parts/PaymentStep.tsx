@@ -246,7 +246,7 @@ export function PaymentStep({
                     <span className="text-green-600 font-bold">-{formatCurrency(entryValue)}</span>
                   </div>
                   <div className="flex justify-between text-lg font-bold border-t pt-2 px-1">
-                    <span>Saldo a Parcelar</span>
+                    <span>Saldo Final a Receber</span>
                     <span>{formatCurrency(pendingAmount)}</span>
                   </div>
                 </div>
