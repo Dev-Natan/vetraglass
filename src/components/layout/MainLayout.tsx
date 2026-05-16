@@ -88,7 +88,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             )}
 
             {/* Page Content */}
-            <div className="p-4 sm:p-8 max-w-7xl mx-auto min-h-[calc(100vh-210px)]">
+            <div className="p-8 max-w-7xl mx-auto min-h-[calc(100vh-210px)]">
               <div className="animate-fade-in">
                 <AnnouncementBanner />
                 {children}
