@@ -239,7 +239,16 @@ export function PaymentStep({
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="font-medium">Valor do Orçamento</span>
-                <span className="text-2xl font-bold text-primary">{formatCurrency(valorFinal)}</span>
+                <div className="flex flex-col items-end">
+                  <span className="text-2xl font-bold text-primary">{formatCurrency(valorFinal)}</span>
+                  {state.selectedFormaId && (
+                    <span className="text-xs text-muted-foreground mt-1">
+                      {formasPagamento.find(f => f.id === state.selectedFormaId)?.tipo === 'avista' 
+                        ? 'Valor com desconto à vista' 
+                        : 'Valor sem desconto (parcelado)'}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {hasEntry && (
