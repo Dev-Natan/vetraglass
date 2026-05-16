@@ -827,14 +827,15 @@ export default function CaixaVendas() {
       <AbrirCaixaDialog 
         open={abrirCaixaOpen} 
         onOpenChange={setAbrirCaixaOpen} 
-        onConfirm={(amount) => openCashMutation.mutateAsync(amount)} 
+        onConfirm={handleOpenCash} 
         companyCash={companyCash} 
-        isLoading={openCashMutation.isPending} 
+        isLoading={isOpening} 
       />
       <FecharCaixaDialog open={fecharCaixaOpen} onOpenChange={setFecharCaixaOpen} onConfirm={handleSubmitForAudit} summary={cashSummary} companyCash={companyCash} cashRegisterId={openCashRegister?.id} isLoading={isSubmittingForAudit} />
-      <NovaVendaDialog open={novaVendaOpen} onOpenChange={setNovaVendaOpen} onConfirm={(data) => newSaleMutation.mutateAsync(data)} availableItems={availableItems} approvedQuotes={approvedQuotesWithFinancial} isLoading={newSaleMutation.isPending} />
-      <CancelarVendaDialog open={cancelarVendaOpen} onOpenChange={setCancelarVendaOpen} sale={selectedSale} onConfirm={(saleId, reason) => cancelSaleMutation.mutateAsync({ saleId, reason })} isLoading={cancelSaleMutation.isPending} />
+      <NovaVendaDialog open={novaVendaOpen} onOpenChange={setNovaVendaOpen} onConfirm={(data) => createSale({ ...data, cashRegisterId: openCashRegister!.id, companyId: currentCompany!.id, userId: user!.id })} availableItems={availableItems} approvedQuotes={approvedQuotesWithFinancial} isLoading={isCreating} />
+      <CancelarVendaDialog open={cancelarVendaOpen} onOpenChange={setCancelarVendaOpen} sale={selectedSale} onConfirm={(saleId, reason) => cancelSale({ saleId, companyId: currentCompany!.id, userId: user!.id, reason })} isLoading={isCancelling} />
       <DetalhesVendaDialog open={detalhesVendaOpen} onOpenChange={setDetalhesVendaOpen} sale={selectedSale} onPrint={handlePrintReceipt} />
+
 
       {/* Dialog Movimentação Caixa do Dia */}
       {openCashRegister && (

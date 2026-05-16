@@ -3,13 +3,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { VendaItem } from '@/components/caixa/NovaVendaDialog';
 import { PaymentConfig } from '@/components/caixa/InstallmentPaymentSheet';
-import { calculateFormulaQuantity } from '@/utils/safeFormulaEvaluator';
 
 export function useSales() {
   const queryClient = useQueryClient();
 
   const cancelSaleMutation = useMutation({
     mutationFn: async ({ saleId, companyId, userId, reason }: { saleId: string; companyId: string; userId: string; reason: string }) => {
+      // Usando a função RPC cancel_sale que já existe no banco
       const { data, error } = await supabase.rpc('cancel_sale', {
         p_sale_id: saleId,
         p_company_id: companyId,
@@ -23,7 +23,7 @@ export function useSales() {
       return result;
     },
     onSuccess: (result) => {
-      toast.success(`Venda #${String(result.sale_number).padStart(4, '0')} cancelada com sucesso!`);
+      toast.success(`Venda cancelada com sucesso!`);
       queryClient.invalidateQueries({ queryKey: ['sales-today'] });
       queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
       queryClient.invalidateQueries({ queryKey: ['accounts-receivable'] });
@@ -53,7 +53,7 @@ export function useSales() {
     }) => {
       const { items, customerName, paymentConfig, discountPercent, discountAmount, subtotal, total, quoteId, cashRegisterId, companyId, userId } = data;
 
-      // 1. Create Sale
+      // 1. Criar Venda
       const { data: sale, error: saleError } = await supabase
         .from('sales')
         .insert({
@@ -66,16 +66,16 @@ export function useSales() {
           total_amount: total,
           payment_method: paymentConfig.method,
           payment_status: paymentConfig.method === 'dinheiro' ? 'paid' : 'pending',
-          created_by: userId,
+          sold_by: userId, // Usando sold_by em vez de created_by
           quote_id: quoteId,
-          sale_type: quoteId ? 'partial' : 'full' // Basic logic
+          sale_type: quoteId ? 'partial' : 'full'
         })
         .select('*')
         .single();
 
       if (saleError) throw saleError;
 
-      // 2. Insert Items
+      // 2. Inserir Itens da Venda
       const saleItems = items.map(item => ({
         sale_id: sale.id,
         item_name: item.name,
@@ -83,17 +83,16 @@ export function useSales() {
         quantity: item.quantity,
         unit_price: item.unitPrice,
         total_price: item.totalPrice,
-        width: item.width,
-        height: item.height,
-        company_product_id: item.companyProductId,
-        product_template_id: item.productTemplateId,
-        item_template_id: item.itemTemplateId
+        width: item.width || null,
+        height: item.height || null,
+        company_product_id: item.companyProductId || null,
+        item_template_id: item.itemTemplateId || null
       }));
 
       const { error: itemsError } = await supabase.from('sale_items').insert(saleItems);
       if (itemsError) throw itemsError;
 
-      // 3. Register cash movement if paid in cash
+      // 3. Registrar movimento de caixa se pago em dinheiro
       if (paymentConfig.method === 'dinheiro') {
         await supabase.from('cash_movements').insert({
           company_id: companyId,
@@ -109,13 +108,10 @@ export function useSales() {
         });
       }
 
-      // In a real scenario, we would also update stock, handle installments, etc.
-      // Keeping it focused on the core for now to avoid breaking complex logic.
-
       return sale;
     },
     onSuccess: (sale) => {
-      toast.success(`Venda #${String(sale.sale_number).padStart(4, '0')} registrada!`);
+      toast.success(`Venda registrada com sucesso!`);
       queryClient.invalidateQueries({ queryKey: ['sales-today'] });
       queryClient.invalidateQueries({ queryKey: ['company-stock'] });
       queryClient.invalidateQueries({ queryKey: ['accounts-receivable'] });
