@@ -52,37 +52,48 @@ export function MainLayout({ children }: MainLayoutProps) {
 
             {/* Company Header */}
             {currentCompany && (
-              <div className="px-8 py-8 border-b border-border/50 bg-white/50 dark:bg-card/30 backdrop-blur-sm">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 max-w-7xl mx-auto">
-                  <div className="flex items-center gap-5">
+              <div className="px-8 py-10 border-b border-border/40 bg-gradient-to-b from-white to-transparent dark:from-card/40 dark:to-transparent">
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 max-w-7xl mx-auto">
+                  <div className="flex items-center gap-6">
                     {currentCompany.logo_url ? (
-                      <img 
-                        src={currentCompany.logo_url} 
-                        alt={currentCompany.name}
-                        className="w-16 h-16 rounded-2xl object-contain bg-white border border-border shadow-sm ring-4 ring-background"
-                      />
+                      <div className="relative group">
+                        <img 
+                          src={currentCompany.logo_url} 
+                          alt={currentCompany.name}
+                          className="w-20 h-20 rounded-[2rem] object-contain bg-white border border-border/50 shadow-xl ring-8 ring-background/50 transition-transform duration-500 group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 rounded-[2rem] shadow-inner pointer-events-none" />
+                      </div>
                     ) : (
-                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/20 ring-4 ring-background">
-                        <span className="font-display font-bold text-primary-foreground text-2xl">
+                      <div className="w-20 h-20 rounded-[2rem] bg-gradient-to-br from-primary via-primary/90 to-blue-600 flex items-center justify-center shadow-2xl shadow-primary/30 ring-8 ring-background/50 transition-transform duration-500 hover:scale-105">
+                        <span className="font-display font-bold text-primary-foreground text-3xl">
                           {currentCompany.name.charAt(0)}
                         </span>
                       </div>
                     )}
-                    <div>
-                      <h1 className="font-display font-bold text-2xl text-foreground tracking-tight">
+                    <div className="space-y-1">
+                      <h1 className="font-display font-black text-3xl text-foreground tracking-tight sm:text-4xl">
                         {currentCompany.name}
                       </h1>
-                      <p className="text-sm text-muted-foreground mt-0.5">
-                        {getTimeBasedGreeting()}, <span className="font-semibold text-primary">{profile?.full_name || 'Usuário'}</span>
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-muted-foreground/80">
+                          {getTimeBasedGreeting()},
+                        </span>
+                        <span className="text-sm font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md">
+                          {profile?.full_name || 'Usuário'}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <div className="relative w-full md:w-80 group">
-                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                  <div className="relative w-full md:w-96 group">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-all duration-300" />
                     <Input 
-                      placeholder="Buscar por atalhos..." 
-                      className="pl-11 h-12 bg-background border-border/50 rounded-2xl shadow-sm focus-visible:ring-primary/20 focus-visible:border-primary transition-all group-hover:border-border"
+                      placeholder="Buscar por atalhos ou comandos..." 
+                      className="pl-12 h-14 bg-background/50 backdrop-blur-sm border-border/50 rounded-2xl shadow-inner-lg focus-visible:ring-primary/10 focus-visible:border-primary/50 transition-all duration-300 group-hover:bg-background"
                     />
+                    <kbd className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none hidden sm:inline-flex h-6 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100 group-focus-within:hidden">
+                      <span className="text-xs">⌘</span>K
+                    </kbd>
                   </div>
                 </div>
               </div>
