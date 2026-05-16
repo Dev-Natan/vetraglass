@@ -71,44 +71,47 @@ export const DayOverviewCards = memo(function DayOverviewCards({ data }: DayOver
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {cards.map((card) => (
-        <Link key={card.label} to={card.link} className="group h-full">
+        <Link key={card.label} to={card.link} className="group">
           <Card className={cn(
-            "h-full transition-all duration-500 border border-border/40 shadow-sm group-hover:shadow-2xl group-hover:-translate-y-2 relative overflow-hidden rounded-[1.5rem] sm:rounded-[2rem]",
-            card.alert ? "ring-2 ring-primary/10" : ""
+            "h-full transition-all duration-300 border-none shadow-sm group-hover:shadow-xl group-hover:-translate-y-1 relative overflow-hidden",
+            card.alert ? "ring-1 ring-primary/20" : ""
           )}>
             {/* Background Accent Gradient */}
             <div className={cn(
-              "absolute top-0 right-0 w-40 h-40 -mr-10 -mt-10 rounded-full opacity-10 transition-transform duration-700 group-hover:scale-150 group-hover:opacity-20 blur-2xl",
+              "absolute top-0 right-0 w-32 h-32 -mr-8 -mt-8 rounded-full opacity-10 transition-transform duration-500 group-hover:scale-150",
               card.bgColor
             )} />
             
-            <CardContent className="p-5 sm:p-8 relative z-10 flex flex-col h-full">
-              <div className="flex items-center justify-between mb-8">
+            <CardContent className="p-6 relative z-10">
+              <div className="flex items-center justify-between mb-4">
                 <div className={cn(
-                  "p-4 rounded-2xl transition-all duration-500 shadow-sm group-hover:shadow-lg group-hover:rotate-6",
+                  "p-3 rounded-2xl transition-colors duration-300",
                   card.bgColor,
-                  "group-hover:bg-opacity-30"
+                  "group-hover:bg-opacity-20"
                 )}>
-                  <card.icon className={cn("h-7 w-7 transition-transform group-hover:scale-110", card.color)} />
+                  <card.icon className={cn("h-6 w-6", card.color)} />
                 </div>
                 {card.alert && (
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-destructive/10 text-destructive text-[9px] font-black uppercase tracking-[0.15em] border border-destructive/20 shadow-sm animate-pulse">
-                    <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
-                    Prioridade
+                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                    </span>
+                    Atenção
                   </div>
                 )}
               </div>
               
-              <div className="space-y-1 mt-auto">
-                <h3 className="text-xs font-black text-muted-foreground/60 uppercase tracking-[0.1em]">
+              <div className="space-y-1">
+                <h3 className="text-sm font-medium text-muted-foreground">
                   {card.label}
                 </h3>
                 <div className={cn(
-                  "font-display font-black tracking-tighter transition-all duration-500",
+                  "text-2xl font-bold tracking-tight transition-colors duration-300",
                   card.alert ? card.color : "text-foreground",
-                  card.isMonetary ? "text-2xl sm:text-3xl" : "text-4xl"
+                  card.isMonetary ? "text-xl sm:text-2xl" : "text-3xl"
                 )}>
                   {card.value}
                 </div>
