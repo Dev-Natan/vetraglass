@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DollarSign, CreditCard, TrendingUp, TrendingDown, Wallet, ArrowUpDown } from 'lucide-react';
+import { DollarSign, CreditCard, TrendingUp, TrendingDown, Wallet, ArrowUpDown, Printer } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 
 interface CaixaResumoProps {
@@ -39,8 +40,20 @@ export function CaixaResumo({
 
   const hasCompanyCash = companyCashBalance !== undefined;
 
+  const handlePrintDailyReport = () => {
+    window.print();
+  };
+
   return (
     <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h2 className="text-lg font-bold">Resumo Diário</h2>
+        <Button variant="outline" size="sm" onClick={handlePrintDailyReport} className="gap-2 print:hidden">
+          <Printer className="h-4 w-4" />
+          Imprimir Relatório
+        </Button>
+      </div>
+      
       {/* Cards de Resumo Principais */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Abertura */}
