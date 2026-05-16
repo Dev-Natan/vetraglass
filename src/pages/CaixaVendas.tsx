@@ -676,9 +676,8 @@ export default function CaixaVendas() {
 
       return result;
     },
-    },
-    onSuccess: (sale) => { 
-      toast.success(`Venda #${String(sale.sale_number).padStart(4, '0')} cancelada!`); 
+    onSuccess: (result) => { 
+      toast.success(`Venda #${String(result.sale_number).padStart(4, '0')} cancelada!`);
       queryClient.invalidateQueries({ queryKey: ['sales-today'] }); 
       queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
       queryClient.invalidateQueries({ queryKey: ['accounts-receivable'] });
