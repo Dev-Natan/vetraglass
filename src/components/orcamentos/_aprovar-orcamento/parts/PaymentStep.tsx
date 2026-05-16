@@ -190,7 +190,7 @@ export function PaymentStep({
                           {state.balanceDueDate ? format(state.balanceDueDate, 'dd/MM/yyyy', { locale: ptBR }) : 'Selecionar data'}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
+                      <PopoverContent className="w-auto p-0 z-[9999]" align="start">
                         <Calendar
                           mode="single"
                           selected={state.balanceDueDate}
