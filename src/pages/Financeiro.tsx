@@ -77,7 +77,7 @@ const statusConfig = {
 };
 
 export default function Financeiro() {
-  const { currentCompany } = useAuth();
+  const { currentCompany, user } = useAuth();
   const queryClient = useQueryClient();
 
   // Module tutorial trigger
