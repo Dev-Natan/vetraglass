@@ -227,13 +227,13 @@ export function Sidebar() {
         </nav>
 
         {/* Footer */}
-        <div className="p-3 border-t border-sidebar-border">
+        <div className="p-6 border-t border-white/5">
           <button 
             onClick={handleSignOut}
-            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-white/40 hover:bg-destructive/10 hover:text-destructive transition-all duration-300 group"
           >
-            <LogOut className="w-5 h-5" />
-            <span className="text-sm font-medium">Sair</span>
+            <LogOut className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
+            <span className="text-sm font-bold tracking-tight">Encerrar Sessão</span>
           </button>
         </div>
       </aside>
