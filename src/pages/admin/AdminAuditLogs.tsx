@@ -455,7 +455,7 @@ export default function AdminAuditLogs() {
                           <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-2">
                               <div>
-                                <span className="font-bold">Motivo:</span> {String(selectedLog.metadata.reason || 'Não informado')}
+                                <span className="font-bold">Motivo:</span> {String((selectedLog.metadata as any).reason || 'Não informado')}
                               </div>
                               <div>
                                 <span className="font-bold">Venda:</span> #{selectedLog.metadata.sale_number}
