@@ -47,10 +47,10 @@ export default function Index() {
     <MainLayout>
       <div className="space-y-6 max-w-7xl mx-auto">
         {/* Header com data */}
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 animate-slide-up p-8 bg-card rounded-[2.5rem] border border-border/40 shadow-xl overflow-hidden relative group">
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 animate-slide-up p-5 sm:p-8 bg-card rounded-[1.5rem] sm:rounded-[2.5rem] border border-border/40 shadow-xl overflow-hidden relative group">
           <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32 transition-transform duration-1000 group-hover:scale-150" />
           <div className="relative">
-            <h1 className="text-4xl font-black text-foreground tracking-tighter capitalize sm:text-5xl">
+            <h1 className="text-2xl sm:text-4xl font-black text-foreground tracking-tighter capitalize sm:text-5xl">
               {formattedDate}
             </h1>
             <p className="text-muted-foreground text-lg mt-2 font-medium">
