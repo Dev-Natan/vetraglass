@@ -52,7 +52,7 @@ export function useApprovalMutation({
         .update({
           status: 'approved',
           forma_pagamento_id: selectedFormaId,
-          condicao_pagamento_id: selectedCondicaoId === 'none' ? null : selectedCondicaoId,
+          condicao_pagamento_id: null,
           valor_original: totalOriginal,
           valor_final_aprovado: valorFinal,
           approved_at: new Date().toISOString(),
