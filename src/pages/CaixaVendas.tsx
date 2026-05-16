@@ -744,11 +744,32 @@ export default function CaixaVendas() {
           });
         }
       }
+      // Cancelar contas a receber vinculadas
+      await supabase.from('accounts_receivable')
+        .update({ status: 'cancelled' })
+        .eq('sale_id', saleId);
+
+      // Cancelar registros de entrada vinculados (cash_movements)
+      // Buscamos os movimentos de entrada da venda e cancelamos
+      await supabase.from('cash_movements')
+        .delete()
+        .eq('sale_id', saleId)
+        .eq('type', 'entrada');
+
       const { data: sale, error } = await supabase.from('sales').update({ payment_status: 'cancelled', notes: reason ? `Cancelado: ${reason}` : 'Venda cancelada' }).eq('id', saleId).select().single();
       if (error) throw error;
       return sale;
     },
-    onSuccess: (sale) => { toast.success(`Venda #${String(sale.sale_number).padStart(4, '0')} cancelada!`); queryClient.invalidateQueries({ queryKey: ['sales-today'] }); queryClient.invalidateQueries({ queryKey: ['company-stock'] }); setCancelarVendaOpen(false); setSelectedSale(null); },
+    onSuccess: (sale) => { 
+      toast.success(`Venda #${String(sale.sale_number).padStart(4, '0')} cancelada!`); 
+      queryClient.invalidateQueries({ queryKey: ['sales-today'] }); 
+      queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts-receivable'] });
+      queryClient.invalidateQueries({ queryKey: ['receivables-due-today'] });
+      queryClient.invalidateQueries({ queryKey: ['company-stock'] }); 
+      setCancelarVendaOpen(false); 
+      setSelectedSale(null); 
+    },
     onError: (error: Error) => toast.error(`Erro ao cancelar venda: ${error.message}`),
   });
 
