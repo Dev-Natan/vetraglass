@@ -850,7 +850,7 @@ export default function CaixaVendas() {
   };
 
   // Handler: Receber parcela via caixa do dia - abre dialog com suporte a pagamento parcial
-  const handleReceivePayment = (receivable: { 
+  const handleReceivePayment = async (receivable: { 
     id: string; 
     customer_name: string; 
     description?: string;
@@ -866,6 +866,15 @@ export default function CaixaVendas() {
     if (!openCashRegister?.id) {
       toast.error('Caixa não está aberto');
       return;
+    }
+
+    // Validar se a venda está cancelada
+    if (receivable.sale_id) {
+      const { data: sale } = await supabase.from('sales').select('payment_status').eq('id', receivable.sale_id).single();
+      if (sale?.payment_status === 'cancelled') {
+        toast.error('Esta venda está cancelada e não pode receber pagamentos.');
+        return;
+      }
     }
     setSelectedReceivable({
       id: receivable.id,
