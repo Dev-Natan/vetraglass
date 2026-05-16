@@ -152,35 +152,32 @@ export function Sidebar() {
 
       {/* Sidebar */}
       <aside className={cn(
-        "fixed left-0 top-0 h-screen w-64 bg-sidebar flex flex-col z-40 transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) shadow-[10px_0_40px_-15px_rgba(0,0,0,0.3)]",
-        "lg:translate-x-0 lg:shadow-none border-r border-sidebar-border/20",
+        "fixed left-0 top-0 h-screen w-64 bg-sidebar flex flex-col z-40 transition-all duration-300 ease-in-out shadow-2xl",
+        "lg:translate-x-0 lg:shadow-none",
         isMobileOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         {/* Logo */}
-        <div className="p-8 border-b border-white/5" data-tutorial="logo">
+        <div className="p-6 border-b border-sidebar-border/30" data-tutorial="logo">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="relative group">
-                <div className="w-11 h-11 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-xl border border-white/20 shadow-xl transition-all duration-300 group-hover:scale-110 group-hover:rotate-3">
-                  <span className="text-white text-2xl font-black">V</span>
-                </div>
-                <div className="absolute -inset-1 bg-white/5 rounded-2xl blur-lg opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center backdrop-blur-md border border-white/20">
+                <span className="text-white text-xl font-bold">V</span>
               </div>
               <div>
-                <h1 className="font-display font-black text-xl text-white tracking-tighter leading-none">Vetra</h1>
-                <p className="text-[10px] text-white/40 uppercase font-black tracking-[0.2em] mt-1">Console</p>
+                <h1 className="font-display font-bold text-lg text-sidebar-foreground tracking-tight">Vetra</h1>
+                <p className="text-[10px] text-sidebar-foreground/50 uppercase font-semibold tracking-wider">Gestão Inteligente</p>
               </div>
             </div>
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setSupportOpen(true)}
-              className="relative h-9 w-9 rounded-xl text-white/40 hover:text-white hover:bg-white/10 transition-all"
+              className="relative text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-white/10"
             >
               <Headphones className="h-5 w-5" />
               {openTicketsCount > 0 && (
                 <span 
-                  className="absolute top-1.5 right-1.5 h-2.5 w-2.5 rounded-full bg-destructive border-2 border-sidebar animate-pulse"
+                  className="absolute top-2 right-2 h-2 w-2 rounded-full bg-destructive animate-pulse"
                 />
               )}
             </Button>
@@ -188,8 +185,8 @@ export function Sidebar() {
         </div>
 
         {/* Company Switcher */}
-        <div className="px-6 pt-4">
-          <CompanySwitcher className="w-full justify-start bg-white/5 border-white/10 text-white hover:bg-white/10 rounded-2xl h-12 px-4 shadow-inner" />
+        <div className="px-4 pt-3">
+          <CompanySwitcher className="w-full justify-start bg-white/5 border-white/10 text-sidebar-foreground hover:bg-white/10" />
         </div>
 
         {/* Navigation */}
@@ -204,36 +201,33 @@ export function Sidebar() {
                 onClick={() => setIsMobileOpen(false)}
                 data-tutorial={item.tutorialId}
                 className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-300 group relative overflow-hidden",
+                  "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 group relative",
                   isActive 
-                    ? "bg-white/10 text-white shadow-[0_4px_20px_rgba(0,0,0,0.2)] ring-1 ring-white/20" 
-                    : "text-white/60 hover:bg-white/5 hover:text-white"
+                    ? "bg-white/15 text-white shadow-sm ring-1 ring-white/20" 
+                    : "text-sidebar-foreground/70 hover:bg-white/5 hover:text-sidebar-foreground"
                 )}
               >
-                {isActive && (
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary shadow-[0_0_15px_hsl(var(--primary))]" />
-                )}
                 <item.icon className={cn(
-                  "w-5 h-5 transition-all duration-500 group-hover:scale-110",
-                  isActive ? "text-primary brightness-150" : "text-white/40 group-hover:text-white/80"
+                  "w-5 h-5 transition-transform duration-200 group-hover:scale-110",
+                  isActive ? "text-white" : "text-sidebar-foreground/60"
                 )} />
-                <span className={cn(
-                  "text-sm font-semibold tracking-tight transition-colors duration-300",
-                  isActive ? "text-white" : "text-white/60 group-hover:text-white"
-                )}>{item.label}</span>
+                <span className="text-sm font-medium">{item.label}</span>
+                {isActive && (
+                  <div className="absolute right-2 w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_white]" />
+                )}
               </Link>
             );
           })}
         </nav>
 
         {/* Footer */}
-        <div className="p-6 border-t border-white/5">
+        <div className="p-3 border-t border-sidebar-border">
           <button 
             onClick={handleSignOut}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-white/40 hover:bg-destructive/10 hover:text-destructive transition-all duration-300 group"
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
           >
-            <LogOut className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
-            <span className="text-sm font-bold tracking-tight">Encerrar Sessão</span>
+            <LogOut className="w-5 h-5" />
+            <span className="text-sm font-medium">Sair</span>
           </button>
         </div>
       </aside>

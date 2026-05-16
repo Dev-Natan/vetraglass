@@ -59,44 +59,33 @@ export const TodayReceivables = memo(function TodayReceivables({ items }: TodayR
   }
 
   return (
-    <Card className="h-full flex flex-col border-border/40 shadow-sm overflow-hidden rounded-[2.5rem]">
-      <CardHeader className="pb-4 pt-8 px-8 border-b border-border/40">
+    <Card className="h-full flex flex-col">
+      <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-black tracking-tight flex items-center gap-3">
-            <div className="p-2 bg-emerald-500/10 rounded-xl">
-              <DollarSign className="h-5 w-5 text-emerald-600" />
-            </div>
-            Recebimentos
+          <CardTitle className="text-base flex items-center gap-2">
+            <DollarSign className="h-4 w-4 text-emerald-600" />
+            Cobranças do Dia
           </CardTitle>
-          <Badge variant="outline" className="rounded-lg border-2 border-emerald-500/20 bg-emerald-500/5 text-emerald-600 font-black">
+          <Badge variant="secondary" className="text-emerald-700 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400">
             {formatCurrency(total)}
           </Badge>
         </div>
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col p-0">
-        <div className="flex-1 max-h-[350px] overflow-y-auto divide-y divide-border/40">
+      <CardContent className="flex-1 flex flex-col">
+        <div className="space-y-2 flex-1 max-h-[200px] overflow-y-auto">
           {overdueItems.length > 0 && (
-            <div className="bg-destructive/[0.02]">
-              <div className="px-8 py-3 bg-destructive/5 border-y border-destructive/10 flex items-center justify-between">
-                <p className="text-[10px] font-black text-destructive uppercase tracking-widest flex items-center gap-2">
-                  <AlertCircle className="h-3 w-3" />
-                  Pendências Críticas
-                </p>
-                <Badge variant="destructive" className="h-5 px-1.5 text-[9px] font-black rounded-md">
-                  {overdueItems.length}
-                </Badge>
-              </div>
-              {overdueItems.slice(0, 5).map(item => (
-                <div key={item.id} className="flex items-center justify-between p-8 hover:bg-destructive/[0.04] transition-all group">
+            <div className="mb-2">
+              <p className="text-xs font-medium text-destructive mb-1 flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                Atrasadas ({overdueItems.length})
+              </p>
+              {overdueItems.slice(0, 3).map(item => (
+                <div key={item.id} className="flex items-center justify-between py-2 px-2 rounded bg-destructive/5 border border-destructive/20 mb-1">
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-black truncate text-foreground group-hover:text-destructive transition-colors tracking-tight">{item.customer_name}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[10px] font-black text-destructive uppercase bg-destructive/10 px-1.5 py-0.5 rounded">
-                        {item.daysOverdue} DIA(S) ATRASO
-                      </span>
-                    </div>
+                    <p className="text-sm font-medium truncate">{item.customer_name}</p>
+                    <p className="text-xs text-destructive">{item.daysOverdue} dia(s) atraso</p>
                   </div>
-                  <span className="text-lg font-black text-destructive tracking-tighter shrink-0 ml-4">
+                  <span className="text-sm font-semibold text-destructive shrink-0 ml-2">
                     {formatCurrency(item.remaining)}
                   </span>
                 </div>
@@ -106,22 +95,17 @@ export const TodayReceivables = memo(function TodayReceivables({ items }: TodayR
           
           {todayItems.length > 0 && (
             <div>
-              <div className="px-8 py-3 bg-muted/30 border-y border-border/40 flex items-center justify-between">
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                  <Clock className="h-3 w-3" />
-                  Previsão para Hoje
-                </p>
-                <Badge variant="secondary" className="h-5 px-1.5 text-[9px] font-black rounded-md">
-                  {todayItems.length}
-                </Badge>
-              </div>
-              {todayItems.slice(0, 5).map(item => (
-                <div key={item.id} className="flex items-center justify-between p-8 hover:bg-emerald-500/[0.04] transition-all group">
+              <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                Vencendo Hoje ({todayItems.length})
+              </p>
+              {todayItems.slice(0, 3).map(item => (
+                <div key={item.id} className="flex items-center justify-between py-2 px-2 rounded hover:bg-muted/50 border mb-1">
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-black truncate text-foreground group-hover:text-emerald-600 transition-colors tracking-tight">{item.customer_name}</p>
-                    <p className="text-xs text-muted-foreground/60 truncate mt-1 font-bold">{item.description}</p>
+                    <p className="text-sm font-medium truncate">{item.customer_name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{item.description}</p>
                   </div>
-                  <span className="text-lg font-black text-foreground tracking-tighter shrink-0 ml-4 group-hover:text-emerald-600 transition-colors">
+                  <span className="text-sm font-semibold text-foreground shrink-0 ml-2">
                     {formatCurrency(item.remaining)}
                   </span>
                 </div>
@@ -130,11 +114,11 @@ export const TodayReceivables = memo(function TodayReceivables({ items }: TodayR
           )}
         </div>
         
-        <div className="p-6 bg-muted/30 border-t border-border/40 mt-auto">
-          <Button asChild variant="outline" className="w-full h-12 rounded-2xl border-2 font-black uppercase tracking-tighter text-xs group">
+        <div className="pt-3 mt-auto border-t">
+          <Button asChild variant="outline" size="sm" className="w-full">
             <Link to="/financeiro?tab=receber">
-              Gerenciar Fluxo Financeiro
-              <ArrowRight className="h-4 w-4 ml-2 transition-transform group-hover:translate-x-1" />
+              Gerenciar Cobranças
+              <ArrowRight className="h-4 w-4 ml-2" />
             </Link>
           </Button>
         </div>
