@@ -1,4 +1,5 @@
 import { Sidebar } from './Sidebar';
+import { Link } from 'react-router-dom';
 import { Settings, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
