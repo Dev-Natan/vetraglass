@@ -124,66 +124,67 @@ a[href*="lovable.dev"][target="_blank"] {
 
 @layer components {
   .glass-card {
-    @apply bg-card/70 backdrop-blur-xl border border-border/50 shadow-lg;
+    @apply bg-card/60 backdrop-blur-2xl border border-white/10 dark:border-white/5 shadow-2xl;
   }
 
   .glass-effect {
-    @apply backdrop-blur-xl bg-card/60;
+    @apply backdrop-blur-2xl bg-card/40;
   }
 
   .section-card {
-    @apply bg-card rounded-2xl border border-border p-6;
-    box-shadow: var(--shadow-card);
+    @apply bg-card rounded-3xl border border-border/40 p-8 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1.5;
+    box-shadow: 0 10px 40px -10px rgba(0,0,0,0.05);
   }
 
   .action-card {
-    @apply rounded-2xl p-6 flex flex-col items-center justify-center gap-3 transition-all duration-200 cursor-pointer;
-    box-shadow: var(--shadow-action);
+    @apply rounded-[2.5rem] p-8 flex flex-col items-center justify-center gap-4 transition-all duration-500 cursor-pointer relative overflow-hidden group;
+    box-shadow: 0 20px 40px -15px rgba(0,0,0,0.1);
+  }
+
+  .action-card::before {
+    content: '';
+    @apply absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500;
   }
 
   .action-card:hover {
-    @apply -translate-y-1 scale-[1.02];
+    @apply -translate-y-2 scale-[1.03];
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.2);
   }
 
   .action-card-green {
     @apply action-card text-white;
-    background: linear-gradient(135deg, hsl(var(--action-green)), hsl(145 65% 42%));
+    background: linear-gradient(135deg, #10b981, #059669);
   }
 
   .action-card-blue {
     @apply action-card text-white;
-    background: linear-gradient(135deg, hsl(var(--action-blue)), hsl(215 85% 45%));
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
   }
 
   .action-card-purple {
     @apply action-card text-white;
-    background: linear-gradient(135deg, hsl(var(--action-purple)), hsl(270 65% 45%));
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
   }
 
   .action-card-orange {
-    @apply action-card text-foreground;
-    background: linear-gradient(135deg, hsl(var(--action-orange)), hsl(45 95% 50%));
+    @apply action-card text-white;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
   }
 
   /* Hero Action Card - Nova Venda */
   .action-card-hero {
-    @apply rounded-2xl p-5 flex items-center justify-between transition-all duration-200 cursor-pointer text-white;
-    background: linear-gradient(135deg, hsl(var(--action-blue)), hsl(220 85% 50%));
-    box-shadow: 0 8px 32px -4px hsl(var(--action-blue) / 0.4);
+    @apply rounded-[2.5rem] p-6 flex items-center justify-between transition-all duration-500 cursor-pointer text-white relative overflow-hidden group;
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    box-shadow: 0 25px 50px -12px rgba(59, 130, 246, 0.4);
   }
 
   .action-card-hero:hover {
-    @apply -translate-y-1;
-    box-shadow: 0 12px 40px -4px hsl(var(--action-blue) / 0.5);
+    @apply -translate-y-2 scale-[1.01];
+    box-shadow: 0 35px 70px -12px rgba(59, 130, 246, 0.5);
   }
 
   .menu-card {
-    @apply bg-card rounded-xl border border-border p-4 flex items-center gap-4 transition-all duration-200 cursor-pointer hover:border-primary/30;
-    box-shadow: var(--shadow-card);
-  }
-
-  .menu-card:hover {
-    @apply -translate-y-0.5;
+    @apply bg-card rounded-2xl border border-border/40 p-5 flex items-center gap-5 transition-all duration-500 cursor-pointer hover:border-primary/50 hover:shadow-xl hover:-translate-y-1 group;
   }
 }
 
