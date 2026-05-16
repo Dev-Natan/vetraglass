@@ -32,7 +32,7 @@ export function useApprovalMutation({
       if (!quote || !companyId || !userId) throw new Error('Dados incompletos');
 
       const {
-        selectedFormaId, selectedCondicaoId, entryAmount, entryPaymentMethod, cardActualReceived,
+        selectedFormaId, entryAmount, entryPaymentMethod, cardActualReceived,
         balanceDueDate, receiveOnCompletion, estimatedEnd, priority, notes,
       } = formState;
 
