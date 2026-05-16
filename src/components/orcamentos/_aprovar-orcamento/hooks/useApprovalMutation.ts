@@ -49,12 +49,23 @@ export function useApprovalMutation({
       // 0. Guard: prevent duplicate OS for the same quote
       const { data: existingOS, error: existingOSError } = await supabase
         .from('ordens_servico')
-        .select('id, os_number')
+        .select('id, os_number, status, sale_id')
         .eq('quote_id', quote.id)
         .maybeSingle();
       if (existingOSError) throw existingOSError;
+
       if (existingOS) {
-        throw new Error(`Este orçamento já foi aprovado (OS #${existingOS.os_number}). Não é possível aprovar novamente.`);
+        // Se o orçamento está pendente (foi cancelado/resetado), a OS é órfã → limpar e reaprovar
+        if (quote.status === 'pending') {
+          // Limpar registros vinculados à OS órfã
+          await supabase.from('material_consumption').delete().eq('ordem_servico_id', existingOS.id);
+          await supabase.from('service_appointments').delete().eq('ordem_servico_id', existingOS.id);
+          await supabase.from('quote_deposits').delete().eq('ordem_servico_id', existingOS.id);
+          await supabase.from('accounts_receivable').update({ status: 'cancelled' }).eq('ordem_servico_id', existingOS.id);
+          await supabase.from('ordens_servico').delete().eq('id', existingOS.id);
+        } else {
+          throw new Error(`Este orçamento já foi aprovado (OS #${existingOS.os_number}). Não é possível aprovar novamente.`);
+        }
       }
 
       // 1. Update quote
