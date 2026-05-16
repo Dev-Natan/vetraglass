@@ -443,6 +443,11 @@ export default function Configuracoes() {
         </div>
       </div>
 
+      <EditCompanyDialog 
+        open={editDialogOpen} 
+        onOpenChange={setEditDialogOpen} 
+        company={company}
+      />
     </MainLayout>
   );
 }
