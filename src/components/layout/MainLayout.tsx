@@ -30,7 +30,7 @@ export function MainLayout({ children }: MainLayoutProps) {
           <main className="lg:pl-64 min-h-screen overflow-y-auto transition-all duration-300">
             {/* Top Header */}
             <header className="fixed top-0 right-0 left-0 lg:left-64 z-30 bg-background/80 backdrop-blur-xl border-b border-border/50 shadow-sm transition-all duration-300">
-              <div className="flex items-center justify-between px-8 py-3 max-w-7xl mx-auto w-full">
+              <div className="flex items-center justify-between px-4 sm:px-8 py-3 max-w-7xl mx-auto w-full">
                 <div className="pl-12 lg:pl-0 flex items-center gap-3">
                   <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
                   <h2 className="text-xs font-bold text-muted-foreground/60 tracking-widest uppercase">
