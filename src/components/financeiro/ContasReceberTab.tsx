@@ -174,7 +174,22 @@ export function ContasReceberTab() {
     };
   }, [receivables]);
 
-  // Operational receive payment mutation removed from Financeiro audit view.
+  // Format currency helper
+  const formatCurrency = (value: number) => {
+    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  };
+
+  // Status display helper
+  const getStatusDisplay = (receivable: Receivable) => {
+    if (receivable.status === 'paid') return statusConfig.paid;
+    if (receivable.status === 'cancelled') return statusConfig.cancelled;
+    if (isPast(new Date(receivable.due_date)) && !isToday(new Date(receivable.due_date))) {
+      return statusConfig.overdue;
+    }
+    return statusConfig.pending;
+  };
+
+  // Operational receive payment functionality removed from Financeiro audit view.
   // Payments must be received through the Caixa module for proper cash tracking.
   const handleReceiveClick = (receivable: Receivable) => {
     toast.info('O recebimento de parcelas deve ser realizado através do módulo de Caixa para registro correto no fluxo diário.');
