@@ -1,0 +1,1 @@
+ALTER FUNCTION public.cancel_sale(UUID, UUID, UUID, TEXT) SET search_path = public;
