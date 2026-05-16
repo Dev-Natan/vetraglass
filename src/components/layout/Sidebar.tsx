@@ -185,8 +185,8 @@ export function Sidebar() {
         </div>
 
         {/* Company Switcher */}
-        <div className="px-6 pt-4">
-          <CompanySwitcher className="w-full justify-start bg-white/5 border-white/10 text-white hover:bg-white/10 rounded-2xl h-12 px-4 shadow-inner" />
+        <div className="px-4 pt-3">
+          <CompanySwitcher className="w-full justify-start bg-white/5 border-white/10 text-sidebar-foreground hover:bg-white/10" />
         </div>
 
         {/* Navigation */}
