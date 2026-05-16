@@ -55,9 +55,15 @@ export function useApprovalMutation({
       if (existingOSError) throw existingOSError;
 
       if (existingOS) {
+        // Verificar status atual do orçamento
+        const { data: currentQuote } = await supabase
+          .from('quotes')
+          .select('status')
+          .eq('id', quote.id)
+          .single();
+
         // Se o orçamento está pendente (foi cancelado/resetado), a OS é órfã → limpar e reaprovar
-        if (quote.status === 'pending') {
-          // Limpar registros vinculados à OS órfã
+        if (currentQuote?.status === 'pending') {
           await supabase.from('material_consumption').delete().eq('ordem_servico_id', existingOS.id);
           await supabase.from('service_appointments').delete().eq('ordem_servico_id', existingOS.id);
           await supabase.from('quote_deposits').delete().eq('ordem_servico_id', existingOS.id);
