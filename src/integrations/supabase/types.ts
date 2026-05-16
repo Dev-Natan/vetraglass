@@ -331,8 +331,10 @@ export type Database = {
           description: string
           expense_id: string | null
           id: string
+          ordem_servico_id: string | null
           origem: string | null
           payment_method: string | null
+          quote_id: string | null
           receivable_id: string | null
           sale_id: string | null
           type: string
@@ -347,8 +349,10 @@ export type Database = {
           description: string
           expense_id?: string | null
           id?: string
+          ordem_servico_id?: string | null
           origem?: string | null
           payment_method?: string | null
+          quote_id?: string | null
           receivable_id?: string | null
           sale_id?: string | null
           type: string
@@ -363,8 +367,10 @@ export type Database = {
           description?: string
           expense_id?: string | null
           id?: string
+          ordem_servico_id?: string | null
           origem?: string | null
           payment_method?: string | null
+          quote_id?: string | null
           receivable_id?: string | null
           sale_id?: string | null
           type?: string
@@ -396,6 +402,41 @@ export type Database = {
             columns: ["expense_id"]
             isOneToOne: false
             referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_movements_ordem_servico_id_fkey"
+            columns: ["ordem_servico_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_movements_ordem_servico_id_fkey"
+            columns: ["ordem_servico_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_movements_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quote_financial_status"
+            referencedColumns: ["quote_id"]
+          },
+          {
+            foreignKeyName: "cash_movements_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_movements_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes_safe"
             referencedColumns: ["id"]
           },
           {
