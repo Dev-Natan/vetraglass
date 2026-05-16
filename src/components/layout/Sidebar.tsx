@@ -157,27 +157,30 @@ export function Sidebar() {
         isMobileOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         {/* Logo */}
-        <div className="p-6 border-b border-sidebar-border/30" data-tutorial="logo">
+        <div className="p-8 border-b border-white/5" data-tutorial="logo">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center backdrop-blur-md border border-white/20">
-                <span className="text-white text-xl font-bold">V</span>
+            <div className="flex items-center gap-4">
+              <div className="relative group">
+                <div className="w-11 h-11 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-xl border border-white/20 shadow-xl transition-all duration-300 group-hover:scale-110 group-hover:rotate-3">
+                  <span className="text-white text-2xl font-black">V</span>
+                </div>
+                <div className="absolute -inset-1 bg-white/5 rounded-2xl blur-lg opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
               <div>
-                <h1 className="font-display font-bold text-lg text-sidebar-foreground tracking-tight">Vetra</h1>
-                <p className="text-[10px] text-sidebar-foreground/50 uppercase font-semibold tracking-wider">Gestão Inteligente</p>
+                <h1 className="font-display font-black text-xl text-white tracking-tighter leading-none">Vetra</h1>
+                <p className="text-[10px] text-white/40 uppercase font-black tracking-[0.2em] mt-1">Console</p>
               </div>
             </div>
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setSupportOpen(true)}
-              className="relative text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-white/10"
+              className="relative h-9 w-9 rounded-xl text-white/40 hover:text-white hover:bg-white/10 transition-all"
             >
               <Headphones className="h-5 w-5" />
               {openTicketsCount > 0 && (
                 <span 
-                  className="absolute top-2 right-2 h-2 w-2 rounded-full bg-destructive animate-pulse"
+                  className="absolute top-1.5 right-1.5 h-2.5 w-2.5 rounded-full bg-destructive border-2 border-sidebar animate-pulse"
                 />
               )}
             </Button>
