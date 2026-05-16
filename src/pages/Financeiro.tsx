@@ -287,7 +287,7 @@ export default function Financeiro() {
               <Card className="border-primary/20 bg-primary/5">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <History className="h-4 w-4 text-primary" />
+                    <HistoryIcon className="h-4 w-4 text-primary" />
                     Trilha de Auditoria (Somente Leitura)
                   </CardTitle>
                 </CardHeader>
