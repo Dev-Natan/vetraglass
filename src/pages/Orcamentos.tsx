@@ -36,7 +36,6 @@ import { PaginationControls } from '@/components/common/PaginationControls';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 
-// Refatoração
 import { useQuotes } from '@/hooks/useQuotes';
 import { Quote, QuoteStatus, quoteService } from '@/services/quoteService';
 import { QuoteCard } from '@/components/orcamentos/QuoteCard';
@@ -216,10 +215,10 @@ export default function Orcamentos() {
               <div key={i} className="h-48 rounded-xl bg-muted animate-pulse" />
             ))}
           </div>
-        ) : pagination.paginatedItems.length > 0 ? (
+        ) : pagination.paginatedData.length > 0 ? (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
-              {pagination.paginatedItems.map((quote) => (
+              {pagination.paginatedData.map((quote) => (
                 <QuoteCard
                   key={quote.id}
                   quote={quote}
@@ -238,7 +237,14 @@ export default function Orcamentos() {
                 />
               ))}
             </div>
-            <PaginationControls pagination={pagination} />
+            <PaginationControls 
+              currentPage={pagination.currentPage}
+              totalPages={pagination.totalPages}
+              totalItems={pagination.totalItems}
+              pageSize={pagination.pageSize}
+              onPageChange={pagination.setPage}
+              onPageSizeChange={pagination.setPageSize}
+            />
           </>
         ) : (
           <div className="flex flex-col items-center justify-center py-20 bg-muted/20 rounded-2xl border-2 border-dashed">
@@ -248,9 +254,9 @@ export default function Orcamentos() {
         )}
       </div>
 
-      <NovoOrcamentoDialog open={isNewDialogOpen} onOpenChange={setIsNewDialogOpen} quoteToEdit={selectedQuote || undefined} />
+      <NovoOrcamentoDialog open={isNewDialogOpen} onOpenChange={setIsNewDialogOpen} initialData={selectedQuote || undefined} />
       <VisualizarOrcamentoDialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen} quote={selectedQuote} />
-      <EditarContratoDialog open={isContractDialogOpen} onOpenChange={setIsContractDialogOpen} quote={selectedQuote} items={contractItems} />
+      <EditarContratoDialog open={isContractDialogOpen} onOpenChange={setIsContractDialogOpen} quote={selectedQuote} items={contractItems} company={currentCompany} />
       <AprovarOrcamentoDialog open={isApproveDialogOpen} onOpenChange={setIsApproveDialogOpen} quote={selectedQuote} items={approveQuoteItems} />
       <FormasPagamentoDialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen} />
 
