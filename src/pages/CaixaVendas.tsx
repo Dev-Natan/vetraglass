@@ -659,142 +659,23 @@ export default function CaixaVendas() {
   // Mutation: Cancelar venda (mantido igual, resumido)
   const cancelSaleMutation = useMutation({
     mutationFn: async ({ saleId, reason }: { saleId: string; reason: string }) => {
-      if (!currentCompany?.id) throw new Error('Empresa não encontrada');
-      const { data: saleItems } = await supabase.from('sale_items').select('id, item_template_id, company_product_id, quantity, width, height').eq('sale_id', saleId);
-      const stockRestorations: Map<string, number> = new Map();
-      for (const item of saleItems || []) {
-        if (item.item_template_id && !item.company_product_id) {
-          // Verificar se é um item de área (m²) - recalcular área para restaurar corretamente
-          const template = availableItems.find(t => t.id === item.item_template_id);
-          let restoreQty = item.quantity;
-          
-          if ((template?.unit === 'm²' || template?.unit === 'm2') && item.width && item.height) {
-            // Restaurar área em m²: (largura_mm × altura_mm) / 1.000.000
-            const areaM2 = (item.width / 1000) * (item.height / 1000) * item.quantity;
-            restoreQty = areaM2;
-          }
-          
-          stockRestorations.set(item.item_template_id, (stockRestorations.get(item.item_template_id) || 0) + restoreQty);
-        }
-        if (item.company_product_id && item.width && item.height) {
-          // 1. Buscar composição da empresa (company_product_items) - prioridade
-          const { data: companyItems } = await supabase
-            .from('company_product_items')
-            .select('item_template_id, company_item_id, quantity_formula, pieces_quantity')
-            .eq('company_product_id', item.company_product_id);
-          
-          let hasCompanyComposition = false;
-          if (companyItems && companyItems.length > 0) {
-            hasCompanyComposition = true;
-            for (const ci of companyItems) {
-              if (ci.quantity_formula) {
-                const qty = calculateFormulaQuantity(ci.quantity_formula, item.width, item.height, ci.pieces_quantity || 1) * item.quantity;
-                if (qty > 0) {
-                  const key = ci.item_template_id || `ci:${ci.company_item_id}`;
-                  stockRestorations.set(key, (stockRestorations.get(key) || 0) + qty);
-                }
-              }
-            }
-          }
-          
-          // 2. Fallback: composição do template global
-          if (!hasCompanyComposition) {
-            const { data: cp } = await supabase.from('company_products').select('product_template_id').eq('id', item.company_product_id).single();
-            if (cp?.product_template_id) {
-              const { data: templateItems } = await supabase.from('product_template_items').select('item_template_id, quantity_formula, pieces_quantity').eq('product_template_id', cp.product_template_id).or(`company_id.is.null,company_id.eq.${currentCompany.id}`);
-              for (const ti of templateItems || []) {
-                if (ti.item_template_id && ti.quantity_formula) {
-                  const qty = calculateFormulaQuantity(ti.quantity_formula, item.width, item.height, ti.pieces_quantity || 1) * item.quantity;
-                  if (qty > 0) stockRestorations.set(ti.item_template_id, (stockRestorations.get(ti.item_template_id) || 0) + qty);
-                }
-              }
-            }
-          }
-        }
-      }
-      // Restaurar estoque e registrar movimentações de entrada (cancelamento)
-      for (const [key, restoreQty] of stockRestorations) {
-        let stockItem;
-        const isCompanyItem = key.startsWith('ci:');
-        
-        if (isCompanyItem) {
-          const companyItemId = key.replace('ci:', '');
-          const { data } = await supabase.from('company_stock').select('id, quantity, company_item_id, item_template_id').eq('company_id', currentCompany.id).eq('company_item_id', companyItemId).maybeSingle();
-          stockItem = data;
-        } else {
-          const { data } = await supabase.from('company_stock').select('id, quantity, company_item_id, item_template_id').eq('company_id', currentCompany.id).eq('item_template_id', key).maybeSingle();
-          stockItem = data;
-        }
-        
-        if (stockItem) {
-          await supabase.from('company_stock').update({ quantity: stockItem.quantity + restoreQty }).eq('id', stockItem.id);
-          
-          await supabase.from('stock_movements').insert({
-            company_id: currentCompany.id,
-            company_item_id: stockItem.company_item_id,
-            item_template_id: stockItem.item_template_id || (isCompanyItem ? null : key),
-            type: 'entrada',
-            category: 'estorno_venda',
-            quantity: restoreQty,
-            unit_cost: 0,
-            description: `Cancelamento de venda`,
-            reference_id: saleId,
-            reference_type: 'sale_cancellation',
-            created_by: user?.id || null,
-          });
-        }
-      }
-      // Buscar registros que serão afetados para auditoria
-      const { data: removedMovements } = await supabase.from('cash_movements')
-        .select('*')
-        .eq('sale_id', saleId)
-        .eq('type', 'entrada');
-
-      const { data: cancelledReceivables } = await supabase.from('accounts_receivable')
-        .select('*')
-        .eq('sale_id', saleId);
-
-      const { data: currentSale } = await supabase.from('sales')
-        .select('sale_number, customer_name, total_amount')
-        .eq('id', saleId)
-        .single();
-
-      // Registrar Auditoria de Cancelamento
-      await supabase.from('audit_logs').insert({
-        company_id: currentCompany.id,
-        user_id: user?.id,
-        action: 'CANCEL_SALE',
-        table_name: 'sales',
-        record_id: saleId,
-        metadata: {
-          reason,
-          sale_number: currentSale?.sale_number,
-          customer_name: currentSale?.customer_name,
-          total_amount: currentSale?.total_amount,
-          removed_cash_movements: removedMovements,
-          cancelled_accounts_receivable: cancelledReceivables,
-          stock_restorations: Array.from(stockRestorations.entries()).map(([id, qty]) => ({ item_id: id, quantity: qty }))
-        }
+      if (!currentCompany?.id || !user?.id) throw new Error('Dados incompletos para cancelamento');
+      
+      // Chamar a função RPC para cancelamento atômico (transação no banco)
+      const { data, error } = await supabase.rpc('cancel_sale', {
+        p_sale_id: saleId,
+        p_company_id: currentCompany.id,
+        p_user_id: user.id,
+        p_reason: reason
       });
 
-      // Cancelar contas a receber vinculadas
-      await supabase.from('accounts_receivable')
-        .update({ status: 'cancelled' })
-        .eq('sale_id', saleId);
-
-      // Cancelar registros de entrada vinculados (cash_movements)
-      await supabase.from('cash_movements')
-        .delete()
-        .eq('sale_id', saleId)
-        .eq('type', 'entrada');
-
-      const { data: sale, error } = await supabase.from('sales').update({ 
-        payment_status: 'cancelled', 
-        notes: reason ? `Cancelado: ${reason}` : 'Venda cancelada' 
-      }).eq('id', saleId).select().single();
-      
       if (error) throw error;
-      return sale;
+      
+      const result = data as { success: boolean; error?: string; sale_number?: number };
+      if (!result.success) throw new Error(result.error || 'Erro ao cancelar venda');
+
+      return result;
+    },
     },
     onSuccess: (sale) => { 
       toast.success(`Venda #${String(sale.sale_number).padStart(4, '0')} cancelada!`); 
