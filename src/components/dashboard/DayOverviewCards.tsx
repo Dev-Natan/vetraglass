@@ -115,13 +115,16 @@ export const DayOverviewCards = memo(function DayOverviewCards({ data }: DayOver
                 )}>
                   {card.value}
                 </div>
-                <div className="flex items-center gap-2 mt-2">
-                  <div className="h-1 w-1 rounded-full bg-muted-foreground/30" />
-                  <p className="text-[11px] text-muted-foreground font-bold tracking-tight">
-                    {card.subtitle}
-                  </p>
-                </div>
+                <p className="text-xs text-muted-foreground/80 font-medium">
+                  {card.subtitle}
+                </p>
               </div>
+              
+              {/* Bottom indicator */}
+              <div className={cn(
+                "absolute bottom-0 left-0 h-1 w-0 bg-primary transition-all duration-300 group-hover:w-full",
+                card.alert ? "bg-destructive" : "bg-primary"
+              )} />
             </CardContent>
           </Card>
         </Link>
