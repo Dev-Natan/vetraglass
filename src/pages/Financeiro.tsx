@@ -540,13 +540,6 @@ export default function Financeiro() {
       </div>
 
       {/* Dialogs */}
-      <CancelarVendaDialog
-        open={cancelDialogOpen}
-        onOpenChange={setCancelDialogOpen}
-        sale={selectedSale}
-        onConfirm={(saleId, reason) => cancelSaleMutation.mutateAsync({ saleId, reason })}
-        isLoading={cancelSaleMutation.isPending}
-      />
 
       <DetalhesVendaDialog
         open={detailsDialogOpen}
