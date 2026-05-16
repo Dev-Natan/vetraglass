@@ -744,19 +744,55 @@ export default function CaixaVendas() {
           });
         }
       }
+      // Buscar registros que serão afetados para auditoria
+      const { data: removedMovements } = await supabase.from('cash_movements')
+        .select('*')
+        .eq('sale_id', saleId)
+        .eq('type', 'entrada');
+
+      const { data: cancelledReceivables } = await supabase.from('accounts_receivable')
+        .select('*')
+        .eq('sale_id', saleId);
+
+      const { data: currentSale } = await supabase.from('sales')
+        .select('sale_number, customer_name, total_amount')
+        .eq('id', saleId)
+        .single();
+
+      // Registrar Auditoria de Cancelamento
+      await supabase.from('audit_logs').insert({
+        company_id: currentCompany.id,
+        user_id: user?.id,
+        action: 'CANCEL_SALE',
+        table_name: 'sales',
+        record_id: saleId,
+        metadata: {
+          reason,
+          sale_number: currentSale?.sale_number,
+          customer_name: currentSale?.customer_name,
+          total_amount: currentSale?.total_amount,
+          removed_cash_movements: removedMovements,
+          cancelled_accounts_receivable: cancelledReceivables,
+          stock_restorations: Array.from(stockRestorations.entries()).map(([id, qty]) => ({ item_id: id, quantity: qty }))
+        }
+      });
+
       // Cancelar contas a receber vinculadas
       await supabase.from('accounts_receivable')
         .update({ status: 'cancelled' })
         .eq('sale_id', saleId);
 
       // Cancelar registros de entrada vinculados (cash_movements)
-      // Buscamos os movimentos de entrada da venda e cancelamos
       await supabase.from('cash_movements')
         .delete()
         .eq('sale_id', saleId)
         .eq('type', 'entrada');
 
-      const { data: sale, error } = await supabase.from('sales').update({ payment_status: 'cancelled', notes: reason ? `Cancelado: ${reason}` : 'Venda cancelada' }).eq('id', saleId).select().single();
+      const { data: sale, error } = await supabase.from('sales').update({ 
+        payment_status: 'cancelled', 
+        notes: reason ? `Cancelado: ${reason}` : 'Venda cancelada' 
+      }).eq('id', saleId).select().single();
+      
       if (error) throw error;
       return sale;
     },

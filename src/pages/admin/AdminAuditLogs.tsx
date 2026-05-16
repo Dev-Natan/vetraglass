@@ -65,6 +65,7 @@ const actionLabels: Record<string, { label: string; color: string }> = {
   DELETE: { label: "Exclusão", color: "bg-red-500" },
   LOGIN: { label: "Login", color: "bg-purple-500" },
   LOGOUT: { label: "Logout", color: "bg-gray-500" },
+  CANCEL_SALE: { label: "Cancelamento de Venda", color: "bg-orange-500" },
 };
 
 const tableLabels: Record<string, string> = {
@@ -447,11 +448,69 @@ export default function AdminAuditLogs() {
                   {selectedLog.metadata && (
                     <div>
                       <p className="text-sm font-medium text-muted-foreground mb-2">
-                        Metadados
+                        {selectedLog.action === 'CANCEL_SALE' ? 'Detalhes do Cancelamento' : 'Metadados'}
                       </p>
-                      <pre className="bg-muted p-4 rounded-lg text-xs overflow-x-auto">
-                        {JSON.stringify(selectedLog.metadata, null, 2)}
-                      </pre>
+                      <div className="bg-muted p-4 rounded-lg text-xs overflow-x-auto">
+                        {selectedLog.action === 'CANCEL_SALE' ? (
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <span className="font-bold">Motivo:</span> {String((selectedLog.metadata as any).reason || 'Não informado')}
+                              </div>
+                              <div>
+                                <span className="font-bold">Venda:</span> #{(selectedLog.metadata as any).sale_number}
+                              </div>
+                              <div>
+                                <span className="font-bold">Cliente:</span> {String((selectedLog.metadata as any).customer_name || 'N/A')}
+                              </div>
+                              <div>
+                                <span className="font-bold">Valor Total:</span> {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number((selectedLog.metadata as any).total_amount || 0))}
+                              </div>
+                            </div>
+                            
+                            {(selectedLog.metadata as any).removed_cash_movements && ((selectedLog.metadata as any).removed_cash_movements as any[]).length > 0 && (
+                              <div className="space-y-1">
+                                <p className="font-bold text-red-500">Movimentações de Caixa Removidas:</p>
+                                <ul className="list-disc pl-4">
+                                  {((selectedLog.metadata as any).removed_cash_movements as any[]).map((m: any, i: number) => (
+                                    <li key={i}>
+                                      ID: {m.id} | Tipo: {m.type} | Valor: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(m.amount)} | Data: {m.created_at}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            {(selectedLog.metadata as any).cancelled_accounts_receivable && ((selectedLog.metadata as any).cancelled_accounts_receivable as any[]).length > 0 && (
+                              <div className="space-y-1">
+                                <p className="font-bold text-orange-500">Contas a Receber Canceladas:</p>
+                                <ul className="list-disc pl-4">
+                                  {((selectedLog.metadata as any).cancelled_accounts_receivable as any[]).map((r: any, i: number) => (
+                                    <li key={i}>
+                                      ID: {r.id} | Parcela: {r.installment_number}/{r.total_installments} | Valor: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(r.total_amount)} | Vencimento: {r.due_date}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            {(selectedLog.metadata as any).stock_restorations && ((selectedLog.metadata as any).stock_restorations as any[]).length > 0 && (
+                              <div className="space-y-1">
+                                <p className="font-bold text-green-600">Estoque Restaurado:</p>
+                                <ul className="list-disc pl-4">
+                                  {((selectedLog.metadata as any).stock_restorations as any[]).map((s: any, i: number) => (
+                                    <li key={i}>
+                                      Item ID: {s.item_id} | Quantidade: {s.quantity}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <pre>{JSON.stringify(selectedLog.metadata, null, 2)}</pre>
+                        )}
+                      </div>
                     </div>
                   )}
 
