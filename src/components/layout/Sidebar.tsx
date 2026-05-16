@@ -152,8 +152,8 @@ export function Sidebar() {
 
       {/* Sidebar */}
       <aside className={cn(
-        "fixed left-0 top-0 h-screen w-64 bg-sidebar flex flex-col z-40 transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) shadow-[10px_0_40px_-15px_rgba(0,0,0,0.3)]",
-        "lg:translate-x-0 lg:shadow-none border-r border-sidebar-border/20",
+        "fixed left-0 top-0 h-screen w-64 bg-sidebar flex flex-col z-40 transition-all duration-300 ease-in-out shadow-2xl",
+        "lg:translate-x-0 lg:shadow-none",
         isMobileOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         {/* Logo */}
