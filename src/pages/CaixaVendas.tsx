@@ -229,11 +229,16 @@ export default function CaixaVendas() {
       const today = format(new Date(), 'yyyy-MM-dd');
       const { data, error } = await supabase
         .from('accounts_receivable')
-        .select('*')
+        .select('*, sales!left(payment_status)')
         .eq('company_id', currentCompany.id)
         .eq('due_date', today)
         .eq('status', 'pending')
         .order('total_amount', { ascending: false });
+
+      if (error) throw error;
+      
+      // Filtrar parcelas de vendas canceladas
+      return (data || []).filter(r => (r as any).sales?.payment_status !== 'cancelled');
       if (error) throw error;
       return data || [];
     },
