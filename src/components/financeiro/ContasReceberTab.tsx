@@ -194,8 +194,7 @@ export function ContasReceberTab() {
   };
 
   const handleReceiveClick = (receivable: Receivable) => {
-    setSelectedReceivable(receivable);
-    setReceiveDialogOpen(true);
+    toast.info('O recebimento de parcelas deve ser realizado através do módulo de Caixa para registro correto no fluxo diário.');
   };
 
   return (
