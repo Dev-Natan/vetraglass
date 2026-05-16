@@ -8,36 +8,12 @@ import {
   Plus, 
   Search, 
   FileText, 
-  User, 
-  MapPin,
-  Phone,
-  Calendar, 
-  DollarSign,
-  Eye,
-  Edit,
-  Trash2,
+  Clock,
   CheckCircle,
   XCircle,
-  Clock,
   AlertCircle,
-  Copy,
-  Package,
-  FileSignature,
-  Printer,
-  PlayCircle,
-  CreditCard,
-  Settings,
-  MoreVertical,
-  RotateCcw
+  Settings
 } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -60,9 +36,14 @@ import { AprovarOrcamentoDialog } from '@/components/orcamentos/AprovarOrcamento
 import { FormasPagamentoDialog } from '@/components/orcamentos/FormasPagamentoDialog';
 import { usePagination } from '@/hooks/usePagination';
 import { PaginationControls } from '@/components/common/PaginationControls';
-import { queryKeys } from '@/lib/queryConfig';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
+
+// Refatoração
+import { useQuotes } from '@/hooks/useQuotes';
+import { Quote, QuoteStatus, quoteService } from '@/services/quoteService';
+import { QuoteCard } from '@/components/orcamentos/QuoteCard';
+
 
 type QuoteStatus = 'pending' | 'approved' | 'rejected' | 'expired' | 'converted';
 
@@ -101,7 +82,6 @@ const statusConfig: Record<QuoteStatus, { label: string; icon: typeof Clock; var
 export default function Orcamentos() {
   const { currentCompany } = useAuth();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   
   // Module tutorial trigger
@@ -120,6 +100,15 @@ export default function Orcamentos() {
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [quoteToCancelApproved, setQuoteToCancelApproved] = useState<Quote | null>(null);
 
+  const {
+    quotes,
+    isLoading,
+    deleteQuote,
+    updateStatus,
+    cancelApproved,
+    duplicateQuote
+  } = useQuotes(currentCompany?.id);
+
   // Open new dialog if ?novo=true in URL
   useEffect(() => {
     if (searchParams.get('novo') === 'true') {
@@ -129,109 +118,36 @@ export default function Orcamentos() {
     }
   }, [searchParams, setSearchParams]);
 
-
-  // Fetch quotes with optimized query (only needed fields)
-  const { data: quotes, isLoading } = useQuery({
-    queryKey: queryKeys.quotes.all(currentCompany?.id || ''),
-    queryFn: async () => {
-      if (!currentCompany?.id) return [];
-      const { data, error } = await supabase
-        .from('quotes')
-        .select('id, quote_number, customer_name, customer_phone, customer_email, customer_address, customer_document, customer_document_type, customer_profession, customer_marital_status, payment_terms, notes, status, total_amount, discount_percent, discount_amount, final_amount, valid_until, show_measures_column, show_m2_column, created_at')
-        .eq('company_id', currentCompany.id)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data as Quote[];
-    },
-    enabled: !!currentCompany?.id,
-    // Zero cache - sempre dados frescos
-  });
-
-  // Delete mutation
-  const deleteMutation = useMutation({
-    mutationFn: async (quoteId: string) => {
-      const { error } = await supabase
-        .from('quotes')
-        .delete()
-        .eq('id', quoteId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['quotes'] });
-      
-      setQuoteToDelete(null);
-    },
-    onError: () => {
-      toast({ title: 'Erro ao excluir orçamento', variant: 'destructive' });
-    }
-  });
-
-  // Reject mutation (for pending quotes - simple status change)
-  const rejectMutation = useMutation({
-    mutationFn: async (quoteId: string) => {
-      const { error } = await supabase
-        .from('quotes')
-        .update({ status: 'rejected' })
-        .eq('id', quoteId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['quotes'] });
-      toast({ title: 'Orçamento rejeitado' });
-    },
-    onError: () => {
-      toast({ title: 'Erro ao rejeitar orçamento', variant: 'destructive' });
-    }
-  });
-
-  // Cancel approved/converted quote mutation (cancels all financial data)
-  const cancelApprovedMutation = useMutation({
-    mutationFn: async (quoteId: string) => {
-      const { data, error } = await supabase.rpc('cancel_approved_quote', { _quote_id: quoteId });
-      if (error) throw error;
-      const result = data as any;
-      if (result && !result.success) throw new Error(result.error);
-      return result;
-    },
-    onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ['quotes'] });
-      queryClient.invalidateQueries({ queryKey: ['ordens'] });
-      queryClient.invalidateQueries({ queryKey: ['sales'] });
-      queryClient.invalidateQueries({ queryKey: ['accounts_receivable'] });
-      const details: string[] = [];
-      if (data?.cancelled_os > 0) details.push(`${data.cancelled_os} OS`);
-      if (data?.cancelled_sales > 0) details.push(`${data.cancelled_sales} venda(s)`);
-      if (data?.cancelled_receivables > 0) details.push(`${data.cancelled_receivables} parcela(s)`);
-      if (data?.cancelled_deposits > 0) details.push(`${data.cancelled_deposits} depósito(s)`);
+  const handleEdit = (quote: Quote) => {
+    if (quote.status === 'approved' || quote.status === 'converted') {
       toast({ 
-        title: 'Orçamento cancelado com sucesso',
-        description: details.length > 0 ? `Cancelados: ${details.join(', ')}` : undefined
+        title: 'Não é possível editar', 
+        description: 'Orçamentos aprovados não podem ser editados. Reabra como pendente primeiro.',
+        variant: 'destructive' 
       });
-      setQuoteToCancelApproved(null);
-    },
-    onError: (err: any) => {
-      toast({ title: 'Erro ao cancelar orçamento', description: err.message, variant: 'destructive' });
+      return;
     }
-  });
+    setSelectedQuote(quote);
+    setIsNewDialogOpen(true);
+  };
 
-  // Reopen mutation (back to pending)
-  const reopenMutation = useMutation({
-    mutationFn: async (quoteId: string) => {
-      const { error } = await supabase
-        .from('quotes')
-        .update({ status: 'pending' })
-        .eq('id', quoteId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['quotes'] });
-      toast({ title: 'Orçamento reaberto como pendente' });
-    },
-    onError: () => {
-      toast({ title: 'Erro ao reabrir orçamento', variant: 'destructive' });
-    }
-  });
+  const handleDuplicate = async (quote: Quote) => {
+    const items = await quoteService.fetchQuoteItems(quote.id);
+    await duplicateQuote({ quote, items });
+  };
+
+  const handleReopen = async (quote: Quote) => {
+    await updateStatus({ id: quote.id, status: 'pending' });
+  };
+
+  const handleReject = async (quote: Quote) => {
+    await updateStatus({ id: quote.id, status: 'rejected' });
+  };
+
+  const handleCancelApproved = async (quote: Quote) => {
+    await cancelApproved(quote.id);
+  };
+
 
   const filteredQuotes = quotes?.filter(quote => {
     const matchesSearch = quote.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -320,16 +236,12 @@ export default function Orcamentos() {
   };
 
   const handleApprove = async (quote: Quote) => {
-    // Fetch quote items
-    const { data: items } = await supabase
-      .from('quote_items')
-      .select('*')
-      .eq('quote_id', quote.id);
-
+    const items = await quoteService.fetchQuoteItems(quote.id);
     setApproveQuoteItems(items || []);
     setSelectedQuote(quote);
     setIsApproveDialogOpen(true);
   };
+
 
   const handleDuplicate = async (quote: Quote) => {
     if (!currentCompany?.id) return;
