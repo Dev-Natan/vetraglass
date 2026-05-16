@@ -399,92 +399,78 @@ export default function Orcamentos() {
 
   return (
     <MainLayout>
-      <div className="space-y-8 animate-slide-up pb-32">
-        {/* Header Profissional */}
-        <div data-tutorial="orcamentos-header" className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8 p-5 sm:p-8 bg-card rounded-[1.5rem] sm:rounded-[2.5rem] border border-border/40 shadow-xl overflow-hidden relative group">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32 transition-transform duration-1000 group-hover:scale-150" />
-          <div className="relative">
-            <h1 className="text-2xl sm:text-4xl font-black text-foreground tracking-tighter flex items-center gap-4 sm:text-5xl">
-              <div className="p-3 bg-primary/10 rounded-2xl shadow-inner border border-primary/20">
-                <FileText className="w-10 h-10 text-primary" />
-              </div>
+      <div className="space-y-6 animate-fade-in pb-24">
+        {/* Header */}
+        <div data-tutorial="orcamentos-header" className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-display font-bold text-foreground flex items-center gap-2">
+              <FileText className="w-7 h-7 text-primary" />
               Orçamentos
             </h1>
-            <p className="text-muted-foreground text-lg mt-3 font-medium">
-              Gestão de propostas e <span className="text-primary font-black uppercase tracking-widest text-xs">Fluxo Comercial</span>
-            </p>
+            <p className="text-muted-foreground">Gerencie todos os orçamentos da sua vidraçaria.</p>
           </div>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 relative">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <Button 
               variant="outline" 
               onClick={() => setIsPaymentDialogOpen(true)}
-              className="h-14 rounded-2xl border-2 font-black uppercase tracking-tighter text-xs"
+              className="gap-2"
             >
-              <Settings className="w-4 h-4 mr-2" />
-              Configurações
+              <Settings className="w-4 h-4" />
+              Configurar Pagamentos
             </Button>
             <Button 
-              size="lg" 
               onClick={() => {
                 setSelectedQuote(null);
                 setIsNewDialogOpen(true);
               }}
-              className="h-14 rounded-2xl font-black uppercase tracking-tighter text-xs shadow-xl shadow-primary/20 group"
+              className="gap-2"
             >
-              <Plus className="w-5 h-5 mr-2 transition-transform group-hover:rotate-90" />
-              Nova Proposta
+              <Plus className="w-4 h-4" />
+              Novo Orçamento
             </Button>
           </div>
         </div>
 
-        <div className="space-y-6">
-          {/* Status Tabs Modernas */}
-          <Tabs data-tutorial="orcamentos-tabs" value={statusFilter} onValueChange={(v) => setStatusFilter(v as QuoteStatus | 'all')} className="w-full">
-            <TabsList className="w-full h-auto p-1 bg-muted/30 border border-border/40 rounded-[1.5rem] justify-start overflow-x-auto flex-nowrap scrollbar-none">
-              <TabsTrigger value="all" className="px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-card data-[state=active]:shadow-lg transition-all">
-                Todos
-                <Badge variant="secondary" className="ml-2 h-5 px-1.5">{statusCounts.all}</Badge>
-              </TabsTrigger>
-              <TabsTrigger value="pending" className="px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-card data-[state=active]:shadow-lg transition-all">
-                Pendentes
-                <Badge variant="secondary" className="ml-2 h-5 px-1.5">{statusCounts.pending}</Badge>
-              </TabsTrigger>
-              <TabsTrigger value="approved" className="px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-card data-[state=active]:shadow-lg transition-all">
-                Aprovados
-                <Badge variant="secondary" className="ml-2 h-5 px-1.5">{statusCounts.approved}</Badge>
-              </TabsTrigger>
-              <TabsTrigger value="converted" className="px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-card data-[state=active]:shadow-lg transition-all">
-                Convertidos
-                <Badge variant="secondary" className="ml-2 h-5 px-1.5">{statusCounts.converted}</Badge>
-              </TabsTrigger>
-              <TabsTrigger value="rejected" className="px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-card data-[state=active]:shadow-lg transition-all">
-                Rejeitados
-                <Badge variant="secondary" className="ml-2 h-5 px-1.5">{statusCounts.rejected}</Badge>
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+        {/* Status Tabs */}
+        <Tabs data-tutorial="orcamentos-tabs" value={statusFilter} onValueChange={(v) => setStatusFilter(v as QuoteStatus | 'all')} className="w-full">
+          <TabsList className="w-full justify-start overflow-x-auto flex-nowrap">
+            <TabsTrigger value="all" className="gap-2">
+              Todos
+              <Badge variant="secondary" className="ml-1">{statusCounts.all}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="pending" className="gap-2">
+              <Clock className="w-3.5 h-3.5" />
+              Pendentes
+              <Badge variant="secondary" className="ml-1">{statusCounts.pending}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="approved" className="gap-2">
+              <CheckCircle className="w-3.5 h-3.5" />
+              Aprovados
+              <Badge variant="secondary" className="ml-1">{statusCounts.approved}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="converted" className="gap-2">
+              <CheckCircle className="w-3.5 h-3.5" />
+              Convertidos
+              <Badge variant="secondary" className="ml-1">{statusCounts.converted}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="rejected" className="gap-2">
+              <XCircle className="w-3.5 h-3.5" />
+              Rejeitados
+              <Badge variant="secondary" className="ml-1">{statusCounts.rejected}</Badge>
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
 
-          {/* Search Profissional */}
-          <div className="relative group">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-all duration-300" />
-            <Input
-              type="text"
-              placeholder="Pesquisar por cliente, número ou observação..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-14 h-16 bg-card border-border/40 rounded-2xl shadow-sm text-lg font-medium focus-visible:ring-primary/10 transition-all duration-300"
-            />
-            {searchTerm && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => setSearchTerm('')}
-                className="absolute right-4 top-1/2 -translate-y-1/2 hover:bg-transparent"
-              >
-                <XCircle className="w-5 h-5 text-muted-foreground hover:text-foreground transition-colors" />
-              </Button>
-            )}
-          </div>
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Buscar por cliente ou número..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
+          />
         </div>
 
         {/* Quotes Grid */}
