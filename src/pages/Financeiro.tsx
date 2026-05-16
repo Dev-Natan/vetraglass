@@ -185,36 +185,8 @@ export default function Financeiro() {
     };
   }, [filteredSales]);
 
-  // Cancel sale mutation
-  const cancelSaleMutation = useMutation({
-    mutationFn: async ({ saleId, reason }: { saleId: string; reason: string }) => {
-      if (!currentCompany?.id || !user?.id) throw new Error('Dados incompletos para cancelamento');
-      
-      const { data, error } = await supabase.rpc('cancel_sale', {
-        p_sale_id: saleId,
-        p_company_id: currentCompany.id,
-        p_user_id: user.id,
-        p_reason: reason
-      });
-
-      if (error) throw error;
-      
-      const result = data as { success: boolean; error?: string; sale_number?: number };
-      if (!result.success) throw new Error(result.error || 'Erro ao cancelar venda');
-
-      return result;
-    },
-    onSuccess: (result) => {
-      toast.success(`Venda #${String(result.sale_number).padStart(4, '0')} cancelada!`);
-      queryClient.invalidateQueries({ queryKey: ['sales-financeiro'] });
-      queryClient.invalidateQueries({ queryKey: ['company-stock'] });
-      setCancelDialogOpen(false);
-      setSelectedSale(null);
-    },
-    onError: (error: Error) => {
-      toast.error(`Erro ao cancelar venda: ${error.message}`);
-    },
-  });
+  // Cancel sale functionality removed from Financeiro as it is now an audit-only module.
+  // Operations should be performed in the Caixa module.
 
   const handleViewDetails = (sale: Sale) => {
     setSelectedSale(sale);
@@ -222,8 +194,7 @@ export default function Financeiro() {
   };
 
   const handleCancelSale = (sale: Sale) => {
-    setSelectedSale(sale);
-    setCancelDialogOpen(true);
+    toast.info('O cancelamento de vendas deve ser realizado através do módulo de Caixa.');
   };
 
   const handlePrintReceipt = async (sale: Sale) => {
