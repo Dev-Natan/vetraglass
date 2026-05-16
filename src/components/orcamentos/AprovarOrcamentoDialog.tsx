@@ -147,7 +147,7 @@ export function AprovarOrcamentoDialog({
               </DialogTitle>
               <DialogDescription className="flex items-center gap-3 mt-1 ml-10">
                 <span className="truncate">{quote.customer_name}</span>
-                <span className="text-primary font-semibold">{formatCurrency(quote.final_amount)}</span>
+                <span className="text-primary font-semibold">{formatCurrency(valorFinal)}</span>
                 {isOldQuote && (
                   <Badge variant="destructive" className="gap-1 flex-shrink-0">
                     <AlertTriangle className="w-3 h-3" />
@@ -184,6 +184,7 @@ export function AprovarOrcamentoDialog({
               companyId={currentCompany?.id}
               valorFinal={valorFinal}
               isCaixaAberto={isCaixaAberto}
+              selectedForma={selectedForma}
               onStockCheck={setStockCheckResult}
             />
           )}
