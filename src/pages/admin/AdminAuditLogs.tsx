@@ -458,21 +458,21 @@ export default function AdminAuditLogs() {
                                 <span className="font-bold">Motivo:</span> {String((selectedLog.metadata as any).reason || 'Não informado')}
                               </div>
                               <div>
-                                <span className="font-bold">Venda:</span> #{selectedLog.metadata.sale_number}
+                                <span className="font-bold">Venda:</span> #{(selectedLog.metadata as any).sale_number}
                               </div>
                               <div>
-                                <span className="font-bold">Cliente:</span> {String(selectedLog.metadata.customer_name || 'N/A')}
+                                <span className="font-bold">Cliente:</span> {String((selectedLog.metadata as any).customer_name || 'N/A')}
                               </div>
                               <div>
-                                <span className="font-bold">Valor Total:</span> {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(selectedLog.metadata.total_amount || 0))}
+                                <span className="font-bold">Valor Total:</span> {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number((selectedLog.metadata as any).total_amount || 0))}
                               </div>
                             </div>
                             
-                            {selectedLog.metadata.removed_cash_movements && (selectedLog.metadata.removed_cash_movements as any[]).length > 0 && (
+                            {(selectedLog.metadata as any).removed_cash_movements && ((selectedLog.metadata as any).removed_cash_movements as any[]).length > 0 && (
                               <div className="space-y-1">
                                 <p className="font-bold text-red-500">Movimentações de Caixa Removidas:</p>
                                 <ul className="list-disc pl-4">
-                                  {(selectedLog.metadata.removed_cash_movements as any[]).map((m: any, i: number) => (
+                                  {((selectedLog.metadata as any).removed_cash_movements as any[]).map((m: any, i: number) => (
                                     <li key={i}>
                                       ID: {m.id} | Tipo: {m.type} | Valor: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(m.amount)} | Data: {m.created_at}
                                     </li>
@@ -481,11 +481,11 @@ export default function AdminAuditLogs() {
                               </div>
                             )}
 
-                            {selectedLog.metadata.cancelled_accounts_receivable && (selectedLog.metadata.cancelled_accounts_receivable as any[]).length > 0 && (
+                            {(selectedLog.metadata as any).cancelled_accounts_receivable && ((selectedLog.metadata as any).cancelled_accounts_receivable as any[]).length > 0 && (
                               <div className="space-y-1">
                                 <p className="font-bold text-orange-500">Contas a Receber Canceladas:</p>
                                 <ul className="list-disc pl-4">
-                                  {(selectedLog.metadata.cancelled_accounts_receivable as any[]).map((r: any, i: number) => (
+                                  {((selectedLog.metadata as any).cancelled_accounts_receivable as any[]).map((r: any, i: number) => (
                                     <li key={i}>
                                       ID: {r.id} | Parcela: {r.installment_number}/{r.total_installments} | Valor: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(r.total_amount)} | Vencimento: {r.due_date}
                                     </li>
@@ -494,11 +494,11 @@ export default function AdminAuditLogs() {
                               </div>
                             )}
 
-                            {selectedLog.metadata.stock_restorations && (selectedLog.metadata.stock_restorations as any[]).length > 0 && (
+                            {(selectedLog.metadata as any).stock_restorations && ((selectedLog.metadata as any).stock_restorations as any[]).length > 0 && (
                               <div className="space-y-1">
                                 <p className="font-bold text-green-600">Estoque Restaurado:</p>
                                 <ul className="list-disc pl-4">
-                                  {(selectedLog.metadata.stock_restorations as any[]).map((s: any, i: number) => (
+                                  {((selectedLog.metadata as any).stock_restorations as any[]).map((s: any, i: number) => (
                                     <li key={i}>
                                       Item ID: {s.item_id} | Quantidade: {s.quantity}
                                     </li>
