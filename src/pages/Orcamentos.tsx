@@ -437,51 +437,54 @@ export default function Orcamentos() {
           </div>
         </div>
 
-        {/* Status Tabs */}
-        <Tabs data-tutorial="orcamentos-tabs" value={statusFilter} onValueChange={(v) => setStatusFilter(v as QuoteStatus | 'all')} className="w-full">
-          <TabsList className="w-full justify-start overflow-x-auto flex-nowrap">
-            <TabsTrigger value="all" className="gap-2">
-              Todos
-              <Badge variant="secondary" className="ml-1">{statusCounts.all}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="pending" className="gap-2">
-              <Clock className="w-3.5 h-3.5" />
-              Pendentes
-              <Badge variant="secondary" className="ml-1">{statusCounts.pending}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="approved" className="gap-2">
-              <CheckCircle className="w-3.5 h-3.5" />
-              Aprovados
-              <Badge variant="secondary" className="ml-1">{statusCounts.approved}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="converted" className="gap-2">
-              <CheckCircle className="w-3.5 h-3.5" />
-              Convertidos
-              <Badge variant="secondary" className="ml-1">{statusCounts.converted}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="rejected" className="gap-2">
-              <XCircle className="w-3.5 h-3.5" />
-              Rejeitados
-              <Badge variant="secondary" className="ml-1">{statusCounts.rejected}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="expired" className="gap-2">
-              <AlertCircle className="w-3.5 h-3.5" />
-              Expirados
-              <Badge variant="secondary" className="ml-1">{statusCounts.expired}</Badge>
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="space-y-6">
+          {/* Status Tabs Modernas */}
+          <Tabs data-tutorial="orcamentos-tabs" value={statusFilter} onValueChange={(v) => setStatusFilter(v as QuoteStatus | 'all')} className="w-full">
+            <TabsList className="w-full h-auto p-1 bg-muted/30 border border-border/40 rounded-[1.5rem] justify-start overflow-x-auto flex-nowrap scrollbar-none">
+              <TabsTrigger value="all" className="px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-card data-[state=active]:shadow-lg transition-all">
+                Todos
+                <Badge variant="secondary" className="ml-2 h-5 px-1.5">{statusCounts.all}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="pending" className="px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-card data-[state=active]:shadow-lg transition-all">
+                Pendentes
+                <Badge variant="secondary" className="ml-2 h-5 px-1.5">{statusCounts.pending}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="approved" className="px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-card data-[state=active]:shadow-lg transition-all">
+                Aprovados
+                <Badge variant="secondary" className="ml-2 h-5 px-1.5">{statusCounts.approved}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="converted" className="px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-card data-[state=active]:shadow-lg transition-all">
+                Convertidos
+                <Badge variant="secondary" className="ml-2 h-5 px-1.5">{statusCounts.converted}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="rejected" className="px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-card data-[state=active]:shadow-lg transition-all">
+                Rejeitados
+                <Badge variant="secondary" className="ml-2 h-5 px-1.5">{statusCounts.rejected}</Badge>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="Buscar por cliente ou número..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
-          />
+          {/* Search Profissional */}
+          <div className="relative group">
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-all duration-300" />
+            <Input
+              type="text"
+              placeholder="Pesquisar por cliente, número ou observação..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-14 h-16 bg-card border-border/40 rounded-2xl shadow-sm text-lg font-medium focus-visible:ring-primary/10 transition-all duration-300"
+            />
+            {searchTerm && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setSearchTerm('')}
+                className="absolute right-4 top-1/2 -translate-y-1/2 hover:bg-transparent"
+              >
+                <XCircle className="w-5 h-5 text-muted-foreground hover:text-foreground transition-colors" />
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Quotes Grid */}
