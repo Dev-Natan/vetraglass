@@ -401,10 +401,10 @@ export default function Orcamentos() {
     <MainLayout>
       <div className="space-y-8 animate-slide-up pb-32">
         {/* Header Profissional */}
-        <div data-tutorial="orcamentos-header" className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8 p-8 bg-card rounded-[2.5rem] border border-border/40 shadow-xl overflow-hidden relative group">
+        <div data-tutorial="orcamentos-header" className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8 p-5 sm:p-8 bg-card rounded-[1.5rem] sm:rounded-[2.5rem] border border-border/40 shadow-xl overflow-hidden relative group">
           <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32 transition-transform duration-1000 group-hover:scale-150" />
           <div className="relative">
-            <h1 className="text-4xl font-black text-foreground tracking-tighter flex items-center gap-4 sm:text-5xl">
+            <h1 className="text-2xl sm:text-4xl font-black text-foreground tracking-tighter flex items-center gap-4 sm:text-5xl">
               <div className="p-3 bg-primary/10 rounded-2xl shadow-inner border border-primary/20">
                 <FileText className="w-10 h-10 text-primary" />
               </div>
@@ -522,10 +522,10 @@ export default function Orcamentos() {
               return (
                   <div 
                     key={quote.id} 
-                    className="group bg-card rounded-[2.5rem] border-2 border-border/40 overflow-hidden hover:border-primary/40 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 flex flex-col relative"
+                    className="group bg-card rounded-[1.5rem] sm:rounded-[2.5rem] border-2 border-border/40 overflow-hidden hover:border-primary/40 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 flex flex-col relative"
                   >
                     {/* Header do Card */}
-                    <div className="p-8">
+                    <div className="p-5 sm:p-8">
                       <div className="flex items-start justify-between gap-4 mb-6">
                         <div className="space-y-1">
                           <h3 className="text-xl font-black text-foreground tracking-tighter leading-tight group-hover:text-primary transition-colors">

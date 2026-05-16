@@ -75,7 +75,7 @@ export const DayOverviewCards = memo(function DayOverviewCards({ data }: DayOver
       {cards.map((card) => (
         <Link key={card.label} to={card.link} className="group h-full">
           <Card className={cn(
-            "h-full transition-all duration-500 border border-border/40 shadow-sm group-hover:shadow-2xl group-hover:-translate-y-2 relative overflow-hidden rounded-[2rem]",
+            "h-full transition-all duration-500 border border-border/40 shadow-sm group-hover:shadow-2xl group-hover:-translate-y-2 relative overflow-hidden rounded-[1.5rem] sm:rounded-[2rem]",
             card.alert ? "ring-2 ring-primary/10" : ""
           )}>
             {/* Background Accent Gradient */}
@@ -84,7 +84,7 @@ export const DayOverviewCards = memo(function DayOverviewCards({ data }: DayOver
               card.bgColor
             )} />
             
-            <CardContent className="p-8 relative z-10 flex flex-col h-full">
+            <CardContent className="p-5 sm:p-8 relative z-10 flex flex-col h-full">
               <div className="flex items-center justify-between mb-8">
                 <div className={cn(
                   "p-4 rounded-2xl transition-all duration-500 shadow-sm group-hover:shadow-lg group-hover:rotate-6",

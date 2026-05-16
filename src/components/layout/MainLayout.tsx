@@ -52,7 +52,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
             {/* Company Header */}
             {currentCompany && (
-              <div className="px-8 py-10 border-b border-border/40 bg-gradient-to-b from-white to-transparent dark:from-card/40 dark:to-transparent">
+              <div className="px-4 sm:px-8 py-6 sm:py-10 border-b border-border/40 bg-gradient-to-b from-white to-transparent dark:from-card/40 dark:to-transparent">
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 max-w-7xl mx-auto">
                   <div className="flex items-center gap-6">
                     {currentCompany.logo_url ? (
@@ -100,7 +100,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             )}
 
             {/* Page Content */}
-            <div className="p-8 max-w-7xl mx-auto min-h-[calc(100vh-210px)]">
+            <div className="p-4 sm:p-8 max-w-7xl mx-auto min-h-[calc(100vh-210px)]">
               <div className="animate-fade-in">
                 <AnnouncementBanner />
                 {children}
