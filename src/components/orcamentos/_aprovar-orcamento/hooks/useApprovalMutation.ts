@@ -46,6 +46,17 @@ export function useApprovalMutation({
         throw new Error('Caixa precisa estar aberto para registrar entrada');
       }
 
+      // 0. Guard: prevent duplicate OS for the same quote
+      const { data: existingOS, error: existingOSError } = await supabase
+        .from('ordens_servico')
+        .select('id, os_number')
+        .eq('quote_id', quote.id)
+        .maybeSingle();
+      if (existingOSError) throw existingOSError;
+      if (existingOS) {
+        throw new Error(`Este orçamento já foi aprovado (OS #${existingOS.os_number}). Não é possível aprovar novamente.`);
+      }
+
       // 1. Update quote
       const { error: quoteUpdateError } = await supabase
         .from('quotes')
