@@ -98,7 +98,7 @@ export const TodaySchedule = memo(function TodaySchedule({ items }: TodaySchedul
             <Link 
               key={item.id} 
               to={item.link}
-              className="flex items-start gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors group"
+              className="flex items-start gap-2 sm:gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors group"
             >
               <div className={`p-2 rounded-lg ${colorClass} shrink-0`}>
                 <Icon className="h-4 w-4" />
