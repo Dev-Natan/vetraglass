@@ -401,32 +401,32 @@ export default function Orcamentos() {
     <MainLayout>
       <div className="space-y-6 animate-fade-in pb-24">
         {/* Header */}
-        <div data-tutorial="orcamentos-header" className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div data-tutorial="orcamentos-header" className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-display font-bold text-foreground flex items-center gap-2">
-              <FileText className="w-7 h-7 text-primary" />
+            <h1 className="text-xl sm:text-2xl font-display font-bold text-foreground flex items-center gap-2">
+              <FileText className="w-6 h-6 sm:w-7 sm:h-7 text-primary" />
               Orçamentos
             </h1>
-            <p className="text-muted-foreground">Gerencie todos os orçamentos da sua vidraçaria.</p>
+            <p className="text-xs sm:text-sm text-muted-foreground">Gerencie todos os orçamentos da sua vidraçaria.</p>
           </div>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
             <Button 
               variant="outline" 
               onClick={() => setIsPaymentDialogOpen(true)}
-              className="gap-2"
+              className="gap-2 h-10 sm:h-11 px-4"
             >
               <Settings className="w-4 h-4" />
-              Configurar Pagamentos
+              <span className="text-sm">Configurar Pagamentos</span>
             </Button>
             <Button 
               onClick={() => {
                 setSelectedQuote(null);
                 setIsNewDialogOpen(true);
               }}
-              className="gap-2"
+              className="gap-2 h-10 sm:h-11 px-4"
             >
               <Plus className="w-4 h-4" />
-              Novo Orçamento
+              <span className="text-sm">Novo Orçamento</span>
             </Button>
           </div>
         </div>
