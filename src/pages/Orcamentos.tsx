@@ -399,63 +399,92 @@ export default function Orcamentos() {
 
   return (
     <MainLayout>
-      <div className="space-y-6 animate-fade-in pb-24">
-        {/* Header */}
-        <div data-tutorial="orcamentos-header" className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-display font-bold text-foreground flex items-center gap-2">
-              <FileText className="w-7 h-7 text-primary" />
+      <div className="space-y-8 animate-slide-up pb-32">
+        {/* Header Profissional */}
+        <div data-tutorial="orcamentos-header" className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8 p-8 bg-card rounded-[2.5rem] border border-border/40 shadow-xl overflow-hidden relative group">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32 transition-transform duration-1000 group-hover:scale-150" />
+          <div className="relative">
+            <h1 className="text-4xl font-black text-foreground tracking-tighter flex items-center gap-4 sm:text-5xl">
+              <div className="p-3 bg-primary/10 rounded-2xl shadow-inner border border-primary/20">
+                <FileText className="w-10 h-10 text-primary" />
+              </div>
               Orçamentos
             </h1>
-            <p className="text-muted-foreground">Gerencie todos os orçamentos da sua vidraçaria.</p>
+            <p className="text-muted-foreground text-lg mt-3 font-medium">
+              Gestão de propostas e <span className="text-primary font-black uppercase tracking-widest text-xs">Fluxo Comercial</span>
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 relative">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsPaymentDialogOpen(true)}
+              className="h-14 rounded-2xl border-2 font-black uppercase tracking-tighter text-xs"
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              Configurações
+            </Button>
+            <Button 
+              size="lg" 
+              onClick={() => {
+                setSelectedQuote(null);
+                setIsNewDialogOpen(true);
+              }}
+              className="h-14 rounded-2xl font-black uppercase tracking-tighter text-xs shadow-xl shadow-primary/20 group"
+            >
+              <Plus className="w-5 h-5 mr-2 transition-transform group-hover:rotate-90" />
+              Nova Proposta
+            </Button>
           </div>
         </div>
 
-        {/* Status Tabs */}
-        <Tabs data-tutorial="orcamentos-tabs" value={statusFilter} onValueChange={(v) => setStatusFilter(v as QuoteStatus | 'all')} className="w-full">
-          <TabsList className="w-full justify-start overflow-x-auto flex-nowrap">
-            <TabsTrigger value="all" className="gap-2">
-              Todos
-              <Badge variant="secondary" className="ml-1">{statusCounts.all}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="pending" className="gap-2">
-              <Clock className="w-3.5 h-3.5" />
-              Pendentes
-              <Badge variant="secondary" className="ml-1">{statusCounts.pending}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="approved" className="gap-2">
-              <CheckCircle className="w-3.5 h-3.5" />
-              Aprovados
-              <Badge variant="secondary" className="ml-1">{statusCounts.approved}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="converted" className="gap-2">
-              <CheckCircle className="w-3.5 h-3.5" />
-              Convertidos
-              <Badge variant="secondary" className="ml-1">{statusCounts.converted}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="rejected" className="gap-2">
-              <XCircle className="w-3.5 h-3.5" />
-              Rejeitados
-              <Badge variant="secondary" className="ml-1">{statusCounts.rejected}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="expired" className="gap-2">
-              <AlertCircle className="w-3.5 h-3.5" />
-              Expirados
-              <Badge variant="secondary" className="ml-1">{statusCounts.expired}</Badge>
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="space-y-6">
+          {/* Status Tabs Modernas */}
+          <Tabs data-tutorial="orcamentos-tabs" value={statusFilter} onValueChange={(v) => setStatusFilter(v as QuoteStatus | 'all')} className="w-full">
+            <TabsList className="w-full h-auto p-1 bg-muted/30 border border-border/40 rounded-[1.5rem] justify-start overflow-x-auto flex-nowrap scrollbar-none">
+              <TabsTrigger value="all" className="px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-card data-[state=active]:shadow-lg transition-all">
+                Todos
+                <Badge variant="secondary" className="ml-2 h-5 px-1.5">{statusCounts.all}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="pending" className="px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-card data-[state=active]:shadow-lg transition-all">
+                Pendentes
+                <Badge variant="secondary" className="ml-2 h-5 px-1.5">{statusCounts.pending}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="approved" className="px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-card data-[state=active]:shadow-lg transition-all">
+                Aprovados
+                <Badge variant="secondary" className="ml-2 h-5 px-1.5">{statusCounts.approved}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="converted" className="px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-card data-[state=active]:shadow-lg transition-all">
+                Convertidos
+                <Badge variant="secondary" className="ml-2 h-5 px-1.5">{statusCounts.converted}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="rejected" className="px-6 py-3 rounded-xl font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-card data-[state=active]:shadow-lg transition-all">
+                Rejeitados
+                <Badge variant="secondary" className="ml-2 h-5 px-1.5">{statusCounts.rejected}</Badge>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="Buscar por cliente ou número..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
-          />
+          {/* Search Profissional */}
+          <div className="relative group">
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-all duration-300" />
+            <Input
+              type="text"
+              placeholder="Pesquisar por cliente, número ou observação..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-14 h-16 bg-card border-border/40 rounded-2xl shadow-sm text-lg font-medium focus-visible:ring-primary/10 transition-all duration-300"
+            />
+            {searchTerm && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setSearchTerm('')}
+                className="absolute right-4 top-1/2 -translate-y-1/2 hover:bg-transparent"
+              >
+                <XCircle className="w-5 h-5 text-muted-foreground hover:text-foreground transition-colors" />
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Quotes Grid */}
@@ -491,63 +520,64 @@ export default function Orcamentos() {
               const StatusIcon = status.icon;
               
               return (
-                <div
-                  key={quote.id}
-                  className="bg-card border rounded-xl overflow-hidden hover:shadow-lg transition-shadow"
-                >
-                  {/* Card Header */}
-                  <div className="p-4 pb-3">
-                    <div className="flex items-start justify-between mb-3">
-                      <h3 className="text-lg font-bold text-foreground">
-                        ORÇAMENTO {quote.quote_number}
-                      </h3>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="text-muted-foreground hover:text-destructive gap-1 h-8 px-2"
-                        onClick={() => setQuoteToDelete(quote)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        Excluir
-                      </Button>
-                    </div>
-
-                    {/* Customer Info */}
-                    <div className="space-y-1.5 text-sm">
-                      <div className="flex items-center gap-2 text-foreground font-medium">
-                        <User className="w-4 h-4 text-muted-foreground shrink-0" />
-                        <span className="truncate">{quote.customer_name}</span>
-                      </div>
-                      {quote.customer_address && (
-                        <div className="flex items-start gap-2 text-primary">
-                          <MapPin className="w-4 h-4 shrink-0 mt-0.5" />
-                          <span className="line-clamp-2">{quote.customer_address}</span>
+                  <div 
+                    key={quote.id} 
+                    className="group bg-card rounded-[2.5rem] border-2 border-border/40 overflow-hidden hover:border-primary/40 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 flex flex-col relative"
+                  >
+                    {/* Header do Card */}
+                    <div className="p-8">
+                      <div className="flex items-start justify-between gap-4 mb-6">
+                        <div className="space-y-1">
+                          <h3 className="text-xl font-black text-foreground tracking-tighter leading-tight group-hover:text-primary transition-colors">
+                            {quote.customer_name}
+                          </h3>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">
+                              ORÇAMENTO #{String(quote.quote_number).padStart(4, '0')}
+                            </span>
+                          </div>
                         </div>
-                      )}
-                      {quote.customer_phone && (
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Phone className="w-4 h-4 shrink-0" />
-                          <span>{quote.customer_phone}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Price and Date */}
-                    <div className="flex items-center justify-between mt-3 pt-3 border-t">
-                      <div className="flex items-center gap-2">
-                        <Badge variant={status.variant} className="gap-1">
-                          <StatusIcon className="w-3 h-3" />
-                          {status.label}
+                        <Badge variant={status.variant} className="px-3 py-1 font-black shrink-0">
+                          {status.label.toUpperCase()}
                         </Badge>
-                        <span className="text-lg font-bold text-green-600">
-                          {formatCurrency(quote.final_amount)}
-                        </span>
                       </div>
-                      <span className="text-xs text-muted-foreground">
-                        {format(new Date(quote.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                      </span>
+
+                      {/* Informações de Contato */}
+                      <div className="space-y-3 mb-8">
+                        {quote.customer_address && (
+                          <div className="flex items-center gap-3 text-sm font-bold text-muted-foreground group-hover:text-foreground transition-colors">
+                            <div className="p-2 bg-muted rounded-xl">
+                              <MapPin className="w-4 h-4 text-primary" />
+                            </div>
+                            <span className="line-clamp-1">{quote.customer_address}</span>
+                          </div>
+                        )}
+                        {quote.customer_phone && (
+                          <div className="flex items-center gap-3 text-sm font-bold text-muted-foreground group-hover:text-foreground transition-colors">
+                            <div className="p-2 bg-muted rounded-xl">
+                              <Phone className="w-4 h-4 text-primary" />
+                            </div>
+                            <span>{quote.customer_phone}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Valor e Data */}
+                      <div className="flex items-end justify-between pt-6 border-t border-border/40">
+                        <div className="space-y-1">
+                          <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Investimento Total</p>
+                          <span className="text-2xl font-black text-foreground tracking-tighter group-hover:text-primary transition-colors">
+                            {formatCurrency(quote.final_amount)}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Emitido em</p>
+                          <span className="text-xs font-bold text-muted-foreground/60">
+                            {format(new Date(quote.created_at), "dd MMM yyyy", { locale: ptBR })}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
 
                   {/* Quick Actions */}
                   <div className="px-4 py-3 bg-muted/30 border-t">

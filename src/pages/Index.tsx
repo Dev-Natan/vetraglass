@@ -47,19 +47,20 @@ export default function Index() {
     <MainLayout>
       <div className="space-y-6 max-w-7xl mx-auto">
         {/* Header com data */}
-        <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 animate-fade-in">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground tracking-tight capitalize">
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 animate-slide-up p-8 bg-card rounded-[2.5rem] border border-border/40 shadow-xl overflow-hidden relative group">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32 transition-transform duration-1000 group-hover:scale-150" />
+          <div className="relative">
+            <h1 className="text-4xl font-black text-foreground tracking-tighter capitalize sm:text-5xl">
               {formattedDate}
             </h1>
-            <p className="text-muted-foreground text-base mt-1">
-              Bem-vindo ao seu painel de controle.
+            <p className="text-muted-foreground text-lg mt-2 font-medium">
+              Bom trabalho hoje, <span className="text-primary font-black uppercase tracking-widest text-sm">Vetra System</span>.
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="px-3 py-1.5 bg-success/10 text-success text-xs font-bold rounded-full flex items-center gap-2 border border-success/20">
-              <span className="h-2 w-2 rounded-full bg-success animate-pulse" />
-              SISTEMA ONLINE
+          <div className="flex items-center gap-4 relative">
+            <div className="px-4 py-2 bg-success/10 text-success text-[10px] font-black tracking-widest rounded-2xl flex items-center gap-2.5 border-2 border-success/20 shadow-lg shadow-success/5 uppercase transition-all hover:bg-success/20">
+              <span className="h-2.5 w-2.5 rounded-full bg-success animate-pulse shadow-[0_0_8px_hsl(var(--success))]" />
+              Conexão Ativa
             </div>
           </div>
         </header>

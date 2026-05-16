@@ -71,60 +71,54 @@ export const DayOverviewCards = memo(function DayOverviewCards({ data }: DayOver
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
       {cards.map((card) => (
-        <Link key={card.label} to={card.link} className="group">
+        <Link key={card.label} to={card.link} className="group h-full">
           <Card className={cn(
-            "h-full transition-all duration-300 border-none shadow-sm group-hover:shadow-xl group-hover:-translate-y-1 relative overflow-hidden",
-            card.alert ? "ring-1 ring-primary/20" : ""
+            "h-full transition-all duration-500 border border-border/40 shadow-sm group-hover:shadow-2xl group-hover:-translate-y-2 relative overflow-hidden rounded-[2rem]",
+            card.alert ? "ring-2 ring-primary/10" : ""
           )}>
             {/* Background Accent Gradient */}
             <div className={cn(
-              "absolute top-0 right-0 w-32 h-32 -mr-8 -mt-8 rounded-full opacity-10 transition-transform duration-500 group-hover:scale-150",
+              "absolute top-0 right-0 w-40 h-40 -mr-10 -mt-10 rounded-full opacity-10 transition-transform duration-700 group-hover:scale-150 group-hover:opacity-20 blur-2xl",
               card.bgColor
             )} />
             
-            <CardContent className="p-6 relative z-10">
-              <div className="flex items-center justify-between mb-4">
+            <CardContent className="p-8 relative z-10 flex flex-col h-full">
+              <div className="flex items-center justify-between mb-8">
                 <div className={cn(
-                  "p-3 rounded-2xl transition-colors duration-300",
+                  "p-4 rounded-2xl transition-all duration-500 shadow-sm group-hover:shadow-lg group-hover:rotate-6",
                   card.bgColor,
-                  "group-hover:bg-opacity-20"
+                  "group-hover:bg-opacity-30"
                 )}>
-                  <card.icon className={cn("h-6 w-6", card.color)} />
+                  <card.icon className={cn("h-7 w-7 transition-transform group-hover:scale-110", card.color)} />
                 </div>
                 {card.alert && (
-                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-                    </span>
-                    Atenção
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-destructive/10 text-destructive text-[9px] font-black uppercase tracking-[0.15em] border border-destructive/20 shadow-sm animate-pulse">
+                    <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
+                    Prioridade
                   </div>
                 )}
               </div>
               
-              <div className="space-y-1">
-                <h3 className="text-sm font-medium text-muted-foreground">
+              <div className="space-y-1 mt-auto">
+                <h3 className="text-xs font-black text-muted-foreground/60 uppercase tracking-[0.1em]">
                   {card.label}
                 </h3>
                 <div className={cn(
-                  "text-2xl font-bold tracking-tight transition-colors duration-300",
+                  "font-display font-black tracking-tighter transition-all duration-500",
                   card.alert ? card.color : "text-foreground",
-                  card.isMonetary ? "text-xl sm:text-2xl" : "text-3xl"
+                  card.isMonetary ? "text-2xl sm:text-3xl" : "text-4xl"
                 )}>
                   {card.value}
                 </div>
-                <p className="text-xs text-muted-foreground/80 font-medium">
-                  {card.subtitle}
-                </p>
+                <div className="flex items-center gap-2 mt-2">
+                  <div className="h-1 w-1 rounded-full bg-muted-foreground/30" />
+                  <p className="text-[11px] text-muted-foreground font-bold tracking-tight">
+                    {card.subtitle}
+                  </p>
+                </div>
               </div>
-              
-              {/* Bottom indicator */}
-              <div className={cn(
-                "absolute bottom-0 left-0 h-1 w-0 bg-primary transition-all duration-300 group-hover:w-full",
-                card.alert ? "bg-destructive" : "bg-primary"
-              )} />
             </CardContent>
           </Card>
         </Link>
