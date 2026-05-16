@@ -1,16 +1,12 @@
 import { Quote, QuoteStatus } from '@/services/quoteService';
-import { Card, CardContent } from '@/components/ui/button'; // Wait, should be Card from @/components/ui/card
 import { Badge } from '@/components/ui/badge';
 import { 
-  Clock, 
   CheckCircle, 
   XCircle, 
-  AlertCircle, 
   User, 
   MapPin, 
   Phone, 
   Calendar, 
-  DollarSign, 
   MoreVertical,
   Eye,
   Edit,
@@ -30,6 +26,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from '@/components/ui/button';
+import { Card as UICard, CardContent as UICardContent } from '@/components/ui/card';
 
 interface QuoteCardProps {
   quote: Quote;
@@ -47,8 +44,6 @@ interface QuoteCardProps {
   onCancelApproved: (quote: Quote) => void;
 }
 
-import { Card as UICard, CardContent as UICardContent } from '@/components/ui/card';
-
 export function QuoteCard({
   quote,
   statusConfig,
@@ -64,7 +59,7 @@ export function QuoteCard({
   onGenerateContract,
   onCancelApproved
 }: QuoteCardProps) {
-  const status = statusConfig[quote.status];
+  const status = statusConfig[quote.status as QuoteStatus] || statusConfig.pending;
   const StatusIcon = status.icon;
 
   return (
