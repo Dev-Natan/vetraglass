@@ -174,70 +174,12 @@ export function ContasReceberTab() {
     };
   }, [receivables]);
 
-  // Receive payment mutation
-  const receivePaymentMutation = useMutation({
-    mutationFn: async (receivable: Receivable) => {
-      if (!currentCompany?.id || !user?.id) throw new Error('Dados inválidos');
-
-      // Update receivable
-      const { error: updateError } = await supabase
-        .from('accounts_receivable')
-        .update({
-          status: 'paid',
-          paid_date: new Date().toISOString(),
-          paid_amount: receivable.total_amount,
-          payment_method: receivePaymentMethod,
-        })
-        .eq('id', receivable.id);
-
-      if (updateError) throw updateError;
-
-      // Check if there's an open cash register to add movement
-      const { data: openRegister } = await supabase
-        .from('cash_registers')
-        .select('id')
-        .eq('company_id', currentCompany.id)
-        .eq('status', 'open')
-        .maybeSingle();
-
-      if (openRegister) {
-        // Create cash movement for the received payment
-        const { error: movementError } = await supabase
-          .from('cash_movements')
-          .insert({
-            company_id: currentCompany.id,
-            cash_register_id: openRegister.id,
-            type: 'entrada',
-            category: 'recebimento_parcela',
-            amount: receivable.total_amount,
-            description: `Recebimento parcela ${receivable.installment_number}/${receivable.total_installments} - ${receivable.customer_name}`,
-            payment_method: receivePaymentMethod,
-            receivable_id: receivable.id,
-            sale_id: receivable.sale_id,
-            created_by: user.id,
-          });
-
-        if (movementError) console.error('Error creating cash movement:', movementError);
-      }
-
-      return receivable;
-    },
-    onSuccess: (receivable) => {
-      toast.success(`Pagamento de ${receivable.customer_name} registrado!`);
-      queryClient.invalidateQueries({ queryKey: ['accounts-receivable'] });
-      queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
-      setReceiveDialogOpen(false);
-      setSelectedReceivable(null);
-    },
-    onError: (error: Error) => {
-      toast.error(`Erro ao registrar pagamento: ${error.message}`);
-    },
-  });
-
+  // Format currency helper
   const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
+  // Status display helper
   const getStatusDisplay = (receivable: Receivable) => {
     if (receivable.status === 'paid') return statusConfig.paid;
     if (receivable.status === 'cancelled') return statusConfig.cancelled;
@@ -247,9 +189,10 @@ export function ContasReceberTab() {
     return statusConfig.pending;
   };
 
+  // Operational receive payment functionality removed from Financeiro audit view.
+  // Payments must be received through the Caixa module for proper cash tracking.
   const handleReceiveClick = (receivable: Receivable) => {
-    setSelectedReceivable(receivable);
-    setReceiveDialogOpen(true);
+    toast.info('O recebimento de parcelas deve ser realizado através do módulo de Caixa para registro correto no fluxo diário.');
   };
 
   return (
@@ -411,87 +354,6 @@ export function ContasReceberTab() {
         </Table>
       </div>
 
-      {/* Receive Payment Dialog */}
-      <Dialog open={receiveDialogOpen} onOpenChange={setReceiveDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Registrar Recebimento</DialogTitle>
-            <DialogDescription>
-              Confirme o recebimento da parcela de {selectedReceivable?.customer_name}
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedReceivable && (
-            <div className="space-y-4 py-4">
-              <div className="rounded-lg border p-4 bg-muted/20">
-                <div className="flex justify-between mb-2">
-                  <span className="text-muted-foreground">Parcela</span>
-                  <span className="font-medium">
-                    {selectedReceivable.installment_number}/{selectedReceivable.total_installments}
-                  </span>
-                </div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-muted-foreground">Vencimento</span>
-                  <span className="font-medium">
-                    {format(new Date(selectedReceivable.due_date), 'dd/MM/yyyy', { locale: ptBR })}
-                  </span>
-                </div>
-                <div className="flex justify-between text-lg font-bold border-t pt-2 mt-2">
-                  <span>Valor</span>
-                  <span className="text-green-600">{formatCurrency(selectedReceivable.total_amount)}</span>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Forma de Recebimento</Label>
-                <RadioGroup
-                  value={receivePaymentMethod}
-                  onValueChange={(v) => setReceivePaymentMethod(v as typeof receivePaymentMethod)}
-                  className="grid grid-cols-2 gap-2"
-                >
-                  <Label htmlFor="receive-dinheiro" className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 cursor-pointer ${receivePaymentMethod === 'dinheiro' ? 'border-primary bg-primary/5' : 'border-muted'}`}>
-                    <RadioGroupItem value="dinheiro" id="receive-dinheiro" className="sr-only" />
-                    <DollarSign className="w-4 h-4" />
-                    Dinheiro
-                  </Label>
-                  <Label htmlFor="receive-pix" className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 cursor-pointer ${receivePaymentMethod === 'pix' ? 'border-primary bg-primary/5' : 'border-muted'}`}>
-                    <RadioGroupItem value="pix" id="receive-pix" className="sr-only" />
-                    PIX
-                  </Label>
-                  <Label htmlFor="receive-transferencia" className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 cursor-pointer ${receivePaymentMethod === 'transferencia' ? 'border-primary bg-primary/5' : 'border-muted'}`}>
-                    <RadioGroupItem value="transferencia" id="receive-transferencia" className="sr-only" />
-                    Transferência
-                  </Label>
-                  <Label htmlFor="receive-cartao" className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 cursor-pointer ${receivePaymentMethod === 'cartao' ? 'border-primary bg-primary/5' : 'border-muted'}`}>
-                    <RadioGroupItem value="cartao" id="receive-cartao" className="sr-only" />
-                    Cartão
-                  </Label>
-                </RadioGroup>
-              </div>
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setReceiveDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button 
-              onClick={() => selectedReceivable && receivePaymentMutation.mutate(selectedReceivable)}
-              disabled={receivePaymentMutation.isPending}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              {receivePaymentMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Registrando...
-                </>
-              ) : (
-                'Confirmar Recebimento'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

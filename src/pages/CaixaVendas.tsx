@@ -982,7 +982,7 @@ export default function CaixaVendas() {
                 <Badge variant="secondary">{todaySales.filter(s => s.payment_status !== 'cancelled').length} vendas</Badge>
               </CardHeader>
               <CardContent>
-                <VendasTable sales={todaySales} onViewDetails={handleViewDetails} onCancelSale={handleCancelSale} onPrintReceipt={handlePrintReceipt} />
+                <VendasTable sales={todaySales} onViewDetails={handleViewDetails} onCancelSale={handleCancelSale} onPrintReceipt={handlePrintReceipt} showCancelButton={true} />
               </CardContent>
             </Card>
 
