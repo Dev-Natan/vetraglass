@@ -11,8 +11,10 @@ import {
   FileText,
   Sparkles,
   X,
-  PlayCircle
+  PlayCircle,
+  ArrowRight
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useOnboardingStatus } from '@/hooks/useOnboardingStatus';
 import { useTutorial } from '@/contexts/TutorialContext';
 
