@@ -62,6 +62,10 @@ export function PaymentStep({
         </div>
       )}
 
+      {(() => {
+        const formasFiltradas = formasPagamento.filter(f => f.tipo === 'avista' || f.tipo === 'parcelado');
+        const labelForma = (tipo: string) => tipo === 'avista' ? 'À vista' : 'Cartão (parcelado)';
+        return (
       <div className="grid md:grid-cols-2 gap-6">
         {/* Left */}
         <div className="space-y-4">
@@ -79,36 +83,13 @@ export function PaymentStep({
                 <SelectValue placeholder="Selecione a forma de pagamento" />
               </SelectTrigger>
               <SelectContent>
-                {formasPagamento.map(forma => (
+                {formasFiltradas.map(forma => (
                   <SelectItem key={forma.id} value={forma.id}>
                     <div className="flex items-center gap-2">
-                      <span>{forma.nome}</span>
-                      <Badge variant="outline" className="text-xs">
-                        {forma.tipo === 'avista' ? 'À vista' : forma.tipo === 'parcelado' ? 'Parcelado' : 'Misto'}
-                      </Badge>
+                      <span>{labelForma(forma.tipo)}</span>
                     </div>
                   </SelectItem>
                 ))}
-              </SelectContent>
-            </Select>
-
-            <Label className="mt-4 block">Condição de Pagamento (Saldo)</Label>
-            <Select
-              value={state.selectedCondicaoId || ''}
-              onValueChange={(v) => onChange('selectedCondicaoId', v)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a condição do saldo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">À vista / Personalizado</SelectItem>
-                {condicoesPagamento
-                  .filter(c => !state.selectedFormaId || c.forma_pagamento_id === state.selectedFormaId)
-                  .map(condicao => (
-                    <SelectItem key={condicao.id} value={condicao.id}>
-                      {condicao.nome} ({condicao.parcelas}x)
-                    </SelectItem>
-                  ))}
               </SelectContent>
             </Select>
           </div>
