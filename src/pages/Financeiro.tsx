@@ -21,7 +21,8 @@ import {
   Download,
   Receipt,
   Wallet,
-  Users
+  Users,
+  History as HistoryIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -60,9 +61,6 @@ import { calculateFormulaQuantity } from '@/utils/safeFormulaEvaluator';
 import { MonthSelector, getMonthDateRange } from '@/components/common/MonthSelector';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 import { PaginationControls } from '@/components/common/PaginationControls';
-
-// Types moved to @/types/financeiro
-
 
 const paymentMethodConfig = {
   dinheiro: { label: 'Dinheiro', icon: DollarSign, color: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' },
@@ -281,9 +279,24 @@ export default function Financeiro() {
             </div>
           </TabsContent>
 
-          {/* Tab: Relatórios de Caixa */}
+          {/* Tab: Relatórios de Caixa e Auditoria */}
           <TabsContent value="relatorios" className="mt-6">
-            <CaixaReportTab selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
+            <div className="space-y-6">
+              <Card className="border-primary/20 bg-primary/5">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <HistoryIcon className="h-4 w-4 text-primary" />
+                    Trilha de Auditoria (Somente Leitura)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xs text-muted-foreground">
+                    Esta seção exibe todos os registros de movimentações financeiras e alterações críticas para fins de conferência e auditoria.
+                  </p>
+                </CardContent>
+              </Card>
+              <CaixaReportTab selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
+            </div>
           </TabsContent>
 
           {/* Tab: Comissões */}
@@ -412,11 +425,8 @@ export default function Financeiro() {
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <FileText className="w-5 h-5" />
-                    Vendas
-                  </CardTitle>
-                  <Badge variant="secondary">{filteredSales.length} registros</Badge>
+                  <CardTitle className="text-lg">Histórico de Vendas</CardTitle>
+                  <Badge variant="secondary">{totalSalesCount} registros</Badge>
                 </div>
               </CardHeader>
               <CardContent>
