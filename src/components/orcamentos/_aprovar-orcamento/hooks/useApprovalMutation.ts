@@ -39,7 +39,7 @@ export function useApprovalMutation({
       const entryValue = parseAmount(entryAmount);
       const hasEntry = entryValue > 0;
       const isCaixaAberto = !!openCashRegister;
-      const pendingAmount = valorFinal - entryValue;
+      const pendingAmount = Number((valorFinal - entryValue).toFixed(2));
       const osPaidAmount = hasEntry && isCaixaAberto ? entryValue : 0;
 
       if (hasEntry && !isCaixaAberto) {
@@ -52,7 +52,7 @@ export function useApprovalMutation({
         .update({
           status: 'approved',
           forma_pagamento_id: selectedFormaId,
-          condicao_pagamento_id: null,
+          condicao_pagamento_id: selectedCondicaoId === 'none' ? null : selectedCondicaoId,
           valor_original: totalOriginal,
           valor_final_aprovado: valorFinal,
           approved_at: new Date().toISOString(),
