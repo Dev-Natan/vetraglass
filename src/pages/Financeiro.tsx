@@ -281,9 +281,24 @@ export default function Financeiro() {
             </div>
           </TabsContent>
 
-          {/* Tab: Relatórios de Caixa */}
+          {/* Tab: Relatórios de Caixa e Auditoria */}
           <TabsContent value="relatorios" className="mt-6">
-            <CaixaReportTab selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
+            <div className="space-y-6">
+              <Card className="border-primary/20 bg-primary/5">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <History className="h-4 w-4 text-primary" />
+                    Trilha de Auditoria (Somente Leitura)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xs text-muted-foreground">
+                    Esta seção exibe todos os registros de movimentações financeiras e alterações críticas para fins de conferência e auditoria.
+                  </p>
+                </CardContent>
+              </Card>
+              <CaixaReportTab selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
+            </div>
           </TabsContent>
 
           {/* Tab: Comissões */}

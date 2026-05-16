@@ -1036,8 +1036,10 @@ export default function CaixaVendas() {
         receivable={selectedReceivable}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['receivables-due-today'] });
+          queryClient.invalidateQueries({ queryKey: ['accounts-receivable'] });
           queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
-          queryClient.invalidateQueries({ queryKey: ['cash-summary'] });
+          queryClient.invalidateQueries({ queryKey: ['cash-register-open'] });
+          queryClient.invalidateQueries({ queryKey: ['sales-today'] });
         }}
       />
 
