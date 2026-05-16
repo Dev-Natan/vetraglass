@@ -133,7 +133,7 @@ export function PaymentStep({
                       <div key={method} className="flex items-center space-x-2 p-2 border rounded-lg flex-1">
                         <RadioGroupItem value={method} id={`entry-${method}`} />
                         <Label htmlFor={`entry-${method}`} className="cursor-pointer capitalize">
-                          {method === 'cartao' ? 'Cartão' : method.charAt(0).toUpperCase() + method.slice(1)}
+                          {method === 'cartao' ? 'Cartão' : method === 'pix' ? 'Pix / Transferência' : 'Dinheiro'}
                         </Label>
                       </div>
                     ))}
@@ -190,7 +190,7 @@ export function PaymentStep({
                           {state.balanceDueDate ? format(state.balanceDueDate, 'dd/MM/yyyy', { locale: ptBR }) : 'Selecionar data'}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
+                      <PopoverContent className="w-auto p-0 z-[9999]" align="start">
                         <Calendar
                           mode="single"
                           selected={state.balanceDueDate}
@@ -285,7 +285,7 @@ export function PaymentStep({
                       {state.estimatedEnd ? format(state.estimatedEnd, 'dd/MM/yyyy') : 'Selecionar'}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
+                  <PopoverContent className="w-auto p-0 z-[9999]" align="start">
                     <Calendar
                       mode="single"
                       selected={state.estimatedEnd}
