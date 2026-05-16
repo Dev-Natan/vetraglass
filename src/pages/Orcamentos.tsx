@@ -254,7 +254,7 @@ export default function Orcamentos() {
         )}
       </div>
 
-      <NovoOrcamentoDialog open={isNewDialogOpen} onOpenChange={setIsNewDialogOpen} initialData={selectedQuote || undefined} />
+      <NovoOrcamentoDialog open={isNewDialogOpen} onOpenChange={setIsNewDialogOpen} quote={selectedQuote || undefined} />
       <VisualizarOrcamentoDialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen} quote={selectedQuote} />
       <EditarContratoDialog open={isContractDialogOpen} onOpenChange={setIsContractDialogOpen} quote={selectedQuote} items={contractItems} company={currentCompany} />
       <AprovarOrcamentoDialog open={isApproveDialogOpen} onOpenChange={setIsApproveDialogOpen} quote={selectedQuote} items={approveQuoteItems} />
