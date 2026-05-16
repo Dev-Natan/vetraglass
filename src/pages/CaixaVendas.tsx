@@ -109,51 +109,44 @@ export default function CaixaVendas() {
     status: string;
   } | null>(null);
 
-  // Buscar caixa da empresa (usado para abrir/fechar caixa)
-  const { data: companyCash } = useQuery({
-    queryKey: ['company-cash', currentCompany?.id],
-    queryFn: async () => {
-      if (!currentCompany?.id) return null;
-      const { data, error } = await supabase
-        .from('company_cash')
-        .select('*')
-        .eq('company_id', currentCompany.id)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
+  // Hooks de serviço refatorados
+  const { 
+    companyCash, 
+    openCashRegister, 
+    isLoading: loadingCashRegister,
+    openCash
+  } = useCaixa();
+
+  const { data: todaySales = [] } = useQuery({
+    queryKey: ['sales-today', openCashRegister?.id],
+    queryFn: () => saleService.fetchTodaySales(openCashRegister!.id),
+    enabled: !!openCashRegister?.id,
+  });
+
+  const { data: cashMovements = [] } = useQuery({
+    queryKey: ['cash-movements', openCashRegister?.id],
+    queryFn: () => caixaService.fetchCashMovements(openCashRegister!.id),
+    enabled: !!openCashRegister?.id,
+  });
+
+  const { data: expensesDueToday = [] } = useQuery({
+    queryKey: ['expenses-due-today', currentCompany?.id],
+    queryFn: () => caixaService.fetchExpensesDueToday(currentCompany!.id),
     enabled: !!currentCompany?.id,
   });
 
-  // Buscar caixa aberto DO USUÁRIO ATUAL (sistema multiusuário)
-  const { data: openCashRegister, isLoading: loadingCashRegister } = useQuery({
-    queryKey: ['cash-register-open', currentCompany?.id, user?.id],
-    queryFn: async () => {
-      if (!currentCompany?.id || !user?.id) return null;
-      
-      // Usar função RPC que busca apenas o caixa do usuário logado
-      const { data, error } = await supabase.rpc('get_user_open_cash_register', {
-        _company_id: currentCompany.id,
-      });
-      
-      if (error) throw error;
-      
-      // A função retorna uma tabela, pegar o primeiro registro
-      if (data && data.length > 0) {
-        // Buscar dados completos do caixa
-        const { data: fullRegister, error: fullError } = await supabase
-          .from('cash_registers')
-          .select('*')
-          .eq('id', data[0].id)
-          .single();
-        if (fullError) throw fullError;
-        return fullRegister;
-      }
-      
-      return null;
-    },
-    enabled: !!currentCompany?.id && !!user?.id,
+  const { data: receivablesDueToday = [] } = useQuery({
+    queryKey: ['receivables-due-today', currentCompany?.id],
+    queryFn: () => caixaService.fetchReceivablesDueToday(currentCompany!.id),
+    enabled: !!currentCompany?.id,
   });
+
+  const { data: completedOSPendingBilling = [] } = useQuery({
+    queryKey: ['completed-os-pending-billing', currentCompany?.id],
+    queryFn: () => ordemServicoService.fetchCompletedOSPendingBilling(currentCompany!.id),
+    enabled: !!currentCompany?.id,
+  });
+
 
   useEffect(() => {
     if (searchParams.get('novo') === 'true') {
