@@ -42,8 +42,10 @@ export function MainLayout({ children }: MainLayoutProps) {
                 <div className="flex items-center gap-2 sm:gap-3">
                   <OverdueOrdersNotification />
                   <div className="h-4 w-[1px] bg-border mx-1 hidden sm:block" />
-                  <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground rounded-full h-9 w-9">
-                    <Settings className="w-5 h-5" />
+                  <Button asChild variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground rounded-full h-9 w-9">
+                    <Link to="/configuracoes" aria-label="Configurações">
+                      <Settings className="w-5 h-5" />
+                    </Link>
                   </Button>
                 </div>
               </div>
