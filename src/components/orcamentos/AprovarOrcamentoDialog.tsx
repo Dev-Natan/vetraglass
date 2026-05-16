@@ -173,6 +173,7 @@ export function AprovarOrcamentoDialog({
               isInitializingDefaults={initializeDefaults.isPending}
               isCaixaAberto={isCaixaAberto}
               valorFinal={valorFinal}
+              quote={quote}
             />
           )}
 
