@@ -26,6 +26,10 @@ export function useCompositionPricing({
   quantity,
   widthB,
   heightB,
+  leaves_count = 1,
+  glasses_count = 1,
+  panels_count = 1,
+  sides_count = 1,
   enabled = true,
   excludeOptionalIds = [],
 }: UseCompositionPricingOptions) {
