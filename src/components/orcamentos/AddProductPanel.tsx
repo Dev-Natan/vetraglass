@@ -351,7 +351,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   const basePrice = customPrice !== null ? customPrice : finalPricePerSqm;
 
   // Calculate prices: use composition when available, otherwise area × price/m²
-  const area = width && height ? (width / 1000) * (height / 1000) : 0;
+  const area = width && height ? ((width + (selectedProduct?.has_multiple_sides ? widthB : 0)) / 1000) * (height / 1000) : 0;
   const unitPrice = (productUsesComposition && compositionPricing.isReady)
     ? compositionPricing.compositionCostPerUnit
     : (area > 0 ? basePrice * area : 0);
