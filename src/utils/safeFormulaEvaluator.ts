@@ -73,6 +73,13 @@ export interface FormulaContext {
   widthB?: number;
   /** Height of side B (if different from main height) */
   heightB?: number;
+  /** New granular variables */
+  widthC?: number;
+  heightC?: number;
+  sides_count?: number;
+  leaves_count?: number;
+  glasses_count?: number;
+  panels_count?: number;
 }
 
 /**
