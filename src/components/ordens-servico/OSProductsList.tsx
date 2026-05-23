@@ -64,6 +64,11 @@ export function OSProductsList({ ordemServicoId }: OSProductsListProps) {
       }, user!.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['os-items', ordemServicoId] });
+      // Clear specific lists that depend on these items
+      queryClient.invalidateQueries({ queryKey: ['os-materials', ordemServicoId] });
+      queryClient.invalidateQueries({ queryKey: ['os-cutting-plan', ordemServicoId] });
+      queryClient.invalidateQueries({ queryKey: ['os-composition-accessories', ordemServicoId] });
+      queryClient.invalidateQueries({ queryKey: ['os-composition-glasses', ordemServicoId] });
       toast.success('Medidas de produção atualizadas! Recalcule o plano para aplicar as mudanças.');
       setIsAdjusting(false);
     },
