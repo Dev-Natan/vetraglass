@@ -127,6 +127,7 @@ export default function Orcamentos() {
   const handleCancelApprovedAction = async (quote: Quote) => {
     await cancelApproved(quote.id);
     setQuoteToCancelApproved(null);
+    setStatusFilter('pending');
   };
 
   const handleApprove = async (quote: Quote) => {
