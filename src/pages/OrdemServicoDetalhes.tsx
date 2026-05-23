@@ -398,7 +398,7 @@ export default function OrdemServicoDetalhes() {
               <span>Produtos</span>
             </TabsTrigger>
             <TabsTrigger value="materials" className="flex items-center gap-2 py-2">
-              <Layers className="w-4 h-4" />
+              <Package className="w-4 h-4" />
               <span>Materiais</span>
             </TabsTrigger>
             <TabsTrigger value="cutting" className="flex items-center gap-2 py-2">
@@ -413,14 +413,18 @@ export default function OrdemServicoDetalhes() {
               <Camera className="w-4 h-4" />
               <span>Fotos</span>
             </TabsTrigger>
-            <TabsTrigger value="details" className="flex items-center gap-2 py-2">
-              <FileText className="w-4 h-4" />
-              <span>Histórico</span>
+            <TabsTrigger value="history" className="flex items-center gap-2 py-2">
+              <History className="w-4 h-4" />
+              <span>Ajustes</span>
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="products" className="mt-4">
              <OSProductsList ordemServicoId={ordem.id} />
+          </TabsContent>
+
+          <TabsContent value="history" className="mt-4">
+             <OSDimensionHistoryList ordemServicoId={ordem.id} />
           </TabsContent>
 
 
