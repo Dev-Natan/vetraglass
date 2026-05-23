@@ -136,6 +136,10 @@ export function useCompositionPricing({
       vaoLarguraB: widthB,
       vaoAlturaB: heightB,
       quantity: quantity || 1,
+      leaves_count,
+      glasses_count,
+      panels_count,
+      sides_count,
     };
 
     try {
