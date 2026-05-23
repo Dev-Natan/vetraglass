@@ -142,6 +142,8 @@ export function useActivationData({
           is_optional: false,
           notes: formula.formula_name,
           side: null,
+          calculation_type: 'formula',
+          applies_to: 'glass',
           isNew: true,
           item_template: {
             id: genericGlassTemplate.id,
