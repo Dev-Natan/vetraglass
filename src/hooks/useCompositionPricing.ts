@@ -10,6 +10,10 @@ interface UseCompositionPricingOptions {
   height: number; // mm
   widthB?: number;
   heightB?: number;
+  leaves_count?: number;
+  glasses_count?: number;
+  panels_count?: number;
+  sides_count?: number;
   quantity: number;
   enabled?: boolean;
   excludeOptionalIds?: string[];
