@@ -35,6 +35,8 @@ export function useComponentEditor({
   const [heightFormula, setHeightFormula] = useState('');
   const [glassName, setGlassName] = useState('');
   const [side, setSide] = useState<string | null>(null);
+  const [calculationType, setCalculationType] = useState<'fixed' | 'per_side' | 'per_leaf' | 'per_glass' | 'formula'>('formula');
+  const [appliesTo, setAppliesTo] = useState<'product' | 'side' | 'leaf' | 'glass' | 'panel'>('side');
 
   const resetForm = () => {
     setSelectedItemTemplateId('');
@@ -46,6 +48,8 @@ export function useComponentEditor({
     setHeightFormula('');
     setGlassName('');
     setSide(null);
+    setCalculationType('formula');
+    setAppliesTo('side');
     setSearchTerm('');
   };
 
@@ -69,6 +73,8 @@ export function useComponentEditor({
       height_formula: activeTab === 'glass' ? heightFormula : null,
       is_optional: false,
       side: side,
+      calculation_type: calculationType,
+      applies_to: appliesTo,
       notes: activeTab === 'glass' ? glassName : null,
       isNew: true,
       item_template: {
@@ -106,6 +112,8 @@ export function useComponentEditor({
           width_formula: itemType === 'glass' ? widthFormula : null,
           height_formula: itemType === 'glass' ? heightFormula : null,
           side: side,
+          calculation_type: calculationType,
+          applies_to: appliesTo,
           notes: itemType === 'glass' ? glassName : item.notes,
         };
       })
@@ -125,6 +133,8 @@ export function useComponentEditor({
     setHeightFormula(item.height_formula || '');
     setGlassName(item.notes || '');
     setSide(item.side || null);
+    setCalculationType(item.calculation_type || 'formula');
+    setAppliesTo(item.applies_to || 'side');
   };
 
   const handleSaveEdit = () => {
@@ -168,6 +178,10 @@ export function useComponentEditor({
     setGlassName,
     side,
     setSide,
+    calculationType,
+    setCalculationType,
+    appliesTo,
+    setAppliesTo,
 
     // actions
     resetForm,

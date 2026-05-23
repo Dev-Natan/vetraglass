@@ -45,6 +45,8 @@ export function useActivationData({
           is_optional,
           notes,
           side,
+          calculation_type,
+          applies_to,
           item_template:item_templates (
             id,
             name,
@@ -108,6 +110,11 @@ export function useActivationData({
         .from('item_templates')
         .select('*')
         .eq('type', dbType as 'accessory' | 'glass' | 'profile' | 'service')
+        .select(`
+          *,
+          default_calculation_type:type,
+          default_applies_to:type
+        `)
         .eq('is_active', true)
         .order('linha')
         .order('name');
@@ -140,6 +147,8 @@ export function useActivationData({
           is_optional: false,
           notes: formula.formula_name,
           side: null,
+          calculation_type: 'formula',
+          applies_to: 'glass',
           isNew: true,
           item_template: {
             id: genericGlassTemplate.id,

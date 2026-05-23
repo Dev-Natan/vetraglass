@@ -32,9 +32,9 @@ interface FormulaEditorProps {
 const commonFormulas = [
   { label: 'Altura', formula: 'Altura', icon: ArrowUpDown, color: 'bg-blue-500' },
   { label: 'Largura', formula: 'Largura', icon: ArrowLeftRight, color: 'bg-green-500' },
-  { label: 'Vez. Comum', formula: '(Largura - 134) / 2', icon: null, color: 'bg-orange-500' },
-  { label: 'Qtde Vez.', formula: '((Altura - 132) / 60) * 2', icon: null, color: 'bg-purple-500' },
-  { label: '(Largura / 2) - 20', formula: '(Largura / 2) - 20', icon: null, color: 'bg-emerald-500' },
+  { label: 'Lado A + B', formula: 'largura_lado_a + largura_lado_b', icon: null, color: 'bg-orange-500' },
+  { label: 'Lados', formula: 'lados', icon: null, color: 'bg-purple-500' },
+  { label: 'Folhas', formula: 'folhas', icon: null, color: 'bg-emerald-500' },
   { label: 'Área m²', formula: 'Altura * Largura / 1000000', icon: null, color: 'bg-purple-500' },
 ];
 
@@ -400,8 +400,8 @@ export const FormulaEditor = forwardRef<HTMLDivElement, FormulaEditorProps>(
         <p className="font-medium">💡 Dicas:</p>
         <ul className="list-disc list-inside space-y-0.5 text-muted-foreground/80">
           <li><strong>Altura</strong> e <strong>Largura</strong> são as dimensões do produto em milímetros</li>
-          <li>Use parênteses para agrupar operações: <code className="font-mono bg-muted px-1 rounded">(Largura / 2) - 20</code></li>
-          <li>Para calcular área em m²: <code className="font-mono bg-muted px-1 rounded">Altura * Largura / 10000</code></li>
+          <li>Variáveis extras: <strong>lados</strong>, <strong>folhas</strong>, <strong>vidros</strong>, <strong>painel</strong>, <strong>folga</strong></li>
+          <li>Dimensões: <strong>largura_lado_a</strong>, <strong>largura_lado_b</strong>, <strong>altura_lado_a</strong>, etc.</li>
         </ul>
       </div>
     </div>

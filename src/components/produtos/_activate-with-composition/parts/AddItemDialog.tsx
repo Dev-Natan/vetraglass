@@ -10,6 +10,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { resolveItemImageUrl } from '@/utils/imageUrl';
 import { FormulaEditor } from '../../FormulaEditor';
 import { GlassFormulaEditor } from '../../GlassFormulaEditor';
@@ -41,6 +48,10 @@ interface AddItemDialogProps {
   setGlassName: (v: string) => void;
   side: string | null;
   setSide: (v: string | null) => void;
+  calculationType: 'fixed' | 'per_side' | 'per_leaf' | 'per_glass' | 'formula';
+  setCalculationType: (v: 'fixed' | 'per_side' | 'per_leaf' | 'per_glass' | 'formula') => void;
+  appliesTo: 'product' | 'side' | 'leaf' | 'glass' | 'panel';
+  setAppliesTo: (v: 'product' | 'side' | 'leaf' | 'glass' | 'panel') => void;
   onAdd: () => void;
 }
 
@@ -69,6 +80,10 @@ export function AddItemDialog(props: AddItemDialogProps) {
     setGlassName,
     side,
     setSide,
+    calculationType,
+    setCalculationType,
+    appliesTo,
+    setAppliesTo,
     onAdd,
   } = props;
   const formRef = useRef<HTMLDivElement>(null);
@@ -304,14 +319,48 @@ export function AddItemDialog(props: AddItemDialogProps) {
                   )}
                 </>
               )}
-              <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-4 border-t pt-4">
+                <div className="space-y-2">
+                  <Label>Tipo de cálculo</Label>
+                  <Select value={calculationType} onValueChange={(v: any) => setCalculationType(v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="fixed">Fixo (1x)</SelectItem>
+                      <SelectItem value="per_side">Por Lado</SelectItem>
+                      <SelectItem value="per_leaf">Por Folha</SelectItem>
+                      <SelectItem value="per_glass">Por Vidro</SelectItem>
+                      <SelectItem value="formula">Fórmula Personalizada</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Aplicação</Label>
+                  <Select value={appliesTo} onValueChange={(v: any) => setAppliesTo(v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a aplicação" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="product">Produto Inteiro</SelectItem>
+                      <SelectItem value="side">Lado</SelectItem>
+                      <SelectItem value="leaf">Folha</SelectItem>
+                      <SelectItem value="glass">Vidro</SelectItem>
+                      <SelectItem value="panel">Painel</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2 border-t pt-4">
                 <Label>Lado de aplicação</Label>
                 <div className="flex gap-2">
                   {[
                     { value: null, label: 'Ambos' },
                     { value: 'A', label: 'Lado A' },
                     { value: 'B', label: 'Lado B' },
-                    { value: 'Todos', label: 'Produto' },
+                    { value: 'C', label: 'Lado C' },
                   ].map(option => (
                     <Button
                       key={String(option.value)}
@@ -326,7 +375,7 @@ export function AddItemDialog(props: AddItemDialogProps) {
                   ))}
                 </div>
                 <p className="text-[10px] text-muted-foreground">
-                  Selecione "Produto" para itens usados uma única vez no conjunto todo (ex: kit fechadura, silicone). Isso evita que o item seja cobrado em dobro em produtos com dois lados.
+                  Selecione o lado específico ou use "Tipo de Cálculo: Fixo" para acessórios únicos.
                 </p>
               </div>
             </div>

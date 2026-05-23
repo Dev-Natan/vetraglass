@@ -13,7 +13,7 @@ import {
 import { resolveItemImageUrl } from '@/utils/imageUrl';
 import { FormulaEditor } from '../../FormulaEditor';
 import { GlassFormulaEditor } from '../../GlassFormulaEditor';
-import { typeColors, typeLabels } from '../constants';
+import { typeColors, typeLabels, itemTypeTabs } from '../constants';
 import type { ComponentItem } from '../types';
 
 interface ComponentRowProps {
@@ -40,6 +40,10 @@ interface ComponentRowProps {
   setGlassName: (v: string) => void;
   side: string | null;
   setSide: (v: string | null) => void;
+  calculationType: 'fixed' | 'per_side' | 'per_leaf' | 'per_glass' | 'formula';
+  setCalculationType: (v: 'fixed' | 'per_side' | 'per_leaf' | 'per_glass' | 'formula') => void;
+  appliesTo: 'product' | 'side' | 'leaf' | 'glass' | 'panel';
+  setAppliesTo: (v: 'product' | 'side' | 'leaf' | 'glass' | 'panel') => void;
 }
 
 export function ComponentRow({
@@ -65,6 +69,10 @@ export function ComponentRow({
   setGlassName,
   side,
   setSide,
+  calculationType,
+  setCalculationType,
+  appliesTo,
+  setAppliesTo,
 }: ComponentRowProps) {
   const itemType = item.item_template?.type;
 
@@ -183,6 +191,39 @@ export function ComponentRow({
                   </Select>
                 </div>
               )}
+              <div className="grid grid-cols-2 gap-4 border-t pt-4">
+                <div className="space-y-2">
+                  <Label className="text-sm">Tipo de cálculo</Label>
+                  <Select value={calculationType} onValueChange={(v: any) => setCalculationType(v)}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="fixed">Fixo (1x)</SelectItem>
+                      <SelectItem value="per_side">Por Lado</SelectItem>
+                      <SelectItem value="per_leaf">Por Folha</SelectItem>
+                      <SelectItem value="per_glass">Por Vidro</SelectItem>
+                      <SelectItem value="formula">Fórmula Personalizada</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm">Aplicação</Label>
+                  <Select value={appliesTo} onValueChange={(v: any) => setAppliesTo(v)}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="product">Produto Inteiro</SelectItem>
+                      <SelectItem value="side">Lado</SelectItem>
+                      <SelectItem value="leaf">Folha</SelectItem>
+                      <SelectItem value="glass">Vidro</SelectItem>
+                      <SelectItem value="panel">Painel</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
               <div className="space-y-2 mt-4 pt-4 border-t">
                 <Label className="text-sm">Lado de aplicação</Label>
                 <div className="flex gap-2">
@@ -190,7 +231,7 @@ export function ComponentRow({
                     { value: null, label: 'Ambos' },
                     { value: 'A', label: 'Lado A' },
                     { value: 'B', label: 'Lado B' },
-                    { value: 'Todos', label: 'Produto' },
+                    { value: 'C', label: 'Lado C' },
                   ].map(option => (
                     <Button
                       key={String(option.value)}
@@ -205,7 +246,7 @@ export function ComponentRow({
                   ))}
                 </div>
                 <p className="text-[10px] text-muted-foreground mt-1">
-                  "Produto" = usado uma única vez no conjunto todo.
+                  Use "Tipo: Fixo" para itens únicos (kit, silicone, etc).
                 </p>
               </div>
             </div>
@@ -288,16 +329,24 @@ export function ComponentRow({
               )}
             </>
           )}
+          {calculationType && calculationType !== 'formula' && (
+            <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200">
+              {calculationType === 'fixed' && 'Fixo'}
+              {calculationType === 'per_side' && 'Por Lado'}
+              {calculationType === 'per_leaf' && 'Por Folha'}
+              {calculationType === 'per_glass' && 'Por Vidro'}
+            </Badge>
+          )}
           {side && (
             <Badge 
               variant="outline" 
               className={
-                side === 'A' ? "bg-blue-50 text-blue-600" : 
-                side === 'B' ? "bg-green-50 text-green-600" : 
-                "bg-purple-50 text-purple-600"
+                side === 'A' ? "bg-blue-50 text-blue-600 border-blue-200" : 
+                side === 'B' ? "bg-green-50 text-green-600 border-green-200" : 
+                "bg-purple-50 text-purple-600 border-purple-200"
               }
             >
-              {side === 'Todos' ? 'Produto Todo' : `Lado ${side}`}
+              Lado {side}
             </Badge>
           )}
           {item.isNew && (

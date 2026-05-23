@@ -18,7 +18,13 @@ interface QuoteItemForConsumption {
   height: number | null;
   width_b?: number | null;
   height_b?: number | null;
+  width_c?: number | null;
+  height_c?: number | null;
   quantity: number;
+  leaves_count?: number;
+  glasses_count?: number;
+  panels_count?: number;
+  sides_count?: number;
   company_product_id?: string | null;
   product_template_id?: string | null;
 }
@@ -32,6 +38,8 @@ interface ProductCompositionItem {
   height_formula: string | null;
   pieces_quantity: number | null;
   side?: string | null;
+  calculation_type?: string | null;
+  applies_to?: string | null;
   company_items?: {
     id: string;
     name: string;
@@ -90,7 +98,14 @@ export async function generateMaterialConsumption(
       const height = quoteItem.height || 0;
       const width_b = quoteItem.width_b || 0;
       const height_b = quoteItem.height_b || 0;
+      const width_c = quoteItem.width_c || 0;
+      const height_c = quoteItem.height_c || 0;
       const qty = quoteItem.quantity || 1;
+      
+      const sides_count = quoteItem.sides_count || 1;
+      const leaves_count = quoteItem.leaves_count || 1;
+      const glasses_count = quoteItem.glasses_count || 1;
+      const panels_count = quoteItem.panels_count || 1;
 
       // Fetch product composition and info
       let composition: ProductCompositionItem[] = [];
@@ -117,6 +132,8 @@ export async function generateMaterialConsumption(
             height_formula,
             pieces_quantity,
             side,
+            calculation_type,
+            applies_to,
             company_items (
               id,
               name,
@@ -158,6 +175,8 @@ export async function generateMaterialConsumption(
             height_formula,
             pieces_quantity,
             side,
+            calculation_type,
+            applies_to,
             item_templates (
               id,
               name,
@@ -202,36 +221,60 @@ export async function generateMaterialConsumption(
           }
         }
 
-        // Determine which sides to process
-        const sidesToProcess: (string | null)[] = [];
-        if (!hasMultipleSides) {
-          sidesToProcess.push(null);
-        } else if (component.side === 'A' || component.side === 'B') {
-          sidesToProcess.push(component.side);
-        } else if (component.side === 'Ambos' || !component.side) {
-          // Default: Both sides
-          sidesToProcess.push('A', 'B');
-        } else if (component.side === 'Todos' || component.side === 'Produto') {
-          // "Todos" or "Produto" means only one record (unit for whole product)
-          sidesToProcess.push(null);
+        // Determine which sides/contexts to process based on applies_to
+        const contextsToProcess: { side: string | null }[] = [];
+        const appliesTo = component.applies_to || 'side';
+
+        if (appliesTo === 'side' && hasMultipleSides) {
+          if (component.side === 'B') {
+            contextsToProcess.push({ side: 'B' });
+          } else if (component.side === 'C') {
+            contextsToProcess.push({ side: 'C' });
+          } else if (component.side === 'Ambos') {
+            contextsToProcess.push({ side: 'A' }, { side: 'B' });
+          } else if (!component.side || component.side === 'A') {
+            contextsToProcess.push({ side: 'A' });
+          }
         } else {
-          // Fallback for any other value
-          sidesToProcess.push(null);
+          // product, leaf, glass, panel - processed once (multipliers handled by calculation_type)
+          contextsToProcess.push({ side: null });
         }
 
-        for (const currentSide of sidesToProcess) {
+        for (const context of contextsToProcess) {
+          const currentSide = context.side;
           const formulaContext = {
             width,
             height,
             widthB: width_b,
-            heightB: height_b
+            heightB: height_b,
+            widthC: width_c,
+            heightC: height_c,
+            sides_count,
+            leaves_count,
+            glasses_count,
+            panels_count,
           };
 
-          // Evaluate the quantity formula
+          // Determine multiplier based on calculation_type
+          let multiplier = 1;
+          const calcType = component.calculation_type || 'formula';
+          
+          if (calcType === 'per_side') {
+            multiplier = sides_count;
+          } else if (calcType === 'per_leaf') {
+            multiplier = leaves_count;
+          } else if (calcType === 'per_glass') {
+            multiplier = glasses_count;
+          } else if (calcType === 'fixed') {
+            multiplier = 1;
+          }
+
+          // Evaluate the pieces formula
           const piecesQty = (component as any).pieces_formula 
             ? evaluateFormula((component as any).pieces_formula, formulaContext, undefined, currentSide)
             : (component.pieces_quantity || 1);
-          let calculatedQty = piecesQty * qty;
+          
+          let calculatedQty = piecesQty * qty * multiplier;
 
           // If there's a quantity formula, evaluate it
           if (component.quantity_formula && component.quantity_formula.trim() !== '' && component.quantity_formula !== '1') {
@@ -239,20 +282,20 @@ export async function generateMaterialConsumption(
             if (formulaResult > 0) {
               // For linear items (profiles), result is in mm, convert to meters
               if (itemInfo.unit === 'm' || itemInfo.unit === 'metro' || itemInfo.unit === 'metros') {
-                calculatedQty = (formulaResult / 1000) * piecesQty * qty;
+                calculatedQty = (formulaResult / 1000) * piecesQty * qty * multiplier;
               } else if (itemInfo.unit === 'm²' || itemInfo.unit === 'm2') {
                 // For area items (glass), result is in mm², convert to m²
-                calculatedQty = (formulaResult / 1000000) * piecesQty * qty;
+                calculatedQty = (formulaResult / 1000000) * piecesQty * qty * multiplier;
               } else {
                 // For units/pieces, use the formula result directly
-                calculatedQty = formulaResult * piecesQty * qty;
+                calculatedQty = formulaResult * piecesQty * qty * multiplier;
               }
             }
           } else if (itemInfo.unit === 'm²' || itemInfo.unit === 'm2') {
             // Fallback: if no formula, calculate area based on dimensions (m²)
-            const targetWidth = currentSide === 'B' ? width_b : width;
-            const targetHeight = currentSide === 'B' ? height_b : height;
-            calculatedQty = ((targetWidth * targetHeight) / 1000000) * piecesQty * qty;
+            const targetWidth = currentSide === 'B' ? width_b : currentSide === 'C' ? width_c : width;
+            const targetHeight = currentSide === 'B' ? height_b : currentSide === 'C' ? height_c : height;
+            calculatedQty = ((targetWidth * targetHeight) / 1000000) * piecesQty * qty * multiplier;
           }
 
           // Skip zero quantities
@@ -269,8 +312,8 @@ export async function generateMaterialConsumption(
             unit: itemInfo.unit,
             quantity_calculated: Math.round(calculatedQty * 1000) / 1000, // Round to 3 decimals
             formula_used: component.quantity_formula || null,
-            input_width: currentSide === 'B' ? width_b : width,
-            input_height: currentSide === 'B' ? height_b : height,
+            input_width: currentSide === 'B' ? width_b : currentSide === 'C' ? width_c : width,
+            input_height: currentSide === 'B' ? height_b : currentSide === 'C' ? height_c : height,
             input_quantity: qty,
             status: 'pending',
           });
