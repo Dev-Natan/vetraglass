@@ -462,9 +462,11 @@ export async function generateOSDocuments(
         const accessoryMaterials = [];
         const width = item.largura_producao || 0;
         const height = item.altura_producao || 0;
-        const width_b = item.width_production_b || width;
-        const height_b = item.height_production_b || height;
-        const formulaContext = { width, height, widthB: width_b, heightB: height_b };
+        const width_b = item.largura_producao_b || width;
+        const height_b = item.altura_producao_b || height;
+        const width_c = item.largura_producao_c || width;
+        const height_c = item.altura_producao_c || height;
+        const formulaContext = { width, height, widthB: width_b, heightB: height_b, widthC: width_c, heightC: height_c };
 
         for (const comp of accessories) {
           const piecesQty = comp.pieces_quantity || 1;
