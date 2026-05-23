@@ -323,7 +323,7 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
                         <TableRow className="bg-muted/50">
                           <TableHead className="w-12">✓</TableHead>
                           <TableHead>Perfil</TableHead>
-                          {isAdmin && <TableHead>Fórmula</TableHead>}
+                          
                           <TableHead>Posição</TableHead>
                           <TableHead className="text-right">Medida</TableHead>
                           <TableHead className="text-right">Qtd</TableHead>
@@ -352,13 +352,6 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
                                     {cut.side && <Badge variant="outline" className="w-fit text-[10px] px-1 py-0 mt-0.5">Lado {cut.side}</Badge>}
                                   </div>
                                 </TableCell>
-                                {isAdmin && (
-                                  <TableCell>
-                                    <Badge variant="outline" className="font-mono text-xs">
-                                      {cut.formula}
-                                    </Badge>
-                                  </TableCell>
-                                )}
                                 <TableCell>
                                   <Badge variant={cut.position === 'Altura' ? 'default' : 'secondary'}>
                                     {cut.position}
