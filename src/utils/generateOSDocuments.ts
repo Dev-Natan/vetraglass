@@ -417,24 +417,80 @@ export async function generateOSDocuments(
     if (allCuts.length > 0) {
       const optimized = optimizeProfiles(allCuts);
 
-      const materialsToInsert = optimized.profiles.map(profile => ({
-        ordem_servico_id: ordemServicoId,
-        item_template_id: profile.itemTemplateId,
-        item_name: profile.itemName,
-        item_type: 'profile',
-        cut_length_mm: profile.cuts.length > 0 ? profile.cuts[0].length : 0,
-        pieces_count: profile.cuts.reduce((sum, c) => sum + c.qty, 0),
-        total_length_mm: profile.totalLengthMm,
-        bar_length_mm: profile.barLengthMm,
-        bars_needed: profile.barsNeeded,
-        waste_mm: profile.wasteMm,
-        waste_percent: profile.wastePercent,
-        unit: profile.unit,
-        notes: profile.cuts.map(c => `${c.qty}x ${c.length}mm`).join(', '),
-        os_item_id: (allCuts.find(c => c.itemTemplateId === profile.itemTemplateId))?.os_item_id
-      }));
+      const materialsToInsert = optimized.profiles.map(profile => {
+        const matchingCut = allCuts.find(c => c.itemTemplateId === profile.itemTemplateId);
+        return {
+          ordem_servico_id: ordemServicoId,
+          item_template_id: profile.itemTemplateId,
+          item_name: profile.itemName,
+          item_type: 'profile',
+          cut_length_mm: profile.cuts.length > 0 ? profile.cuts[0].length : 0,
+          pieces_count: profile.cuts.reduce((sum, c) => sum + c.qty, 0),
+          total_length_mm: profile.totalLengthMm,
+          bar_length_mm: profile.barLengthMm,
+          bars_needed: profile.barsNeeded,
+          waste_mm: profile.wasteMm,
+          waste_percent: profile.wastePercent,
+          unit: profile.unit,
+          notes: profile.cuts.map(c => `${c.qty}x ${c.length}mm`).join(', '),
+          os_item_id: matchingCut?.os_item_id
+        };
+      });
 
       await supabase.from('os_materials').insert(materialsToInsert);
+    }
+
+    // Now handle accessories (non-profile items)
+    for (const item of osItems) {
+      if (!item.product_id) continue;
+      
+      const [allComposition] = await Promise.all([
+        getProductComposition(item.product_id)
+      ]);
+
+      const accessories = allComposition.filter(comp => 
+        comp.item_template.type !== 'profile' && comp.item_template.type !== 'glass'
+      );
+
+      if (accessories.length > 0) {
+        const accessoryMaterials = [];
+        const width = item.largura_producao || 0;
+        const height = item.altura_producao || 0;
+        const width_b = item.width_production_b || width;
+        const height_b = item.height_production_b || height;
+        const formulaContext = { width, height, widthB: width_b, heightB: height_b };
+
+        for (const comp of accessories) {
+          const piecesQty = comp.pieces_quantity || 1;
+          const qty = item.quantity || 1;
+          
+          let calculatedQty = piecesQty * qty;
+          if (comp.quantity_formula && comp.quantity_formula !== '1') {
+            const formulaResult = evaluateFormula(comp.quantity_formula, formulaContext);
+            if (formulaResult > 0) {
+              calculatedQty = formulaResult * piecesQty * qty;
+            }
+          }
+
+          if (calculatedQty <= 0) continue;
+
+          accessoryMaterials.push({
+            ordem_servico_id: ordemServicoId,
+            os_item_id: item.id,
+            item_template_id: comp.item_template_id,
+            item_name: comp.item_template.name,
+            item_type: comp.item_template.type,
+            unit: comp.item_template.unit,
+            pieces_count: calculatedQty,
+            total_length_mm: 0,
+            notes: `Componente do produto: ${item.product_name}`
+          });
+        }
+
+        if (accessoryMaterials.length > 0) {
+          await supabase.from('os_materials').insert(accessoryMaterials);
+        }
+      }
     }
 
     return { success: true };
