@@ -45,6 +45,8 @@ export function useActivationData({
           is_optional,
           notes,
           side,
+          calculation_type,
+          applies_to,
           item_template:item_templates (
             id,
             name,
