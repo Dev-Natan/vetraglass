@@ -6,45 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Trash2, Package, Layers, Palette, Maximize2, Plus, X } from 'lucide-react';
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
 import { useItemTypes } from '@/hooks/useItemTypes';
+import type { QuoteItem, QuoteComponent } from './_novo-orcamento/types';
 
-interface QuoteComponent {
-  id?: string;
-  description: string;
-  quantity: number;
-  unit_price: number;
-}
-
-interface QuoteItem {
-  id?: string;
-  company_product_id?: string;
-  product_template_id?: string;
-  company_item_id?: string;
-  item_type?: 'product' | 'item';
-  description: string;
-  width?: number;
-  height?: number;
-  vao_width?: number;
-  vao_height?: number;
-  width_b?: number;
-  height_b?: number;
-  vao_width_b?: number;
-  vao_height_b?: number;
-  quantity: number;
-  base_price_m2: number;
-  unit_price: number;
-  total_price: number;
-  image_url?: string | null;
-  linha?: string | null;
-  category?: string;
-  unit?: string;
-  has_glass?: boolean;
-  glass_color?: string;
-  glass_thickness?: string;
-  aluminum_color?: string;
-  include_contramarco?: boolean;
-  excluded_optional_ids?: string[];
-  components?: QuoteComponent[];
-}
 
 const glassColorLabels: Record<string, string> = {
   incolor: 'Incolor',
