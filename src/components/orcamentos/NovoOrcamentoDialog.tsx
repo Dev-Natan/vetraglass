@@ -146,8 +146,12 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
     category?: string;
     width: number;
     height: number;
+    width_b?: number;
+    height_b?: number;
     vao_width?: number;
     vao_height?: number;
+    vao_width_b?: number;
+    vao_height_b?: number;
     quantity: number;
     unit_price: number;
     total_price: number;
@@ -169,6 +173,8 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
       description: product.name,
       width: product.width,
       height: product.height,
+      width_b: product.width_b,
+      height_b: product.height_b,
       vao_width: product.vao_width,
       vao_height: product.vao_height,
       quantity: product.quantity,

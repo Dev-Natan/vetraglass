@@ -37,6 +37,10 @@ export interface QuoteItem {
   height?: number;
   vao_width?: number;
   vao_height?: number;
+  width_b?: number;
+  height_b?: number;
+  vao_width_b?: number;
+  vao_height_b?: number;
   quantity: number;
   base_price_m2: number;
   unit_price: number;

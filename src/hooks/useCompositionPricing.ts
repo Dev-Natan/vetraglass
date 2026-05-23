@@ -8,6 +8,8 @@ interface UseCompositionPricingOptions {
   companyProductId?: string;
   width: number; // mm
   height: number; // mm
+  widthB?: number;
+  heightB?: number;
   quantity: number;
   enabled?: boolean;
   excludeOptionalIds?: string[];
@@ -18,6 +20,8 @@ export function useCompositionPricing({
   width,
   height,
   quantity,
+  widthB,
+  heightB,
   enabled = true,
   excludeOptionalIds = [],
 }: UseCompositionPricingOptions) {
@@ -31,7 +35,7 @@ export function useCompositionPricing({
       const { data, error } = await supabase
         .from('company_product_items')
         .select(`
-          id, quantity_formula, width_formula, height_formula, pieces_quantity, cut_angle, is_optional, section,
+          id, quantity_formula, width_formula, height_formula, pieces_quantity, cut_angle, is_optional, section, side,
           item_template:item_templates(id, name, type, unit, bar_length_mm, weight_per_bar, weight_per_meter),
           company_item:company_items(id, name, type, unit, cost, cost_per_bar, cost_per_kg, cost_per_meter, bar_length_mm, weight_kg, weight_per_meter)
         `)
@@ -106,6 +110,7 @@ export function useCompositionPricing({
         heightFormula: ci.quantity_formula,
         quantityFormula: ci.quantity_formula,
         piecesQuantity: ci.pieces_quantity || 1,
+        side: ci.side,
         cutAngle: ci.cut_angle,
         lossPercent: 0,
         barLengthMm: compItem?.bar_length_mm || tpl?.bar_length_mm || 6000,
@@ -120,6 +125,8 @@ export function useCompositionPricing({
     const pricingInput: PricingInput = {
       vaoLargura: width,
       vaoAltura: height,
+      vaoLarguraB: widthB,
+      vaoAlturaB: heightB,
       quantity: quantity || 1,
     };
 
@@ -128,7 +135,7 @@ export function useCompositionPricing({
     } catch {
       return null;
     }
-  }, [compositionItems, fallbackCompanyItems, width, height, quantity, excludeOptionalIds]);
+  }, [compositionItems, fallbackCompanyItems, width, height, widthB, heightB, quantity, excludeOptionalIds]);
 
   const hasComposition = !!compositionItems && compositionItems.length > 0;
   const compositionCostPerUnit = result ? result.totalCost / (quantity || 1) : 0;

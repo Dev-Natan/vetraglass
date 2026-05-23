@@ -6,41 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Trash2, Package, Layers, Palette, Maximize2, Plus, X } from 'lucide-react';
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
 import { useItemTypes } from '@/hooks/useItemTypes';
+import type { QuoteItem, QuoteComponent } from './_novo-orcamento/types';
 
-interface QuoteComponent {
-  id?: string;
-  description: string;
-  quantity: number;
-  unit_price: number;
-}
-
-interface QuoteItem {
-  id?: string;
-  company_product_id?: string;
-  product_template_id?: string;
-  company_item_id?: string;
-  item_type?: 'product' | 'item';
-  description: string;
-  width?: number;
-  height?: number;
-  vao_width?: number;
-  vao_height?: number;
-  quantity: number;
-  base_price_m2: number;
-  unit_price: number;
-  total_price: number;
-  image_url?: string | null;
-  linha?: string | null;
-  category?: string;
-  unit?: string;
-  has_glass?: boolean;
-  glass_color?: string;
-  glass_thickness?: string;
-  aluminum_color?: string;
-  include_contramarco?: boolean;
-  excluded_optional_ids?: string[];
-  components?: QuoteComponent[];
-}
 
 const glassColorLabels: Record<string, string> = {
   incolor: 'Incolor',
@@ -51,7 +18,7 @@ const glassColorLabels: Record<string, string> = {
 interface QuoteItemCardProps {
   item: QuoteItem;
   index: number;
-  onUpdate: (index: number, field: keyof QuoteItem, value: any) => void;
+  onUpdate: (index: number, field: keyof QuoteItem, value: unknown) => void;
   onRemove: (index: number) => void;
   formatCurrency: (value: number) => string;
 }
@@ -73,7 +40,7 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
   };
 
   const imageUrl = getProductImage(item.image_url);
-  const area = item.width && item.height ? ((item.width / 1000) * (item.height / 1000)).toFixed(2) : null;
+  const area = item.width && item.height ? (((item.width + (item.width_b || 0)) / 1000) * (item.height / 1000)).toFixed(2) : null;
   const isItem = item.item_type === 'item';
 
   const addComponent = () => {
@@ -257,6 +224,34 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
                   className="h-9"
                 />
               </div>
+
+              {item.width_b !== undefined && (
+                <>
+                  <div>
+                    <label className="text-xs text-muted-foreground">Largura Lado B (mm)</label>
+                    <Input
+                      type="number"
+                      value={item.width_b || ''}
+                      onChange={(e) => onUpdate(index, 'width_b', Number(e.target.value))}
+                      placeholder="1200"
+                      min={0}
+                      className="h-9"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">Altura Lado B (mm)</label>
+                    <Input
+                      type="number"
+                      value={item.height_b || ''}
+                      onChange={(e) => onUpdate(index, 'height_b', Number(e.target.value))}
+                      placeholder="1500"
+                      min={0}
+                      className="h-9"
+                    />
+                  </div>
+                </>
+              )}
+
               <div>
                 <label className="text-xs text-muted-foreground">Qtd</label>
                 <Input
@@ -351,7 +346,7 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
             <div className="text-xs text-muted-foreground">
               {isItem 
                 ? `${item.quantity} ${item.unit || 'un'} × ${formatCurrency(item.unit_price)}`
-                : area && `${area} m² × ${item.quantity} un`
+                : area && `${area} m² ${item.width_b ? '(Lado A+B) ' : ''}× ${item.quantity} un`
               }
             </div>
             <div className="text-right">

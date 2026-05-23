@@ -58,6 +58,8 @@ export const DEFAULT_PRICING_POLICY: PricingPolicy = {
 export interface PricingInput {
   vaoLargura: number;   // mm
   vaoAltura: number;    // mm
+  vaoLarguraB?: number; // mm
+  vaoAlturaB?: number;  // mm
   quantity: number;
   folgaLargura?: number;
   folgaAltura?: number;
@@ -73,6 +75,7 @@ export interface CompositionItemInput {
   heightFormula: string | null;
   quantityFormula: string;
   piecesQuantity: number;
+  side?: string | null;
   piecesFormula?: string | null;
   cutAngle?: number | null;
   lossPercent: number;
@@ -153,9 +156,10 @@ function calculateItemCost(
   item: CompositionItemInput,
   input: PricingInput,
   folgaCtx: FormulaContext,
+  side?: string | null,
 ): CalculatedItem {
   const piecesQty = item.piecesFormula 
-    ? evaluateFormula(item.piecesFormula, folgaCtx)
+    ? evaluateFormula(item.piecesFormula, folgaCtx, undefined, side)
     : (item.piecesQuantity || 1);
   const totalPieces = piecesQty * input.quantity;
   
@@ -171,8 +175,8 @@ function calculateItemCost(
 
   if (item.itemType === 'glass') {
     // Glass: calculate area in m²
-    const calcW = evaluateFormula(item.widthFormula || 'Largura', folgaCtx);
-    const calcH = evaluateFormula(item.heightFormula || 'Altura', folgaCtx);
+    const calcW = evaluateFormula(item.widthFormula || 'Largura', folgaCtx, undefined, side);
+    const calcH = evaluateFormula(item.heightFormula || 'Altura', folgaCtx, undefined, side);
     calculatedWidth = calcW;
     calculatedHeight = calcH;
     const areaM2 = (calcW * calcH) / 1_000_000;
@@ -187,10 +191,10 @@ function calculateItemCost(
   } else if (item.itemType === 'profile') {
     // Profile: calculate length in mm
     const length = item.heightFormula
-      ? evaluateFormula(item.heightFormula, folgaCtx)
+      ? evaluateFormula(item.heightFormula, folgaCtx, undefined, side)
       : item.widthFormula
-        ? evaluateFormula(item.widthFormula, folgaCtx)
-        : evaluateFormula(item.quantityFormula, folgaCtx);
+        ? evaluateFormula(item.widthFormula, folgaCtx, undefined, side)
+        : evaluateFormula(item.quantityFormula, folgaCtx, undefined, side);
     
     calculatedLength = length;
     consumoTotal = length * piecesQty; // total mm
@@ -320,10 +324,12 @@ export function calculatePricing(
     height: input.vaoAltura,
     folgaLargura: input.folgaLargura ?? 0,
     folgaAltura: input.folgaAltura ?? 0,
+    widthB: input.vaoLarguraB,
+    heightB: input.vaoAlturaB,
   };
 
   // ─── Level 2: Composition ───
-  const items = compositionItems.map(item => calculateItemCost(item, input, folgaCtx));
+  const items = compositionItems.map(item => calculateItemCost(item, input, folgaCtx, item.side));
   
   const costByType: Record<string, number> = {};
   items.forEach(item => {

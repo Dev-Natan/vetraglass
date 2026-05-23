@@ -51,6 +51,7 @@ type ProductTemplate = {
   min_height: number | null;
   max_height: number | null;
   base_price: number | null;
+  has_multiple_sides: boolean | null;
 };
 
 type ProductTemplateItem = {
@@ -61,6 +62,7 @@ type ProductTemplateItem = {
   pieces_quantity: number;
   is_optional: boolean;
   notes: string | null;
+  side: string | null;
   cut_angle: number;
   width_formula: string | null;
   height_formula: string | null;
@@ -123,6 +125,7 @@ export default function EditarProduto() {
   const [heightFormula, setHeightFormula] = useState('');
   const [piecesFormula, setPiecesFormula] = useState<string | null>(null);
   const [glassName, setGlassName] = useState('');
+  const [side, setSide] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -134,6 +137,7 @@ export default function EditarProduto() {
     has_glass: true,
     gap_type: 'normal',
     base_price: '',
+    has_multiple_sides: false,
   });
 
   const [fiscalData, setFiscalData] = useState<FiscalFieldsData>({
@@ -313,6 +317,7 @@ export default function EditarProduto() {
         has_glass: true,
         gap_type: 'normal',
         base_price: product.base_price?.toString() || '',
+        has_multiple_sides: (product as any).has_multiple_sides || false,
       });
       // Load fiscal data
       setFiscalData({
@@ -335,6 +340,7 @@ export default function EditarProduto() {
         description: formData.description,
         composition_finished: formData.composition_finished,
         base_price: formData.base_price ? parseFloat(formData.base_price) : 0,
+        has_multiple_sides: formData.has_multiple_sides,
       };
 
       // Include fiscal data if fiscal mode is enabled
@@ -379,6 +385,7 @@ export default function EditarProduto() {
         width_formula?: string | null;
         height_formula?: string | null;
         notes?: string | null;
+        side?: string | null;
       } = {
         product_template_id: id,
         item_template_id: selectedItemToAdd,
@@ -389,6 +396,7 @@ export default function EditarProduto() {
         width_formula: activeTab === 'glass' ? (widthFormula || null) : null,
         height_formula: activeTab === 'glass' ? (heightFormula || null) : null,
         notes: activeTab === 'glass' ? (glassName || null) : null,
+        side: side || null,
       };
 
       // If not SaaS admin, must include company_id
@@ -406,6 +414,7 @@ export default function EditarProduto() {
       toast.success('Item adicionado!');
       setIsAddItemDialogOpen(false);
       setSelectedItemToAdd('');
+      setSide(null);
       setQuantityFormula('1');
       setPiecesQuantity(1);
       setPiecesFormula(null);
@@ -449,6 +458,7 @@ export default function EditarProduto() {
         updateData.width_formula = widthFormula || null;
         updateData.height_formula = heightFormula || null;
         updateData.notes = glassName || null;
+        updateData.side = side || null;
         updateData.quantity_formula = quantityFormula || '1';
         updateData.pieces_quantity = piecesQuantity;
         updateData.pieces_formula = piecesFormula || null;
@@ -457,6 +467,7 @@ export default function EditarProduto() {
         updateData.pieces_quantity = piecesQuantity;
         updateData.pieces_formula = piecesFormula || null;
         updateData.cut_angle = cutAngle;
+        updateData.side = side || null;
       }
       
       const { error } = await supabase
@@ -485,6 +496,7 @@ export default function EditarProduto() {
       setWidthFormula(item.width_formula || '');
       setHeightFormula(item.height_formula || '');
       setGlassName(item.notes || '');
+      setSide(item.side || null);
       setQuantityFormula(item.quantity_formula || '1');
       setPiecesQuantity(item.pieces_quantity || 1);
       setPiecesFormula((item as any).pieces_formula || null);
@@ -492,6 +504,7 @@ export default function EditarProduto() {
       setQuantityFormula(item.quantity_formula || '1');
       setPiecesQuantity(item.pieces_quantity || 1);
       setPiecesFormula((item as any).pieces_formula || null);
+      setSide(item.side || null);
       setCutAngle(item.cut_angle || 90);
     }
     
@@ -652,6 +665,16 @@ export default function EditarProduto() {
                     />
                     <Label htmlFor="composition-finished" className="text-xs font-medium cursor-pointer whitespace-nowrap">
                       Concluído
+                    </Label>
+                  </div>
+                  <div className="flex items-center gap-2 border rounded-md px-3 h-10 bg-muted/20 shrink-0">
+                    <Checkbox 
+                      id="has-multiple-sides" 
+                      checked={formData.has_multiple_sides} 
+                      onCheckedChange={(checked) => setFormData({ ...formData, has_multiple_sides: checked === true })}
+                    />
+                    <Label htmlFor="has-multiple-sides" className="text-xs font-medium cursor-pointer whitespace-nowrap">
+                      Múltiplos Lados
                     </Label>
                   </div>
                 </div>
@@ -853,6 +876,13 @@ export default function EditarProduto() {
                             </span>
                           </div>
                         )}
+                        {item.side && (
+                          <div className="flex items-center justify-center gap-1">
+                            <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                              Lado: {item.side}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     )}
                     
@@ -866,6 +896,11 @@ export default function EditarProduto() {
                         }`}>
                           {getFormulaType(item.quantity_formula)}
                         </span>
+                        {item.side && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                            Lado: {item.side}
+                          </span>
+                        )}
                       </div>
                     )}
                     
@@ -1038,6 +1073,22 @@ export default function EditarProduto() {
                 </Select>
               </div>
               
+              {/* Side Selection for Multi-side products */}
+              {formData.has_multiple_sides && (
+                <div className="space-y-2">
+                  <Label>Lado</Label>
+                  <Select value={side || 'A'} onValueChange={setSide}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background border shadow-lg z-50">
+                      <SelectItem value="A">Lado A</SelectItem>
+                      <SelectItem value="B">Lado B</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               {/* Show GlassFormulaEditor for glass items, FormulaEditor for others */}
               {activeTab === 'glass' ? (
                 <>
@@ -1122,6 +1173,22 @@ export default function EditarProduto() {
             </DialogHeader>
             
             <div className="space-y-4">
+              {/* Side Selection for Multi-side products */}
+              {formData.has_multiple_sides && (
+                <div className="space-y-2">
+                  <Label>Lado</Label>
+                  <Select value={side || 'A'} onValueChange={setSide}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background border shadow-lg z-50">
+                      <SelectItem value="A">Lado A</SelectItem>
+                      <SelectItem value="B">Lado B</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               {/* Show GlassFormulaEditor for glass items, FormulaEditor for others */}
               {editingItem?.item_template?.type === 'glass' ? (
                 <>
