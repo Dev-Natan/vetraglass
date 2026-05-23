@@ -183,6 +183,27 @@ export function ComponentRow({
                   </Select>
                 </div>
               )}
+              <div className="space-y-2 mt-4 pt-4 border-t">
+                <Label className="text-sm">Lado de aplicação</Label>
+                <div className="flex gap-2">
+                  {[
+                    { value: null, label: 'Ambos' },
+                    { value: 'A', label: 'Lado A' },
+                    { value: 'B', label: 'Lado B' },
+                  ].map(option => (
+                    <Button
+                      key={String(option.value)}
+                      type="button"
+                      variant={side === option.value ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setSide(option.value)}
+                      className="flex-1 text-xs"
+                    >
+                      {option.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 

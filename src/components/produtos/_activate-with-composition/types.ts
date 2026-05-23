@@ -17,6 +17,7 @@ export interface ComponentItem {
   width_formula: string | null;
   height_formula: string | null;
   is_optional: boolean;
+  notes: string | null;
   side: string | null;
   isNew?: boolean;
   item_template: {

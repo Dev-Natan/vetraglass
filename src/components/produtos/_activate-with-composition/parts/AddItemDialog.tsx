@@ -304,6 +304,30 @@ export function AddItemDialog(props: AddItemDialogProps) {
                   )}
                 </>
               )}
+              <div className="space-y-2">
+                <Label>Lado de aplicação</Label>
+                <div className="flex gap-2">
+                  {[
+                    { value: null, label: 'Ambos' },
+                    { value: 'A', label: 'Lado A' },
+                    { value: 'B', label: 'Lado B' },
+                  ].map(option => (
+                    <Button
+                      key={String(option.value)}
+                      type="button"
+                      variant={side === option.value ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setSide(option.value)}
+                      className="flex-1"
+                    >
+                      {option.label}
+                    </Button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Selecione "Ambos" se o item for usado nos dois lados de um produto com múltiplos lados.
+                </p>
+              </div>
             </div>
           ) : (
             <div className="pt-4 border-t">
