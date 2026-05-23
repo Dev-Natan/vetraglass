@@ -21,6 +21,8 @@ export const mapItemForInsert = (item: QuoteItem, quoteId: string) => ({
   width: item.width || null,
   height: item.height || null,
   quantity: item.quantity,
+  width_b: item.width_b || null,
+  height_b: item.height_b || null,
   unit_price: item.unit_price,
   total_price: item.total_price,
   unit: item.unit || null,
