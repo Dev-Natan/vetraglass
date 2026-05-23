@@ -44,10 +44,22 @@ export function OSProductsList({ ordemServicoId }: OSProductsListProps) {
   });
 
   const adjustMutation = useMutation({
-    mutationFn: (data: { largura: number; altura: number; notes: string }) => 
+    mutationFn: (data: { 
+      largura: number; 
+      altura: number; 
+      largura_producao_b?: number | null;
+      altura_producao_b?: number | null;
+      largura_producao_c?: number | null;
+      altura_producao_c?: number | null;
+      notes: string 
+    }) => 
       osService.updateProductionDimensions(selectedItem!.id, {
         largura_producao: data.largura,
         altura_producao: data.altura,
+        largura_producao_b: data.largura_producao_b,
+        altura_producao_b: data.altura_producao_b,
+        largura_producao_c: data.largura_producao_c,
+        altura_producao_c: data.altura_producao_c,
         technical_notes: data.notes
       }, user!.id),
     onSuccess: () => {
