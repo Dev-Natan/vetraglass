@@ -13,7 +13,7 @@ import {
 import { resolveItemImageUrl } from '@/utils/imageUrl';
 import { FormulaEditor } from '../../FormulaEditor';
 import { GlassFormulaEditor } from '../../GlassFormulaEditor';
-import { typeColors, typeLabels } from '../constants';
+import { typeColors, typeLabels, itemTypeTabs } from '../constants';
 import type { ComponentItem } from '../types';
 
 interface ComponentRowProps {
