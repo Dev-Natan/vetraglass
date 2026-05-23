@@ -287,9 +287,13 @@ export function ComponentRow({
           {side && (
             <Badge 
               variant="outline" 
-              className={side === 'A' ? "bg-blue-50 text-blue-600" : "bg-green-50 text-green-600"}
+              className={
+                side === 'A' ? "bg-blue-50 text-blue-600" : 
+                side === 'B' ? "bg-green-50 text-green-600" : 
+                "bg-purple-50 text-purple-600"
+              }
             >
-              Lado {side}
+              {side === 'Todos' ? 'Produto Todo' : `Lado ${side}`}
             </Badge>
           )}
           {item.isNew && (
