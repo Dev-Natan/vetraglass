@@ -98,7 +98,14 @@ export async function generateMaterialConsumption(
       const height = quoteItem.height || 0;
       const width_b = quoteItem.width_b || 0;
       const height_b = quoteItem.height_b || 0;
+      const width_c = quoteItem.width_c || 0;
+      const height_c = quoteItem.height_c || 0;
       const qty = quoteItem.quantity || 1;
+      
+      const sides_count = quoteItem.sides_count || 1;
+      const leaves_count = quoteItem.leaves_count || 1;
+      const glasses_count = quoteItem.glasses_count || 1;
+      const panels_count = quoteItem.panels_count || 1;
 
       // Fetch product composition and info
       let composition: ProductCompositionItem[] = [];
