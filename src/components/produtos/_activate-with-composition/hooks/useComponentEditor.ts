@@ -73,6 +73,8 @@ export function useComponentEditor({
       height_formula: activeTab === 'glass' ? heightFormula : null,
       is_optional: false,
       side: side,
+      calculation_type: calculationType,
+      applies_to: appliesTo,
       notes: activeTab === 'glass' ? glassName : null,
       isNew: true,
       item_template: {
