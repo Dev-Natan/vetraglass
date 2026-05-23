@@ -22,6 +22,7 @@ interface CutData {
   quantity: number;
   cutAngle: number;
   position: string;
+  side?: string;
 }
 
 interface GlassCutData {
@@ -34,6 +35,7 @@ interface GlassCutData {
   quantity: number;
   isMovable?: boolean;
   panelIndex?: number;
+  side?: string;
 }
 
 interface CuttingPlan {
@@ -41,6 +43,8 @@ interface CuttingPlan {
   product_name: string;
   vao_width: number;
   vao_height: number;
+  vao_width_b?: number;
+  vao_height_b?: number;
   quantity: number;
   cuts_data: CutData[];
   glass_cuts_data: GlassCutData[];
@@ -231,7 +235,7 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
                   </CardTitle>
                   <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
                     <Maximize2 className="w-4 h-4" />
-                    <span>Vão: {plan.vao_width} x {plan.vao_height} mm</span>
+                    <span>Vão: {plan.vao_width} {plan.vao_width_b ? `x ${plan.vao_width_b}` : ''} x {plan.vao_height} mm</span>
                     <Badge variant="secondary">{plan.quantity}x</Badge>
                     {plan.quote_items?.aluminum_color && (
                       <Badge variant="outline" className="gap-1 text-amber-700 dark:text-amber-400 border-amber-500/30 bg-amber-500/10">
@@ -291,7 +295,10 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
                                   />
                                 </TableCell>
                                 <TableCell className={`font-medium ${isCompleted ? 'line-through text-muted-foreground' : ''}`}>
-                                  {cut.profileName}
+                                  <div className="flex flex-col">
+                                    <span>{cut.profileName}</span>
+                                    {cut.side && <Badge variant="outline" className="w-fit text-[10px] px-1 py-0 mt-0.5">Lado {cut.side}</Badge>}
+                                  </div>
                                 </TableCell>
                                 <TableCell>
                                   <Badge variant="outline" className="font-mono text-xs">
