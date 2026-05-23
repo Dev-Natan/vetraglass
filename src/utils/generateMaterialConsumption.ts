@@ -211,8 +211,11 @@ export async function generateMaterialConsumption(
         } else if (component.side === 'Ambos' || !component.side) {
           // Default: Both sides
           sidesToProcess.push('A', 'B');
+        } else if (component.side === 'Todos' || component.side === 'Produto') {
+          // "Todos" or "Produto" means only one record (unit for whole product)
+          sidesToProcess.push(null);
         } else {
-          // "Todos" or any other value means only one record (unit for whole product)
+          // Fallback for any other value
           sidesToProcess.push(null);
         }
 
