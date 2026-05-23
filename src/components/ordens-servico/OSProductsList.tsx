@@ -104,21 +104,64 @@ export function OSProductsList({ ordemServicoId }: OSProductsListProps) {
                     )}
                   </div>
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                    <div className="space-y-1 p-3 bg-muted/50 rounded-lg">
-                      <Label className="text-muted-foreground text-xs uppercase">Medidas de Venda (Bloqueado)</Label>
-                      <div className="flex items-center gap-2 font-mono text-lg opacity-60">
-                        <Maximize2 className="w-4 h-4" />
-                        {item.largura_venda} x {item.altura_venda} mm
+                  <div className="grid grid-cols-1 gap-4 mt-4">
+                    {/* Side A */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1 p-3 bg-muted/50 rounded-lg">
+                        <Label className="text-muted-foreground text-xs uppercase">Lado A - Venda (Bloqueado)</Label>
+                        <div className="flex items-center gap-2 font-mono text-lg opacity-60">
+                          <Maximize2 className="w-4 h-4" />
+                          {item.largura_venda} x {item.altura_venda} mm
+                        </div>
+                      </div>
+                      <div className="space-y-1 p-3 bg-primary/5 border border-primary/10 rounded-lg">
+                        <Label className="text-primary/70 text-xs uppercase font-bold">Lado A - Produção</Label>
+                        <div className="flex items-center gap-2 font-mono text-lg text-primary font-bold">
+                          <Ruler className="w-4 h-4" />
+                          {item.largura_producao} x {item.altura_producao} mm
+                        </div>
                       </div>
                     </div>
-                    <div className="space-y-1 p-3 bg-primary/5 border border-primary/10 rounded-lg">
-                      <Label className="text-primary/70 text-xs uppercase font-bold">Medidas de Produção</Label>
-                      <div className="flex items-center gap-2 font-mono text-lg text-primary font-bold">
-                        <Ruler className="w-4 h-4" />
-                        {item.largura_producao} x {item.altura_producao} mm
+
+                    {/* Side B */}
+                    {(item.largura_venda_b || item.largura_producao_b) && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1 p-3 bg-muted/50 rounded-lg">
+                          <Label className="text-muted-foreground text-xs uppercase">Lado B - Venda</Label>
+                          <div className="flex items-center gap-2 font-mono text-lg opacity-60">
+                            <Maximize2 className="w-4 h-4" />
+                            {item.largura_venda_b || '-'} x {item.altura_venda_b || '-'} mm
+                          </div>
+                        </div>
+                        <div className="space-y-1 p-3 bg-primary/5 border border-primary/10 rounded-lg">
+                          <Label className="text-primary/70 text-xs uppercase font-bold">Lado B - Produção</Label>
+                          <div className="flex items-center gap-2 font-mono text-lg text-primary font-bold">
+                            <Ruler className="w-4 h-4" />
+                            {item.largura_producao_b || '-'} x {item.altura_producao_b || '-'} mm
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    )}
+
+                    {/* Side C */}
+                    {(item.largura_venda_c || item.largura_producao_c) && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1 p-3 bg-muted/50 rounded-lg">
+                          <Label className="text-muted-foreground text-xs uppercase">Lado C - Venda</Label>
+                          <div className="flex items-center gap-2 font-mono text-lg opacity-60">
+                            <Maximize2 className="w-4 h-4" />
+                            {item.largura_venda_c || '-'} x {item.altura_venda_c || '-'} mm
+                          </div>
+                        </div>
+                        <div className="space-y-1 p-3 bg-primary/5 border border-primary/10 rounded-lg">
+                          <Label className="text-primary/70 text-xs uppercase font-bold">Lado C - Produção</Label>
+                          <div className="flex items-center gap-2 font-mono text-lg text-primary font-bold">
+                            <Ruler className="w-4 h-4" />
+                            {item.largura_producao_c || '-'} x {item.altura_producao_c || '-'} mm
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   
                   {item.technical_notes && (
