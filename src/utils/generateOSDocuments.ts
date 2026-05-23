@@ -210,8 +210,10 @@ export async function generateOSDocuments(
 
         for (const sideData of sidesToCalculate) {
           const calculatedLength = evaluateFormula(formula, {
-            width: sideData.w,
-            height: sideData.h,
+            width,
+            height,
+            widthB: width_b,
+            heightB: height_b
           }, undefined, sideData.s as any);
           
           if (calculatedLength <= 0) continue;
@@ -276,12 +278,16 @@ export async function generateOSDocuments(
 
         for (const sideData of sidesToCalculate) {
           const calcWidth = evaluateFormula(formula.width_formula, {
-            width: sideData.w,
-            height: sideData.h,
+            width,
+            height,
+            widthB: width_b,
+            heightB: height_b
           }, undefined, sideData.s as any);
           const calcHeight = evaluateFormula(formula.height_formula, {
-            width: sideData.w,
-            height: sideData.h,
+            width,
+            height,
+            widthB: width_b,
+            heightB: height_b
           }, undefined, sideData.s as any);
           
           if (calcWidth <= 0 || calcHeight <= 0) continue;
