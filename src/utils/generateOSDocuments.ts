@@ -19,6 +19,8 @@ interface OSItem {
   glass_thickness?: string | null;
   glass_color?: string | null;
   include_contramarco?: boolean | null;
+  width_sold?: number | null;
+  height_sold?: number | null;
 }
 
 interface ProductCompositionItem {
