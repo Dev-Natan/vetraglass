@@ -148,11 +148,17 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
     height: number;
     width_b?: number;
     height_b?: number;
+    width_c?: number;
+    height_c?: number;
     vao_width?: number;
     vao_height?: number;
     vao_width_b?: number;
     vao_height_b?: number;
     quantity: number;
+    leaves_count?: number;
+    glasses_count?: number;
+    panels_count?: number;
+    sides_count?: number;
     unit_price: number;
     total_price: number;
     has_glass?: boolean;
@@ -175,9 +181,15 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
       height: product.height,
       width_b: product.width_b,
       height_b: product.height_b,
+      width_c: product.width_c,
+      height_c: product.height_c,
       vao_width: product.vao_width,
       vao_height: product.vao_height,
       quantity: product.quantity,
+      leaves_count: product.leaves_count,
+      glasses_count: product.glasses_count,
+      panels_count: product.panels_count,
+      sides_count: product.sides_count,
       base_price_m2: product.base_price,
       unit_price: product.unit_price,
       total_price: product.total_price,
@@ -190,7 +202,6 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
       include_contramarco: product.include_contramarco,
       excluded_optional_ids: product.excluded_optional_ids,
       notes: product.notes,
-      components: product.components,
     });
     setShowAddProduct(false);
     

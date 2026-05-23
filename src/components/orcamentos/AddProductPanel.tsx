@@ -42,11 +42,19 @@ interface AddProductPanelProps {
     height: number;
     width_b?: number;
     height_b?: number;
+    width_c?: number;
+    height_c?: number;
     vao_width?: number;
     vao_height?: number;
     vao_width_b?: number;
     vao_height_b?: number;
+    vao_width_c?: number;
+    vao_height_c?: number;
     quantity: number;
+    leaves_count?: number;
+    glasses_count?: number;
+    panels_count?: number;
+    sides_count?: number;
     unit_price: number;
     total_price: number;
     has_glass?: boolean;
@@ -329,6 +337,10 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     height: height || 1000,
     widthB: widthB || 0,
     heightB: heightB || 0,
+    leaves_count: companyProduct?.leaves_count || 1,
+    glasses_count: companyProduct?.glasses_count || 1,
+    panels_count: companyProduct?.panels_count || 1,
+    sides_count: companyProduct?.sides_count || 1,
     quantity: quantity || 1,
     enabled: !!companyProduct?.id && width > 0 && height > 0,
     excludeOptionalIds: excludedOptionalIds,
@@ -402,11 +414,17 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
       height,
       width_b: selectedProduct.has_multiple_sides ? widthB : undefined,
       height_b: selectedProduct.has_multiple_sides ? heightB : undefined,
+      width_c: 0, // Placeholder for side C
+      height_c: 0,
       vao_width: useVao ? vaoWidth : undefined,
       vao_height: useVao ? vaoHeight : undefined,
       vao_width_b: (useVao && selectedProduct.has_multiple_sides) ? vaoWidthB : undefined,
       vao_height_b: (useVao && selectedProduct.has_multiple_sides) ? vaoHeightB : undefined,
       quantity,
+      leaves_count: companyProduct?.leaves_count || 1,
+      glasses_count: companyProduct?.glasses_count || 1,
+      panels_count: companyProduct?.panels_count || 1,
+      sides_count: companyProduct?.sides_count || 1,
       unit_price: unitPrice,
       total_price: totalPrice,
       has_glass: hasGlass && (!!selectedGlassThickness || !!selectedGlassColor || productUsesGlass),
