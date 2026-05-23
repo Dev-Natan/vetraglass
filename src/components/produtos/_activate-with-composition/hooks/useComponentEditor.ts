@@ -35,6 +35,8 @@ export function useComponentEditor({
   const [heightFormula, setHeightFormula] = useState('');
   const [glassName, setGlassName] = useState('');
   const [side, setSide] = useState<string | null>(null);
+  const [calculationType, setCalculationType] = useState<'fixed' | 'per_side' | 'per_leaf' | 'per_glass' | 'formula'>('formula');
+  const [appliesTo, setAppliesTo] = useState<'product' | 'side' | 'leaf' | 'glass' | 'panel'>('side');
 
   const resetForm = () => {
     setSelectedItemTemplateId('');
