@@ -43,7 +43,7 @@ export function useCompositionPricing({
       const { data, error } = await supabase
         .from('company_product_items')
         .select(`
-          id, quantity_formula, width_formula, height_formula, pieces_quantity, cut_angle, is_optional, section, side,
+          id, quantity_formula, width_formula, height_formula, pieces_quantity, cut_angle, is_optional, section, side, calculation_type, applies_to,
           item_template:item_templates(id, name, type, unit, bar_length_mm, weight_per_bar, weight_per_meter),
           company_item:company_items(id, name, type, unit, cost, cost_per_bar, cost_per_kg, cost_per_meter, bar_length_mm, weight_kg, weight_per_meter)
         `)
@@ -119,6 +119,8 @@ export function useCompositionPricing({
         quantityFormula: ci.quantity_formula,
         piecesQuantity: ci.pieces_quantity || 1,
         side: ci.side,
+        calculation_type: ci.calculation_type,
+        applies_to: ci.applies_to,
         cutAngle: ci.cut_angle,
         lossPercent: 0,
         barLengthMm: compItem?.bar_length_mm || tpl?.bar_length_mm || 6000,

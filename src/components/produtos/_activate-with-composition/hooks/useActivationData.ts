@@ -110,6 +110,11 @@ export function useActivationData({
         .from('item_templates')
         .select('*')
         .eq('type', dbType as 'accessory' | 'glass' | 'profile' | 'service')
+        .select(`
+          *,
+          default_calculation_type:type,
+          default_applies_to:type
+        `)
         .eq('is_active', true)
         .order('linha')
         .order('name');
