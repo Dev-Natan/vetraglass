@@ -37,7 +37,7 @@ export default function OrdemServicoDetalhes() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { currentCompany } = useAuth();
+  const { currentCompany, companies } = useAuth();
 
   const { data: ordem, isLoading } = useQuery({
     queryKey: ['ordem-servico', id],
@@ -221,7 +221,9 @@ export default function OrdemServicoDetalhes() {
       ...p,
       aluminum_color: p.quote_items?.aluminum_color || null,
     }));
-    generateCuttingPlanPdf(plansForPdf, getOsInfo(), getCompanyInfo());
+    const currentCompanyUser = companies.find(c => c.company_id === currentCompany?.id);
+    const isAdmin = currentCompanyUser?.role === 'admin';
+    generateCuttingPlanPdf(plansForPdf, getOsInfo(), getCompanyInfo(), 'download', isAdmin);
     toast.success('PDF gerado com sucesso!');
   };
 

@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Scissors, Maximize2, Layers, Square, CheckCircle, Clock, Palette } from 'lucide-react';
 import { OSGlassUnifiedView } from './OSGlassUnifiedView';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface OSCuttingPlanProps {
   ordemServicoId: string;
@@ -57,6 +58,9 @@ interface CuttingPlan {
 
 export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
   const queryClient = useQueryClient();
+  const { companies, currentCompany } = useAuth();
+  const currentCompanyUser = companies.find(c => c.company_id === currentCompany?.id);
+  const isAdmin = currentCompanyUser?.role === 'admin';
 
   const { data: plans, isLoading } = useQuery({
     queryKey: ['os-cutting-plan', ordemServicoId],
@@ -271,7 +275,7 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
                         <TableRow className="bg-muted/50">
                           <TableHead className="w-12">✓</TableHead>
                           <TableHead>Perfil</TableHead>
-                          <TableHead>Fórmula</TableHead>
+                          {isAdmin && <TableHead>Fórmula</TableHead>}
                           <TableHead>Posição</TableHead>
                           <TableHead className="text-right">Medida</TableHead>
                           <TableHead className="text-right">Qtd</TableHead>
@@ -300,11 +304,13 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
                                     {cut.side && <Badge variant="outline" className="w-fit text-[10px] px-1 py-0 mt-0.5">Lado {cut.side}</Badge>}
                                   </div>
                                 </TableCell>
-                                <TableCell>
-                                  <Badge variant="outline" className="font-mono text-xs">
-                                    {cut.formula}
-                                  </Badge>
-                                </TableCell>
+                                {isAdmin && (
+                                  <TableCell>
+                                    <Badge variant="outline" className="font-mono text-xs">
+                                      {cut.formula}
+                                    </Badge>
+                                  </TableCell>
+                                )}
                                 <TableCell>
                                   <Badge variant={cut.position === 'Altura' ? 'default' : 'secondary'}>
                                     {cut.position}
