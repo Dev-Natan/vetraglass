@@ -238,6 +238,10 @@ export function ActivateWithCompositionDialog({
         setGlassName={editor.setGlassName}
         side={editor.side}
         setSide={editor.setSide}
+        calculationType={editor.calculationType}
+        setCalculationType={editor.setCalculationType}
+        appliesTo={editor.appliesTo}
+        setAppliesTo={editor.setAppliesTo}
         onAdd={editor.handleAddItem}
       />
     </>
