@@ -311,6 +311,7 @@ export function AddItemDialog(props: AddItemDialogProps) {
                     { value: null, label: 'Ambos' },
                     { value: 'A', label: 'Lado A' },
                     { value: 'B', label: 'Lado B' },
+                    { value: 'Todos', label: 'Produto' },
                   ].map(option => (
                     <Button
                       key={String(option.value)}
@@ -325,7 +326,7 @@ export function AddItemDialog(props: AddItemDialogProps) {
                   ))}
                 </div>
                 <p className="text-[10px] text-muted-foreground">
-                  Selecione "Ambos" se o item for usado nos dois lados de um produto com múltiplos lados.
+                  Selecione "Produto" para itens usados uma única vez no conjunto todo (ex: kit fechadura).
                 </p>
               </div>
             </div>

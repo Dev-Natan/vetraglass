@@ -190,6 +190,7 @@ export function ComponentRow({
                     { value: null, label: 'Ambos' },
                     { value: 'A', label: 'Lado A' },
                     { value: 'B', label: 'Lado B' },
+                    { value: 'Todos', label: 'Produto' },
                   ].map(option => (
                     <Button
                       key={String(option.value)}
@@ -203,6 +204,9 @@ export function ComponentRow({
                     </Button>
                   ))}
                 </div>
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  "Produto" = usado uma única vez no conjunto todo.
+                </p>
               </div>
             </div>
           )}
