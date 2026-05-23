@@ -82,6 +82,8 @@ export interface CompositionItemInput {
   quantityFormula: string;
   piecesQuantity: number;
   side?: string | null;
+  calculation_type?: 'fixed' | 'per_side' | 'per_leaf' | 'per_glass' | 'formula' | null;
+  applies_to?: 'product' | 'side' | 'leaf' | 'glass' | 'panel' | null;
   piecesFormula?: string | null;
   cutAngle?: number | null;
   lossPercent: number;
