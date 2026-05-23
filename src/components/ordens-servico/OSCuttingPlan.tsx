@@ -67,12 +67,12 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('os_cutting_plan')
-        .select('*, quote_items(aluminum_color)')
+        .select('*, quote_items(aluminum_color), os_items(*)')
         .eq('ordem_servico_id', ordemServicoId)
         .order('created_at');
 
       if (error) throw error;
-      return (data || []) as unknown as CuttingPlan[];
+      return (data || []) as any[];
     },
   });
 
