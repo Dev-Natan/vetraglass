@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Scissors, Maximize2, Layers, Square, CheckCircle, Clock, Palette } from 'lucide-react';
+import { Scissors, Maximize2, Layers, Square, CheckCircle, Clock, Palette, AlertTriangle } from 'lucide-react';
 import { OSGlassUnifiedView } from './OSGlassUnifiedView';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
