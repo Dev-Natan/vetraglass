@@ -178,6 +178,10 @@ export function useComponentEditor({
     setGlassName,
     side,
     setSide,
+    calculationType,
+    setCalculationType,
+    appliesTo,
+    setAppliesTo,
 
     // actions
     resetForm,
