@@ -39,6 +39,18 @@ function normalizeFormula(formula: string): string {
     // Replace full Portuguese names
     .replace(/Largura/gi, 'W')
     .replace(/Altura/gi, 'H')
+    // Replace specific variables from the user request
+    .replace(/\blargura_lado_a\b/gi, 'WA')
+    .replace(/\blargura_lado_b\b/gi, 'WB')
+    .replace(/\blargura_lado_c\b/gi, 'WC')
+    .replace(/\baltura_lado_a\b/gi, 'HA')
+    .replace(/\baltura_lado_b\b/gi, 'HB')
+    .replace(/\baltura_lado_c\b/gi, 'HC')
+    .replace(/\blados\b/gi, 'SIDES')
+    .replace(/\bfolhas\b/gi, 'LEAVES')
+    .replace(/\bvidros\b/gi, 'GLASSES')
+    .replace(/\bpainel\b/gi, 'PANEL')
+    .replace(/\bfolga\b/gi, 'FL')
     // Replace standalone L and A (word boundaries)
     .replace(/\bL\b/gi, 'W')
     .replace(/\bA\b/gi, 'H')
