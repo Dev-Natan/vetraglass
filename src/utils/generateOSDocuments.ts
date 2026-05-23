@@ -11,8 +11,8 @@ interface QuoteItem {
   description: string;
   width: number | null;
   height: number | null;
-  width_b: number | null;
-  height_b: number | null;
+  width_b?: number | null;
+  height_b?: number | null;
   quantity: number;
   product_template_id?: string | null;
   glass_thickness?: string | null;
