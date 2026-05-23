@@ -161,8 +161,10 @@ export async function generateOSDocuments(
       
       const width = item.largura_producao;
       const height = item.altura_producao;
-      const width_b = item.width_production_b || width;
-      const height_b = item.height_production_b || height;
+      const width_b = item.largura_producao_b || width;
+      const height_b = item.altura_producao_b || height;
+      const width_c = item.largura_producao_c || width;
+      const height_c = item.altura_producao_c || height;
       const quantity = item.quantity;
 
       // Get product template details
