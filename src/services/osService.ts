@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { regenerateOSDocuments } from '@/utils/generateOSDocuments';
 
 export interface OSItem {
   id: string;
@@ -38,7 +39,7 @@ export const osService = {
       .order('created_at', { ascending: true });
     
     if (error) throw error;
-    return data as OSItem[];
+    return data as any[];
   },
 
   async getOSItemById(osItemId: string): Promise<OSItem> {
@@ -49,7 +50,7 @@ export const osService = {
       .single();
     
     if (error) throw error;
-    return data as OSItem;
+    return data as any;
   },
 
   async updateProductionDimensions(
@@ -64,7 +65,7 @@ export const osService = {
     const currentItem = await this.getOSItemById(osItemId);
     const historyEntries = [];
 
-    if (currentItem.largura_producao !== payload.largura_producao) {
+    if (Number(currentItem.largura_producao) !== Number(payload.largura_producao)) {
       historyEntries.push({
         os_item_id: osItemId,
         field: 'largura_producao',
@@ -74,7 +75,7 @@ export const osService = {
       });
     }
 
-    if (currentItem.altura_producao !== payload.altura_producao) {
+    if (Number(currentItem.altura_producao) !== Number(payload.altura_producao)) {
       historyEntries.push({
         os_item_id: osItemId,
         field: 'altura_producao',
@@ -142,15 +143,22 @@ export const osService = {
       }
       
       if (item.item_type === 'profile') {
-        consolidated[key].total_length += item.total_length_mm || 0;
-        consolidated[key].pieces_count += item.pieces_count || 0;
-        consolidated[key].bars_needed += item.bars_needed || 0;
+        consolidated[key].total_length += Number(item.total_length_mm || 0);
+        consolidated[key].pieces_count += Number(item.pieces_count || 0);
+        consolidated[key].bars_needed += Number(item.bars_needed || 0);
       } else {
-        // Accessories usually use pieces_count as the main quantity
-        consolidated[key].total_quantity += item.pieces_count || 0;
+        consolidated[key].total_quantity += Number(item.pieces_count || 0);
       }
     });
     
     return Object.values(consolidated);
+  },
+
+  async recalculateOSItem(osItemId: string, osId: string) {
+    return regenerateOSDocuments(osId, osItemId);
+  },
+
+  async recalculateAllOSItems(osId: string) {
+    return regenerateOSDocuments(osId);
   }
 };
