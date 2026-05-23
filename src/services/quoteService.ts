@@ -90,13 +90,17 @@ export const quoteService = {
             altura_venda: item.height,
             largura_producao: item.width,
             altura_producao: item.height,
+            width_sold: item.width,
+            height_sold: item.height,
+            width_production: item.width,
+            height_production: item.height,
             quantity: item.quantity,
             product_id: item.product_template_id
           }));
 
           await supabase
             .from('os_items')
-            .upsert(osItems, { onConflict: 'os_id, quote_item_id' });
+            .upsert(osItems as any, { onConflict: 'os_id, quote_item_id' });
         }
       }
     }
