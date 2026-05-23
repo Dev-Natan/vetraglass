@@ -19,6 +19,8 @@ export interface ComponentItem {
   is_optional: boolean;
   notes: string | null;
   side: string | null;
+  calculation_type: 'fixed' | 'per_side' | 'per_leaf' | 'per_glass' | 'formula';
+  applies_to: 'product' | 'side' | 'leaf' | 'glass' | 'panel';
   isNew?: boolean;
   item_template: {
     id: string;
