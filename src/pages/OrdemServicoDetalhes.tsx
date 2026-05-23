@@ -9,11 +9,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Package, Scissors, Layers, FileText, User, Phone, MapPin, Calendar, RefreshCw, Loader2, Download, Camera, ExternalLink, CalendarDays, History } from 'lucide-react';
 import { OSMaterialsList } from '@/components/ordens-servico/OSMaterialsList';
 import { OSCuttingPlan } from '@/components/ordens-servico/OSCuttingPlan';
-import { OSGlassProject } from '@/components/ordens-servico/OSGlassProject';
 import { OSPhotosGallery } from '@/components/ordens-servico/OSPhotosGallery';
 import { OSSalesFlowTimeline } from '@/components/ordens-servico/OSSalesFlowTimeline';
 import { OSProductsList } from '@/components/ordens-servico/OSProductsList';
 import { OSDimensionHistoryList } from '@/components/ordens-servico/OSDimensionHistoryList';
+import { OSCompositionGlasses } from '@/components/ordens-servico/OSCompositionGlasses';
+import { OSCompositionAccessories } from '@/components/ordens-servico/OSCompositionAccessories';
 
 import { OSProductionProgress } from '@/components/ordens-servico/OSProductionProgress';
 import { format } from 'date-fns';
