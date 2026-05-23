@@ -134,8 +134,13 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
           uses_glass,
           pricing_type,
           product_template_id,
+          leaves_count,
+          glasses_count,
+          panels_count,
+          sides_count,
           product_template:product_templates (
-            id, name, description, category, linha, image_url, has_multiple_sides
+            id, name, description, category, linha, image_url, has_multiple_sides,
+            default_leaves_count, default_glasses_count, default_panels_count, default_sides_count
           )
         `)
         .eq('company_id', currentCompany.id)
