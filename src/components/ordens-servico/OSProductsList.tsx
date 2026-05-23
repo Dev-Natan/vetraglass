@@ -44,10 +44,22 @@ export function OSProductsList({ ordemServicoId }: OSProductsListProps) {
   });
 
   const adjustMutation = useMutation({
-    mutationFn: (data: { largura: number; altura: number; notes: string }) => 
+    mutationFn: (data: { 
+      largura: number; 
+      altura: number; 
+      largura_producao_b?: number | null;
+      altura_producao_b?: number | null;
+      largura_producao_c?: number | null;
+      altura_producao_c?: number | null;
+      notes: string 
+    }) => 
       osService.updateProductionDimensions(selectedItem!.id, {
         largura_producao: data.largura,
         altura_producao: data.altura,
+        largura_producao_b: data.largura_producao_b,
+        altura_producao_b: data.altura_producao_b,
+        largura_producao_c: data.largura_producao_c,
+        altura_producao_c: data.altura_producao_c,
         technical_notes: data.notes
       }, user!.id),
     onSuccess: () => {
@@ -104,21 +116,64 @@ export function OSProductsList({ ordemServicoId }: OSProductsListProps) {
                     )}
                   </div>
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                    <div className="space-y-1 p-3 bg-muted/50 rounded-lg">
-                      <Label className="text-muted-foreground text-xs uppercase">Medidas de Venda (Bloqueado)</Label>
-                      <div className="flex items-center gap-2 font-mono text-lg opacity-60">
-                        <Maximize2 className="w-4 h-4" />
-                        {item.largura_venda} x {item.altura_venda} mm
+                  <div className="grid grid-cols-1 gap-4 mt-4">
+                    {/* Side A */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1 p-3 bg-muted/50 rounded-lg">
+                        <Label className="text-muted-foreground text-xs uppercase">Lado A - Venda (Bloqueado)</Label>
+                        <div className="flex items-center gap-2 font-mono text-lg opacity-60">
+                          <Maximize2 className="w-4 h-4" />
+                          {item.largura_venda} x {item.altura_venda} mm
+                        </div>
+                      </div>
+                      <div className="space-y-1 p-3 bg-primary/5 border border-primary/10 rounded-lg">
+                        <Label className="text-primary/70 text-xs uppercase font-bold">Lado A - Produção</Label>
+                        <div className="flex items-center gap-2 font-mono text-lg text-primary font-bold">
+                          <Ruler className="w-4 h-4" />
+                          {item.largura_producao} x {item.altura_producao} mm
+                        </div>
                       </div>
                     </div>
-                    <div className="space-y-1 p-3 bg-primary/5 border border-primary/10 rounded-lg">
-                      <Label className="text-primary/70 text-xs uppercase font-bold">Medidas de Produção</Label>
-                      <div className="flex items-center gap-2 font-mono text-lg text-primary font-bold">
-                        <Ruler className="w-4 h-4" />
-                        {item.largura_producao} x {item.altura_producao} mm
+
+                    {/* Side B */}
+                    {(item.largura_venda_b || item.largura_producao_b) && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1 p-3 bg-muted/50 rounded-lg">
+                          <Label className="text-muted-foreground text-xs uppercase">Lado B - Venda</Label>
+                          <div className="flex items-center gap-2 font-mono text-lg opacity-60">
+                            <Maximize2 className="w-4 h-4" />
+                            {item.largura_venda_b || '-'} x {item.altura_venda_b || '-'} mm
+                          </div>
+                        </div>
+                        <div className="space-y-1 p-3 bg-primary/5 border border-primary/10 rounded-lg">
+                          <Label className="text-primary/70 text-xs uppercase font-bold">Lado B - Produção</Label>
+                          <div className="flex items-center gap-2 font-mono text-lg text-primary font-bold">
+                            <Ruler className="w-4 h-4" />
+                            {item.largura_producao_b || '-'} x {item.altura_producao_b || '-'} mm
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    )}
+
+                    {/* Side C */}
+                    {(item.largura_venda_c || item.largura_producao_c) && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1 p-3 bg-muted/50 rounded-lg">
+                          <Label className="text-muted-foreground text-xs uppercase">Lado C - Venda</Label>
+                          <div className="flex items-center gap-2 font-mono text-lg opacity-60">
+                            <Maximize2 className="w-4 h-4" />
+                            {item.largura_venda_c || '-'} x {item.altura_venda_c || '-'} mm
+                          </div>
+                        </div>
+                        <div className="space-y-1 p-3 bg-primary/5 border border-primary/10 rounded-lg">
+                          <Label className="text-primary/70 text-xs uppercase font-bold">Lado C - Produção</Label>
+                          <div className="flex items-center gap-2 font-mono text-lg text-primary font-bold">
+                            <Ruler className="w-4 h-4" />
+                            {item.largura_producao_c || '-'} x {item.altura_producao_c || '-'} mm
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   
                   {item.technical_notes && (
@@ -179,28 +234,86 @@ export function OSProductsList({ ordemServicoId }: OSProductsListProps) {
               Altere as medidas reais para produção. O orçamento comercial permanecerá intacto.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="width">Largura de Produção (mm)</Label>
-                <Input 
-                  id="width" 
-                  type="number" 
-                  defaultValue={selectedItem?.largura_producao} 
-                  onChange={(e) => selectedItem && (selectedItem.largura_producao = Number(e.target.value))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="height">Altura de Produção (mm)</Label>
-                <Input 
-                  id="height" 
-                  type="number" 
-                  defaultValue={selectedItem?.altura_producao}
-                  onChange={(e) => selectedItem && (selectedItem.altura_producao = Number(e.target.value))}
-                />
+          <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
+            <div className="space-y-4">
+              <div className="font-semibold text-sm border-b pb-1">Lado A (Principal)</div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="width">Largura A (mm)</Label>
+                  <Input 
+                    id="width" 
+                    type="number" 
+                    defaultValue={selectedItem?.largura_producao} 
+                    onChange={(e) => selectedItem && (selectedItem.largura_producao = Number(e.target.value))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="height">Altura A (mm)</Label>
+                  <Input 
+                    id="height" 
+                    type="number" 
+                    defaultValue={selectedItem?.altura_producao}
+                    onChange={(e) => selectedItem && (selectedItem.altura_producao = Number(e.target.value))}
+                  />
+                </div>
               </div>
             </div>
-            <div className="space-y-2">
+
+            {/* Lado B Fields (if multi-side) */}
+            {(selectedItem?.largura_venda_b || selectedItem?.largura_producao_b) && (
+              <div className="space-y-4 pt-2">
+                <div className="font-semibold text-sm border-b pb-1">Lado B</div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="width_b">Largura B (mm)</Label>
+                    <Input 
+                      id="width_b" 
+                      type="number" 
+                      defaultValue={selectedItem?.largura_producao_b || 0} 
+                      onChange={(e) => selectedItem && (selectedItem.largura_producao_b = Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="height_b">Altura B (mm)</Label>
+                    <Input 
+                      id="height_b" 
+                      type="number" 
+                      defaultValue={selectedItem?.altura_producao_b || 0}
+                      onChange={(e) => selectedItem && (selectedItem.altura_producao_b = Number(e.target.value))}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Lado C Fields (if multi-side) */}
+            {(selectedItem?.largura_venda_c || selectedItem?.largura_producao_c) && (
+              <div className="space-y-4 pt-2">
+                <div className="font-semibold text-sm border-b pb-1">Lado C</div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="width_c">Largura C (mm)</Label>
+                    <Input 
+                      id="width_c" 
+                      type="number" 
+                      defaultValue={selectedItem?.largura_producao_c || 0} 
+                      onChange={(e) => selectedItem && (selectedItem.largura_producao_c = Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="height_c">Altura C (mm)</Label>
+                    <Input 
+                      id="height_c" 
+                      type="number" 
+                      defaultValue={selectedItem?.altura_producao_c || 0}
+                      onChange={(e) => selectedItem && (selectedItem.altura_producao_c = Number(e.target.value))}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2 pt-2">
               <Label htmlFor="notes">Observações Técnicas</Label>
               <Textarea 
                 id="notes" 
@@ -216,6 +329,10 @@ export function OSProductsList({ ordemServicoId }: OSProductsListProps) {
               onClick={() => adjustMutation.mutate({
                 largura: selectedItem!.largura_producao,
                 altura: selectedItem!.altura_producao,
+                largura_producao_b: selectedItem!.largura_producao_b,
+                altura_producao_b: selectedItem!.altura_producao_b,
+                largura_producao_c: selectedItem!.largura_producao_c,
+                altura_producao_c: selectedItem!.altura_producao_c,
                 notes: selectedItem!.technical_notes || ''
               })}
               disabled={adjustMutation.isPending}

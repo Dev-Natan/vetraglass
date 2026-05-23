@@ -4379,7 +4379,11 @@ export type Database = {
       os_items: {
         Row: {
           altura_producao: number | null
+          altura_producao_b: number | null
+          altura_producao_c: number | null
           altura_venda: number | null
+          altura_venda_b: number | null
+          altura_venda_c: number | null
           created_at: string
           height_production: number
           height_production_b: number | null
@@ -4387,7 +4391,11 @@ export type Database = {
           height_sold_b: number | null
           id: string
           largura_producao: number | null
+          largura_producao_b: number | null
+          largura_producao_c: number | null
           largura_venda: number | null
+          largura_venda_b: number | null
+          largura_venda_c: number | null
           last_recalculated_at: string | null
           os_id: string
           product_id: string | null
@@ -4404,7 +4412,11 @@ export type Database = {
         }
         Insert: {
           altura_producao?: number | null
+          altura_producao_b?: number | null
+          altura_producao_c?: number | null
           altura_venda?: number | null
+          altura_venda_b?: number | null
+          altura_venda_c?: number | null
           created_at?: string
           height_production: number
           height_production_b?: number | null
@@ -4412,7 +4424,11 @@ export type Database = {
           height_sold_b?: number | null
           id?: string
           largura_producao?: number | null
+          largura_producao_b?: number | null
+          largura_producao_c?: number | null
           largura_venda?: number | null
+          largura_venda_b?: number | null
+          largura_venda_c?: number | null
           last_recalculated_at?: string | null
           os_id: string
           product_id?: string | null
@@ -4429,7 +4445,11 @@ export type Database = {
         }
         Update: {
           altura_producao?: number | null
+          altura_producao_b?: number | null
+          altura_producao_c?: number | null
           altura_venda?: number | null
+          altura_venda_b?: number | null
+          altura_venda_c?: number | null
           created_at?: string
           height_production?: number
           height_production_b?: number | null
@@ -4437,7 +4457,11 @@ export type Database = {
           height_sold_b?: number | null
           id?: string
           largura_producao?: number | null
+          largura_producao_b?: number | null
+          largura_producao_c?: number | null
           largura_venda?: number | null
+          largura_venda_b?: number | null
+          largura_venda_c?: number | null
           last_recalculated_at?: string | null
           os_id?: string
           product_id?: string | null

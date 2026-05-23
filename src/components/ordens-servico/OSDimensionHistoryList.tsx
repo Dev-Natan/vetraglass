@@ -65,7 +65,12 @@ export function OSDimensionHistoryList({ ordemServicoId }: OSDimensionHistoryLis
                     <div className="flex items-center gap-2 text-sm">
                       <Ruler className="w-3 h-3 text-muted-foreground" />
                       <span>
-                        {log.field === 'largura_producao' ? 'Largura' : 'Altura'} alterada: 
+                        {log.field === 'largura_producao' ? 'Largura A' : 
+                         log.field === 'altura_producao' ? 'Altura A' :
+                         log.field === 'largura_producao_b' ? 'Largura B' :
+                         log.field === 'altura_producao_b' ? 'Altura B' :
+                         log.field === 'largura_producao_c' ? 'Largura C' :
+                         log.field === 'altura_producao_c' ? 'Altura C' : log.field} alterada: 
                       </span>
                       <span className="text-muted-foreground line-through">{log.previous_value}mm</span>
                       <span className="text-primary font-bold">→ {log.new_value}mm</span>

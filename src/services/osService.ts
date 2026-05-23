@@ -8,8 +8,16 @@ export interface OSItem {
   product_name: string;
   largura_venda: number;
   altura_venda: number;
+  largura_venda_b: number | null;
+  altura_venda_b: number | null;
+  largura_venda_c: number | null;
+  altura_venda_c: number | null;
   largura_producao: number;
   altura_producao: number;
+  largura_producao_b: number | null;
+  altura_producao_b: number | null;
+  largura_producao_c: number | null;
+  altura_producao_c: number | null;
   quantity: number;
   technical_notes: string | null;
   recalculation_required: boolean;
@@ -58,6 +66,10 @@ export const osService = {
     payload: { 
       largura_producao: number; 
       altura_producao: number; 
+      largura_producao_b?: number | null; 
+      altura_producao_b?: number | null; 
+      largura_producao_c?: number | null; 
+      altura_producao_c?: number | null; 
       technical_notes?: string 
     },
     userId: string
@@ -65,31 +77,36 @@ export const osService = {
     const currentItem = await this.getOSItemById(osItemId);
     const historyEntries = [];
 
-    if (Number(currentItem.largura_producao) !== Number(payload.largura_producao)) {
-      historyEntries.push({
-        os_item_id: osItemId,
-        field: 'largura_producao',
-        previous_value: currentItem.largura_producao,
-        new_value: payload.largura_producao,
-        user_id: userId
-      });
-    }
+    const fieldsToCompare = [
+      'largura_producao', 'altura_producao', 
+      'largura_producao_b', 'altura_producao_b',
+      'largura_producao_c', 'altura_producao_c'
+    ] as const;
 
-    if (Number(currentItem.altura_producao) !== Number(payload.altura_producao)) {
-      historyEntries.push({
-        os_item_id: osItemId,
-        field: 'altura_producao',
-        previous_value: currentItem.altura_producao,
-        new_value: payload.altura_producao,
-        user_id: userId
-      });
-    }
+    fieldsToCompare.forEach(field => {
+      const oldValue = currentItem[field];
+      const newValue = payload[field];
+      
+      if (newValue !== undefined && Number(oldValue) !== Number(newValue)) {
+        historyEntries.push({
+          os_item_id: osItemId,
+          field: field,
+          previous_value: oldValue,
+          new_value: newValue,
+          user_id: userId
+        });
+      }
+    });
 
     const { error: updateError } = await supabase
       .from('os_items')
       .update({
         largura_producao: payload.largura_producao,
         altura_producao: payload.altura_producao,
+        largura_producao_b: payload.largura_producao_b,
+        altura_producao_b: payload.altura_producao_b,
+        largura_producao_c: payload.largura_producao_c,
+        altura_producao_c: payload.altura_producao_c,
         technical_notes: payload.technical_notes,
         recalculation_required: historyEntries.length > 0
       })
@@ -147,6 +164,7 @@ export const osService = {
         consolidated[key].pieces_count += Number(item.pieces_count || 0);
         consolidated[key].bars_needed += Number(item.bars_needed || 0);
       } else {
+        // Accessories usually use pieces_count as the main quantity
         consolidated[key].total_quantity += Number(item.pieces_count || 0);
       }
     });
