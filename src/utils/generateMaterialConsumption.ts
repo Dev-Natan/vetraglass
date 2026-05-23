@@ -38,6 +38,8 @@ interface ProductCompositionItem {
   height_formula: string | null;
   pieces_quantity: number | null;
   side?: string | null;
+  calculation_type?: string | null;
+  applies_to?: string | null;
   company_items?: {
     id: string;
     name: string;
