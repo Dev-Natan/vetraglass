@@ -47,11 +47,63 @@ export const quoteService = {
   },
 
   async updateQuoteStatus(quoteId: string, status: QuoteStatus) {
+    const { data: quote, error: quoteError } = await supabase
+      .from('quotes')
+      .select('id, company_id')
+      .eq('id', quoteId)
+      .single();
+
+    if (quoteError) throw quoteError;
+
     const { error } = await supabase
       .from('quotes')
       .update({ status })
       .eq('id', quoteId);
+
     if (error) throw error;
+
+    // If approved/converted, ensure OS and OS items are created
+    if (status === 'approved' || status === 'converted') {
+      // The RPC 'convert_quote_to_os' usually handles OS creation.
+      // We need to ensure os_items are populated correctly.
+      // This is often handled by a DB trigger or the RPC itself.
+      // Assuming existing flow creates ordens_servico, we just need to ensure os_items exist.
+      
+      const { data: os } = await supabase
+        .from('ordens_servico')
+        .select('id')
+        .eq('quote_id', quoteId)
+        .maybeSingle();
+
+      if (os) {
+        const { data: items } = await supabase
+          .from('quote_items')
+          .select('*')
+          .eq('quote_id', quoteId);
+
+        if (items) {
+          const osItems = items.map(item => ({
+            os_id: os.id,
+            quote_item_id: item.id,
+            product_name: item.description,
+            largura_venda: item.width,
+            altura_venda: item.height,
+            largura_producao: item.width,
+            altura_producao: item.height,
+            width_sold: item.width,
+            height_sold: item.height,
+            width_production: item.width,
+            height_production: item.height,
+            quantity: item.quantity,
+            product_id: item.product_template_id
+          }));
+
+          await supabase
+            .from('os_items')
+            .upsert(osItems as any, { onConflict: 'os_id, quote_item_id' });
+        }
+      }
+    }
   },
 
   async cancelApprovedQuote(quoteId: string) {

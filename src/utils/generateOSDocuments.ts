@@ -1,23 +1,26 @@
 // Generate OS Documents - Materials, Cutting Plan, Glass Projects, Purchase Orders
-
 import { supabase } from '@/integrations/supabase/client';
 import { optimizeProfiles, CutPiece } from './profileOptimization';
 import { evaluateFormula, getFormulaPosition } from './safeFormulaEvaluator';
 import { createPurchaseOrderFromOS } from './createPurchaseOrder';
 import { checkGlassStockAvailability, createStockReservation } from './checkGlassStock';
 
-interface QuoteItem {
+interface OSItem {
   id: string;
-  description: string;
-  width: number | null;
-  height: number | null;
-  width_b?: number | null;
-  height_b?: number | null;
+  os_id: string;
+  quote_item_id: string | null;
+  product_name: string;
+  largura_producao: number;
+  altura_producao: number;
+  width_production_b?: number | null;
+  height_production_b?: number | null;
   quantity: number;
-  product_template_id?: string | null;
+  product_id: string | null;
   glass_thickness?: string | null;
   glass_color?: string | null;
   include_contramarco?: boolean | null;
+  width_sold?: number | null;
+  height_sold?: number | null;
 }
 
 interface ProductCompositionItem {
@@ -123,17 +126,18 @@ async function getProductTemplate(productTemplateId: string): Promise<ProductTem
 }
 
 /**
- * Generate all OS documents after quote approval
+ * Generate all OS documents using production dimensions from os_items
  */
 export async function generateOSDocuments(
   ordemServicoId: string,
-  quoteItems: QuoteItem[],
+  osItems: OSItem[],
   companyId?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const allCuts: CutPiece[] = [];
+    const allCuts: (CutPiece & { os_item_id: string })[] = [];
     const glassProjectsToProcess: Array<{
       id: string;
+      os_item_id: string;
       product_name: string;
       glass_type?: string;
       glass_color?: string;
@@ -149,34 +153,32 @@ export async function generateOSDocuments(
       };
     }> = [];
     
-    // Process each quote item
-    for (const item of quoteItems) {
-      if (!item.product_template_id || !item.width || !item.height) continue;
+    // Process each OS item
+    for (const item of osItems) {
+      if (!item.product_id || !item.largura_producao || !item.altura_producao) continue;
       
-      const width = item.width;
-      const height = item.height;
-      const width_b = item.width_b || width;
-      const height_b = item.height_b || height;
+      const width = item.largura_producao;
+      const height = item.altura_producao;
+      const width_b = item.width_production_b || width;
+      const height_b = item.height_production_b || height;
       const quantity = item.quantity;
 
       // Get product template details
-      const product = await getProductTemplate(item.product_template_id);
+      const product = await getProductTemplate(item.product_id);
       if (!product) continue;
 
-      // Get composition and filter contramarco items based on quote setting
-      const allComposition = await getProductComposition(item.product_template_id);
-      const includeContramarco = item.include_contramarco !== false; // default true
+      // Get composition and glass formulas
+      const [allComposition, glassFormulas] = await Promise.all([
+        getProductComposition(item.product_id),
+        getGlassFormulas(item.product_id, product.linha || '')
+      ]);
+
+      const includeContramarco = item.include_contramarco !== false;
       const composition = allComposition.filter(comp => {
         if (comp.section === 'contramarco' && !includeContramarco) return false;
         return true;
       });
       
-      // Get glass formulas
-      const glassFormulas = await getGlassFormulas(
-        item.product_template_id,
-        product.linha || ''
-      );
-
       // Calculate profile cuts
       const profileCuts: Array<{
         profileName: string;
@@ -203,7 +205,6 @@ export async function generateOSDocuments(
         } else if (comp.side === 'B') {
           sidesToCalculate.push({ label: 'B', w: width_b, h: height_b, s: 'B' });
         } else {
-          // Both sides
           sidesToCalculate.push({ label: 'A', w: width, h: height, s: 'A' });
           sidesToCalculate.push({ label: 'B', w: width_b, h: height_b, s: 'B' });
         }
@@ -228,8 +229,8 @@ export async function generateOSDocuments(
             side: sideData.label
           });
 
-          // Add to optimization array
           allCuts.push({
+            os_item_id: item.id,
             itemTemplateId: comp.item_template_id,
             itemName: comp.item_template.name,
             cutLength: calculatedLength,
@@ -262,15 +263,12 @@ export async function generateOSDocuments(
         } else if (formula.side === 'B') {
           sidesToCalculate.push({ label: 'B', w: width_b, h: height_b, s: 'B' });
         } else {
-          // If side is null and product is multi-side, we assume it might be both
-          // but for glass it's usually specific. Let's default to side A or both based on formula name
           const nameLower = formula.formula_name.toLowerCase();
           if (nameLower.includes('lado a') || nameLower.includes('side a')) {
             sidesToCalculate.push({ label: 'A', w: width, h: height, s: 'A' });
           } else if (nameLower.includes('lado b') || nameLower.includes('side b')) {
             sidesToCalculate.push({ label: 'B', w: width_b, h: height_b, s: 'B' });
           } else {
-            // Default both
             sidesToCalculate.push({ label: 'A', w: width, h: height, s: 'A' });
             sidesToCalculate.push({ label: 'B', w: width_b, h: height_b, s: 'B' });
           }
@@ -309,12 +307,13 @@ export async function generateOSDocuments(
         }
       }
 
-      // Insert cutting plan
+      // Insert cutting plan for this OS item
       await supabase.from('os_cutting_plan').insert({
         ordem_servico_id: ordemServicoId,
-        quote_item_id: item.id,
-        product_name: item.description,
-        product_template_id: item.product_template_id,
+        os_item_id: item.id,
+        quote_item_id: item.quote_item_id,
+        product_name: item.product_name,
+        product_template_id: item.product_id,
         vao_width: width,
         vao_height: height,
         vao_width_b: product.has_multiple_sides ? width_b : null,
@@ -324,7 +323,7 @@ export async function generateOSDocuments(
         glass_cuts_data: glassCuts,
       });
 
-      // Insert glass project with hybrid stock check
+      // Insert glass project
       if (glassCuts.length > 0) {
         const panels = glassCuts.map((glass, index) => ({
           index: index + 1,
@@ -339,7 +338,6 @@ export async function generateOSDocuments(
 
         const totalArea = glassCuts.reduce((sum, g) => sum + g.areaM2, 0);
 
-        // Check stock availability if company is provided
         let stockCheck = null;
         let materialOrigin: 'stock' | 'purchase' | 'mixed' | 'pending' = 'pending';
         let procurementStatus = 'pending_purchase';
@@ -353,21 +351,15 @@ export async function generateOSDocuments(
           );
 
           materialOrigin = stockCheck.origin;
-          
-          if (stockCheck.origin === 'stock') {
-            procurementStatus = 'in_stock';
-          } else if (stockCheck.origin === 'mixed') {
-            procurementStatus = 'partial_stock';
-          } else {
-            procurementStatus = 'pending_purchase';
-          }
+          procurementStatus = stockCheck.origin === 'stock' ? 'in_stock' : stockCheck.origin === 'mixed' ? 'partial_stock' : 'pending_purchase';
         }
 
         const { data: glassProject } = await supabase.from('os_glass_projects').insert({
           ordem_servico_id: ordemServicoId,
-          quote_item_id: item.id,
-          product_name: item.description,
-          product_template_id: item.product_template_id,
+          os_item_id: item.id,
+          quote_item_id: item.quote_item_id,
+          product_name: item.product_name,
+          product_template_id: item.product_id,
           vao_width: width,
           vao_height: height,
           vao_width_b: product.has_multiple_sides ? width_b : null,
@@ -386,7 +378,6 @@ export async function generateOSDocuments(
         }).select().single();
 
         if (glassProject) {
-          // Create stock reservation if using stock
           if (stockCheck && stockCheck.useFromStock > 0 && stockCheck.stockItemId && companyId) {
             await createStockReservation(
               companyId,
@@ -400,7 +391,8 @@ export async function generateOSDocuments(
 
           glassProjectsToProcess.push({
             id: glassProject.id,
-            product_name: item.description,
+            os_item_id: item.id,
+            product_name: item.product_name,
             glass_type: item.glass_thickness || undefined,
             glass_color: item.glass_color || undefined,
             quantity,
@@ -416,93 +408,135 @@ export async function generateOSDocuments(
           });
         }
       }
+      
+      // Update recalculated status
+      await supabase.from('os_items')
+        .update({ recalculation_required: false, last_recalculated_at: new Date().toISOString() })
+        .eq('id', item.id);
     }
 
     // Optimize profiles and insert materials list
     if (allCuts.length > 0) {
       const optimized = optimizeProfiles(allCuts);
 
-      const materialsToInsert = optimized.profiles.map(profile => ({
-        ordem_servico_id: ordemServicoId,
-        item_template_id: profile.itemTemplateId,
-        item_name: profile.itemName,
-        item_type: 'profile',
-        cut_length_mm: profile.cuts.length > 0 ? profile.cuts[0].length : 0,
-        pieces_count: profile.cuts.reduce((sum, c) => sum + c.qty, 0),
-        total_length_mm: profile.totalLengthMm,
-        bar_length_mm: profile.barLengthMm,
-        bars_needed: profile.barsNeeded,
-        waste_mm: profile.wasteMm,
-        waste_percent: profile.wastePercent,
-        unit: profile.unit,
-        notes: profile.cuts.map(c => `${c.qty}x ${c.length}mm`).join(', '),
-      }));
+      const materialsToInsert = optimized.profiles.map(profile => {
+        const matchingCut = allCuts.find(c => c.itemTemplateId === profile.itemTemplateId);
+        return {
+          ordem_servico_id: ordemServicoId,
+          item_template_id: profile.itemTemplateId,
+          item_name: profile.itemName,
+          item_type: 'profile',
+          cut_length_mm: profile.cuts.length > 0 ? profile.cuts[0].length : 0,
+          pieces_count: profile.cuts.reduce((sum, c) => sum + c.qty, 0),
+          total_length_mm: profile.totalLengthMm,
+          bar_length_mm: profile.barLengthMm,
+          bars_needed: profile.barsNeeded,
+          waste_mm: profile.wasteMm,
+          waste_percent: profile.wastePercent,
+          unit: profile.unit,
+          notes: profile.cuts.map(c => `${c.qty}x ${c.length}mm`).join(', '),
+          os_item_id: matchingCut?.os_item_id
+        };
+      });
 
       await supabase.from('os_materials').insert(materialsToInsert);
     }
 
-    // Create purchase order only for glass that needs to be purchased (not in stock)
-    const glassesToPurchase = glassProjectsToProcess.filter(project => {
-      // Only include if needs any purchase
-      if (!project.stockCheck) return true; // No stock check = needs purchase
-      return project.stockCheck.needToPurchase > 0;
-    }).map(project => ({
-      ...project,
-      // Adjust area to only what needs to be purchased
-      total_area_m2: project.stockCheck?.needToPurchase || project.total_area_m2,
-    }));
+    // Now handle accessories (non-profile items)
+    for (const item of osItems) {
+      if (!item.product_id) continue;
+      
+      const [allComposition] = await Promise.all([
+        getProductComposition(item.product_id)
+      ]);
 
-    if (glassesToPurchase.length > 0 && companyId) {
-      await createPurchaseOrderFromOS(ordemServicoId, companyId, glassesToPurchase);
+      const accessories = allComposition.filter(comp => 
+        comp.item_template.type !== 'profile' && comp.item_template.type !== 'glass'
+      );
+
+      if (accessories.length > 0) {
+        const accessoryMaterials = [];
+        const width = item.largura_producao || 0;
+        const height = item.altura_producao || 0;
+        const width_b = item.width_production_b || width;
+        const height_b = item.height_production_b || height;
+        const formulaContext = { width, height, widthB: width_b, heightB: height_b };
+
+        for (const comp of accessories) {
+          const piecesQty = comp.pieces_quantity || 1;
+          const qty = item.quantity || 1;
+          
+          let calculatedQty = piecesQty * qty;
+          if (comp.quantity_formula && comp.quantity_formula !== '1') {
+            const formulaResult = evaluateFormula(comp.quantity_formula, formulaContext);
+            if (formulaResult > 0) {
+              calculatedQty = formulaResult * piecesQty * qty;
+            }
+          }
+
+          if (calculatedQty <= 0) continue;
+
+          accessoryMaterials.push({
+            ordem_servico_id: ordemServicoId,
+            os_item_id: item.id,
+            item_template_id: comp.item_template_id,
+            item_name: comp.item_template.name,
+            item_type: comp.item_template.type,
+            unit: comp.item_template.unit,
+            pieces_count: calculatedQty,
+            total_length_mm: 0,
+            notes: `Componente do produto: ${item.product_name}`
+          });
+        }
+
+        if (accessoryMaterials.length > 0) {
+          await supabase.from('os_materials').insert(accessoryMaterials);
+        }
+      }
     }
 
     return { success: true };
   } catch (error) {
     console.error('Error generating OS documents:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Erro desconhecido' 
-    };
+    return { success: false, error: error instanceof Error ? error.message : 'Erro desconhecido' };
   }
 }
 
 /**
- * Regenerate OS documents (delete existing and recreate)
+ * Regenerate OS documents for a specific item or all items in an OS
  */
 export async function regenerateOSDocuments(
   ordemServicoId: string,
-  quoteId: string
+  osItemId?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // Delete existing documents
-    await Promise.all([
+    // Delete existing documents for the scope
+    const deleteQueries = [
       supabase.from('os_materials').delete().eq('ordem_servico_id', ordemServicoId),
       supabase.from('os_cutting_plan').delete().eq('ordem_servico_id', ordemServicoId),
       supabase.from('os_glass_projects').delete().eq('ordem_servico_id', ordemServicoId),
-    ]);
+    ];
+    
+    if (osItemId) {
+      deleteQueries.forEach(q => q.eq('os_item_id', osItemId));
+    }
 
-    // Fetch quote items
-    const { data: quoteItems, error } = await supabase
-      .from('quote_items')
-      .select('*')
-      .eq('quote_id', quoteId);
+    await Promise.all(deleteQueries);
 
+    // Fetch OS items
+    let query = supabase.from('os_items').select('*').eq('os_id', ordemServicoId);
+    if (osItemId) {
+      query = query.eq('id', osItemId);
+    }
+    const { data: osItems, error } = await query;
     if (error) throw error;
 
     // Fetch company_id from OS
-    const { data: os } = await supabase
-      .from('ordens_servico')
-      .select('company_id')
-      .eq('id', ordemServicoId)
-      .single();
+    const { data: os } = await supabase.from('ordens_servico').select('company_id').eq('id', ordemServicoId).single();
 
-    // Regenerate
-    return generateOSDocuments(ordemServicoId, quoteItems || [], os?.company_id);
+    return generateOSDocuments(ordemServicoId, (osItems || []) as any[], os?.company_id);
   } catch (error) {
     console.error('Error regenerating OS documents:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Erro desconhecido' 
-    };
+    return { success: false, error: error instanceof Error ? error.message : 'Erro desconhecido' };
   }
 }

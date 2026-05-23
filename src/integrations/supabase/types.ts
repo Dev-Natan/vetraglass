@@ -4378,16 +4378,23 @@ export type Database = {
       }
       os_items: {
         Row: {
+          altura_producao: number | null
+          altura_venda: number | null
           created_at: string
           height_production: number
           height_production_b: number | null
           height_sold: number
           height_sold_b: number | null
           id: string
+          largura_producao: number | null
+          largura_venda: number | null
+          last_recalculated_at: string | null
           os_id: string
+          product_id: string | null
           product_name: string
           quantity: number
           quote_item_id: string | null
+          recalculation_required: boolean | null
           technical_notes: string | null
           updated_at: string
           width_production: number
@@ -4396,16 +4403,23 @@ export type Database = {
           width_sold_b: number | null
         }
         Insert: {
+          altura_producao?: number | null
+          altura_venda?: number | null
           created_at?: string
           height_production: number
           height_production_b?: number | null
           height_sold: number
           height_sold_b?: number | null
           id?: string
+          largura_producao?: number | null
+          largura_venda?: number | null
+          last_recalculated_at?: string | null
           os_id: string
+          product_id?: string | null
           product_name: string
           quantity?: number
           quote_item_id?: string | null
+          recalculation_required?: boolean | null
           technical_notes?: string | null
           updated_at?: string
           width_production: number
@@ -4414,16 +4428,23 @@ export type Database = {
           width_sold_b?: number | null
         }
         Update: {
+          altura_producao?: number | null
+          altura_venda?: number | null
           created_at?: string
           height_production?: number
           height_production_b?: number | null
           height_sold?: number
           height_sold_b?: number | null
           id?: string
+          largura_producao?: number | null
+          largura_venda?: number | null
+          last_recalculated_at?: string | null
           os_id?: string
+          product_id?: string | null
           product_name?: string
           quantity?: number
           quote_item_id?: string | null
+          recalculation_required?: boolean | null
           technical_notes?: string | null
           updated_at?: string
           width_production?: number
