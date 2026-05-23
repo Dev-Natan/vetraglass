@@ -17,6 +17,7 @@ interface PanelData {
   areaM2: number;
   quantity: number;
   isMovable?: boolean;
+  side?: string;
   holes?: Array<{ x: number; y: number; diameter: number }>;
   cutouts?: Array<{ x: number; y: number; width: number; height: number }>;
 }
@@ -25,7 +26,9 @@ interface GlassProject {
   id: string;
   product_name: string;
   vao_width: number;
+  vao_width_b?: number | null;
   vao_height: number;
+  vao_height_b?: number | null;
   quantity: number;
   panels_data: PanelData[];
   total_area_m2: number | null;
@@ -116,7 +119,7 @@ export function OSGlassProject({ ordemServicoId }: OSGlassProjectProps) {
                 <CardTitle className="text-lg">{project.product_name}</CardTitle>
                 <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
                   <Maximize2 className="w-4 h-4" />
-                  <span>Vão: {project.vao_width} x {project.vao_height} mm</span>
+                  <span>Vão: {project.vao_width} {project.vao_width_b ? `x ${project.vao_width_b}` : ''} x {project.vao_height} mm</span>
                   <Badge variant="secondary">{project.quantity}x</Badge>
                 </div>
               </div>
@@ -152,7 +155,10 @@ export function OSGlassProject({ ordemServicoId }: OSGlassProjectProps) {
                     {String.fromCharCode(65 + idx)}
                   </div>
                   <div className="flex-1">
-                    <div className="font-medium text-sm">{panel.name}</div>
+                    <div className="font-medium text-sm flex items-center gap-2">
+                      {panel.name}
+                      {panel.side && <Badge variant="outline" className="text-[9px] px-1 py-0">Lado {panel.side}</Badge>}
+                    </div>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span className="font-mono">{panel.width}mm</span>
                       <span>×</span>

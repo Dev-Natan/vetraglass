@@ -11,6 +11,7 @@ interface Panel {
   areaM2: number;
   quantity: number;
   isMovable: boolean;
+  side?: string;
   holes?: Array<{ x: number; y: number; diameter: number }>;
   cutouts?: Array<{ x: number; y: number; width: number; height: number }>;
 }
@@ -19,7 +20,9 @@ interface GlassProject {
   id: string;
   product_name: string;
   vao_width: number;
+  vao_width_b?: number | null;
   vao_height: number;
+  vao_height_b?: number | null;
   quantity: number;
   panels_data: Panel[];
   glass_type: string | null;
@@ -131,7 +134,7 @@ export function generateGlassProductionPdf(
     
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
-    doc.text(`Vão: ${project.vao_width} x ${project.vao_height} mm`, margin + 4, y + 14);
+    doc.text(`Vão: ${project.vao_width} ${project.vao_width_b ? `x ${project.vao_width_b}` : ''} x ${project.vao_height} mm`, margin + 4, y + 14);
     
     // Glass info on right
     const glassInfo = [
@@ -229,7 +232,7 @@ export function generateGlassProductionPdf(
         const letter = String.fromCharCode(65 + index);
         return [
           letter,
-          panel.name,
+          panel.side ? `${panel.name} (Lado ${panel.side})` : panel.name,
           `${panel.width}`,
           `${panel.height}`,
           `${panel.quantity}`,
