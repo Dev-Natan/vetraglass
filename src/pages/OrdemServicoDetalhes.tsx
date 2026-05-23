@@ -319,11 +319,6 @@ export default function OrdemServicoDetalhes() {
         {/* Production Progress Card */}
         <OSProductionProgress ordemServicoId={ordem.id} />
 
-        {/* Material Consumption Status - NEW */}
-        <OSConsumptionStatus ordemServicoId={ordem.id} osStatus={ordem.status} />
-
-        {/* Materials Status */}
-        <OSMaterialsStatus ordemServicoId={ordem.id} />
 
         {/* Summary Card */}
         <Card>
