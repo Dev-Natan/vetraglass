@@ -291,6 +291,8 @@ export function useApprovalMutation({
           description: item.description,
           width: item.width,
           height: item.height,
+          width_b: (item as any).width_b,
+          height_b: (item as any).height_b,
           quantity: item.quantity,
           company_product_id: item.company_product_id,
           product_template_id: item.product_template_id,
