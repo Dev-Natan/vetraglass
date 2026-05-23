@@ -48,6 +48,8 @@ export function useComponentEditor({
     setHeightFormula('');
     setGlassName('');
     setSide(null);
+    setCalculationType('formula');
+    setAppliesTo('side');
     setSearchTerm('');
   };
 
