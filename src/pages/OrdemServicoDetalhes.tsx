@@ -9,11 +9,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Package, Scissors, Layers, FileText, User, Phone, MapPin, Calendar, RefreshCw, Loader2, Download, Camera, ExternalLink, CalendarDays, History } from 'lucide-react';
 import { OSMaterialsList } from '@/components/ordens-servico/OSMaterialsList';
 import { OSCuttingPlan } from '@/components/ordens-servico/OSCuttingPlan';
-import { OSGlassProject } from '@/components/ordens-servico/OSGlassProject';
 import { OSPhotosGallery } from '@/components/ordens-servico/OSPhotosGallery';
 import { OSSalesFlowTimeline } from '@/components/ordens-servico/OSSalesFlowTimeline';
 import { OSProductsList } from '@/components/ordens-servico/OSProductsList';
 import { OSDimensionHistoryList } from '@/components/ordens-servico/OSDimensionHistoryList';
+import { OSCompositionGlasses } from '@/components/ordens-servico/OSCompositionGlasses';
+import { OSCompositionAccessories } from '@/components/ordens-servico/OSCompositionAccessories';
 
 import { OSProductionProgress } from '@/components/ordens-servico/OSProductionProgress';
 import { format } from 'date-fns';
@@ -410,9 +411,9 @@ export default function OrdemServicoDetalhes() {
               <Layers className="w-4 h-4" />
               <span>Vidros</span>
             </TabsTrigger>
-            <TabsTrigger value="photos" className="flex items-center gap-2 py-2">
-              <Camera className="w-4 h-4" />
-              <span>Fotos</span>
+            <TabsTrigger value="accessories" className="flex items-center gap-2 py-2">
+              <Package className="w-4 h-4" />
+              <span>Acessórios</span>
             </TabsTrigger>
             <TabsTrigger value="history" className="flex items-center gap-2 py-2">
               <History className="w-4 h-4" />
@@ -450,17 +451,11 @@ export default function OrdemServicoDetalhes() {
           </TabsContent>
 
           <TabsContent value="glass" className="mt-4 space-y-4">
-            <div className="flex justify-end">
-              <Button variant="outline" size="sm" onClick={handleDownloadGlassPdf} className="gap-2">
-                <Download className="w-4 h-4" />
-                Baixar PDF
-              </Button>
-            </div>
-            <OSGlassProject ordemServicoId={ordem.id} />
+            <OSCompositionGlasses ordemServicoId={ordem.id} />
           </TabsContent>
           
-          <TabsContent value="photos" className="mt-4">
-            <OSPhotosGallery ordemServicoId={ordem.id} />
+          <TabsContent value="accessories" className="mt-4">
+            <OSCompositionAccessories ordemServicoId={ordem.id} />
           </TabsContent>
 
           <TabsContent value="details" className="mt-4">
