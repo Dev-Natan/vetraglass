@@ -14,8 +14,6 @@ import { OSPhotosGallery } from '@/components/ordens-servico/OSPhotosGallery';
 import { OSSalesFlowTimeline } from '@/components/ordens-servico/OSSalesFlowTimeline';
 
 import { OSProductionProgress } from '@/components/ordens-servico/OSProductionProgress';
-import { OSMaterialsStatus } from '@/components/ordens-servico/OSMaterialsStatus';
-import { OSConsumptionStatus } from '@/components/ordens-servico/OSConsumptionStatus';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { regenerateOSDocuments } from '@/utils/generateOSDocuments';
