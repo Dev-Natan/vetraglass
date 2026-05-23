@@ -4118,6 +4118,7 @@ export type Database = {
           id: string
           item_status: Json | null
           ordem_servico_id: string
+          os_item_id: string | null
           product_name: string
           product_template_id: string | null
           quantity: number
@@ -4137,6 +4138,7 @@ export type Database = {
           id?: string
           item_status?: Json | null
           ordem_servico_id: string
+          os_item_id?: string | null
           product_name: string
           product_template_id?: string | null
           quantity?: number
@@ -4156,6 +4158,7 @@ export type Database = {
           id?: string
           item_status?: Json | null
           ordem_servico_id?: string
+          os_item_id?: string | null
           product_name?: string
           product_template_id?: string | null
           quantity?: number
@@ -4182,6 +4185,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "os_cutting_plan_os_item_id_fkey"
+            columns: ["os_item_id"]
+            isOneToOne: false
+            referencedRelation: "os_items"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "os_cutting_plan_product_template_id_fkey"
             columns: ["product_template_id"]
             isOneToOne: false
@@ -4197,6 +4207,44 @@ export type Database = {
           },
         ]
       }
+      os_dimension_history: {
+        Row: {
+          created_at: string
+          field: string
+          id: string
+          new_value: number
+          os_item_id: string
+          previous_value: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          field: string
+          id?: string
+          new_value: number
+          os_item_id: string
+          previous_value?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          field?: string
+          id?: string
+          new_value?: number
+          os_item_id?: string
+          previous_value?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_dimension_history_os_item_id_fkey"
+            columns: ["os_item_id"]
+            isOneToOne: false
+            referencedRelation: "os_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       os_glass_projects: {
         Row: {
           created_at: string
@@ -4205,6 +4253,7 @@ export type Database = {
           id: string
           material_origin: string | null
           ordem_servico_id: string
+          os_item_id: string | null
           panels_data: Json
           procurement_status: string | null
           product_name: string
@@ -4230,6 +4279,7 @@ export type Database = {
           id?: string
           material_origin?: string | null
           ordem_servico_id: string
+          os_item_id?: string | null
           panels_data?: Json
           procurement_status?: string | null
           product_name: string
@@ -4255,6 +4305,7 @@ export type Database = {
           id?: string
           material_origin?: string | null
           ordem_servico_id?: string
+          os_item_id?: string | null
           panels_data?: Json
           procurement_status?: string | null
           product_name?: string
@@ -4286,6 +4337,13 @@ export type Database = {
             columns: ["ordem_servico_id"]
             isOneToOne: false
             referencedRelation: "ordens_servico_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_glass_projects_os_item_id_fkey"
+            columns: ["os_item_id"]
+            isOneToOne: false
+            referencedRelation: "os_items"
             referencedColumns: ["id"]
           },
           {
@@ -4318,6 +4376,85 @@ export type Database = {
           },
         ]
       }
+      os_items: {
+        Row: {
+          created_at: string
+          height_production: number
+          height_production_b: number | null
+          height_sold: number
+          height_sold_b: number | null
+          id: string
+          os_id: string
+          product_name: string
+          quantity: number
+          quote_item_id: string | null
+          technical_notes: string | null
+          updated_at: string
+          width_production: number
+          width_production_b: number | null
+          width_sold: number
+          width_sold_b: number | null
+        }
+        Insert: {
+          created_at?: string
+          height_production: number
+          height_production_b?: number | null
+          height_sold: number
+          height_sold_b?: number | null
+          id?: string
+          os_id: string
+          product_name: string
+          quantity?: number
+          quote_item_id?: string | null
+          technical_notes?: string | null
+          updated_at?: string
+          width_production: number
+          width_production_b?: number | null
+          width_sold: number
+          width_sold_b?: number | null
+        }
+        Update: {
+          created_at?: string
+          height_production?: number
+          height_production_b?: number | null
+          height_sold?: number
+          height_sold_b?: number | null
+          id?: string
+          os_id?: string
+          product_name?: string
+          quantity?: number
+          quote_item_id?: string | null
+          technical_notes?: string | null
+          updated_at?: string
+          width_production?: number
+          width_production_b?: number | null
+          width_sold?: number
+          width_sold_b?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "os_items_os_id_fkey"
+            columns: ["os_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_items_os_id_fkey"
+            columns: ["os_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_items_quote_item_id_fkey"
+            columns: ["quote_item_id"]
+            isOneToOne: false
+            referencedRelation: "quote_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       os_materials: {
         Row: {
           bar_length_mm: number | null
@@ -4330,6 +4467,7 @@ export type Database = {
           item_type: string
           notes: string | null
           ordem_servico_id: string
+          os_item_id: string | null
           pieces_count: number
           procurement_status: string | null
           purchase_order_item_id: string | null
@@ -4351,6 +4489,7 @@ export type Database = {
           item_type: string
           notes?: string | null
           ordem_servico_id: string
+          os_item_id?: string | null
           pieces_count?: number
           procurement_status?: string | null
           purchase_order_item_id?: string | null
@@ -4372,6 +4511,7 @@ export type Database = {
           item_type?: string
           notes?: string | null
           ordem_servico_id?: string
+          os_item_id?: string | null
           pieces_count?: number
           procurement_status?: string | null
           purchase_order_item_id?: string | null
@@ -4402,6 +4542,13 @@ export type Database = {
             columns: ["ordem_servico_id"]
             isOneToOne: false
             referencedRelation: "ordens_servico_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "os_materials_os_item_id_fkey"
+            columns: ["os_item_id"]
+            isOneToOne: false
+            referencedRelation: "os_items"
             referencedColumns: ["id"]
           },
           {
