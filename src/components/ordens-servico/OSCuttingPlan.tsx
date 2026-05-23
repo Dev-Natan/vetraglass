@@ -272,6 +272,18 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
+                  {plan.os_items?.recalculation_required && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="gap-2 text-amber-600 border-amber-500/50 hover:bg-amber-50"
+                      onClick={() => recalculateMutation.mutate(plan.os_item_id)}
+                      disabled={recalculateMutation.isPending}
+                    >
+                      {recalculateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                      Recalcular
+                    </Button>
+                  )}
                   <div className="text-right">
                     <div className="text-sm text-muted-foreground">Progresso</div>
                     <div className="font-bold">{completedItems}/{totalItems}</div>
