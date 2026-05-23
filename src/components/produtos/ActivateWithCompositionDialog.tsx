@@ -186,6 +186,8 @@ export function ActivateWithCompositionDialog({
                 setHeightFormula={editor.setHeightFormula}
                 glassName={editor.glassName}
                 setGlassName={editor.setGlassName}
+                side={editor.side}
+                setSide={editor.setSide}
               />
             )}
           </div>
@@ -230,6 +232,8 @@ export function ActivateWithCompositionDialog({
         setHeightFormula={editor.setHeightFormula}
         glassName={editor.glassName}
         setGlassName={editor.setGlassName}
+        side={editor.side}
+        setSide={editor.setSide}
         onAdd={editor.handleAddItem}
       />
     </>

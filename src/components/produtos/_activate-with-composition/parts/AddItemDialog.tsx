@@ -39,6 +39,8 @@ interface AddItemDialogProps {
   setHeightFormula: (v: string) => void;
   glassName: string;
   setGlassName: (v: string) => void;
+  side: string | null;
+  setSide: (v: string | null) => void;
   onAdd: () => void;
 }
 
@@ -65,6 +67,8 @@ export function AddItemDialog(props: AddItemDialogProps) {
     setHeightFormula,
     glassName,
     setGlassName,
+    side,
+    setSide,
     onAdd,
   } = props;
   const formRef = useRef<HTMLDivElement>(null);
@@ -300,6 +304,31 @@ export function AddItemDialog(props: AddItemDialogProps) {
                   )}
                 </>
               )}
+              <div className="space-y-2">
+                <Label>Lado de aplicação</Label>
+                <div className="flex gap-2">
+                  {[
+                    { value: null, label: 'Ambos' },
+                    { value: 'A', label: 'Lado A' },
+                    { value: 'B', label: 'Lado B' },
+                    { value: 'Todos', label: 'Produto' },
+                  ].map(option => (
+                    <Button
+                      key={String(option.value)}
+                      type="button"
+                      variant={side === option.value ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setSide(option.value)}
+                      className="flex-1"
+                    >
+                      {option.label}
+                    </Button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Selecione "Produto" para itens usados uma única vez no conjunto todo (ex: kit fechadura).
+                </p>
+              </div>
             </div>
           ) : (
             <div className="pt-4 border-t">

@@ -34,6 +34,7 @@ export function useComponentEditor({
   const [widthFormula, setWidthFormula] = useState('');
   const [heightFormula, setHeightFormula] = useState('');
   const [glassName, setGlassName] = useState('');
+  const [side, setSide] = useState<string | null>(null);
 
   const resetForm = () => {
     setSelectedItemTemplateId('');
@@ -44,6 +45,7 @@ export function useComponentEditor({
     setWidthFormula('');
     setHeightFormula('');
     setGlassName('');
+    setSide(null);
     setSearchTerm('');
   };
 
@@ -66,6 +68,7 @@ export function useComponentEditor({
       width_formula: activeTab === 'glass' ? widthFormula : null,
       height_formula: activeTab === 'glass' ? heightFormula : null,
       is_optional: false,
+      side: side,
       notes: activeTab === 'glass' ? glassName : null,
       isNew: true,
       item_template: {
@@ -102,6 +105,7 @@ export function useComponentEditor({
           cut_angle: cutAngle,
           width_formula: itemType === 'glass' ? widthFormula : null,
           height_formula: itemType === 'glass' ? heightFormula : null,
+          side: side,
           notes: itemType === 'glass' ? glassName : item.notes,
         };
       })
@@ -120,6 +124,7 @@ export function useComponentEditor({
     setWidthFormula(item.width_formula || '');
     setHeightFormula(item.height_formula || '');
     setGlassName(item.notes || '');
+    setSide(item.side || null);
   };
 
   const handleSaveEdit = () => {
@@ -161,6 +166,8 @@ export function useComponentEditor({
     setHeightFormula,
     glassName,
     setGlassName,
+    side,
+    setSide,
 
     // actions
     resetForm,

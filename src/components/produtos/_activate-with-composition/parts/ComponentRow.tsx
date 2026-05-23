@@ -38,6 +38,8 @@ interface ComponentRowProps {
   setHeightFormula: (v: string) => void;
   glassName: string;
   setGlassName: (v: string) => void;
+  side: string | null;
+  setSide: (v: string | null) => void;
 }
 
 export function ComponentRow({
@@ -61,6 +63,8 @@ export function ComponentRow({
   setHeightFormula,
   glassName,
   setGlassName,
+  side,
+  setSide,
 }: ComponentRowProps) {
   const itemType = item.item_template?.type;
 
@@ -179,6 +183,31 @@ export function ComponentRow({
                   </Select>
                 </div>
               )}
+              <div className="space-y-2 mt-4 pt-4 border-t">
+                <Label className="text-sm">Lado de aplicação</Label>
+                <div className="flex gap-2">
+                  {[
+                    { value: null, label: 'Ambos' },
+                    { value: 'A', label: 'Lado A' },
+                    { value: 'B', label: 'Lado B' },
+                    { value: 'Todos', label: 'Produto' },
+                  ].map(option => (
+                    <Button
+                      key={String(option.value)}
+                      type="button"
+                      variant={side === option.value ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setSide(option.value)}
+                      className="flex-1 text-xs"
+                    >
+                      {option.label}
+                    </Button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  "Produto" = usado uma única vez no conjunto todo.
+                </p>
+              </div>
             </div>
           )}
 
@@ -258,6 +287,18 @@ export function ComponentRow({
                 </>
               )}
             </>
+          )}
+          {side && (
+            <Badge 
+              variant="outline" 
+              className={
+                side === 'A' ? "bg-blue-50 text-blue-600" : 
+                side === 'B' ? "bg-green-50 text-green-600" : 
+                "bg-purple-50 text-purple-600"
+              }
+            >
+              {side === 'Todos' ? 'Produto Todo' : `Lado ${side}`}
+            </Badge>
           )}
           {item.isNew && (
             <Badge variant="outline" className="text-xs border-green-500 text-green-600">

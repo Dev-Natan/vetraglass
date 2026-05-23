@@ -206,13 +206,14 @@ export async function generateMaterialConsumption(
         const sidesToProcess: (string | null)[] = [];
         if (!hasMultipleSides) {
           sidesToProcess.push(null);
-        } else if (component.side === 'A') {
-          sidesToProcess.push('A');
-        } else if (component.side === 'B') {
-          sidesToProcess.push('B');
-        } else {
-          // Both sides
+        } else if (component.side === 'A' || component.side === 'B') {
+          sidesToProcess.push(component.side);
+        } else if (component.side === 'Ambos' || !component.side) {
+          // Default: Both sides
           sidesToProcess.push('A', 'B');
+        } else {
+          // "Todos" or any other value means only one record (unit for whole product)
+          sidesToProcess.push(null);
         }
 
         for (const currentSide of sidesToProcess) {
