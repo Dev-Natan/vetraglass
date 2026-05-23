@@ -37,7 +37,7 @@ export default function OrdemServicoDetalhes() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { currentCompany } = useAuth();
+  const { currentCompany, companies } = useAuth();
 
   const { data: ordem, isLoading } = useQuery({
     queryKey: ['ordem-servico', id],
