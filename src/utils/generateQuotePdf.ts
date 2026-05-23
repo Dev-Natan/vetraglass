@@ -19,6 +19,8 @@ interface QuoteItem {
   description: string;
   width: number | null;
   height: number | null;
+  width_b?: number | null;
+  height_b?: number | null;
   quantity: number;
   unit_price: number;
   total_price: number;
@@ -251,7 +253,7 @@ export async function generateQuotePdf(
   ];
 
   const tableBody = items.map((item, index) => {
-    const areaValue = ((item.width || 0) * (item.height || 0)) / 1_000_000;
+    const areaValue = (((item.width || 0) + (item.width_b || 0)) * (item.height || 0)) / 1_000_000;
     
     let description = `${item.description}`;
     let details = [];
@@ -276,7 +278,11 @@ export async function generateQuotePdf(
       (index + 1).toString(),
       '', 
       `${description}${detailsStr}${componentsStr}${obsStr}`,
-      ...(showMeasuresColumn ? [`${item.width || 0} x ${item.height || 0}`] : []),
+      ...(showMeasuresColumn ? [
+        item.width_b 
+          ? `A: ${item.width || 0}x${item.height || 0} | B: ${item.width_b}x${item.height_b || item.height}`
+          : `${item.width || 0} x ${item.height || 0}`
+      ] : []),
       ...(showM2Column ? [`${areaValue.toFixed(2)} m²`] : []),
       item.quantity.toString(),
       formatCurrencyValue(item.unit_price),
