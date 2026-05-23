@@ -40,8 +40,12 @@ interface AddProductPanelProps {
     category?: string;
     width: number;
     height: number;
+    width_b?: number;
+    height_b?: number;
     vao_width?: number;
     vao_height?: number;
+    vao_width_b?: number;
+    vao_height_b?: number;
     quantity: number;
     unit_price: number;
     total_price: number;
@@ -77,6 +81,10 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   const [height, setHeight] = useState<number>(0); // Produto
   const [vaoWidth, setVaoWidth] = useState<number>(0);
   const [vaoHeight, setVaoHeight] = useState<number>(0);
+  const [vaoWidthB, setVaoWidthB] = useState<number>(0);
+  const [vaoHeightB, setVaoHeightB] = useState<number>(0);
+  const [widthB, setWidthB] = useState<number>(0);
+  const [heightB, setHeightB] = useState<number>(0);
   const [folgaWidth, setFolgaWidth] = useState<number>(0);
   const [folgaHeight, setFolgaHeight] = useState<number>(0);
   const [useVao, setUseVao] = useState<boolean>(false);
@@ -119,7 +127,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
           pricing_type,
           product_template_id,
           product_template:product_templates (
-            id, name, description, category, linha, image_url
+            id, name, description, category, linha, image_url, has_multiple_sides
           )
         `)
         .eq('company_id', currentCompany.id)
@@ -171,7 +179,8 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
         is_custom: cp.is_custom ?? false,
         uses_glass: cp.uses_glass ?? true,
         company_product: cp,
-        product_template_id: cp.product_template_id
+        product_template_id: cp.product_template_id,
+        has_multiple_sides: (template as any)?.has_multiple_sides ?? false
       };
     });
     
@@ -284,16 +293,20 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     if (useVao) {
       setWidth(Math.max(0, vaoWidth - folgaWidth));
       setHeight(Math.max(0, vaoHeight - folgaHeight));
+      setWidthB(Math.max(0, vaoWidthB - folgaWidth));
+      setHeightB(Math.max(0, vaoHeightB - folgaHeight));
     }
-  }, [vaoWidth, vaoHeight, folgaWidth, folgaHeight, useVao]);
+  }, [vaoWidth, vaoHeight, vaoWidthB, vaoHeightB, folgaWidth, folgaHeight, useVao]);
 
   // Set default dimensions from vao if not using vao input directly
   useEffect(() => {
     if (!useVao) {
       setVaoWidth(width + folgaWidth);
       setVaoHeight(height + folgaHeight);
+      setVaoWidthB(widthB + folgaWidth);
+      setVaoHeightB(heightB + folgaHeight);
     }
-  }, [width, height, folgaWidth, folgaHeight, !useVao]);
+  }, [width, height, widthB, heightB, folgaWidth, folgaHeight, !useVao]);
 
 
   // Get selected glass price details
@@ -314,6 +327,8 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     companyProductId: companyProduct?.id,
     width: width || 1000,
     height: height || 1000,
+    widthB: widthB || 0,
+    heightB: heightB || 0,
     quantity: quantity || 1,
     enabled: !!companyProduct?.id && width > 0 && height > 0,
     excludeOptionalIds: excludedOptionalIds,
@@ -385,8 +400,12 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
       category: selectedProduct.category,
       width,
       height,
+      width_b: selectedProduct.has_multiple_sides ? widthB : undefined,
+      height_b: selectedProduct.has_multiple_sides ? heightB : undefined,
       vao_width: useVao ? vaoWidth : undefined,
       vao_height: useVao ? vaoHeight : undefined,
+      vao_width_b: (useVao && selectedProduct.has_multiple_sides) ? vaoWidthB : undefined,
+      vao_height_b: (useVao && selectedProduct.has_multiple_sides) ? vaoHeightB : undefined,
       quantity,
       unit_price: unitPrice,
       total_price: totalPrice,
@@ -611,10 +630,10 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
 
         {/* Largura, Altura, Quantidade */}
         {selectedProduct && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-foreground">
-                Largura (mm) <span className="text-destructive">*</span>
+                Largura {selectedProduct.has_multiple_sides && "(Lado A)"} (mm) <span className="text-destructive">*</span>
               </label>
               <Input
                 type="number"
@@ -626,7 +645,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-foreground">
-                Altura (mm) <span className="text-destructive">*</span>
+                Altura {selectedProduct.has_multiple_sides && "(Lado A)"} (mm) <span className="text-destructive">*</span>
               </label>
               <Input
                 type="number"
@@ -636,6 +655,36 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                 className="bg-background h-10"
               />
             </div>
+
+            {selectedProduct.has_multiple_sides && (
+              <>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-foreground">
+                    Largura Lado B (mm) <span className="text-destructive">*</span>
+                  </label>
+                  <Input
+                    type="number"
+                    value={widthB || ''}
+                    onChange={(e) => setWidthB(Number(e.target.value))}
+                    placeholder="1000"
+                    className="bg-background h-10"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-foreground">
+                    Altura Lado B (mm) <span className="text-destructive">*</span>
+                  </label>
+                  <Input
+                    type="number"
+                    value={heightB || ''}
+                    onChange={(e) => setHeightB(Number(e.target.value))}
+                    placeholder="2000"
+                    className="bg-background h-10"
+                  />
+                </div>
+              </>
+            )}
+
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-foreground">
                 Quantidade <span className="text-destructive">*</span>
