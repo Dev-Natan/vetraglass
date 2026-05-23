@@ -32,9 +32,9 @@ interface FormulaEditorProps {
 const commonFormulas = [
   { label: 'Altura', formula: 'Altura', icon: ArrowUpDown, color: 'bg-blue-500' },
   { label: 'Largura', formula: 'Largura', icon: ArrowLeftRight, color: 'bg-green-500' },
-  { label: 'Vez. Comum', formula: '(Largura - 134) / 2', icon: null, color: 'bg-orange-500' },
-  { label: 'Qtde Vez.', formula: '((Altura - 132) / 60) * 2', icon: null, color: 'bg-purple-500' },
-  { label: '(Largura / 2) - 20', formula: '(Largura / 2) - 20', icon: null, color: 'bg-emerald-500' },
+  { label: 'Lado A + B', formula: 'largura_lado_a + largura_lado_b', icon: null, color: 'bg-orange-500' },
+  { label: 'Lados', formula: 'lados', icon: null, color: 'bg-purple-500' },
+  { label: 'Folhas', formula: 'folhas', icon: null, color: 'bg-emerald-500' },
   { label: 'Área m²', formula: 'Altura * Largura / 1000000', icon: null, color: 'bg-purple-500' },
 ];
 
