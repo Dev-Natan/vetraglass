@@ -12,8 +12,10 @@ interface OSItem {
   product_name: string;
   largura_producao: number;
   altura_producao: number;
-  width_production_b?: number | null;
-  height_production_b?: number | null;
+  largura_producao_b?: number | null;
+  altura_producao_b?: number | null;
+  largura_producao_c?: number | null;
+  altura_producao_c?: number | null;
   quantity: number;
   product_id: string | null;
   glass_thickness?: string | null;
