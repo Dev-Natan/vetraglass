@@ -41,6 +41,10 @@ interface AddItemDialogProps {
   setGlassName: (v: string) => void;
   side: string | null;
   setSide: (v: string | null) => void;
+  calculationType: 'fixed' | 'per_side' | 'per_leaf' | 'per_glass' | 'formula';
+  setCalculationType: (v: 'fixed' | 'per_side' | 'per_leaf' | 'per_glass' | 'formula') => void;
+  appliesTo: 'product' | 'side' | 'leaf' | 'glass' | 'panel';
+  setAppliesTo: (v: 'product' | 'side' | 'leaf' | 'glass' | 'panel') => void;
   onAdd: () => void;
 }
 
