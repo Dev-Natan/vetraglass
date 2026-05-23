@@ -222,28 +222,86 @@ export function OSProductsList({ ordemServicoId }: OSProductsListProps) {
               Altere as medidas reais para produção. O orçamento comercial permanecerá intacto.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="width">Largura de Produção (mm)</Label>
-                <Input 
-                  id="width" 
-                  type="number" 
-                  defaultValue={selectedItem?.largura_producao} 
-                  onChange={(e) => selectedItem && (selectedItem.largura_producao = Number(e.target.value))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="height">Altura de Produção (mm)</Label>
-                <Input 
-                  id="height" 
-                  type="number" 
-                  defaultValue={selectedItem?.altura_producao}
-                  onChange={(e) => selectedItem && (selectedItem.altura_producao = Number(e.target.value))}
-                />
+          <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
+            <div className="space-y-4">
+              <div className="font-semibold text-sm border-b pb-1">Lado A (Principal)</div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="width">Largura A (mm)</Label>
+                  <Input 
+                    id="width" 
+                    type="number" 
+                    defaultValue={selectedItem?.largura_producao} 
+                    onChange={(e) => selectedItem && (selectedItem.largura_producao = Number(e.target.value))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="height">Altura A (mm)</Label>
+                  <Input 
+                    id="height" 
+                    type="number" 
+                    defaultValue={selectedItem?.altura_producao}
+                    onChange={(e) => selectedItem && (selectedItem.altura_producao = Number(e.target.value))}
+                  />
+                </div>
               </div>
             </div>
-            <div className="space-y-2">
+
+            {/* Lado B Fields (if multi-side) */}
+            {(selectedItem?.largura_venda_b || selectedItem?.largura_producao_b) && (
+              <div className="space-y-4 pt-2">
+                <div className="font-semibold text-sm border-b pb-1">Lado B</div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="width_b">Largura B (mm)</Label>
+                    <Input 
+                      id="width_b" 
+                      type="number" 
+                      defaultValue={selectedItem?.largura_producao_b || 0} 
+                      onChange={(e) => selectedItem && (selectedItem.largura_producao_b = Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="height_b">Altura B (mm)</Label>
+                    <Input 
+                      id="height_b" 
+                      type="number" 
+                      defaultValue={selectedItem?.altura_producao_b || 0}
+                      onChange={(e) => selectedItem && (selectedItem.altura_producao_b = Number(e.target.value))}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Lado C Fields (if multi-side) */}
+            {(selectedItem?.largura_venda_c || selectedItem?.largura_producao_c) && (
+              <div className="space-y-4 pt-2">
+                <div className="font-semibold text-sm border-b pb-1">Lado C</div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="width_c">Largura C (mm)</Label>
+                    <Input 
+                      id="width_c" 
+                      type="number" 
+                      defaultValue={selectedItem?.largura_producao_c || 0} 
+                      onChange={(e) => selectedItem && (selectedItem.largura_producao_c = Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="height_c">Altura C (mm)</Label>
+                    <Input 
+                      id="height_c" 
+                      type="number" 
+                      defaultValue={selectedItem?.altura_producao_c || 0}
+                      onChange={(e) => selectedItem && (selectedItem.altura_producao_c = Number(e.target.value))}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2 pt-2">
               <Label htmlFor="notes">Observações Técnicas</Label>
               <Textarea 
                 id="notes" 
@@ -259,6 +317,10 @@ export function OSProductsList({ ordemServicoId }: OSProductsListProps) {
               onClick={() => adjustMutation.mutate({
                 largura: selectedItem!.largura_producao,
                 altura: selectedItem!.altura_producao,
+                largura_producao_b: selectedItem!.largura_producao_b,
+                altura_producao_b: selectedItem!.altura_producao_b,
+                largura_producao_c: selectedItem!.largura_producao_c,
+                altura_producao_c: selectedItem!.altura_producao_c,
                 notes: selectedItem!.technical_notes || ''
               })}
               disabled={adjustMutation.isPending}
