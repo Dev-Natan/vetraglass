@@ -1,16 +1,21 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Package, Ruler, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Package, Ruler, AlertTriangle, CheckCircle, List, Boxes } from 'lucide-react';
 import { formatMm, distributeAcrossBars } from '@/utils/profileOptimization';
+import { osService } from '@/services/osService';
 
 interface OSMaterialsListProps {
   ordemServicoId: string;
 }
 
 export function OSMaterialsList({ ordemServicoId }: OSMaterialsListProps) {
+  const [viewMode, setViewMode] = useState<'individual' | 'consolidated'>('individual');
+
   const { data: materials, isLoading } = useQuery({
     queryKey: ['os-materials', ordemServicoId],
     queryFn: async () => {
