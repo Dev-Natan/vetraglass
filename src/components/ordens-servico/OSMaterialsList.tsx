@@ -68,14 +68,31 @@ export function OSMaterialsList({ ordemServicoId }: OSMaterialsListProps) {
 
   return (
     <div className="space-y-6">
-      {/* Summary Card */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Package className="w-5 h-5" />
-            Resumo de Materiais
-          </CardTitle>
-        </CardHeader>
+      <div className="flex justify-start">
+        <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as any)} className="w-auto">
+          <TabsList>
+            <TabsTrigger value="individual" className="gap-2">
+              <List className="w-4 h-4" />
+              Individual
+            </TabsTrigger>
+            <TabsTrigger value="consolidated" className="gap-2">
+              <Boxes className="w-4 h-4" />
+              Consolidado
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
+      {viewMode === 'individual' ? (
+        <>
+          {/* Summary Card */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Package className="w-5 h-5" />
+                Resumo de Materiais
+              </CardTitle>
+            </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center p-3 bg-muted/50 rounded-lg">
