@@ -125,6 +125,10 @@ export function ComponentsStep(props: ComponentsStepProps) {
                     setGlassName={props.setGlassName}
                     side={props.side}
                     setSide={props.setSide}
+                    calculationType={props.calculationType}
+                    setCalculationType={props.setCalculationType}
+                    appliesTo={props.appliesTo}
+                    setAppliesTo={props.setAppliesTo}
                   />
                 ))
               )}
