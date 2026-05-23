@@ -8,8 +8,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Plus } from 'lucide-react';
 import { useProductCategories } from '@/hooks/useProductCategories';
+import { useProductLinhas } from '@/hooks/useProductLinhas';
 import { ImageUploadField } from '@/components/common/ImageUploadField';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -31,11 +32,14 @@ export function EditCustomProductDialog({ open, onOpenChange, product }: EditCus
   const queryClient = useQueryClient();
   const { currentCompany } = useAuth();
   const { data: productCategories } = useProductCategories();
+  const { data: productLinhas } = useProductLinhas();
   
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('other');
   const [linha, setLinha] = useState('');
+  const [customLinha, setCustomLinha] = useState('');
+  const [showCustomLinha, setShowCustomLinha] = useState(false);
   const [basePrice, setBasePrice] = useState('');
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
@@ -60,7 +64,7 @@ export function EditCustomProductDialog({ open, onOpenChange, product }: EditCus
           commercial_name: name.trim(),
           description: description.trim() || null,
           category,
-          linha: linha.trim() || null,
+          linha: showCustomLinha ? customLinha.trim() : (linha.trim() || null),
           base_price: basePrice ? parseFloat(basePrice) : null,
           image_url: imageUrl,
         })
@@ -139,12 +143,52 @@ export function EditCustomProductDialog({ open, onOpenChange, product }: EditCus
 
           <div className="space-y-2">
             <Label htmlFor="linha">Linha</Label>
-            <Input
-              id="linha"
-              value={linha}
-              onChange={(e) => setLinha(e.target.value)}
-              placeholder="Ex: Suprema"
-            />
+            {showCustomLinha ? (
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Nome da linha"
+                  value={customLinha}
+                  onChange={(e) => setCustomLinha(e.target.value)}
+                  className="flex-1"
+                />
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => {
+                    setShowCustomLinha(false);
+                    setCustomLinha('');
+                  }}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            ) : (
+              <Select value={linha} onValueChange={(val) => {
+                if (val === '__new__') {
+                  setShowCustomLinha(true);
+                } else {
+                  setLinha(val);
+                }
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a linha..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {productLinhas?.map((l) => (
+                    <SelectItem key={l.id} value={l.name}>
+                      {l.name}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="__new__" className="text-primary">
+                    <span className="flex items-center gap-2">
+                      <Plus className="w-4 h-4" />
+                      Nova linha
+                    </span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           <div className="space-y-2">

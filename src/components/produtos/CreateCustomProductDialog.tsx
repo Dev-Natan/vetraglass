@@ -12,7 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useProductCategories } from '@/hooks/useProductCategories';
-import { useProductLinhas } from '@/hooks/useProductLinhas';
+import { useProductLinhas, useProductLinhaLabels } from '@/hooks/useProductLinhas';
 import { ImageUploadField } from '@/components/common/ImageUploadField';
 
 interface CreateCustomProductDialogProps {
@@ -41,34 +41,8 @@ export function CreateCustomProductDialog({ open, onOpenChange, defaultLinha }: 
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [tempProductId] = useState(() => crypto.randomUUID());
 
-  // Fetch existing linhas from company products
-  const { data: existingLinhas = [] } = useQuery({
-    queryKey: ['existing-linhas', currentCompany?.id],
-    queryFn: async () => {
-      if (!currentCompany?.id) return [];
-      
-      // Get linhas from company products
-      const { data: companyLinhas } = await supabase
-        .from('company_products')
-        .select('linha')
-        .eq('company_id', currentCompany.id)
-        .not('linha', 'is', null);
-      
-      // Get linhas from product templates
-      const { data: templateLinhas } = await supabase
-        .from('product_templates')
-        .select('linha')
-        .eq('is_active', true)
-        .not('linha', 'is', null);
-      
-      const allLinhas = new Set<string>();
-      companyLinhas?.forEach(p => p.linha && allLinhas.add(p.linha));
-      templateLinhas?.forEach(p => p.linha && allLinhas.add(p.linha));
-      
-      return Array.from(allLinhas).sort();
-    },
-    enabled: !!currentCompany?.id && open,
-  });
+  // No longer fetching existing linhas as we want to use the pre-defined ones
+  const { labels: productLinhaLabels } = useProductLinhaLabels();
 
   // Fetch existing categories from company products
   const { data: existingCategories = [] } = useQuery({
@@ -286,12 +260,12 @@ export function CreateCustomProductDialog({ open, onOpenChange, defaultLinha }: 
                   }
                 }}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione ou crie..." />
+                    <SelectValue placeholder="Selecione a linha..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {existingLinhas.map((l) => (
-                      <SelectItem key={l} value={l}>
-                        {l}
+                    {productLinhas?.map((l) => (
+                      <SelectItem key={l.id} value={l.name}>
+                        {l.name}
                       </SelectItem>
                     ))}
                     <SelectItem value="__new__" className="text-primary">
