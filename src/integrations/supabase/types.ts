@@ -1602,6 +1602,8 @@ export type Database = {
       }
       company_product_items: {
         Row: {
+          applies_to: string | null
+          calculation_type: string | null
           company_item_id: string | null
           company_product_id: string
           created_at: string | null
@@ -1621,6 +1623,8 @@ export type Database = {
           width_formula: string | null
         }
         Insert: {
+          applies_to?: string | null
+          calculation_type?: string | null
           company_item_id?: string | null
           company_product_id: string
           created_at?: string | null
@@ -1640,6 +1644,8 @@ export type Database = {
           width_formula?: string | null
         }
         Update: {
+          applies_to?: string | null
+          calculation_type?: string | null
           company_item_id?: string | null
           company_product_id?: string
           created_at?: string | null
@@ -1696,21 +1702,25 @@ export type Database = {
           cost_per_sqm: number | null
           created_at: string
           description: string | null
+          glasses_count: number | null
           has_multiple_sides: boolean | null
           id: string
           image_url: string | null
           is_active: boolean
           is_custom: boolean | null
+          leaves_count: number | null
           linha: string | null
           margin_percent: number | null
           max_height: number | null
           max_width: number | null
           min_height: number | null
           min_width: number | null
+          panels_count: number | null
           price_per_sqm: number | null
           pricing_type: string
           product_template_id: string | null
           reforco: string | null
+          sides_count: number | null
           updated_at: string
           uses_glass: boolean | null
         }
@@ -1727,21 +1737,25 @@ export type Database = {
           cost_per_sqm?: number | null
           created_at?: string
           description?: string | null
+          glasses_count?: number | null
           has_multiple_sides?: boolean | null
           id?: string
           image_url?: string | null
           is_active?: boolean
           is_custom?: boolean | null
+          leaves_count?: number | null
           linha?: string | null
           margin_percent?: number | null
           max_height?: number | null
           max_width?: number | null
           min_height?: number | null
           min_width?: number | null
+          panels_count?: number | null
           price_per_sqm?: number | null
           pricing_type?: string
           product_template_id?: string | null
           reforco?: string | null
+          sides_count?: number | null
           updated_at?: string
           uses_glass?: boolean | null
         }
@@ -1758,21 +1772,25 @@ export type Database = {
           cost_per_sqm?: number | null
           created_at?: string
           description?: string | null
+          glasses_count?: number | null
           has_multiple_sides?: boolean | null
           id?: string
           image_url?: string | null
           is_active?: boolean
           is_custom?: boolean | null
+          leaves_count?: number | null
           linha?: string | null
           margin_percent?: number | null
           max_height?: number | null
           max_width?: number | null
           min_height?: number | null
           min_width?: number | null
+          panels_count?: number | null
           price_per_sqm?: number | null
           pricing_type?: string
           product_template_id?: string | null
           reforco?: string | null
+          sides_count?: number | null
           updated_at?: string
           uses_glass?: boolean | null
         }
@@ -4784,6 +4802,8 @@ export type Database = {
       }
       product_template_items: {
         Row: {
+          applies_to: string | null
+          calculation_type: string | null
           company_id: string | null
           created_at: string
           cut_angle: number
@@ -4801,6 +4821,8 @@ export type Database = {
           width_formula: string | null
         }
         Insert: {
+          applies_to?: string | null
+          calculation_type?: string | null
           company_id?: string | null
           created_at?: string
           cut_angle?: number
@@ -4818,6 +4840,8 @@ export type Database = {
           width_formula?: string | null
         }
         Update: {
+          applies_to?: string | null
+          calculation_type?: string | null
           company_id?: string | null
           created_at?: string
           cut_angle?: number
@@ -4880,6 +4904,10 @@ export type Database = {
           cor_componentes: string | null
           corte_contramarco: string | null
           created_at: string
+          default_glasses_count: number | null
+          default_leaves_count: number | null
+          default_panels_count: number | null
+          default_sides_count: number | null
           description: string | null
           has_multiple_sides: boolean | null
           id: string
@@ -4910,6 +4938,10 @@ export type Database = {
           cor_componentes?: string | null
           corte_contramarco?: string | null
           created_at?: string
+          default_glasses_count?: number | null
+          default_leaves_count?: number | null
+          default_panels_count?: number | null
+          default_sides_count?: number | null
           description?: string | null
           has_multiple_sides?: boolean | null
           id?: string
@@ -4940,6 +4972,10 @@ export type Database = {
           cor_componentes?: string | null
           corte_contramarco?: string | null
           created_at?: string
+          default_glasses_count?: number | null
+          default_leaves_count?: number | null
+          default_panels_count?: number | null
+          default_sides_count?: number | null
           description?: string | null
           has_multiple_sides?: boolean | null
           id?: string
@@ -5271,16 +5307,20 @@ export type Database = {
           excluded_optional_ids: Json | null
           glass_color: string | null
           glass_thickness: string | null
+          glasses_count: number | null
           has_glass: boolean | null
           height: number | null
           height_b: number | null
           id: string
           include_contramarco: boolean | null
           item_type: string | null
+          leaves_count: number | null
           notes: string | null
+          panels_count: number | null
           product_template_id: string | null
           quantity: number
           quote_id: string
+          sides_count: number | null
           total_price: number
           unit: string | null
           unit_price: number
@@ -5296,16 +5336,20 @@ export type Database = {
           excluded_optional_ids?: Json | null
           glass_color?: string | null
           glass_thickness?: string | null
+          glasses_count?: number | null
           has_glass?: boolean | null
           height?: number | null
           height_b?: number | null
           id?: string
           include_contramarco?: boolean | null
           item_type?: string | null
+          leaves_count?: number | null
           notes?: string | null
+          panels_count?: number | null
           product_template_id?: string | null
           quantity?: number
           quote_id: string
+          sides_count?: number | null
           total_price?: number
           unit?: string | null
           unit_price?: number
@@ -5321,16 +5365,20 @@ export type Database = {
           excluded_optional_ids?: Json | null
           glass_color?: string | null
           glass_thickness?: string | null
+          glasses_count?: number | null
           has_glass?: boolean | null
           height?: number | null
           height_b?: number | null
           id?: string
           include_contramarco?: boolean | null
           item_type?: string | null
+          leaves_count?: number | null
           notes?: string | null
+          panels_count?: number | null
           product_template_id?: string | null
           quantity?: number
           quote_id?: string
+          sides_count?: number | null
           total_price?: number
           unit?: string | null
           unit_price?: number
