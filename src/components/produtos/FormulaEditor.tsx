@@ -400,8 +400,8 @@ export const FormulaEditor = forwardRef<HTMLDivElement, FormulaEditorProps>(
         <p className="font-medium">💡 Dicas:</p>
         <ul className="list-disc list-inside space-y-0.5 text-muted-foreground/80">
           <li><strong>Altura</strong> e <strong>Largura</strong> são as dimensões do produto em milímetros</li>
-          <li>Use parênteses para agrupar operações: <code className="font-mono bg-muted px-1 rounded">(Largura / 2) - 20</code></li>
-          <li>Para calcular área em m²: <code className="font-mono bg-muted px-1 rounded">Altura * Largura / 10000</code></li>
+          <li>Variáveis extras: <strong>lados</strong>, <strong>folhas</strong>, <strong>vidros</strong>, <strong>painel</strong>, <strong>folga</strong></li>
+          <li>Dimensões: <strong>largura_lado_a</strong>, <strong>largura_lado_b</strong>, <strong>altura_lado_a</strong>, etc.</li>
         </ul>
       </div>
     </div>
