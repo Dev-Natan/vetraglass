@@ -279,7 +279,17 @@ export function useApprovalMutation({
       }
 
       // 5. Documents
-      const docsResult = await generateOSDocuments(ordemServico.id, items);
+      const osItems = items.map(item => ({
+        id: crypto.randomUUID(), // Temp ID until fetched
+        os_id: ordemServico.id,
+        quote_item_id: item.id,
+        product_name: item.description,
+        largura_producao: item.width || 0,
+        altura_producao: item.height || 0,
+        quantity: item.quantity,
+        product_id: item.product_template_id
+      }));
+      const docsResult = await generateOSDocuments(ordemServico.id, osItems as any);
       if (!docsResult.success) console.warn('Error generating OS documents:', docsResult.error);
 
       // 6. Material consumption
