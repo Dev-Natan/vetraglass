@@ -44,6 +44,7 @@ export function useActivationData({
           height_formula,
           is_optional,
           notes,
+          side,
           item_template:item_templates (
             id,
             name,
@@ -138,6 +139,7 @@ export function useActivationData({
           height_formula: formula.height_formula,
           is_optional: false,
           notes: formula.formula_name,
+          side: null,
           isNew: true,
           item_template: {
             id: genericGlassTemplate.id,
