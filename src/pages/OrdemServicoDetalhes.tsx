@@ -221,7 +221,7 @@ export default function OrdemServicoDetalhes() {
       ...p,
       aluminum_color: p.quote_items?.aluminum_color || null,
     }));
-    generateCuttingPlanPdf(plansForPdf, getOsInfo(), getCompanyInfo());
+    generateCuttingPlanPdf(plansForPdf, getOsInfo(), getCompanyInfo(), 'download', userProfile?.role === 'admin');
     toast.success('PDF gerado com sucesso!');
   };
 

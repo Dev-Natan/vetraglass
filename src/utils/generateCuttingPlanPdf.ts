@@ -55,7 +55,8 @@ export function generateCuttingPlanPdf(
   plans: CuttingPlan[],
   osInfo: OSInfo,
   company: Company | null,
-  mode: 'download' | 'print' = 'download'
+  mode: 'download' | 'print' = 'download',
+  isAdmin: boolean = false
 ) {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -153,18 +154,32 @@ export function generateCuttingPlanPdf(
       doc.text('✂ CORTES DE PERFIL', margin, y + 4);
       y += 8;
       
-      const profileTableData = plan.cuts_data.map((cut) => [
-        cut.side ? `${cut.profileName} (Lado ${cut.side})` : cut.profileName,
-        cut.formula,
-        cut.position,
-        `${cut.calculatedLength} mm`,
-        `${cut.quantity}`,
-        `${cut.cutAngle}°`
-      ]);
+      const profileTableData = plan.cuts_data.map((cut) => {
+        const row = [
+          cut.side ? `${cut.profileName} (Lado ${cut.side})` : cut.profileName,
+        ];
+        
+        if (isAdmin) {
+          row.push(cut.formula);
+        }
+        
+        row.push(
+          cut.position,
+          `${cut.calculatedLength} mm`,
+          `${cut.quantity}`,
+          `${cut.cutAngle}°`
+        );
+        
+        return row;
+      });
+      
+      const head = ['Perfil'];
+      if (isAdmin) head.push('Fórmula');
+      head.push('Posição', 'Medida', 'Qtd', 'Ângulo');
       
       autoTable(doc, {
         startY: y,
-        head: [['Perfil', 'Fórmula', 'Posição', 'Medida', 'Qtd', 'Ângulo']],
+        head: [head],
         body: profileTableData,
         theme: 'grid',
         headStyles: {
@@ -178,8 +193,8 @@ export function generateCuttingPlanPdf(
           textColor: darkText
         },
         columnStyles: {
-          0: { fontStyle: 'bold', cellWidth: 50 },
-          1: { cellWidth: 40, halign: 'center' },
+          0: { fontStyle: 'bold', cellWidth: isAdmin ? 45 : 60 },
+          1: isAdmin ? { cellWidth: 35, halign: 'center' } : { cellWidth: 30, halign: 'center' },
           2: { cellWidth: 25, halign: 'center' },
           3: { cellWidth: 30, halign: 'center', fontStyle: 'bold' },
           4: { cellWidth: 15, halign: 'center' },
