@@ -16,7 +16,9 @@ export interface ApprovalQuoteItem {
   id: string;
   description: string;
   width: number | null;
+  width_b?: number | null;
   height: number | null;
+  height_b?: number | null;
   quantity: number;
   unit_price: number;
   total_price: number;

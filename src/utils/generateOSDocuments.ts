@@ -11,6 +11,8 @@ interface QuoteItem {
   description: string;
   width: number | null;
   height: number | null;
+  width_b?: number | null;
+  height_b?: number | null;
   quantity: number;
   product_template_id?: string | null;
   glass_thickness?: string | null;
@@ -28,6 +30,7 @@ interface ProductCompositionItem {
   pieces_quantity: number;
   is_optional: boolean;
   section: string | null;
+  side: string | null;
   item_template: {
     id: string;
     name: string;
@@ -46,6 +49,15 @@ interface GlassFormula {
   panel_index: number | null;
   description: string | null;
   is_movable: boolean | null;
+  side: string | null;
+}
+
+interface ProductTemplate {
+  id: string;
+  name: string;
+  linha: string | null;
+  category: string | null;
+  has_multiple_sides: boolean | null;
 }
 
 /**
@@ -64,6 +76,7 @@ async function getProductComposition(productTemplateId: string): Promise<Product
       pieces_quantity,
       is_optional,
       section,
+      side,
       item_template:item_templates!inner(
         id,
         name,
@@ -92,16 +105,16 @@ async function getGlassFormulas(productTemplateId: string, linha: string): Promi
     .order('panel_index', { ascending: true });
 
   if (error) throw error;
-  return data || [];
+  return (data || []) as GlassFormula[];
 }
 
 /**
  * Get product template details
  */
-async function getProductTemplate(productTemplateId: string) {
+async function getProductTemplate(productTemplateId: string): Promise<ProductTemplate | null> {
   const { data, error } = await supabase
     .from('product_templates')
-    .select('id, name, linha, category')
+    .select('id, name, linha, category, has_multiple_sides')
     .eq('id', productTemplateId)
     .single();
 
@@ -142,6 +155,8 @@ export async function generateOSDocuments(
       
       const width = item.width;
       const height = item.height;
+      const width_b = item.width_b || width;
+      const height_b = item.height_b || height;
       const quantity = item.quantity;
 
       // Get product template details
@@ -170,39 +185,59 @@ export async function generateOSDocuments(
         quantity: number;
         cutAngle: number;
         position: string;
+        side?: string;
       }> = [];
 
       for (const comp of composition) {
         if (comp.item_template.type !== 'profile') continue;
         
-        // The formula is in quantity_formula (e.g., "A - 20", "L - 31", "L / 2 - 91")
-        // width_formula and height_formula are usually null
         const formula = comp.quantity_formula || comp.width_formula || comp.height_formula || '';
-        const calculatedLength = evaluateFormula(formula, width, height);
-        
-        if (calculatedLength <= 0) continue;
-
         const piecesQty = comp.pieces_quantity || 1;
         const totalPieces = piecesQty * quantity;
 
-        profileCuts.push({
-          profileName: comp.item_template.name,
-          formula,
-          calculatedLength,
-          quantity: totalPieces,
-          cutAngle: comp.cut_angle,
-          position: getFormulaPosition(formula),
-        });
+        const sidesToCalculate = [];
+        if (!product.has_multiple_sides) {
+          sidesToCalculate.push({ label: undefined, w: width, h: height, s: null });
+        } else if (comp.side === 'A') {
+          sidesToCalculate.push({ label: 'A', w: width, h: height, s: 'A' });
+        } else if (comp.side === 'B') {
+          sidesToCalculate.push({ label: 'B', w: width_b, h: height_b, s: 'B' });
+        } else {
+          // Both sides
+          sidesToCalculate.push({ label: 'A', w: width, h: height, s: 'A' });
+          sidesToCalculate.push({ label: 'B', w: width_b, h: height_b, s: 'B' });
+        }
 
-        // Add to optimization array
-        allCuts.push({
-          itemTemplateId: comp.item_template_id,
-          itemName: comp.item_template.name,
-          cutLength: calculatedLength,
-          quantity: totalPieces,
-          barLengthMm: comp.item_template.bar_length_mm || 6000,
-          unit: comp.item_template.unit,
-        });
+        for (const sideData of sidesToCalculate) {
+          const calculatedLength = evaluateFormula(formula, {
+            width,
+            height,
+            widthB: width_b,
+            heightB: height_b
+          }, undefined, sideData.s as any);
+          
+          if (calculatedLength <= 0) continue;
+
+          profileCuts.push({
+            profileName: comp.item_template.name,
+            formula,
+            calculatedLength,
+            quantity: totalPieces,
+            cutAngle: comp.cut_angle,
+            position: getFormulaPosition(formula),
+            side: sideData.label
+          });
+
+          // Add to optimization array
+          allCuts.push({
+            itemTemplateId: comp.item_template_id,
+            itemName: comp.item_template.name,
+            cutLength: calculatedLength,
+            quantity: totalPieces,
+            barLengthMm: comp.item_template.bar_length_mm || 6000,
+            unit: comp.item_template.unit,
+          });
+        }
       }
 
       // Calculate glass cuts
@@ -215,27 +250,63 @@ export async function generateOSDocuments(
         areaM2: number;
         quantity: number;
         isMovable: boolean;
+        side?: string;
       }> = [];
 
       for (const formula of glassFormulas) {
-        const calcWidth = evaluateFormula(formula.width_formula, width, height);
-        const calcHeight = evaluateFormula(formula.height_formula, width, height);
-        
-        if (calcWidth <= 0 || calcHeight <= 0) continue;
+        const sidesToCalculate = [];
+        if (!product.has_multiple_sides) {
+          sidesToCalculate.push({ label: undefined, w: width, h: height, s: null });
+        } else if (formula.side === 'A') {
+          sidesToCalculate.push({ label: 'A', w: width, h: height, s: 'A' });
+        } else if (formula.side === 'B') {
+          sidesToCalculate.push({ label: 'B', w: width_b, h: height_b, s: 'B' });
+        } else {
+          // If side is null and product is multi-side, we assume it might be both
+          // but for glass it's usually specific. Let's default to side A or both based on formula name
+          const nameLower = formula.formula_name.toLowerCase();
+          if (nameLower.includes('lado a') || nameLower.includes('side a')) {
+            sidesToCalculate.push({ label: 'A', w: width, h: height, s: 'A' });
+          } else if (nameLower.includes('lado b') || nameLower.includes('side b')) {
+            sidesToCalculate.push({ label: 'B', w: width_b, h: height_b, s: 'B' });
+          } else {
+            // Default both
+            sidesToCalculate.push({ label: 'A', w: width, h: height, s: 'A' });
+            sidesToCalculate.push({ label: 'B', w: width_b, h: height_b, s: 'B' });
+          }
+        }
 
-        const areaM2 = (calcWidth / 1000) * (calcHeight / 1000);
-        const totalQty = quantity;
+        for (const sideData of sidesToCalculate) {
+          const calcWidth = evaluateFormula(formula.width_formula, {
+            width,
+            height,
+            widthB: width_b,
+            heightB: height_b
+          }, undefined, sideData.s as any);
+          const calcHeight = evaluateFormula(formula.height_formula, {
+            width,
+            height,
+            widthB: width_b,
+            heightB: height_b
+          }, undefined, sideData.s as any);
+          
+          if (calcWidth <= 0 || calcHeight <= 0) continue;
 
-        glassCuts.push({
-          glassName: formula.formula_name,
-          widthFormula: formula.width_formula,
-          heightFormula: formula.height_formula,
-          calculatedWidth: calcWidth,
-          calculatedHeight: calcHeight,
-          areaM2: areaM2 * totalQty,
-          quantity: totalQty,
-          isMovable: formula.is_movable ?? true, // Default to true for folhas
-        });
+          const areaM2 = (calcWidth / 1000) * (calcHeight / 1000);
+          const totalQty = quantity;
+
+          glassCuts.push({
+            glassName: formula.formula_name,
+            widthFormula: formula.width_formula,
+            heightFormula: formula.height_formula,
+            calculatedWidth: calcWidth,
+            calculatedHeight: calcHeight,
+            areaM2: areaM2 * totalQty,
+            quantity: totalQty,
+            isMovable: formula.is_movable ?? true,
+            side: sideData.label
+          });
+        }
       }
 
       // Insert cutting plan
@@ -246,6 +317,8 @@ export async function generateOSDocuments(
         product_template_id: item.product_template_id,
         vao_width: width,
         vao_height: height,
+        vao_width_b: product.has_multiple_sides ? width_b : null,
+        vao_height_b: product.has_multiple_sides ? height_b : null,
         quantity,
         cuts_data: profileCuts,
         glass_cuts_data: glassCuts,
@@ -255,12 +328,13 @@ export async function generateOSDocuments(
       if (glassCuts.length > 0) {
         const panels = glassCuts.map((glass, index) => ({
           index: index + 1,
-          name: glass.glassName,
+          name: glass.side ? `${glass.glassName} (Lado ${glass.side})` : glass.glassName,
           width: glass.calculatedWidth,
           height: glass.calculatedHeight,
           areaM2: glass.areaM2 / quantity,
           quantity: glass.quantity,
           isMovable: glass.isMovable,
+          side: glass.side
         }));
 
         const totalArea = glassCuts.reduce((sum, g) => sum + g.areaM2, 0);
@@ -296,6 +370,8 @@ export async function generateOSDocuments(
           product_template_id: item.product_template_id,
           vao_width: width,
           vao_height: height,
+          vao_width_b: product.has_multiple_sides ? width_b : null,
+          vao_height_b: product.has_multiple_sides ? height_b : null,
           quantity,
           panels_data: panels,
           total_area_m2: totalArea,
@@ -413,8 +489,15 @@ export async function regenerateOSDocuments(
 
     if (error) throw error;
 
+    // Fetch company_id from OS
+    const { data: os } = await supabase
+      .from('ordens_servico')
+      .select('company_id')
+      .eq('id', ordemServicoId)
+      .single();
+
     // Regenerate
-    return generateOSDocuments(ordemServicoId, quoteItems || []);
+    return generateOSDocuments(ordemServicoId, quoteItems || [], os?.company_id);
   } catch (error) {
     console.error('Error regenerating OS documents:', error);
     return { 

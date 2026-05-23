@@ -2857,6 +2857,7 @@ export type Database = {
           linha: string
           panel_index: number | null
           product_template_id: string | null
+          side: string | null
           updated_at: string
           width_formula: string
         }
@@ -2871,6 +2872,7 @@ export type Database = {
           linha: string
           panel_index?: number | null
           product_template_id?: string | null
+          side?: string | null
           updated_at?: string
           width_formula?: string
         }
@@ -2885,6 +2887,7 @@ export type Database = {
           linha?: string
           panel_index?: number | null
           product_template_id?: string | null
+          side?: string | null
           updated_at?: string
           width_formula?: string
         }
@@ -4103,7 +4106,9 @@ export type Database = {
           quote_item_id: string | null
           status: string
           vao_height: number
+          vao_height_b: number | null
           vao_width: number
+          vao_width_b: number | null
         }
         Insert: {
           completed_at?: string | null
@@ -4120,7 +4125,9 @@ export type Database = {
           quote_item_id?: string | null
           status?: string
           vao_height: number
+          vao_height_b?: number | null
           vao_width: number
+          vao_width_b?: number | null
         }
         Update: {
           completed_at?: string | null
@@ -4137,7 +4144,9 @@ export type Database = {
           quote_item_id?: string | null
           status?: string
           vao_height?: number
+          vao_height_b?: number | null
           vao_width?: number
+          vao_width_b?: number | null
         }
         Relationships: [
           {
@@ -4192,7 +4201,9 @@ export type Database = {
           stock_unit_cost: number | null
           total_area_m2: number | null
           vao_height: number
+          vao_height_b: number | null
           vao_width: number
+          vao_width_b: number | null
         }
         Insert: {
           created_at?: string
@@ -4215,7 +4226,9 @@ export type Database = {
           stock_unit_cost?: number | null
           total_area_m2?: number | null
           vao_height: number
+          vao_height_b?: number | null
           vao_width: number
+          vao_width_b?: number | null
         }
         Update: {
           created_at?: string
@@ -4238,7 +4251,9 @@ export type Database = {
           stock_unit_cost?: number | null
           total_area_m2?: number | null
           vao_height?: number
+          vao_height_b?: number | null
           vao_width?: number
+          vao_width_b?: number | null
         }
         Relationships: [
           {
@@ -4302,6 +4317,8 @@ export type Database = {
           purchase_order_item_id: string | null
           total_length_mm: number | null
           unit: string | null
+          vao_height_b: number | null
+          vao_width_b: number | null
           waste_mm: number | null
           waste_percent: number | null
         }
@@ -4321,6 +4338,8 @@ export type Database = {
           purchase_order_item_id?: string | null
           total_length_mm?: number | null
           unit?: string | null
+          vao_height_b?: number | null
+          vao_width_b?: number | null
           waste_mm?: number | null
           waste_percent?: number | null
         }
@@ -4340,6 +4359,8 @@ export type Database = {
           purchase_order_item_id?: string | null
           total_length_mm?: number | null
           unit?: string | null
+          vao_height_b?: number | null
+          vao_width_b?: number | null
           waste_mm?: number | null
           waste_percent?: number | null
         }

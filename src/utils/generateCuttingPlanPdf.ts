@@ -10,6 +10,7 @@ interface CutData {
   quantity: number;
   cutAngle: number;
   position: string;
+  side?: string;
 }
 
 interface GlassCutData {
@@ -27,6 +28,8 @@ interface CuttingPlan {
   product_name: string;
   vao_width: number;
   vao_height: number;
+  vao_width_b?: number | null;
+  vao_height_b?: number | null;
   quantity: number;
   cuts_data: CutData[];
   glass_cuts_data: GlassCutData[];
@@ -129,7 +132,7 @@ export function generateCuttingPlanPdf(
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
     const rightInfoY = y + 6;
-    doc.text(`Vão: ${plan.vao_width} x ${plan.vao_height} mm`, pageWidth - margin - 60, rightInfoY);
+    doc.text(`Vão: ${plan.vao_width} ${plan.vao_width_b ? `x ${plan.vao_width_b}` : ''} x ${plan.vao_height} mm`, pageWidth - margin - 60, rightInfoY);
     doc.text(`Qtd: ${plan.quantity}x`, pageWidth - margin - 4, rightInfoY, { align: 'right' });
     
     // Show aluminum finish if present
@@ -151,7 +154,7 @@ export function generateCuttingPlanPdf(
       y += 8;
       
       const profileTableData = plan.cuts_data.map((cut) => [
-        cut.profileName,
+        cut.side ? `${cut.profileName} (Lado ${cut.side})` : cut.profileName,
         cut.formula,
         cut.position,
         `${cut.calculatedLength} mm`,
