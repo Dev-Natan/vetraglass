@@ -383,8 +383,9 @@ export default function ProductTemplates() {
     const templateLinha = selectedTemplate?.linha;
     if (!templateLinha) return a.name.localeCompare(b.name);
     
-    const aMatchesLinha = a.linha === templateLinha;
-    const bMatchesLinha = b.linha === templateLinha;
+    // Prioritize items that match the template's line OR are "Universal"
+    const aMatchesLinha = a.linha === templateLinha || a.linha === "Universal";
+    const bMatchesLinha = b.linha === templateLinha || b.linha === "Universal";
     
     if (aMatchesLinha && !bMatchesLinha) return -1;
     if (!aMatchesLinha && bMatchesLinha) return 1;

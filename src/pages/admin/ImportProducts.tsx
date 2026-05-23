@@ -60,6 +60,7 @@ const lineMap: Record<string, string> = {
   gold: "Gold",
   suprema: "Suprema",
   inova: "Inova",
+  universal: "Universal",
 };
 
 export default function ImportProducts() {
