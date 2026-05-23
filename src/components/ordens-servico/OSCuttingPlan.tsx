@@ -11,6 +11,8 @@ import { Scissors, Maximize2, Layers, Square, CheckCircle, Clock, Palette, Alert
 import { OSGlassUnifiedView } from './OSGlassUnifiedView';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { regenerateOSDocuments } from '@/utils/generateOSDocuments';
+import { Loader2, RefreshCw } from 'lucide-react';
 
 interface OSCuttingPlanProps {
   ordemServicoId: string;
