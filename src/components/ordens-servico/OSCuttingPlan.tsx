@@ -252,15 +252,29 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
                     </Badge>
                   </CardTitle>
                   <div className="flex flex-col gap-1 mt-1">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Maximize2 className="w-4 h-4" />
-                      <span>Vão Produção: {plan.os_items?.largura_producao || plan.vao_width} x {plan.os_items?.altura_producao || plan.vao_height} mm</span>
-                      <Badge variant="secondary">{plan.quantity}x</Badge>
+                    <div className="flex flex-col gap-1 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-2">
+                        <Maximize2 className="w-4 h-4" />
+                        <span>Vão A Produção: {plan.os_items?.largura_producao || plan.vao_width} x {plan.os_items?.altura_producao || plan.vao_height} mm</span>
+                        <Badge variant="secondary">{plan.quantity}x</Badge>
+                      </div>
+                      {plan.os_items?.largura_producao_b && (
+                        <div className="flex items-center gap-2 pl-6">
+                          <span>Vão B Produção: {plan.os_items.largura_producao_b} x {plan.os_items.altura_producao_b} mm</span>
+                        </div>
+                      )}
+                      {plan.os_items?.largura_producao_c && (
+                        <div className="flex items-center gap-2 pl-6">
+                          <span>Vão C Produção: {plan.os_items.largura_producao_c} x {plan.os_items.altura_producao_c} mm</span>
+                        </div>
+                      )}
                       {plan.quote_items?.aluminum_color && (
-                        <Badge variant="outline" className="gap-1 text-amber-700 dark:text-amber-400 border-amber-500/30 bg-amber-500/10">
-                          <Palette className="w-3 h-3" />
-                          {plan.quote_items.aluminum_color}
-                        </Badge>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="outline" className="gap-1 text-amber-700 dark:text-amber-400 border-amber-500/30 bg-amber-500/10">
+                            <Palette className="w-3 h-3" />
+                            {plan.quote_items.aluminum_color}
+                          </Badge>
+                        </div>
                       )}
                     </div>
                     {plan.os_items?.recalculation_required && (
