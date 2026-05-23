@@ -108,6 +108,8 @@ export function useActivationSubmit({
         height_formula: item.height_formula,
         is_optional: item.is_optional,
         side: item.side,
+        calculation_type: item.calculation_type,
+        applies_to: item.applies_to,
         notes: item.notes,
       }));
 
