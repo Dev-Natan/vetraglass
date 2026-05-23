@@ -79,7 +79,7 @@ export function OSProductsList({ ordemServicoId }: OSProductsListProps) {
           variant="outline" 
           size="sm" 
           className="gap-2"
-          onClick={() => recalculateMutation.mutate()}
+          onClick={() => recalculateMutation.mutate(undefined)}
           disabled={recalculateMutation.isPending}
         >
           {recalculateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
@@ -97,7 +97,7 @@ export function OSProductsList({ ordemServicoId }: OSProductsListProps) {
                     <h4 className="text-lg font-bold">{item.product_name}</h4>
                     <Badge variant="secondary">{item.quantity}x</Badge>
                     {item.recalculation_required && (
-                      <Badge variant="warning" className="bg-amber-500 text-white gap-1">
+                      <Badge variant="destructive" className="bg-amber-600 text-white gap-1">
                         <AlertTriangle className="w-3 h-3" />
                         Recalcular
                       </Badge>
