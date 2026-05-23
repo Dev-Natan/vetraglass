@@ -16,6 +16,8 @@ interface QuoteItemForConsumption {
   description: string;
   width: number | null;
   height: number | null;
+  width_b?: number | null;
+  height_b?: number | null;
   quantity: number;
   company_product_id?: string | null;
   product_template_id?: string | null;
@@ -29,6 +31,7 @@ interface ProductCompositionItem {
   width_formula: string | null;
   height_formula: string | null;
   pieces_quantity: number | null;
+  side?: string | null;
   company_items?: {
     id: string;
     name: string;
@@ -85,12 +88,23 @@ export async function generateMaterialConsumption(
 
       const width = quoteItem.width || 0;
       const height = quoteItem.height || 0;
+      const width_b = quoteItem.width_b || 0;
+      const height_b = quoteItem.height_b || 0;
       const qty = quoteItem.quantity || 1;
 
-      // Fetch product composition
+      // Fetch product composition and info
       let composition: ProductCompositionItem[] = [];
+      let hasMultipleSides = false;
 
       if (quoteItem.company_product_id) {
+        // Get product info
+        const { data: productData } = await supabase
+          .from('company_products')
+          .select('has_multiple_sides')
+          .eq('id', quoteItem.company_product_id)
+          .maybeSingle();
+        hasMultipleSides = !!productData?.has_multiple_sides;
+
         // Get from company_product_items
         const { data: companyComposition, error: compError } = await supabase
           .from('company_product_items')
@@ -102,6 +116,7 @@ export async function generateMaterialConsumption(
             width_formula,
             height_formula,
             pieces_quantity,
+            side,
             company_items (
               id,
               name,
@@ -124,6 +139,14 @@ export async function generateMaterialConsumption(
 
         composition = (companyComposition || []) as ProductCompositionItem[];
       } else if (quoteItem.product_template_id) {
+        // Get template info
+        const { data: templateData } = await supabase
+          .from('product_templates')
+          .select('has_multiple_sides')
+          .eq('id', quoteItem.product_template_id)
+          .maybeSingle();
+        hasMultipleSides = !!templateData?.has_multiple_sides;
+
         // Fallback to product_template_items
         const { data: templateComposition, error: tempError } = await supabase
           .from('product_template_items')
@@ -134,6 +157,7 @@ export async function generateMaterialConsumption(
             width_formula,
             height_formula,
             pieces_quantity,
+            side,
             item_templates (
               id,
               name,
@@ -178,52 +202,75 @@ export async function generateMaterialConsumption(
           }
         }
 
-        // Evaluate the quantity formula
-        const piecesQty = (component as any).pieces_formula 
-          ? evaluateFormula((component as any).pieces_formula, width, height)
-          : (component.pieces_quantity || 1);
-        let calculatedQty = piecesQty * qty;
-
-        // If there's a quantity formula, evaluate it
-        if (component.quantity_formula && component.quantity_formula.trim() !== '' && component.quantity_formula !== '1') {
-          const formulaResult = evaluateFormula(component.quantity_formula, width, height);
-          if (formulaResult > 0) {
-            // For linear items (profiles), result is in mm, convert to meters
-            if (itemInfo.unit === 'm' || itemInfo.unit === 'metro' || itemInfo.unit === 'metros') {
-              calculatedQty = (formulaResult / 1000) * piecesQty * qty;
-            } else if (itemInfo.unit === 'm²' || itemInfo.unit === 'm2') {
-              // For area items (glass), result is in mm², convert to m²
-              // If there's a formula, it might be the area itself
-              calculatedQty = (formulaResult / 1000000) * piecesQty * qty;
-            } else {
-              // For units/pieces, use the formula result directly
-              calculatedQty = formulaResult * piecesQty * qty;
-            }
-          }
-        } else if (itemInfo.unit === 'm²' || itemInfo.unit === 'm2') {
-          // Fallback: if no formula, calculate area based on dimensions (m²)
-          calculatedQty = ((width * height) / 1000000) * piecesQty * qty;
+        // Determine which sides to process
+        const sidesToProcess: (string | null)[] = [];
+        if (!hasMultipleSides) {
+          sidesToProcess.push(null);
+        } else if (component.side === 'A') {
+          sidesToProcess.push('A');
+        } else if (component.side === 'B') {
+          sidesToProcess.push('B');
+        } else {
+          // Both sides
+          sidesToProcess.push('A', 'B');
         }
 
-        // Skip zero quantities
-        if (calculatedQty <= 0) continue;
+        for (const currentSide of sidesToProcess) {
+          const formulaContext = {
+            width,
+            height,
+            widthB: width_b,
+            heightB: height_b
+          };
 
-        consumptionRecords.push({
-          company_id: companyId,
-          ordem_servico_id: ordemServicoId,
-          quote_item_id: quoteItem.id,
-          company_item_id: resolvedCompanyItemId,
-          item_template_id: component.item_template_id,
-          item_name: itemInfo.name,
-          item_type: itemInfo.type,
-          unit: itemInfo.unit,
-          quantity_calculated: Math.round(calculatedQty * 1000) / 1000, // Round to 3 decimals
-          formula_used: component.quantity_formula || null,
-          input_width: width,
-          input_height: height,
-          input_quantity: qty,
-          status: 'pending',
-        });
+          // Evaluate the quantity formula
+          const piecesQty = (component as any).pieces_formula 
+            ? evaluateFormula((component as any).pieces_formula, formulaContext, undefined, currentSide)
+            : (component.pieces_quantity || 1);
+          let calculatedQty = piecesQty * qty;
+
+          // If there's a quantity formula, evaluate it
+          if (component.quantity_formula && component.quantity_formula.trim() !== '' && component.quantity_formula !== '1') {
+            const formulaResult = evaluateFormula(component.quantity_formula, formulaContext, undefined, currentSide);
+            if (formulaResult > 0) {
+              // For linear items (profiles), result is in mm, convert to meters
+              if (itemInfo.unit === 'm' || itemInfo.unit === 'metro' || itemInfo.unit === 'metros') {
+                calculatedQty = (formulaResult / 1000) * piecesQty * qty;
+              } else if (itemInfo.unit === 'm²' || itemInfo.unit === 'm2') {
+                // For area items (glass), result is in mm², convert to m²
+                calculatedQty = (formulaResult / 1000000) * piecesQty * qty;
+              } else {
+                // For units/pieces, use the formula result directly
+                calculatedQty = formulaResult * piecesQty * qty;
+              }
+            }
+          } else if (itemInfo.unit === 'm²' || itemInfo.unit === 'm2') {
+            // Fallback: if no formula, calculate area based on dimensions (m²)
+            const targetWidth = currentSide === 'B' ? width_b : width;
+            const targetHeight = currentSide === 'B' ? height_b : height;
+            calculatedQty = ((targetWidth * targetHeight) / 1000000) * piecesQty * qty;
+          }
+
+          // Skip zero quantities
+          if (calculatedQty <= 0) continue;
+
+          consumptionRecords.push({
+            company_id: companyId,
+            ordem_servico_id: ordemServicoId,
+            quote_item_id: quoteItem.id,
+            company_item_id: resolvedCompanyItemId,
+            item_template_id: component.item_template_id,
+            item_name: itemInfo.name + (currentSide ? ` (Lado ${currentSide})` : ''),
+            item_type: itemInfo.type,
+            unit: itemInfo.unit,
+            quantity_calculated: Math.round(calculatedQty * 1000) / 1000, // Round to 3 decimals
+            formula_used: component.quantity_formula || null,
+            input_width: currentSide === 'B' ? width_b : width,
+            input_height: currentSide === 'B' ? height_b : height,
+            input_quantity: qty,
+            status: 'pending',
+          });
+        }
       }
     }
 

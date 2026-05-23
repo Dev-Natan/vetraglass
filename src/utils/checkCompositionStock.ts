@@ -34,6 +34,8 @@ interface QuoteItemInput {
   description: string;
   width: number | null;
   height: number | null;
+  width_b?: number | null;
+  height_b?: number | null;
   quantity: number;
   company_product_id?: string | null;
   product_template_id?: string | null;
@@ -61,12 +63,22 @@ export async function checkCompositionStockAvailability(
 
     const width = quoteItem.width || 0;
     const height = quoteItem.height || 0;
+    const width_b = quoteItem.width_b || 0;
+    const height_b = quoteItem.height_b || 0;
     const qty = quoteItem.quantity || 1;
 
-    // Fetch composition
+    // Fetch composition and product info
     let composition: any[] = [];
+    let hasMultipleSides = false;
 
     if (quoteItem.company_product_id) {
+      const { data: productData } = await supabase
+        .from('company_products')
+        .select('has_multiple_sides')
+        .eq('id', quoteItem.company_product_id)
+        .maybeSingle();
+      hasMultipleSides = !!productData?.has_multiple_sides;
+
       const { data } = await supabase
         .from('company_product_items')
         .select(`
@@ -77,12 +89,20 @@ export async function checkCompositionStockAvailability(
           width_formula,
           height_formula,
           pieces_quantity,
+          side,
           company_items (id, name, type, unit),
           item_templates (id, name, type, unit)
         `)
         .eq('company_product_id', quoteItem.company_product_id);
       composition = data || [];
     } else if (quoteItem.product_template_id) {
+      const { data: templateData } = await supabase
+        .from('product_templates')
+        .select('has_multiple_sides')
+        .eq('id', quoteItem.product_template_id)
+        .maybeSingle();
+      hasMultipleSides = !!templateData?.has_multiple_sides;
+
       const { data } = await supabase
         .from('product_template_items')
         .select(`
@@ -92,6 +112,7 @@ export async function checkCompositionStockAvailability(
           width_formula,
           height_formula,
           pieces_quantity,
+          side,
           item_templates (id, name, type, unit)
         `)
         .eq('product_template_id', quoteItem.product_template_id)
@@ -117,49 +138,71 @@ export async function checkCompositionStockAvailability(
         if (ci) companyItemId = ci.id;
       }
 
-      // Calculate quantity needed
-      const piecesQty = (component as any).pieces_formula 
-        ? evaluateFormula((component as any).pieces_formula, width, height)
-        : (component.pieces_quantity || 1);
-      let calculatedQty = piecesQty * qty;
-
-      if (component.quantity_formula && component.quantity_formula.trim() !== '' && component.quantity_formula !== '1') {
-        const formulaResult = evaluateFormula(component.quantity_formula, width, height);
-        if (formulaResult > 0) {
-          if (itemInfo.unit === 'm' || itemInfo.unit === 'metro' || itemInfo.unit === 'metros') {
-            calculatedQty = (formulaResult / 1000) * piecesQty * qty;
-          } else if (itemInfo.unit === 'm²' || itemInfo.unit === 'm2') {
-            // Fix: Use the formula result if available, otherwise fallback to dimensions
-            calculatedQty = (formulaResult / 1000000) * piecesQty * qty;
-          } else {
-            calculatedQty = formulaResult * piecesQty * qty;
-          }
-        }
-      } else if (itemInfo.unit === 'm²' || itemInfo.unit === 'm2') {
-        // Fallback for area if no formula
-        calculatedQty = ((width * height) / 1000000) * piecesQty * qty;
+      // Determine which sides to process
+      const sidesToProcess: (string | null)[] = [];
+      if (!hasMultipleSides) {
+        sidesToProcess.push(null);
+      } else if (component.side === 'A') {
+        sidesToProcess.push('A');
+      } else if (component.side === 'B') {
+        sidesToProcess.push('B');
+      } else {
+        sidesToProcess.push('A', 'B');
       }
 
-      if (calculatedQty <= 0) continue;
+      for (const currentSide of sidesToProcess) {
+        const formulaContext = {
+          width,
+          height,
+          widthB: width_b,
+          heightB: height_b
+        };
 
-      // Aggregate by item key
-      const key = companyItemId || itemTemplateId || itemInfo.name;
-      const existing = aggregatedNeeds.get(key);
-      if (existing) {
-        existing.quantityNeeded += calculatedQty;
-        if (!existing.quoteItemDescriptions.includes(quoteItem.description)) {
-          existing.quoteItemDescriptions.push(quoteItem.description);
+        // Calculate quantity needed
+        const piecesQty = (component as any).pieces_formula 
+          ? evaluateFormula((component as any).pieces_formula, formulaContext, undefined, currentSide)
+          : (component.pieces_quantity || 1);
+        let calculatedQty = piecesQty * qty;
+
+        if (component.quantity_formula && component.quantity_formula.trim() !== '' && component.quantity_formula !== '1') {
+          const formulaResult = evaluateFormula(component.quantity_formula, formulaContext, undefined, currentSide);
+          if (formulaResult > 0) {
+            if (itemInfo.unit === 'm' || itemInfo.unit === 'metro' || itemInfo.unit === 'metros') {
+              calculatedQty = (formulaResult / 1000) * piecesQty * qty;
+            } else if (itemInfo.unit === 'm²' || itemInfo.unit === 'm2') {
+              calculatedQty = (formulaResult / 1000000) * piecesQty * qty;
+            } else {
+              calculatedQty = formulaResult * piecesQty * qty;
+            }
+          }
+        } else if (itemInfo.unit === 'm²' || itemInfo.unit === 'm2') {
+          // Fallback for area if no formula
+          const targetWidth = currentSide === 'B' ? width_b : width;
+          const targetHeight = currentSide === 'B' ? height_b : height;
+          calculatedQty = ((targetWidth * targetHeight) / 1000000) * piecesQty * qty;
         }
-      } else {
-        aggregatedNeeds.set(key, {
-          itemName: itemInfo.name,
-          itemType: itemInfo.type,
-          unit: itemInfo.unit,
-          quantityNeeded: calculatedQty,
-          companyItemId,
-          itemTemplateId,
-          quoteItemDescriptions: [quoteItem.description],
-        });
+
+        if (calculatedQty <= 0) continue;
+
+        // Aggregate by item key
+        const key = companyItemId || itemTemplateId || itemInfo.name;
+        const existing = aggregatedNeeds.get(key);
+        if (existing) {
+          existing.quantityNeeded += calculatedQty;
+          if (!existing.quoteItemDescriptions.includes(quoteItem.description)) {
+            existing.quoteItemDescriptions.push(quoteItem.description);
+          }
+        } else {
+          aggregatedNeeds.set(key, {
+            itemName: itemInfo.name,
+            itemType: itemInfo.type,
+            unit: itemInfo.unit,
+            quantityNeeded: calculatedQty,
+            companyItemId,
+            itemTemplateId,
+            quoteItemDescriptions: [quoteItem.description],
+          });
+        }
       }
     }
   }
