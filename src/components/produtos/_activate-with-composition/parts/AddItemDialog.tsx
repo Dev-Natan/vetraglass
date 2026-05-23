@@ -39,6 +39,8 @@ interface AddItemDialogProps {
   setHeightFormula: (v: string) => void;
   glassName: string;
   setGlassName: (v: string) => void;
+  side: string | null;
+  setSide: (v: string | null) => void;
   onAdd: () => void;
 }
 
@@ -65,6 +67,8 @@ export function AddItemDialog(props: AddItemDialogProps) {
     setHeightFormula,
     glassName,
     setGlassName,
+    side,
+    setSide,
     onAdd,
   } = props;
   const formRef = useRef<HTMLDivElement>(null);

@@ -107,6 +107,7 @@ export function useActivationSubmit({
         width_formula: item.width_formula,
         height_formula: item.height_formula,
         is_optional: item.is_optional,
+        side: item.side,
         notes: item.notes,
       }));
 

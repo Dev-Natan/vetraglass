@@ -38,6 +38,8 @@ interface ComponentRowProps {
   setHeightFormula: (v: string) => void;
   glassName: string;
   setGlassName: (v: string) => void;
+  side: string | null;
+  setSide: (v: string | null) => void;
 }
 
 export function ComponentRow({
@@ -61,6 +63,8 @@ export function ComponentRow({
   setHeightFormula,
   glassName,
   setGlassName,
+  side,
+  setSide,
 }: ComponentRowProps) {
   const itemType = item.item_template?.type;
 
@@ -258,6 +262,14 @@ export function ComponentRow({
                 </>
               )}
             </>
+          )}
+          {side && (
+            <Badge 
+              variant="outline" 
+              className={side === 'A' ? "bg-blue-50 text-blue-600" : "bg-green-50 text-green-600"}
+            >
+              Lado {side}
+            </Badge>
           )}
           {item.isNew && (
             <Badge variant="outline" className="text-xs border-green-500 text-green-600">

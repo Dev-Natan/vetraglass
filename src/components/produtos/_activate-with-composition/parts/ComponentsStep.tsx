@@ -32,6 +32,8 @@ interface ComponentsStepProps {
   setHeightFormula: (v: string) => void;
   glassName: string;
   setGlassName: (v: string) => void;
+  side: string | null;
+  setSide: (v: string | null) => void;
 }
 
 export function ComponentsStep(props: ComponentsStepProps) {
@@ -117,6 +119,8 @@ export function ComponentsStep(props: ComponentsStepProps) {
                     setHeightFormula={props.setHeightFormula}
                     glassName={props.glassName}
                     setGlassName={props.setGlassName}
+                    side={props.side}
+                    setSide={props.setSide}
                   />
                 ))
               )}
