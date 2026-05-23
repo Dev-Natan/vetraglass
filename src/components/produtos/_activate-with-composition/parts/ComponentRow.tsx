@@ -329,16 +329,24 @@ export function ComponentRow({
               )}
             </>
           )}
+          {calculationType && calculationType !== 'formula' && (
+            <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200">
+              {calculationType === 'fixed' && 'Fixo'}
+              {calculationType === 'per_side' && 'Por Lado'}
+              {calculationType === 'per_leaf' && 'Por Folha'}
+              {calculationType === 'per_glass' && 'Por Vidro'}
+            </Badge>
+          )}
           {side && (
             <Badge 
               variant="outline" 
               className={
-                side === 'A' ? "bg-blue-50 text-blue-600" : 
-                side === 'B' ? "bg-green-50 text-green-600" : 
-                "bg-purple-50 text-purple-600"
+                side === 'A' ? "bg-blue-50 text-blue-600 border-blue-200" : 
+                side === 'B' ? "bg-green-50 text-green-600 border-green-200" : 
+                "bg-purple-50 text-purple-600 border-purple-200"
               }
             >
-              {side === 'Todos' ? 'Produto Todo' : `Lado ${side}`}
+              Lado {side}
             </Badge>
           )}
           {item.isNew && (
