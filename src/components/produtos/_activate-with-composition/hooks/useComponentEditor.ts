@@ -133,6 +133,8 @@ export function useComponentEditor({
     setHeightFormula(item.height_formula || '');
     setGlassName(item.notes || '');
     setSide(item.side || null);
+    setCalculationType(item.calculation_type || 'formula');
+    setAppliesTo(item.applies_to || 'side');
   };
 
   const handleSaveEdit = () => {
