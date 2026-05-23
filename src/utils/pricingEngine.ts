@@ -329,7 +329,12 @@ export function calculatePricing(
   };
 
   // ─── Level 2: Composition ───
-  const items = compositionItems.map(item => calculateItemCost(item, input, folgaCtx, item.side));
+  const items = compositionItems.map(item => {
+    // If side is 'Todos' or 'Produto', treat as null side (global product item)
+    // for dimension context but ensure it doesn't duplicate.
+    const effectiveSide = (item.side === 'Todos' || item.side === 'Produto') ? null : item.side;
+    return calculateItemCost(item, input, folgaCtx, effectiveSide);
+  });
   
   const costByType: Record<string, number> = {};
   items.forEach(item => {

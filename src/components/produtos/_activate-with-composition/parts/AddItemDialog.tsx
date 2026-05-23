@@ -326,7 +326,7 @@ export function AddItemDialog(props: AddItemDialogProps) {
                   ))}
                 </div>
                 <p className="text-[10px] text-muted-foreground">
-                  Selecione "Produto" para itens usados uma única vez no conjunto todo (ex: kit fechadura).
+                  Selecione "Produto" para itens usados uma única vez no conjunto todo (ex: kit fechadura, silicone). Isso evita que o item seja cobrado em dobro em produtos com dois lados.
                 </p>
               </div>
             </div>
