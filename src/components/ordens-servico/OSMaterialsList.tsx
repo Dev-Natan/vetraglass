@@ -254,6 +254,47 @@ export function OSMaterialsList({ ordemServicoId }: OSMaterialsListProps) {
           </div>
         </CardContent>
       </Card>
+        </>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Boxes className="w-5 h-5" />
+              Materiais Consolidados
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-md border">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50 border-b">
+                  <tr>
+                    <th className="p-3 text-left">Item</th>
+                    <th className="p-3 text-left">Tipo</th>
+                    <th className="p-3 text-right">Qtd Total</th>
+                    <th className="p-3 text-left">Unidade</th>
+                    <th className="p-3 text-right">Barras</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {consolidatedMaterials?.map((item: any, idx: number) => (
+                    <tr key={idx}>
+                      <td className="p-3 font-medium">{item.item_name}</td>
+                      <td className="p-3">
+                        <Badge variant="outline">{item.item_type === 'profile' ? 'Perfil' : 'Acessório'}</Badge>
+                      </td>
+                      <td className="p-3 text-right font-mono">
+                        {item.item_type === 'profile' ? formatMm(item.total_length) : item.total_quantity}
+                      </td>
+                      <td className="p-3">{item.unit}</td>
+                      <td className="p-3 text-right">{item.bars_needed || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
