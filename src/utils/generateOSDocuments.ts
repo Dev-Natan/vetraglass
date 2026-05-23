@@ -159,12 +159,12 @@ export async function generateOSDocuments(
     for (const item of osItems) {
       if (!item.product_id || !item.largura_producao || !item.altura_producao) continue;
       
-      const width = item.largura_producao;
-      const height = item.altura_producao;
-      const width_b = item.largura_producao_b || width;
-      const height_b = item.altura_producao_b || height;
-      const width_c = item.largura_producao_c || width;
-      const height_c = item.altura_producao_c || height;
+      const width = Number(item.largura_producao || 0);
+      const height = Number(item.altura_producao || 0);
+      const width_b = Number(item.largura_producao_b || width);
+      const height_b = Number(item.altura_producao_b || height);
+      const width_c = Number(item.largura_producao_c || width);
+      const height_c = Number(item.altura_producao_c || height);
       const quantity = item.quantity;
 
       // Get product template details
@@ -218,7 +218,9 @@ export async function generateOSDocuments(
             width,
             height,
             widthB: width_b,
-            heightB: height_b
+            heightB: height_b,
+            widthC: width_c,
+            heightC: height_c
           }, undefined, sideData.s as any);
           
           if (calculatedLength <= 0) continue;
@@ -283,13 +285,17 @@ export async function generateOSDocuments(
             width,
             height,
             widthB: width_b,
-            heightB: height_b
+            heightB: height_b,
+            widthC: width_c,
+            heightC: height_c
           }, undefined, sideData.s as any);
           const calcHeight = evaluateFormula(formula.height_formula, {
             width,
             height,
             widthB: width_b,
-            heightB: height_b
+            heightB: height_b,
+            widthC: width_c,
+            heightC: height_c
           }, undefined, sideData.s as any);
           
           if (calcWidth <= 0 || calcHeight <= 0) continue;
