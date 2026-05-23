@@ -73,6 +73,10 @@ export function AddItemDialog(props: AddItemDialogProps) {
     setGlassName,
     side,
     setSide,
+    calculationType,
+    setCalculationType,
+    appliesTo,
+    setAppliesTo,
     onAdd,
   } = props;
   const formRef = useRef<HTMLDivElement>(null);
