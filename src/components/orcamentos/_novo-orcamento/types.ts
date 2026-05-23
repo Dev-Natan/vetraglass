@@ -41,7 +41,13 @@ export interface QuoteItem {
   height_b?: number;
   vao_width_b?: number;
   vao_height_b?: number;
+  width_c?: number;
+  height_c?: number;
   quantity: number;
+  leaves_count?: number;
+  glasses_count?: number;
+  panels_count?: number;
+  sides_count?: number;
   base_price_m2: number;
   unit_price: number;
   total_price: number;
