@@ -390,29 +390,37 @@ export default function OrdemServicoDetalhes() {
         )}
 
         {/* Tabs */}
-        <Tabs defaultValue="materials" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="materials" className="flex items-center gap-2">
+        <Tabs defaultValue="products" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-6 lg:grid-cols-6 h-auto">
+            <TabsTrigger value="products" className="flex items-center gap-2 py-2">
               <Package className="w-4 h-4" />
-              <span className="hidden sm:inline">Materiais</span>
+              <span>Produtos</span>
             </TabsTrigger>
-            <TabsTrigger value="cutting" className="flex items-center gap-2">
-              <Scissors className="w-4 h-4" />
-              <span className="hidden sm:inline">Corte</span>
-            </TabsTrigger>
-            <TabsTrigger value="glass" className="flex items-center gap-2">
+            <TabsTrigger value="materials" className="flex items-center gap-2 py-2">
               <Layers className="w-4 h-4" />
-              <span className="hidden sm:inline">Vidros</span>
+              <span>Materiais</span>
             </TabsTrigger>
-            <TabsTrigger value="photos" className="flex items-center gap-2">
+            <TabsTrigger value="cutting" className="flex items-center gap-2 py-2">
+              <Scissors className="w-4 h-4" />
+              <span>Corte</span>
+            </TabsTrigger>
+            <TabsTrigger value="glass" className="flex items-center gap-2 py-2">
+              <Layers className="w-4 h-4" />
+              <span>Vidros</span>
+            </TabsTrigger>
+            <TabsTrigger value="photos" className="flex items-center gap-2 py-2">
               <Camera className="w-4 h-4" />
-              <span className="hidden sm:inline">Fotos</span>
+              <span>Fotos</span>
             </TabsTrigger>
-            <TabsTrigger value="details" className="flex items-center gap-2">
+            <TabsTrigger value="details" className="flex items-center gap-2 py-2">
               <FileText className="w-4 h-4" />
-              <span className="hidden sm:inline">Detalhes</span>
+              <span>Histórico</span>
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="products" className="mt-4">
+             <OSProductsList ordemServicoId={ordem.id} />
+          </TabsContent>
 
 
           <TabsContent value="materials" className="mt-4 space-y-4">
