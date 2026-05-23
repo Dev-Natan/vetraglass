@@ -112,6 +112,8 @@ export function useComponentEditor({
           width_formula: itemType === 'glass' ? widthFormula : null,
           height_formula: itemType === 'glass' ? heightFormula : null,
           side: side,
+          calculation_type: calculationType,
+          applies_to: appliesTo,
           notes: itemType === 'glass' ? glassName : item.notes,
         };
       })
