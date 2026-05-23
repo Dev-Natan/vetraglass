@@ -25,6 +25,10 @@ interface QuoteItem {
   height?: number;
   vao_width?: number;
   vao_height?: number;
+  width_b?: number;
+  height_b?: number;
+  vao_width_b?: number;
+  vao_height_b?: number;
   quantity: number;
   base_price_m2: number;
   unit_price: number;
@@ -73,7 +77,7 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
   };
 
   const imageUrl = getProductImage(item.image_url);
-  const area = item.width && item.height ? ((item.width / 1000) * (item.height / 1000)).toFixed(2) : null;
+  const area = item.width && item.height ? (((item.width + (item.width_b || 0)) / 1000) * (item.height / 1000)).toFixed(2) : null;
   const isItem = item.item_type === 'item';
 
   const addComponent = () => {
@@ -257,6 +261,34 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
                   className="h-9"
                 />
               </div>
+
+              {item.width_b !== undefined && (
+                <>
+                  <div>
+                    <label className="text-xs text-muted-foreground">Largura Lado B (mm)</label>
+                    <Input
+                      type="number"
+                      value={item.width_b || ''}
+                      onChange={(e) => onUpdate(index, 'width_b', Number(e.target.value))}
+                      placeholder="1200"
+                      min={0}
+                      className="h-9"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">Altura Lado B (mm)</label>
+                    <Input
+                      type="number"
+                      value={item.height_b || ''}
+                      onChange={(e) => onUpdate(index, 'height_b', Number(e.target.value))}
+                      placeholder="1500"
+                      min={0}
+                      className="h-9"
+                    />
+                  </div>
+                </>
+              )}
+
               <div>
                 <label className="text-xs text-muted-foreground">Qtd</label>
                 <Input
@@ -351,7 +383,7 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
             <div className="text-xs text-muted-foreground">
               {isItem 
                 ? `${item.quantity} ${item.unit || 'un'} × ${formatCurrency(item.unit_price)}`
-                : area && `${area} m² × ${item.quantity} un`
+                : area && `${area} m² ${item.width_b ? '(Lado A+B) ' : ''}× ${item.quantity} un`
               }
             </div>
             <div className="text-right">
