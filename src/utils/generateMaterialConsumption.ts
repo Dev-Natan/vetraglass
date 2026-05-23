@@ -18,7 +18,13 @@ interface QuoteItemForConsumption {
   height: number | null;
   width_b?: number | null;
   height_b?: number | null;
+  width_c?: number | null;
+  height_c?: number | null;
   quantity: number;
+  leaves_count?: number;
+  glasses_count?: number;
+  panels_count?: number;
+  sides_count?: number;
   company_product_id?: string | null;
   product_template_id?: string | null;
 }
