@@ -123,6 +123,18 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
     updateStatusMutation.mutate({ planId, itemKey, completed: !currentValue });
   };
 
+  const recalculateMutation = useMutation({
+    mutationFn: (osItemId: string) => regenerateOSDocuments(ordemServicoId, osItemId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['os-cutting-plan', ordemServicoId] });
+      queryClient.invalidateQueries({ queryKey: ['os-materials', ordemServicoId] });
+      queryClient.invalidateQueries({ queryKey: ['os-items', ordemServicoId] });
+      toast.success('Plano recalculado com sucesso!');
+    },
+    onError: (error: Error) => toast.error('Erro ao recalcular: ' + error.message)
+  });
+
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
