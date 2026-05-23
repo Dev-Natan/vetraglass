@@ -166,9 +166,24 @@ function calculateItemCost(
   folgaCtx: FormulaContext,
   side?: string | null,
 ): CalculatedItem {
-  const piecesQty = item.piecesFormula 
+  // Determine multiplier based on calculation_type
+  let multiplier = 1;
+  const calcType = item.calculation_type || 'formula';
+  
+  if (calcType === 'per_side') {
+    multiplier = input.sides_count || 1;
+  } else if (calcType === 'per_leaf') {
+    multiplier = input.leaves_count || 1;
+  } else if (calcType === 'per_glass') {
+    multiplier = input.glasses_count || 1;
+  } else if (calcType === 'fixed') {
+    multiplier = 1; // Explicitly 1 for fixed
+  }
+
+  const piecesQty = (item.piecesFormula 
     ? evaluateFormula(item.piecesFormula, folgaCtx, undefined, side)
-    : (item.piecesQuantity || 1);
+    : (item.piecesQuantity || 1)) * multiplier;
+    
   const totalPieces = piecesQty * input.quantity;
   
   let calculatedLength = 0;
