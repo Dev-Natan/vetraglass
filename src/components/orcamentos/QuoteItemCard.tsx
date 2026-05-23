@@ -18,7 +18,7 @@ const glassColorLabels: Record<string, string> = {
 interface QuoteItemCardProps {
   item: QuoteItem;
   index: number;
-  onUpdate: (index: number, field: keyof QuoteItem, value: any) => void;
+  onUpdate: (index: number, field: keyof QuoteItem, value: unknown) => void;
   onRemove: (index: number) => void;
   formatCurrency: (value: number) => string;
 }
