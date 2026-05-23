@@ -107,23 +107,48 @@ export function evaluateFormula(
     if (!formula || formula.trim() === '') return 0;
     
     let w: number, h: number, fl: number, fa: number;
+    let wa: number, wb: number, wc: number, ha: number, hb: number, hc: number;
+    let sides: number, leaves: number, glasses: number, panels: number;
     
     if (typeof widthOrContext === 'object') {
       // When side is 'B', use widthB/heightB dimensions
       if (side === 'B') {
         w = widthOrContext.widthB ?? widthOrContext.width;
         h = widthOrContext.heightB ?? widthOrContext.height;
+      } else if (side === 'C') {
+        w = widthOrContext.widthC ?? widthOrContext.width;
+        h = widthOrContext.heightC ?? widthOrContext.height;
       } else {
         w = widthOrContext.width;
         h = widthOrContext.height;
       }
       fl = widthOrContext.folgaLargura ?? 0;
       fa = widthOrContext.folgaAltura ?? 0;
+      wa = widthOrContext.width;
+      wb = widthOrContext.widthB ?? widthOrContext.width;
+      wc = widthOrContext.widthC ?? widthOrContext.width;
+      ha = widthOrContext.height;
+      hb = widthOrContext.heightB ?? widthOrContext.height;
+      hc = widthOrContext.heightC ?? widthOrContext.height;
+      sides = widthOrContext.sides_count ?? 1;
+      leaves = widthOrContext.leaves_count ?? 1;
+      glasses = widthOrContext.glasses_count ?? 1;
+      panels = widthOrContext.panels_count ?? 1;
     } else {
       w = widthOrContext;
       h = height ?? 0;
       fl = 0;
       fa = 0;
+      wa = w;
+      wb = w;
+      wc = w;
+      ha = h;
+      hb = h;
+      hc = h;
+      sides = 1;
+      leaves = 1;
+      glasses = 1;
+      panels = 1;
     }
     
     const normalized = normalizeFormula(formula);
@@ -139,6 +164,16 @@ export function evaluateFormula(
       FA: fa,
       fl: fl,
       fa: fa,
+      WA: wa,
+      WB: wb,
+      WC: wc,
+      HA: ha,
+      HB: hb,
+      HC: hc,
+      SIDES: sides,
+      LEAVES: leaves,
+      GLASSES: glasses,
+      PANEL: panels,
     };
     
     const result = math.evaluate(normalized, scope);
