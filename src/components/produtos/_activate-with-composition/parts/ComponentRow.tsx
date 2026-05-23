@@ -69,6 +69,10 @@ export function ComponentRow({
   setGlassName,
   side,
   setSide,
+  calculationType,
+  setCalculationType,
+  appliesTo,
+  setAppliesTo,
 }: ComponentRowProps) {
   const itemType = item.item_template?.type;
 
