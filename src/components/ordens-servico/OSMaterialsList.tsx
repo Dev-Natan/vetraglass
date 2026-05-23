@@ -30,7 +30,13 @@ export function OSMaterialsList({ ordemServicoId }: OSMaterialsListProps) {
     },
   });
 
-  if (isLoading) {
+  const { data: consolidatedMaterials, isLoading: isConsolidatedLoading } = useQuery({
+    queryKey: ['os-materials-consolidated', ordemServicoId],
+    queryFn: () => osService.getConsolidatedMaterials(ordemServicoId),
+    enabled: viewMode === 'consolidated'
+  });
+
+  if (isLoading || isConsolidatedLoading) {
     return (
       <div className="flex items-center justify-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -50,7 +56,7 @@ export function OSMaterialsList({ ordemServicoId }: OSMaterialsListProps) {
     );
   }
 
-  // Group by item type
+  // Group by item type for individual view
   const profiles = materials.filter(m => m.item_type === 'profile');
   const totalBars = profiles.reduce((sum, p) => sum + (p.bars_needed || 0), 0);
   const totalWaste = profiles.reduce((sum, p) => sum + (p.waste_mm || 0), 0);
@@ -58,6 +64,7 @@ export function OSMaterialsList({ ordemServicoId }: OSMaterialsListProps) {
   const avgWaste = totalLength > 0 
     ? Math.round((totalWaste / (totalLength + totalWaste)) * 1000) / 10 
     : 0;
+
 
   return (
     <div className="space-y-6">
