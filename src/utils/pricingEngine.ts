@@ -349,15 +349,39 @@ export function calculatePricing(
     folgaAltura: input.folgaAltura ?? 0,
     widthB: input.vaoLarguraB,
     heightB: input.vaoAlturaB,
+    widthC: input.vaoLarguraC,
+    heightC: input.vaoAlturaC,
+    sides_count: input.sides_count || 1,
+    leaves_count: input.leaves_count || 1,
+    glasses_count: input.glasses_count || 1,
+    panels_count: input.panels_count || 1,
   };
 
   // ─── Level 2: Composition ───
-  const items = compositionItems.map(item => {
-    // If side is 'Todos' or 'Produto', treat as null side (global product item)
-    // for dimension context but ensure it doesn't duplicate.
-    const effectiveSide = (item.side === 'Todos' || item.side === 'Produto') ? null : item.side;
-    return calculateItemCost(item, input, folgaCtx, effectiveSide);
-  });
+  const calculatedItems: CalculatedItem[] = [];
+
+  for (const item of compositionItems) {
+    const appliesTo = item.applies_to || 'side';
+    
+    if (appliesTo === 'side') {
+      // Process side-specific items
+      if (item.side === 'B') {
+        calculatedItems.push(calculateItemCost(item, input, folgaCtx, 'B'));
+      } else if (item.side === 'C') {
+        calculatedItems.push(calculateItemCost(item, input, folgaCtx, 'C'));
+      } else if (item.side === 'Ambos') {
+        calculatedItems.push(calculateItemCost(item, input, folgaCtx, 'A'));
+        calculatedItems.push(calculateItemCost(item, input, folgaCtx, 'B'));
+      } else if (!item.side || item.side === 'A') {
+        calculatedItems.push(calculateItemCost(item, input, folgaCtx, 'A'));
+      }
+    } else {
+      // product, leaf, glass, panel - generally calculated once with multipliers
+      calculatedItems.push(calculateItemCost(item, input, folgaCtx, null));
+    }
+  }
+  
+  const items = calculatedItems;
   
   const costByType: Record<string, number> = {};
   items.forEach(item => {
