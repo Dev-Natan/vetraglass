@@ -296,16 +296,15 @@ export function useApprovalMutation({
       const consumptionResult = await generateMaterialConsumption(
         ordemServico.id,
         companyId,
-        items.map(item => ({
+        osItems.map(item => ({
           id: item.id,
-          description: item.description,
-          width: item.width,
-          height: item.height,
-          width_b: (item as any).width_b,
-          height_b: (item as any).height_b,
+          os_id: item.os_id,
+          product_name: item.product_name,
+          largura_producao: item.largura_producao,
+          altura_producao: item.altura_producao,
           quantity: item.quantity,
-          company_product_id: item.company_product_id,
-          product_template_id: item.product_template_id,
+          product_id: item.product_id,
+          quote_item_id: item.quote_item_id
         }))
       );
       if (!consumptionResult.success) console.warn('Error generating material consumption:', consumptionResult.error);
