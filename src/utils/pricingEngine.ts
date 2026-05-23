@@ -60,7 +60,13 @@ export interface PricingInput {
   vaoAltura: number;    // mm
   vaoLarguraB?: number; // mm
   vaoAlturaB?: number;  // mm
+  vaoLarguraC?: number; // mm
+  vaoAlturaC?: number;  // mm
   quantity: number;
+  leaves_count?: number;
+  glasses_count?: number;
+  panels_count?: number;
+  sides_count?: number;
   folgaLargura?: number;
   folgaAltura?: number;
 }
