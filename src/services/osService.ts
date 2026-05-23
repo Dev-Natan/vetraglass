@@ -8,8 +8,16 @@ export interface OSItem {
   product_name: string;
   largura_venda: number;
   altura_venda: number;
+  largura_venda_b: number | null;
+  altura_venda_b: number | null;
+  largura_venda_c: number | null;
+  altura_venda_c: number | null;
   largura_producao: number;
   altura_producao: number;
+  largura_producao_b: number | null;
+  altura_producao_b: number | null;
+  largura_producao_c: number | null;
+  altura_producao_c: number | null;
   quantity: number;
   technical_notes: string | null;
   recalculation_required: boolean;
