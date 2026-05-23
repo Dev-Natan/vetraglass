@@ -12,6 +12,7 @@ import { OSCuttingPlan } from '@/components/ordens-servico/OSCuttingPlan';
 import { OSGlassProject } from '@/components/ordens-servico/OSGlassProject';
 import { OSPhotosGallery } from '@/components/ordens-servico/OSPhotosGallery';
 import { OSSalesFlowTimeline } from '@/components/ordens-servico/OSSalesFlowTimeline';
+import { OSProductsList } from '@/components/ordens-servico/OSProductsList';
 
 import { OSProductionProgress } from '@/components/ordens-servico/OSProductionProgress';
 import { format } from 'date-fns';
