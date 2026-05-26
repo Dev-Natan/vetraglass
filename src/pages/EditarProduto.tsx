@@ -1120,7 +1120,7 @@ export default function EditarProduto() {
                   <FormulaEditor
                     value={quantityFormula}
                     onChange={setQuantityFormula}
-                    showPiecesQuantity={true}
+                    showPiecesQuantity={false}
                     piecesQuantity={piecesQuantity}
                     onPiecesChange={setPiecesQuantity}
                     piecesFormula={piecesFormula}
@@ -1220,7 +1220,7 @@ export default function EditarProduto() {
                   <FormulaEditor
                     value={quantityFormula}
                     onChange={setQuantityFormula}
-                    showPiecesQuantity={true}
+                    showPiecesQuantity={false}
                     piecesQuantity={piecesQuantity}
                     onPiecesChange={setPiecesQuantity}
                     piecesFormula={piecesFormula}
