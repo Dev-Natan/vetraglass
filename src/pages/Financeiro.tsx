@@ -392,6 +392,11 @@ export default function Financeiro() {
         sale={selectedSale}
         onPrint={handlePrintReceipt}
       />
+
+      <FormasPagamentoDialog 
+        open={isPaymentDialogOpen} 
+        onOpenChange={setIsPaymentDialogOpen} 
+      />
     </MainLayout>
   );
 }
