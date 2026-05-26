@@ -1,0 +1,1 @@
+ALTER TABLE public.quote_items ADD COLUMN IF NOT EXISTS width_c numeric, ADD COLUMN IF NOT EXISTS height_c numeric;
