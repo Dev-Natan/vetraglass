@@ -30,7 +30,7 @@ import { NovoOrcamentoDialog } from '@/components/orcamentos/NovoOrcamentoDialog
 import { VisualizarOrcamentoDialog } from '@/components/orcamentos/VisualizarOrcamentoDialog';
 import { EditarContratoDialog } from '@/components/orcamentos/EditarContratoDialog';
 import { AprovarOrcamentoDialog } from '@/components/orcamentos/AprovarOrcamentoDialog';
-import { FormasPagamentoDialog } from '@/components/orcamentos/FormasPagamentoDialog';
+
 import { usePagination } from '@/hooks/usePagination';
 import { PaginationControls } from '@/components/common/PaginationControls';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
