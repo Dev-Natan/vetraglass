@@ -5503,6 +5503,7 @@ export type Database = {
           has_glass: boolean | null
           height: number | null
           height_b: number | null
+          height_c: number | null
           id: string
           include_contramarco: boolean | null
           item_type: string | null
@@ -5518,6 +5519,7 @@ export type Database = {
           unit_price: number
           width: number | null
           width_b: number | null
+          width_c: number | null
         }
         Insert: {
           aluminum_color?: string | null
@@ -5532,6 +5534,7 @@ export type Database = {
           has_glass?: boolean | null
           height?: number | null
           height_b?: number | null
+          height_c?: number | null
           id?: string
           include_contramarco?: boolean | null
           item_type?: string | null
@@ -5547,6 +5550,7 @@ export type Database = {
           unit_price?: number
           width?: number | null
           width_b?: number | null
+          width_c?: number | null
         }
         Update: {
           aluminum_color?: string | null
@@ -5561,6 +5565,7 @@ export type Database = {
           has_glass?: boolean | null
           height?: number | null
           height_b?: number | null
+          height_c?: number | null
           id?: string
           include_contramarco?: boolean | null
           item_type?: string | null
@@ -5576,6 +5581,7 @@ export type Database = {
           unit_price?: number
           width?: number | null
           width_b?: number | null
+          width_c?: number | null
         }
         Relationships: [
           {
