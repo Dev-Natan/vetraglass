@@ -178,10 +178,6 @@ export default function Orcamentos() {
             <p className="text-xs sm:text-sm text-muted-foreground">Gerencie todos os orçamentos da sua vidraçaria.</p>
           </div>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
-            <Button variant="outline" onClick={() => setIsPaymentDialogOpen(true)} className="gap-2 h-10 sm:h-11 px-4">
-              <Settings className="w-4 h-4" />
-              <span className="text-sm">Configurar Pagamentos</span>
-            </Button>
             <Button onClick={() => { setSelectedQuote(null); setIsNewDialogOpen(true); }} className="gap-2 h-10 sm:h-11 px-4">
               <Plus className="w-4 h-4" />
               <span className="text-sm">Novo Orçamento</span>
