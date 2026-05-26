@@ -12,7 +12,7 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  Settings
+  
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -30,7 +30,7 @@ import { NovoOrcamentoDialog } from '@/components/orcamentos/NovoOrcamentoDialog
 import { VisualizarOrcamentoDialog } from '@/components/orcamentos/VisualizarOrcamentoDialog';
 import { EditarContratoDialog } from '@/components/orcamentos/EditarContratoDialog';
 import { AprovarOrcamentoDialog } from '@/components/orcamentos/AprovarOrcamentoDialog';
-import { FormasPagamentoDialog } from '@/components/orcamentos/FormasPagamentoDialog';
+
 import { usePagination } from '@/hooks/usePagination';
 import { PaginationControls } from '@/components/common/PaginationControls';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -65,7 +65,7 @@ export default function Orcamentos() {
   const [contractItems, setContractItems] = useState<any[]>([]);
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
   const [approveQuoteItems, setApproveQuoteItems] = useState<any[]>([]);
-  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  
   const [quoteToCancelApproved, setQuoteToCancelApproved] = useState<Quote | null>(null);
 
   const {
@@ -178,10 +178,6 @@ export default function Orcamentos() {
             <p className="text-xs sm:text-sm text-muted-foreground">Gerencie todos os orçamentos da sua vidraçaria.</p>
           </div>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
-            <Button variant="outline" onClick={() => setIsPaymentDialogOpen(true)} className="gap-2 h-10 sm:h-11 px-4">
-              <Settings className="w-4 h-4" />
-              <span className="text-sm">Configurar Pagamentos</span>
-            </Button>
             <Button onClick={() => { setSelectedQuote(null); setIsNewDialogOpen(true); }} className="gap-2 h-10 sm:h-11 px-4">
               <Plus className="w-4 h-4" />
               <span className="text-sm">Novo Orçamento</span>
@@ -259,7 +255,7 @@ export default function Orcamentos() {
       <VisualizarOrcamentoDialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen} quote={selectedQuote} />
       <EditarContratoDialog open={isContractDialogOpen} onOpenChange={setIsContractDialogOpen} quote={selectedQuote} items={contractItems} company={currentCompany} />
       <AprovarOrcamentoDialog open={isApproveDialogOpen} onOpenChange={setIsApproveDialogOpen} quote={selectedQuote} items={approveQuoteItems} />
-      <FormasPagamentoDialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen} />
+      
 
       <AlertDialog open={!!quoteToDelete} onOpenChange={(open) => !open && setQuoteToDelete(null)}>
         <AlertDialogContent>

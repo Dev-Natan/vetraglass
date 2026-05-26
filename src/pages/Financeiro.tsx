@@ -19,8 +19,10 @@ import {
   History as HistoryIcon,
   PieChart,
   BarChart3,
-  Receipt
+  Receipt,
+  Settings
 } from 'lucide-react';
+import { FormasPagamentoDialog } from '@/components/orcamentos/FormasPagamentoDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -80,6 +82,7 @@ export default function Financeiro() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState(() => sessionStorage.getItem('financeiro-active-tab') || 'dashboard');
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
@@ -174,7 +177,7 @@ export default function Financeiro() {
   return (
     <MainLayout>
       <div className="space-y-6 animate-fade-in">
-        <header className="flex flex-col sm:flex-row justify-between gap-4">
+        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="font-display font-bold text-2xl text-foreground flex items-center gap-2">
               <BarChart3 className="w-7 h-7 text-primary" />
@@ -182,6 +185,14 @@ export default function Financeiro() {
             </h1>
             <p className="text-muted-foreground text-sm">Controle gerencial, análise de resultados e auditoria de movimentações</p>
           </div>
+          <Button 
+            variant="outline" 
+            onClick={() => setIsPaymentDialogOpen(true)} 
+            className="gap-2 h-10 sm:h-11 px-4"
+          >
+            <Settings className="w-4 h-4" />
+            <span className="text-sm">Configurar Pagamentos</span>
+          </Button>
         </header>
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
@@ -380,6 +391,11 @@ export default function Financeiro() {
         onOpenChange={setDetailsDialogOpen}
         sale={selectedSale}
         onPrint={handlePrintReceipt}
+      />
+
+      <FormasPagamentoDialog 
+        open={isPaymentDialogOpen} 
+        onOpenChange={setIsPaymentDialogOpen} 
       />
     </MainLayout>
   );
