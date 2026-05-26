@@ -82,6 +82,7 @@ export default function Financeiro() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState(() => sessionStorage.getItem('financeiro-active-tab') || 'dashboard');
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
