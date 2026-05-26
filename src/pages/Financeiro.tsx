@@ -19,8 +19,10 @@ import {
   History as HistoryIcon,
   PieChart,
   BarChart3,
-  Receipt
+  Receipt,
+  Settings
 } from 'lucide-react';
+import { FormasPagamentoDialog } from '@/components/orcamentos/FormasPagamentoDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
