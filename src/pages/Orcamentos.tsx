@@ -65,7 +65,7 @@ export default function Orcamentos() {
   const [contractItems, setContractItems] = useState<any[]>([]);
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
   const [approveQuoteItems, setApproveQuoteItems] = useState<any[]>([]);
-  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  
   const [quoteToCancelApproved, setQuoteToCancelApproved] = useState<Quote | null>(null);
 
   const {
