@@ -512,6 +512,60 @@ export default function EditarProduto() {
     setIsEditItemDialogOpen(true);
   };
 
+  const handleAddItem = () => {
+    if (activeTab === 'glass') {
+      if (!widthFormula.trim()) {
+        toast.error('Informe a fórmula da largura do vidro');
+        return;
+      }
+      if (!heightFormula.trim()) {
+        toast.error('Informe a fórmula da altura do vidro');
+        return;
+      }
+      
+      const wv = validateFormula(widthFormula);
+      const hv = validateFormula(heightFormula);
+      
+      if (!wv.isValid) {
+        toast.error(`Fórmula de largura inválida: ${wv.error}`);
+        return;
+      }
+      if (!hv.isValid) {
+        toast.error(`Fórmula de altura inválida: ${hv.error}`);
+        return;
+      }
+    }
+    addItemMutation.mutate();
+  };
+
+  const handleUpdateItem = () => {
+    const itemType = editingItem?.item_template?.type;
+    if (itemType === 'glass') {
+      if (!widthFormula.trim()) {
+        toast.error('Informe a fórmula da largura do vidro');
+        return;
+      }
+      if (!heightFormula.trim()) {
+        toast.error('Informe a fórmula da altura do vidro');
+        return;
+      }
+      
+      const wv = validateFormula(widthFormula);
+      const hv = validateFormula(heightFormula);
+      
+      if (!wv.isValid) {
+        toast.error(`Fórmula de largura inválida: ${wv.error}`);
+        return;
+      }
+      if (!hv.isValid) {
+        toast.error(`Fórmula de altura inválida: ${hv.error}`);
+        return;
+      }
+    }
+    updateItemMutation.mutate();
+  };
+
+
   const getItemsByType = (tabValue: string) => {
     const currentTab = itemTypeTabs.find(t => t.value === tabValue);
     const dbType = currentTab?.dbType;
