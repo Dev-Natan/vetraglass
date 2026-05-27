@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { validateFormula } from '@/utils/safeFormulaEvaluator';
 import type { ComponentItem, ItemTemplate } from '../types';
 
 interface UseComponentEditorParams {
