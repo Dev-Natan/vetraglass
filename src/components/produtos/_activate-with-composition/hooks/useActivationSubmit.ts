@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useGlassPriceMatrixMutations } from '@/hooks/useGlassPricing';
+import { validateFormula } from '@/utils/safeFormulaEvaluator';
 import type { ComponentItem } from '../types';
 import type { ProductPricingData } from '../../ProductPricingStep';
 
