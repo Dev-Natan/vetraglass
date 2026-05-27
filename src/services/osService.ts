@@ -114,6 +114,18 @@ export const osService = {
 
     if (updateError) throw updateError;
 
+    // Automaticamente dispara o recálculo se houver mudanças nas medidas
+    if (historyEntries.length > 0) {
+      try {
+        await regenerateOSDocuments(currentItem.os_id, osItemId);
+      } catch (calcError) {
+        console.error('Erro ao recalcular automaticamente:', calcError);
+        // Não lançamos o erro aqui para não travar o salvamento do ajuste, 
+        // mas o log acima ajudará no debug
+      }
+    }
+
+
     if (historyEntries.length > 0) {
       const { error: historyError } = await supabase
         .from('os_dimension_history')
