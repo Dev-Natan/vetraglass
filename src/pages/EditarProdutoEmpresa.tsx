@@ -911,7 +911,7 @@ export default function EditarProdutoEmpresa() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddItemDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={() => addItemMutation.mutate()} disabled={!selectedItemToAdd || addItemMutation.isPending}>{addItemMutation.isPending ? 'Adicionando...' : 'Adicionar'}</Button>
+            <Button onClick={handleAddItem} disabled={!selectedItemToAdd || addItemMutation.isPending}>{addItemMutation.isPending ? 'Adicionando...' : 'Adicionar'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
