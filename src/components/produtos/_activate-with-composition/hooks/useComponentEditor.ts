@@ -60,6 +60,29 @@ export function useComponentEditor({
       return;
     }
 
+    if (activeTab === 'glass') {
+      if (!widthFormula.trim()) {
+        toast.error('Informe a fórmula da largura do vidro');
+        return;
+      }
+      if (!heightFormula.trim()) {
+        toast.error('Informe a fórmula da altura do vidro');
+        return;
+      }
+      
+      const wv = validateFormula(widthFormula);
+      const hv = validateFormula(heightFormula);
+      
+      if (!wv.isValid) {
+        toast.error(`Fórmula de largura inválida: ${wv.error}`);
+        return;
+      }
+      if (!hv.isValid) {
+        toast.error(`Fórmula de altura inválida: ${hv.error}`);
+        return;
+      }
+    }
+
     const itemTemplate = availableItems?.find(i => i.id === selectedItemTemplateId);
     if (!itemTemplate) return;
 
