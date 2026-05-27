@@ -20,6 +20,7 @@ export function useQuoteItems() {
         
         const width = field === 'width' ? (value as number) : updated.width || 0;
         const height = field === 'height' ? (value as number) : updated.height || 0;
+        const isMultiSide = updated.width_b !== undefined;
         const widthB = field === 'width_b' ? (value as number) : updated.width_b || 0;
         const heightB = field === 'height_b' ? (value as number) : updated.height_b || 0;
         const quantity = field === 'quantity' ? (value as number) : updated.quantity || 1;
@@ -28,7 +29,7 @@ export function useQuoteItems() {
         
         if (isProduct || isM2Item) {
           const basePriceM2 = field === 'base_price_m2' ? (value as number) : updated.base_price_m2 || 0;
-          const areaM2 = ((width + widthB) / 1000) * (height / 1000);
+          const areaM2 = ((width + (isMultiSide ? widthB : 0)) / 1000) * (height / 1000);
           unitPrice = areaM2 * basePriceM2;
         } else if (field === 'unit_price') {
           unitPrice = value as number;
@@ -41,8 +42,8 @@ export function useQuoteItems() {
           ...updated,
           width,
           height,
-          width_b: widthB,
-          height_b: heightB,
+          // Preserve undefined for single-side products so Lado B fields don't appear
+          ...(isMultiSide ? { width_b: widthB, height_b: heightB } : {}),
           quantity,
           unit_price: unitPrice,
           total_price: totalPrice,
