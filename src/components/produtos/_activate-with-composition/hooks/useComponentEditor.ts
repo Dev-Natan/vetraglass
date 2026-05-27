@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { validateFormula } from '@/utils/safeFormulaEvaluator';
 import type { ComponentItem, ItemTemplate } from '../types';
 
 interface UseComponentEditorParams {
@@ -57,6 +58,29 @@ export function useComponentEditor({
     if (!selectedItemTemplateId) {
       toast.error('Selecione um item');
       return;
+    }
+
+    if (activeTab === 'glass') {
+      if (!widthFormula.trim()) {
+        toast.error('Informe a fórmula da largura do vidro');
+        return;
+      }
+      if (!heightFormula.trim()) {
+        toast.error('Informe a fórmula da altura do vidro');
+        return;
+      }
+      
+      const wv = validateFormula(widthFormula);
+      const hv = validateFormula(heightFormula);
+      
+      if (!wv.isValid) {
+        toast.error(`Fórmula de largura inválida: ${wv.error}`);
+        return;
+      }
+      if (!hv.isValid) {
+        toast.error(`Fórmula de altura inválida: ${hv.error}`);
+        return;
+      }
     }
 
     const itemTemplate = availableItems?.find(i => i.id === selectedItemTemplateId);
@@ -139,6 +163,35 @@ export function useComponentEditor({
 
   const handleSaveEdit = () => {
     if (!editingItemId) return;
+
+    // Localizar item sendo editado para checar o tipo
+    const itemBeingEdited = availableItems?.find(i => i.id === selectedItemTemplateId) || 
+                          // fallback se não achou no availableItems (caso já esteja no localItems)
+                          { type: activeTab }; 
+
+    if (activeTab === 'glass' || (itemBeingEdited as any).type === 'glass') {
+      if (!widthFormula.trim()) {
+        toast.error('Informe a fórmula da largura do vidro');
+        return;
+      }
+      if (!heightFormula.trim()) {
+        toast.error('Informe a fórmula da altura do vidro');
+        return;
+      }
+      
+      const wv = validateFormula(widthFormula);
+      const hv = validateFormula(heightFormula);
+      
+      if (!wv.isValid) {
+        toast.error(`Fórmula de largura inválida: ${wv.error}`);
+        return;
+      }
+      if (!hv.isValid) {
+        toast.error(`Fórmula de altura inválida: ${hv.error}`);
+        return;
+      }
+    }
+
     saveCurrentEdit();
     setEditingItemId(null);
     resetForm();

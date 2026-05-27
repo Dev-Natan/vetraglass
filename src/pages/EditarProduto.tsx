@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FormulaEditor } from '@/components/produtos/FormulaEditor';
 import { GlassFormulaEditor } from '@/components/produtos/GlassFormulaEditor';
 import { FiscalFieldsCard, FiscalFieldsData } from '@/components/produtos/FiscalFieldsCard';
+import { validateFormula } from '@/utils/safeFormulaEvaluator';
 import {
   Select,
   SelectContent,
@@ -510,6 +511,60 @@ export default function EditarProduto() {
     
     setIsEditItemDialogOpen(true);
   };
+
+  const handleAddItem = () => {
+    if (activeTab === 'glass') {
+      if (!widthFormula.trim()) {
+        toast.error('Informe a fórmula da largura do vidro');
+        return;
+      }
+      if (!heightFormula.trim()) {
+        toast.error('Informe a fórmula da altura do vidro');
+        return;
+      }
+      
+      const wv = validateFormula(widthFormula);
+      const hv = validateFormula(heightFormula);
+      
+      if (!wv.isValid) {
+        toast.error(`Fórmula de largura inválida: ${wv.error}`);
+        return;
+      }
+      if (!hv.isValid) {
+        toast.error(`Fórmula de altura inválida: ${hv.error}`);
+        return;
+      }
+    }
+    addItemMutation.mutate();
+  };
+
+  const handleUpdateItem = () => {
+    const itemType = editingItem?.item_template?.type;
+    if (itemType === 'glass') {
+      if (!widthFormula.trim()) {
+        toast.error('Informe a fórmula da largura do vidro');
+        return;
+      }
+      if (!heightFormula.trim()) {
+        toast.error('Informe a fórmula da altura do vidro');
+        return;
+      }
+      
+      const wv = validateFormula(widthFormula);
+      const hv = validateFormula(heightFormula);
+      
+      if (!wv.isValid) {
+        toast.error(`Fórmula de largura inválida: ${wv.error}`);
+        return;
+      }
+      if (!hv.isValid) {
+        toast.error(`Fórmula de altura inválida: ${hv.error}`);
+        return;
+      }
+    }
+    updateItemMutation.mutate();
+  };
+
 
   const getItemsByType = (tabValue: string) => {
     const currentTab = itemTypeTabs.find(t => t.value === tabValue);
@@ -1144,10 +1199,10 @@ export default function EditarProduto() {
                   Cancelar
                 </Button>
                 <Button 
-                  onClick={() => addItemMutation.mutate()}
+                  onClick={handleAddItem}
                   disabled={!selectedItemToAdd || addItemMutation.isPending}
                 >
-                  Adicionar
+                  {addItemMutation.isPending ? 'Adicionando...' : 'Adicionar'}
                 </Button>
               </div>
             </div>
@@ -1266,10 +1321,10 @@ export default function EditarProduto() {
                   Cancelar
                 </Button>
                 <Button 
-                  onClick={() => updateItemMutation.mutate()}
+                  onClick={handleUpdateItem}
                   disabled={updateItemMutation.isPending}
                 >
-                  {updateItemMutation.isPending ? 'Salvando...' : 'Salvar Alterações'}
+                  {updateItemMutation.isPending ? 'Salvando...' : 'Salvar'}
                 </Button>
               </div>
             </div>

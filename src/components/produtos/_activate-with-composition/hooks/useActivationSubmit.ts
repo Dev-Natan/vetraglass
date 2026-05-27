@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useGlassPriceMatrixMutations } from '@/hooks/useGlassPricing';
+import { validateFormula } from '@/utils/safeFormulaEvaluator';
 import type { ComponentItem } from '../types';
 import type { ProductPricingData } from '../../ProductPricingStep';
 
@@ -37,6 +38,25 @@ export function useActivationSubmit({
   return useMutation({
     mutationFn: async () => {
       if (!companyId) throw new Error('Empresa não selecionada');
+
+      // 0. Validar componentes de vidro
+      for (const item of localItems) {
+        if (item.item_template?.type === 'glass') {
+          if (!item.width_formula || !item.width_formula.trim()) {
+            throw new Error(`O vidro "${item.item_template.name}" está sem fórmula de largura.`);
+          }
+          if (!item.height_formula || !item.height_formula.trim()) {
+            throw new Error(`O vidro "${item.item_template.name}" está sem fórmula de altura.`);
+          }
+          
+          const wv = validateFormula(item.width_formula);
+          const hv = validateFormula(item.height_formula);
+          
+          if (!wv.isValid) throw new Error(`Fórmula de largura inválida para "${item.item_template.name}": ${wv.error}`);
+          if (!hv.isValid) throw new Error(`Fórmula de altura inválida para "${item.item_template.name}": ${hv.error}`);
+        }
+      }
+
 
       // 1. Ativa template para a empresa via RPC
       const { data: activatedProduct, error: activateError } = await supabase.rpc(

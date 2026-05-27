@@ -18,6 +18,7 @@ import { GlassFormulaEditor } from '@/components/produtos/GlassFormulaEditor';
 import { ProductConfigPanel, ProductConfigData } from '@/components/produtos/ProductConfigPanel';
 import { ProductCompositionPricing } from '@/components/produtos/ProductCompositionPricing';
 import { CompositionSections } from '@/components/produtos/CompositionSections';
+import { validateFormula } from '@/utils/safeFormulaEvaluator';
 import {
   Select,
   SelectContent,
@@ -600,6 +601,60 @@ export default function EditarProdutoEmpresa() {
     setIsEditItemDialogOpen(true);
   };
 
+  const handleAddItem = () => {
+    if (addItemSection === 'glass') {
+      if (!widthFormula.trim()) {
+        toast.error('Informe a fórmula da largura do vidro');
+        return;
+      }
+      if (!heightFormula.trim()) {
+        toast.error('Informe a fórmula da altura do vidro');
+        return;
+      }
+      
+      const wv = validateFormula(widthFormula);
+      const hv = validateFormula(heightFormula);
+      
+      if (!wv.isValid) {
+        toast.error(`Fórmula de largura inválida: ${wv.error}`);
+        return;
+      }
+      if (!hv.isValid) {
+        toast.error(`Fórmula de altura inválida: ${hv.error}`);
+        return;
+      }
+    }
+    addItemMutation.mutate();
+  };
+
+  const handleUpdateItem = () => {
+    const itemType = editingItem?.item_template?.type || editingItem?.company_item?.type;
+    if (itemType === 'glass') {
+      if (!widthFormula.trim()) {
+        toast.error('Informe a fórmula da largura do vidro');
+        return;
+      }
+      if (!heightFormula.trim()) {
+        toast.error('Informe a fórmula da altura do vidro');
+        return;
+      }
+      
+      const wv = validateFormula(widthFormula);
+      const hv = validateFormula(heightFormula);
+      
+      if (!wv.isValid) {
+        toast.error(`Fórmula de largura inválida: ${wv.error}`);
+        return;
+      }
+      if (!hv.isValid) {
+        toast.error(`Fórmula de altura inválida: ${hv.error}`);
+        return;
+      }
+    }
+    updateItemMutation.mutate();
+  };
+
+
   const getItemsByType = (tabValue: string) => {
     const currentTab = itemTypeTabs.find(t => t.value === tabValue);
     const dbType = currentTab?.dbType;
@@ -856,7 +911,7 @@ export default function EditarProdutoEmpresa() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddItemDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={() => addItemMutation.mutate()} disabled={!selectedItemToAdd || addItemMutation.isPending}>{addItemMutation.isPending ? 'Adicionando...' : 'Adicionar'}</Button>
+            <Button onClick={handleAddItem} disabled={!selectedItemToAdd || addItemMutation.isPending}>{addItemMutation.isPending ? 'Adicionando...' : 'Adicionar'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -870,7 +925,7 @@ export default function EditarProdutoEmpresa() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditItemDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={() => updateItemMutation.mutate()} disabled={updateItemMutation.isPending}>{updateItemMutation.isPending ? 'Salvando...' : 'Salvar'}</Button>
+            <Button onClick={handleUpdateItem} disabled={updateItemMutation.isPending}>{updateItemMutation.isPending ? 'Salvando...' : 'Salvar'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
