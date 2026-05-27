@@ -1199,10 +1199,10 @@ export default function EditarProduto() {
                   Cancelar
                 </Button>
                 <Button 
-                  onClick={() => addItemMutation.mutate()}
+                  onClick={handleAddItem}
                   disabled={!selectedItemToAdd || addItemMutation.isPending}
                 >
-                  Adicionar
+                  {addItemMutation.isPending ? 'Adicionando...' : 'Adicionar'}
                 </Button>
               </div>
             </div>
@@ -1321,10 +1321,10 @@ export default function EditarProduto() {
                   Cancelar
                 </Button>
                 <Button 
-                  onClick={() => updateItemMutation.mutate()}
+                  onClick={handleUpdateItem}
                   disabled={updateItemMutation.isPending}
                 >
-                  {updateItemMutation.isPending ? 'Salvando...' : 'Salvar Alterações'}
+                  {updateItemMutation.isPending ? 'Salvando...' : 'Salvar'}
                 </Button>
               </div>
             </div>
