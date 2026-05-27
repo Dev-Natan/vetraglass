@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FormulaEditor } from '@/components/produtos/FormulaEditor';
 import { GlassFormulaEditor } from '@/components/produtos/GlassFormulaEditor';
 import { FiscalFieldsCard, FiscalFieldsData } from '@/components/produtos/FiscalFieldsCard';
+import { validateFormula } from '@/utils/safeFormulaEvaluator';
 import {
   Select,
   SelectContent,
