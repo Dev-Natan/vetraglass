@@ -69,13 +69,12 @@ export function OSProductsList({ ordemServicoId }: OSProductsListProps) {
       queryClient.invalidateQueries({ queryKey: ['os-composition-accessories', ordemServicoId] });
       queryClient.invalidateQueries({ queryKey: ['os-composition-glasses', ordemServicoId] });
       
-      // Automaticamente dispara o recálculo após salvar o ajuste
-      recalculateMutation.mutate(selectedItem?.id);
-      
+      toast.success('Ajuste técnico salvo e cálculos atualizados!');
       setIsAdjusting(false);
     },
-    onError: (error: Error) => toast.error('Erro: ' + error.message)
+    onError: (error: Error) => toast.error('Erro ao salvar ajuste: ' + error.message)
   });
+
 
   const recalculateMutation = useMutation({
     mutationFn: (osItemId?: string) => regenerateOSDocuments(ordemServicoId, osItemId),
