@@ -202,41 +202,76 @@ export default function OrdemServicoDetalhes() {
     phone: currentCompany.phone,
   } : null;
 
-  const handleDownloadMaterialsPdf = () => {
-    if (!materials || materials.length === 0) {
-      toast.error('Nenhum material disponível para gerar PDF');
-      return;
+  const fetchImageAsDataUrl = async (url: string): Promise<string | null> => {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      const blob = await res.blob();
+      return await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch {
+      return null;
     }
-    toast.info('Gerando PDF...');
-    generateMaterialsListPdf(materials, getOsInfo(), getCompanyInfo());
-    toast.success('PDF gerado com sucesso!');
   };
 
-  const handleDownloadCuttingPlanPdf = () => {
+  const handleDownloadCuttingPlanPdf = async () => {
     if (!cuttingPlans || cuttingPlans.length === 0) {
       toast.error('Nenhum plano de corte disponível para gerar PDF');
       return;
     }
     toast.info('Gerando PDF...');
+
+    // Collect accessories per os_item
+    const accessoriesByOsItem = new Map<string, any[]>();
+    (materials || []).forEach((m: any) => {
+      if (m.item_type === 'profile') return;
+      const list = accessoriesByOsItem.get(m.os_item_id) || [];
+      list.push(m);
+      accessoriesByOsItem.set(m.os_item_id, list);
+    });
+
     const plansForPdf = (cuttingPlans || []).map((p: any) => ({
       ...p,
       aluminum_color: p.quote_items?.aluminum_color || null,
+      accessories: accessoriesByOsItem.get(p.id) || accessoriesByOsItem.get(p.os_item_id) || [],
     }));
-    const currentCompanyUser = companies.find(c => c.company_id === currentCompany?.id);
-    const isAdmin = currentCompanyUser?.role === 'admin';
-    generateCuttingPlanPdf(plansForPdf, getOsInfo(), getCompanyInfo(), 'download', isAdmin);
+
+    // Build image map by item name (profiles, glasses, accessories)
+    const itemNames = new Set<string>();
+    plansForPdf.forEach((p: any) => {
+      (p.cuts_data || []).forEach((c: any) => itemNames.add(c.profileName));
+      (p.glass_cuts_data || []).forEach((g: any) => itemNames.add(g.glassName));
+      (p.accessories || []).forEach((a: any) => itemNames.add(a.item_name));
+    });
+
+    const images: Record<string, string> = {};
+    if (itemNames.size > 0) {
+      const { data: templates } = await supabase
+        .from('item_templates')
+        .select('name, image_url')
+        .in('name', Array.from(itemNames));
+      const loads = await Promise.all(
+        (templates || [])
+          .filter((t: any) => t.image_url)
+          .map(async (t: any) => {
+            const dataUrl = await fetchImageAsDataUrl(t.image_url);
+            return dataUrl ? [t.name as string, dataUrl] as const : null;
+          })
+      );
+      loads.forEach(entry => {
+        if (entry) images[entry[0]] = entry[1];
+      });
+    }
+
+    generateCuttingPlanPdf(plansForPdf, getOsInfo(), getCompanyInfo(), 'download', false, images);
     toast.success('PDF gerado com sucesso!');
   };
 
-  const handleDownloadGlassPdf = () => {
-    if (!glassProjects || glassProjects.length === 0) {
-      toast.error('Nenhum projeto de vidro disponível para gerar PDF');
-      return;
-    }
-    toast.info('Gerando PDF...');
-    generateGlassProductionPdf(glassProjects as any, getOsInfo(), getCompanyInfo());
-    toast.success('PDF gerado com sucesso!');
-  };
+
 
   const formatCurrency = (value: number) => 
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
