@@ -5005,6 +5005,7 @@ export type Database = {
           item_template_id: string
           loss_percent: number | null
           notes: string | null
+          pieces_formula: string | null
           pieces_quantity: number
           product_template_id: string
           quantity_formula: string
@@ -5024,6 +5025,7 @@ export type Database = {
           item_template_id: string
           loss_percent?: number | null
           notes?: string | null
+          pieces_formula?: string | null
           pieces_quantity?: number
           product_template_id: string
           quantity_formula?: string
@@ -5043,6 +5045,7 @@ export type Database = {
           item_template_id?: string
           loss_percent?: number | null
           notes?: string | null
+          pieces_formula?: string | null
           pieces_quantity?: number
           product_template_id?: string
           quantity_formula?: string

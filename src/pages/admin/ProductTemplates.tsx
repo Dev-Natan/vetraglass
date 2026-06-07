@@ -109,10 +109,12 @@ type ProductTemplateItem = {
   quantity_formula: string;
   pieces_quantity: number;
   cut_angle: number;
+  pieces_formula?: string | null;
   is_optional: boolean;
   notes: string | null;
   width_formula: string | null;
   height_formula: string | null;
+  side: string | null;
   item_template?: {
     id: string;
     name: string;
@@ -369,6 +371,23 @@ export default function ProductTemplates() {
     glassName,
     cutAngle,
   ]);
+
+  useEffect(() => {
+    if (!selectedItemToAdd || compositionActiveTab !== 'glass') return;
+    
+    const selectedItem = itemTemplates?.find(it => it.id === selectedItemToAdd);
+    if (selectedItem?.default_formulas) {
+      const widthDef = selectedItem.default_formulas.find(f => f.position === 'width');
+      const heightDef = selectedItem.default_formulas.find(f => f.position === 'height');
+      
+      if (widthDef) setWidthFormula(widthDef.formula);
+      if (heightDef) setHeightFormula(heightDef.formula);
+    } else {
+      // Set some common defaults if none provided
+      if (!widthFormula) setWidthFormula("Largura");
+      if (!heightFormula) setHeightFormula("Altura");
+    }
+  }, [selectedItemToAdd, compositionActiveTab, itemTemplates]);
 
   const filteredTemplates = templates?.filter((template) => {
     const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -696,6 +715,7 @@ export default function ProductTemplates() {
         item_template_id: data.item_template_id,
         quantity_formula: data.quantity_formula,
         pieces_quantity: data.pieces_quantity,
+        pieces_formula: data.pieces_formula,
         cut_angle: data.cut_angle,
         is_optional: data.is_optional,
         notes: data.notes || null,
@@ -709,6 +729,10 @@ export default function ProductTemplates() {
       queryClient.invalidateQueries({ queryKey: ["product-template-items", selectedTemplate?.id] });
       toast.success("Item adicionado!");
     },
+    onError: (error: any) => {
+      console.error("Erro ao adicionar item:", error);
+      toast.error("Erro ao adicionar item: " + (error.message || "Erro desconhecido"));
+    }
   });
 
   const removeCompositionMutation = useMutation({
@@ -720,6 +744,10 @@ export default function ProductTemplates() {
       queryClient.invalidateQueries({ queryKey: ["product-template-items", selectedTemplate?.id] });
       toast.success("Item removido!");
     },
+    onError: (error: any) => {
+      console.error("Erro ao remover item:", error);
+      toast.error("Erro ao remover item: " + (error.message || "Erro desconhecido"));
+    }
   });
 
   const updateCompositionMutation = useMutation({
@@ -739,6 +767,7 @@ export default function ProductTemplates() {
         .update({
           quantity_formula: data.quantity_formula,
           pieces_quantity: data.pieces_quantity,
+          pieces_formula: data.pieces_formula,
           cut_angle: data.cut_angle,
           notes: data.notes || null,
           width_formula: data.width_formula || null,
@@ -754,10 +783,26 @@ export default function ProductTemplates() {
       setIsEditItemDialogOpen(false);
       setEditingItem(null);
     },
+    onError: (error: any) => {
+      console.error("Erro ao atualizar item:", error);
+      toast.error("Erro ao atualizar item: " + (error.message || "Erro desconhecido"));
+    }
   });
 
   const handleAddCompositionItem = () => {
     if (!selectedItemToAdd) return;
+    
+    // Glass specific validation
+    if (compositionActiveTab === 'glass') {
+      if (!widthFormula || widthFormula.trim() === "") {
+        toast.error("Por favor, informe a fórmula da largura do vidro.");
+        return;
+      }
+      if (!heightFormula || heightFormula.trim() === "") {
+        toast.error("Por favor, informe a fórmula da altura do vidro.");
+        return;
+      }
+    }
     
     addCompositionMutation.mutate({
       item_template_id: selectedItemToAdd,
@@ -782,6 +827,18 @@ export default function ProductTemplates() {
     
     const itemType = editingItem.item_template?.type;
     
+    // Glass specific validation
+    if (itemType === 'glass') {
+      if (!editWidthFormula || editWidthFormula.trim() === "") {
+        toast.error("Por favor, informe a fórmula da largura do vidro.");
+        return;
+      }
+      if (!editHeightFormula || editHeightFormula.trim() === "") {
+        toast.error("Por favor, informe a fórmula da altura do vidro.");
+        return;
+      }
+    }
+    
     updateCompositionMutation.mutate({
       id: editingItem.id,
       quantity_formula: editQuantityFormula,
@@ -799,12 +856,12 @@ export default function ProductTemplates() {
     setEditingItem(item);
     setEditQuantityFormula(item.quantity_formula || "1");
     setEditPiecesQuantity(item.pieces_quantity || 1);
-    setEditPiecesFormula((item as any).pieces_formula || null);
+    setEditPiecesFormula(item.pieces_formula || null);
     setEditWidthFormula(item.width_formula || "");
     setEditHeightFormula(item.height_formula || "");
     setEditGlassName(item.notes || "");
     setEditCutAngle(item.cut_angle || 90);
-    setEditSide((item as any).side || "");
+    setEditSide(item.side || "");
     setIsEditItemDialogOpen(true);
   };
 
