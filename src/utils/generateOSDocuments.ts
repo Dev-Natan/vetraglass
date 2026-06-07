@@ -260,6 +260,57 @@ export async function generateOSDocuments(
         side?: string;
       }> = [];
 
+      // Source 1: glasses defined in product composition (product_template_items with type='glass')
+      const glassComposition = allComposition.filter(c => c.item_template.type === 'glass');
+
+      for (const comp of glassComposition) {
+        if (!comp.width_formula || !comp.height_formula) continue;
+
+        const sidesToCalculate: Array<{ label?: string; s: 'A' | 'B' | null }> = [];
+        if (!product.has_multiple_sides) {
+          sidesToCalculate.push({ label: undefined, s: null });
+        } else if (comp.side === 'A') {
+          sidesToCalculate.push({ label: 'A', s: 'A' });
+        } else if (comp.side === 'B') {
+          sidesToCalculate.push({ label: 'B', s: 'B' });
+        } else {
+          sidesToCalculate.push({ label: 'A', s: 'A' });
+          sidesToCalculate.push({ label: 'B', s: 'B' });
+        }
+
+        const formulaCtx = {
+          width, height,
+          widthB: width_b, heightB: height_b,
+          widthC: width_c, heightC: height_c,
+        };
+
+        const piecesQty = comp.pieces_quantity || 1;
+        const nameLower = (comp.item_template.name || '').toLowerCase();
+        const isMovable = !nameLower.includes('fixo');
+
+        for (const sideData of sidesToCalculate) {
+          const calcWidth = evaluateFormula(comp.width_formula, formulaCtx, undefined, sideData.s as any);
+          const calcHeight = evaluateFormula(comp.height_formula, formulaCtx, undefined, sideData.s as any);
+          if (calcWidth <= 0 || calcHeight <= 0) continue;
+
+          const totalQty = piecesQty * quantity;
+          const areaM2 = (calcWidth / 1000) * (calcHeight / 1000) * totalQty;
+
+          glassCuts.push({
+            glassName: comp.item_template.name,
+            widthFormula: comp.width_formula,
+            heightFormula: comp.height_formula,
+            calculatedWidth: calcWidth,
+            calculatedHeight: calcHeight,
+            areaM2,
+            quantity: totalQty,
+            isMovable,
+            side: sideData.label,
+          });
+        }
+      }
+
+      // Source 2 (legacy): glass_line_formulas
       for (const formula of glassFormulas) {
         const sidesToCalculate = [];
         if (!product.has_multiple_sides) {
@@ -316,6 +367,7 @@ export async function generateOSDocuments(
           });
         }
       }
+
 
       // Insert cutting plan for this OS item
       await supabase.from('os_cutting_plan').insert({
