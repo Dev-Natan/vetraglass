@@ -370,6 +370,23 @@ export default function ProductTemplates() {
     cutAngle,
   ]);
 
+  useEffect(() => {
+    if (!selectedItemToAdd || compositionActiveTab !== 'glass') return;
+    
+    const selectedItem = itemTemplates?.find(it => it.id === selectedItemToAdd);
+    if (selectedItem?.default_formulas) {
+      const widthDef = selectedItem.default_formulas.find(f => f.position === 'width');
+      const heightDef = selectedItem.default_formulas.find(f => f.position === 'height');
+      
+      if (widthDef) setWidthFormula(widthDef.formula);
+      if (heightDef) setHeightFormula(heightDef.formula);
+    } else {
+      // Set some common defaults if none provided
+      if (!widthFormula) setWidthFormula("Largura");
+      if (!heightFormula) setHeightFormula("Altura");
+    }
+  }, [selectedItemToAdd, compositionActiveTab, itemTemplates]);
+
   const filteredTemplates = templates?.filter((template) => {
     const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           template.description?.toLowerCase().includes(searchTerm.toLowerCase());
