@@ -114,6 +114,7 @@ type ProductTemplateItem = {
   notes: string | null;
   width_formula: string | null;
   height_formula: string | null;
+  side: string | null;
   item_template?: {
     id: string;
     name: string;
