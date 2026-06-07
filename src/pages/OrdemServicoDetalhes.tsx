@@ -433,8 +433,9 @@ export default function OrdemServicoDetalhes() {
                       toast.error('Nenhum projeto de vidro disponível');
                       return;
                     }
-                    generateGlassProductionPdf(glassProjects, getOsInfo(), getCompanyInfo());
+                    generateGlassProductionPdf(glassProjects as any, getOsInfo(), getCompanyInfo());
                   }}
+
                 >
                   <Download className="w-4 h-4" />
                   Pedido Têmpera
