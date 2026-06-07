@@ -34,6 +34,7 @@ interface CuttingPlan {
   cuts_data: CutData[];
   glass_cuts_data: GlassCutData[];
   aluminum_color?: string | null;
+  accessories?: Array<{ item_name: string; unit: string; pieces_count: number; notes?: string | null }>;
 }
 
 interface OSInfo {
@@ -58,6 +59,7 @@ export function generateCuttingPlanPdf(
   mode: 'download' | 'print' = 'download',
   isAdmin: boolean = false
 ) {
+
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
