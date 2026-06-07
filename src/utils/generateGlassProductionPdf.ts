@@ -113,20 +113,6 @@ export function generateGlassProductionPdf(
   doc.setFont('helvetica', 'bold');
   doc.text(`Cliente: ${osInfo.customer_name}`, margin, y);
   y += 7;
-
-  }
-  
-  y = 45;
-  
-  // Date info
-  doc.setTextColor(...mutedText);
-  doc.setFontSize(9);
-  doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, margin, y);
-  if (osInfo.estimated_end) {
-    doc.text(`Entrega: ${format(new Date(osInfo.estimated_end), 'dd/MM/yyyy', { locale: ptBR })}`, pageWidth - margin, y, { align: 'right' });
-  }
-  
-  y += 12;
   
   // ========== GLASS PROJECTS ==========
   for (let projectIndex = 0; projectIndex < projects.length; projectIndex++) {
@@ -152,7 +138,6 @@ export function generateGlassProductionPdf(
     doc.setFont('helvetica', 'normal');
     doc.text(project.product_name, margin, y);
     y += 10;
-
     
     // ========== VISUAL REPRESENTATION ==========
     if (panels.length > 0) {
@@ -339,7 +324,7 @@ export function generateGlassProductionPdf(
   }
   
   // Output
-  const filename = `vidros-OS${osInfo.os_number.toString().padStart(4, '0')}.pdf`;
+  const filename = `pedido-vidro-OS${osInfo.os_number.toString().padStart(4, '0')}.pdf`;
   
   if (mode === 'print') {
     doc.autoPrint();
