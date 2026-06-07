@@ -477,24 +477,13 @@ export default function OrdemServicoDetalhes() {
 
 
           <TabsContent value="materials" className="mt-4 space-y-4">
-            <div className="flex justify-end">
-              <Button variant="outline" size="sm" onClick={handleDownloadMaterialsPdf} className="gap-2">
-                <Download className="w-4 h-4" />
-                Baixar PDF
-              </Button>
-            </div>
             <OSMaterialsList ordemServicoId={ordem.id} />
           </TabsContent>
 
           <TabsContent value="cutting" className="mt-4 space-y-4">
-            <div className="flex justify-end">
-              <Button variant="outline" size="sm" onClick={handleDownloadCuttingPlanPdf} className="gap-2">
-                <Download className="w-4 h-4" />
-                Baixar PDF
-              </Button>
-            </div>
             <OSCuttingPlan ordemServicoId={ordem.id} />
           </TabsContent>
+
 
           <TabsContent value="glass" className="mt-4 space-y-4">
             <OSCompositionGlasses ordemServicoId={ordem.id} />
