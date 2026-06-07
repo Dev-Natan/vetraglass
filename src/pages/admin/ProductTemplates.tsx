@@ -808,6 +808,18 @@ export default function ProductTemplates() {
     
     const itemType = editingItem.item_template?.type;
     
+    // Glass specific validation
+    if (itemType === 'glass') {
+      if (!editWidthFormula || editWidthFormula.trim() === "") {
+        toast.error("Por favor, informe a fórmula da largura do vidro.");
+        return;
+      }
+      if (!editHeightFormula || editHeightFormula.trim() === "") {
+        toast.error("Por favor, informe a fórmula da altura do vidro.");
+        return;
+      }
+    }
+    
     updateCompositionMutation.mutate({
       id: editingItem.id,
       quantity_formula: editQuantityFormula,
