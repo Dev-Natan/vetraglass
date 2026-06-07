@@ -150,61 +150,61 @@ export function generateCuttingPlanPdf(
     
     y += 18;
     
+    // Helper: draw image inside a cell
+    const drawCellImage = (data: any, name: string) => {
+      const img = images[name];
+      if (!img) return;
+      const cell = data.cell;
+      const size = Math.min(cell.height - 2, 12);
+      const x = cell.x + (cell.width - size) / 2;
+      const yPos = cell.y + (cell.height - size) / 2;
+      try {
+        const fmt = img.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+        doc.addImage(img, fmt, x, yPos, size, size);
+      } catch {
+        // ignore broken images
+      }
+    };
+
     // Profile Cuts Table
     if (plan.cuts_data && plan.cuts_data.length > 0) {
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(...primaryBlue);
-      doc.text('✂ CORTES DE PERFIL', margin, y + 4);
+      doc.text('CORTES DE PERFIL', margin, y + 4);
       y += 8;
       
-      const profileTableData = plan.cuts_data.map((cut) => {
-        const row = [
-          cut.side ? `${cut.profileName} (Lado ${cut.side})` : cut.profileName,
-        ];
-        
-        if (isAdmin) {
-          row.push(cut.formula);
-        }
-        
-        row.push(
-          cut.position,
-          `${cut.calculatedLength} mm`,
-          `${cut.quantity}`,
-          `${cut.cutAngle}°`
-        );
-        
-        return row;
-      });
-      
-      const head = ['Perfil'];
-      if (isAdmin) head.push('Fórmula');
-      head.push('Posição', 'Medida', 'Qtd', 'Ângulo');
+      const profileTableData = plan.cuts_data.map((cut) => [
+        '',
+        cut.side ? `${cut.profileName} (Lado ${cut.side})` : cut.profileName,
+        cut.position,
+        `${cut.calculatedLength} mm`,
+        `${cut.quantity}`,
+        `${cut.cutAngle}°`,
+      ]);
       
       autoTable(doc, {
         startY: y,
-        head: [head],
+        head: [['Img', 'Perfil', 'Posição', 'Medida', 'Qtd', 'Ângulo']],
         body: profileTableData,
         theme: 'grid',
-        headStyles: {
-          fillColor: primaryBlue,
-          textColor: 255,
-          fontStyle: 'bold',
-          fontSize: 9
-        },
-        bodyStyles: {
-          fontSize: 9,
-          textColor: darkText
-        },
+        headStyles: { fillColor: primaryBlue, textColor: 255, fontStyle: 'bold', fontSize: 9 },
+        bodyStyles: { fontSize: 9, textColor: darkText, minCellHeight: 14 },
         columnStyles: {
-          0: { fontStyle: 'bold', cellWidth: isAdmin ? 45 : 60 },
-          1: isAdmin ? { cellWidth: 35, halign: 'center' } : { cellWidth: 30, halign: 'center' },
+          0: { cellWidth: 16, halign: 'center' },
+          1: { fontStyle: 'bold', cellWidth: 60 },
           2: { cellWidth: 25, halign: 'center' },
           3: { cellWidth: 30, halign: 'center', fontStyle: 'bold' },
           4: { cellWidth: 15, halign: 'center' },
-          5: { cellWidth: 20, halign: 'center' }
+          5: { cellWidth: 20, halign: 'center' },
         },
-        margin: { left: margin, right: margin }
+        margin: { left: margin, right: margin },
+        didDrawCell: (data: any) => {
+          if (data.section === 'body' && data.column.index === 0) {
+            const cut = plan.cuts_data[data.row.index];
+            if (cut) drawCellImage(data, cut.profileName);
+          }
+        },
       });
       
       y = (doc as any).lastAutoTable.finalY + 8;
@@ -212,7 +212,6 @@ export function generateCuttingPlanPdf(
     
     // Glass Cuts Table
     if (plan.glass_cuts_data && plan.glass_cuts_data.length > 0) {
-      // Check page break
       if (y > pageHeight - 60) {
         doc.addPage();
         y = margin;
@@ -221,42 +220,38 @@ export function generateCuttingPlanPdf(
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(...primaryBlue);
-      doc.text('🔲 CORTES DE VIDRO', margin, y + 4);
+      doc.text('CORTES DE VIDRO', margin, y + 4);
       y += 8;
       
       const glassTableData = plan.glass_cuts_data.map((glass) => [
+        '',
         glass.glassName,
-        `L: ${glass.widthFormula}`,
-        `A: ${glass.heightFormula}`,
         `${glass.calculatedWidth} x ${glass.calculatedHeight}`,
         `${glass.quantity}`,
-        `${glass.areaM2.toFixed(2)} m²`
+        `${glass.areaM2.toFixed(2)} m²`,
       ]);
       
       autoTable(doc, {
         startY: y,
-        head: [['Vidro', 'Fórm. Largura', 'Fórm. Altura', 'Dimensões (mm)', 'Qtd', 'Área']],
+        head: [['Img', 'Vidro', 'Dimensões (mm)', 'Qtd', 'Área']],
         body: glassTableData,
         theme: 'grid',
-        headStyles: {
-          fillColor: [16, 185, 129], // Green
-          textColor: 255,
-          fontStyle: 'bold',
-          fontSize: 9
-        },
-        bodyStyles: {
-          fontSize: 9,
-          textColor: darkText
-        },
+        headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: 'bold', fontSize: 9 },
+        bodyStyles: { fontSize: 9, textColor: darkText, minCellHeight: 14 },
         columnStyles: {
-          0: { fontStyle: 'bold', cellWidth: 40 },
-          1: { cellWidth: 35, halign: 'center' },
-          2: { cellWidth: 35, halign: 'center' },
-          3: { cellWidth: 40, halign: 'center', fontStyle: 'bold' },
-          4: { cellWidth: 15, halign: 'center' },
-          5: { cellWidth: 25, halign: 'center' }
+          0: { cellWidth: 16, halign: 'center' },
+          1: { fontStyle: 'bold', cellWidth: 70 },
+          2: { cellWidth: 45, halign: 'center', fontStyle: 'bold' },
+          3: { cellWidth: 18, halign: 'center' },
+          4: { cellWidth: 30, halign: 'center' },
         },
-        margin: { left: margin, right: margin }
+        margin: { left: margin, right: margin },
+        didDrawCell: (data: any) => {
+          if (data.section === 'body' && data.column.index === 0) {
+            const glass = plan.glass_cuts_data[data.row.index];
+            if (glass) drawCellImage(data, glass.glassName);
+          }
+        },
       });
       
       y = (doc as any).lastAutoTable.finalY + 12;
@@ -272,32 +267,42 @@ export function generateCuttingPlanPdf(
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(...primaryBlue);
-      doc.text('🔩 ACESSÓRIOS E MATERIAIS', margin, y + 4);
+      doc.text('ACESSÓRIOS E MATERIAIS', margin, y + 4);
       y += 8;
       
       autoTable(doc, {
         startY: y,
-        head: [['Item', 'Quantidade', 'Unidade', 'Observação']],
+        head: [['Img', 'Item', 'Quantidade', 'Unidade', 'Observação']],
         body: plan.accessories.map(a => [
+          '',
           a.item_name,
           String(a.pieces_count),
           a.unit || '-',
-          a.notes || '-'
+          a.notes || '-',
         ]),
         theme: 'grid',
         headStyles: { fillColor: [245, 158, 11], textColor: 255, fontStyle: 'bold', fontSize: 9 },
-        bodyStyles: { fontSize: 9, textColor: darkText },
+        bodyStyles: { fontSize: 9, textColor: darkText, minCellHeight: 14 },
         columnStyles: {
-          0: { fontStyle: 'bold', cellWidth: 70 },
-          1: { cellWidth: 25, halign: 'center' },
+          0: { cellWidth: 16, halign: 'center' },
+          1: { fontStyle: 'bold', cellWidth: 70 },
           2: { cellWidth: 25, halign: 'center' },
-          3: { cellWidth: 'auto' as any }
+          3: { cellWidth: 25, halign: 'center' },
+          4: { cellWidth: 'auto' as any },
         },
-        margin: { left: margin, right: margin }
+        margin: { left: margin, right: margin },
+        didDrawCell: (data: any) => {
+          if (data.section === 'body' && data.column.index === 0) {
+            const acc = plan.accessories![data.row.index];
+            if (acc) drawCellImage(data, acc.item_name);
+          }
+        },
       });
       
       y = (doc as any).lastAutoTable.finalY + 12;
     }
+    
+
     
     // Add separator between products
     if (planIndex < plans.length - 1) {
