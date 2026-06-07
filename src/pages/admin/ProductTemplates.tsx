@@ -696,6 +696,7 @@ export default function ProductTemplates() {
         item_template_id: data.item_template_id,
         quantity_formula: data.quantity_formula,
         pieces_quantity: data.pieces_quantity,
+        pieces_formula: data.pieces_formula,
         cut_angle: data.cut_angle,
         is_optional: data.is_optional,
         notes: data.notes || null,
@@ -709,6 +710,10 @@ export default function ProductTemplates() {
       queryClient.invalidateQueries({ queryKey: ["product-template-items", selectedTemplate?.id] });
       toast.success("Item adicionado!");
     },
+    onError: (error: any) => {
+      console.error("Erro ao adicionar item:", error);
+      toast.error("Erro ao adicionar item: " + (error.message || "Erro desconhecido"));
+    }
   });
 
   const removeCompositionMutation = useMutation({
@@ -720,6 +725,10 @@ export default function ProductTemplates() {
       queryClient.invalidateQueries({ queryKey: ["product-template-items", selectedTemplate?.id] });
       toast.success("Item removido!");
     },
+    onError: (error: any) => {
+      console.error("Erro ao remover item:", error);
+      toast.error("Erro ao remover item: " + (error.message || "Erro desconhecido"));
+    }
   });
 
   const updateCompositionMutation = useMutation({
@@ -739,6 +748,7 @@ export default function ProductTemplates() {
         .update({
           quantity_formula: data.quantity_formula,
           pieces_quantity: data.pieces_quantity,
+          pieces_formula: data.pieces_formula,
           cut_angle: data.cut_angle,
           notes: data.notes || null,
           width_formula: data.width_formula || null,
@@ -754,10 +764,26 @@ export default function ProductTemplates() {
       setIsEditItemDialogOpen(false);
       setEditingItem(null);
     },
+    onError: (error: any) => {
+      console.error("Erro ao atualizar item:", error);
+      toast.error("Erro ao atualizar item: " + (error.message || "Erro desconhecido"));
+    }
   });
 
   const handleAddCompositionItem = () => {
     if (!selectedItemToAdd) return;
+    
+    // Glass specific validation
+    if (compositionActiveTab === 'glass') {
+      if (!widthFormula || widthFormula.trim() === "") {
+        toast.error("Por favor, informe a fórmula da largura do vidro.");
+        return;
+      }
+      if (!heightFormula || heightFormula.trim() === "") {
+        toast.error("Por favor, informe a fórmula da altura do vidro.");
+        return;
+      }
+    }
     
     addCompositionMutation.mutate({
       item_template_id: selectedItemToAdd,
