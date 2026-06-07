@@ -57,8 +57,10 @@ export function generateCuttingPlanPdf(
   osInfo: OSInfo,
   company: Company | null,
   mode: 'download' | 'print' = 'download',
-  isAdmin: boolean = false
+  _isAdmin: boolean = false,
+  images: Record<string, string> = {}
 ) {
+
 
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
