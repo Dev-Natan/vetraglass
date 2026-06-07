@@ -17,8 +17,10 @@ export interface ApprovalQuoteItem {
   description: string;
   width: number | null;
   width_b?: number | null;
+  width_c?: number | null;
   height: number | null;
   height_b?: number | null;
+  height_c?: number | null;
   quantity: number;
   unit_price: number;
   total_price: number;
@@ -27,6 +29,7 @@ export interface ApprovalQuoteItem {
   glass_thickness?: string | null;
   glass_color?: string | null;
   has_glass?: boolean | null;
+  include_contramarco?: boolean | null;
 }
 
 export interface AprovarOrcamentoDialogProps {
