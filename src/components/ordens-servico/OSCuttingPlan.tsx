@@ -7,12 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Scissors, Maximize2, Layers, Square, CheckCircle, Clock, Palette, AlertTriangle } from 'lucide-react';
+import { Scissors, Maximize2, Layers, Square, CheckCircle, Clock, Palette, AlertTriangle, FileDown } from 'lucide-react';
 import { OSGlassUnifiedView } from './OSGlassUnifiedView';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { regenerateOSDocuments } from '@/utils/generateOSDocuments';
+import { generateCuttingPlanPdf } from '@/utils/generateCuttingPlanPdf';
 import { Loader2, RefreshCw } from 'lucide-react';
+
 
 interface OSCuttingPlanProps {
   ordemServicoId: string;
@@ -170,8 +172,72 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
     return sum + panelCount;
   }, 0);
 
+  const handleDownloadPdf = async () => {
+    try {
+      const [{ data: os }, { data: materials }, { data: companyRow }] = await Promise.all([
+        supabase
+          .from('ordens_servico')
+          .select('os_number, customer_name, estimated_end, company_id')
+          .eq('id', ordemServicoId)
+          .single(),
+        supabase
+          .from('os_materials')
+          .select('item_name, unit, pieces_count, notes, item_type, os_item_id')
+          .eq('ordem_servico_id', ordemServicoId),
+        supabase
+          .from('ordens_servico')
+          .select('companies(name, cnpj, phone)')
+          .eq('id', ordemServicoId)
+          .single(),
+      ]);
+
+      if (!os) throw new Error('OS não encontrada');
+
+      const accessoriesByOsItem = new Map<string, any[]>();
+      (materials || []).forEach((m: any) => {
+        if (m.item_type === 'profile') return;
+        const list = accessoriesByOsItem.get(m.os_item_id) || [];
+        list.push(m);
+        accessoriesByOsItem.set(m.os_item_id, list);
+      });
+
+      const planData = plans!.map((p: any) => ({
+        id: p.id,
+        product_name: p.product_name,
+        vao_width: p.vao_width,
+        vao_height: p.vao_height,
+        vao_width_b: p.vao_width_b,
+        vao_height_b: p.vao_height_b,
+        quantity: p.quantity,
+        cuts_data: p.cuts_data || [],
+        glass_cuts_data: p.glass_cuts_data || [],
+        aluminum_color: p.quote_items?.aluminum_color,
+        accessories: accessoriesByOsItem.get(p.os_item_id) || [],
+      }));
+
+      const company = (companyRow as any)?.companies || null;
+
+      generateCuttingPlanPdf(
+        planData,
+        { os_number: os.os_number, customer_name: os.customer_name, estimated_end: os.estimated_end },
+        company,
+        'download',
+        isAdmin
+      );
+    } catch (e: any) {
+      toast.error('Erro ao gerar PDF: ' + (e?.message || ''));
+    }
+  };
+
   return (
     <div className="space-y-6">
+      <div className="flex justify-end">
+        <Button onClick={handleDownloadPdf} className="gap-2">
+          <FileDown className="w-4 h-4" />
+          Baixar PDF do Plano de Corte
+        </Button>
+      </div>
+
       {/* Summary Card for Glass */}
       {totalGlassPanels > 0 && (
         <Card className="bg-gradient-to-r from-sky-50 to-cyan-50 dark:from-sky-950/30 dark:to-cyan-950/30 border-sky-200 dark:border-sky-800">
@@ -200,6 +266,7 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
           </CardContent>
         </Card>
       )}
+
 
       {plans.map((plan) => {
         const itemStatus = plan.item_status || {};

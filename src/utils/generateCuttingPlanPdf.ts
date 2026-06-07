@@ -34,6 +34,7 @@ interface CuttingPlan {
   cuts_data: CutData[];
   glass_cuts_data: GlassCutData[];
   aluminum_color?: string | null;
+  accessories?: Array<{ item_name: string; unit: string; pieces_count: number; notes?: string | null }>;
 }
 
 interface OSInfo {
@@ -58,6 +59,7 @@ export function generateCuttingPlanPdf(
   mode: 'download' | 'print' = 'download',
   isAdmin: boolean = false
 ) {
+
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -258,6 +260,43 @@ export function generateCuttingPlanPdf(
       y = (doc as any).lastAutoTable.finalY + 12;
     }
     
+    // Accessories Table
+    if (plan.accessories && plan.accessories.length > 0) {
+      if (y > pageHeight - 60) {
+        doc.addPage();
+        y = margin;
+      }
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...primaryBlue);
+      doc.text('🔩 ACESSÓRIOS E MATERIAIS', margin, y + 4);
+      y += 8;
+      
+      autoTable(doc, {
+        startY: y,
+        head: [['Item', 'Quantidade', 'Unidade', 'Observação']],
+        body: plan.accessories.map(a => [
+          a.item_name,
+          String(a.pieces_count),
+          a.unit || '-',
+          a.notes || '-'
+        ]),
+        theme: 'grid',
+        headStyles: { fillColor: [245, 158, 11], textColor: 255, fontStyle: 'bold', fontSize: 9 },
+        bodyStyles: { fontSize: 9, textColor: darkText },
+        columnStyles: {
+          0: { fontStyle: 'bold', cellWidth: 70 },
+          1: { cellWidth: 25, halign: 'center' },
+          2: { cellWidth: 25, halign: 'center' },
+          3: { cellWidth: 'auto' as any }
+        },
+        margin: { left: margin, right: margin }
+      });
+      
+      y = (doc as any).lastAutoTable.finalY + 12;
+    }
+    
     // Add separator between products
     if (planIndex < plans.length - 1) {
       doc.setDrawColor(200, 200, 200);
@@ -265,6 +304,7 @@ export function generateCuttingPlanPdf(
       doc.line(margin, y - 4, pageWidth - margin, y - 4);
     }
   }
+
   
   // ========== FOOTER ==========
   const pageCount = doc.getNumberOfPages();
