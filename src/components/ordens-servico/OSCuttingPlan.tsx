@@ -231,12 +231,7 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
-        <Button onClick={handleDownloadPdf} className="gap-2">
-          <FileDown className="w-4 h-4" />
-          Baixar PDF do Plano de Corte
-        </Button>
-      </div>
+
 
       {/* Summary Card for Glass */}
       {totalGlassPanels > 0 && (
