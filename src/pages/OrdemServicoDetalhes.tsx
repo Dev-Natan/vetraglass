@@ -22,7 +22,7 @@ import { ptBR } from 'date-fns/locale';
 import { regenerateOSDocuments } from '@/utils/generateOSDocuments';
 import { generateCuttingPlanPdf } from '@/utils/generateCuttingPlanPdf';
 import { generateMaterialsListPdf } from '@/utils/generateMaterialsListPdf';
-import { generateGlassProductionPdf } from '@/utils/generateGlassProductionPdf';
+
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -153,21 +153,6 @@ export default function OrdemServicoDetalhes() {
     enabled: !!id,
   });
 
-  // Fetch glass projects for PDF
-  const { data: glassProjects } = useQuery({
-    queryKey: ['os-glass-projects', id],
-    queryFn: async () => {
-      if (!id) return [];
-      const { data, error } = await supabase
-        .from('os_glass_projects')
-        .select('*')
-        .eq('ordem_servico_id', id)
-        .order('created_at');
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!id,
-  });
 
   const regenerateMutation = useMutation({
     mutationFn: async () => {
@@ -179,7 +164,7 @@ export default function OrdemServicoDetalhes() {
         toast.success('Documentos regenerados com sucesso!');
         queryClient.invalidateQueries({ queryKey: ['os-materials', id] });
         queryClient.invalidateQueries({ queryKey: ['os-cutting-plan', id] });
-        queryClient.invalidateQueries({ queryKey: ['os-glass-projects', id] });
+        
       } else {
         toast.error('Erro ao regenerar documentos: ' + result.error);
       }
@@ -424,22 +409,6 @@ export default function OrdemServicoDetalhes() {
                     Orçamento #{relatedQuote.quote_number?.toString().padStart(4, '0')}
                   </Button>
                 )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2 text-emerald-600 border-emerald-200 hover:bg-emerald-50"
-                  onClick={() => {
-                    if (!glassProjects || glassProjects.length === 0) {
-                      toast.error('Nenhum projeto de vidro disponível');
-                      return;
-                    }
-                    generateGlassProductionPdf(glassProjects as any, getOsInfo(), getCompanyInfo());
-                  }}
-
-                >
-                  <Download className="w-4 h-4" />
-                  Pedido Têmpera
-                </Button>
                 {relatedAppointments && relatedAppointments.length > 0 && (
                   <Button
                     variant="outline"
