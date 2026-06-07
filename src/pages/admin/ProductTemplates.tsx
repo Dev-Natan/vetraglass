@@ -856,12 +856,12 @@ export default function ProductTemplates() {
     setEditingItem(item);
     setEditQuantityFormula(item.quantity_formula || "1");
     setEditPiecesQuantity(item.pieces_quantity || 1);
-    setEditPiecesFormula((item as any).pieces_formula || null);
+    setEditPiecesFormula(item.pieces_formula || null);
     setEditWidthFormula(item.width_formula || "");
     setEditHeightFormula(item.height_formula || "");
     setEditGlassName(item.notes || "");
     setEditCutAngle(item.cut_angle || 90);
-    setEditSide((item as any).side || "");
+    setEditSide(item.side || "");
     setIsEditItemDialogOpen(true);
   };
 
