@@ -278,21 +278,80 @@ export function useApprovalMutation({
         }
       }
 
-      // 5. Documents
-      const osItems = items.map(item => ({
-        id: crypto.randomUUID(), // Temp ID until fetched
-        os_id: ordemServico.id,
-        quote_item_id: item.id,
-        product_name: item.description,
-        largura_producao: item.width || 0,
-        altura_producao: item.height || 0,
-        quantity: item.quantity,
-        product_id: item.product_template_id
-      }));
-      const docsResult = await generateOSDocuments(ordemServico.id, osItems as any);
-      if (!docsResult.success) console.warn('Error generating OS documents:', docsResult.error);
+      // 5. Insert real os_items from quote items
+      const osItemsPayload = items.map(item => {
+        const w = Number(item.width || 0);
+        const h = Number(item.height || 0);
+        const wb = item.width_b != null ? Number(item.width_b) : null;
+        const hb = item.height_b != null ? Number(item.height_b) : null;
+        const wc = item.width_c != null ? Number(item.width_c) : null;
+        const hc = item.height_c != null ? Number(item.height_c) : null;
+        return {
+          os_id: ordemServico.id,
+          quote_item_id: item.id,
+          product_name: item.description,
+          product_id: item.product_template_id ?? null,
+          quantity: item.quantity,
+          // legacy NOT NULL columns
+          width_sold: w,
+          height_sold: h,
+          width_production: w,
+          height_production: h,
+          width_sold_b: wb,
+          height_sold_b: hb,
+          width_production_b: wb,
+          height_production_b: hb,
+          // current columns
+          largura_venda: w,
+          altura_venda: h,
+          largura_venda_b: wb,
+          altura_venda_b: hb,
+          largura_venda_c: wc,
+          altura_venda_c: hc,
+          largura_producao: w,
+          altura_producao: h,
+          largura_producao_b: wb,
+          altura_producao_b: hb,
+          largura_producao_c: wc,
+          altura_producao_c: hc,
+        };
+      });
 
-      // 6. Material consumption
+      const { data: insertedOSItems, error: osItemsError } = await supabase
+        .from('os_items')
+        .insert(osItemsPayload)
+        .select('id, quote_item_id, product_name, product_id, quantity, largura_producao, altura_producao, largura_producao_b, altura_producao_b, largura_producao_c, altura_producao_c');
+      if (osItemsError) {
+        console.error('Erro crítico ao inserir os_items:', osItemsError);
+        throw osItemsError;
+      }
+
+      // 6. Documents — usar IDs reais + dados completos do quote_item
+      const osItems = (insertedOSItems || []).map(row => {
+        const src = items.find(i => i.id === row.quote_item_id);
+        return {
+          id: row.id,
+          os_id: ordemServico.id,
+          quote_item_id: row.quote_item_id,
+          product_name: row.product_name,
+          largura_producao: Number(row.largura_producao || 0),
+          altura_producao: Number(row.altura_producao || 0),
+          largura_producao_b: row.largura_producao_b,
+          altura_producao_b: row.altura_producao_b,
+          largura_producao_c: row.largura_producao_c,
+          altura_producao_c: row.altura_producao_c,
+          quantity: row.quantity,
+          product_id: row.product_id,
+          glass_thickness: src?.glass_thickness ?? null,
+          glass_color: src?.glass_color ?? null,
+          include_contramarco: src?.include_contramarco ?? true,
+        };
+      });
+
+      const docsResult = await generateOSDocuments(ordemServico.id, osItems as any, companyId);
+      if (!docsResult.success) console.error('Erro ao gerar documentos da OS:', docsResult.error);
+
+      // 7. Material consumption
       const consumptionResult = await generateMaterialConsumption(
         ordemServico.id,
         companyId,
