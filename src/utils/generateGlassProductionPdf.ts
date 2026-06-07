@@ -33,6 +33,8 @@ interface GlassProject {
 interface OSInfo {
   os_number: number;
   customer_name: string;
+  customer_address?: string | null;
+  customer_phone?: string | null;
   estimated_end?: string | null;
 }
 
@@ -67,7 +69,6 @@ export function generateGlassProductionPdf(
   const contentWidth = pageWidth - 2 * margin;
   
   // Colors
-  const primaryBlue: [number, number, number] = [37, 99, 235];
   const emeraldGreen: [number, number, number] = [16, 185, 129];
   const lightGray: [number, number, number] = [245, 245, 245];
   const darkText: [number, number, number] = [30, 30, 30];
@@ -77,27 +78,42 @@ export function generateGlassProductionPdf(
   
   // ========== HEADER ==========
   doc.setFillColor(...emeraldGreen);
-  doc.rect(0, 0, pageWidth, 35, 'F');
+  doc.rect(0, 0, pageWidth, 40, 'F');
   
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
-  doc.text('PROJETO DE VIDROS', margin, 15);
+  doc.text('PEDIDO DE VIDRO (TÊMPERA)', margin, 15);
   
-  doc.setFontSize(12);
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
-  doc.text(`OS #${osInfo.os_number.toString().padStart(4, '0')}`, margin, 24);
+  doc.text(`Pedido nº. ${osInfo.os_number.toString().padStart(4, '0')}`, margin, 24);
+  doc.text(`Data: ${format(new Date(), 'dd / MM / yyyy')}`, margin, 30);
   
-  doc.setFontSize(10);
-  doc.text(osInfo.customer_name, margin, 31);
-  
-  // Company info on the right
+  // Customer/Company info on the right
   if (company) {
-    doc.setFontSize(9);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
     doc.text(company.name, pageWidth - margin, 15, { align: 'right' });
-    if (company.cnpj) {
-      doc.text(`CNPJ: ${company.cnpj}`, pageWidth - margin, 22, { align: 'right' });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    if (osInfo.customer_address) {
+      const addrLines = doc.splitTextToSize(`End: ${osInfo.customer_address}`, 80);
+      doc.text(addrLines, pageWidth - margin, 21, { align: 'right' });
     }
+    if (company.phone || osInfo.customer_phone) {
+      doc.text(`Fone: ${company.phone || osInfo.customer_phone}`, pageWidth - margin, 35, { align: 'right' });
+    }
+  }
+
+  y = 48;
+  
+  doc.setTextColor(...darkText);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`Cliente: ${osInfo.customer_name}`, margin, y);
+  y += 7;
+
   }
   
   y = 45;
@@ -123,29 +139,20 @@ export function generateGlassProductionPdf(
       y = margin;
     }
     
-    // Product header
-    doc.setFillColor(...lightGray);
-    doc.rect(margin, y, contentWidth, 18, 'F');
-    
-    doc.setTextColor(...darkText);
+    // Product Spec Title
+    doc.setTextColor(...emeraldGreen);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.text(project.product_name, margin + 4, y + 7);
+    const spec = `${(project.glass_type || '').toUpperCase()} ${project.glass_color ? `- ${project.glass_color.toUpperCase()}` : ''}`;
+    doc.text(spec, margin, y);
+    y += 7;
     
+    doc.setTextColor(...darkText);
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.text(`Vão: ${project.vao_width} ${project.vao_width_b ? `x ${project.vao_width_b}` : ''} x ${project.vao_height} mm`, margin + 4, y + 14);
-    
-    // Glass info on right
-    const glassInfo = [
-      project.glass_type ? `Espessura: ${project.glass_type}` : null,
-      project.glass_color ? `Cor: ${project.glass_color}` : null,
-      `Qtd: ${project.quantity}x`
-    ].filter(Boolean).join(' | ');
-    
-    doc.text(glassInfo, pageWidth - margin - 4, y + 10, { align: 'right' });
-    
-    y += 24;
+    doc.text(project.product_name, margin, y);
+    y += 10;
+
     
     // ========== VISUAL REPRESENTATION ==========
     if (panels.length > 0) {

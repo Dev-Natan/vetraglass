@@ -193,8 +193,10 @@ export default function OrdemServicoDetalhes() {
     os_number: ordem?.os_number || 0,
     customer_name: ordem?.customer_name || '',
     customer_address: ordem?.customer_address,
+    customer_phone: ordem?.customer_phone,
     estimated_end: ordem?.estimated_end,
   });
+
 
   const getCompanyInfo = () => currentCompany ? {
     name: currentCompany.name,
@@ -422,6 +424,21 @@ export default function OrdemServicoDetalhes() {
                     Orçamento #{relatedQuote.quote_number?.toString().padStart(4, '0')}
                   </Button>
                 )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                  onClick={() => {
+                    if (!glassProjects || glassProjects.length === 0) {
+                      toast.error('Nenhum projeto de vidro disponível');
+                      return;
+                    }
+                    generateGlassProductionPdf(glassProjects, getOsInfo(), getCompanyInfo());
+                  }}
+                >
+                  <Download className="w-4 h-4" />
+                  Pedido Têmpera
+                </Button>
                 {relatedAppointments && relatedAppointments.length > 0 && (
                   <Button
                     variant="outline"
@@ -433,6 +450,7 @@ export default function OrdemServicoDetalhes() {
                     {relatedAppointments.length} Agendamento{relatedAppointments.length > 1 ? 's' : ''}
                   </Button>
                 )}
+
               </div>
             </CardContent>
           </Card>
@@ -457,6 +475,7 @@ export default function OrdemServicoDetalhes() {
               <Layers className="w-4 h-4" />
               <span>Vidros</span>
             </TabsTrigger>
+
             <TabsTrigger value="accessories" className="flex items-center gap-2 py-2">
               <Package className="w-4 h-4" />
               <span>Acessórios</span>
