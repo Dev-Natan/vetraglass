@@ -1,46 +1,40 @@
-## Diagnóstico
+## Problema
 
-Ao aprovar um orçamento em `useApprovalMutation.ts`, o código cria a Ordem de Serviço, mas **nunca insere registros na tabela `os_items`**. Em vez disso, monta uma lista em memória com `id: crypto.randomUUID()` (IDs fictícios) e passa para `generateOSDocuments`.
+Na página de Ordens de Serviço, o plano de corte exibe os perfis de alumínio, mas **não mostra os vidros** dos produtos.
 
-Resultado:
-- `os_items` fica vazio → a aba de produto/componentes da OS não mostra nada.
-- Cada `insert` em `os_cutting_plan`, `os_glass_projects` e `os_materials` referencia `os_item_id` inexistente → o insert falha silenciosamente (erros só caem em `console.warn`), zerando o plano de corte, vidros e materiais.
+Causa identificada em `src/utils/generateOSDocuments.ts`:
 
-Confirmado no banco: as OS aprovadas recentes têm `os_items=0/1` mas `cuts=0`, `glass=0`, `mats=0`.
+- A função `getGlassFormulas` busca os vidros somente na tabela `glass_line_formulas`, que está **vazia** (0 registros no banco).
+- Os vidros dos produtos hoje são cadastrados como itens da composição em `product_template_items` (com `item_templates.type = 'glass'`) — há 13 registros usando esse modelo (fórmulas de largura/altura, lados, peças por produto etc.).
+- Resultado: nenhum vidro é gerado, `glass_cuts_data` fica vazio e a UI não exibe a seção "Plano de Corte de Vidros".
 
-## Correção (somente backend de aprovação — sem mexer em UI)
+## Correção
 
-Arquivo: `src/components/orcamentos/_aprovar-orcamento/hooks/useApprovalMutation.ts`
+Ajustar **apenas** `src/utils/generateOSDocuments.ts` para que os vidros venham da composição do produto, mantendo `glass_line_formulas` como fonte secundária/legado.
 
-Entre o passo 2 (criação da OS) e o passo 5 (geração de documentos):
+### Mudanças
 
-1. **Inserir os_items reais** a partir dos `items` do orçamento, um registro por item, copiando:
-   - `os_id`, `quote_item_id`, `product_name = item.description`
-   - `quantity`, `product_id = item.product_template_id`
-   - Dimensões venda: `largura_venda/altura_venda` (+ `_b`, `_c` quando existirem) a partir de `item.width/height/width_b/height_b/width_c/height_c`
-   - Dimensões produção (inicializadas iguais às de venda): `largura_producao/altura_producao` (+ `_b`, `_c`)
-   - Campos legados `width_sold/height_sold/width_production/height_production` (NOT NULL no schema) preenchidos com os mesmos valores
-2. **Capturar os IDs retornados** (`.select('id, quote_item_id, product_id, ...')`).
-3. **Montar `osItems` para `generateOSDocuments`** usando os IDs reais e os campos extras já lidos do `quote_item` (`include_contramarco`, `glass_thickness`, `glass_color`, dimensões B/C).
-4. **Repassar a mesma lista** para `generateMaterialConsumption` (já espera o mesmo shape).
-5. Manter os warnings, mas adicionar `console.error` quando o insert de `os_items` falhar (esse é crítico).
+1. **Nova função `getGlassCompositionItems(productTemplateId)`**
+   - Consulta `product_template_items` (com join em `item_templates`) filtrando `type = 'glass'` e `company_id is null` (mesma regra usada para perfis).
+   - Retorna: `name`, `width_formula`, `height_formula`, `pieces_quantity`, `pieces_formula`, `quantity_formula`, `side`, `item_template_id`.
 
-Arquivo: `src/components/orcamentos/_aprovar-orcamento/types.ts`
-- Estender `ApprovalQuoteItem` com `width_c?`, `height_c?`, `include_contramarco?` (opcionais) para que os dados já carregados sejam repassados corretamente. Nenhum consumer atual quebra (campos opcionais).
+2. **No loop de cada `osItem`** (após calcular perfis, antes de calcular `glassCuts`):
+   - Buscar a composição de vidros através da nova função.
+   - Para cada item de vidro:
+     - Determinar lados (mesma lógica usada nos perfis: respeita `has_multiple_sides` e o campo `side` — "A", "B", "Ambos" ou nulo).
+     - Calcular `calcWidth` / `calcHeight` via `evaluateFormula` com o contexto completo (`width`, `height`, `widthB`, `heightB`, `widthC`, `heightC`).
+     - Calcular `piecesQty` (usa `pieces_formula` se existir, senão `pieces_quantity`).
+     - `totalQty = piecesQty * quantity`.
+     - `areaM2 = (calcWidth/1000) * (calcHeight/1000) * totalQty`.
+     - `isMovable`: `true` se o nome **não** contiver "fixo" (case-insensitive); caso contrário `false`.
+     - Inserir no array `glassCuts` no mesmo formato já consumido por `os_cutting_plan` e `os_glass_projects`.
+   - Se `glass_line_formulas` retornar resultados, continuar processando-os (compatibilidade), mas hoje a fonte primária passa a ser a composição.
 
-Arquivo: `src/components/orcamentos/VisualizarOrcamentoDialog.tsx` (somente leitura da query de items)
-- Garantir que a consulta de `items` que alimenta o dialog inclua `width_c, height_c, include_contramarco` (se ainda não inclui). Sem mudanças de UI.
+3. **Bloco de accessories**: já filtra `type !== 'glass'`, não precisa de mudança.
 
-## Validação
+4. **Sem mudanças de schema**, sem migrations, sem alterações de UI — `OSCuttingPlan.tsx` e `OSGlassUnifiedView.tsx` já renderizam corretamente quando `glass_cuts_data` está preenchido.
 
-- Aprovar um orçamento de teste e conferir no banco:
-  - `select count(*) from os_items where os_id = :nova_os` > 0
-  - `select count(*) from os_cutting_plan where ordem_servico_id = :nova_os` > 0
-  - `select count(*) from os_materials where ordem_servico_id = :nova_os` > 0
-  - Para produtos com vidro: `os_glass_projects` > 0
-- Abrir a OS recém-criada em `/ordens-servico` e confirmar que aparecem: lista de produtos, plano de corte e componentes/vidros com tamanhos calculados pelas fórmulas.
+### Validação
 
-## Fora de escopo
-
-- Não alterar lógica de cálculo em `generateOSDocuments.ts` (já está correta).
-- Não mexer em UI da página de OS nem no fluxo financeiro do aprovar.
+- Após salvar, ao aprovar um orçamento (ou clicar em "Recalcular" em uma OS existente), o plano de corte deve listar os vidros com fórmulas, dimensões calculadas, quantidade total e área.
+- O resumo de "Painéis" e "m² total" no topo passa a refletir os vidros.
