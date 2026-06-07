@@ -109,6 +109,7 @@ type ProductTemplateItem = {
   quantity_formula: string;
   pieces_quantity: number;
   cut_angle: number;
+  pieces_formula?: string | null;
   is_optional: boolean;
   notes: string | null;
   width_formula: string | null;
