@@ -318,19 +318,30 @@ export default function OrdemServicoDetalhes() {
               <p className="text-muted-foreground">{ordem.customer_name}</p>
             </div>
           </div>
-          <Button 
-            variant="outline" 
-            onClick={() => regenerateMutation.mutate()}
-            disabled={regenerateMutation.isPending}
-            className="gap-2"
-          >
-            {regenerateMutation.isPending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <RefreshCw className="w-4 h-4" />
-            )}
-            Recalcular
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={handleDownloadCuttingPlanPdf}
+              className="gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Gerar PDF
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => regenerateMutation.mutate()}
+              disabled={regenerateMutation.isPending}
+              className="gap-2"
+            >
+              {regenerateMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4" />
+              )}
+              Recalcular
+            </Button>
+          </div>
+
         </div>
 
         {/* Sales Flow Timeline */}
