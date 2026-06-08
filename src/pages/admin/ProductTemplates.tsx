@@ -364,6 +364,8 @@ export default function ProductTemplates() {
       heightFormula,
       glassName,
       cutAngle,
+      cutAngleStart,
+      cutAngleEnd,
       side: compositionSide,
       isOpen: true,
     };
