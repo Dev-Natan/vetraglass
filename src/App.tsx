@@ -34,7 +34,7 @@ const EditarProdutoEmpresa = lazy(() => import("./pages/EditarProdutoEmpresa"));
 const OrdemServicoDetalhes = lazy(() => import("./pages/OrdemServicoDetalhes"));
 const Financeiro = lazy(() => import("./pages/Financeiro"));
 const Funcionarios = lazy(() => import("./pages/Funcionarios"));
-const ProjetoVidro = lazy(() => import("./pages/ProjetoVidro"));
+
 
 const Agenda = lazy(() => import("./pages/Agenda"));
 const Medicoes = lazy(() => import("./pages/Medicoes"));
@@ -197,7 +197,7 @@ function AppRoutes() {
       <Route path="/funcionarios" element={
         <ProtectedRoute><ModuleGuard moduleKey="funcionarios"><LazyRoute><Funcionarios /></LazyRoute></ModuleGuard></ProtectedRoute>
       } />
-      <Route path="/projeto-vidro" element={<ProtectedRoute><ModuleGuard moduleKey="producao"><LazyRoute><ProjetoVidro /></LazyRoute></ModuleGuard></ProtectedRoute>} />
+      
       <Route path="/pedidos-compra" element={
         <ProtectedRoute><ModuleGuard moduleKey="pedidos_compra"><LazyRoute><PedidosCompra /></LazyRoute></ModuleGuard></ProtectedRoute>
       } />
