@@ -180,6 +180,10 @@ export function generateCuttingPlanPdf(
         cut.position,
         `${cut.calculatedLength} mm`,
         `${cut.quantity}`,
+        cut.cutAngle === 4545 ? '45/45' :
+        cut.cutAngle === 4590 ? '45/90' :
+        cut.cutAngle === 9045 ? '90/45' :
+        cut.cutAngle === 9090 ? '90/90' :
         `${cut.cutAngle}°`,
       ]);
       
