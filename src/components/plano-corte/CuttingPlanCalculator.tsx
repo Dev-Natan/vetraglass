@@ -113,6 +113,8 @@ export function CuttingPlanCalculator() {
           quantity_formula,
           pieces_quantity,
           cut_angle,
+          cut_angle_start,
+          cut_angle_end,
           is_optional,
           notes,
           width_formula,
