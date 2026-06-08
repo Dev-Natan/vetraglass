@@ -12,6 +12,8 @@ export interface LabelData {
   };
   position?: string;
   angle?: number;
+  angleStart?: number;
+  angleEnd?: number;
   pieceNumber: number;
   totalPieces: number;
   qrData?: string;
