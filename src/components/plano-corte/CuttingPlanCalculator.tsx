@@ -352,6 +352,8 @@ export function CuttingPlanCalculator() {
         length: c.calculatedLength,
         quantity: c.quantity,
         angle: c.cutAngle,
+        angleStart: c.cutAngleStart,
+        angleEnd: c.cutAngleEnd,
         position: c.position,
         formula: c.heightFormula || c.widthFormula || undefined,
       })),
