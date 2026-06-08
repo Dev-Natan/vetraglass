@@ -4,7 +4,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { 
   ClipboardList, Search, Clock, CheckCircle, AlertCircle, 
   User, Calendar, ChevronRight, Play, XCircle,
-  MoreHorizontal, Eye, AlertTriangle, Trash2, Wrench
+  MoreHorizontal, Eye, AlertTriangle, Trash2, Wrench, Scissors
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
