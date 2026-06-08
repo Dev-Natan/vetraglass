@@ -891,6 +891,8 @@ export default function ProductTemplates() {
     setEditHeightFormula(item.height_formula || "");
     setEditGlassName(item.notes || "");
     setEditCutAngle(item.cut_angle || 90);
+    setEditCutAngleStart(item.cut_angle_start || item.cut_angle || 90);
+    setEditCutAngleEnd(item.cut_angle_end || item.cut_angle || 90);
     setEditSide(item.side || "");
     setIsEditItemDialogOpen(true);
   };
