@@ -415,7 +415,7 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
                                   </div>
                                 </TableCell>
                                 <TableCell>
-                                  <Badge variant={cut.position === 'Altura' ? 'default' : 'secondary'}>
+                                  <Badge variant={cut.position === 'Altura' || (cut.formula && (cut.formula.toLowerCase().includes('altura') || /\ba\b/i.test(cut.formula))) ? 'default' : 'secondary'}>
                                     {cut.position}
                                   </Badge>
                                 </TableCell>

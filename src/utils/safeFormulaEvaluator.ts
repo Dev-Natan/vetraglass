@@ -290,7 +290,8 @@ export function getFormulaPosition(formula: string | null): 'Altura' | 'Largura'
   const lower = formula.toLowerCase();
   
   // Checks specifically for 'altura' or standalone 'a' (case insensitive with word boundaries)
-  if (lower.includes('altura') || /\ba\b/i.test(lower) || /\bh\b/i.test(lower)) {
+  // Also check for common height variables like HA, HB, HC
+  if (lower.includes('altura') || /\ba\b/i.test(lower) || /\bh\b/i.test(lower) || /\bh[abc]\b/i.test(lower)) {
     return 'Altura';
   }
   return 'Largura';
