@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { resolveProductImageUrl } from '@/utils/imageUrl';
-import { ArrowLeft, Printer, Download, Tags, BarChart3 } from 'lucide-react';
+import { Printer, Download, Tags, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -395,28 +395,28 @@ export function CuttingPlanCalculator() {
         <body>
           <div class="header">
             <div class="product-image">
-              \${selectedProductData?.image_url ? \`<img src="\${getStorageUrl(selectedProductData.image_url)}" alt="\${selectedProductData.name}" />\` : '<span style="color:#999">🪟</span>'}
+              ${selectedProductData?.image_url ? `<img src="${getStorageUrl(selectedProductData.image_url)}" alt="${selectedProductData.name}" />` : '<span style="color:#999">🪟</span>'}
             </div>
             <div class="product-info">
-              <h1>\${selectedProductData?.name || '-'}</h1>
+              <h1>${selectedProductData?.name || '-'}</h1>
               <div class="dimensions">
                 <div>
                   <div class="dim-label">Largura do Vão</div>
-                  <div class="dim-box"><span class="dim-value">\${width}</span></div>
+                  <div class="dim-box"><span class="dim-value">${width}</span></div>
                 </div>
                 <div>
                   <div class="dim-label">Altura do Vão</div>
-                  <div class="dim-box"><span class="dim-value">\${height}</span></div>
+                  <div class="dim-box"><span class="dim-value">${height}</span></div>
                 </div>
               </div>
               <div>
                 <div class="dim-label">Quantidade</div>
-                <div class="dim-box"><span class="dim-value">\${quantity}</span></div>
+                <div class="dim-box"><span class="dim-value">${quantity}</span></div>
               </div>
             </div>
           </div>
 
-          \${calculatedGlassCuts.length > 0 ? \`
+          ${calculatedGlassCuts.length > 0 ? `
             <div class="section-title">
               <span class="section-dot section-dot-glass"></span>
               Vidros
@@ -432,20 +432,20 @@ export function CuttingPlanCalculator() {
                 </tr>
               </thead>
               <tbody>
-                \${calculatedGlassCuts.map(glass => \`
+                ${calculatedGlassCuts.map(glass => `
                   <tr>
-                    <td><strong>\${glass.customName || glass.glassName}</strong></td>
-                    <td class="value-green">\${glass.calculatedWidth}</td>
-                    <td class="value-blue">\${glass.calculatedHeight}</td>
-                    <td class="value-purple">\${glass.areaM2.toFixed(3)}</td>
-                    <td>\${glass.quantity}</td>
+                    <td><strong>${glass.customName || glass.glassName}</strong></td>
+                    <td class="value-green">${glass.calculatedWidth}</td>
+                    <td class="value-blue">${glass.calculatedHeight}</td>
+                    <td class="value-purple">${glass.areaM2.toFixed(3)}</td>
+                    <td>${glass.quantity}</td>
                   </tr>
-                \`).join('')}
+                `).join('')}
               </tbody>
             </table>
-          \` : ''}
+          ` : ''}
 
-          \${calculatedCuts.length > 0 ? \`
+          ${calculatedCuts.length > 0 ? `
             <div class="section-title">
               <span class="section-dot section-dot-profile"></span>
               Perfis de Alumínio
@@ -461,25 +461,25 @@ export function CuttingPlanCalculator() {
                 </tr>
               </thead>
               <tbody>
-                \${calculatedCuts.map(cut => \`
+                ${calculatedCuts.map(cut => `
                   <tr>
-                    <td><strong>\${cut.profileName}</strong></td>
-                    <td style="font-size: 18px; font-weight: bold;">\${cut.calculatedLength}</td>
-                    <td>\${cut.quantity}</td>
-                    <td>\${cut.cutAngle}° / \${cut.cutAngle}°</td>
-                    <td>\${cut.position}</td>
+                    <td><strong>${cut.profileName}</strong></td>
+                    <td style="font-size: 18px; font-weight: bold;">${cut.calculatedLength}</td>
+                    <td>${cut.quantity}</td>
+                    <td>${cut.cutAngle}° / ${cut.cutAngle}°</td>
+                    <td>${cut.position}</td>
                   </tr>
-                \`).join('')}
+                `).join('')}
               </tbody>
             </table>
-          \` : ''}
+          ` : ''}
           
           <p style="margin-top: 30px; text-align: center; font-size: 11px; color: #999;">
-            Gerado em \${new Date().toLocaleDateString('pt-BR')} às \${new Date().toLocaleTimeString('pt-BR')}
+            Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}
           </p>
         </body>
       </html>
-    \`);
+    `);
     printWindow.document.close();
     
     printWindow.onload = () => {
@@ -497,7 +497,6 @@ export function CuttingPlanCalculator() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header Toolbar */}
       <div className="flex items-center justify-end">
         <div className="flex items-center gap-2">
           {totalItems > 0 && (
@@ -505,10 +504,10 @@ export function CuttingPlanCalculator() {
               <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-primary transition-all duration-300"
-                  style={{ width: \`\${progressPercent}%\` }}
+                  style={{ width: `${progressPercent}%` }}
                 />
               </div>
-              <span className="text-sm text-muted-foreground">\${progressPercent}%</span>
+              <span className="text-sm text-muted-foreground">{progressPercent}%</span>
             </div>
           )}
           
@@ -537,7 +536,6 @@ export function CuttingPlanCalculator() {
         </div>
       </div>
 
-      {/* Product Selection & Info */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="flex justify-center">
           <div className="w-full max-w-[250px] aspect-square bg-muted rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
