@@ -211,6 +211,8 @@ export default function ProductTemplates() {
   const [heightFormula, setHeightFormula] = useState("");
   const [glassName, setGlassName] = useState("");
   const [cutAngle, setCutAngle] = useState(90);
+  const [cutAngleStart, setCutAngleStart] = useState(90);
+  const [cutAngleEnd, setCutAngleEnd] = useState(90);
   const [compositionSide, setCompositionSide] = useState<string>("");
 
   
