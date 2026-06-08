@@ -291,8 +291,18 @@ export function getFormulaPosition(formula: string | null): 'Altura' | 'Largura'
   
   // Checks specifically for 'altura' or standalone 'a' (case insensitive with word boundaries)
   // Also check for common height variables like HA, HB, HC
-  if (lower.includes('altura') || /\ba\b/i.test(lower) || /\bh\b/i.test(lower) || /\bh[abc]\b/i.test(lower)) {
+  // We avoid matching 'fa' (folga altura) as the primary indicator if 'l' is present
+  const hasHeightVar = lower.includes('altura') || /\ba\b/i.test(lower) || /\bh\b/i.test(lower) || /\bh[abc]\b/i.test(lower);
+  const hasWidthVar = lower.includes('largura') || /\bl\b/i.test(lower) || /\bw\b/i.test(lower) || /\bw[abc]\b/i.test(lower);
+
+  if (hasHeightVar && !hasWidthVar) {
     return 'Altura';
   }
+  if (hasWidthVar && !hasHeightVar) {
+    return 'Largura';
+  }
+  // If both or neither, priority to common height patterns
+  if (hasHeightVar) return 'Altura';
+
   return 'Largura';
 }
