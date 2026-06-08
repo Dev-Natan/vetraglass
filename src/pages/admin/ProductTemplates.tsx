@@ -486,6 +486,8 @@ export default function ProductTemplates() {
     setHeightFormula("");
     setGlassName("");
     setCutAngle(90);
+    setCutAngleStart(90);
+    setCutAngleEnd(90);
     setCompositionSide("");
   };
 
