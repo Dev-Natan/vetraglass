@@ -325,6 +325,8 @@ export function expandCutsToLabels(
         dimensions: { length: cut.calculatedLength },
         position: cut.position,
         angle: cut.cutAngle,
+        angleStart: cut.cutAngleStart,
+        angleEnd: cut.cutAngleEnd,
         pieceNumber: pieceCounter,
         totalPieces,
         qrData: `${osNumber}-P-${cut.id}-${i + 1}`,
