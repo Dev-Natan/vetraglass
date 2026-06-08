@@ -5,6 +5,8 @@ export interface ProfileExportData {
   length: number;
   quantity: number;
   angle: number;
+  angleStart?: number;
+  angleEnd?: number;
   position: string;
   formula?: string;
 }
