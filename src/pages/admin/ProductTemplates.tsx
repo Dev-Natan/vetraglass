@@ -109,6 +109,8 @@ type ProductTemplateItem = {
   quantity_formula: string;
   pieces_quantity: number;
   cut_angle: number;
+  cut_angle_start?: number;
+  cut_angle_end?: number;
   pieces_formula?: string | null;
   is_optional: boolean;
   notes: string | null;
@@ -150,6 +152,8 @@ type CompositionDraft = {
   heightFormula: string;
   glassName: string;
   cutAngle: number;
+  cutAngleStart: number;
+  cutAngleEnd: number;
   side: string;
   isOpen: boolean;
 };
@@ -207,6 +211,8 @@ export default function ProductTemplates() {
   const [heightFormula, setHeightFormula] = useState("");
   const [glassName, setGlassName] = useState("");
   const [cutAngle, setCutAngle] = useState(90);
+  const [cutAngleStart, setCutAngleStart] = useState(90);
+  const [cutAngleEnd, setCutAngleEnd] = useState(90);
   const [compositionSide, setCompositionSide] = useState<string>("");
 
   
@@ -219,6 +225,8 @@ export default function ProductTemplates() {
   const [editHeightFormula, setEditHeightFormula] = useState("");
   const [editGlassName, setEditGlassName] = useState("");
   const [editCutAngle, setEditCutAngle] = useState(90);
+  const [editCutAngleStart, setEditCutAngleStart] = useState(90);
+  const [editCutAngleEnd, setEditCutAngleEnd] = useState(90);
   const [editSide, setEditSide] = useState<string>("");
   
   const currentLinha = linhaParam ? decodeURIComponent(linhaParam) : null;
@@ -331,6 +339,8 @@ export default function ProductTemplates() {
       setHeightFormula(draft.heightFormula || "");
       setGlassName(draft.glassName || "");
       setCutAngle(typeof draft.cutAngle === "number" ? draft.cutAngle : 90);
+      setCutAngleStart(typeof draft.cutAngleStart === "number" ? draft.cutAngleStart : 90);
+      setCutAngleEnd(typeof draft.cutAngleEnd === "number" ? draft.cutAngleEnd : 90);
     } catch {
       clearCompositionDraft();
     }
@@ -354,6 +364,8 @@ export default function ProductTemplates() {
       heightFormula,
       glassName,
       cutAngle,
+      cutAngleStart,
+      cutAngleEnd,
       side: compositionSide,
       isOpen: true,
     };
@@ -370,6 +382,8 @@ export default function ProductTemplates() {
     heightFormula,
     glassName,
     cutAngle,
+    cutAngleStart,
+    cutAngleEnd,
   ]);
 
   useEffect(() => {
@@ -472,6 +486,8 @@ export default function ProductTemplates() {
     setHeightFormula("");
     setGlassName("");
     setCutAngle(90);
+    setCutAngleStart(90);
+    setCutAngleEnd(90);
     setCompositionSide("");
   };
 
@@ -669,6 +685,8 @@ export default function ProductTemplates() {
           quantity_formula: item.quantity_formula,
           pieces_quantity: item.pieces_quantity,
           cut_angle: item.cut_angle,
+          cut_angle_start: item.cut_angle_start || item.cut_angle,
+          cut_angle_end: item.cut_angle_end || item.cut_angle,
           is_optional: item.is_optional,
           notes: item.notes,
           width_formula: item.width_formula,
@@ -703,6 +721,8 @@ export default function ProductTemplates() {
       pieces_quantity: number;
       pieces_formula?: string | null;
       cut_angle: number;
+      cut_angle_start: number;
+      cut_angle_end: number;
       is_optional: boolean;
       notes: string;
       width_formula?: string;
@@ -717,6 +737,8 @@ export default function ProductTemplates() {
         pieces_quantity: data.pieces_quantity,
         pieces_formula: data.pieces_formula,
         cut_angle: data.cut_angle,
+        cut_angle_start: data.cut_angle_start,
+        cut_angle_end: data.cut_angle_end,
         is_optional: data.is_optional,
         notes: data.notes || null,
         width_formula: data.width_formula || null,
@@ -757,6 +779,8 @@ export default function ProductTemplates() {
       pieces_quantity: number;
       pieces_formula?: string | null;
       cut_angle: number;
+      cut_angle_start: number;
+      cut_angle_end: number;
       notes?: string;
       width_formula?: string;
       height_formula?: string;
@@ -769,6 +793,8 @@ export default function ProductTemplates() {
           pieces_quantity: data.pieces_quantity,
           pieces_formula: data.pieces_formula,
           cut_angle: data.cut_angle,
+          cut_angle_start: data.cut_angle_start,
+          cut_angle_end: data.cut_angle_end,
           notes: data.notes || null,
           width_formula: data.width_formula || null,
           height_formula: data.height_formula || null,
@@ -810,6 +836,8 @@ export default function ProductTemplates() {
       pieces_quantity: piecesQuantity,
       pieces_formula: piecesFormula,
       cut_angle: cutAngle,
+      cut_angle_start: cutAngleStart,
+      cut_angle_end: cutAngleEnd,
       is_optional: false,
       notes: compositionActiveTab === 'glass' ? glassName : "",
       width_formula: compositionActiveTab === 'glass' ? widthFormula : undefined,
@@ -845,6 +873,8 @@ export default function ProductTemplates() {
       pieces_quantity: editPiecesQuantity,
       pieces_formula: editPiecesFormula,
       cut_angle: editCutAngle,
+      cut_angle_start: editCutAngleStart,
+      cut_angle_end: editCutAngleEnd,
       notes: itemType === 'glass' ? editGlassName : undefined,
       width_formula: itemType === 'glass' ? editWidthFormula : undefined,
       height_formula: itemType === 'glass' ? editHeightFormula : undefined,
@@ -861,6 +891,8 @@ export default function ProductTemplates() {
     setEditHeightFormula(item.height_formula || "");
     setEditGlassName(item.notes || "");
     setEditCutAngle(item.cut_angle || 90);
+    setEditCutAngleStart(item.cut_angle_start || item.cut_angle || 90);
+    setEditCutAngleEnd(item.cut_angle_end || item.cut_angle || 90);
     setEditSide(item.side || "");
     setIsEditItemDialogOpen(true);
   };
@@ -1711,21 +1743,40 @@ export default function ProductTemplates() {
                   )}
                   
                   {compositionActiveTab === 'profile' && (
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Ângulo de corte (graus)</Label>
-                      <div className="flex gap-2">
-                        {[45, 90].map((angle) => (
-                          <Button
-                            key={angle}
-                            type="button"
-                            variant={cutAngle === angle ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => setCutAngle(angle)}
-                            className="flex-1"
-                          >
-                            {angle}°
-                          </Button>
-                        ))}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Ângulo Início</Label>
+                        <div className="flex gap-2">
+                          {[45, 90].map((angle) => (
+                            <Button
+                              key={angle}
+                              type="button"
+                              variant={cutAngleStart === angle ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => setCutAngleStart(angle)}
+                              className="flex-1"
+                            >
+                              {angle}°
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Ângulo Fim</Label>
+                        <div className="flex gap-2">
+                          {[45, 90].map((angle) => (
+                            <Button
+                              key={angle}
+                              type="button"
+                              variant={cutAngleEnd === angle ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => setCutAngleEnd(angle)}
+                              className="flex-1"
+                            >
+                              {angle}°
+                            </Button>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -1890,21 +1941,40 @@ export default function ProductTemplates() {
                   />
                   
                   {editingItem?.item_template?.type === 'profile' && (
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Ângulo de corte (graus)</Label>
-                      <div className="flex gap-2">
-                        {[45, 90].map((angle) => (
-                          <Button
-                            key={angle}
-                            type="button"
-                            variant={editCutAngle === angle ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => setEditCutAngle(angle)}
-                            className="flex-1"
-                          >
-                            {angle}°
-                          </Button>
-                        ))}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Ângulo Início</Label>
+                        <div className="flex gap-2">
+                          {[45, 90].map((angle) => (
+                            <Button
+                              key={angle}
+                              type="button"
+                              variant={editCutAngleStart === angle ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => setEditCutAngleStart(angle)}
+                              className="flex-1"
+                            >
+                              {angle}°
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Ângulo Fim</Label>
+                        <div className="flex gap-2">
+                          {[45, 90].map((angle) => (
+                            <Button
+                              key={angle}
+                              type="button"
+                              variant={editCutAngleEnd === angle ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => setEditCutAngleEnd(angle)}
+                              className="flex-1"
+                            >
+                              {angle}°
+                            </Button>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   )}

@@ -113,6 +113,8 @@ export function CuttingPlanCalculator() {
           quantity_formula,
           pieces_quantity,
           cut_angle,
+          cut_angle_start,
+          cut_angle_end,
           is_optional,
           notes,
           width_formula,
@@ -210,6 +212,8 @@ export function CuttingPlanCalculator() {
           quantity: totalPieces,
           piecesPerProduct,
           cutAngle: item.cut_angle,
+          cutAngleStart: (item as any).cut_angle_start,
+          cutAngleEnd: (item as any).cut_angle_end,
           position,
           isCompleted: completedItems.has(item.id),
         };
@@ -319,6 +323,8 @@ export function CuttingPlanCalculator() {
         quantity: c.quantity,
         position: c.position,
         cutAngle: c.cutAngle,
+        cutAngleStart: c.cutAngleStart,
+        cutAngleEnd: c.cutAngleEnd,
       })),
       calculatedGlassCuts.map(g => ({
         id: g.id,
@@ -346,6 +352,8 @@ export function CuttingPlanCalculator() {
         length: c.calculatedLength,
         quantity: c.quantity,
         angle: c.cutAngle,
+        angleStart: c.cutAngleStart,
+        angleEnd: c.cutAngleEnd,
         position: c.position,
         formula: c.heightFormula || c.widthFormula || undefined,
       })),
@@ -463,7 +471,8 @@ export function CuttingPlanCalculator() {
                   <th class="profile">PERFIL</th>
                   <th class="profile">MEDIDA (mm)</th>
                   <th class="profile">QUANTIDADE</th>
-                  <th class="profile">ÂNGULO</th>
+                  <th class="profile">ÂNGULO INÍCIO</th>
+                  <th class="profile">ÂNGULO FIM</th>
                   <th class="profile">POSIÇÃO</th>
                 </tr>
               </thead>
@@ -473,7 +482,8 @@ export function CuttingPlanCalculator() {
                     <td><strong>${cut.profileName}</strong></td>
                     <td style="font-size: 18px; font-weight: bold;">${cut.calculatedLength}</td>
                     <td>${cut.quantity}</td>
-                    <td>${cut.cutAngle}° / ${cut.cutAngle}°</td>
+                    <td>${cut.cutAngleStart ?? cut.cutAngle}°</td>
+                    <td>${cut.cutAngleEnd ?? cut.cutAngle}°</td>
                     <td>${cut.position}</td>
                   </tr>
                 `).join('')}

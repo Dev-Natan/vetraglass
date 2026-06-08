@@ -4999,6 +4999,8 @@ export type Database = {
           company_id: string | null
           created_at: string
           cut_angle: number
+          cut_angle_end: number | null
+          cut_angle_start: number | null
           height_formula: string | null
           id: string
           is_optional: boolean
@@ -5019,6 +5021,8 @@ export type Database = {
           company_id?: string | null
           created_at?: string
           cut_angle?: number
+          cut_angle_end?: number | null
+          cut_angle_start?: number | null
           height_formula?: string | null
           id?: string
           is_optional?: boolean
@@ -5039,6 +5043,8 @@ export type Database = {
           company_id?: string | null
           created_at?: string
           cut_angle?: number
+          cut_angle_end?: number | null
+          cut_angle_start?: number | null
           height_formula?: string | null
           id?: string
           is_optional?: boolean

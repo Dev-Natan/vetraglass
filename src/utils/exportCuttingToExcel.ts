@@ -5,6 +5,8 @@ export interface ProfileExportData {
   length: number;
   quantity: number;
   angle: number;
+  angleStart?: number;
+  angleEnd?: number;
   position: string;
   formula?: string;
 }
@@ -45,9 +47,9 @@ export function exportCuttingPlanToCSV(data: CuttingPlanExport): void {
   // Profiles section
   if (data.profiles.length > 0) {
     lines.push('PERFIS DE ALUMÍNIO');
-    lines.push('Perfil,Medida (mm),Quantidade,Ângulo,Posição,Fórmula');
+    lines.push('Perfil,Medida (mm),Quantidade,Ângulo Início,Ângulo Fim,Posição,Fórmula');
     data.profiles.forEach(p => {
-      lines.push(`"${p.profileName}",${p.length},${p.quantity},${p.angle}°,${p.position},"${p.formula || ''}"`);
+      lines.push(`"${p.profileName}",${p.length},${p.quantity},${p.angleStart ?? p.angle}°,${p.angleEnd ?? p.angle}°,${p.position},"${p.formula || ''}"`);
     });
     lines.push('');
   }
@@ -97,7 +99,7 @@ export function exportCuttingPlanToCNC(
   profiles.forEach(p => {
     // Expand by quantity for CNC
     for (let i = 0; i < p.quantity; i++) {
-      lines.push(`${p.profileName};${p.length};1;${p.angle};${p.angle}`);
+      lines.push(`${p.profileName};${p.length};1;${p.angleStart ?? p.angle};${p.angleEnd ?? p.angle}`);
     }
   });
 

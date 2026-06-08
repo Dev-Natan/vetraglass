@@ -12,6 +12,8 @@ export interface LabelData {
   };
   position?: string;
   angle?: number;
+  angleStart?: number;
+  angleEnd?: number;
   pieceNumber: number;
   totalPieces: number;
   qrData?: string;
@@ -232,7 +234,7 @@ export function generateCuttingLabels(
                       ` : ''}
                     </div>
                     
-                    ${label.position || label.angle ? `
+                    ${label.position || label.angle || label.angleStart || label.angleEnd ? `
                       <div style="display: flex; gap: 2mm; margin-top: 1mm;">
                         ${label.position ? `
                           <span class="position-badge" style="background: ${label.position === 'Altura' ? '#dbeafe' : '#fef3c7'}; color: ${label.position === 'Altura' ? '#1e40af' : '#92400e'};">
@@ -240,7 +242,11 @@ export function generateCuttingLabels(
                             ${label.position}
                           </span>
                         ` : ''}
-                        ${label.angle ? `
+                        ${label.angleStart || label.angleEnd ? `
+                          <span class="position-badge" style="background: #f3f4f6; color: #374151;">
+                            ∠ ${label.angleStart ?? label.angle ?? 90}° / ${label.angleEnd ?? label.angle ?? 90}°
+                          </span>
+                        ` : label.angle ? `
                           <span class="position-badge" style="background: #f3f4f6; color: #374151;">
                             ∠ ${label.angle}°
                           </span>
@@ -287,6 +293,8 @@ export function expandCutsToLabels(
     quantity: number;
     position: string;
     cutAngle: number;
+    cutAngleStart?: number;
+    cutAngleEnd?: number;
   }>,
   glassCuts: Array<{
     id: string;
@@ -317,6 +325,8 @@ export function expandCutsToLabels(
         dimensions: { length: cut.calculatedLength },
         position: cut.position,
         angle: cut.cutAngle,
+        angleStart: cut.cutAngleStart,
+        angleEnd: cut.cutAngleEnd,
         pieceNumber: pieceCounter,
         totalPieces,
         qrData: `${osNumber}-P-${cut.id}-${i + 1}`,
