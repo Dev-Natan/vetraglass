@@ -1891,7 +1891,7 @@ export default function ProductTemplates() {
                   
                   {editingItem?.item_template?.type === 'profile' && (
                     <div className="space-y-2">
-                      <Label>Ângulo de corte (graus)</Label>
+                      <Label className="text-sm font-medium">Ângulo de corte (graus)</Label>
                       <div className="flex gap-2">
                         {[45, 90].map((angle) => (
                           <Button
