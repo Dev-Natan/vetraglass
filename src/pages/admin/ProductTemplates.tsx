@@ -721,6 +721,8 @@ export default function ProductTemplates() {
       pieces_quantity: number;
       pieces_formula?: string | null;
       cut_angle: number;
+      cut_angle_start: number;
+      cut_angle_end: number;
       is_optional: boolean;
       notes: string;
       width_formula?: string;
