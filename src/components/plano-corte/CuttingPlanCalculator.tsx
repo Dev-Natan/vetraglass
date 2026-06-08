@@ -482,7 +482,8 @@ export function CuttingPlanCalculator() {
                     <td><strong>${cut.profileName}</strong></td>
                     <td style="font-size: 18px; font-weight: bold;">${cut.calculatedLength}</td>
                     <td>${cut.quantity}</td>
-                    <td>${cut.cutAngle}° / ${cut.cutAngle}°</td>
+                    <td>${cut.cutAngleStart ?? cut.cutAngle}°</td>
+                    <td>${cut.cutAngleEnd ?? cut.cutAngle}°</td>
                     <td>${cut.position}</td>
                   </tr>
                 `).join('')}
