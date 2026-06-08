@@ -212,6 +212,8 @@ export function CuttingPlanCalculator() {
           quantity: totalPieces,
           piecesPerProduct,
           cutAngle: item.cut_angle,
+          cutAngleStart: (item as any).cut_angle_start,
+          cutAngleEnd: (item as any).cut_angle_end,
           position,
           isCompleted: completedItems.has(item.id),
         };
