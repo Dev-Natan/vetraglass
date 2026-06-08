@@ -35,7 +35,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                 <div className="flex items-center gap-4">
                   <div className="pl-12 lg:pl-0">
                     <h2 className="text-sm font-semibold text-muted-foreground/80 tracking-wide uppercase">
-                      Vetra Cloud
+                      {"\n"}
                     </h2>
                   </div>
                 </div>
