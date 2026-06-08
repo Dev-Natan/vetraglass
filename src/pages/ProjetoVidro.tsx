@@ -34,18 +34,7 @@ const categoryLabels: Record<string, string> = {
 
 const translateCategory = (category: string) => categoryLabels[category] || category;
 
-export interface GlassPanelData {
-  id: string;
-  letter: string;
-  name: string;
-  width: number;
-  height: number;
-  widthFormula: string | null;
-  heightFormula: string | null;
-  quantity: number;
-  row: number;
-  col: number;
-}
+import { type GlassPanelData } from '@/types/glass';
 
 // Get storage URL helper
 const getStorageUrl = (path: string | null) => resolveProductImageUrl(path);

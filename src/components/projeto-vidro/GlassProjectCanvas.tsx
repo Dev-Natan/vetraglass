@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
-import { GlassPanelData } from '@/pages/Producao';
+import { GlassPanelData } from '@/types/glass';
 import { Circle, Square, ZoomIn, ZoomOut, RotateCcw, Maximize2 } from 'lucide-react';
 import { HoleCutoutEditor, Hole, Cutout } from './HoleCutoutEditor';
 import { cn } from '@/lib/utils';

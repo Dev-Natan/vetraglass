@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { GlassPanelData } from '@/pages/Producao';
+import { GlassPanelData } from '@/types/glass';
 import { Layers, Scale, Ruler, Lock } from 'lucide-react';
 
 interface GroupedPanel {
