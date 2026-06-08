@@ -873,6 +873,8 @@ export default function ProductTemplates() {
       pieces_quantity: editPiecesQuantity,
       pieces_formula: editPiecesFormula,
       cut_angle: editCutAngle,
+      cut_angle_start: editCutAngleStart,
+      cut_angle_end: editCutAngleEnd,
       notes: itemType === 'glass' ? editGlassName : undefined,
       width_formula: itemType === 'glass' ? editWidthFormula : undefined,
       height_formula: itemType === 'glass' ? editHeightFormula : undefined,
