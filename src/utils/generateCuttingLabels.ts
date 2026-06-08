@@ -293,6 +293,8 @@ export function expandCutsToLabels(
     quantity: number;
     position: string;
     cutAngle: number;
+    cutAngleStart?: number;
+    cutAngleEnd?: number;
   }>,
   glassCuts: Array<{
     id: string;
