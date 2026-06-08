@@ -23,7 +23,7 @@ const OrdensServico = lazy(() => import("./pages/OrdensServico"));
 const Clientes = lazy(() => import("./pages/Clientes"));
 const CaixaVendas = lazy(() => import("./pages/CaixaVendas"));
 const Estoque = lazy(() => import("./pages/Estoque"));
-const PlanoCorte = lazy(() => import("./pages/PlanoCorte"));
+
 
 const RecuperarSenha = lazy(() => import("./pages/RecuperarSenha"));
 const RedefinirSenha = lazy(() => import("./pages/RedefinirSenha"));
@@ -178,7 +178,7 @@ function AppRoutes() {
       <Route path="/estoque" element={<ProtectedRoute><ModuleGuard moduleKey="estoque"><LazyRoute><Estoque /></LazyRoute></ModuleGuard></ProtectedRoute>} />
       <Route path="/caixa-vendas" element={<ProtectedRoute><ModuleGuard moduleKey="caixa_vendas"><LazyRoute><CaixaVendas /></LazyRoute></ModuleGuard></ProtectedRoute>} />
       <Route path="/vendas" element={<Navigate to="/caixa-vendas" replace />} />
-      <Route path="/plano-corte" element={<ProtectedRoute><ModuleGuard moduleKey="plano-corte"><LazyRoute><PlanoCorte /></LazyRoute></ModuleGuard></ProtectedRoute>} />
+      
       
       
       {/* Lazy loaded routes */}

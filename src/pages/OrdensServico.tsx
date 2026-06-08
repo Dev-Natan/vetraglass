@@ -4,7 +4,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { 
   ClipboardList, Search, Clock, CheckCircle, AlertCircle, 
   User, Calendar, ChevronRight, Play, XCircle,
-  MoreHorizontal, Eye, AlertTriangle, Trash2, Wrench
+  MoreHorizontal, Eye, AlertTriangle, Trash2, Wrench, Scissors
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,6 +39,7 @@ import { PaginationControls } from '@/components/common/PaginationControls';
 import { OSProductionBadge } from '@/components/ordens-servico/OSProductionBadge';
 import { OSCalendarView } from '@/components/ordens-servico/OSCalendarView';
 import { OSTodayView } from '@/components/ordens-servico/OSTodayView';
+import { CuttingPlanCalculator } from '@/components/plano-corte/CuttingPlanCalculator';
 import { consumeOSMaterials } from '@/utils/checkGlassStock';
 import { releaseMaterialsForProduction } from '@/utils/generateMaterialConsumption';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
@@ -47,7 +48,7 @@ import { useOSCancellation } from '@/hooks/useOSCancellation';
 
 type OSStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
 type OSPriority = 'low' | 'normal' | 'high' | 'urgent';
-type MainTab = 'lista' | 'calendario' | 'hoje';
+type MainTab = 'lista' | 'calendario' | 'hoje' | 'plano-corte';
 
 interface OrdemServico {
   id: string;
@@ -369,6 +370,10 @@ export default function OrdensServico() {
                 <Badge variant="secondary" className="ml-1">{todayAppointmentsCount}</Badge>
               )}
             </TabsTrigger>
+            <TabsTrigger value="plano-corte" className="gap-2">
+              <Scissors className="w-4 h-4" />
+              Calculadora de Corte
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="lista" className="mt-6">
@@ -611,6 +616,10 @@ export default function OrdensServico() {
 
           <TabsContent value="hoje" className="mt-6">
             <OSTodayView />
+          </TabsContent>
+
+          <TabsContent value="plano-corte" className="mt-6">
+            <CuttingPlanCalculator />
           </TabsContent>
         </Tabs>
       </div>

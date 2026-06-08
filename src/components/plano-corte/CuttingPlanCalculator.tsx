@@ -1,15 +1,12 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { resolveProductImageUrl } from '@/utils/imageUrl';
-import { MainLayout } from '@/components/layout/MainLayout';
-import { ArrowLeft, Printer, Download, Tags, BarChart3, Calculator } from 'lucide-react';
+import { Printer, Download, Tags, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
 import { evaluateFormula, getFormulaPosition } from '@/utils/safeFormulaEvaluator';
 import { CuttingPlanFilters } from '@/components/plano-corte/CuttingPlanFilters';
 import { ProfileCutsTable, type ProfileCutItem } from '@/components/plano-corte/ProfileCutsTable';
@@ -24,12 +21,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
-// Get storage URL helper
 const getStorageUrl = (path: string | null) => resolveProductImageUrl(path);
 
-export default function PlanoCorte() {
-  const navigate = useNavigate();
+export function CuttingPlanCalculator() {
   const { currentCompany, isSaasAdmin } = useAuth();
   const [selectedLinha, setSelectedLinha] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -40,7 +36,6 @@ export default function PlanoCorte() {
   const [activeTab, setActiveTab] = useState<'cortes' | 'otimizacao'>('cortes');
   const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
 
-  // Fetch product templates
   const { data: productTemplates } = useQuery({
     queryKey: ['product-templates-for-cutting'],
     queryFn: async () => {
@@ -64,7 +59,6 @@ export default function PlanoCorte() {
     }
   });
 
-  // Get unique linhas
   const availableLinhas = useMemo(() => {
     if (!productTemplates) return [];
     const linhas = new Set<string>();
@@ -74,7 +68,6 @@ export default function PlanoCorte() {
     return Array.from(linhas).sort();
   }, [productTemplates]);
 
-  // Get unique categories filtered by linha
   const availableCategories = useMemo(() => {
     if (!productTemplates) return [];
     const categories = new Set<string>();
@@ -86,7 +79,6 @@ export default function PlanoCorte() {
     return Array.from(categories).sort();
   }, [productTemplates, selectedLinha]);
 
-  // Get products filtered by linha and category
   const filteredProducts = useMemo(() => {
     if (!productTemplates) return [];
     return productTemplates.filter(p => {
@@ -96,7 +88,6 @@ export default function PlanoCorte() {
     });
   }, [productTemplates, selectedLinha, selectedCategory]);
 
-  // Reset dependent filters
   const handleLinhaChange = (value: string) => {
     setSelectedLinha(value);
     setSelectedCategory('');
@@ -110,7 +101,6 @@ export default function PlanoCorte() {
     setCompletedItems(new Set());
   };
 
-  // Fetch product template items
   const { data: productItems } = useQuery({
     queryKey: ['product-template-items-cutting', selectedProduct, currentCompany?.id, isSaasAdmin],
     queryFn: async () => {
@@ -149,7 +139,6 @@ export default function PlanoCorte() {
     enabled: !!selectedProduct
   });
 
-  // Fetch glass formulas from glass_line_formulas as fallback
   const { data: glassFormulas } = useQuery({
     queryKey: ['glass-formulas-cutting', selectedProduct],
     queryFn: async () => {
@@ -169,7 +158,6 @@ export default function PlanoCorte() {
     enabled: !!selectedProduct
   });
 
-  // Calculate profile cuts
   const calculatedCuts = useMemo((): ProfileCutItem[] => {
     if (!productItems || productItems.length === 0) return [];
 
@@ -221,7 +209,6 @@ export default function PlanoCorte() {
       });
   }, [productItems, width, height, quantity, completedItems]);
 
-  // Calculate glass cuts
   const calculatedGlassCuts = useMemo((): GlassCutItem[] => {
     const glassItems: GlassCutItem[] = [];
     
@@ -284,20 +271,18 @@ export default function PlanoCorte() {
     return glassItems;
   }, [productItems, glassFormulas, width, height, quantity, completedItems]);
 
-  // Prepare data for bar optimization
   const barOptimizationData = useMemo(() => {
     return calculatedCuts.map(cut => ({
       itemTemplateId: cut.id,
       itemName: cut.profileName,
       cutLength: cut.calculatedLength,
       quantity: cut.quantity,
-      barLengthMm: 6000, // Default 6m bars
+      barLengthMm: 6000,
     }));
   }, [calculatedCuts]);
 
   const selectedProductData = productTemplates?.find(p => p.id === selectedProduct);
 
-  // Toggle item completion
   const handleToggleComplete = (id: string, completed: boolean) => {
     setCompletedItems(prev => {
       const next = new Set(prev);
@@ -310,12 +295,10 @@ export default function PlanoCorte() {
     });
   };
 
-  // Calculate completion progress
   const totalItems = calculatedCuts.length + calculatedGlassCuts.length;
   const completedCount = completedItems.size;
   const progressPercent = totalItems > 0 ? Math.round((completedCount / totalItems) * 100) : 0;
 
-  // Generate labels
   const handleGenerateLabels = () => {
     if (!selectedProductData) return;
     
@@ -343,7 +326,6 @@ export default function PlanoCorte() {
     generateCuttingLabels(labels);
   };
 
-  // Export CSV
   const handleExportCSV = () => {
     if (!selectedProductData) return;
     
@@ -375,7 +357,6 @@ export default function PlanoCorte() {
     exportCuttingPlanToCSV(exportData);
   };
 
-  // Print handler
   const handlePrint = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
@@ -515,163 +496,149 @@ export default function PlanoCorte() {
   };
 
   return (
-    <MainLayout>
-      <div className="space-y-6 animate-fade-in">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div className="flex items-center gap-2">
-            {/* Progress indicator */}
-            {totalItems > 0 && (
-              <div className="hidden sm:flex items-center gap-2 mr-4">
-                <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-primary transition-all duration-300"
-                    style={{ width: `${progressPercent}%` }}
-                  />
-                </div>
-                <span className="text-sm text-muted-foreground">{progressPercent}%</span>
-              </div>
-            )}
-            
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2" disabled={!selectedProduct || calculatedCuts.length === 0}>
-                  <Download className="w-4 h-4" />
-                  Exportar
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-popover border shadow-md">
-                <DropdownMenuItem onClick={handlePrint}>
-                  <Printer className="w-4 h-4 mr-2" />
-                  Imprimir PDF
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleExportCSV}>
-                  <Download className="w-4 h-4 mr-2" />
-                  Exportar CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleGenerateLabels}>
-                  <Tags className="w-4 h-4 mr-2" />
-                  Gerar Etiquetas
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-
-        {/* Product Selection & Info */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Product Image */}
-          <div className="flex justify-center">
-            <div className="w-full max-w-[250px] aspect-square bg-muted rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
-              {selectedProductData?.image_url ? (
-                <img 
-                  src={getStorageUrl(selectedProductData.image_url) || ''} 
-                  alt={selectedProductData.name}
-                  className="w-full h-full object-contain rounded-lg"
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex items-center justify-end">
+        <div className="flex items-center gap-2">
+          {totalItems > 0 && (
+            <div className="hidden sm:flex items-center gap-2 mr-4">
+              <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-primary transition-all duration-300"
+                  style={{ width: `${progressPercent}%` }}
                 />
-              ) : (
-                <div className="text-6xl text-muted-foreground/30">🪟</div>
-              )}
+              </div>
+              <span className="text-sm text-muted-foreground">{progressPercent}%</span>
             </div>
-          </div>
-
-          {/* Product Selection & Dimensions */}
-          <div className="lg:col-span-2 space-y-4">
-            {/* Filters */}
-            <CuttingPlanFilters
-              availableLinhas={availableLinhas}
-              availableCategories={availableCategories}
-              filteredProducts={filteredProducts}
-              selectedLinha={selectedLinha}
-              selectedCategory={selectedCategory}
-              selectedProduct={selectedProduct}
-              onLinhaChange={handleLinhaChange}
-              onCategoryChange={handleCategoryChange}
-              onProductChange={setSelectedProduct}
-            />
-
-            {/* Product Name */}
-            {selectedProductData && (
-              <h2 className="text-xl font-bold uppercase text-foreground">
-                {selectedProductData.name}
-              </h2>
-            )}
-
-            {/* Dimensions */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>Largura do Vão</Label>
-                <Input 
-                  type="number" 
-                  value={width} 
-                  onChange={e => setWidth(Number(e.target.value))}
-                  className="bg-muted"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Altura do Vão</Label>
-                <Input 
-                  type="number" 
-                  value={height} 
-                  onChange={e => setHeight(Number(e.target.value))}
-                  className="bg-muted"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Quantidade</Label>
-                <Input 
-                  type="number" 
-                  value={quantity} 
-                  onChange={e => setQuantity(Number(e.target.value))}
-                  min={1}
-                  className="bg-muted"
-                />
-              </div>
-            </div>
-          </div>
+          )}
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2" disabled={!selectedProduct || calculatedCuts.length === 0}>
+                <Download className="w-4 h-4" />
+                Exportar
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-popover border shadow-md">
+              <DropdownMenuItem onClick={handlePrint}>
+                <Printer className="w-4 h-4 mr-2" />
+                Imprimir PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportCSV}>
+                <Download className="w-4 h-4 mr-2" />
+                Exportar CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleGenerateLabels}>
+                <Tags className="w-4 h-4 mr-2" />
+                Gerar Etiquetas
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'cortes' | 'otimizacao')}>
-          <TabsList className="w-auto">
-            <TabsTrigger value="cortes" className="px-6 gap-2">
-              <Printer className="w-4 h-4" />
-              Plano de Corte
-            </TabsTrigger>
-            <TabsTrigger value="otimizacao" className="px-6 gap-2">
-              <BarChart3 className="w-4 h-4" />
-              Otimização de Barras
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="cortes" className="mt-4 space-y-6">
-            <GlassCutsTable 
-              glassCuts={calculatedGlassCuts}
-              showCheckboxes
-              onToggleComplete={handleToggleComplete}
-            />
-            <ProfileCutsTable 
-              cuts={calculatedCuts}
-              showCheckboxes
-              onToggleComplete={handleToggleComplete}
-              getStorageUrl={getStorageUrl}
-            />
-          </TabsContent>
-
-          <TabsContent value="otimizacao" className="mt-4">
-            {barOptimizationData.length > 0 ? (
-              <BarOptimizationView cuts={barOptimizationData} />
-            ) : (
-              <div className="text-center py-12 text-muted-foreground">
-                Selecione um produto para ver a otimização de barras
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
       </div>
-    </MainLayout>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="flex justify-center">
+          <div className="w-full max-w-[250px] aspect-square bg-muted rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
+            {selectedProductData?.image_url ? (
+              <img 
+                src={getStorageUrl(selectedProductData.image_url) || ''} 
+                alt={selectedProductData.name}
+                className="w-full h-full object-contain rounded-lg"
+              />
+            ) : (
+              <div className="text-6xl text-muted-foreground/30">🪟</div>
+            )}
+          </div>
+        </div>
+
+        <div className="lg:col-span-2 space-y-4">
+          <CuttingPlanFilters
+            availableLinhas={availableLinhas}
+            availableCategories={availableCategories}
+            filteredProducts={filteredProducts}
+            selectedLinha={selectedLinha}
+            selectedCategory={selectedCategory}
+            selectedProduct={selectedProduct}
+            onLinhaChange={handleLinhaChange}
+            onCategoryChange={handleCategoryChange}
+            onProductChange={setSelectedProduct}
+          />
+
+          {selectedProductData && (
+            <h2 className="text-xl font-bold uppercase text-foreground">
+              {selectedProductData.name}
+            </h2>
+          )}
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label>Largura do Vão</Label>
+              <Input 
+                type="number" 
+                value={width} 
+                onChange={e => setWidth(Number(e.target.value))}
+                className="bg-muted"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Altura do Vão</Label>
+              <Input 
+                type="number" 
+                value={height} 
+                onChange={e => setHeight(Number(e.target.value))}
+                className="bg-muted"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Quantidade</Label>
+              <Input 
+                type="number" 
+                value={quantity} 
+                onChange={e => setQuantity(Number(e.target.value))}
+                min={1}
+                className="bg-muted"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'cortes' | 'otimizacao')}>
+        <TabsList className="w-auto">
+          <TabsTrigger value="cortes" className="px-6 gap-2">
+            <Printer className="w-4 h-4" />
+            Plano de Corte
+          </TabsTrigger>
+          <TabsTrigger value="otimizacao" className="px-6 gap-2">
+            <BarChart3 className="w-4 h-4" />
+            Otimização de Barras
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="cortes" className="mt-4 space-y-6">
+          <GlassCutsTable 
+            glassCuts={calculatedGlassCuts}
+            showCheckboxes
+            onToggleComplete={handleToggleComplete}
+          />
+          <ProfileCutsTable 
+            cuts={calculatedCuts}
+            showCheckboxes
+            onToggleComplete={handleToggleComplete}
+            getStorageUrl={getStorageUrl}
+          />
+        </TabsContent>
+
+        <TabsContent value="otimizacao" className="mt-4">
+          {barOptimizationData.length > 0 ? (
+            <BarOptimizationView cuts={barOptimizationData} />
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              Selecione um produto para ver a otimização de barras
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }

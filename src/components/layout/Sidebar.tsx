@@ -58,7 +58,7 @@ const menuItems: MenuItem[] = [
   
   // Operacional
   { icon: Ruler, label: 'Medições', path: '/medicoes', module: 'medicoes', tutorialId: 'menu-medicoes' },
-  { icon: Scissors, label: 'Plano de Corte', path: '/plano-corte', module: 'plano-corte', tutorialId: 'menu-plano-corte' },
+  
   
   
   // Financeiro

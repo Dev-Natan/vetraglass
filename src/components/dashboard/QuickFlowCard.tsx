@@ -23,7 +23,7 @@ const flowSteps = [
 const quickFlowActions = [
   { label: 'Criar Venda', path: '/caixa-vendas?novo=true', variant: 'default' as const },
   { label: 'Acompanhar OS', path: '/ordens-servico', variant: 'outline' as const },
-  { label: 'Plano de Corte', path: '/plano-corte', variant: 'outline' as const },
+  { label: 'Plano de Corte', path: '/ordens-servico?tab=plano-corte', variant: 'outline' as const },
 ];
 
 export const QuickFlowCard = memo(function QuickFlowCard() {
