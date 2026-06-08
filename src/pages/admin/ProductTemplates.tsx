@@ -339,6 +339,8 @@ export default function ProductTemplates() {
       setHeightFormula(draft.heightFormula || "");
       setGlassName(draft.glassName || "");
       setCutAngle(typeof draft.cutAngle === "number" ? draft.cutAngle : 90);
+      setCutAngleStart(typeof draft.cutAngleStart === "number" ? draft.cutAngleStart : 90);
+      setCutAngleEnd(typeof draft.cutAngleEnd === "number" ? draft.cutAngleEnd : 90);
     } catch {
       clearCompositionDraft();
     }
