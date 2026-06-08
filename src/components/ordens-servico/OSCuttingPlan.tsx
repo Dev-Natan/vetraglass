@@ -423,7 +423,34 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
                                   {cut.calculatedLength}mm
                                 </TableCell>
                                 <TableCell className="text-right">1</TableCell>
-                                <TableCell className="text-right">{cut.cutAngle}°</TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex items-center justify-end gap-2">
+                                    <div className="flex h-6 items-center gap-0.5 px-1 bg-muted rounded border overflow-hidden">
+                                      <div 
+                                        className="h-full w-1.5 bg-primary/40" 
+                                        style={{ 
+                                          transform: cut.cutAngle === 45 || cut.cutAngle === 4545 || cut.cutAngle === 4590 ? 'skewY(-45deg)' : 'none',
+                                          transformOrigin: 'top'
+                                        }}
+                                      />
+                                      <div className="h-0.5 w-4 bg-primary/60" />
+                                      <div 
+                                        className="h-full w-1.5 bg-primary/40" 
+                                        style={{ 
+                                          transform: cut.cutAngle === 45 || cut.cutAngle === 4545 || cut.cutAngle === 9045 ? 'skewY(45deg)' : 'none',
+                                          transformOrigin: 'top'
+                                        }}
+                                      />
+                                    </div>
+                                    <span className="font-mono">{
+                                      cut.cutAngle === 4545 ? '45/45' :
+                                      cut.cutAngle === 4590 ? '45/90' :
+                                      cut.cutAngle === 9045 ? '90/45' :
+                                      cut.cutAngle === 9090 ? '90/90' :
+                                      `${cut.cutAngle}°`
+                                    }</span>
+                                  </div>
+                                </TableCell>
                               </TableRow>
                             );
                           }
