@@ -685,6 +685,8 @@ export default function ProductTemplates() {
           quantity_formula: item.quantity_formula,
           pieces_quantity: item.pieces_quantity,
           cut_angle: item.cut_angle,
+          cut_angle_start: item.cut_angle_start || item.cut_angle,
+          cut_angle_end: item.cut_angle_end || item.cut_angle,
           is_optional: item.is_optional,
           notes: item.notes,
           width_formula: item.width_formula,
