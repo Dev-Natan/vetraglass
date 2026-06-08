@@ -1709,6 +1709,26 @@ export default function ProductTemplates() {
                       onPiecesFormulaChange={setPiecesFormula}
                     />
                   )}
+                  
+                  {compositionActiveTab === 'profile' && (
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Ângulo de corte (graus)</Label>
+                      <div className="flex gap-2">
+                        {[45, 90].map((angle) => (
+                          <Button
+                            key={angle}
+                            type="button"
+                            variant={cutAngle === angle ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setCutAngle(angle)}
+                            className="flex-1"
+                          >
+                            {angle}°
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Side selector for multi-side products */}
                   {selectedTemplate?.has_multiple_sides && (
