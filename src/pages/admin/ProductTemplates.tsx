@@ -225,6 +225,8 @@ export default function ProductTemplates() {
   const [editHeightFormula, setEditHeightFormula] = useState("");
   const [editGlassName, setEditGlassName] = useState("");
   const [editCutAngle, setEditCutAngle] = useState(90);
+  const [editCutAngleStart, setEditCutAngleStart] = useState(90);
+  const [editCutAngleEnd, setEditCutAngleEnd] = useState(90);
   const [editSide, setEditSide] = useState<string>("");
   
   const currentLinha = linhaParam ? decodeURIComponent(linhaParam) : null;
