@@ -288,7 +288,9 @@ export function validateFormula(
 export function getFormulaPosition(formula: string | null): 'Altura' | 'Largura' {
   if (!formula) return 'Largura';
   const lower = formula.toLowerCase();
-  if (lower.includes('altura') || lower.includes('h') || lower.includes('a')) {
+  
+  // Checks specifically for 'altura' or standalone 'a' (case insensitive with word boundaries)
+  if (lower.includes('altura') || /\ba\b/i.test(lower) || /\bh\b/i.test(lower)) {
     return 'Altura';
   }
   return 'Largura';
