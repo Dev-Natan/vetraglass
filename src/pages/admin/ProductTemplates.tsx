@@ -214,6 +214,7 @@ export default function ProductTemplates() {
   const [cutAngleStart, setCutAngleStart] = useState(90);
   const [cutAngleEnd, setCutAngleEnd] = useState(90);
   const [compositionSide, setCompositionSide] = useState<string>("");
+  const [profilePosition, setProfilePosition] = useState<'Largura' | 'Altura'>('Largura');
 
   
   const [editingItem, setEditingItem] = useState<ProductTemplateItem | null>(null);
@@ -228,6 +229,7 @@ export default function ProductTemplates() {
   const [editCutAngleStart, setEditCutAngleStart] = useState(90);
   const [editCutAngleEnd, setEditCutAngleEnd] = useState(90);
   const [editSide, setEditSide] = useState<string>("");
+  const [editProfilePosition, setEditProfilePosition] = useState<'Largura' | 'Altura'>('Largura');
   
   const currentLinha = linhaParam ? decodeURIComponent(linhaParam) : null;
 
@@ -489,6 +491,7 @@ export default function ProductTemplates() {
     setCutAngleStart(90);
     setCutAngleEnd(90);
     setCompositionSide("");
+    setProfilePosition("Largura");
   };
 
   const handleCloseDialog = () => {
@@ -832,7 +835,7 @@ export default function ProductTemplates() {
     
     addCompositionMutation.mutate({
       item_template_id: selectedItemToAdd,
-      quantity_formula: quantityFormula,
+      quantity_formula: profilePosition === 'Largura' && compositionActiveTab === 'profile' ? undefined : quantityFormula,
       pieces_quantity: piecesQuantity,
       pieces_formula: piecesFormula,
       cut_angle: cutAngle,
@@ -840,8 +843,8 @@ export default function ProductTemplates() {
       cut_angle_end: cutAngleEnd,
       is_optional: false,
       notes: compositionActiveTab === 'glass' ? glassName : "",
-      width_formula: compositionActiveTab === 'glass' ? widthFormula : undefined,
-      height_formula: compositionActiveTab === 'glass' ? heightFormula : undefined,
+      width_formula: compositionActiveTab === 'glass' ? widthFormula : (profilePosition === 'Largura' ? quantityFormula : undefined),
+      height_formula: compositionActiveTab === 'glass' ? heightFormula : (profilePosition === 'Altura' ? quantityFormula : undefined),
       side: selectedTemplate?.has_multiple_sides ? compositionSide : undefined,
     }, {
       onSuccess: () => {
@@ -869,15 +872,15 @@ export default function ProductTemplates() {
     
     updateCompositionMutation.mutate({
       id: editingItem.id,
-      quantity_formula: editQuantityFormula,
+      quantity_formula: editProfilePosition === 'Largura' && itemType === 'profile' ? undefined : editQuantityFormula,
       pieces_quantity: editPiecesQuantity,
       pieces_formula: editPiecesFormula,
       cut_angle: editCutAngle,
       cut_angle_start: editCutAngleStart,
       cut_angle_end: editCutAngleEnd,
       notes: itemType === 'glass' ? editGlassName : undefined,
-      width_formula: itemType === 'glass' ? editWidthFormula : undefined,
-      height_formula: itemType === 'glass' ? editHeightFormula : undefined,
+      width_formula: itemType === 'glass' ? editWidthFormula : (editProfilePosition === 'Largura' ? editQuantityFormula : undefined),
+      height_formula: itemType === 'glass' ? editHeightFormula : (editProfilePosition === 'Altura' ? editQuantityFormula : undefined),
       side: selectedTemplate?.has_multiple_sides ? editSide : undefined,
     });
   };
@@ -1743,7 +1746,26 @@ export default function ProductTemplates() {
                   )}
                   
                   {compositionActiveTab === 'profile' && (
-                    <div className="grid grid-cols-2 gap-4">
+                    <>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Posição do Perfil</Label>
+                        <div className="flex gap-2">
+                          {(['Largura', 'Altura'] as const).map((pos) => (
+                            <Button
+                              key={pos}
+                              type="button"
+                              variant={profilePosition === pos ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => setProfilePosition(pos)}
+                              className="flex-1"
+                            >
+                              {pos}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label className="text-sm font-medium">Ângulo Início</Label>
                         <div className="flex gap-2">
@@ -1778,7 +1800,8 @@ export default function ProductTemplates() {
                           ))}
                         </div>
                       </div>
-                    </div>
+                      </div>
+                    </>
                   )}
 
                   {/* Side selector for multi-side products */}
@@ -1940,8 +1963,27 @@ export default function ProductTemplates() {
                     onPiecesFormulaChange={setEditPiecesFormula}
                   />
                   
-                  {editingItem?.item_template?.type === 'profile' && (
-                    <div className="grid grid-cols-2 gap-4">
+              {editingItem?.item_template?.type === 'profile' && (
+                <>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Posição do Perfil</Label>
+                    <div className="flex gap-2">
+                      {(['Largura', 'Altura'] as const).map((pos) => (
+                        <Button
+                          key={pos}
+                          type="button"
+                          variant={editProfilePosition === pos ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setEditProfilePosition(pos)}
+                          className="flex-1"
+                        >
+                          {pos}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label className="text-sm font-medium">Ângulo Início</Label>
                         <div className="flex gap-2">
@@ -1976,8 +2018,9 @@ export default function ProductTemplates() {
                           ))}
                         </div>
                       </div>
-                    </div>
-                  )}
+                  </div>
+                </>
+              )}
                 </>
               )}
               
