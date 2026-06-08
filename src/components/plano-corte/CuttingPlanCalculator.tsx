@@ -174,7 +174,14 @@ export function CuttingPlanCalculator() {
         let displayWidthFormula: string | null = widthF;
         let displayHeightFormula: string | null = heightF;
         
-        if (heightF) {
+        if (heightF && widthF) {
+          // If both exist, we try to determine by the content of the formulas
+          // usually this is a fallback case
+          calculatedLength = evaluateFormula(heightF || widthF, width, height);
+          position = heightF ? 'Altura' : 'Largura';
+          displayHeightFormula = heightF;
+          displayWidthFormula = widthF;
+        } else if (heightF) {
           calculatedLength = evaluateFormula(heightF, width, height);
           position = 'Altura';
         } else if (widthF) {
