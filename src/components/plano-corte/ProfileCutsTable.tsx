@@ -12,6 +12,8 @@ export interface ProfileCutItem {
   quantity: number;
   piecesPerProduct: number;
   cutAngle: number;
+  cutAngleStart?: number;
+  cutAngleEnd?: number;
   position: 'Altura' | 'Largura';
   isCompleted?: boolean;
 }
