@@ -323,6 +323,8 @@ export function CuttingPlanCalculator() {
         quantity: c.quantity,
         position: c.position,
         cutAngle: c.cutAngle,
+        cutAngleStart: c.cutAngleStart,
+        cutAngleEnd: c.cutAngleEnd,
       })),
       calculatedGlassCuts.map(g => ({
         id: g.id,
