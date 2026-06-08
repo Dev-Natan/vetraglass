@@ -47,9 +47,9 @@ export function exportCuttingPlanToCSV(data: CuttingPlanExport): void {
   // Profiles section
   if (data.profiles.length > 0) {
     lines.push('PERFIS DE ALUMÍNIO');
-    lines.push('Perfil,Medida (mm),Quantidade,Ângulo,Posição,Fórmula');
+    lines.push('Perfil,Medida (mm),Quantidade,Ângulo Início,Ângulo Fim,Posição,Fórmula');
     data.profiles.forEach(p => {
-      lines.push(`"${p.profileName}",${p.length},${p.quantity},${p.angle}°,${p.position},"${p.formula || ''}"`);
+      lines.push(`"${p.profileName}",${p.length},${p.quantity},${p.angleStart ?? p.angle}°,${p.angleEnd ?? p.angle}°,${p.position},"${p.formula || ''}"`);
     });
     lines.push('');
   }
