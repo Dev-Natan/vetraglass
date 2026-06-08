@@ -617,6 +617,10 @@ export default function OrdensServico() {
           <TabsContent value="hoje" className="mt-6">
             <OSTodayView />
           </TabsContent>
+
+          <TabsContent value="plano-corte" className="mt-6">
+            <CuttingPlanCalculator />
+          </TabsContent>
         </Tabs>
       </div>
 
