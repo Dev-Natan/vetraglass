@@ -1776,8 +1776,12 @@ export default function ProductTemplates() {
                               variant={cutAngleStart === angle ? 'default' : 'outline'}
                               size="sm"
                               onClick={() => setCutAngleStart(angle)}
-                              className="flex-1"
+                              className="flex-1 relative overflow-hidden"
                             >
+                              <div 
+                                className="absolute left-0 top-0 bottom-0 w-1 bg-primary/20" 
+                                style={{ transform: angle === 45 ? 'skewY(-45deg)' : 'none', transformOrigin: 'top' }}
+                              />
                               {angle}°
                             </Button>
                           ))}
