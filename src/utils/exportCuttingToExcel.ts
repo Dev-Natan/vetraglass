@@ -99,7 +99,7 @@ export function exportCuttingPlanToCNC(
   profiles.forEach(p => {
     // Expand by quantity for CNC
     for (let i = 0; i < p.quantity; i++) {
-      lines.push(`${p.profileName};${p.length};1;${p.angle};${p.angle}`);
+      lines.push(`${p.profileName};${p.length};1;${p.angleStart ?? p.angle};${p.angleEnd ?? p.angle}`);
     }
   });
 
