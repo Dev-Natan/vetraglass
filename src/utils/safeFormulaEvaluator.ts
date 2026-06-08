@@ -289,20 +289,32 @@ export function getFormulaPosition(formula: string | null): 'Altura' | 'Largura'
   if (!formula) return 'Largura';
   const lower = formula.toLowerCase();
   
-  // Checks specifically for 'altura' or standalone 'a' (case insensitive with word boundaries)
-  // Also check for common height variables like HA, HB, HC
-  // We avoid matching 'fa' (folga altura) as the primary indicator if 'l' is present
-  const hasHeightVar = lower.includes('altura') || /\ba\b/i.test(lower) || /\bh\b/i.test(lower) || /\bh[abc]\b/i.test(lower);
-  const hasWidthVar = lower.includes('largura') || /\bl\b/i.test(lower) || /\bw\b/i.test(lower) || /\bw[abc]\b/i.test(lower);
+  // Specific patterns that strongly indicate Height
+  // Avoid matching 'fa' (folga altura) as the only indicator if it's mixed
+  const isHeight = 
+    lower.includes('altura') || 
+    /\ba\b/i.test(lower) || 
+    /\bh\b/i.test(lower) || 
+    /\bh[abc]\b/i.test(lower);
 
-  if (hasHeightVar && !hasWidthVar) {
-    return 'Altura';
-  }
-  if (hasWidthVar && !hasHeightVar) {
-    return 'Largura';
-  }
-  // If both or neither, priority to common height patterns
-  if (hasHeightVar) return 'Altura';
+  // Specific patterns that strongly indicate Width
+  const isWidth = 
+    lower.includes('largura') || 
+    /\bl\b/i.test(lower) || 
+    /\bw\b/i.test(lower) || 
+    /\bw[abc]\b/i.test(lower);
 
+  // Logica de decisão:
+  // 1. Se tem termo de altura e não tem de largura -> Altura
+  if (isHeight && !isWidth) return 'Altura';
+  
+  // 2. Se tem termo de largura (mesmo que tenha FA - Folga Altura) -> Largura
+  // Isso resolve casos como "L - FA" ou "Largura - FA"
+  if (isWidth) return 'Largura';
+  
+  // 3. Fallback para Altura se foi detectado altura
+  if (isHeight) return 'Altura';
+
+  // 4. Default final
   return 'Largura';
 }
