@@ -110,10 +110,10 @@ export function ProfileCutsTable({
                 <TableCell className="text-center">
                   <div className="inline-flex gap-1">
                     <span className="bg-foreground text-background px-3 py-1 text-sm font-medium">
-                      {cut.cutAngle}°
+                      {cut.cutAngleStart ?? cut.cutAngle}°
                     </span>
                     <span className="bg-foreground text-background px-3 py-1 text-sm font-medium">
-                      {cut.cutAngle}°
+                      {cut.cutAngleEnd ?? cut.cutAngle}°
                     </span>
                   </div>
                 </TableCell>
