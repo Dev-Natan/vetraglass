@@ -836,6 +836,8 @@ export default function ProductTemplates() {
       pieces_quantity: piecesQuantity,
       pieces_formula: piecesFormula,
       cut_angle: cutAngle,
+      cut_angle_start: cutAngleStart,
+      cut_angle_end: cutAngleEnd,
       is_optional: false,
       notes: compositionActiveTab === 'glass' ? glassName : "",
       width_formula: compositionActiveTab === 'glass' ? widthFormula : undefined,
