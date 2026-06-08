@@ -152,6 +152,8 @@ type CompositionDraft = {
   heightFormula: string;
   glassName: string;
   cutAngle: number;
+  cutAngleStart: number;
+  cutAngleEnd: number;
   side: string;
   isOpen: boolean;
 };
