@@ -1743,21 +1743,40 @@ export default function ProductTemplates() {
                   )}
                   
                   {compositionActiveTab === 'profile' && (
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Ângulo de corte (graus)</Label>
-                      <div className="flex gap-2">
-                        {[45, 90].map((angle) => (
-                          <Button
-                            key={angle}
-                            type="button"
-                            variant={cutAngle === angle ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => setCutAngle(angle)}
-                            className="flex-1"
-                          >
-                            {angle}°
-                          </Button>
-                        ))}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Ângulo Início</Label>
+                        <div className="flex gap-2">
+                          {[45, 90].map((angle) => (
+                            <Button
+                              key={angle}
+                              type="button"
+                              variant={cutAngleStart === angle ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => setCutAngleStart(angle)}
+                              className="flex-1"
+                            >
+                              {angle}°
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Ângulo Fim</Label>
+                        <div className="flex gap-2">
+                          {[45, 90].map((angle) => (
+                            <Button
+                              key={angle}
+                              type="button"
+                              variant={cutAngleEnd === angle ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => setCutAngleEnd(angle)}
+                              className="flex-1"
+                            >
+                              {angle}°
+                            </Button>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   )}
