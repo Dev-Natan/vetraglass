@@ -471,7 +471,8 @@ export function CuttingPlanCalculator() {
                   <th class="profile">PERFIL</th>
                   <th class="profile">MEDIDA (mm)</th>
                   <th class="profile">QUANTIDADE</th>
-                  <th class="profile">ÂNGULO</th>
+                  <th class="profile">ÂNGULO INÍCIO</th>
+                  <th class="profile">ÂNGULO FIM</th>
                   <th class="profile">POSIÇÃO</th>
                 </tr>
               </thead>
