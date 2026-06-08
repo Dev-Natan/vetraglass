@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { GlassPanelData } from '@/pages/ProjetoVidro';
+import { GlassPanelData } from '@/types/glass';
 import { Hole, Cutout } from '@/components/projeto-vidro/HoleCutoutEditor';
 
 interface GenerateGlassProjectPdfParams {
