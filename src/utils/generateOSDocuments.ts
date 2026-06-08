@@ -197,7 +197,21 @@ export async function generateOSDocuments(
       for (const comp of composition) {
         if (comp.item_template.type !== 'profile') continue;
         
-        const formula = comp.quantity_formula || comp.width_formula || comp.height_formula || '';
+        // Define which formula to use and determine position
+        let formula = '';
+        let position = 'Largura';
+
+        if (comp.width_formula && comp.width_formula.trim() !== '') {
+          formula = comp.width_formula;
+          position = 'Largura';
+        } else if (comp.height_formula && comp.height_formula.trim() !== '') {
+          formula = comp.height_formula;
+          position = 'Altura';
+        } else {
+          formula = comp.quantity_formula || '';
+          position = getFormulaPosition(formula);
+        }
+
         const piecesQty = comp.pieces_quantity || 1;
         const totalPieces = piecesQty * quantity;
 
@@ -231,7 +245,7 @@ export async function generateOSDocuments(
             calculatedLength,
             quantity: totalPieces,
             cutAngle: comp.cut_angle,
-            position: getFormulaPosition(formula),
+            position,
             side: sideData.label
           });
 
