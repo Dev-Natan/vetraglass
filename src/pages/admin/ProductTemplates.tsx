@@ -382,6 +382,8 @@ export default function ProductTemplates() {
     heightFormula,
     glassName,
     cutAngle,
+    cutAngleStart,
+    cutAngleEnd,
   ]);
 
   useEffect(() => {
