@@ -184,38 +184,46 @@ export function AuditCashClosingDialog({
 
           <Separator />
 
-          {/* Campo de ajuste (opcional) */}
-          {hasDifference && (
-            <div className="space-y-2">
-              <Label htmlFor="adjustment">Ajuste de Valor (opcional)</Label>
-              <Input
-                id="adjustment"
-                type="text"
-                inputMode="decimal"
-                placeholder="0,00"
-                value={adjustmentAmount}
-                onChange={(e) => setAdjustmentAmount(e.target.value)}
-                disabled={isLoading}
-              />
-              <p className="text-xs text-muted-foreground">
-                Informe um valor para ajustar a contagem (positivo ou negativo).
-              </p>
-            </div>
-          )}
+          {/* Campo de ajuste e Observações */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {hasDifference && (
+              <div className="space-y-2">
+                <Label htmlFor="adjustment" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Ajuste de Valor
+                </Label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="adjustment"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0,00"
+                    className="pl-9 h-9 text-sm"
+                    value={adjustmentAmount}
+                    onChange={(e) => setAdjustmentAmount(e.target.value)}
+                    disabled={isLoading}
+                  />
+                </div>
+                <p className="text-[10px] text-muted-foreground leading-tight">
+                  Ajusta o saldo final do caixa (positivo ou negativo).
+                </p>
+              </div>
+            )}
 
-          {/* Observações do auditor */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">
-              Observações do Auditor {hasDifference ? '(obrigatório para rejeição)' : '(opcional)'}
-            </Label>
-            <Textarea
-              id="notes"
-              placeholder="Justificativa ou observações..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              disabled={isLoading}
-              rows={2}
-            />
+            <div className="space-y-2">
+              <Label htmlFor="notes" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Observações {hasDifference ? '(obrigatório p/ rejeitar)' : '(opcional)'}
+              </Label>
+              <Textarea
+                id="notes"
+                placeholder="Motivo da decisão..."
+                className="resize-none text-sm h-9 min-h-[36px]"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                disabled={isLoading}
+                rows={1}
+              />
+            </div>
           </div>
         </div>
 
