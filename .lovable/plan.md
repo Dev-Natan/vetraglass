@@ -1,44 +1,23 @@
 ## Problema
+Na aba "A Receber" (/financeiro?tab=receber) estão aparecendo recebíveis com status `paid` e `cancelled`, além do botão "Receber" aparecer em cancelados. O filtro padrão "Pendentes" deveria já esconder pagos, mas a lista mostra registros cancelados/pagos mesmo assim — provavelmente porque:
 
-Na aba **Financeiro → Contas a Receber**, clicar em "Receber" apenas exibe um toast informando que o recebimento deve ser feito pelo Caixa. Isso obriga o usuário a navegar para outra tela.
+1. O filtro pós-query remove apenas recebíveis vinculados a documentos (sale/quote/OS) cancelados, mas NÃO remove recebíveis com `status = 'cancelled'` direto na tabela `accounts_receivable`.
+2. O `statusFilter` default é `'pending'`, mas pelos prints aparecem `paid` e `cancelado` — sugere que algo está mostrando "Todos" ou que a tela usa outra fonte.
 
-## Solução
+## Mudanças (apenas frontend, em `src/components/financeiro/ContasReceberTab.tsx`)
 
-Reaproveitar o componente `src/components/caixa/ReceivePaymentDialog.tsx` que já implementa todo o fluxo correto:
-- Verifica se há caixa aberto (alerta se não houver).
-- Cria `cash_movements` (entrada com `category: 'recebimento_parcela'`), gerando fluxo no caixa.
-- Atualiza `accounts_receivable` (paid_amount / status).
-- Propaga para `sales` e `ordens_servico` vinculados.
-- Suporta pagamento parcial e seleção de forma de pagamento (Dinheiro / Cartão / PIX).
+1. **No `queryFn`**, excluir do resultado qualquer recebível com `r.status === 'cancelled'` (além das exclusões por documento cancelado já existentes).
 
-## Alterações
+2. **No `useMemo` de `filteredReceivables`**, garantir que a aba sempre esconda:
+   - `status === 'paid'`
+   - `status === 'cancelled'`
+   
+   Independente do filtro de status escolhido (a aba "A Receber" é sobre o que falta receber). Pagos continuam acessíveis via aba/relatório próprio; aqui não aparecem mais.
 
-**Arquivo único:** `src/components/financeiro/ContasReceberTab.tsx`
+3. **Remover a opção "Pagos"** do `Select` de Status (já que a aba não deve listar pagos). Manter: Todos (=pendentes+vencidos+parciais), Pendentes, Vencidos.
 
-1. Importar `ReceivePaymentDialog` de `@/components/caixa/ReceivePaymentDialog`.
-2. Adicionar estado local:
-   ```ts
-   const [receivingPayment, setReceivingPayment] = useState<Receivable | null>(null);
-   ```
-3. Substituir `handleReceiveClick` — remover o `toast.info` e abrir o dialog:
-   ```ts
-   const handleReceiveClick = (receivable: Receivable) => {
-     setReceivingPayment(receivable);
-   };
-   ```
-4. Renderizar no final do JSX:
-   ```tsx
-   <ReceivePaymentDialog
-     open={!!receivingPayment}
-     onOpenChange={(o) => !o && setReceivingPayment(null)}
-     receivable={receivingPayment}
-     onSuccess={() => setReceivingPayment(null)}
-   />
-   ```
-5. Garantir que o objeto `receivable` passado contém os campos exigidos (`customer_name`, `description`, `installment_number`, `total_installments`, `sale_id`, `ordem_servico_id`, `quote_id`) — adicionar map/cast se necessário.
+4. **Botão "Receber"**: já está condicional a `status !== 'paid'`. Adicionar `&& status !== 'cancelled'` por segurança (não deve nem aparecer, mas dupla proteção).
 
-## Comportamento resultante
+5. **Card de resumo "Recebido (Total)"**: manter como está (é informativo histórico) — não foi pedido remover.
 
-- O recebimento acontece direto na aba Financeiro.
-- Se o caixa estiver fechado, o próprio dialog mostra o aviso "Nenhum caixa aberto. Abra o caixa para receber pagamentos." (mensagem clara e acionável, no lugar correto).
-- O movimento é registrado em `cash_movements` da sessão aberta, mantendo a integridade do fluxo diário de caixa.
+Nenhuma alteração de backend/migração necessária — é puramente de apresentação na aba.
