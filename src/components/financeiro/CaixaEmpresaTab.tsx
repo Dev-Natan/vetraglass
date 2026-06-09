@@ -28,7 +28,7 @@ import { ptBR } from 'date-fns/locale';
 import { MovimentoCaixaEmpresaDialog } from '@/components/caixa/MovimentoCaixaEmpresaDialog';
 import { CaixaAdiantamentosCard } from '@/components/caixa/CaixaAdiantamentosCard';
 import { FecharCaixaDialog } from '@/components/caixa/FecharCaixaDialog';
-import { PendingAuditsCard } from '@/components/caixa/PendingAuditsCard';
+
 import { AjustarSaldoDialog } from '@/components/caixa/AjustarSaldoDialog';
 import { MonthSelector } from '@/components/common/MonthSelector';
 import { Edit2 } from 'lucide-react';
@@ -349,9 +349,8 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
 
   return (
     <div className="space-y-6">
-      {/* Card de Auditorias Pendentes - somente para admin/manager */}
-      <PendingAuditsCard />
       {/* Card do Caixa do Dia */}
+
       <Card className={openCashRegister ? 'border-green-500/50 bg-green-50/30 dark:bg-green-950/10' : ''}>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-lg font-semibold flex items-center gap-2">

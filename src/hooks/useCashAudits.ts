@@ -70,7 +70,7 @@ export function useCashAudits() {
     enabled: !!currentCompany?.id && !!user?.id,
   });
 
-  // Mutation: Submeter fechamento para auditoria
+  // Mutation: Fechar caixa diretamente (sem auditoria)
   const submitForAuditMutation = useMutation({
     mutationFn: async ({ 
       cashRegisterId, 
@@ -81,27 +81,30 @@ export function useCashAudits() {
       counts: Array<{ payment_method: string; amount: number }>; 
       notes?: string;
     }) => {
-      const { data, error } = await supabase.rpc('submit_cash_closing_for_audit', {
+      const { data, error } = await (supabase.rpc as any)('close_cash_register_direct', {
         _cash_register_id: cashRegisterId,
         _counts: counts,
         _notes: notes || null,
       });
       if (error) throw error;
-      const result = data as { success: boolean; error?: string; message?: string };
+      const result = data as { success: boolean; error?: string };
       if (!result.success) {
-        throw new Error(result.error || 'Erro ao submeter para auditoria');
+        throw new Error(result.error || 'Erro ao fechar caixa');
       }
       return result;
     },
-    onSuccess: (result) => {
-      toast.success(result.message || 'Fechamento enviado para auditoria');
+    onSuccess: () => {
+      toast.success('Caixa fechado com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['cash-register-open'] });
+      queryClient.invalidateQueries({ queryKey: ['company-cash'] });
+      queryClient.invalidateQueries({ queryKey: ['company-cash-movements'] });
       queryClient.invalidateQueries({ queryKey: ['pending-cash-audits'] });
     },
     onError: (error: Error) => {
       toast.error(`Erro: ${error.message}`);
     },
   });
+
 
   // Mutation: Aprovar/Rejeitar auditoria
   const completeAuditMutation = useMutation({
