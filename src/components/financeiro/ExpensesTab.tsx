@@ -373,12 +373,14 @@ export function ExpensesTab({ selectedMonth: externalMonth, onMonthChange }: Exp
         notes: '',
       });
     }
+    setStep(1);
     setDialogOpen(true);
   };
 
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setEditingExpense(null);
+    setStep(1);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
