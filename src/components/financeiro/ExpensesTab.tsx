@@ -383,6 +383,28 @@ export function ExpensesTab({ selectedMonth: externalMonth, onMonthChange }: Exp
     setStep(1);
   };
 
+  const goNext = () => {
+    if (step === 1) {
+      if (!formData.description.trim()) {
+        toast.error('Informe a descrição da despesa');
+        return;
+      }
+      setStep(2);
+      return;
+    }
+    if (step === 2) {
+      if (!formData.amount || formData.amount <= 0) {
+        toast.error('Informe um valor maior que zero');
+        return;
+      }
+      if (!formData.due_date) {
+        toast.error('Informe a data de vencimento');
+        return;
+      }
+      setStep(3);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     saveMutation.mutate({ ...formData, id: editingExpense?.id });
