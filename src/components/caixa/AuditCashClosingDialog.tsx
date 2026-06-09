@@ -113,36 +113,36 @@ export function AuditCashClosingDialog({
 
         <div className="space-y-4 py-4">
           {/* Informações do operador */}
-          <div className="rounded-lg border bg-muted/50 p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-2 text-sm">
-                <User className="h-4 w-4 text-muted-foreground" />
+          <div className="grid grid-cols-2 gap-4">
+            {/* Informações do operador */}
+            <div className="rounded-lg border bg-muted/50 p-3 space-y-2">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <User className="h-3 w-3" />
                 Operador
-              </span>
-              <span className="font-medium">{audit.operator_name}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <p className="font-semibold text-sm truncate">{audit.operator_name}</p>
+              
+              <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
+                <Clock className="h-3 w-3" />
                 Submetido em
-              </span>
-              <span>{format(new Date(audit.submitted_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
+              </div>
+              <p className="text-sm">{format(new Date(audit.submitted_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
             </div>
-          </div>
 
-          {/* Contagem por método de pagamento */}
-          <div className="rounded-lg border p-3 space-y-2">
-            <h4 className="font-medium text-sm flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-primary" />
-              Contagem Informada
-            </h4>
-            <div className="grid grid-cols-2 gap-1 text-sm pl-4">
-              {audit.counts_submitted.map((count, idx) => (
-                <div key={idx} className="contents">
-                  <span className="text-muted-foreground">{getPaymentMethodLabel(count.payment_method)}:</span>
-                  <span className="text-right font-medium">{formatCurrency(count.amount)}</span>
-                </div>
-              ))}
+            {/* Contagem por método de pagamento */}
+            <div className="rounded-lg border p-3 space-y-2">
+              <h4 className="font-semibold text-xs text-muted-foreground flex items-center gap-2 uppercase tracking-wider">
+                <DollarSign className="h-3 w-3 text-primary" />
+                Contagem Detalhada
+              </h4>
+              <div className="space-y-1 overflow-y-auto max-h-[80px] pr-1 scrollbar-thin">
+                {audit.counts_submitted.map((count, idx) => (
+                  <div key={idx} className="flex justify-between items-center text-xs">
+                    <span className="text-muted-foreground">{getPaymentMethodLabel(count.payment_method)}</span>
+                    <span className="font-medium">{formatCurrency(count.amount)}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
