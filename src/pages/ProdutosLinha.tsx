@@ -525,7 +525,7 @@ export default function ProdutosLinha() {
                           }}
                           disabled={deactivateProductMutation.isPending || deactivateCustomProductMutation.isPending}
                         >
-                          Desabilitar
+                          Ocultar para Venda
                         </Button>
                       </>
                     ) : (
@@ -547,7 +547,7 @@ export default function ProdutosLinha() {
                         }}
                         disabled={reactivateCustomProductMutation.isPending || reactivateProductMutation.isPending}
                       >
-                        Habilitar
+                        Mostrar para Venda
                       </Button>
                     )}
                     
@@ -718,7 +718,7 @@ export default function ProdutosLinha() {
                           }}
                           disabled={deactivateProductMutation.isPending || deactivateCustomProductMutation.isPending}
                         >
-                          Desabilitar
+                          Ocultar para Venda
                         </Button>
                       </>
                     ) : (
@@ -740,7 +740,7 @@ export default function ProdutosLinha() {
                         }}
                         disabled={reactivateCustomProductMutation.isPending || reactivateProductMutation.isPending}
                       >
-                        Habilitar
+                        Mostrar para Venda
                       </Button>
                     )}
 
