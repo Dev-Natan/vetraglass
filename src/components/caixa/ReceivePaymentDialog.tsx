@@ -366,7 +366,10 @@ export function ReceivePaymentDialog({
                     inputMode="decimal"
                     placeholder="0,00"
                     value={paymentAmount}
-                    onChange={(e) => setPaymentAmount(e.target.value)}
+                    onChange={(e) => {
+                      const numeric = parseBRLInput(e.target.value);
+                      setPaymentAmount(formatBRLInput(numeric));
+                    }}
                     className="mt-1.5"
                   />
                   {amountToPay > remainingAmount && (
