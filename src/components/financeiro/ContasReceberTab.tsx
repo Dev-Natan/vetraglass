@@ -355,6 +355,17 @@ export function ContasReceberTab() {
         </Table>
       </div>
 
+      <ReceivePaymentDialog
+        open={receiveDialogOpen}
+        onOpenChange={(o) => {
+          setReceiveDialogOpen(o);
+          if (!o) setSelectedReceivable(null);
+        }}
+        receivable={selectedReceivable as any}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['accounts-receivable'] });
+        }}
+      />
     </div>
   );
 }
