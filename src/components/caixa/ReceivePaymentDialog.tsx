@@ -32,6 +32,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { useSalesFinancial, calculateFinancialStatus } from '@/hooks/useSalesFinancial';
+import { parseBRLInput, formatBRLInput } from '@/utils/currencyMask';
 
 interface Receivable {
   id: string;
