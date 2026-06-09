@@ -1604,16 +1604,20 @@ export type Database = {
         Row: {
           applies_to: string | null
           calculation_type: string | null
+          company_id: string | null
           company_item_id: string | null
           company_product_id: string
           created_at: string | null
           cut_angle: number | null
+          cut_angle_end: number | null
+          cut_angle_start: number | null
           height_formula: string | null
           id: string
           is_optional: boolean | null
           item_template_id: string | null
           loss_percent: number | null
           notes: string | null
+          pieces_formula: string | null
           pieces_quantity: number | null
           quantity_formula: string
           section: string | null
@@ -1625,16 +1629,20 @@ export type Database = {
         Insert: {
           applies_to?: string | null
           calculation_type?: string | null
+          company_id?: string | null
           company_item_id?: string | null
           company_product_id: string
           created_at?: string | null
           cut_angle?: number | null
+          cut_angle_end?: number | null
+          cut_angle_start?: number | null
           height_formula?: string | null
           id?: string
           is_optional?: boolean | null
           item_template_id?: string | null
           loss_percent?: number | null
           notes?: string | null
+          pieces_formula?: string | null
           pieces_quantity?: number | null
           quantity_formula?: string
           section?: string | null
@@ -1646,16 +1654,20 @@ export type Database = {
         Update: {
           applies_to?: string | null
           calculation_type?: string | null
+          company_id?: string | null
           company_item_id?: string | null
           company_product_id?: string
           created_at?: string | null
           cut_angle?: number | null
+          cut_angle_end?: number | null
+          cut_angle_start?: number | null
           height_formula?: string | null
           id?: string
           is_optional?: boolean | null
           item_template_id?: string | null
           loss_percent?: number | null
           notes?: string | null
+          pieces_formula?: string | null
           pieces_quantity?: number | null
           quantity_formula?: string
           section?: string | null
@@ -1665,6 +1677,20 @@ export type Database = {
           width_formula?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "company_product_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_product_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "company_product_items_company_item_id_fkey"
             columns: ["company_item_id"]
