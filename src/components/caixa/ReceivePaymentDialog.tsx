@@ -32,6 +32,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { useSalesFinancial, calculateFinancialStatus } from '@/hooks/useSalesFinancial';
+import { parseBRLInput, formatBRLInput } from '@/utils/currencyMask';
 
 interface Receivable {
   id: string;
@@ -94,7 +95,7 @@ export function ReceivePaymentDialog({
     receivable.total_amount - (receivable.paid_amount || 0) : 0;
 
   const amountToPay = isPartialPayment 
-    ? parseFloat(paymentAmount.replace(',', '.')) || 0
+    ? parseBRLInput(paymentAmount)
     : remainingAmount;
 
   const receivePaymentMutation = useMutation({
@@ -365,7 +366,10 @@ export function ReceivePaymentDialog({
                     inputMode="decimal"
                     placeholder="0,00"
                     value={paymentAmount}
-                    onChange={(e) => setPaymentAmount(e.target.value)}
+                    onChange={(e) => {
+                      const numeric = parseBRLInput(e.target.value);
+                      setPaymentAmount(formatBRLInput(numeric));
+                    }}
                     className="mt-1.5"
                   />
                   {amountToPay > remainingAmount && (
