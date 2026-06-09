@@ -109,6 +109,7 @@ export function CreateCustomProductDialog({ open, onOpenChange, defaultLinha }: 
   });
 
   const resetForm = () => {
+    setStep(1);
     setName('');
     setCategory('other');
     setCustomCategory('');
