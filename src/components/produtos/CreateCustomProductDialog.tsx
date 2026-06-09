@@ -29,13 +29,10 @@ export function CreateCustomProductDialog({ open, onOpenChange, defaultLinha }: 
   const { data: productCategories } = useProductCategories();
   const { data: productLinhas } = useProductLinhas();
   
+  const [step, setStep] = useState(1);
   const [name, setName] = useState('');
   const [category, setCategory] = useState('other');
-  const [customCategory, setCustomCategory] = useState('');
-  const [showCustomCategory, setShowCustomCategory] = useState(false);
-  const [linha, setLinha] = useState('');
-  const [customLinha, setCustomLinha] = useState('');
-  const [showCustomLinha, setShowCustomLinha] = useState(false);
+...
   const [basePrice, setBasePrice] = useState<number>(0);
   const [description, setDescription] = useState('');
   const [imageUrl, setImageUrl] = useState<string | null>(null);
