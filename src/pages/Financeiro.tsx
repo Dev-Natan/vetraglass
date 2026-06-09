@@ -75,8 +75,10 @@ const statusConfig = {
 
 export default function Financeiro() {
   const { currentCompany } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   useModuleTutorialTrigger('financeiro');
+  useModuleTutorialTrigger('caixa-vendas');
 
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
   const dateRange = getMonthDateRange(selectedMonth);
@@ -84,18 +86,23 @@ export default function Financeiro() {
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState(() => sessionStorage.getItem('financeiro-active-tab') || 'dashboard');
-  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  
-  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
-  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [activeTab, setActiveTab] = useState(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam) return tabParam;
+    return sessionStorage.getItem('financeiro-active-tab') || 'dashboard';
+  });
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && tabParam !== activeTab) {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     sessionStorage.setItem('financeiro-active-tab', value);
+    setSearchParams({ tab: value });
     setCurrentPage(1);
   };
 
