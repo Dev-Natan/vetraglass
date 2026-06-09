@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -20,7 +21,8 @@ import {
   PieChart,
   BarChart3,
   Receipt,
-  Settings
+  Settings,
+  ShoppingCart
 } from 'lucide-react';
 import { FormasPagamentoDialog } from '@/components/orcamentos/FormasPagamentoDialog';
 import { Button } from '@/components/ui/button';
@@ -54,6 +56,7 @@ import { ContasReceberTab } from '@/components/financeiro/ContasReceberTab';
 import { CaixaEmpresaTab } from '@/components/financeiro/CaixaEmpresaTab';
 import { CaixaReportTab } from '@/components/financeiro/CaixaReportTab';
 import { FinancialDashboard } from '@/components/financeiro/FinancialDashboard';
+import { CaixaOperacionalTab } from '@/components/financeiro/CaixaOperacionalTab';
 import { MonthSelector, getMonthDateRange } from '@/components/common/MonthSelector';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 import { PaginationControls } from '@/components/common/PaginationControls';
