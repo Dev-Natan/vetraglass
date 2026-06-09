@@ -147,45 +147,30 @@ export function AuditCashClosingDialog({
           </div>
 
           {/* Resumo */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-lg border p-3 text-center">
-              <p className="text-xs text-muted-foreground mb-1">Total Contado</p>
-              <p className="text-lg font-bold text-primary">{formatCurrency(audit.total_counted)}</p>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="rounded-lg border p-2 text-center bg-muted/30">
+              <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Esperado</p>
+              <p className="text-sm font-bold">{formatCurrency(audit.expected_amount)}</p>
             </div>
-            <div className="rounded-lg border p-3 text-center">
-              <p className="text-xs text-muted-foreground mb-1">Esperado</p>
-              <p className="text-lg font-bold">{formatCurrency(audit.expected_amount)}</p>
+            <div className="rounded-lg border p-2 text-center bg-primary/5 border-primary/20">
+              <p className="text-[10px] uppercase font-bold text-primary mb-1">Contado</p>
+              <p className="text-sm font-bold text-primary">{formatCurrency(audit.total_counted)}</p>
             </div>
-          </div>
-
-          {/* Diferença */}
-          <div className={`rounded-lg border p-3 ${
-            audit.difference === 0 ? 'bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800' 
-              : audit.difference > 0 ? 'bg-blue-50 border-blue-200 dark:bg-blue-950/30 dark:border-blue-800'
-              : 'bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800'
-          }`}>
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-2 font-medium text-sm">
-                {audit.difference === 0 ? (
-                  <>
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
-                    <span className="text-green-700 dark:text-green-400">Caixa conferido</span>
-                  </>
-                ) : audit.difference > 0 ? (
-                  <>
-                    <TrendingUp className="h-4 w-4 text-blue-600" />
-                    <span className="text-blue-700 dark:text-blue-400">Sobra</span>
-                  </>
-                ) : (
-                  <>
-                    <TrendingDown className="h-4 w-4 text-red-600" />
-                    <span className="text-red-700 dark:text-red-400">Falta</span>
-                  </>
-                )}
-              </span>
-              <Badge variant={audit.difference === 0 ? 'default' : audit.difference > 0 ? 'secondary' : 'destructive'}>
-                {audit.difference >= 0 ? '+' : ''}{formatCurrency(audit.difference)}
-              </Badge>
+            <div className={`rounded-lg border p-2 text-center ${
+              audit.difference === 0 ? 'bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800' 
+                : audit.difference > 0 ? 'bg-blue-50 border-blue-200 dark:bg-blue-950/30 dark:border-blue-800'
+                : 'bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800'
+            }`}>
+              <p className={`text-[10px] uppercase font-bold mb-1 ${
+                audit.difference === 0 ? 'text-green-600' : audit.difference > 0 ? 'text-blue-600' : 'text-red-600'
+              }`}>
+                {audit.difference === 0 ? 'Conferido' : audit.difference > 0 ? 'Sobra' : 'Falta'}
+              </p>
+              <p className={`text-sm font-bold ${
+                audit.difference === 0 ? 'text-green-700' : audit.difference > 0 ? 'text-blue-700' : 'text-red-700'
+              }`}>
+                {audit.difference >= 0 && audit.difference !== 0 ? '+' : ''}{formatCurrency(audit.difference)}
+              </p>
             </div>
           </div>
 
