@@ -168,10 +168,16 @@ export function ActivateProductDialog({
         pieces_quantity: component.pieces_quantity,
         pieces_formula: (component as any).pieces_formula,
         cut_angle: component.cut_angle,
+        cut_angle_start: (component as any).cut_angle_start,
+        cut_angle_end: (component as any).cut_angle_end,
         width_formula: component.width_formula,
         height_formula: component.height_formula,
         is_optional: component.is_optional,
         notes: component.notes,
+        section: (component as any).section,
+        side: (component as any).side,
+        calculation_type: (component as any).calculation_type,
+        applies_to: (component as any).applies_to,
       }));
 
       if (componentInserts.length > 0) {
