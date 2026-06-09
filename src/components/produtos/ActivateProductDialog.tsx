@@ -188,13 +188,20 @@ export function ActivateProductDialog({
       }));
 
       if (componentInserts.length > 0) {
+        // First delete any existing company-specific items for this template to avoid duplicates
+        await supabase
+          .from('product_template_items')
+          .delete()
+          .eq('company_id', currentCompany.id)
+          .eq('product_template_id', productTemplateId);
+
         const { error: insertError } = await supabase
           .from('product_template_items')
           .insert(componentInserts);
 
         if (insertError) {
           console.error('Error inserting components:', insertError);
-          // Continue anyway - the product is activated
+          throw insertError; // Throw instead of continuing to ensure we handle errors
         }
       }
 
