@@ -45,6 +45,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
+import { ReceivePaymentDialog } from '@/components/caixa/ReceivePaymentDialog';
 
 interface Receivable {
   id: string;
@@ -189,10 +190,10 @@ export function ContasReceberTab() {
     return statusConfig.pending;
   };
 
-  // Operational receive payment functionality removed from Financeiro audit view.
-  // Payments must be received through the Caixa module for proper cash tracking.
+  // Abre o dialog de recebimento (gera movimento no caixa aberto)
   const handleReceiveClick = (receivable: Receivable) => {
-    toast.info('O recebimento de parcelas deve ser realizado através do módulo de Caixa para registro correto no fluxo diário.');
+    setSelectedReceivable(receivable);
+    setReceiveDialogOpen(true);
   };
 
   return (
@@ -354,6 +355,17 @@ export function ContasReceberTab() {
         </Table>
       </div>
 
+      <ReceivePaymentDialog
+        open={receiveDialogOpen}
+        onOpenChange={(o) => {
+          setReceiveDialogOpen(o);
+          if (!o) setSelectedReceivable(null);
+        }}
+        receivable={selectedReceivable as any}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['accounts-receivable'] });
+        }}
+      />
     </div>
   );
 }
