@@ -414,5 +414,3 @@ export function CreateCustomProductDialog({ open, onOpenChange, defaultLinha }: 
     </Dialog>
   );
 }
-  );
-}
