@@ -100,92 +100,77 @@ export function AuditCashClosingDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-amber-500" />
+      <DialogContent className="sm:max-w-md p-0 overflow-hidden border-none shadow-2xl">
+        <DialogHeader className="p-4 bg-primary text-primary-foreground">
+          <DialogTitle className="flex items-center gap-2 text-white">
+            <AlertTriangle className="h-5 w-5 text-white animate-pulse" />
             Auditoria de Fechamento
           </DialogTitle>
-          <DialogDescription>
-            Revise a contagem do operador e aprove ou rejeite o fechamento.
+          <DialogDescription className="text-primary-foreground/80 text-xs">
+            Revise a contagem do operador e tome uma decisão sobre o fechamento.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="p-4 space-y-4">
           {/* Informações do operador */}
-          <div className="rounded-lg border bg-muted/50 p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-2 text-sm">
-                <User className="h-4 w-4 text-muted-foreground" />
+          <div className="grid grid-cols-2 gap-4">
+            {/* Informações do operador */}
+            <div className="rounded-lg border bg-muted/50 p-3 space-y-2">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <User className="h-3 w-3" />
                 Operador
-              </span>
-              <span className="font-medium">{audit.operator_name}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <p className="font-semibold text-sm truncate">{audit.operator_name}</p>
+              
+              <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
+                <Clock className="h-3 w-3" />
                 Submetido em
-              </span>
-              <span>{format(new Date(audit.submitted_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
+              </div>
+              <p className="text-sm">{format(new Date(audit.submitted_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
             </div>
-          </div>
 
-          {/* Contagem por método de pagamento */}
-          <div className="rounded-lg border p-3 space-y-2">
-            <h4 className="font-medium text-sm flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-primary" />
-              Contagem Informada
-            </h4>
-            <div className="grid grid-cols-2 gap-1 text-sm pl-4">
-              {audit.counts_submitted.map((count, idx) => (
-                <div key={idx} className="contents">
-                  <span className="text-muted-foreground">{getPaymentMethodLabel(count.payment_method)}:</span>
-                  <span className="text-right font-medium">{formatCurrency(count.amount)}</span>
-                </div>
-              ))}
+            {/* Contagem por método de pagamento */}
+            <div className="rounded-lg border p-3 space-y-2">
+              <h4 className="font-semibold text-xs text-muted-foreground flex items-center gap-2 uppercase tracking-wider">
+                <DollarSign className="h-3 w-3 text-primary" />
+                Contagem Detalhada
+              </h4>
+              <div className="space-y-1 overflow-y-auto max-h-[80px] pr-1 scrollbar-thin">
+                {audit.counts_submitted.map((count, idx) => (
+                  <div key={idx} className="flex justify-between items-center text-xs">
+                    <span className="text-muted-foreground">{getPaymentMethodLabel(count.payment_method)}</span>
+                    <span className="font-medium">{formatCurrency(count.amount)}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
           {/* Resumo */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-lg border p-3 text-center">
-              <p className="text-xs text-muted-foreground mb-1">Total Contado</p>
-              <p className="text-lg font-bold text-primary">{formatCurrency(audit.total_counted)}</p>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="rounded-lg border p-2 text-center bg-muted/30">
+              <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Esperado</p>
+              <p className="text-sm font-bold">{formatCurrency(audit.expected_amount)}</p>
             </div>
-            <div className="rounded-lg border p-3 text-center">
-              <p className="text-xs text-muted-foreground mb-1">Esperado</p>
-              <p className="text-lg font-bold">{formatCurrency(audit.expected_amount)}</p>
+            <div className="rounded-lg border p-2 text-center bg-primary/5 border-primary/20">
+              <p className="text-[10px] uppercase font-bold text-primary mb-1">Contado</p>
+              <p className="text-sm font-bold text-primary">{formatCurrency(audit.total_counted)}</p>
             </div>
-          </div>
-
-          {/* Diferença */}
-          <div className={`rounded-lg border p-3 ${
-            audit.difference === 0 ? 'bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800' 
-              : audit.difference > 0 ? 'bg-blue-50 border-blue-200 dark:bg-blue-950/30 dark:border-blue-800'
-              : 'bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800'
-          }`}>
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-2 font-medium text-sm">
-                {audit.difference === 0 ? (
-                  <>
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
-                    <span className="text-green-700 dark:text-green-400">Caixa conferido</span>
-                  </>
-                ) : audit.difference > 0 ? (
-                  <>
-                    <TrendingUp className="h-4 w-4 text-blue-600" />
-                    <span className="text-blue-700 dark:text-blue-400">Sobra</span>
-                  </>
-                ) : (
-                  <>
-                    <TrendingDown className="h-4 w-4 text-red-600" />
-                    <span className="text-red-700 dark:text-red-400">Falta</span>
-                  </>
-                )}
-              </span>
-              <Badge variant={audit.difference === 0 ? 'default' : audit.difference > 0 ? 'secondary' : 'destructive'}>
-                {audit.difference >= 0 ? '+' : ''}{formatCurrency(audit.difference)}
-              </Badge>
+            <div className={`rounded-lg border p-2 text-center ${
+              audit.difference === 0 ? 'bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800' 
+                : audit.difference > 0 ? 'bg-blue-50 border-blue-200 dark:bg-blue-950/30 dark:border-blue-800'
+                : 'bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800'
+            }`}>
+              <p className={`text-[10px] uppercase font-bold mb-1 ${
+                audit.difference === 0 ? 'text-green-600' : audit.difference > 0 ? 'text-blue-600' : 'text-red-600'
+              }`}>
+                {audit.difference === 0 ? 'Conferido' : audit.difference > 0 ? 'Sobra' : 'Falta'}
+              </p>
+              <p className={`text-sm font-bold ${
+                audit.difference === 0 ? 'text-green-700' : audit.difference > 0 ? 'text-blue-700' : 'text-red-700'
+              }`}>
+                {audit.difference >= 0 && audit.difference !== 0 ? '+' : ''}{formatCurrency(audit.difference)}
+              </p>
             </div>
           </div>
 
@@ -199,70 +184,83 @@ export function AuditCashClosingDialog({
 
           <Separator />
 
-          {/* Campo de ajuste (opcional) */}
-          {hasDifference && (
-            <div className="space-y-2">
-              <Label htmlFor="adjustment">Ajuste de Valor (opcional)</Label>
-              <Input
-                id="adjustment"
-                type="text"
-                inputMode="decimal"
-                placeholder="0,00"
-                value={adjustmentAmount}
-                onChange={(e) => setAdjustmentAmount(e.target.value)}
-                disabled={isLoading}
-              />
-              <p className="text-xs text-muted-foreground">
-                Informe um valor para ajustar a contagem (positivo ou negativo).
-              </p>
-            </div>
-          )}
+          {/* Campo de ajuste e Observações */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {hasDifference && (
+              <div className="space-y-2">
+                <Label htmlFor="adjustment" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Ajuste de Valor
+                </Label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="adjustment"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0,00"
+                    className="pl-9 h-9 text-sm"
+                    value={adjustmentAmount}
+                    onChange={(e) => setAdjustmentAmount(e.target.value)}
+                    disabled={isLoading}
+                  />
+                </div>
+                <p className="text-[10px] text-muted-foreground leading-tight">
+                  Ajusta o saldo final do caixa (positivo ou negativo).
+                </p>
+              </div>
+            )}
 
-          {/* Observações do auditor */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">
-              Observações do Auditor {hasDifference ? '(obrigatório para rejeição)' : '(opcional)'}
-            </Label>
-            <Textarea
-              id="notes"
-              placeholder="Justificativa ou observações..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              disabled={isLoading}
-              rows={2}
-            />
+            <div className="space-y-2">
+              <Label htmlFor="notes" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Observações {hasDifference ? '(obrigatório p/ rejeitar)' : '(opcional)'}
+              </Label>
+              <Textarea
+                id="notes"
+                placeholder="Motivo da decisão..."
+                className="resize-none text-sm h-9 min-h-[36px]"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                disabled={isLoading}
+                rows={1}
+              />
+            </div>
           </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="p-4 bg-muted/30 border-t flex flex-row gap-2 justify-end">
           <Button 
-            variant="outline" 
+            variant="ghost" 
             onClick={handleClose} 
             disabled={isLoading}
+            className="text-xs h-9"
           >
-            Cancelar
+            Sair
           </Button>
-          <Button 
-            variant="destructive" 
-            onClick={handleReject} 
-            disabled={isLoading || !notes}
-          >
-            {isLoading && action === 'reject' ? (
-              <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Rejeitando...</>
-            ) : (
-              <><XCircle className="mr-2 h-4 w-4" />Rejeitar</>
-            )}
-          </Button>
-          <Button 
-            onClick={handleApprove} 
-            disabled={isLoading}
-          >
-            {isLoading && action === 'approve' ? (
-              <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Aprovando...</>
-            ) : (
-              <><CheckCircle2 className="mr-2 h-4 w-4" />{hasAdjustment ? 'Ajustar e Aprovar' : 'Aprovar'}</>
-            )}
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={handleReject} 
+              disabled={isLoading || !notes}
+              className="text-xs border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 h-9"
+            >
+              {isLoading && action === 'reject' ? (
+                <><Loader2 className="mr-1 h-3 w-3 animate-spin" />Rejeitando...</>
+              ) : (
+                <><XCircle className="mr-1 h-3 w-3" />Rejeitar</>
+              )}
+            </Button>
+            <Button 
+              onClick={handleApprove} 
+              disabled={isLoading}
+              className="text-xs h-9 shadow-sm bg-primary hover:bg-primary/90"
+            >
+              {isLoading && action === 'approve' ? (
+                <><Loader2 className="mr-1 h-3 w-3 animate-spin" />Aprovando...</>
+              ) : (
+                <><CheckCircle2 className="mr-1 h-3 w-3" />{hasAdjustment ? 'Ajustar e Aprovar' : 'Aprovar'}</>
+              )}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
