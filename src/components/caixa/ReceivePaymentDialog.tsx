@@ -422,7 +422,7 @@ export function ReceivePaymentDialog({
           )}
         </div>
 
-        <DialogFooter className="p-6 pt-0 bg-muted/30 gap-2 sm:gap-3 flex-row">
+        <DialogFooter className="p-4 bg-muted/30 gap-2 sm:gap-3 flex-row shrink-0 border-t border-border/60">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
