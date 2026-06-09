@@ -7723,15 +7723,6 @@ export type Database = {
         }
         Returns: Json
       }
-      complete_cash_audit: {
-        Args: {
-          _action: string
-          _adjustment_amount?: number
-          _audit_id: string
-          _notes?: string
-        }
-        Returns: Json
-      }
       create_company_and_assign_admin: {
         Args: {
           _address?: string
@@ -7880,7 +7871,6 @@ export type Database = {
         Args: { _company_id: string }
         Returns: Json
       }
-      get_pending_cash_audits: { Args: { _company_id: string }; Returns: Json }
       get_user_company_ids: { Args: { _user_id: string }; Returns: string[] }
       get_user_open_cash_register: {
         Args: { _company_id: string }
@@ -8067,10 +8057,6 @@ export type Database = {
       }
       reset_company_product_to_template: {
         Args: { p_company_product_id: string; p_user_id: string }
-        Returns: Json
-      }
-      submit_cash_closing_for_audit: {
-        Args: { _cash_register_id: string; _counts: Json; _notes?: string }
         Returns: Json
       }
       transfer_company_ownership: {

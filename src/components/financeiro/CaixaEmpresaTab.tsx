@@ -239,39 +239,25 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
     },
     onError: (error: Error) => toast.error(`Erro: ${error.message}`),
   });
-  // Close cash register
+  // Close cash register (direct, no audit/manager approval)
   const closeCashMutation = useMutation({
     mutationFn: async ({ counts, notes }: { counts: { payment_method: string; amount: number }[]; notes: string }) => {
       if (!openCashRegister?.id || !user?.id || !currentCompany?.id) throw new Error('Dados inválidos');
-      
-      // Calculate total from counts
-      const actualAmount = counts.reduce((sum, c) => sum + c.amount, 0);
-      
-      const { data, error } = await supabase.rpc('close_daily_cash', {
+
+      const { data, error } = await (supabase.rpc as any)('close_cash_register_direct', {
         _cash_register_id: openCashRegister.id,
-        _actual_amount: actualAmount,
+        _counts: counts,
         _notes: notes || null,
-        _user_id: user.id,
       });
       if (error) throw error;
-      const result = data as { 
-        success: boolean; 
-        error?: string; 
-        net_excess?: number;
-        compensation?: { total_compensated: number };
-      };
+      const result = data as { success: boolean; error?: string };
       if (!result.success) {
         throw new Error(result.error || 'Erro ao fechar caixa');
       }
       return result;
     },
-    onSuccess: (result) => {
-      const compensation = result?.compensation?.total_compensated || 0;
-      if (compensation > 0) {
-        toast.success(`Caixa fechado! R$ ${compensation.toFixed(2)} compensados de adiantamentos anteriores.`, { duration: 5000 });
-      } else {
-        toast.success('Caixa fechado com sucesso!');
-      }
+    onSuccess: () => {
+      toast.success('Caixa fechado com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['cash-register-open'] });
       queryClient.invalidateQueries({ queryKey: ['sales-today'] });
       queryClient.invalidateQueries({ queryKey: ['company-cash'] });
@@ -281,6 +267,7 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
     },
     onError: (error: Error) => toast.error(`Erro ao fechar caixa: ${error.message}`),
   });
+
 
   const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
