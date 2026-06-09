@@ -7803,6 +7803,10 @@ export type Database = {
         Args: { _company_id: string; _target_user_id: string }
         Returns: Json
       }
+      distribute_product_template_to_all_companies: {
+        Args: { _product_template_id: string }
+        Returns: undefined
+      }
       generate_next_recurring_expense: {
         Args: { expense_id: string }
         Returns: string
