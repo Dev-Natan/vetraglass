@@ -551,7 +551,7 @@ export type Database = {
           difference: number
           expected_amount: number
           id: string
-          operator_id: string
+          operator_id: string | null
           operator_name: string | null
           operator_notes: string | null
           status: string
@@ -573,7 +573,7 @@ export type Database = {
           difference: number
           expected_amount: number
           id?: string
-          operator_id: string
+          operator_id?: string | null
           operator_name?: string | null
           operator_notes?: string | null
           status?: string
@@ -595,7 +595,7 @@ export type Database = {
           difference?: number
           expected_amount?: number
           id?: string
-          operator_id?: string
+          operator_id?: string | null
           operator_name?: string | null
           operator_notes?: string | null
           status?: string
@@ -3922,7 +3922,7 @@ export type Database = {
           discrepancy_type: string
           id: string
           notes: string | null
-          operator_id: string
+          operator_id: string | null
           status: string
         }
         Insert: {
@@ -3936,7 +3936,7 @@ export type Database = {
           discrepancy_type: string
           id?: string
           notes?: string | null
-          operator_id: string
+          operator_id?: string | null
           status?: string
         }
         Update: {
@@ -3950,7 +3950,7 @@ export type Database = {
           discrepancy_type?: string
           id?: string
           notes?: string | null
-          operator_id?: string
+          operator_id?: string | null
           status?: string
         }
         Relationships: [
@@ -4215,7 +4215,7 @@ export type Database = {
           new_value: number
           os_item_id: string
           previous_value: number | null
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -4224,7 +4224,7 @@ export type Database = {
           new_value: number
           os_item_id: string
           previous_value?: number | null
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -4233,7 +4233,7 @@ export type Database = {
           new_value?: number
           os_item_id?: string
           previous_value?: number | null
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
