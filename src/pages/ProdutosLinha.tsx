@@ -311,7 +311,11 @@ export default function ProdutosLinha() {
         };
       });
 
-    // If showing "Desabilitados", we also want to show templates that haven't been activated yet
+    // We no longer need to show "unactivated templates" as templates, 
+    // because they are now auto-activated via trigger on creation.
+    // However, if some products were created BEFORE the trigger, 
+    // or if for some reason a product is in `products` but not in `company_products`, 
+    // we still show them as "Desabilitados" if showActive is false.
     if (!showActive) {
       const templateIdsActivated = new Set(companyProducts.map(cp => cp.product_template_id).filter(Boolean));
       const unactivatedTemplates = (products || [])
@@ -401,7 +405,7 @@ export default function ProdutosLinha() {
                 : 'bg-muted text-muted-foreground hover:bg-muted/80'
             }`}
           >
-            Desabilitados
+            Ocultos ({companyProducts.filter(cp => !cp.is_active).length})
           </button>
         </div>
 
@@ -521,7 +525,7 @@ export default function ProdutosLinha() {
                           }}
                           disabled={deactivateProductMutation.isPending || deactivateCustomProductMutation.isPending}
                         >
-                          Desabilitar
+                          Ocultar para Venda
                         </Button>
                       </>
                     ) : (
@@ -543,7 +547,7 @@ export default function ProdutosLinha() {
                         }}
                         disabled={reactivateCustomProductMutation.isPending || reactivateProductMutation.isPending}
                       >
-                        Habilitar
+                        Mostrar para Venda
                       </Button>
                     )}
                     
@@ -714,7 +718,7 @@ export default function ProdutosLinha() {
                           }}
                           disabled={deactivateProductMutation.isPending || deactivateCustomProductMutation.isPending}
                         >
-                          Desabilitar
+                          Ocultar para Venda
                         </Button>
                       </>
                     ) : (
@@ -736,7 +740,7 @@ export default function ProdutosLinha() {
                         }}
                         disabled={reactivateCustomProductMutation.isPending || reactivateProductMutation.isPending}
                       >
-                        Habilitar
+                        Mostrar para Venda
                       </Button>
                     )}
 
