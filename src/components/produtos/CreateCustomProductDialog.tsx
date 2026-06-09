@@ -133,228 +133,286 @@ export function CreateCustomProductDialog({ open, onOpenChange, defaultLinha }: 
   const finalLinha = showCustomLinha ? customLinha.trim() : (linha || 'Personalizado');
   const canCreate = name.trim().length > 0 && finalCategory.length > 0;
 
+  const steps = [
+    { title: 'Identificação', description: 'Informações básicas e imagem' },
+    { title: 'Classificação', description: 'Categoria e linha' },
+    { title: 'Valores', description: 'Preço e descrição' }
+  ];
+
+  const nextStep = () => {
+    if (step < 3) setStep(step + 1);
+  };
+
+  const prevStep = () => {
+    if (step > 1) setStep(step - 1);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-primary" />
-            Criar Produto Personalizado
-          </DialogTitle>
-          <DialogDescription>
-            Crie um produto exclusivo para sua empresa que não está na biblioteca de templates.
-          </DialogDescription>
-        </DialogHeader>
-
-        {/* Warning Alert */}
-        <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-          <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-          <div className="text-sm">
-            <p className="font-medium text-amber-700">Atenção</p>
-            <p className="text-amber-600/80 text-xs mt-1">
-              Produtos personalizados não utilizam fórmulas automáticas de cálculo de materiais. 
-              Você precisará gerenciar a composição manualmente.
-            </p>
-          </div>
-        </div>
-
-        <div className="space-y-4 py-2">
-          {/* Image Upload */}
-          <ImageUploadField
-            label="Imagem do Produto"
-            imageUrl={imageUrl}
-            onImageChange={setImageUrl}
-            bucket="company-product-images"
-            path={`${currentCompany?.id}/${tempProductId}`}
-            size="md"
-          />
-
-          {/* Name */}
-          <div className="space-y-2">
-            <Label htmlFor="name">Nome do Produto *</Label>
-            <Input
-              id="name"
-              placeholder="Ex: Porta de Correr Especial"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
-
-          {/* Category & Linha Row */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Categoria</Label>
-              {showCustomCategory ? (
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Nome da categoria"
-                    value={customCategory}
-                    onChange={(e) => setCustomCategory(e.target.value)}
-                    className="flex-1"
-                  />
-                  <Button 
-                    type="button" 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => {
-                      setShowCustomCategory(false);
-                      setCustomCategory('');
-                    }}
-                  >
-                    Cancelar
-                  </Button>
-                </div>
-              ) : (
-                <Select value={category} onValueChange={(val) => {
-                  if (val === '__new__') {
-                    setShowCustomCategory(true);
-                  } else {
-                    setCategory(val);
-                  }
-                }}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {allCategories.map((cat) => (
-                      <SelectItem key={cat.value} value={cat.value}>
-                        {cat.label}
-                      </SelectItem>
-                    ))}
-                    <SelectItem value="__new__" className="text-primary">
-                      <span className="flex items-center gap-2">
-                        <Plus className="w-4 h-4" />
-                        Nova categoria
-                      </span>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label>Linha</Label>
-              {showCustomLinha ? (
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Nome da linha"
-                    value={customLinha}
-                    onChange={(e) => setCustomLinha(e.target.value)}
-                    className="flex-1"
-                  />
-                  <Button 
-                    type="button" 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => {
-                      setShowCustomLinha(false);
-                      setCustomLinha('');
-                    }}
-                  >
-                    Cancelar
-                  </Button>
-                </div>
-              ) : (
-                <Select value={linha} onValueChange={(val) => {
-                  if (val === '__new__') {
-                    setShowCustomLinha(true);
-                  } else {
-                    setLinha(val);
-                  }
-                }}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a linha..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {productLinhas?.map((l) => (
-                      <SelectItem key={l.id} value={l.name}>
-                        {l.name}
-                      </SelectItem>
-                    ))}
-                    <SelectItem value="__new__" className="text-primary">
-                      <span className="flex items-center gap-2">
-                        <Plus className="w-4 h-4" />
-                        Nova linha
-                      </span>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-          </div>
-
-          {/* Base Price */}
-          <div className="space-y-2">
-            <Label htmlFor="basePrice">Preço Base (R$/m²)</Label>
-            <Input
-              id="basePrice"
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="0,00"
-              value={basePrice || ''}
-              onChange={(e) => setBasePrice(parseFloat(e.target.value) || 0)}
-            />
-            <p className="text-xs text-muted-foreground">
-              Este é o preço por metro quadrado que será usado nos orçamentos.
-            </p>
-          </div>
-
-          {/* Description */}
-          <div className="space-y-2">
-            <Label htmlFor="description">Descrição (opcional)</Label>
-            <Textarea
-              id="description"
-              placeholder="Descreva as características do produto..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-            />
-          </div>
-        </div>
-
-        {/* Preview Card */}
-        {name && (
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border">
-            <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
-              {imageUrl ? (
-                <img src={imageUrl} alt="Preview" className="w-full h-full object-contain" />
-              ) : (
-                <Package className="w-6 h-6 text-muted-foreground" />
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm truncate">{name}</p>
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <Badge variant="secondary" className="text-xs">
-                  {showCustomCategory ? customCategory || 'Categoria' : (allCategories.find(c => c.value === category)?.label || category)}
-                </Badge>
-                <Badge variant="outline" className="text-xs">
-                  {finalLinha || 'Personalizado'}
-                </Badge>
-                <Badge variant="outline" className="text-xs">
-                  <Sparkles className="w-3 h-3 mr-1" />
-                  Personalizado
-                </Badge>
+      <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden gap-0">
+        <DialogHeader className="p-6 pb-2">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <DialogTitle className="text-lg">Novo Produto</DialogTitle>
+                <DialogDescription className="text-xs">
+                  Passo {step} de 3: {steps[step - 1].title}
+                </DialogDescription>
               </div>
             </div>
-            <span className="text-sm font-medium text-muted-foreground">
-              R$ {basePrice.toFixed(2)}/m²
-            </span>
+            <div className="flex gap-1">
+              {[1, 2, 3].map((s) => (
+                <div 
+                  key={s} 
+                  className={`h-1.5 w-8 rounded-full transition-all duration-300 ${
+                    s === step ? 'bg-primary w-12' : s < step ? 'bg-primary/40' : 'bg-muted'
+                  }`}
+                />
+              ))}
+            </div>
           </div>
-        )}
+        </DialogHeader>
 
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
+        <div className="px-6 py-2 min-h-[380px]">
+          {step === 1 && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="flex items-start gap-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="text-xs">
+                  <p className="font-semibold text-amber-700">Composição Manual</p>
+                  <p className="text-amber-600/80 mt-0.5">
+                    Produtos personalizados não possuem fórmulas automáticas de materiais.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <ImageUploadField
+                  label="Imagem do Produto"
+                  imageUrl={imageUrl}
+                  onImageChange={setImageUrl}
+                  bucket="company-product-images"
+                  path={`${currentCompany?.id}/${tempProductId}`}
+                  size="lg"
+                />
+
+                <div className="space-y-2">
+                  <Label htmlFor="name" className="text-sm font-semibold">Nome do Produto *</Label>
+                  <Input
+                    id="name"
+                    placeholder="Ex: Porta de Correr Especial"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="h-11"
+                  />
+                  <p className="text-[10px] text-muted-foreground">Escolha um nome claro para facilitar a identificação nos orçamentos.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="grid grid-cols-1 gap-6">
+                <div className="space-y-3">
+                  <Label className="text-sm font-semibold">Categoria</Label>
+                  {showCustomCategory ? (
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Nome da categoria"
+                        value={customCategory}
+                        onChange={(e) => setCustomCategory(e.target.value)}
+                        className="h-11 flex-1"
+                        autoFocus
+                      />
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        onClick={() => {
+                          setShowCustomCategory(false);
+                          setCustomCategory('');
+                        }}
+                        className="h-11"
+                      >
+                        Voltar
+                      </Button>
+                    </div>
+                  ) : (
+                    <Select value={category} onValueChange={(val) => {
+                      if (val === '__new__') setShowCustomCategory(true);
+                      else setCategory(val);
+                    }}>
+                      <SelectTrigger className="h-11">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {allCategories.map((cat) => (
+                          <SelectItem key={cat.value} value={cat.value}>
+                            {cat.label}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="__new__" className="text-primary font-medium">
+                          <span className="flex items-center gap-2">
+                            <Plus className="w-4 h-4" />
+                            Criar nova categoria
+                          </span>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-sm font-semibold">Linha de Produto</Label>
+                  {showCustomLinha ? (
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Nome da linha"
+                        value={customLinha}
+                        onChange={(e) => setCustomLinha(e.target.value)}
+                        className="h-11 flex-1"
+                        autoFocus
+                      />
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        onClick={() => {
+                          setShowCustomLinha(false);
+                          setCustomLinha('');
+                        }}
+                        className="h-11"
+                      >
+                        Voltar
+                      </Button>
+                    </div>
+                  ) : (
+                    <Select value={linha} onValueChange={(val) => {
+                      if (val === '__new__') setShowCustomLinha(true);
+                      else setLinha(val);
+                    }}>
+                      <SelectTrigger className="h-11">
+                        <SelectValue placeholder="Selecione a linha..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {productLinhas?.map((l) => (
+                          <SelectItem key={l.id} value={l.name}>
+                            {l.name}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="__new__" className="text-primary font-medium">
+                          <span className="flex items-center gap-2">
+                            <Plus className="w-4 h-4" />
+                            Criar nova linha
+                          </span>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="basePrice" className="text-sm font-semibold">Preço Base (R$/m²)</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">R$</span>
+                    <Input
+                      id="basePrice"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0,00"
+                      value={basePrice || ''}
+                      onChange={(e) => setBasePrice(parseFloat(e.target.value) || 0)}
+                      className="h-11 pl-9"
+                    />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">Preço referencial para orçamentos rápidos.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="description" className="text-sm font-semibold">Descrição Adicional</Label>
+                  <Textarea
+                    id="description"
+                    placeholder="Detalhes, especificações técnicas ou observações importantes..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={4}
+                    className="resize-none"
+                  />
+                </div>
+              </div>
+
+              {/* Summary Preview */}
+              <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 flex items-center gap-4">
+                <div className="w-14 h-14 rounded-lg bg-background border flex items-center justify-center overflow-hidden shrink-0">
+                  {imageUrl ? (
+                    <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <Package className="w-7 h-7 text-muted-foreground/40" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-bold text-sm truncate">{name || 'Produto sem nome'}</h4>
+                  <div className="flex gap-2 mt-1">
+                    <Badge variant="outline" className="text-[10px] h-5 bg-background">
+                      {finalCategory || 'Sem Categoria'}
+                    </Badge>
+                    <Badge variant="outline" className="text-[10px] h-5 bg-background">
+                      {finalLinha || 'Sem Linha'}
+                    </Badge>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] text-muted-foreground">Valor m²</p>
+                  <p className="font-bold text-primary">R$ {basePrice.toFixed(2)}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter className="p-6 pt-2 bg-muted/30 border-t flex flex-row items-center justify-between gap-3 sm:gap-0">
           <Button 
-            onClick={() => createMutation.mutate()} 
-            disabled={!canCreate || createMutation.isPending}
+            variant="ghost" 
+            onClick={step === 1 ? () => onOpenChange(false) : prevStep}
+            className="px-4"
           >
-            {createMutation.isPending ? 'Criando...' : 'Criar Produto'}
+            {step === 1 ? 'Cancelar' : <><ChevronLeft className="w-4 h-4 mr-2" /> Voltar</>}
           </Button>
+
+          {step < 3 ? (
+            <Button 
+              onClick={nextStep} 
+              disabled={step === 1 && !name.trim()}
+              className="px-6"
+            >
+              Continuar <ChevronRight className="w-4 h-4 ml-2" />
+            </Button>
+          ) : (
+            <Button 
+              onClick={() => createMutation.mutate()} 
+              disabled={!canCreate || createMutation.isPending}
+              className="px-8 bg-primary hover:bg-primary/90"
+            >
+              {createMutation.isPending ? (
+                'Criando...'
+              ) : (
+                <><Check className="w-4 h-4 mr-2" /> Finalizar Produto</>
+              )}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
   );
 }
