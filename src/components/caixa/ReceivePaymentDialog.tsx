@@ -252,71 +252,81 @@ export function ReceivePaymentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Receipt className="h-5 w-5" />
-            Receber Pagamento
-          </DialogTitle>
-          <DialogDescription>
-            Registre o recebimento desta parcela/conta
-          </DialogDescription>
+      <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden">
+        <DialogHeader className="p-6 pb-0">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
+              <Receipt className="h-5 w-5" />
+            </div>
+            <div className="space-y-0.5">
+              <DialogTitle className="text-base font-semibold leading-tight">
+                Receber Pagamento
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                Registre o recebimento desta parcela/conta
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          {/* Info do Cliente */}
-          <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-            <User className="h-5 w-5 text-muted-foreground" />
-            <div>
-              <p className="font-medium">{receivable.customer_name}</p>
-              <p className="text-sm text-muted-foreground">{receivable.description}</p>
+        <div className="p-6 space-y-4">
+          {/* Cliente / OS */}
+          <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border border-border/60">
+            <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground shrink-0">
+              <User className="h-4 w-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold truncate">{receivable.customer_name}</p>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider truncate">
+                {receivable.description}
+              </p>
             </div>
           </div>
 
           {/* Vencimento */}
-          <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-            <Calendar className="h-5 w-5 text-muted-foreground" />
-            <div className="flex-1">
-              <p className="text-sm text-muted-foreground">Vencimento</p>
-              <p className="font-medium">
-                {format(new Date(receivable.due_date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-              </p>
+          <div className="flex items-center justify-between p-3 rounded-lg border border-border/60">
+            <div className="flex items-center gap-3 min-w-0">
+              <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase leading-none mb-1">
+                  Vencimento
+                </p>
+                <p className="text-sm font-medium truncate">
+                  {format(new Date(receivable.due_date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                </p>
+              </div>
             </div>
             {isOverdue && (
-              <Badge variant="destructive" className="text-xs">
+              <Badge variant="destructive" className="text-[10px] font-bold uppercase tracking-tight shrink-0">
                 Atrasado
               </Badge>
             )}
           </div>
 
-          {/* Resumo do Valor */}
-          <div className="space-y-2 p-4 bg-muted/50 rounded-lg">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Valor total:</span>
-              <span className="font-medium">{formatCurrency(receivable.total_amount)}</span>
+          {/* Resumo: Valor total + Saldo pendente */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-3 rounded-lg border border-border/60">
+              <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Valor total</p>
+              <p className="text-sm font-semibold">{formatCurrency(receivable.total_amount)}</p>
             </div>
-            
-            {(receivable.paid_amount || 0) > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="flex items-center gap-1 text-green-600">
-                  <CheckCircle2 className="h-3 w-3" />
-                  Já pago:
-                </span>
-                <span className="font-medium text-green-600">
-                  {formatCurrency(receivable.paid_amount || 0)}
-                </span>
-              </div>
-            )}
-            
-            <Separator className="my-2" />
-            
-            <div className="flex justify-between">
-              <span className="font-medium">Saldo pendente:</span>
-              <span className="text-lg font-bold text-primary">
-                {formatCurrency(remainingAmount)}
-              </span>
+            <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+              <p className="text-[10px] uppercase font-bold text-primary mb-1">Saldo pendente</p>
+              <p className="text-sm font-bold text-primary">{formatCurrency(remainingAmount)}</p>
             </div>
           </div>
+
+          {/* Já pago (se houver) */}
+          {(receivable.paid_amount || 0) > 0 && (
+            <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+              <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Já pago
+              </span>
+              <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400">
+                {formatCurrency(receivable.paid_amount || 0)}
+              </span>
+            </div>
+          )}
 
           {/* Alerta se caixa fechado */}
           {!isCaixaAberto && !isLoadingCash && (
@@ -331,30 +341,31 @@ export function ReceivePaymentDialog({
           {/* Opções de pagamento */}
           {isCaixaAberto && (
             <>
-              {/* Pagamento parcial */}
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
                   id="partial-payment"
                   checked={isPartialPayment}
                   onChange={(e) => setIsPartialPayment(e.target.checked)}
-                  className="rounded border-input"
+                  className="w-4 h-4 rounded border-input text-primary focus:ring-primary"
                 />
-                <Label htmlFor="partial-payment" className="text-sm cursor-pointer">
+                <Label htmlFor="partial-payment" className="text-sm font-medium cursor-pointer">
                   Pagamento parcial
                 </Label>
               </div>
 
               {isPartialPayment && (
                 <div>
-                  <Label className="text-sm font-medium">Valor a receber</Label>
+                  <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Valor a receber
+                  </Label>
                   <Input
                     type="text"
                     inputMode="decimal"
                     placeholder="0,00"
                     value={paymentAmount}
                     onChange={(e) => setPaymentAmount(e.target.value)}
-                    className="mt-1"
+                    className="mt-1.5"
                   />
                   {amountToPay > remainingAmount && (
                     <p className="text-xs text-destructive mt-1">
@@ -364,67 +375,70 @@ export function ReceivePaymentDialog({
                 </div>
               )}
 
-              {/* Forma de Pagamento */}
-              <div>
-                <Label className="text-sm font-medium">Forma de Pagamento</Label>
+              {/* Forma de Pagamento - segmented */}
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Forma de Pagamento
+                </Label>
                 <RadioGroup
                   value={paymentMethod}
                   onValueChange={(v) => setPaymentMethod(v as typeof paymentMethod)}
-                  className="flex gap-4 mt-2"
+                  className="grid grid-cols-3 gap-2"
                 >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="dinheiro" id="pay-dinheiro" />
-                    <Label htmlFor="pay-dinheiro" className="flex items-center gap-1 cursor-pointer">
-                      <DollarSign className="w-4 h-4" />
-                      Dinheiro
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="cartao" id="pay-cartao" />
-                    <Label htmlFor="pay-cartao" className="flex items-center gap-1 cursor-pointer">
-                      <CreditCard className="w-4 h-4" />
-                      Cartão
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="pix" id="pay-pix" />
-                    <Label htmlFor="pay-pix" className="flex items-center gap-1 cursor-pointer">
-                      <Smartphone className="w-4 h-4" />
-                      Pix
-                    </Label>
-                  </div>
+                  {[
+                    { value: 'dinheiro', label: 'Dinheiro', Icon: DollarSign },
+                    { value: 'cartao', label: 'Cartão', Icon: CreditCard },
+                    { value: 'pix', label: 'Pix', Icon: Smartphone },
+                  ].map(({ value, label, Icon }) => {
+                    const selected = paymentMethod === value;
+                    return (
+                      <Label
+                        key={value}
+                        htmlFor={`pay-${value}`}
+                        className={`relative flex flex-col items-center gap-1.5 p-3 rounded-lg border cursor-pointer transition-colors ${
+                          selected
+                            ? 'border-primary bg-primary/5 text-primary'
+                            : 'border-border hover:bg-muted/50 text-muted-foreground'
+                        }`}
+                      >
+                        <RadioGroupItem value={value} id={`pay-${value}`} className="sr-only" />
+                        <Icon className="w-4 h-4" />
+                        <span className="text-[11px] font-bold uppercase tracking-tight">
+                          {label}
+                        </span>
+                      </Label>
+                    );
+                  })}
                 </RadioGroup>
               </div>
 
-              {/* Valor a receber */}
-              {!isPartialPayment && (
-                <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg border border-primary/20">
-                  <span className="text-sm font-medium">Valor a receber</span>
-                  <span className="text-xl font-bold text-primary">
-                    {formatCurrency(amountToPay)}
-                  </span>
-                </div>
-              )}
+              {/* Totalizador */}
+              <div className="flex items-center justify-between p-4 rounded-xl bg-foreground text-background">
+                <span className="text-sm font-medium opacity-70">Valor a receber</span>
+                <span className="text-xl font-bold">{formatCurrency(amountToPay)}</span>
+              </div>
             </>
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="p-6 pt-0 bg-muted/30 gap-2 sm:gap-3 flex-row">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={receivePaymentMutation.isPending}
+            className="flex-1"
           >
             Cancelar
           </Button>
           <Button
             onClick={handleConfirm}
             disabled={
-              receivePaymentMutation.isPending || 
-              !isCaixaAberto || 
+              receivePaymentMutation.isPending ||
+              !isCaixaAberto ||
               amountToPay <= 0 ||
               amountToPay > remainingAmount
             }
+            className="flex-1 shadow-lg shadow-primary/20"
           >
             {receivePaymentMutation.isPending ? (
               <>
