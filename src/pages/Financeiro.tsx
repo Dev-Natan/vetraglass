@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -20,7 +21,8 @@ import {
   PieChart,
   BarChart3,
   Receipt,
-  Settings
+  Settings,
+  ShoppingCart
 } from 'lucide-react';
 import { FormasPagamentoDialog } from '@/components/orcamentos/FormasPagamentoDialog';
 import { Button } from '@/components/ui/button';
@@ -54,6 +56,7 @@ import { ContasReceberTab } from '@/components/financeiro/ContasReceberTab';
 import { CaixaEmpresaTab } from '@/components/financeiro/CaixaEmpresaTab';
 import { CaixaReportTab } from '@/components/financeiro/CaixaReportTab';
 import { FinancialDashboard } from '@/components/financeiro/FinancialDashboard';
+import { CaixaOperacionalTab } from '@/components/financeiro/CaixaOperacionalTab';
 import { MonthSelector, getMonthDateRange } from '@/components/common/MonthSelector';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 import { PaginationControls } from '@/components/common/PaginationControls';
@@ -72,8 +75,10 @@ const statusConfig = {
 
 export default function Financeiro() {
   const { currentCompany } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   useModuleTutorialTrigger('financeiro');
+  useModuleTutorialTrigger('caixa-vendas');
 
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
   const dateRange = getMonthDateRange(selectedMonth);
@@ -81,18 +86,29 @@ export default function Financeiro() {
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState(() => sessionStorage.getItem('financeiro-active-tab') || 'dashboard');
+  const [activeTab, setActiveTab] = useState(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam) return tabParam;
+    return sessionStorage.getItem('financeiro-active-tab') || 'dashboard';
+  });
+
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && tabParam !== activeTab) {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams, activeTab]);
+
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
-
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     sessionStorage.setItem('financeiro-active-tab', value);
+    setSearchParams({ tab: value });
     setCurrentPage(1);
   };
 
@@ -196,10 +212,14 @@ export default function Financeiro() {
         </header>
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-7 h-auto p-1 bg-muted/50 border">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-8 h-auto p-1 bg-muted/50 border">
             <TabsTrigger value="dashboard" className="gap-2 py-2">
               <PieChart className="w-4 h-4" />
               Dashboard
+            </TabsTrigger>
+            <TabsTrigger value="caixa" className="gap-2 py-2">
+              <ShoppingCart className="w-4 h-4" />
+              Caixa Diário
             </TabsTrigger>
             <TabsTrigger value="caixa-empresa" className="gap-2 py-2">
               <Wallet className="w-4 h-4" />
@@ -229,6 +249,10 @@ export default function Financeiro() {
 
           <TabsContent value="dashboard" className="mt-6 space-y-6">
             <FinancialDashboard />
+          </TabsContent>
+
+          <TabsContent value="caixa" className="mt-6">
+            <CaixaOperacionalTab />
           </TabsContent>
 
           <TabsContent value="caixa-empresa" className="mt-6">
