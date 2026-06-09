@@ -108,8 +108,9 @@ export function ContasReceberTab() {
 
       if (error) throw error;
 
-      // Filtra recebíveis vinculados a documentos cancelados
+      // Filtra recebíveis vinculados a documentos cancelados e exclui pagos/cancelados
       const filtered = (data as any[]).filter((r) => {
+        if (r.status === 'cancelled' || r.status === 'paid') return false;
         if (r.sale && r.sale.payment_status === 'cancelled') return false;
         if (r.quote && (r.quote.status === 'cancelled' || r.quote.status === 'cancelado')) return false;
         if (r.ordem_servico && (r.ordem_servico.status === 'cancelled' || r.ordem_servico.status === 'cancelada')) return false;
@@ -278,7 +279,7 @@ export function ContasReceberTab() {
             <SelectItem value="all">Todos</SelectItem>
             <SelectItem value="pending">Pendentes</SelectItem>
             <SelectItem value="overdue">Vencidos</SelectItem>
-            <SelectItem value="paid">Pagos</SelectItem>
+            
           </SelectContent>
         </Select>
         <Select value={periodFilter} onValueChange={(v) => setPeriodFilter(v as PeriodFilter)}>
