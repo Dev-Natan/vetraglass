@@ -97,6 +97,8 @@ export default function Financeiro() {
     if (tabParam && tabParam !== activeTab) {
       setActiveTab(tabParam);
     }
+  }, [searchParams, activeTab]);
+
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
