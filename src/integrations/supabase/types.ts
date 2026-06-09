@@ -7698,6 +7698,10 @@ export type Database = {
       }
       cleanup_login_attempts: { Args: never; Returns: undefined }
       cleanup_old_logs: { Args: never; Returns: undefined }
+      close_cash_register_direct: {
+        Args: { _cash_register_id: string; _counts: Json; _notes?: string }
+        Returns: Json
+      }
       close_daily_cash: {
         Args: {
           _actual_amount: number
