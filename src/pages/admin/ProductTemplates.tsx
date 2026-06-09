@@ -1121,9 +1121,9 @@ export default function ProductTemplates() {
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => toggleReadyMutation.mutate({ id: template.id, description: template.description, is_ready: !isReady })}>
                           {isReady ? (
-                            <><XCircle className="w-4 h-4 mr-2 text-destructive" /> Desmarcar Pronto</>
+                            <><XCircle className="w-4 h-4 mr-2 text-destructive" /> Desmarcar como Pronto</>
                           ) : (
-                            <><CheckCircle2 className="w-4 h-4 mr-2 text-emerald-500" /> Marcar Pronto</>
+                            <><CheckCircle2 className="w-4 h-4 mr-2 text-emerald-500" /> Marcar como Pronto</>
                           )}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
