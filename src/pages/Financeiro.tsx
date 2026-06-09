@@ -210,10 +210,14 @@ export default function Financeiro() {
         </header>
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-7 h-auto p-1 bg-muted/50 border">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-8 h-auto p-1 bg-muted/50 border">
             <TabsTrigger value="dashboard" className="gap-2 py-2">
               <PieChart className="w-4 h-4" />
               Dashboard
+            </TabsTrigger>
+            <TabsTrigger value="caixa" className="gap-2 py-2">
+              <ShoppingCart className="w-4 h-4" />
+              Caixa Diário
             </TabsTrigger>
             <TabsTrigger value="caixa-empresa" className="gap-2 py-2">
               <Wallet className="w-4 h-4" />
