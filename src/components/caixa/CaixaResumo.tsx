@@ -107,23 +107,51 @@ export function CaixaResumo({
           </CardContent>
         </Card>
 
-        {/* Total Vendas */}
+        {/* Saldo Total do Caixa (Abertura + Vendas + Entradas - Saídas) */}
         <Card className="border-primary/30 bg-primary/5">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-primary/10">
-                <TrendingUp className="h-5 w-5 text-primary" />
+                <Wallet className="h-5 w-5 text-primary" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs text-muted-foreground truncate">Total Vendas</p>
+                <p className="text-xs text-muted-foreground truncate">Saldo Total do Caixa</p>
                 <p className="text-lg font-bold truncate text-primary">
-                  {formatCurrency(totalVendas)}
+                  {formatCurrency(openingAmount + totalVendas + totalEntradas - totalSaidas)}
+                </p>
+                <p className="text-[10px] text-muted-foreground truncate mt-0.5">
+                  Abertura + Vendas + Entradas − Saídas
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Faixa: Abertura e Total consolidado */}
+      <Card className="border-primary/20">
+        <CardContent className="p-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+            <div className="flex justify-between sm:block">
+              <span className="text-muted-foreground">Valor de Abertura</span>
+              <p className="font-semibold sm:mt-1">{formatCurrency(openingAmount)}</p>
+            </div>
+            <div className="flex justify-between sm:block">
+              <span className="text-muted-foreground">Movimentação Líquida</span>
+              <p className={`font-semibold sm:mt-1 ${(totalVendas + totalEntradas - totalSaidas) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {(totalVendas + totalEntradas - totalSaidas) >= 0 ? '+' : ''}
+                {formatCurrency(totalVendas + totalEntradas - totalSaidas)}
+              </p>
+            </div>
+            <div className="flex justify-between sm:block">
+              <span className="text-muted-foreground">Total Consolidado</span>
+              <p className="font-bold text-primary sm:mt-1">
+                {formatCurrency(openingAmount + totalVendas + totalEntradas - totalSaidas)}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Cards Secundários - Saldo e Movimentações */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
