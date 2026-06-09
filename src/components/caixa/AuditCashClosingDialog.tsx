@@ -101,17 +101,17 @@ export function AuditCashClosingDialog({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md p-0 overflow-hidden border-none shadow-2xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-amber-500" />
+        <DialogHeader className="p-4 bg-primary text-primary-foreground">
+          <DialogTitle className="flex items-center gap-2 text-white">
+            <AlertTriangle className="h-5 w-5 text-white animate-pulse" />
             Auditoria de Fechamento
           </DialogTitle>
-          <DialogDescription>
-            Revise a contagem do operador e aprove ou rejeite o fechamento.
+          <DialogDescription className="text-primary-foreground/80 text-xs">
+            Revise a contagem do operador e tome uma decisão sobre o fechamento.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="p-4 space-y-4">
           {/* Informações do operador */}
           <div className="grid grid-cols-2 gap-4">
             {/* Informações do operador */}
