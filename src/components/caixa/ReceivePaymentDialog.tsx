@@ -252,8 +252,8 @@ export function ReceivePaymentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden">
-        <DialogHeader className="p-6 pb-0">
+      <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden max-h-[90vh] flex flex-col">
+        <DialogHeader className="p-6 pb-4 shrink-0 border-b border-border/60">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
               <Receipt className="h-5 w-5" />
@@ -269,7 +269,8 @@ export function ReceivePaymentDialog({
           </div>
         </DialogHeader>
 
-        <div className="p-6 space-y-4">
+        <div className="p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
+
           {/* Cliente / OS */}
           <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border border-border/60">
             <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground shrink-0">
@@ -421,7 +422,7 @@ export function ReceivePaymentDialog({
           )}
         </div>
 
-        <DialogFooter className="p-6 pt-0 bg-muted/30 gap-2 sm:gap-3 flex-row">
+        <DialogFooter className="p-4 bg-muted/30 gap-2 sm:gap-3 flex-row shrink-0 border-t border-border/60">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
