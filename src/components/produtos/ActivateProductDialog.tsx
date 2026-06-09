@@ -84,11 +84,18 @@ export function ActivateProductDialog({
           item_template_id,
           quantity_formula,
           pieces_quantity,
+          pieces_formula,
           cut_angle,
+          cut_angle_start,
+          cut_angle_end,
           width_formula,
           height_formula,
           is_optional,
           notes,
+          section,
+          side,
+          calculation_type,
+          applies_to,
           item_template:item_templates (
             id,
             name,
@@ -168,20 +175,33 @@ export function ActivateProductDialog({
         pieces_quantity: component.pieces_quantity,
         pieces_formula: (component as any).pieces_formula,
         cut_angle: component.cut_angle,
+        cut_angle_start: (component as any).cut_angle_start,
+        cut_angle_end: (component as any).cut_angle_end,
         width_formula: component.width_formula,
         height_formula: component.height_formula,
         is_optional: component.is_optional,
         notes: component.notes,
+        section: (component as any).section,
+        side: (component as any).side,
+        calculation_type: (component as any).calculation_type,
+        applies_to: (component as any).applies_to,
       }));
 
       if (componentInserts.length > 0) {
+        // First delete any existing company-specific items for this template to avoid duplicates
+        await supabase
+          .from('product_template_items')
+          .delete()
+          .eq('company_id', currentCompany.id)
+          .eq('product_template_id', productTemplateId);
+
         const { error: insertError } = await supabase
           .from('product_template_items')
           .insert(componentInserts);
 
         if (insertError) {
           console.error('Error inserting components:', insertError);
-          // Continue anyway - the product is activated
+          throw insertError; // Throw instead of continuing to ensure we handle errors
         }
       }
 
