@@ -615,139 +615,200 @@ export function ExpensesTab({ selectedMonth: externalMonth, onMonthChange }: Exp
         </Table>
       </Card>
 
-      {/* Add/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {editingExpense ? 'Editar Despesa' : 'Nova Despesa'}
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label>Categoria</Label>
-              <Select 
-                value={formData.category} 
-                onValueChange={(v) => setFormData({ ...formData, category: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(categoryConfig).map(([key, config]) => (
-                    <SelectItem key={key} value={key}>{config.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+      {/* Add/Edit Sheet (Wizard) */}
+      <Sheet open={dialogOpen} onOpenChange={(o) => (o ? setDialogOpen(true) : handleCloseDialog())}>
+        <SheetContent side="right" className="w-full sm:max-w-lg p-0 flex flex-col h-full gap-0">
+          <SheetHeader className="px-6 pt-6 pb-4 border-b space-y-3">
+            <SheetTitle>{editingExpense ? 'Editar Despesa' : 'Nova Despesa'}</SheetTitle>
+            <SheetDescription className="sr-only">
+              Formulário em 3 etapas para registrar uma despesa.
+            </SheetDescription>
+            {/* Step indicator */}
+            <div className="flex items-center gap-2 pt-1">
+              {[
+                { n: 1, label: 'Identificação' },
+                { n: 2, label: 'Valores' },
+                { n: 3, label: 'Pagamento' },
+              ].map((s, i) => (
+                <div key={s.n} className="flex items-center gap-2 flex-1">
+                  <button
+                    type="button"
+                    onClick={() => setStep(s.n as 1 | 2 | 3)}
+                    className={cn(
+                      'h-7 w-7 rounded-full text-xs font-semibold flex items-center justify-center transition-colors shrink-0',
+                      step === s.n
+                        ? 'bg-primary text-primary-foreground'
+                        : step > s.n
+                          ? 'bg-primary/20 text-primary'
+                          : 'bg-muted text-muted-foreground'
+                    )}
+                  >
+                    {s.n}
+                  </button>
+                  <span className={cn('text-xs font-medium hidden sm:inline', step === s.n ? 'text-foreground' : 'text-muted-foreground')}>
+                    {s.label}
+                  </span>
+                  {i < 2 && <div className={cn('h-px flex-1 transition-colors', step > s.n ? 'bg-primary/40' : 'bg-border')} />}
+                </div>
+              ))}
+            </div>
+          </SheetHeader>
+
+          <form
+            onSubmit={handleSubmit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.target as HTMLElement).tagName !== 'TEXTAREA') {
+                e.preventDefault();
+                if (step < 3) {
+                  goNext();
+                } else {
+                  (e.currentTarget as HTMLFormElement).requestSubmit();
+                }
+              }
+            }}
+            className="flex-1 flex flex-col min-h-0"
+          >
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+              {step === 1 && (
+                <div className="space-y-4 animate-in fade-in-50">
+                  <div className="space-y-2">
+                    <Label>Categoria</Label>
+                    <Select
+                      value={formData.category}
+                      onValueChange={(v) => setFormData({ ...formData, category: v })}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(categoryConfig).map(([key, config]) => (
+                          <SelectItem key={key} value={key}>{config.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Descrição *</Label>
+                    <Input
+                      autoFocus
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      placeholder="Ex: Conta de luz - Janeiro"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {step === 2 && (
+                <div className="space-y-4 animate-in fade-in-50">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Valor (R$) *</Label>
+                      <Input
+                        autoFocus
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={formData.amount}
+                        onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Vencimento *</Label>
+                      <Input
+                        type="date"
+                        value={formData.due_date}
+                        onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Status</Label>
+                      <Select
+                        value={formData.status}
+                        onValueChange={(v) => setFormData({ ...formData, status: v })}
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(statusConfig).map(([key, config]) => (
+                            <SelectItem key={key} value={key}>{config.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Recorrência</Label>
+                      <Select
+                        value={formData.recurrence}
+                        onValueChange={(v) => setFormData({ ...formData, recurrence: v })}
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {recurrenceOptions.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {step === 3 && (
+                <div className="space-y-4 animate-in fade-in-50">
+                  <div className="space-y-2">
+                    <Label>Forma de Pagamento</Label>
+                    <Select
+                      value={formData.payment_method}
+                      onValueChange={(v) => setFormData({ ...formData, payment_method: v })}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                        <SelectItem value="cartao">Cartão</SelectItem>
+                        <SelectItem value="pix">PIX</SelectItem>
+                        <SelectItem value="boleto">Boleto</SelectItem>
+                        <SelectItem value="transferencia">Transferência</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Observações</Label>
+                    <Textarea
+                      value={formData.notes}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      placeholder="Anotações adicionais..."
+                      rows={4}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className="space-y-2">
-              <Label>Descrição *</Label>
-              <Input
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Ex: Conta de luz - Janeiro"
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Valor (R$) *</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
-                  required
-                />
+            <div className="border-t p-4 flex items-center justify-between gap-2 bg-background">
+              <div className="flex gap-2">
+                <Button type="button" variant="ghost" onClick={handleCloseDialog}>
+                  Cancelar
+                </Button>
+                {step > 1 && (
+                  <Button type="button" variant="outline" onClick={() => setStep((s) => (s - 1) as 1 | 2 | 3)}>
+                    Voltar
+                  </Button>
+                )}
               </div>
-              <div className="space-y-2">
-                <Label>Vencimento</Label>
-                <Input
-                  type="date"
-                  value={formData.due_date}
-                  onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <Select 
-                  value={formData.status} 
-                  onValueChange={(v) => setFormData({ ...formData, status: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(statusConfig).map(([key, config]) => (
-                      <SelectItem key={key} value={key}>{config.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Recorrência</Label>
-                <Select 
-                  value={formData.recurrence} 
-                  onValueChange={(v) => setFormData({ ...formData, recurrence: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {recurrenceOptions.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Forma de Pagamento</Label>
-              <Select 
-                value={formData.payment_method} 
-                onValueChange={(v) => setFormData({ ...formData, payment_method: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="dinheiro">Dinheiro</SelectItem>
-                  <SelectItem value="cartao">Cartão</SelectItem>
-                  <SelectItem value="pix">PIX</SelectItem>
-                  <SelectItem value="boleto">Boleto</SelectItem>
-                  <SelectItem value="transferencia">Transferência</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Observações</Label>
-              <Textarea
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                placeholder="Anotações adicionais..."
-                rows={2}
-              />
-            </div>
-
-            <div className="flex gap-3 pt-4">
-              <Button type="button" variant="outline" className="flex-1" onClick={handleCloseDialog}>
-                Cancelar
-              </Button>
-              <Button type="submit" className="flex-1" disabled={saveMutation.isPending}>
-                {saveMutation.isPending ? 'Salvando...' : 'Salvar'}
-              </Button>
+              {step < 3 ? (
+                <Button type="button" onClick={goNext} className="gap-2">
+                  Próximo
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button type="submit" disabled={saveMutation.isPending}>
+                  {saveMutation.isPending ? 'Salvando...' : 'Salvar'}
+                </Button>
+              )}
             </div>
           </form>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
