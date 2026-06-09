@@ -403,8 +403,11 @@ export default function ProdutosLinha() {
       <EditProductPricingDialog
         open={editPricingDialogOpen}
         onOpenChange={setEditPricingDialogOpen}
-        product={selectedProductForPricing}
+        companyProductId={selectedProductForPricing?.id || ''}
+        productName={selectedProductForPricing?.name || ''}
+        productImageUrl={selectedProductForPricing?.image_url}
       />
+
     </MainLayout>
   );
 }
