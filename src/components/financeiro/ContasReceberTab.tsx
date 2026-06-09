@@ -97,12 +97,26 @@ export function ContasReceberTab() {
 
       const { data, error } = await supabase
         .from('accounts_receivable')
-        .select('*')
+        .select(`
+          *,
+          sale:sales(payment_status),
+          quote:quotes(status),
+          ordem_servico:ordens_servico(status)
+        `)
         .eq('company_id', currentCompany.id)
         .order('due_date', { ascending: true });
 
       if (error) throw error;
-      return data as Receivable[];
+
+      // Filtra recebíveis vinculados a documentos cancelados
+      const filtered = (data as any[]).filter((r) => {
+        if (r.sale && r.sale.payment_status === 'cancelled') return false;
+        if (r.quote && (r.quote.status === 'cancelled' || r.quote.status === 'cancelado')) return false;
+        if (r.ordem_servico && (r.ordem_servico.status === 'cancelled' || r.ordem_servico.status === 'cancelada')) return false;
+        return true;
+      });
+
+      return filtered as Receivable[];
     },
     enabled: !!currentCompany?.id,
   });
