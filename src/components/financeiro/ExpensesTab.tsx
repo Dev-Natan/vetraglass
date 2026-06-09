@@ -131,6 +131,7 @@ export function ExpensesTab({ selectedMonth: externalMonth, onMonthChange }: Exp
   const dateRange = { start: startOfMonth(selectedMonth), end: endOfMonth(selectedMonth) };
   
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
