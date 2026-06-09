@@ -405,7 +405,7 @@ export default function ProdutosLinha() {
                 : 'bg-muted text-muted-foreground hover:bg-muted/80'
             }`}
           >
-            Desabilitados
+            Ocultos ({companyProducts.filter(cp => !cp.is_active).length})
           </button>
         </div>
 
