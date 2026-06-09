@@ -95,7 +95,7 @@ export function ReceivePaymentDialog({
     receivable.total_amount - (receivable.paid_amount || 0) : 0;
 
   const amountToPay = isPartialPayment 
-    ? parseFloat(paymentAmount.replace(',', '.')) || 0
+    ? parseBRLInput(paymentAmount)
     : remainingAmount;
 
   const receivePaymentMutation = useMutation({
