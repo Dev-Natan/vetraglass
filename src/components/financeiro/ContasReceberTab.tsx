@@ -190,10 +190,10 @@ export function ContasReceberTab() {
     return statusConfig.pending;
   };
 
-  // Operational receive payment functionality removed from Financeiro audit view.
-  // Payments must be received through the Caixa module for proper cash tracking.
+  // Abre o dialog de recebimento (gera movimento no caixa aberto)
   const handleReceiveClick = (receivable: Receivable) => {
-    toast.info('O recebimento de parcelas deve ser realizado através do módulo de Caixa para registro correto no fluxo diário.');
+    setSelectedReceivable(receivable);
+    setReceiveDialogOpen(true);
   };
 
   return (
