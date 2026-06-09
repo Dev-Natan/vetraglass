@@ -237,7 +237,7 @@ export function CaixaOperacionalTab() {
   };
 
   const isCashOpen = !!openCashRegister && openCashRegister.status === 'open';
-  const isPendingAudit = !!openCashRegister && openCashRegister.status === 'pending_audit';
+
 
   const handleExportDailyPdf = () => {
     if (!openCashRegister) return;
