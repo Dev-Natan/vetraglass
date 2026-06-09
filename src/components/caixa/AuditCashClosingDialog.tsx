@@ -227,35 +227,40 @@ export function AuditCashClosingDialog({
           </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="p-4 bg-muted/30 border-t flex flex-row gap-2 justify-end">
           <Button 
-            variant="outline" 
+            variant="ghost" 
             onClick={handleClose} 
             disabled={isLoading}
+            className="text-xs h-9"
           >
-            Cancelar
+            Sair
           </Button>
-          <Button 
-            variant="destructive" 
-            onClick={handleReject} 
-            disabled={isLoading || !notes}
-          >
-            {isLoading && action === 'reject' ? (
-              <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Rejeitando...</>
-            ) : (
-              <><XCircle className="mr-2 h-4 w-4" />Rejeitar</>
-            )}
-          </Button>
-          <Button 
-            onClick={handleApprove} 
-            disabled={isLoading}
-          >
-            {isLoading && action === 'approve' ? (
-              <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Aprovando...</>
-            ) : (
-              <><CheckCircle2 className="mr-2 h-4 w-4" />{hasAdjustment ? 'Ajustar e Aprovar' : 'Aprovar'}</>
-            )}
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={handleReject} 
+              disabled={isLoading || !notes}
+              className="text-xs border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 h-9"
+            >
+              {isLoading && action === 'reject' ? (
+                <><Loader2 className="mr-1 h-3 w-3 animate-spin" />Rejeitando...</>
+              ) : (
+                <><XCircle className="mr-1 h-3 w-3" />Rejeitar</>
+              )}
+            </Button>
+            <Button 
+              onClick={handleApprove} 
+              disabled={isLoading}
+              className="text-xs h-9 shadow-sm bg-primary hover:bg-primary/90"
+            >
+              {isLoading && action === 'approve' ? (
+                <><Loader2 className="mr-1 h-3 w-3 animate-spin" />Aprovando...</>
+              ) : (
+                <><CheckCircle2 className="mr-1 h-3 w-3" />{hasAdjustment ? 'Ajustar e Aprovar' : 'Aprovar'}</>
+              )}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
