@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { VendaItem } from '@/components/caixa/NovaVendaDialog';
 import { PaymentConfig } from '@/components/caixa/InstallmentPaymentSheet';
+import { registerStockExit } from '@/utils/stockMovements';
 
 export const saleService = {
   async fetchTodaySales(cashRegisterId: string) {
