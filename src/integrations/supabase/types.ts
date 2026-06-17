@@ -5934,6 +5934,81 @@ export type Database = {
         }
         Relationships: []
       }
+      sale_item_components: {
+        Row: {
+          company_id: string
+          company_item_id: string | null
+          created_at: string
+          id: string
+          item_name: string
+          item_template_id: string | null
+          quantity: number
+          sale_item_id: string
+          source: string
+          unit: string
+        }
+        Insert: {
+          company_id: string
+          company_item_id?: string | null
+          created_at?: string
+          id?: string
+          item_name: string
+          item_template_id?: string | null
+          quantity: number
+          sale_item_id: string
+          source?: string
+          unit: string
+        }
+        Update: {
+          company_id?: string
+          company_item_id?: string | null
+          created_at?: string
+          id?: string
+          item_name?: string
+          item_template_id?: string | null
+          quantity?: number
+          sale_item_id?: string
+          source?: string
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_item_components_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_item_components_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_item_components_company_item_id_fkey"
+            columns: ["company_item_id"]
+            isOneToOne: false
+            referencedRelation: "company_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_item_components_item_template_id_fkey"
+            columns: ["item_template_id"]
+            isOneToOne: false
+            referencedRelation: "item_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_item_components_sale_item_id_fkey"
+            columns: ["sale_item_id"]
+            isOneToOne: false
+            referencedRelation: "sale_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sale_items: {
         Row: {
           company_product_id: string | null
