@@ -667,10 +667,13 @@ export function NovaVendaDialog({
                           >
                             <div className="flex items-center justify-between gap-3">
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 flex-wrap">
                                   <p className="font-medium text-sm truncate">{item.name}</p>
                                   {item.isProduct && (
                                     <Badge variant="secondary" className="text-[10px] h-4">Produto</Badge>
+                                  )}
+                                  {item.isProduct && item.compositionEdited && (
+                                    <Badge variant="default" className="text-[10px] h-4">Composição manual</Badge>
                                   )}
                                   {item.isDefaultPrice && (
                                     <Badge variant="outline" className="text-[10px] h-4">Preço padrão</Badge>
@@ -692,8 +695,24 @@ export function NovaVendaDialog({
                                     {formatCurrency(item.unitPrice)} / {item.unit} × {item.quantity}
                                   </p>
                                 )}
+                                {item.isProduct && item.composition && item.composition.length > 0 && (
+                                  <p className="text-[10px] text-muted-foreground mt-1">
+                                    {item.composition.length} item(ns) de estoque na composição
+                                  </p>
+                                )}
                               </div>
                               <div className="flex items-center gap-2">
+                                {item.isProduct && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 gap-1 text-xs"
+                                    onClick={() => setCompositionEditorItemId(item.id)}
+                                  >
+                                    <Settings2 className="h-3 w-3" />
+                                    Composição
+                                  </Button>
+                                )}
                                 <div className="flex items-center gap-1">
                                   <Button
                                     variant="outline"
