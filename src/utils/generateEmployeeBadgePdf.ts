@@ -341,7 +341,8 @@ export function generateBadgesSheetPdf(employees: BadgeData[]) {
     // Try to add company logo image
     if (data.companyLogoBase64) {
       try {
-        doc.addImage(data.companyLogoBase64, 'PNG', x + 9, y + 12, 36, 14);
+        const lsz = 16;
+        doc.addImage(data.companyLogoBase64, 'PNG', x + 7 + (40 - lsz) / 2, y + 11, lsz, lsz);
       } catch (error) {
         // Fallback to text
         doc.setTextColor(...primaryBlue);
