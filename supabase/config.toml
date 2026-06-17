@@ -35,5 +35,5 @@ schedule = "0 8 * * *"
 verify_jwt = true
 
 [functions.admin-delete-company]
-verify_jwt = true
+verify_jwt = false
 
