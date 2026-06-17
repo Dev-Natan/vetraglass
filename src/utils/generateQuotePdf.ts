@@ -142,21 +142,16 @@ export async function generateQuotePdf(
     const logoBase64 = getCachedImage(logoUrl);
     if (logoBase64) {
       try {
-        const props = (doc as any).getImageProperties(logoBase64);
-        const ratio = props.width / props.height;
-        // Fit within a square box of side `maxLogoBox`, preserving aspect ratio
-        if (ratio >= 1) {
-          logoRenderedWidth = maxLogoBox;
-          logoHeight = maxLogoBox / ratio;
-        } else {
-          logoHeight = maxLogoBox;
-          logoRenderedWidth = maxLogoBox * ratio;
-        }
-        doc.addImage(logoBase64, inferJsPdfImageFormat(logoBase64), marginLeft, y, logoRenderedWidth, logoHeight);
+        const circularPng = await cropImageToCircle(logoBase64);
+        logoRenderedWidth = maxLogoBox;
+        logoHeight = maxLogoBox;
+        doc.addImage(circularPng, 'PNG', marginLeft, y, logoRenderedWidth, logoHeight);
       } catch {
         logoRenderedWidth = maxLogoBox;
-        logoHeight = maxLogoBox * 0.625;
-        doc.addImage(logoBase64, inferJsPdfImageFormat(logoBase64), marginLeft, y, logoRenderedWidth, logoHeight);
+        logoHeight = maxLogoBox;
+        try {
+          doc.addImage(logoBase64, inferJsPdfImageFormat(logoBase64), marginLeft, y, logoRenderedWidth, logoHeight);
+        } catch {}
       }
     }
   }
