@@ -16,11 +16,13 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Plus, Package, ShoppingCart, FileText, Trash2, Minus,
-  DollarSign, CreditCard, Smartphone, Loader2, ArrowLeft, Layers, Box, User, Calculator, Search
+  DollarSign, CreditCard, Smartphone, Loader2, ArrowLeft, Layers, Box, User, Calculator, Search, Settings2
 } from 'lucide-react';
 import { AddProductPanel } from '@/components/orcamentos/AddProductPanel';
 import { AddToStockDialog } from './AddToStockDialog';
 import { InstallmentPaymentSheet, PaymentConfig } from './InstallmentPaymentSheet';
+import { ProductCompositionEditor } from './ProductCompositionEditor';
+import { buildCompositionFromFormula, SaleCompositionLine } from '@/utils/buildCompositionFromFormula';
 import { toast } from 'sonner';
 
 export interface VendaItem {
@@ -38,6 +40,8 @@ export interface VendaItem {
   height?: number;
   isProduct?: boolean;
   isDefaultPrice?: boolean;
+  composition?: SaleCompositionLine[];
+  compositionEdited?: boolean;
 }
 
 interface ItemTemplate {
@@ -354,8 +358,9 @@ export function NovaVendaDialog({
     glass_color?: string;
     glass_thickness?: string;
   }) => {
+    const itemId = crypto.randomUUID();
     const newItem: VendaItem = {
-      id: crypto.randomUUID(),
+      id: itemId,
       companyProductId: product.company_product_id,
       productTemplateId: product.product_template_id,
       name: product.name,
@@ -366,9 +371,48 @@ export function NovaVendaDialog({
       width: product.width,
       height: product.height,
       isProduct: true,
+      composition: [],
     };
     setItems(prev => [...prev, newItem]);
     setViewMode('main');
+
+    // Pre-fill composition from the product formula in background
+    if (currentCompany?.id) {
+      buildCompositionFromFormula({
+        companyId: currentCompany.id,
+        companyProductId: product.company_product_id,
+        productTemplateId: product.product_template_id,
+        width: product.width,
+        height: product.height,
+        quantity: product.quantity,
+      })
+        .then((lines) => {
+          setItems((prev) =>
+            prev.map((it) => (it.id === itemId ? { ...it, composition: lines } : it)),
+          );
+        })
+        .catch((err) => {
+          console.error('Falha ao gerar composição automática:', err);
+        });
+    }
+  };
+
+  const [compositionEditorItemId, setCompositionEditorItemId] = useState<string | null>(null);
+  const compositionEditorItem = useMemo(
+    () => items.find((i) => i.id === compositionEditorItemId) || null,
+    [items, compositionEditorItemId],
+  );
+
+  const handleCompositionSave = (lines: SaleCompositionLine[]) => {
+    if (!compositionEditorItemId) return;
+    setItems((prev) =>
+      prev.map((it) =>
+        it.id === compositionEditorItemId
+          ? { ...it, composition: lines, compositionEdited: true }
+          : it,
+      ),
+    );
+    setCompositionEditorItemId(null);
   };
 
   // Select quote and load items (orcamento mode)
@@ -623,10 +667,13 @@ export function NovaVendaDialog({
                           >
                             <div className="flex items-center justify-between gap-3">
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 flex-wrap">
                                   <p className="font-medium text-sm truncate">{item.name}</p>
                                   {item.isProduct && (
                                     <Badge variant="secondary" className="text-[10px] h-4">Produto</Badge>
+                                  )}
+                                  {item.isProduct && item.compositionEdited && (
+                                    <Badge variant="default" className="text-[10px] h-4">Composição manual</Badge>
                                   )}
                                   {item.isDefaultPrice && (
                                     <Badge variant="outline" className="text-[10px] h-4">Preço padrão</Badge>
@@ -648,8 +695,24 @@ export function NovaVendaDialog({
                                     {formatCurrency(item.unitPrice)} / {item.unit} × {item.quantity}
                                   </p>
                                 )}
+                                {item.isProduct && item.composition && item.composition.length > 0 && (
+                                  <p className="text-[10px] text-muted-foreground mt-1">
+                                    {item.composition.length} item(ns) de estoque na composição
+                                  </p>
+                                )}
                               </div>
                               <div className="flex items-center gap-2">
+                                {item.isProduct && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 gap-1 text-xs"
+                                    onClick={() => setCompositionEditorItemId(item.id)}
+                                  >
+                                    <Settings2 className="h-3 w-3" />
+                                    Composição
+                                  </Button>
+                                )}
                                 <div className="flex items-center gap-1">
                                   <Button
                                     variant="outline"
@@ -1286,6 +1349,17 @@ export function NovaVendaDialog({
         onSkip={handleStockDialogSkip}
         isLoading={isAddingStock}
       />
+
+      {/* Product composition editor */}
+      {compositionEditorItem && (
+        <ProductCompositionEditor
+          open={!!compositionEditorItemId}
+          onOpenChange={(o) => { if (!o) setCompositionEditorItemId(null); }}
+          productName={compositionEditorItem.name}
+          initialLines={compositionEditorItem.composition || []}
+          onSave={handleCompositionSave}
+        />
+      )}
     </Dialog>
   );
 }
