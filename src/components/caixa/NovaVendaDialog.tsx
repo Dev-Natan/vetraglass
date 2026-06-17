@@ -1349,6 +1349,17 @@ export function NovaVendaDialog({
         onSkip={handleStockDialogSkip}
         isLoading={isAddingStock}
       />
+
+      {/* Product composition editor */}
+      {compositionEditorItem && (
+        <ProductCompositionEditor
+          open={!!compositionEditorItemId}
+          onOpenChange={(o) => { if (!o) setCompositionEditorItemId(null); }}
+          productName={compositionEditorItem.name}
+          initialLines={compositionEditorItem.composition || []}
+          onSave={handleCompositionSave}
+        />
+      )}
     </Dialog>
   );
 }
