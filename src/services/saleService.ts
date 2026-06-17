@@ -128,7 +128,12 @@ export const saleService = {
       quote_id: quoteId || null
     }).select().single();
     
-    if (saleError) throw saleError;
+    if (saleError) {
+      if (saleError.message?.includes('uq_sales_quote_type')) {
+        throw new Error('Este orçamento já foi faturado. Cancele a venda anterior para faturá-lo novamente.');
+      }
+      throw saleError;
+    }
     
     const saleItemsPayload = items.map((item) => ({ 
       sale_id: sale.id, 
