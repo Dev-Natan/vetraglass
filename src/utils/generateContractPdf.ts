@@ -112,7 +112,7 @@ export async function generateContractPdf(
     if (logoBase64) {
       try {
         const circular = await cropImageToCircle(logoBase64);
-        const size = 25;
+        const size = 20;
         doc.addImage(circular, 'PNG', pageWidth / 2 - size / 2, yPos, size, size);
       } catch {
         doc.addImage(logoBase64, 'PNG', pageWidth / 2 - 20, yPos, 40, 25);
