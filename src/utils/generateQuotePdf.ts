@@ -8,6 +8,7 @@ import {
   getProductImageUrl,
   collectQuoteImageUrls 
 } from './pdfImageLoader';
+import { cropImageToCircle } from './cropImageToCircle';
 
 interface QuoteComponent {
   description: string;
