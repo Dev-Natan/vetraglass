@@ -88,7 +88,7 @@ export function useSales() {
           payment_status: paymentConfig.method === 'dinheiro' ? 'paid' : 'pending',
           sold_by: userId,
           quote_id: quoteId,
-          sale_type: quoteId ? 'partial' : 'full',
+          sale_type: quoteId ? (existingPartialSale ? 'completion' : (isPartialQuoteSale ? 'partial' : 'full')) : 'full',
           parent_sale_id: existingPartialSale?.id
         })
         .select('*')
