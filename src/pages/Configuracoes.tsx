@@ -113,10 +113,13 @@ export default function Configuracoes() {
       
       if (updateError) throw updateError;
       
-      return publicUrl;
+      return `${publicUrl}?t=${Date.now()}`;
     },
-    onSuccess: () => {
+    onSuccess: (bustedUrl) => {
       queryClient.invalidateQueries({ queryKey: ["company-config"] });
+      if (currentCompany) {
+        setCurrentCompany({ ...currentCompany, logo_url: bustedUrl } as any);
+      }
       toast.success("Logo atualizado com sucesso!");
       setUploadingLogo(false);
     },
@@ -142,6 +145,9 @@ export default function Configuracoes() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["company-config"] });
+      if (currentCompany) {
+        setCurrentCompany({ ...currentCompany, logo_url: null } as any);
+      }
       toast.success("Logo removido com sucesso!");
     },
     onError: (error) => {
