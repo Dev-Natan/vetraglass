@@ -130,7 +130,7 @@ export const saleService = {
     
     if (saleError) throw saleError;
     
-    const saleItems = items.map((item) => ({ 
+    const saleItemsPayload = items.map((item) => ({ 
       sale_id: sale.id, 
       item_template_id: item.itemTemplateId || null, 
       company_product_id: item.companyProductId || null, 
@@ -143,8 +143,68 @@ export const saleService = {
       height: item.height || null 
     }));
     
-    const { error: itemsError } = await supabase.from('sale_items').insert(saleItems);
+    const { data: insertedItems, error: itemsError } = await supabase
+      .from('sale_items')
+      .insert(saleItemsPayload)
+      .select('id');
     if (itemsError) throw itemsError;
+
+    // Persist manual composition for product items and aggregate stock exits
+    const stockExits = new Map<string, { itemTemplateId: string | null; quantity: number; name: string }>();
+    const componentRows: any[] = [];
+
+    items.forEach((item, idx) => {
+      const saleItemId = insertedItems?.[idx]?.id;
+      if (!saleItemId) return;
+      if (item.isProduct && item.composition && item.composition.length > 0) {
+        for (const c of item.composition) {
+          componentRows.push({
+            sale_item_id: saleItemId,
+            company_id: companyId,
+            company_item_id: c.companyItemId,
+            item_template_id: c.itemTemplateId,
+            item_name: c.itemName,
+            unit: c.unit,
+            quantity: c.quantity,
+            source: c.source,
+          });
+          const key = c.companyItemId || c.itemTemplateId;
+          if (!key) continue;
+          const existing = stockExits.get(key);
+          if (existing) existing.quantity += c.quantity;
+          else stockExits.set(key, { itemTemplateId: c.itemTemplateId, quantity: c.quantity, name: c.itemName });
+        }
+      } else if (!item.isProduct && item.itemTemplateId) {
+        // Avulso: deduct directly
+        const key = item.itemTemplateId;
+        const existing = stockExits.get(key);
+        if (existing) existing.quantity += item.quantity;
+        else stockExits.set(key, { itemTemplateId: item.itemTemplateId, quantity: item.quantity, name: item.name });
+      }
+    });
+
+    if (componentRows.length > 0) {
+      const { error: compError } = await supabase.from('sale_item_components').insert(componentRows);
+      if (compError) console.error('Falha ao salvar composição:', compError);
+    }
+
+    // Register stock exits (failures are logged but don't fail the sale)
+    for (const [, exit] of stockExits) {
+      if (!exit.itemTemplateId || exit.quantity <= 0) continue;
+      try {
+        await registerStockExit({
+          companyId,
+          itemTemplateId: exit.itemTemplateId,
+          quantity: exit.quantity,
+          category: 'venda',
+          description: `Venda PDV — ${exit.name}`,
+          referenceId: sale.id,
+          referenceType: 'sale',
+        });
+      } catch (err) {
+        console.error(`Falha na baixa de estoque (${exit.name}):`, err);
+      }
+    }
 
     return sale;
   }
