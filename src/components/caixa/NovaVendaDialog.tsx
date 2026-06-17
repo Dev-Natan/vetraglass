@@ -358,8 +358,9 @@ export function NovaVendaDialog({
     glass_color?: string;
     glass_thickness?: string;
   }) => {
+    const itemId = crypto.randomUUID();
     const newItem: VendaItem = {
-      id: crypto.randomUUID(),
+      id: itemId,
       companyProductId: product.company_product_id,
       productTemplateId: product.product_template_id,
       name: product.name,
@@ -370,9 +371,48 @@ export function NovaVendaDialog({
       width: product.width,
       height: product.height,
       isProduct: true,
+      composition: [],
     };
     setItems(prev => [...prev, newItem]);
     setViewMode('main');
+
+    // Pre-fill composition from the product formula in background
+    if (currentCompany?.id) {
+      buildCompositionFromFormula({
+        companyId: currentCompany.id,
+        companyProductId: product.company_product_id,
+        productTemplateId: product.product_template_id,
+        width: product.width,
+        height: product.height,
+        quantity: product.quantity,
+      })
+        .then((lines) => {
+          setItems((prev) =>
+            prev.map((it) => (it.id === itemId ? { ...it, composition: lines } : it)),
+          );
+        })
+        .catch((err) => {
+          console.error('Falha ao gerar composição automática:', err);
+        });
+    }
+  };
+
+  const [compositionEditorItemId, setCompositionEditorItemId] = useState<string | null>(null);
+  const compositionEditorItem = useMemo(
+    () => items.find((i) => i.id === compositionEditorItemId) || null,
+    [items, compositionEditorItemId],
+  );
+
+  const handleCompositionSave = (lines: SaleCompositionLine[]) => {
+    if (!compositionEditorItemId) return;
+    setItems((prev) =>
+      prev.map((it) =>
+        it.id === compositionEditorItemId
+          ? { ...it, composition: lines, compositionEdited: true }
+          : it,
+      ),
+    );
+    setCompositionEditorItemId(null);
   };
 
   // Select quote and load items (orcamento mode)
