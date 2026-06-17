@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { generateCredentialCardPdf, generateCredentialSheetPdf } from '@/utils/generateCredentialCardPdf';
 import { generateEmployeeBadgePdf, imageUrlToBase64 } from '@/utils/generateEmployeeBadgePdf';
+import { cropImageToCircle } from '@/utils/cropImageToCircle';
 import { toast } from 'sonner';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 
