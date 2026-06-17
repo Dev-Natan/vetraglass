@@ -141,7 +141,7 @@ export async function generateQuotePdf(
   // ========== SLIM HEADER ==========
   let logoHeight = 0;
   let logoRenderedWidth = 0;
-  const maxLogoBox = company?.logo_size || 35;
+  const maxLogoBox = company?.logo_size || 20;
   if (logoUrl) {
     const logoBase64 = getCachedImage(logoUrl);
     if (logoBase64) {
