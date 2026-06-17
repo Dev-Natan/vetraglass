@@ -16,11 +16,13 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Plus, Package, ShoppingCart, FileText, Trash2, Minus,
-  DollarSign, CreditCard, Smartphone, Loader2, ArrowLeft, Layers, Box, User, Calculator, Search
+  DollarSign, CreditCard, Smartphone, Loader2, ArrowLeft, Layers, Box, User, Calculator, Search, Settings2
 } from 'lucide-react';
 import { AddProductPanel } from '@/components/orcamentos/AddProductPanel';
 import { AddToStockDialog } from './AddToStockDialog';
 import { InstallmentPaymentSheet, PaymentConfig } from './InstallmentPaymentSheet';
+import { ProductCompositionEditor } from './ProductCompositionEditor';
+import { buildCompositionFromFormula, SaleCompositionLine } from '@/utils/buildCompositionFromFormula';
 import { toast } from 'sonner';
 
 export interface VendaItem {
@@ -38,6 +40,8 @@ export interface VendaItem {
   height?: number;
   isProduct?: boolean;
   isDefaultPrice?: boolean;
+  composition?: SaleCompositionLine[];
+  compositionEdited?: boolean;
 }
 
 interface ItemTemplate {
