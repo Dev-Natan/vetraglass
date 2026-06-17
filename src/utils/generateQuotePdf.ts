@@ -163,7 +163,7 @@ export async function generateQuotePdf(
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
   doc.setTextColor(40, 40, 40);
-  const companyInfoX = logoRenderedWidth > 0 ? marginLeft + logoRenderedWidth + 8 : marginLeft;
+  const companyInfoX = logoRenderedWidth > 0 ? marginLeft + logoRenderedWidth + 5 : marginLeft;
   
   doc.text(company?.name || '', companyInfoX, y + 5);
   doc.setFont('helvetica', 'normal');
