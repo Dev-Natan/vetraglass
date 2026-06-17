@@ -103,10 +103,11 @@ export function generateEmployeeBadgePdf(data: BadgeData) {
   // Try to add company logo image
   if (data.companyLogoBase64) {
     try {
-      // Calculate logo dimensions to fit within the area while maintaining aspect ratio
-      const logoMaxW = logoAreaW - 4;
-      const logoMaxH = logoAreaH - 4;
-      doc.addImage(data.companyLogoBase64, 'PNG', logoAreaX + 2, logoAreaY + 2, logoMaxW, logoMaxH);
+      // Logo is circular with transparent bg — draw as square centered
+      const logoSize = logoAreaH - 2;
+      const logoX = logoAreaX + (logoAreaW - logoSize) / 2;
+      const logoY = logoAreaY + 1;
+      doc.addImage(data.companyLogoBase64, 'PNG', logoX, logoY, logoSize, logoSize);
     } catch (error) {
       console.error('Error adding company logo to badge:', error);
       // Fallback to text
@@ -340,7 +341,8 @@ export function generateBadgesSheetPdf(employees: BadgeData[]) {
     // Try to add company logo image
     if (data.companyLogoBase64) {
       try {
-        doc.addImage(data.companyLogoBase64, 'PNG', x + 9, y + 12, 36, 14);
+        const lsz = 16;
+        doc.addImage(data.companyLogoBase64, 'PNG', x + 7 + (40 - lsz) / 2, y + 11, lsz, lsz);
       } catch (error) {
         // Fallback to text
         doc.setTextColor(...primaryBlue);

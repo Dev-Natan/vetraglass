@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { preloadImages, getCachedImage } from './pdfImageLoader';
+import { cropImageToCircle } from './cropImageToCircle';
 
 interface QuoteItem {
   description: string;
@@ -109,7 +110,13 @@ export async function generateContractPdf(
   if (company?.logo_url) {
     const logoBase64 = getCachedImage(company.logo_url);
     if (logoBase64) {
-      doc.addImage(logoBase64, 'PNG', pageWidth / 2 - 20, yPos, 40, 25);
+      try {
+        const circular = await cropImageToCircle(logoBase64);
+        const size = 25;
+        doc.addImage(circular, 'PNG', pageWidth / 2 - size / 2, yPos, size, size);
+      } catch {
+        doc.addImage(logoBase64, 'PNG', pageWidth / 2 - 20, yPos, 40, 25);
+      }
       logoLoaded = true;
       yPos += 30;
     }

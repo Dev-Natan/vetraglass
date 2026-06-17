@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { generateCredentialCardPdf, generateCredentialSheetPdf } from '@/utils/generateCredentialCardPdf';
 import { generateEmployeeBadgePdf, imageUrlToBase64 } from '@/utils/generateEmployeeBadgePdf';
+import { cropImageToCircle } from '@/utils/cropImageToCircle';
 import { toast } from 'sonner';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 
@@ -97,7 +98,14 @@ export default function Funcionarios() {
     // Convert company logo to base64 if available
     let companyLogoBase64: string | null = null;
     if (currentCompany.logo_url) {
-      companyLogoBase64 = await imageUrlToBase64(currentCompany.logo_url);
+      const raw = await imageUrlToBase64(currentCompany.logo_url);
+      if (raw) {
+        try {
+          companyLogoBase64 = await cropImageToCircle(raw);
+        } catch {
+          companyLogoBase64 = raw;
+        }
+      }
     }
     
     toast.dismiss('badge-loading');
