@@ -1516,7 +1516,7 @@ export default function ProductTemplates() {
                           <SelectContent>
                             <SelectItem value="none">Nenhuma</SelectItem>
                             {availableLines.map(l => (
-                              <SelectItem key={l} value={l}>{l}</SelectItem>
+                              <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
