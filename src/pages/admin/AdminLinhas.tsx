@@ -168,6 +168,9 @@ export default function AdminLinhas() {
                 linha={linha.name}
                 productCount={productCounts?.[linha.name] || 0}
                 onViewProducts={() => handleLinhaClick(linha.name)}
+                isAdmin
+                isActive={linha.is_active}
+                onToggleActive={(next) => handleToggleActive(linha.id, next)}
               />
             ))}
             <AddLinhaCard onClick={handleAddLinha} />
