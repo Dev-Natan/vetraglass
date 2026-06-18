@@ -185,7 +185,7 @@ export default function ProductTemplates() {
   
   const categoriesList = productCategories?.map(c => c.slug) || [];
   const itemTypeTabs = getItemTypeTabs(itemTypes);
-  const availableLines = productLinhas?.map(l => l.name) || [];
+  const availableLines = productLinhas?.map(l => ({ value: l.slug, label: l.name })) || [];
   const navigate = useNavigate();
   const { isSaasAdmin } = useAuth();
   const queryClient = useQueryClient();
