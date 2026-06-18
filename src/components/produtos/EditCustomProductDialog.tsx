@@ -176,7 +176,7 @@ export function EditCustomProductDialog({ open, onOpenChange, product }: EditCus
                 </SelectTrigger>
                 <SelectContent>
                   {productLinhas?.map((l) => (
-                    <SelectItem key={l.id} value={l.name}>
+                    <SelectItem key={l.id} value={l.slug}>
                       {l.name}
                     </SelectItem>
                   ))}
