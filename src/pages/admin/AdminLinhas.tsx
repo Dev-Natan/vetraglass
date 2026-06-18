@@ -35,7 +35,16 @@ export default function AdminLinhas() {
   
   // Use centralized hook for linhas
   const { data: linhas, isLoading } = useProductLinhas(true);
-  const { createMutation } = useProductLinhaMutations();
+  const { createMutation, updateMutation } = useProductLinhaMutations();
+
+  const handleToggleActive = async (id: string, next: boolean) => {
+    try {
+      await updateMutation.mutateAsync({ id, is_active: next });
+      toast.success(next ? 'Linha ativada' : 'Linha desativada');
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao atualizar linha');
+    }
+  };
   
   // Fetch product counts per linha
   const { data: productCounts } = useQuery({
@@ -159,6 +168,9 @@ export default function AdminLinhas() {
                 linha={linha.name}
                 productCount={productCounts?.[linha.name] || 0}
                 onViewProducts={() => handleLinhaClick(linha.name)}
+                isAdmin
+                isActive={linha.is_active}
+                onToggleActive={(next) => handleToggleActive(linha.id, next)}
               />
             ))}
             <AddLinhaCard onClick={handleAddLinha} />
