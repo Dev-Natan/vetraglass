@@ -1,0 +1,2 @@
+CREATE POLICY "SaaS admins can view all feedbacks" ON public.feedbacks FOR SELECT USING (EXISTS (SELECT 1 FROM public.saas_admins WHERE user_id = auth.uid()));
+CREATE POLICY "SaaS admins can update all feedbacks" ON public.feedbacks FOR UPDATE USING (EXISTS (SELECT 1 FROM public.saas_admins WHERE user_id = auth.uid()));
