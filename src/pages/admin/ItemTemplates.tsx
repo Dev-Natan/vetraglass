@@ -671,7 +671,7 @@ export default function ItemTemplates() {
           <div>
             <h1 className="text-2xl font-bold text-foreground">Item Templates</h1>
             <p className="text-sm text-muted-foreground">
-              {totalItems} itens cadastrados • {productLinhas?.length || 0} linhas
+              {stats.total} itens cadastrados • {availableLines.length} linhas
             </p>
           </div>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
