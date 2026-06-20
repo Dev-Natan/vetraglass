@@ -301,8 +301,8 @@ export default function CompanySetup() {
           <div className="w-16 h-16 rounded-2xl bg-primary mx-auto flex items-center justify-center mb-4">
             <Building2 className="w-8 h-8 text-primary-foreground" />
           </div>
-          <h1 className="font-display font-bold text-3xl text-foreground">Cadastrar Empresa</h1>
-          <p className="text-muted-foreground mt-1">Configure sua primeira empresa no sistema</p>
+          <h1 className="font-display font-bold text-3xl text-foreground">Configure sua Empresa B2B</h1>
+          <p className="text-muted-foreground mt-1">Etapa 2 de 2 — vincule sua empresa à conta recém-criada para liberar o acesso</p>
         </div>
 
         <Card className="border-border/50 shadow-xl">

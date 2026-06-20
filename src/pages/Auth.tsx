@@ -153,7 +153,8 @@ export default function Auth() {
     setIsLoading(false);
     
     if (!error) {
-      navigate('/dashboard');
+      // Etapa 2: redireciona para configuração obrigatória da empresa B2B
+      navigate('/empresa/nova');
     }
   };
 
