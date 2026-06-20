@@ -143,13 +143,15 @@ export default function CompanySetup() {
     e.preventDefault();
     setErrors({});
     
-    // Limpar documento antes de validar
-    const cleanDocument = document ? document.replace(/\D/g, '') : '';
-    
+    // Sanitize document and phone (digits only)
+    const cleanDocument = document.replace(/\D/g, '');
+    const cleanPhone = phone.replace(/\D/g, '');
+    const normalizedName = name.trim().toUpperCase();
+
     const validation = companySchema.safeParse({
-      name,
+      name: normalizedName,
       document: cleanDocument,
-      phone,
+      phone: cleanPhone,
       email,
       zipCode,
       street,
@@ -179,11 +181,11 @@ export default function CompanySetup() {
       // Use RPC to create company and assign admin role
       const { data: companyData, error: companyError } = await supabase
         .rpc('create_company_and_assign_admin', {
-          _name: name,
-          _cnpj: cleanDocument || null, // Envia null se vazio
-          _phone: phone || null,
+          _name: normalizedName,
+          _cnpj: cleanDocument,
+          _phone: cleanPhone || null,
           _email: email || null,
-          _address: [street, addressNumber, complement, neighborhood, city, state, zipCode].filter(Boolean).join(', ') || null,
+          _address: [street, addressNumber, complement, neighborhood, city, state, zipCode.replace(/\D/g, '')].filter(Boolean).join(', ') || null,
         });
       
       if (companyError) {
