@@ -43,6 +43,7 @@ const PedidosCompra = lazy(() => import("./pages/PedidosCompra"));
 const Feedbacks = lazy(() => import("./pages/Feedbacks"));
 
 const AceitarConvite = lazy(() => import("./pages/AceitarConvite"));
+const Planos = lazy(() => import("./pages/Planos"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Settings pages - lazy loaded
