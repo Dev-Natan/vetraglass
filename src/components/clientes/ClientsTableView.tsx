@@ -138,10 +138,18 @@ export function ClientsTableView({ clients, onView, onDelete }: ClientsTableView
               </TableCell>
               <TableCell>
                 <div className="space-y-1">
+                  <p className="font-medium uppercase">{client.name}</p>
+                  {client.document && (
+                    <p className="text-xs text-muted-foreground">{formatCPFOrCNPJ(client.document)}</p>
+                  )}
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="space-y-1">
                   {client.phone && (
                     <div className="flex items-center gap-1 text-sm">
                       <Phone className="h-3 w-3 text-muted-foreground" />
-                      {client.phone}
+                      {formatPhone(client.phone)}
                     </div>
                   )}
                   {client.email && (
