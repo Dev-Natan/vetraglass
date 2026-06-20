@@ -959,13 +959,12 @@ export default function ItemTemplates() {
             {expandedLinhas.size === 0 && (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
                 {availableLines.map((linha) => {
-                  const groupItems = groupedItems.get(linha) || [];
-                  const types = Array.from(new Set(groupItems.map(i => i.type)));
+                  const types = Array.from(linhaTypesMap.get(linha.toLowerCase()) || []);
                   return (
                     <LinhaCardSimple
                       key={linha}
                       linha={linha}
-                      label={productLinhas?.find(l => l.slug.toLowerCase() === linha.toLowerCase() || l.name.toLowerCase() === linha.toLowerCase())?.name || linha}
+                      label={prettifyLinha(linha)}
                       isRemovable={false}
                       categories={types}
                       categoryLabels={typeLabels}
