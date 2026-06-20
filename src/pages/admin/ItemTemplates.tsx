@@ -874,7 +874,7 @@ export default function ItemTemplates() {
             <SelectTrigger className="w-40"><SelectValue placeholder="Linha" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas Linhas</SelectItem>
-              {availableLines?.map((line) => <SelectItem key={line} value={line}>{line}</SelectItem>)}
+              {availableLines?.map((line) => <SelectItem key={line} value={line}>{productLinhas?.find(l => l.slug.toLowerCase() === line.toLowerCase() || l.name.toLowerCase() === line.toLowerCase())?.name || line}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={filterType} onValueChange={(v) => { setFilterType(v); setPage(1); }}>
