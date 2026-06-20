@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
+import { useProductLinhas } from '@/hooks/useProductLinhas';
 
 export default function Produtos() {
   const navigate = useNavigate();
@@ -30,6 +31,8 @@ export default function Produtos() {
   const [createLinhaDialogOpen, setCreateLinhaDialogOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const { labels: categoryLabels, categories } = useProductCategoryLabels();
+  const { data: productLinhas } = useProductLinhas();
+  const getLinhaLabel = (slug: string) => productLinhas?.find(l => l.slug.toLowerCase() === slug.toLowerCase() || l.name.toLowerCase() === slug.toLowerCase())?.name || slug;
 
   // Fetch company activated products
   const { data: companyProducts = [] } = useQuery({
@@ -175,6 +178,7 @@ export default function Produtos() {
               <LinhaCardSimple
                 key={item.linha}
                 linha={item.linha}
+                label={getLinhaLabel(item.linha)}
                 onViewProducts={() => navigate(`/produtos/linha/${encodeURIComponent(item.linha)}`)}
                 onRemove={() => handleRemoveLinha(item.linha)}
                 isRemovable={showActive}
