@@ -482,12 +482,9 @@ export default function AdminAuditLogs() {
                     <div>
                       <p className="text-sm text-muted-foreground">Ação</p>
                       <Badge
-                        className={`${
-                          actionLabels[selectedLog.action]?.color || "bg-gray-500"
-                        } text-white`}
+                        className={`${getActionInfo(selectedLog.action).color} text-white`}
                       >
-                        {actionLabels[selectedLog.action]?.label ||
-                          selectedLog.action}
+                        {getActionInfo(selectedLog.action).label}
                       </Badge>
                     </div>
                     <div>
@@ -499,17 +496,19 @@ export default function AdminAuditLogs() {
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">
-                        ID do Usuário
-                      </p>
-                      <p className="font-mono text-sm">
-                        {selectedLog.user_id || "Sistema"}
+                      <p className="text-sm text-muted-foreground">Usuário</p>
+                      <p className="text-sm">
+                        {selectedLog.user_id
+                          ? usersMap?.[selectedLog.user_id]?.name || selectedLog.user_id
+                          : "Sistema"}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Empresa</p>
-                      <p className="font-mono text-sm">
-                        {selectedLog.company_id || "-"}
+                      <p className="text-sm">
+                        {selectedLog.company_id
+                          ? companiesMap?.[selectedLog.company_id] || selectedLog.company_id
+                          : "-"}
                       </p>
                     </div>
                   </div>
@@ -520,9 +519,7 @@ export default function AdminAuditLogs() {
                       <p className="text-sm font-medium text-muted-foreground mb-2">
                         Dados Anteriores
                       </p>
-                      <pre className="bg-muted p-4 rounded-lg text-xs overflow-x-auto">
-                        {JSON.stringify(selectedLog.old_data, null, 2)}
-                      </pre>
+                      <JsonView data={selectedLog.old_data} />
                     </div>
                   )}
 
@@ -532,11 +529,10 @@ export default function AdminAuditLogs() {
                       <p className="text-sm font-medium text-muted-foreground mb-2">
                         Dados Novos
                       </p>
-                      <pre className="bg-muted p-4 rounded-lg text-xs overflow-x-auto">
-                        {JSON.stringify(selectedLog.new_data, null, 2)}
-                      </pre>
+                      <JsonView data={selectedLog.new_data} />
                     </div>
                   )}
+
 
                   {/* Metadata */}
                   {selectedLog.metadata && (
