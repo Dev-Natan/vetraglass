@@ -687,7 +687,7 @@ export default function ItemTemplates() {
                       <SelectTrigger><SelectValue placeholder="Selecione uma linha" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">Sem Linha</SelectItem>
-                        {availableLines?.map((line) => <SelectItem key={line} value={line}>{line}</SelectItem>)}
+                        {availableLines?.map((line) => <SelectItem key={line} value={line}>{productLinhas?.find(l => l.slug.toLowerCase() === line.toLowerCase() || l.name.toLowerCase() === line.toLowerCase())?.name || line}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
