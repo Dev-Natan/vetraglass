@@ -1307,7 +1307,8 @@ export default function ProductTemplates() {
                             return (
                               <LinhaCardSimple
                                 key={linha}
-                                linha={meta?.name || linha}
+                                linha={linha}
+                                label={meta?.name || linha}
                                 onViewProducts={() => setLinhaView(linha)}
                                 isRemovable={false}
                                 categories={cats}
