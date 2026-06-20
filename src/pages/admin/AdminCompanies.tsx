@@ -53,6 +53,7 @@ interface Subscription {
 
 export default function AdminCompanies() {
   const { isSaasAdmin } = useAuth();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'expiring' | 'no_plan'>('all');
   const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
