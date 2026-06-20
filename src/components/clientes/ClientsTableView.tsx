@@ -18,6 +18,15 @@ import {
   MessageCircle
 } from 'lucide-react';
 import { openWhatsapp } from '@/utils/whatsapp';
+import { formatCPFOrCNPJ } from '@/utils/documentValidation';
+
+const formatPhone = (phone: string | null) => {
+  if (!phone) return '';
+  const c = phone.replace(/\D/g, '');
+  if (c.length === 11) return c.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+  if (c.length === 10) return c.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+  return phone;
+};
 
 interface Client {
   id: string;
@@ -121,9 +130,9 @@ export function ClientsTableView({ clients, onView, onDelete }: ClientsTableView
             >
               <TableCell>
                 <div>
-                  <p className="font-medium">{client.name}</p>
+                  <p className="font-medium uppercase">{client.name}</p>
                   {client.document && (
-                    <p className="text-xs text-muted-foreground">{client.document}</p>
+                    <p className="text-xs text-muted-foreground">{formatCPFOrCNPJ(client.document)}</p>
                   )}
                 </div>
               </TableCell>
@@ -132,7 +141,7 @@ export function ClientsTableView({ clients, onView, onDelete }: ClientsTableView
                   {client.phone && (
                     <div className="flex items-center gap-1 text-sm">
                       <Phone className="h-3 w-3 text-muted-foreground" />
-                      {client.phone}
+                      {formatPhone(client.phone)}
                     </div>
                   )}
                   {client.email && (

@@ -37,6 +37,9 @@ export const ClientsCardView = memo(function ClientsCardView({ clients, onView, 
 
   const formatPhone = (phone: string | null) => {
     if (!phone) return '(00) 00000-0000';
+    const c = phone.replace(/\D/g, '');
+    if (c.length === 11) return c.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+    if (c.length === 10) return c.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
     return phone;
   };
 
@@ -69,7 +72,7 @@ export const ClientsCardView = memo(function ClientsCardView({ clients, onView, 
           <div className="space-y-2 mb-4 pr-12">
             <div className="flex items-start gap-2">
               <User className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-              <span className="font-semibold text-foreground text-sm leading-tight">
+              <span className="font-semibold text-foreground text-sm leading-tight uppercase">
                 {client.name}
               </span>
             </div>
