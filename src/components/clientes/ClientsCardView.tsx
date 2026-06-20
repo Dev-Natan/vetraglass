@@ -37,6 +37,9 @@ export const ClientsCardView = memo(function ClientsCardView({ clients, onView, 
 
   const formatPhone = (phone: string | null) => {
     if (!phone) return '(00) 00000-0000';
+    const c = phone.replace(/\D/g, '');
+    if (c.length === 11) return c.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+    if (c.length === 10) return c.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
     return phone;
   };
 
