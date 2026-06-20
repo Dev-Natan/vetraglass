@@ -276,11 +276,11 @@ export default function AdminDashboard() {
                 </CardContent>
               </Card>
             </Link>
-            <Link to="/admin/audit-logs">
+            <Link to="/admin/companies">
               <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
                 <CardContent className="pt-4 flex items-center gap-3">
                   <FileText className="h-5 w-5 text-muted-foreground" />
-                  <span className="text-sm font-medium">Ver Logs</span>
+                  <span className="text-sm font-medium">Ver Empresas / Logs</span>
                 </CardContent>
               </Card>
             </Link>
