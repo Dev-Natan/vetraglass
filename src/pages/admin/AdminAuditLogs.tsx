@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -43,6 +43,7 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { JsonView } from "@/components/admin/JsonView";
 
 interface AuditLog {
   id: string;
@@ -59,14 +60,50 @@ interface AuditLog {
   created_at: string;
 }
 
+// DB stores actions lowercase (create/update/delete). Keep aliases for legacy rows.
 const actionLabels: Record<string, { label: string; color: string }> = {
-  INSERT: { label: "Criação", color: "bg-green-500" },
-  UPDATE: { label: "Atualização", color: "bg-blue-500" },
-  DELETE: { label: "Exclusão", color: "bg-red-500" },
-  LOGIN: { label: "Login", color: "bg-purple-500" },
-  LOGOUT: { label: "Logout", color: "bg-gray-500" },
-  CANCEL_SALE: { label: "Cancelamento de Venda", color: "bg-orange-500" },
+  create: { label: "Criação", color: "bg-green-500" },
+  insert: { label: "Criação", color: "bg-green-500" },
+  update: { label: "Atualização", color: "bg-blue-500" },
+  delete: { label: "Exclusão", color: "bg-red-500" },
+  login: { label: "Login", color: "bg-purple-500" },
+  logout: { label: "Logout", color: "bg-gray-500" },
+  cancel_sale: { label: "Cancelamento de Venda", color: "bg-orange-500" },
 };
+
+const getActionInfo = (action: string) =>
+  actionLabels[action?.toLowerCase()] || { label: action, color: "bg-gray-500" };
+
+const countAction = (logs: AuditLog[] | undefined, ...keys: string[]) =>
+  logs?.filter((l) => keys.includes(l.action?.toLowerCase())).length || 0;
+
+// Build a friendly "Target / Reference" string from the log payload.
+function buildTargetRef(log: AuditLog): string {
+  const data =
+    (log.new_data as Record<string, unknown>) ||
+    (log.old_data as Record<string, unknown>) ||
+    (log.metadata as Record<string, unknown>) ||
+    {};
+  const get = (k: string) => (data[k] != null ? String(data[k]) : "");
+  const table = log.table_name;
+
+  if (table === "quotes") {
+    const num = get("quote_number") || get("numero");
+    const name = get("customer_name") || get("client_name");
+    if (name || num) return [name, num && `Nº ${num}`].filter(Boolean).join(" — ");
+  }
+  if (table === "sales" || table === "ordens_servico") {
+    const num = get("sale_number") || get("os_number") || get("numero");
+    const name = get("customer_name") || get("client_name");
+    const short = log.record_id?.slice(0, 8);
+    return [name, num ? `Nº ${num}` : short].filter(Boolean).join(" — ");
+  }
+  if (table === "clients") return get("name") || get("razao_social") || "-";
+  if (table === "companies") return get("name") || "-";
+  if (table === "expenses") return get("description") || get("category") || "-";
+
+  return get("name") || get("title") || log.record_id?.slice(0, 8) || "-";
+}
 
 const tableLabels: Record<string, string> = {
   companies: "Empresas",
@@ -115,6 +152,50 @@ export default function AdminAuditLogs() {
     enabled: isSaasAdmin,
   });
 
+  // Resolve user_ids → profile name/email
+  const userIds = useMemo(
+    () => [...new Set((logs || []).map((l) => l.user_id).filter(Boolean) as string[])],
+    [logs],
+  );
+  const { data: usersMap } = useQuery({
+    queryKey: ["audit-logs-users", userIds],
+    enabled: isSaasAdmin && userIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("user_id, full_name")
+        .in("user_id", userIds);
+      if (error) throw error;
+      const map: Record<string, { name: string }> = {};
+      for (const p of data || []) {
+        map[p.user_id] = { name: p.full_name || p.user_id.slice(0, 8) };
+      }
+      return map;
+    },
+  });
+
+  // Resolve company_ids → company name
+  const companyIds = useMemo(
+    () => [...new Set((logs || []).map((l) => l.company_id).filter(Boolean) as string[])],
+    [logs],
+  );
+  const { data: companiesMap } = useQuery({
+    queryKey: ["audit-logs-companies", companyIds],
+    enabled: isSaasAdmin && companyIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("companies")
+        .select("id, name")
+        .in("id", companyIds);
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      for (const c of data || []) {
+        map[c.id] = c.name || c.id.slice(0, 8);
+      }
+      return map;
+    },
+  });
+
   // Get unique tables from logs
   const uniqueTables = [...new Set(logs?.map((l) => l.table_name) || [])].sort();
 
@@ -122,11 +203,16 @@ export default function AdminAuditLogs() {
   const filteredLogs = logs?.filter((log) => {
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
+    const userName = log.user_id ? usersMap?.[log.user_id]?.name?.toLowerCase() : "";
+    const companyName = log.company_id ? companiesMap?.[log.company_id]?.toLowerCase() : "";
     return (
       log.table_name.toLowerCase().includes(term) ||
       log.action.toLowerCase().includes(term) ||
       log.record_id?.toLowerCase().includes(term) ||
-      log.user_id?.toLowerCase().includes(term)
+      log.user_id?.toLowerCase().includes(term) ||
+      userName?.includes(term) ||
+      companyName?.includes(term) ||
+      buildTargetRef(log).toLowerCase().includes(term)
     );
   });
 
@@ -215,9 +301,9 @@ export default function AdminAuditLogs() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas as ações</SelectItem>
-                  <SelectItem value="INSERT">Criação</SelectItem>
-                  <SelectItem value="UPDATE">Atualização</SelectItem>
-                  <SelectItem value="DELETE">Exclusão</SelectItem>
+                  <SelectItem value="create">Criação</SelectItem>
+                  <SelectItem value="update">Atualização</SelectItem>
+                  <SelectItem value="delete">Exclusão</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -237,7 +323,7 @@ export default function AdminAuditLogs() {
           <Card>
             <CardContent className="pt-4">
               <div className="text-2xl font-bold text-green-500">
-                {logs?.filter((l) => l.action === "INSERT").length || 0}
+                {countAction(logs, "create", "insert")}
               </div>
               <p className="text-xs text-muted-foreground">Criações</p>
             </CardContent>
@@ -245,7 +331,7 @@ export default function AdminAuditLogs() {
           <Card>
             <CardContent className="pt-4">
               <div className="text-2xl font-bold text-blue-500">
-                {logs?.filter((l) => l.action === "UPDATE").length || 0}
+                {countAction(logs, "update")}
               </div>
               <p className="text-xs text-muted-foreground">Atualizações</p>
             </CardContent>
@@ -253,7 +339,7 @@ export default function AdminAuditLogs() {
           <Card>
             <CardContent className="pt-4">
               <div className="text-2xl font-bold text-red-500">
-                {logs?.filter((l) => l.action === "DELETE").length || 0}
+                {countAction(logs, "delete")}
               </div>
               <p className="text-xs text-muted-foreground">Exclusões</p>
             </CardContent>
@@ -285,23 +371,28 @@ export default function AdminAuditLogs() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[180px]">Data/Hora</TableHead>
+                      <TableHead className="w-[150px]">Data/Hora</TableHead>
                       <TableHead>Tabela</TableHead>
                       <TableHead>Ação</TableHead>
-                      <TableHead>ID do Registro</TableHead>
+                      <TableHead>Alvo / Referência</TableHead>
                       <TableHead>Usuário</TableHead>
+                      <TableHead>Empresa</TableHead>
                       <TableHead className="text-right">Detalhes</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredLogs?.slice(0, 100).map((log) => {
-                      const actionInfo = actionLabels[log.action] || {
-                        label: log.action,
-                        color: "bg-gray-500",
-                      };
+                      const actionInfo = getActionInfo(log.action);
+                      const userName = log.user_id
+                        ? usersMap?.[log.user_id]?.name || `${log.user_id.slice(0, 8)}…`
+                        : "Sistema";
+                      const companyName = log.company_id
+                        ? companiesMap?.[log.company_id] || `${log.company_id.slice(0, 8)}…`
+                        : "-";
+                      const targetRef = buildTargetRef(log);
                       return (
                         <TableRow key={log.id}>
-                          <TableCell className="font-mono text-sm">
+                          <TableCell className="font-mono text-xs">
                             <div className="flex items-center gap-2">
                               <Calendar className="h-3 w-3 text-muted-foreground" />
                               {format(new Date(log.created_at), "dd/MM/yy HH:mm", {
@@ -321,16 +412,19 @@ export default function AdminAuditLogs() {
                               {actionInfo.label}
                             </Badge>
                           </TableCell>
-                          <TableCell className="font-mono text-xs text-muted-foreground max-w-[150px] truncate">
-                            {log.record_id || "-"}
+                          <TableCell className="text-xs max-w-[220px] truncate" title={targetRef}>
+                            {targetRef}
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <User className="h-3 w-3" />
-                              <span className="max-w-[100px] truncate">
-                                {log.user_id?.slice(0, 8) || "Sistema"}
+                            <div className="flex items-center gap-1 text-xs">
+                              <User className="h-3 w-3 text-muted-foreground" />
+                              <span className="max-w-[140px] truncate" title={userName}>
+                                {userName}
                               </span>
                             </div>
+                          </TableCell>
+                          <TableCell className="text-xs max-w-[160px] truncate" title={companyName}>
+                            {companyName}
                           </TableCell>
                           <TableCell className="text-right">
                             <Button
@@ -388,12 +482,9 @@ export default function AdminAuditLogs() {
                     <div>
                       <p className="text-sm text-muted-foreground">Ação</p>
                       <Badge
-                        className={`${
-                          actionLabels[selectedLog.action]?.color || "bg-gray-500"
-                        } text-white`}
+                        className={`${getActionInfo(selectedLog.action).color} text-white`}
                       >
-                        {actionLabels[selectedLog.action]?.label ||
-                          selectedLog.action}
+                        {getActionInfo(selectedLog.action).label}
                       </Badge>
                     </div>
                     <div>
@@ -405,17 +496,19 @@ export default function AdminAuditLogs() {
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">
-                        ID do Usuário
-                      </p>
-                      <p className="font-mono text-sm">
-                        {selectedLog.user_id || "Sistema"}
+                      <p className="text-sm text-muted-foreground">Usuário</p>
+                      <p className="text-sm">
+                        {selectedLog.user_id
+                          ? usersMap?.[selectedLog.user_id]?.name || selectedLog.user_id
+                          : "Sistema"}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Empresa</p>
-                      <p className="font-mono text-sm">
-                        {selectedLog.company_id || "-"}
+                      <p className="text-sm">
+                        {selectedLog.company_id
+                          ? companiesMap?.[selectedLog.company_id] || selectedLog.company_id
+                          : "-"}
                       </p>
                     </div>
                   </div>
@@ -426,9 +519,7 @@ export default function AdminAuditLogs() {
                       <p className="text-sm font-medium text-muted-foreground mb-2">
                         Dados Anteriores
                       </p>
-                      <pre className="bg-muted p-4 rounded-lg text-xs overflow-x-auto">
-                        {JSON.stringify(selectedLog.old_data, null, 2)}
-                      </pre>
+                      <JsonView data={selectedLog.old_data} />
                     </div>
                   )}
 
@@ -438,11 +529,10 @@ export default function AdminAuditLogs() {
                       <p className="text-sm font-medium text-muted-foreground mb-2">
                         Dados Novos
                       </p>
-                      <pre className="bg-muted p-4 rounded-lg text-xs overflow-x-auto">
-                        {JSON.stringify(selectedLog.new_data, null, 2)}
-                      </pre>
+                      <JsonView data={selectedLog.new_data} />
                     </div>
                   )}
+
 
                   {/* Metadata */}
                   {selectedLog.metadata && (
