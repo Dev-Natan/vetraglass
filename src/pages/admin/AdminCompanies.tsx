@@ -496,7 +496,7 @@ export default function AdminCompanies() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Empresa</TableHead>
-                    <TableHead>CNPJ</TableHead>
+                    <TableHead>CNPJ / CPF</TableHead>
                     <TableHead>Contato</TableHead>
                     <TableHead>Plano</TableHead>
                     <TableHead>Status</TableHead>
