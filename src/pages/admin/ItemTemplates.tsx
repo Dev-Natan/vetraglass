@@ -29,6 +29,7 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useItemTypeLabels } from '@/hooks/useItemTypes';
 import { useProductLinhas } from '@/hooks/useProductLinhas';
+import { LinhaCardSimple } from '@/components/produtos/LinhaCardSimple';
 
 interface ItemTemplate {
   id: string;
