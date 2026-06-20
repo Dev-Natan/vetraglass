@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import {
   ArrowLeft, Building2, CreditCard, Activity, FileText, Loader2,
   CheckCircle2, XCircle, AlertTriangle, Clock, Calendar, User, Eye,
-  MapPin, Mail, Phone, Crown,
+  MapPin, Mail, Phone, Crown, Undo2,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -20,11 +20,14 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { JsonView } from "@/components/admin/JsonView";
+import { buildNarrative, diffFields } from "@/utils/auditLogNarrative";
 
 interface CompanyRow {
   id: string;
@@ -112,6 +115,8 @@ export default function AdminCompanyDetail() {
   const queryClient = useQueryClient();
   const [subDialogOpen, setSubDialogOpen] = useState(false);
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
+  const [onlyDeletes, setOnlyDeletes] = useState(false);
+  const [revertTarget, setRevertTarget] = useState<AuditLog | null>(null);
   const [subForm, setSubForm] = useState({
     plan_name: "basico",
     plan_price: 98.99,
@@ -249,6 +254,39 @@ export default function AdminCompanyDetail() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+  const revertLog = useMutation({
+    mutationFn: async (log: AuditLog) => {
+      if (!log.old_data || !log.table_name) {
+        throw new Error("Log sem dados anteriores — não é possível reverter.");
+      }
+      const table = log.table_name as never;
+      const action = (log.action || "").toLowerCase();
+      // Remove fields managed by DB
+      const payload: Record<string, unknown> = { ...(log.old_data as Record<string, unknown>) };
+      delete payload.updated_at;
+
+      if (action === "delete") {
+        const { error } = await supabase.from(table).insert(payload as never);
+        if (error) throw error;
+      } else if (action === "update") {
+        if (!log.record_id) throw new Error("Log sem record_id.");
+        delete payload.id;
+        delete payload.created_at;
+        const { error } = await supabase.from(table).update(payload as never).eq("id" as never, log.record_id as never);
+        if (error) throw error;
+      } else {
+        throw new Error("Apenas updates e exclusões podem ser revertidos.");
+      }
+    },
+    onSuccess: () => {
+      toast.success("Alteração revertida com sucesso");
+      queryClient.invalidateQueries({ queryKey: ["admin-company-logs", id] });
+      queryClient.invalidateQueries({ queryKey: ["admin-company-quotes", id] });
+      setRevertTarget(null);
+    },
+    onError: (e: Error) => toast.error(e.message || "Erro ao reverter"),
+  });
+
 
   const openSubDialog = () => {
     setSubForm({
@@ -457,8 +495,19 @@ export default function AdminCompanyDetail() {
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Activity className="h-4 w-4" />Registros desta empresa
                 </CardTitle>
-                <CardDescription>
-                  {loadingLogs ? "Carregando..." : `${logs.length} registro(s) — últimos 500`}
+                <CardDescription className="flex items-center justify-between gap-4 flex-wrap">
+                  <span>
+                    {loadingLogs
+                      ? "Carregando..."
+                      : `${onlyDeletes ? logs.filter((l) => l.action?.toLowerCase() === "delete").length : logs.length} registro(s)${onlyDeletes ? " (exclusões)" : " — últimos 500"}`}
+                  </span>
+                  <label className="flex items-center gap-2 cursor-pointer text-sm font-normal text-foreground">
+                    <Checkbox
+                      checked={onlyDeletes}
+                      onCheckedChange={(c) => setOnlyDeletes(c === true)}
+                    />
+                    Mostrar apenas exclusões
+                  </label>
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -471,44 +520,69 @@ export default function AdminCompanyDetail() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="w-[150px]">Data/Hora</TableHead>
-                          <TableHead>Tabela</TableHead>
+                          <TableHead className="w-[140px]">Data/Hora</TableHead>
                           <TableHead>Ação</TableHead>
-                          <TableHead>Usuário</TableHead>
-                          <TableHead className="text-right">Detalhes</TableHead>
+                          <TableHead>Descrição</TableHead>
+                          <TableHead className="text-right w-[140px]">Ações</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {logs.slice(0, 200).map((log) => {
-                          const info = actionLabels[log.action?.toLowerCase()] || { label: log.action, color: "bg-gray-500" };
-                          const userName = log.user_id ? usersMap?.[log.user_id] || `${log.user_id.slice(0, 8)}…` : "Sistema";
-                          return (
-                            <TableRow key={log.id}>
-                              <TableCell className="font-mono text-xs">
-                                {format(new Date(log.created_at), "dd/MM/yy HH:mm", { locale: ptBR })}
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant="outline" className="font-mono text-xs">
-                                  {tableLabels[log.table_name] || log.table_name}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                <Badge className={`${info.color} text-white text-xs`}>{info.label}</Badge>
-                              </TableCell>
-                              <TableCell className="text-xs">
-                                <div className="flex items-center gap-1">
-                                  <User className="h-3 w-3 text-muted-foreground" />
-                                  <span className="max-w-[160px] truncate" title={userName}>{userName}</span>
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <Button variant="ghost" size="sm" onClick={() => setSelectedLog(log)}>
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
+                        {logs
+                          .filter((l) => !onlyDeletes || l.action?.toLowerCase() === "delete")
+                          .slice(0, 200)
+                          .map((log) => {
+                            const action = log.action?.toLowerCase();
+                            const info = actionLabels[action] || { label: log.action, color: "bg-gray-500" };
+                            const userName = log.user_id ? usersMap?.[log.user_id] || `${log.user_id.slice(0, 8)}…` : "Sistema";
+                            const narrative = buildNarrative(log, userName);
+                            const canRevert = (action === "update" || action === "delete") && !!log.old_data;
+                            return (
+                              <TableRow key={log.id}>
+                                <TableCell className="font-mono text-xs">
+                                  {format(new Date(log.created_at), "dd/MM/yy HH:mm", { locale: ptBR })}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge className={`${info.color} text-white text-xs`}>{info.label}</Badge>
+                                </TableCell>
+                                <TableCell className="text-sm">
+                                  <div className="font-medium">{narrative.text}</div>
+                                  {narrative.diffs.length > 0 && (
+                                    <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-2 gap-y-0.5">
+                                      {narrative.diffs.slice(0, 3).map((d) => (
+                                        <span key={d.key}>
+                                          <span className="text-foreground/70">{d.key}:</span>{" "}
+                                          <span className="line-through text-red-600 dark:text-red-400">{d.oldValue}</span>
+                                          {" → "}
+                                          <span className="text-green-600 dark:text-green-400 font-medium">{d.newValue}</span>
+                                        </span>
+                                      ))}
+                                      {narrative.diffs.length > 3 && (
+                                        <span className="text-muted-foreground">+{narrative.diffs.length - 3} mais</span>
+                                      )}
+                                    </div>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex items-center justify-end gap-1">
+                                    <Button variant="ghost" size="sm" onClick={() => setSelectedLog(log)} title="Ver detalhes">
+                                      <Eye className="h-4 w-4" />
+                                    </Button>
+                                    {canRevert && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setRevertTarget(log)}
+                                        title="Desfazer esta alteração"
+                                        className="text-orange-600 hover:text-orange-700"
+                                      >
+                                        <Undo2 className="h-4 w-4" />
+                                      </Button>
+                                    )}
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
                       </TableBody>
                     </Table>
                   </div>
@@ -516,6 +590,7 @@ export default function AdminCompanyDetail() {
               </CardContent>
             </Card>
           </TabsContent>
+
 
           {/* ============== ORÇAMENTOS ============== */}
           <TabsContent value="orcamentos">
@@ -592,6 +667,28 @@ export default function AdminCompanyDetail() {
                   <Field label="Registro" value={selectedLog.record_id || "-"} />
                   <Field label="Usuário" value={selectedLog.user_id ? usersMap?.[selectedLog.user_id] || selectedLog.user_id : "Sistema"} />
                 </div>
+                {selectedLog.action?.toLowerCase() === "update" && (() => {
+                  const diffs = diffFields(selectedLog.old_data, selectedLog.new_data);
+                  if (diffs.length === 0) return null;
+                  return (
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground mb-2">Alterações</p>
+                      <div className="rounded-md border divide-y">
+                        {diffs.map((d) => (
+                          <div key={d.key} className="grid grid-cols-[140px_1fr_1fr] gap-2 p-2 text-xs">
+                            <div className="font-medium text-foreground">{d.key}</div>
+                            <div className="bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 px-2 py-1 rounded line-through break-all">
+                              {d.oldValue}
+                            </div>
+                            <div className="bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300 px-2 py-1 rounded font-medium break-all">
+                              {d.newValue}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
                 {selectedLog.old_data && (
                   <div>
                     <p className="text-sm font-medium text-muted-foreground mb-2">Dados Anteriores</p>
@@ -615,6 +712,36 @@ export default function AdminCompanyDetail() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Revert confirmation */}
+      <AlertDialog open={!!revertTarget} onOpenChange={(o) => !o && setRevertTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Undo2 className="h-5 w-5 text-orange-600" />Desfazer alteração?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {revertTarget?.action?.toLowerCase() === "delete"
+                ? "O registro excluído será restaurado com os dados originais. Confirma?"
+                : "O registro voltará ao estado anterior à alteração. Confirma?"}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                if (revertTarget) revertLog.mutate(revertTarget);
+              }}
+              disabled={revertLog.isPending}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              {revertLog.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Confirmar reversão
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Subscription dialog */}
       <Dialog open={subDialogOpen} onOpenChange={setSubDialogOpen}>
