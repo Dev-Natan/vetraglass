@@ -19,7 +19,7 @@ import { toast } from 'sonner';
 import { 
   Loader2, Plus, Pencil, Trash2, Search, Package, Upload, X, MoreVertical,
   Eye, EyeOff, Copy, DollarSign, Ruler, ImageUp, CheckCircle2, XCircle,
-  AlertCircle, AlertTriangle, LayoutGrid, LayoutList, Image, ChevronDown, ChevronRight
+  AlertCircle, AlertTriangle, LayoutGrid, LayoutList, Image, ChevronDown, ChevronRight, ArrowLeft
 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Progress } from '@/components/ui/progress';
