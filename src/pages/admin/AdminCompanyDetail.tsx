@@ -115,6 +115,8 @@ export default function AdminCompanyDetail() {
   const queryClient = useQueryClient();
   const [subDialogOpen, setSubDialogOpen] = useState(false);
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
+  const [onlyDeletes, setOnlyDeletes] = useState(false);
+  const [revertTarget, setRevertTarget] = useState<AuditLog | null>(null);
   const [subForm, setSubForm] = useState({
     plan_name: "basico",
     plan_price: 98.99,
