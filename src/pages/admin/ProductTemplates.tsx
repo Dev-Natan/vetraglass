@@ -1306,141 +1306,179 @@ export default function ProductTemplates() {
               </Card>
             ) : (
               <div className="space-y-4">
-                {[...groupedTemplates.entries()].map(([linha, templates]) => (
-                  <Collapsible 
-                    key={linha} 
-                    open={expandedLinhas.has(linha)} 
-                    onOpenChange={() => toggleLinha(linha)}
-                    className="border rounded-xl bg-card overflow-hidden transition-all shadow-sm"
-                  >
-                    <CollapsibleTrigger className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className={cn(
-                          "p-2 rounded-lg transition-colors",
-                          expandedLinhas.has(linha) ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
-                        )}>
-                          <Layers className="w-5 h-5" />
-                        </div>
-                        <div className="text-left">
-                          <h3 className="font-bold text-lg">{linha}</h3>
-                          <p className="text-xs text-muted-foreground">{templates.length} produtos nesta linha</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Badge variant="outline" className="hidden sm:inline-flex">{templates.filter(t => t.is_active).length} ativos</Badge>
-                        {expandedLinhas.has(linha) ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
-                      </div>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <div className="p-4 border-t bg-muted/10">
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                          {templates.map(template => {
-                            const imgUrl = resolveProductImageUrl(template.image_url);
-                            const isReady = template.description?.includes("[PRONTO]");
-                            return (
-                              <Card 
-                                key={template.id} 
-                                className={cn(
-                                  "group relative overflow-hidden transition-all hover:shadow-lg border-2",
-                                  !template.is_active && "opacity-50",
-                                  isReady ? "border-emerald-300 dark:border-emerald-700" : "border-transparent hover:border-primary/30"
-                                )}
-                              >
-                                {isReady && (
-                                  <div className="absolute top-2 left-2 z-10">
-                                    <div className="bg-emerald-500 text-white rounded-full p-1 shadow-md">
-                                      <CheckCircle2 className="w-4 h-4" />
-                                    </div>
-                                  </div>
-                                )}
-                                <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button variant="secondary" size="icon" className="h-7 w-7 shadow-sm">
-                                        <MoreVertical className="w-3.5 h-3.5" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      <DropdownMenuItem onClick={() => handleEdit(template)}><Pencil className="w-4 h-4 mr-2" /> Editar</DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => copyMutation.mutate(template)}><Copy className="w-4 h-4 mr-2" /> Duplicar</DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => { setSelectedTemplate(template); setIsCompositionDialogOpen(true); }}>
-                                        <Settings2 className="w-4 h-4 mr-2" /> Composição
-                                      </DropdownMenuItem>
-                                      <DropdownMenuSeparator />
-                                      <DropdownMenuItem onClick={() => toggleReadyMutation.mutate({ id: template.id, description: template.description, is_ready: !isReady })}>
-                                        {isReady ? (
-                                          <><XCircle className="w-4 h-4 mr-2 text-destructive" /> Desmarcar Pronto</>
-                                        ) : (
-                                          <><CheckCircle2 className="w-4 h-4 mr-2 text-emerald-500" /> Marcar Pronto</>
-                                        )}
-                                      </DropdownMenuItem>
-                                      <DropdownMenuSeparator />
-                                      <DropdownMenuItem className="text-destructive" onClick={() => deleteMutation.mutate(template.id)}><Trash2 className="w-4 h-4 mr-2" /> Excluir</DropdownMenuItem>
-                                    </DropdownMenuContent>
+                {(() => {
+                  const entries = [...groupedTemplates.entries()];
+                  const linhaMeta = (slug: string) =>
+                    productLinhas?.find(l => l.slug === slug || l.name === slug);
 
-                                  </DropdownMenu>
+                  // ===== Visão 1: GRID de cards das linhas =====
+                  if (!linhaView) {
+                    return (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        {entries.map(([linha, templates]) => {
+                          const meta = linhaMeta(linha);
+                          const activeCount = templates.filter(t => t.is_active).length;
+                          const readyCount = templates.filter(t => t.description?.includes("[PRONTO]")).length;
+                          const cover = templates.find(t => t.image_url)?.image_url;
+                          const coverUrl = cover ? resolveProductImageUrl(cover) : null;
+                          const accent = meta?.color || 'hsl(var(--primary))';
+
+                          return (
+                            <button
+                              type="button"
+                              key={linha}
+                              onClick={() => setLinhaView(linha)}
+                              className="group relative text-left rounded-xl border-2 border-transparent hover:border-primary/40 bg-card overflow-hidden shadow-sm hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-primary/40"
+                            >
+                              <div
+                                className="aspect-[4/3] relative overflow-hidden flex items-center justify-center"
+                                style={{ background: `linear-gradient(135deg, ${accent}15, ${accent}05)` }}
+                              >
+                                {coverUrl ? (
+                                  <img
+                                    src={coverUrl}
+                                    alt={meta?.name || linha}
+                                    className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform"
+                                  />
+                                ) : (
+                                  <Layers className="w-14 h-14 opacity-30" style={{ color: accent }} />
+                                )}
+                                <div className="absolute top-2 right-2 flex gap-1.5">
+                                  <Badge
+                                    className="text-[10px] shadow-sm border-0"
+                                    style={{ background: accent, color: 'white' }}
+                                  >
+                                    {templates.length}
+                                  </Badge>
                                 </div>
-                                <div className="aspect-square bg-muted/50 flex items-center justify-center p-3 relative overflow-hidden">
-                                  {imgUrl ? (
-                                    <img src={imgUrl} alt={template.name} className="w-full h-full object-contain" />
-                                  ) : (
-                                    <Package className="w-10 h-10 text-muted-foreground/30" />
-                                  )}
-                                  <label className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                                    <div className="flex flex-col items-center text-white gap-1">
-                                      <ImageUp className="w-6 h-6" />
-                                      <span className="text-xs font-medium">Trocar imagem</span>
-                                    </div>
-                                    <input 
-                                      type="file" 
-                                      accept="image/*" 
-                                      className="hidden"
-                                      onChange={async (e) => {
-                                        const file = e.target.files?.[0];
-                                        if (!file) return;
-                                        try {
-                                          const processedFile = await processFileWithWhiteBackground(file);
-                                          const fileName = `${template.id}.png`;
-                                          const { error: uploadError } = await supabase.storage
-                                            .from('product-templates')
-                                            .upload(fileName, processedFile, { upsert: true, contentType: 'image/png', cacheControl: '0' });
-                                          if (uploadError) throw uploadError;
-                                          const { data: urlData } = supabase.storage.from('product-templates').getPublicUrl(fileName);
-                                          const newUrl = `${urlData.publicUrl}?t=${Date.now()}`;
-                                          await supabase.from('product_templates').update({ image_url: newUrl }).eq('id', template.id);
-                                          queryClient.invalidateQueries({ queryKey: ['product-templates'] });
-                                          toast.success('Imagem atualizada!');
-                                        } catch (err: any) {
-                                          toast.error('Erro ao enviar imagem: ' + err.message);
-                                        }
-                                        e.target.value = '';
-                                      }}
-                                    />
-                                  </label>
-                                </div>
-                                <div className="p-3 space-y-1.5">
-                                  <h3 className="font-semibold text-sm leading-tight truncate" title={template.name}>{template.name}</h3>
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">{categoryLabels[template.category] || template.category}</Badge>
-                                    {template.has_multiple_sides && <Badge variant="outline" className="text-[9px] px-1 py-0 bg-primary/10 border-primary/30 text-primary">2 Lados</Badge>}
-                                  </div>
-                                  <div className="flex items-center justify-between pt-1">
-                                    <Switch checked={template.is_active} onCheckedChange={(checked) => toggleActiveMutation.mutate({ id: template.id, is_active: checked })} className="scale-75 origin-left" />
-                                    <span className={cn("text-[10px] font-medium", template.is_active ? "text-emerald-600" : "text-muted-foreground")}>
-                                      {template.is_active ? "Ativo" : "Inativo"}
+                              </div>
+                              <div className="p-3 space-y-1.5">
+                                <h3 className="font-bold text-sm leading-tight truncate" title={meta?.name || linha}>
+                                  {meta?.name || linha}
+                                </h3>
+                                <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                                  <span className="inline-flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                    {activeCount} ativos
+                                  </span>
+                                  {readyCount > 0 && (
+                                    <span className="inline-flex items-center gap-1">
+                                      <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                                      {readyCount} prontos
                                     </span>
-                                  </div>
+                                  )}
                                 </div>
-                              </Card>
-                            );
-                          })}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    );
+                  }
+
+                  // ===== Visão 2: produtos da linha selecionada =====
+                  const meta = linhaMeta(linhaView);
+                  const templates = groupedTemplates.get(linhaView) || [];
+
+                  return (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between gap-3 flex-wrap">
+                        <div className="flex items-center gap-3">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setLinhaView(null)}
+                          >
+                            <ArrowLeft className="w-4 h-4 mr-2" />
+                            Voltar às linhas
+                          </Button>
+                          <div>
+                            <h2 className="text-lg font-bold leading-tight">{meta?.name || linhaView}</h2>
+                            <p className="text-xs text-muted-foreground">
+                              {templates.length} produtos · {templates.filter(t => t.is_active).length} ativos
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                ))}
+
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                        {templates.map(template => {
+                          const imgUrl = resolveProductImageUrl(template.image_url);
+                          const isReady = template.description?.includes("[PRONTO]");
+                          return (
+                            <Card
+                              key={template.id}
+                              className={cn(
+                                "group relative overflow-hidden transition-all hover:shadow-lg border-2",
+                                !template.is_active && "opacity-50",
+                                isReady ? "border-emerald-300 dark:border-emerald-700" : "border-transparent hover:border-primary/30"
+                              )}
+                            >
+                              {isReady && (
+                                <div className="absolute top-2 left-2 z-10">
+                                  <div className="bg-emerald-500 text-white rounded-full p-1 shadow-md">
+                                    <CheckCircle2 className="w-4 h-4" />
+                                  </div>
+                                </div>
+                              )}
+                              <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="secondary" size="icon" className="h-7 w-7 shadow-sm">
+                                      <MoreVertical className="w-3.5 h-3.5" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => handleEdit(template)}><Pencil className="w-4 h-4 mr-2" /> Editar</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => copyMutation.mutate(template)}><Copy className="w-4 h-4 mr-2" /> Duplicar</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => { setSelectedTemplate(template); setIsCompositionDialogOpen(true); }}>
+                                      <Settings2 className="w-4 h-4 mr-2" /> Composição
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={() => toggleReadyMutation.mutate({ id: template.id, description: template.description, is_ready: !isReady })}>
+                                      {isReady ? (
+                                        <><XCircle className="w-4 h-4 mr-2 text-destructive" /> Desmarcar Pronto</>
+                                      ) : (
+                                        <><CheckCircle2 className="w-4 h-4 mr-2 text-emerald-500" /> Marcar Pronto</>
+                                      )}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem className="text-destructive" onClick={() => deleteMutation.mutate(template.id)}><Trash2 className="w-4 h-4 mr-2" /> Excluir</DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
+                              <div className="aspect-square bg-muted/50 flex items-center justify-center p-3 relative overflow-hidden">
+                                {imgUrl ? (
+                                  <img src={imgUrl} alt={template.name} className="w-full h-full object-contain" />
+                                ) : (
+                                  <Package className="w-10 h-10 text-muted-foreground/30" />
+                                )}
+                              </div>
+                              <div className="p-3 space-y-1.5">
+                                <h3 className="font-semibold text-sm leading-tight truncate" title={template.name}>
+                                  {template.name}
+                                </h3>
+                                <div className="flex items-center justify-between pt-1">
+                                  <Switch
+                                    checked={template.is_active}
+                                    onCheckedChange={(checked) => toggleActiveMutation.mutate({ id: template.id, is_active: checked })}
+                                    className="scale-75 origin-left"
+                                  />
+                                  <span className={cn("text-[10px] font-medium", template.is_active ? "text-emerald-600" : "text-muted-foreground")}>
+                                    {template.is_active ? "Ativo" : "Inativo"}
+                                  </span>
+                                </div>
+                              </div>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             )}
+
           </div>
         )}
 
