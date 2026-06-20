@@ -528,6 +528,7 @@ export default function ProductTemplates() {
 
   const handleEdit = (template: ProductTemplate) => {
     setEditingTemplate(template);
+    setSelectedTemplate(template);
     setFormImageFile(null);
     setFormImagePreview(resolveProductImageUrl(template.image_url) || null);
     setFormData({
@@ -550,6 +551,7 @@ export default function ProductTemplates() {
     });
     setIsDialogOpen(true);
   };
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
