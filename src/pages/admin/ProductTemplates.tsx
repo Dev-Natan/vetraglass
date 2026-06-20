@@ -1392,7 +1392,7 @@ export default function ProductTemplates() {
                                 <h3 className="font-semibold text-sm leading-tight truncate" title={template.name}>
                                   {template.name}
                                 </h3>
-                                <div className="flex items-center justify-between pt-1">
+                                <div className="flex items-center justify-between pt-1" onClick={(e) => e.stopPropagation()}>
                                   <Switch
                                     checked={template.is_active}
                                     onCheckedChange={(checked) => toggleActiveMutation.mutate({ id: template.id, is_active: checked })}
@@ -1402,6 +1402,7 @@ export default function ProductTemplates() {
                                     {template.is_active ? "Ativo" : "Inativo"}
                                   </span>
                                 </div>
+
                               </div>
                             </Card>
                           );
