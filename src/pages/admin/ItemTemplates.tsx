@@ -168,13 +168,12 @@ export default function ItemTemplates() {
     enabled: isSaasAdmin,
   });
 
-  // Une linhas do cadastro oficial + linhas presentes nos itens (case-insensitive, sem duplicatas)
+  // Apenas linhas que realmente possuem itens cadastrados (deduplicadas case-insensitive)
   const availableLines = useMemo(() => {
     const map = new Map<string, string>();
-    (productLinhas || []).forEach(l => { if (l?.name) map.set(l.name.toLowerCase(), l.name); });
     (itemLinhas || []).forEach(n => { const k = n.toLowerCase(); if (!map.has(k)) map.set(k, n); });
     return Array.from(map.values()).sort((a, b) => a.localeCompare(b));
-  }, [productLinhas, itemLinhas]);
+  }, [itemLinhas]);
 
   const filteredItems = items;
 
