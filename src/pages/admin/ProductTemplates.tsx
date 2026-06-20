@@ -1089,12 +1089,10 @@ export default function ProductTemplates() {
                         <DropdownMenuItem onClick={() => copyMutation.mutate(template)}>
                           <Copy className="w-4 h-4 mr-2" /> Duplicar
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => {
-                          setSelectedTemplate(template);
-                          setIsCompositionDialogOpen(true);
-                        }}>
+                        <DropdownMenuItem onClick={() => handleEdit(template)}>
                           <Settings2 className="w-4 h-4 mr-2" /> Composição
                         </DropdownMenuItem>
+
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => toggleReadyMutation.mutate({ id: template.id, description: template.description, is_ready: !isReady })}>
                           {isReady ? (
