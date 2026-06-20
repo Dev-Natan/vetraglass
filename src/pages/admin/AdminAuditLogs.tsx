@@ -99,7 +99,7 @@ function buildTargetRef(log: AuditLog): string {
     return [name, num ? `Nº ${num}` : short].filter(Boolean).join(" — ");
   }
   if (table === "clients") return get("name") || get("razao_social") || "-";
-  if (table === "companies") return get("fantasy_name") || get("name") || "-";
+  if (table === "companies") return get("name") || "-";
   if (table === "expenses") return get("description") || get("category") || "-";
 
   return get("name") || get("title") || log.record_id?.slice(0, 8) || "-";
