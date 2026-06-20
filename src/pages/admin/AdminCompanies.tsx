@@ -532,7 +532,7 @@ export default function AdminCompanies() {
                                 </div>
                               )}
                               <div>
-                                <p className="font-medium">{company.name}</p>
+                                <p className="font-medium uppercase">{company.name}</p>
                                 {(company.city || company.state) && (
                                   <p className="text-xs text-muted-foreground flex items-center gap-1">
                                     <MapPin className="h-3 w-3" />
