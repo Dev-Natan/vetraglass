@@ -65,7 +65,8 @@ export default function CompanySetup() {
   const [state, setState] = useState('');
 
   const handleDocumentChange = (value: string) => {
-    const formatted = formatCPFOrCNPJ(value);
+    const digits = value.replace(/\D/g, '').slice(0, 14);
+    const formatted = formatCNPJ(digits);
     setDocument(formatted);
     setCnpjValidated(null);
     setCnpjData(null);
