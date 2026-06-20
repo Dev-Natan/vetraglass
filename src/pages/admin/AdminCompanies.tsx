@@ -183,34 +183,44 @@ export default function AdminCompanies() {
   };
 
   const handleClearAllCompaniesProducts = async () => {
-    if (confirm('Deseja APAGAR TODOS os produtos de TODAS as empresas cadastradas?')) {
-      if (confirm('ESTA AÇÃO É IRREVERSÍVEL. Tem certeza que deseja prosseguir com a limpeza geral?')) {
-        const { error } = await supabase
-          .from('company_products')
-          .delete()
-          .not('id', 'is', null);
-        
-        if (error) {
-          toast.error('Erro ao apagar produtos: ' + error.message);
-        } else {
-          // Also clear company_linhas
-          await supabase.from('company_linhas').delete().not('id', 'is', null);
-          toast.success('Todos os produtos de todas as empresas foram apagados');
-          queryClient.invalidateQueries({ queryKey: ['admin-companies'] });
-        }
-      }
+    setIsClearingAll(true);
+    try {
+      const { error } = await supabase
+        .from('company_products')
+        .delete()
+        .not('id', 'is', null);
+      if (error) throw error;
+      await supabase.from('company_linhas').delete().not('id', 'is', null);
+      toast.success('Todos os produtos de todas as empresas foram apagados');
+      queryClient.invalidateQueries({ queryKey: ['admin-companies'] });
+      setClearAllDialogOpen(false);
+      setClearAllConfirmText('');
+    } catch (err: any) {
+      toast.error('Erro ao apagar produtos: ' + (err.message || ''));
+    } finally {
+      setIsClearingAll(false);
     }
   };
 
   const filteredCompanies = companies.filter(company => {
     const searchLower = searchTerm.toLowerCase();
-
-    return (
+    const matchesSearch = (
       company.name.toLowerCase().includes(searchLower) ||
       company.cnpj?.includes(searchTerm) ||
       company.email?.toLowerCase().includes(searchLower) ||
       company.phone?.includes(searchTerm)
     );
+    if (!matchesSearch) return false;
+
+    const sub = subscriptionMap.get(company.id);
+    if (statusFilter === 'active') return sub?.status === 'active';
+    if (statusFilter === 'no_plan') return !sub;
+    if (statusFilter === 'expiring') {
+      if (!sub?.expires_at) return false;
+      const days = differenceInDays(new Date(sub.expires_at), new Date());
+      return days >= 0 && days <= 7;
+    }
+    return true;
   });
 
   const handleDeleteCompany = async () => {
