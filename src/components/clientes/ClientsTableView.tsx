@@ -130,14 +130,6 @@ export function ClientsTableView({ clients, onView, onDelete }: ClientsTableView
             >
               <TableCell>
                 <div>
-                  <p className="font-medium">{client.name}</p>
-                  {client.document && (
-                    <p className="text-xs text-muted-foreground">{client.document}</p>
-                  )}
-                </div>
-              </TableCell>
-              <TableCell>
-                <div className="space-y-1">
                   <p className="font-medium uppercase">{client.name}</p>
                   {client.document && (
                     <p className="text-xs text-muted-foreground">{formatCPFOrCNPJ(client.document)}</p>
