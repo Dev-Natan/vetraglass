@@ -53,11 +53,15 @@ interface Subscription {
 export default function AdminCompanies() {
   const { isSaasAdmin } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'expiring' | 'no_plan'>('all');
   const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [subDialogOpen, setSubDialogOpen] = useState(false);
   const [subCompany, setSubCompany] = useState<Company | null>(null);
+  const [clearAllDialogOpen, setClearAllDialogOpen] = useState(false);
+  const [clearAllConfirmText, setClearAllConfirmText] = useState('');
+  const [isClearingAll, setIsClearingAll] = useState(false);
   const [subForm, setSubForm] = useState({
     plan_name: 'basico',
     plan_price: 98.99,
