@@ -256,14 +256,31 @@ export default function AdminCompanies() {
     setSubDialogOpen(true);
   };
 
-  const formatCNPJ = (cnpj: string | null) => {
-    if (!cnpj) return '-';
-    const cleaned = cnpj.replace(/\D/g, '');
+  const formatDocument = (doc: string | null) => {
+    if (!doc) return '-';
+    const cleaned = doc.replace(/\D/g, '');
     if (cleaned.length === 14) {
       return cleaned.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
     }
-    return cnpj;
+    if (cleaned.length === 11) {
+      return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    }
+    return doc;
   };
+
+  const formatPhone = (phone: string | null) => {
+    if (!phone) return '-';
+    const cleaned = phone.replace(/\D/g, '');
+    if (cleaned.length === 11) {
+      return cleaned.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+    }
+    if (cleaned.length === 10) {
+      return cleaned.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+    }
+    return phone;
+  };
+
+  const formatCNPJ = formatDocument;
 
   const getSubscriptionBadge = (companyId: string) => {
     const sub = subscriptionMap.get(companyId);
