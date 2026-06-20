@@ -43,6 +43,7 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { JsonView } from "@/components/admin/JsonView";
 
 interface AuditLog {
   id: string;
@@ -59,14 +60,50 @@ interface AuditLog {
   created_at: string;
 }
 
+// DB stores actions lowercase (create/update/delete). Keep aliases for legacy rows.
 const actionLabels: Record<string, { label: string; color: string }> = {
-  INSERT: { label: "Criação", color: "bg-green-500" },
-  UPDATE: { label: "Atualização", color: "bg-blue-500" },
-  DELETE: { label: "Exclusão", color: "bg-red-500" },
-  LOGIN: { label: "Login", color: "bg-purple-500" },
-  LOGOUT: { label: "Logout", color: "bg-gray-500" },
-  CANCEL_SALE: { label: "Cancelamento de Venda", color: "bg-orange-500" },
+  create: { label: "Criação", color: "bg-green-500" },
+  insert: { label: "Criação", color: "bg-green-500" },
+  update: { label: "Atualização", color: "bg-blue-500" },
+  delete: { label: "Exclusão", color: "bg-red-500" },
+  login: { label: "Login", color: "bg-purple-500" },
+  logout: { label: "Logout", color: "bg-gray-500" },
+  cancel_sale: { label: "Cancelamento de Venda", color: "bg-orange-500" },
 };
+
+const getActionInfo = (action: string) =>
+  actionLabels[action?.toLowerCase()] || { label: action, color: "bg-gray-500" };
+
+const countAction = (logs: AuditLog[] | undefined, ...keys: string[]) =>
+  logs?.filter((l) => keys.includes(l.action?.toLowerCase())).length || 0;
+
+// Build a friendly "Target / Reference" string from the log payload.
+function buildTargetRef(log: AuditLog): string {
+  const data =
+    (log.new_data as Record<string, unknown>) ||
+    (log.old_data as Record<string, unknown>) ||
+    (log.metadata as Record<string, unknown>) ||
+    {};
+  const get = (k: string) => (data[k] != null ? String(data[k]) : "");
+  const table = log.table_name;
+
+  if (table === "quotes") {
+    const num = get("quote_number") || get("numero");
+    const name = get("customer_name") || get("client_name");
+    if (name || num) return [name, num && `Nº ${num}`].filter(Boolean).join(" — ");
+  }
+  if (table === "sales" || table === "ordens_servico") {
+    const num = get("sale_number") || get("os_number") || get("numero");
+    const name = get("customer_name") || get("client_name");
+    const short = log.record_id?.slice(0, 8);
+    return [name, num ? `Nº ${num}` : short].filter(Boolean).join(" — ");
+  }
+  if (table === "clients") return get("name") || get("razao_social") || "-";
+  if (table === "companies") return get("fantasy_name") || get("name") || "-";
+  if (table === "expenses") return get("description") || get("category") || "-";
+
+  return get("name") || get("title") || log.record_id?.slice(0, 8) || "-";
+}
 
 const tableLabels: Record<string, string> = {
   companies: "Empresas",
