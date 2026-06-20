@@ -18,6 +18,15 @@ import {
   MessageCircle
 } from 'lucide-react';
 import { openWhatsapp } from '@/utils/whatsapp';
+import { formatCPFOrCNPJ } from '@/utils/documentValidation';
+
+const formatPhone = (phone: string | null) => {
+  if (!phone) return '';
+  const c = phone.replace(/\D/g, '');
+  if (c.length === 11) return c.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+  if (c.length === 10) return c.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+  return phone;
+};
 
 interface Client {
   id: string;
