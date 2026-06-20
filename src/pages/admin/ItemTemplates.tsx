@@ -927,6 +927,7 @@ export default function ItemTemplates() {
                     <LinhaCardSimple
                       key={linha}
                       linha={linha}
+                      label={productLinhas?.find(l => l.slug.toLowerCase() === linha.toLowerCase() || l.name.toLowerCase() === linha.toLowerCase())?.name || linha}
                       isRemovable={false}
                       categories={types}
                       categoryLabels={typeLabels}
