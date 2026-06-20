@@ -29,6 +29,7 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useItemTypeLabels } from '@/hooks/useItemTypes';
 import { useProductLinhas } from '@/hooks/useProductLinhas';
+import { LinhaCardSimple } from '@/components/produtos/LinhaCardSimple';
 
 interface ItemTemplate {
   id: string;
@@ -918,56 +919,18 @@ export default function ItemTemplates() {
           <div className="space-y-6">
             {/* Linha Cards Grid — esconde quando uma linha é selecionada */}
             {expandedLinhas.size === 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
                 {Array.from(groupedItems.entries()).map(([linha, groupItems]) => {
-                  const typeCounts = groupItems.reduce((acc, i) => { acc[i.type] = (acc[i.type] || 0) + 1; return acc; }, {} as Record<string, number>);
-                  const withImage = groupItems.filter(i => i.image_url).length;
-                  const withoutImage = groupItems.length - withImage;
-                  const totalWeight = groupItems.reduce((sum, i) => sum + (i.weight_per_meter || 0), 0);
-                  const activeCount = groupItems.filter(i => i.is_active).length;
-
+                  const types = Array.from(new Set(groupItems.map(i => i.type)));
                   return (
-                    <Card
+                    <LinhaCardSimple
                       key={linha}
-                      className="cursor-pointer transition-all hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5"
-                      onClick={() => setExpandedLinhas(new Set([linha]))}
-                    >
-                      <CardHeader className="pb-3">
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-base font-bold truncate">{linha}</CardTitle>
-                          <Badge variant="secondary" className="text-xs font-mono flex-shrink-0">
-                            {groupItems.length}
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="pt-0 space-y-3">
-                        <div className="flex flex-wrap gap-1.5">
-                          {Object.entries(typeCounts).map(([type, count]) => (
-                            <Badge key={type} variant="outline" className={`text-xs ${typeColors[type]}`}>
-                              {count} {typeLabels[type]}
-                            </Badge>
-                          ))}
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                          {totalWeight > 0 && (
-                            <div className="bg-muted/50 rounded-md p-2">
-                              <p className="text-muted-foreground">Peso total</p>
-                              <p className="font-semibold text-foreground">{totalWeight.toFixed(1)} kg/m</p>
-                            </div>
-                          )}
-                          <div className="bg-muted/50 rounded-md p-2">
-                            <p className="text-muted-foreground">Ativos</p>
-                            <p className="font-semibold text-foreground">{activeCount} / {groupItems.length}</p>
-                          </div>
-                          <div className="bg-muted/50 rounded-md p-2">
-                            <p className="text-muted-foreground">Com imagem</p>
-                            <p className={`font-semibold ${withoutImage > 0 ? 'text-amber-600' : 'text-foreground'}`}>
-                              {withImage} / {groupItems.length}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                      linha={linha}
+                      isRemovable={false}
+                      categories={types}
+                      categoryLabels={typeLabels}
+                      onViewProducts={() => setExpandedLinhas(new Set([linha]))}
+                    />
                   );
                 })}
               </div>
