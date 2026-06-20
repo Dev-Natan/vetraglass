@@ -5,6 +5,7 @@ import { X } from 'lucide-react';
 
 interface LinhaCardSimpleProps {
   linha: string;
+  label?: string;
   onViewProducts: () => void;
   onRemove?: () => void;
   isRemovable?: boolean;
@@ -14,6 +15,7 @@ interface LinhaCardSimpleProps {
 
 export const LinhaCardSimple = memo(function LinhaCardSimple({ 
   linha, 
+  label,
   onViewProducts,
   onRemove,
   isRemovable = true,
@@ -36,7 +38,7 @@ export const LinhaCardSimple = memo(function LinhaCardSimple({
 
       <div className="p-3 pt-8 sm:p-4 sm:pt-9 min-h-[140px] flex flex-col justify-between gap-4">
         <h3 className="font-semibold text-foreground uppercase text-xs sm:text-sm tracking-wide leading-tight line-clamp-2">
-          {linha}
+          {label || linha}
         </h3>
 
         {categories.length > 0 && (
