@@ -532,6 +532,7 @@ export default function ProductTemplates() {
   const handleEdit = (template: ProductTemplate) => {
     setEditingTemplate(template);
     setSelectedTemplate(template);
+    setDialogTab("dados");
     setFormImageFile(null);
     setFormImagePreview(resolveProductImageUrl(template.image_url) || null);
     setFormData({
