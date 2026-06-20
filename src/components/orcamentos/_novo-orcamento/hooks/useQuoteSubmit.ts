@@ -75,6 +75,7 @@ export function useQuoteSubmit({ companyId, quote, items, totals, discountPercen
     mutationFn: async (data: QuoteFormData) => {
       if (!quote?.id) throw new Error('Orçamento não encontrado');
 
+      // 1) Atualiza o cabeçalho do orçamento
       const { error: quoteError } = await supabase
         .from('quotes')
         .update(buildQuotePayload(data))
@@ -82,14 +83,33 @@ export function useQuoteSubmit({ companyId, quote, items, totals, discountPercen
 
       if (quoteError) throw quoteError;
 
-      await supabase.from('quote_items').delete().eq('quote_id', quote.id);
+      // 2) Captura IDs antigos ANTES de qualquer mutação destrutiva
+      const { data: existingRows, error: fetchError } = await supabase
+        .from('quote_items')
+        .select('id')
+        .eq('quote_id', quote.id);
 
+      if (fetchError) throw fetchError;
+      const oldIds = (existingRows ?? []).map((r) => r.id);
+
+      // 3) Insere os novos itens PRIMEIRO. Se falhar, os antigos permanecem intactos.
       if (items.length > 0) {
         const { error: itemsError } = await supabase
           .from('quote_items')
-          .insert(items.map(item => mapItemForInsert(item, quote.id)));
+          .insert(items.map((item) => mapItemForInsert(item, quote.id)));
 
         if (itemsError) throw itemsError;
+      }
+
+      // 4) Só agora removemos os antigos. Se essa etapa falhar, o usuário verá
+      // itens duplicados (recuperável) em vez de perder tudo (irrecuperável).
+      if (oldIds.length > 0) {
+        const { error: deleteError } = await supabase
+          .from('quote_items')
+          .delete()
+          .in('id', oldIds);
+
+        if (deleteError) throw deleteError;
       }
     },
     onSuccess: () => {
@@ -101,6 +121,7 @@ export function useQuoteSubmit({ companyId, quote, items, totals, discountPercen
       toast({ title: 'Erro ao atualizar orçamento', description: error.message, variant: 'destructive' });
     },
   });
+
 
   return { createMutation, updateMutation };
 }
