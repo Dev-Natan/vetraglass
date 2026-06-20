@@ -155,30 +155,57 @@ export default function ItemTemplates() {
 
   const { data: productLinhas } = useProductLinhas();
 
-  // Busca TODAS as linhas distintas cadastradas em item_templates (independente de product_linhas)
-  const { data: itemLinhas } = useQuery({
-    queryKey: ['item-templates-distinct-linhas'],
+  // Busca TODOS os itens (linha + type + image_url) para cálculo de stats globais e tipos por linha
+  const { data: allItemsMeta } = useQuery({
+    queryKey: ['item-templates-all-meta'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('item_templates')
-        .select('linha')
-        .not('linha', 'is', null);
+        .select('linha, type, image_url, default_price, is_active');
       if (error) throw error;
-      return Array.from(new Set((data || []).map((r: any) => (r.linha || '').trim()).filter(Boolean)));
+      return data || [];
     },
     enabled: isSaasAdmin,
   });
 
-  // Apenas linhas que realmente possuem itens cadastrados (deduplicadas case-insensitive)
+  // Linhas distintas (case-insensitive) cadastradas em item_templates
   const availableLines = useMemo(() => {
     const map = new Map<string, string>();
-    (itemLinhas || []).forEach(n => { const k = n.toLowerCase(); if (!map.has(k)) map.set(k, n); });
+    (allItemsMeta || []).forEach((r: any) => {
+      const n = (r.linha || '').trim();
+      if (!n) return;
+      const k = n.toLowerCase();
+      if (!map.has(k)) map.set(k, n);
+    });
     return Array.from(map.values()).sort((a, b) => a.localeCompare(b));
-  }, [itemLinhas]);
+  }, [allItemsMeta]);
+
+  // Mapa global: linha (lowercase) -> Set de tipos
+  const linhaTypesMap = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    (allItemsMeta || []).forEach((r: any) => {
+      const k = (r.linha || '').trim().toLowerCase();
+      if (!k || !r.type) return;
+      if (!map.has(k)) map.set(k, new Set());
+      map.get(k)!.add(r.type);
+    });
+    return map;
+  }, [allItemsMeta]);
+
+  // Helper: formata slug feio (linha_25 -> Linha 25) como fallback
+  const prettifyLinha = (raw: string) => {
+    const meta = productLinhas?.find(l => l.slug.toLowerCase() === raw.toLowerCase() || l.name.toLowerCase() === raw.toLowerCase());
+    const name = meta?.name || raw;
+    if (!name.includes('_')) return name;
+    return name
+      .split('_')
+      .map(w => w ? w[0].toUpperCase() + w.slice(1).toLowerCase() : w)
+      .join(' ');
+  };
 
   const filteredItems = items;
 
-  // Group items by linha
+  // Group items by linha (current page)
   const groupedItems = useMemo(() => {
     if (!filteredItems) return new Map<string, ItemTemplate[]>();
     const groups = new Map<string, ItemTemplate[]>();
@@ -187,31 +214,34 @@ export default function ItemTemplates() {
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key)!.push(item);
     }
-    // Sort groups alphabetically
     return new Map([...groups.entries()].sort(([a], [b]) => a.localeCompare(b)));
   }, [filteredItems]);
 
-  // Data quality stats
+  // Stats globais (todos os itens, não só a página)
   const qualityStats = useMemo(() => {
-    if (!filteredItems) return { total: 0, semImagem: 0, semPreco: 0, inativos: 0 };
+    const all = allItemsMeta || [];
     return {
-      total: filteredItems.length,
-      semImagem: filteredItems.filter(i => !i.image_url).length,
-      semPreco: filteredItems.filter(i => !i.default_price || i.default_price === 0).length,
-      inativos: filteredItems.filter(i => !i.is_active).length,
+      total: all.length,
+      semImagem: all.filter((i: any) => !i.image_url).length,
+      semPreco: all.filter((i: any) => !i.default_price || i.default_price === 0).length,
+      inativos: all.filter((i: any) => !i.is_active).length,
     };
-  }, [filteredItems]);
+  }, [allItemsMeta]);
 
-  // Stats by type
-  const stats = useMemo(() => ({
-    total: items?.length || 0,
-    byType: {
-      glass: items?.filter(i => i.type === 'glass').length || 0,
-      profile: items?.filter(i => i.type === 'profile').length || 0,
-      accessory: items?.filter(i => i.type === 'accessory').length || 0,
-      service: items?.filter(i => i.type === 'service').length || 0,
-    }
-  }), [items]);
+  const stats = useMemo(() => {
+    const all = allItemsMeta || [];
+    return {
+      total: all.length,
+      byType: {
+        glass: all.filter((i: any) => i.type === 'glass').length,
+        profile: all.filter((i: any) => i.type === 'profile').length,
+        accessory: all.filter((i: any) => i.type === 'accessory').length,
+        service: all.filter((i: any) => i.type === 'service').length,
+        other: all.filter((i: any) => !['glass', 'profile', 'accessory', 'service'].includes(i.type)).length,
+      },
+    };
+  }, [allItemsMeta]);
+
 
   const toggleLinha = (linha: string) => {
     setExpandedLinhas(prev => {
@@ -641,7 +671,7 @@ export default function ItemTemplates() {
           <div>
             <h1 className="text-2xl font-bold text-foreground">Item Templates</h1>
             <p className="text-sm text-muted-foreground">
-              {totalItems} itens cadastrados • {productLinhas?.length || 0} linhas
+              {stats.total} itens cadastrados • {availableLines.length} linhas
             </p>
           </div>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -687,7 +717,7 @@ export default function ItemTemplates() {
                       <SelectTrigger><SelectValue placeholder="Selecione uma linha" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">Sem Linha</SelectItem>
-                        {availableLines?.map((line) => <SelectItem key={line} value={line}>{productLinhas?.find(l => l.slug.toLowerCase() === line.toLowerCase() || l.name.toLowerCase() === line.toLowerCase())?.name || line}</SelectItem>)}
+                        {availableLines?.map((line) => <SelectItem key={line} value={line}>{prettifyLinha(line)}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -856,9 +886,17 @@ export default function ItemTemplates() {
               <p className="text-xs text-muted-foreground flex items-center gap-1"><Image className="w-3 h-3" />Sem foto</p>
             </CardContent>
           </Card>
+          {stats.byType.other > 0 && (
+            <Card className="bg-slate-500/5 border-slate-500/20">
+              <CardContent className="pt-3 pb-2">
+                <p className="text-2xl font-bold text-slate-600">{stats.byType.other}</p>
+                <p className="text-xs text-muted-foreground">Outros</p>
+              </CardContent>
+            </Card>
+          )}
           <Card className="bg-muted/30">
             <CardContent className="pt-3 pb-2">
-              <p className="text-2xl font-bold text-muted-foreground">{productLinhas?.length || 0}</p>
+              <p className="text-2xl font-bold text-muted-foreground">{availableLines.length}</p>
               <p className="text-xs text-muted-foreground">Linhas</p>
             </CardContent>
           </Card>
@@ -874,7 +912,7 @@ export default function ItemTemplates() {
             <SelectTrigger className="w-40"><SelectValue placeholder="Linha" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas Linhas</SelectItem>
-              {availableLines?.map((line) => <SelectItem key={line} value={line}>{productLinhas?.find(l => l.slug.toLowerCase() === line.toLowerCase() || l.name.toLowerCase() === line.toLowerCase())?.name || line}</SelectItem>)}
+              {availableLines?.map((line) => <SelectItem key={line} value={line}>{prettifyLinha(line)}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={filterType} onValueChange={(v) => { setFilterType(v); setPage(1); }}>
@@ -921,13 +959,12 @@ export default function ItemTemplates() {
             {expandedLinhas.size === 0 && (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
                 {availableLines.map((linha) => {
-                  const groupItems = groupedItems.get(linha) || [];
-                  const types = Array.from(new Set(groupItems.map(i => i.type)));
+                  const types = Array.from(linhaTypesMap.get(linha.toLowerCase()) || []);
                   return (
                     <LinhaCardSimple
                       key={linha}
                       linha={linha}
-                      label={productLinhas?.find(l => l.slug.toLowerCase() === linha.toLowerCase() || l.name.toLowerCase() === linha.toLowerCase())?.name || linha}
+                      label={prettifyLinha(linha)}
                       isRemovable={false}
                       categories={types}
                       categoryLabels={typeLabels}
@@ -954,7 +991,7 @@ export default function ItemTemplates() {
                         <ArrowLeft className="w-4 h-4 mr-1" /> Voltar às linhas
                       </Button>
                       <div>
-                        <CardTitle className="text-lg">{productLinhas?.find(l => l.slug.toLowerCase() === linha.toLowerCase() || l.name.toLowerCase() === linha.toLowerCase())?.name || linha}</CardTitle>
+                        <CardTitle className="text-lg">{prettifyLinha(linha)}</CardTitle>
                         <CardDescription>{groupItems.length} itens cadastrados</CardDescription>
                       </div>
                     </div>
