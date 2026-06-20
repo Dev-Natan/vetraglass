@@ -136,6 +136,7 @@ export function Client360Dialog({ open, onOpenChange, client, onSave, isLoading 
           value={form.name}
           onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
           placeholder="Nome completo ou razão social"
+          className="uppercase placeholder:normal-case"
           required
         />
       </div>
@@ -245,7 +246,7 @@ export function Client360Dialog({ open, onOpenChange, client, onSave, isLoading 
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <User className="h-5 w-5" />
-            {isEditing ? client.name : 'Novo Cliente'}
+            <span className="uppercase">{isEditing ? client.name : 'Novo Cliente'}</span>
           </DialogTitle>
           <p id="client-dialog-description" className="text-sm text-muted-foreground">
             {isEditing ? 'Visão completa do cliente' : 'Preencha os dados para cadastrar um novo cliente'}
