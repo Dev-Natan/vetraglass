@@ -73,61 +73,88 @@ export default function CompanySetup() {
     setErrors(prev => ({ ...prev, document: '' }));
   };
 
-  // Auto-fetch BrasilAPI when CNPJ reaches 14 valid digits
+  // Auto-fetch CNPJ data when 14 valid digits are present.
+  // Strategy: try BrasilAPI directly from the browser, then fall back to the
+  // `cnpj-lookup` edge function which proxies BrasilAPI → minhareceita → publica.cnpj.ws
+  // (avoiding browser-side CORS/timeout issues).
   useEffect(() => {
     const digits = document.replace(/\D/g, '');
     if (digits.length !== 14 || !validateCNPJ(digits)) return;
 
+    let cancelled = false;
     const controller = new AbortController();
+
+    const applyData = (data: any) => {
+      if (cancelled || !data) return;
+      const razaoSocial = data.razao_social || '';
+      const nomeFantasia = data.nome_fantasia || '';
+      const empresa = (nomeFantasia || razaoSocial).toUpperCase();
+
+      if (empresa && !name) setName(empresa);
+      if (data.ddd_telefone_1 && !phone) setPhone(data.ddd_telefone_1);
+      if (data.logradouro && !street) setStreet(String(data.logradouro).trim());
+      if (data.numero && !addressNumber) setAddressNumber(String(data.numero));
+      if (data.complemento && !complement) setComplement(data.complemento);
+      if (data.bairro && !neighborhood) setNeighborhood(data.bairro);
+      if (data.municipio && !city) setCity(data.municipio);
+      if (data.uf && !state) setState(String(data.uf).toUpperCase());
+      if (data.cep && !zipCode) {
+        const cep = String(data.cep).replace(/\D/g, '');
+        setZipCode(cep.length === 8 ? `${cep.slice(0, 5)}-${cep.slice(5)}` : cep);
+      }
+
+      setCnpjValidated(true);
+      setCnpjData({
+        razaoSocial,
+        nomeFantasia,
+        situacao: data.descricao_situacao_cadastral || '',
+        endereco: [data.logradouro, data.numero, data.bairro, data.municipio, data.uf].filter(Boolean).join(', '),
+        telefone: data.ddd_telefone_1 || '',
+        email: data.email || '',
+      });
+    };
+
     const timer = setTimeout(async () => {
       setIsValidating(true);
+
+      // 1) Direct BrasilAPI from browser (fast path)
       try {
         const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${digits}`, {
           signal: controller.signal,
         });
-        if (!res.ok) throw new Error('CNPJ não encontrado');
-        const data = await res.json();
-
-        const razaoSocial = data.razao_social || '';
-        const nomeFantasia = data.nome_fantasia || '';
-        const empresa = (nomeFantasia || razaoSocial).toUpperCase();
-
-        if (empresa && !name) setName(empresa);
-        if (data.ddd_telefone_1 && !phone) setPhone(data.ddd_telefone_1);
-        if (data.logradouro && !street) {
-          setStreet(`${data.logradouro}${data.descricao_tipo_de_logradouro ? '' : ''}`.trim());
+        if (res.ok) {
+          const data = await res.json();
+          applyData(data);
+          setIsValidating(false);
+          return;
         }
-        if (data.numero && !addressNumber) setAddressNumber(String(data.numero));
-        if (data.complemento && !complement) setComplement(data.complemento);
-        if (data.bairro && !neighborhood) setNeighborhood(data.bairro);
-        if (data.municipio && !city) setCity(data.municipio);
-        if (data.uf && !state) setState(String(data.uf).toUpperCase());
-        if (data.cep && !zipCode) {
-          const cep = String(data.cep).replace(/\D/g, '');
-          setZipCode(cep.length === 8 ? `${cep.slice(0, 5)}-${cep.slice(5)}` : cep);
-        }
-
-        setCnpjValidated(true);
-        setCnpjData({
-          razaoSocial,
-          nomeFantasia,
-          situacao: data.descricao_situacao_cadastral || '',
-          endereco: [data.logradouro, data.numero, data.bairro, data.municipio, data.uf].filter(Boolean).join(', '),
-          telefone: data.ddd_telefone_1 || '',
-          email: data.email || '',
-        });
       } catch (err: any) {
-        if (err.name === 'AbortError') return;
-        toast({
-          title: 'Aviso',
-          description: 'Não foi possível buscar os dados automaticamente',
+        if (err?.name === 'AbortError') return;
+        // fall through to edge function fallback
+      }
+
+      // 2) Edge function with multi-provider fallback (bypasses browser CORS)
+      try {
+        const { data: payload, error } = await supabase.functions.invoke('cnpj-lookup', {
+          body: { cnpj: digits },
         });
+        if (cancelled) return;
+        if (error || !payload?.data) throw error || new Error('not found');
+        applyData(payload.data);
+      } catch {
+        if (!cancelled) {
+          toast({
+            title: 'Aviso',
+            description: 'Não foi possível buscar os dados automaticamente',
+          });
+        }
       } finally {
-        setIsValidating(false);
+        if (!cancelled) setIsValidating(false);
       }
     }, 400);
 
     return () => {
+      cancelled = true;
       controller.abort();
       clearTimeout(timer);
     };
