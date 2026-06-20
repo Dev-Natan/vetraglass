@@ -198,8 +198,9 @@ export default function ProductTemplates() {
   const [selectedTemplate, setSelectedTemplate] = useState<ProductTemplate | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState<string>("all");
-  const [showInactive, setShowInactive] = useState(false);
-  const [showReady, setShowReady] = useState(false);
+  const [showInactive, setShowInactive] = useState(true);
+  const [showReady, setShowReady] = useState(true);
+
   const [uploadingImageId, setUploadingImageId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'table' | 'grouped'>('grouped');
   const [expandedLinhas, setExpandedLinhas] = useState<Set<string>>(new Set());
@@ -1013,7 +1014,7 @@ export default function ProductTemplates() {
               variant="outline"
               size="sm"
               onClick={() => setShowReady(!showReady)}
-              className={cn("gap-2", !showReady && "bg-primary/10 border-primary/30")}
+              className={cn("gap-2", showReady && "bg-primary/10 border-primary/30")}
             >
               {showReady ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
               {showReady ? "Ocultar Prontos" : "Mostrar Prontos"}
