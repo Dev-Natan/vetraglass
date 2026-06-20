@@ -289,10 +289,20 @@ export default function CompanySetup() {
         }
         throw companyError;
       }
-      
+
+      // Define trial de 7 dias a partir do momento atual
+      const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      const newCompanyId = typeof companyData === 'string' ? companyData : (companyData as any)?.id ?? (companyData as any)?.company_id;
+      if (newCompanyId) {
+        await supabase
+          .from('companies')
+          .update({ subscription_status: 'trialing', trial_ends_at: trialEndsAt })
+          .eq('id', newCompanyId);
+      }
+
       toast({
         title: "Empresa cadastrada!",
-        description: "Sua empresa foi criada com sucesso. Faça login para continuar.",
+        description: "Seu teste grátis de 7 dias começou. Faça login para continuar.",
       });
       
       // Sign out and redirect to login so user can login with the new company
