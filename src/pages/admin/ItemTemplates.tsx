@@ -1073,7 +1073,7 @@ export default function ItemTemplates() {
         )}
 
         {/* Pagination */}
-        {totalPages > 1 && (
+        {totalPages > 1 && !(viewMode === 'grouped' && expandedLinhas.size === 0) && (
           <div className="flex items-center justify-center gap-2 pt-4">
             <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Anterior</Button>
             <span className="text-sm text-muted-foreground">Página {page} de {totalPages}</span>
