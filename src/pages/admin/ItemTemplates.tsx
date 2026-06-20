@@ -920,7 +920,8 @@ export default function ItemTemplates() {
             {/* Linha Cards Grid — esconde quando uma linha é selecionada */}
             {expandedLinhas.size === 0 && (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
-                {Array.from(groupedItems.entries()).map(([linha, groupItems]) => {
+                {availableLines.map((linha) => {
+                  const groupItems = groupedItems.get(linha) || [];
                   const types = Array.from(new Set(groupItems.map(i => i.type)));
                   return (
                     <LinhaCardSimple
@@ -929,7 +930,11 @@ export default function ItemTemplates() {
                       isRemovable={false}
                       categories={types}
                       categoryLabels={typeLabels}
-                      onViewProducts={() => setExpandedLinhas(new Set([linha]))}
+                      onViewProducts={() => {
+                        setExpandedLinhas(new Set([linha]));
+                        setFilterLinha(linha);
+                        setPage(1);
+                      }}
                     />
                   );
                 })}
@@ -1068,7 +1073,7 @@ export default function ItemTemplates() {
         )}
 
         {/* Pagination */}
-        {totalPages > 1 && (
+        {totalPages > 1 && !(viewMode === 'grouped' && expandedLinhas.size === 0) && (
           <div className="flex items-center justify-center gap-2 pt-4">
             <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Anterior</Button>
             <span className="text-sm text-muted-foreground">Página {page} de {totalPages}</span>
