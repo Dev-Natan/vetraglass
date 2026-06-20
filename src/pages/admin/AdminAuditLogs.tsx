@@ -163,18 +163,18 @@ export default function AdminAuditLogs() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, full_name, email")
-        .in("id", userIds);
+        .select("user_id, full_name")
+        .in("user_id", userIds);
       if (error) throw error;
-      const map: Record<string, { name: string; email: string | null }> = {};
+      const map: Record<string, { name: string }> = {};
       for (const p of data || []) {
-        map[p.id] = { name: p.full_name || p.email || p.id.slice(0, 8), email: p.email };
+        map[p.user_id] = { name: p.full_name || p.user_id.slice(0, 8) };
       }
       return map;
     },
   });
 
-  // Resolve company_ids → fantasy_name
+  // Resolve company_ids → company name
   const companyIds = useMemo(
     () => [...new Set((logs || []).map((l) => l.company_id).filter(Boolean) as string[])],
     [logs],
@@ -185,13 +185,12 @@ export default function AdminAuditLogs() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("companies")
-        .select("id, fantasy_name, name")
+        .select("id, name")
         .in("id", companyIds);
       if (error) throw error;
       const map: Record<string, string> = {};
       for (const c of data || []) {
-        map[c.id] = (c as { fantasy_name?: string; name?: string }).fantasy_name ||
-          (c as { name?: string }).name || c.id.slice(0, 8);
+        map[c.id] = c.name || c.id.slice(0, 8);
       }
       return map;
     },
