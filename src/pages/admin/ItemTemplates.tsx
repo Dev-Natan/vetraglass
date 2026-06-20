@@ -66,7 +66,7 @@ export default function ItemTemplates() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [filterLinha, setFilterLinha] = useState<string>('all');
-  const [showInactive, setShowInactive] = useState(false);
+  const [showInactive, setShowInactive] = useState(true);
   const [viewMode, setViewMode] = useState<'grid' | 'table' | 'grouped'>('grouped');
   const [expandedLinhas, setExpandedLinhas] = useState<Set<string>>(new Set());
   
@@ -442,14 +442,15 @@ export default function ItemTemplates() {
   const renderItemCard = (item: ItemTemplate) => (
     <Card 
       key={item.id} 
-      className={`group relative transition-all hover:shadow-md ${!item.is_active ? "opacity-60" : ""}`}
+      onClick={() => handleEdit(item)}
+      className={`group relative transition-all hover:shadow-md cursor-pointer ${!item.is_active ? "opacity-60" : ""}`}
     >
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
             <button
               type="button"
-              onClick={() => handleQuickImageUpload(item.id)}
+              onClick={(e) => { e.stopPropagation(); handleQuickImageUpload(item.id); }}
               disabled={uploadingImageId === item.id}
               className="relative w-12 h-12 bg-white rounded-lg border p-1 flex-shrink-0 flex items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors group/img disabled:opacity-50"
               title="Clique para trocar imagem"
@@ -477,11 +478,11 @@ export default function ItemTemplates() {
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+              <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                 <MoreVertical className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
               <DropdownMenuItem onClick={() => handleEdit(item)}><Pencil className="w-4 h-4 mr-2" />Editar</DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleQuickImageUpload(item.id)}><Upload className="w-4 h-4 mr-2" />Trocar Imagem</DropdownMenuItem>
               <DropdownMenuItem onClick={() => copyMutation.mutate(item)}><Copy className="w-4 h-4 mr-2" />Duplicar</DropdownMenuItem>
