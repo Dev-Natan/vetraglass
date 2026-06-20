@@ -667,6 +667,28 @@ export default function AdminCompanyDetail() {
                   <Field label="Registro" value={selectedLog.record_id || "-"} />
                   <Field label="Usuário" value={selectedLog.user_id ? usersMap?.[selectedLog.user_id] || selectedLog.user_id : "Sistema"} />
                 </div>
+                {selectedLog.action?.toLowerCase() === "update" && (() => {
+                  const diffs = diffFields(selectedLog.old_data, selectedLog.new_data);
+                  if (diffs.length === 0) return null;
+                  return (
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground mb-2">Alterações</p>
+                      <div className="rounded-md border divide-y">
+                        {diffs.map((d) => (
+                          <div key={d.key} className="grid grid-cols-[140px_1fr_1fr] gap-2 p-2 text-xs">
+                            <div className="font-medium text-foreground">{d.key}</div>
+                            <div className="bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 px-2 py-1 rounded line-through break-all">
+                              {d.oldValue}
+                            </div>
+                            <div className="bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300 px-2 py-1 rounded font-medium break-all">
+                              {d.newValue}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
                 {selectedLog.old_data && (
                   <div>
                     <p className="text-sm font-medium text-muted-foreground mb-2">Dados Anteriores</p>
