@@ -270,16 +270,17 @@ export default function CompanySetup() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="document">CPF ou CNPJ (opcional)</Label>
+                <Label htmlFor="document">CNPJ *</Label>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <Input
                       id="document"
-                      placeholder="000.000.000-00 ou 00.000.000/0001-00"
+                      placeholder="00.000.000/0001-00"
                       value={document}
                       onChange={(e) => handleDocumentChange(e.target.value)}
                       disabled={isLoading || isValidating}
                       maxLength={18}
+                      inputMode="numeric"
                       className={cnpjValidated === true ? 'border-green-500 pr-10' : cnpjValidated === false ? 'border-destructive pr-10' : ''}
                     />
                     {cnpjValidated === true && (
