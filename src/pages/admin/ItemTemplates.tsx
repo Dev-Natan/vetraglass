@@ -19,7 +19,7 @@ import { toast } from 'sonner';
 import { 
   Loader2, Plus, Pencil, Trash2, Search, Package, Upload, X, MoreVertical,
   Eye, EyeOff, Copy, DollarSign, Ruler, ImageUp, CheckCircle2, XCircle,
-  AlertCircle, AlertTriangle, LayoutGrid, LayoutList, Image, ChevronDown, ChevronRight
+  AlertCircle, AlertTriangle, LayoutGrid, LayoutList, Image, ChevronDown, ChevronRight, ArrowLeft
 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Progress } from '@/components/ui/progress';
@@ -916,85 +916,79 @@ export default function ItemTemplates() {
           </Card>
         ) : viewMode === 'grouped' ? (
           <div className="space-y-6">
-            {/* Linha Cards Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {Array.from(groupedItems.entries()).map(([linha, groupItems]) => {
-                const typeCounts = groupItems.reduce((acc, i) => { acc[i.type] = (acc[i.type] || 0) + 1; return acc; }, {} as Record<string, number>);
-                const withImage = groupItems.filter(i => i.image_url).length;
-                const withoutImage = groupItems.length - withImage;
-                const totalWeight = groupItems.reduce((sum, i) => sum + (i.weight_per_meter || 0), 0);
-                const activeCount = groupItems.filter(i => i.is_active).length;
-                const isSelected = expandedLinhas.has(linha);
+            {/* Linha Cards Grid — esconde quando uma linha é selecionada */}
+            {expandedLinhas.size === 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {Array.from(groupedItems.entries()).map(([linha, groupItems]) => {
+                  const typeCounts = groupItems.reduce((acc, i) => { acc[i.type] = (acc[i.type] || 0) + 1; return acc; }, {} as Record<string, number>);
+                  const withImage = groupItems.filter(i => i.image_url).length;
+                  const withoutImage = groupItems.length - withImage;
+                  const totalWeight = groupItems.reduce((sum, i) => sum + (i.weight_per_meter || 0), 0);
+                  const activeCount = groupItems.filter(i => i.is_active).length;
 
-                return (
-                  <Card
-                    key={linha}
-                    className={`cursor-pointer transition-all hover:shadow-md ${isSelected ? 'ring-2 ring-primary border-primary' : 'hover:border-primary/40'}`}
-                    onClick={() => {
-                      setExpandedLinhas(prev => {
-                        const next = new Set<string>();
-                        if (!prev.has(linha)) next.add(linha);
-                        return next;
-                      });
-                    }}
-                  >
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-base font-bold truncate">{linha}</CardTitle>
-                        <Badge variant={isSelected ? "default" : "secondary"} className="text-xs font-mono flex-shrink-0">
-                          {groupItems.length}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pt-0 space-y-3">
-                      {/* Type breakdown */}
-                      <div className="flex flex-wrap gap-1.5">
-                        {Object.entries(typeCounts).map(([type, count]) => (
-                          <Badge key={type} variant="outline" className={`text-xs ${typeColors[type]}`}>
-                            {count} {typeLabels[type]}
+                  return (
+                    <Card
+                      key={linha}
+                      className="cursor-pointer transition-all hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5"
+                      onClick={() => setExpandedLinhas(new Set([linha]))}
+                    >
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-base font-bold truncate">{linha}</CardTitle>
+                          <Badge variant="secondary" className="text-xs font-mono flex-shrink-0">
+                            {groupItems.length}
                           </Badge>
-                        ))}
-                      </div>
-
-                      {/* Stats grid */}
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        {totalWeight > 0 && (
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pt-0 space-y-3">
+                        <div className="flex flex-wrap gap-1.5">
+                          {Object.entries(typeCounts).map(([type, count]) => (
+                            <Badge key={type} variant="outline" className={`text-xs ${typeColors[type]}`}>
+                              {count} {typeLabels[type]}
+                            </Badge>
+                          ))}
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          {totalWeight > 0 && (
+                            <div className="bg-muted/50 rounded-md p-2">
+                              <p className="text-muted-foreground">Peso total</p>
+                              <p className="font-semibold text-foreground">{totalWeight.toFixed(1)} kg/m</p>
+                            </div>
+                          )}
                           <div className="bg-muted/50 rounded-md p-2">
-                            <p className="text-muted-foreground">Peso total</p>
-                            <p className="font-semibold text-foreground">{totalWeight.toFixed(1)} kg/m</p>
+                            <p className="text-muted-foreground">Ativos</p>
+                            <p className="font-semibold text-foreground">{activeCount} / {groupItems.length}</p>
                           </div>
-                        )}
-                        <div className="bg-muted/50 rounded-md p-2">
-                          <p className="text-muted-foreground">Ativos</p>
-                          <p className="font-semibold text-foreground">{activeCount} / {groupItems.length}</p>
+                          <div className="bg-muted/50 rounded-md p-2">
+                            <p className="text-muted-foreground">Com imagem</p>
+                            <p className={`font-semibold ${withoutImage > 0 ? 'text-amber-600' : 'text-foreground'}`}>
+                              {withImage} / {groupItems.length}
+                            </p>
+                          </div>
                         </div>
-                        <div className="bg-muted/50 rounded-md p-2">
-                          <p className="text-muted-foreground">Com imagem</p>
-                          <p className={`font-semibold ${withoutImage > 0 ? 'text-amber-600' : 'text-foreground'}`}>
-                            {withImage} / {groupItems.length}
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
 
-            {/* Expanded linha detail */}
+            {/* Detalhe da linha selecionada */}
             {Array.from(expandedLinhas).map(linha => {
               const groupItems = groupedItems.get(linha);
               if (!groupItems) return null;
               return (
                 <Card key={`detail-${linha}`} className="ring-1 ring-primary/20 overflow-hidden">
                   <CardHeader className="pb-3 flex flex-row items-center justify-between">
-                    <div>
-                      <CardTitle className="text-lg">{linha}</CardTitle>
-                      <CardDescription>{groupItems.length} itens cadastrados</CardDescription>
+                    <div className="flex items-center gap-3">
+                      <Button variant="outline" size="sm" onClick={() => setExpandedLinhas(new Set())}>
+                        <ArrowLeft className="w-4 h-4 mr-1" /> Voltar às linhas
+                      </Button>
+                      <div>
+                        <CardTitle className="text-lg">{linha}</CardTitle>
+                        <CardDescription>{groupItems.length} itens cadastrados</CardDescription>
+                      </div>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => setExpandedLinhas(new Set())}>
-                      <X className="w-4 h-4 mr-1" /> Fechar
-                    </Button>
                   </CardHeader>
                   <CardContent className="p-0">
                     <div className="overflow-x-auto">
