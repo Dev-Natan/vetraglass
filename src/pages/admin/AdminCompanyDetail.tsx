@@ -713,6 +713,36 @@ export default function AdminCompanyDetail() {
         </DialogContent>
       </Dialog>
 
+      {/* Revert confirmation */}
+      <AlertDialog open={!!revertTarget} onOpenChange={(o) => !o && setRevertTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Undo2 className="h-5 w-5 text-orange-600" />Desfazer alteração?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {revertTarget?.action?.toLowerCase() === "delete"
+                ? "O registro excluído será restaurado com os dados originais. Confirma?"
+                : "O registro voltará ao estado anterior à alteração. Confirma?"}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                if (revertTarget) revertLog.mutate(revertTarget);
+              }}
+              disabled={revertLog.isPending}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              {revertLog.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Confirmar reversão
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Subscription dialog */}
       <Dialog open={subDialogOpen} onOpenChange={setSubDialogOpen}>
         <DialogContent>
