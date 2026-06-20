@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
+import { useProductLinhas } from '@/hooks/useProductLinhas';
 
 export default function Produtos() {
   const navigate = useNavigate();
