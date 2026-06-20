@@ -1004,33 +1004,6 @@ export default function ProductTemplates() {
               </SelectContent>
             </Select>
 
-            <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
-              <Button 
-                variant={viewMode === 'grid' ? 'secondary' : 'ghost'} 
-                size="sm" 
-                className={cn("h-8 px-2", viewMode === 'grid' && "bg-background shadow-sm")}
-                onClick={() => setViewMode('grid')}
-              >
-                <LayoutGrid className="w-4 h-4 mr-1" /> Grid
-              </Button>
-              <Button 
-                variant={viewMode === 'table' ? 'secondary' : 'ghost'} 
-                size="sm" 
-                className={cn("h-8 px-2", viewMode === 'table' && "bg-background shadow-sm")}
-                onClick={() => setViewMode('table')}
-              >
-                <LayoutList className="w-4 h-4 mr-1" /> Lista
-              </Button>
-              <Button 
-                variant={viewMode === 'grouped' ? 'secondary' : 'ghost'} 
-                size="sm" 
-                className={cn("h-8 px-2", viewMode === 'grouped' && "bg-background shadow-sm")}
-                onClick={() => setViewMode('grouped')}
-              >
-                <Layers className="w-4 h-4 mr-1" /> Linhas
-              </Button>
-            </div>
-
           </div>
 
           <div className="flex items-center gap-2">
@@ -1055,12 +1028,7 @@ export default function ProductTemplates() {
           </div>
         </div>
 
-        {viewMode === 'grouped' && filteredTemplates && filteredTemplates.length > 0 && (
-          <div className="flex gap-2 mb-2">
-            <Button variant="ghost" size="sm" onClick={expandAll} className="text-xs h-7">Expandir todas</Button>
-            <Button variant="ghost" size="sm" onClick={collapseAll} className="text-xs h-7">Recolher todas</Button>
-          </div>
-        )}
+
 
         {isLoading ? (
           <div className="text-center py-12">
