@@ -1339,12 +1339,14 @@ export default function ProductTemplates() {
                           return (
                             <Card
                               key={template.id}
+                              onClick={() => handleEdit(template)}
                               className={cn(
-                                "group relative overflow-hidden transition-all hover:shadow-lg border-2",
+                                "group relative overflow-hidden transition-all hover:shadow-lg border-2 cursor-pointer",
                                 !template.is_active && "opacity-50",
                                 isReady ? "border-emerald-300 dark:border-emerald-700" : "border-transparent hover:border-primary/30"
                               )}
                             >
+
                               {isReady && (
                                 <div className="absolute top-2 left-2 z-10">
                                   <div className="bg-emerald-500 text-white rounded-full p-1 shadow-md">
@@ -1352,7 +1354,8 @@ export default function ProductTemplates() {
                                   </div>
                                 </div>
                               )}
-                              <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div onClick={(e) => e.stopPropagation()} className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
                                     <Button variant="secondary" size="icon" className="h-7 w-7 shadow-sm">
@@ -1389,7 +1392,7 @@ export default function ProductTemplates() {
                                 <h3 className="font-semibold text-sm leading-tight truncate" title={template.name}>
                                   {template.name}
                                 </h3>
-                                <div className="flex items-center justify-between pt-1">
+                                <div className="flex items-center justify-between pt-1" onClick={(e) => e.stopPropagation()}>
                                   <Switch
                                     checked={template.is_active}
                                     onCheckedChange={(checked) => toggleActiveMutation.mutate({ id: template.id, is_active: checked })}
@@ -1399,6 +1402,7 @@ export default function ProductTemplates() {
                                     {template.is_active ? "Ativo" : "Inativo"}
                                   </span>
                                 </div>
+
                               </div>
                             </Card>
                           );
