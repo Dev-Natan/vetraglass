@@ -77,6 +77,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { FormulaEditor } from "@/components/produtos/FormulaEditor";
+import { LinhaCardSimple } from "@/components/produtos/LinhaCardSimple";
+
 import { GlassFormulaEditor } from "@/components/produtos/GlassFormulaEditor";
 import { cn } from "@/lib/utils";
 import { useProductCategoryLabels } from "@/hooks/useProductCategories";
