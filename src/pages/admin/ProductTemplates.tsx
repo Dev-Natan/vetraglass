@@ -338,9 +338,9 @@ export default function ProductTemplates() {
         return;
       }
 
-      setSelectedTemplate(draftTemplate);
-      setIsCompositionDialogOpen(true);
+      handleEdit(draftTemplate);
       setCompositionActiveTab(draft.activeTab || "glass");
+
       setSelectedItemToAdd(draft.selectedItemToAdd || "");
       setQuantityFormula(draft.quantityFormula || "1");
       setPiecesQuantity(typeof draft.piecesQuantity === "number" ? draft.piecesQuantity : 1);
