@@ -252,9 +252,9 @@ export default function AdminAuditLogs() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas as ações</SelectItem>
-                  <SelectItem value="INSERT">Criação</SelectItem>
-                  <SelectItem value="UPDATE">Atualização</SelectItem>
-                  <SelectItem value="DELETE">Exclusão</SelectItem>
+                  <SelectItem value="create">Criação</SelectItem>
+                  <SelectItem value="update">Atualização</SelectItem>
+                  <SelectItem value="delete">Exclusão</SelectItem>
                 </SelectContent>
               </Select>
             </div>
