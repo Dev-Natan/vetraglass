@@ -558,7 +558,7 @@ export default function AdminCompanies() {
                               {company.phone && (
                                 <p className="text-xs flex items-center gap-1">
                                   <Phone className="h-3 w-3 text-muted-foreground" />
-                                  {company.phone}
+                                  {formatPhone(company.phone)}
                                 </p>
                               )}
                               {!company.email && !company.phone && (
