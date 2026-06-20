@@ -68,7 +68,7 @@ const AdminSupport = lazy(() => import("./pages/admin/AdminSupport"));
 const AdminAnnouncements = lazy(() => import("./pages/admin/AdminAnnouncements"));
 const AdminGlassFormulas = lazy(() => import("./pages/admin/AdminGlassFormulas"));
 const AdminCategories = lazy(() => import("./pages/admin/AdminCategories"));
-const AdminAuditLogs = lazy(() => import("./pages/admin/AdminAuditLogs"));
+const AdminCompanyDetail = lazy(() => import("./pages/admin/AdminCompanyDetail"));
 const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
 const AdminFeedbacks = lazy(() => import("./pages/admin/AdminFeedbacks"));
 const FormulaTester = lazy(() => import("./pages/admin/FormulaTester"));
