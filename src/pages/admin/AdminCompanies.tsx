@@ -678,7 +678,7 @@ export default function AdminCompanies() {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Telefone</p>
-                    <p className="font-medium">{selectedCompany.phone || '-'}</p>
+                    <p className="font-medium">{formatPhone(selectedCompany.phone)}</p>
                   </div>
                   <div className="col-span-2">
                     <p className="text-xs text-muted-foreground">Localização</p>
