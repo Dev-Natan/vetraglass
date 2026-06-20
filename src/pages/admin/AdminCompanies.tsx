@@ -371,11 +371,12 @@ export default function AdminCompanies() {
               <Shield className="h-3 w-3 mr-1" />
               SaaS Admin
             </Badge>
-            <Button 
-              variant="destructive" 
-              size="sm" 
-              onClick={handleClearAllCompaniesProducts}
-              className="gap-2"
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setClearAllDialogOpen(true)}
+              className="gap-2 text-muted-foreground hover:text-destructive"
+              title="Ação destrutiva — requer confirmação"
             >
               <Trash className="h-4 w-4" />
               Limpar Produtos (Geral)
