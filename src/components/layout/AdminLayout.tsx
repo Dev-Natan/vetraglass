@@ -73,11 +73,6 @@ const adminMenuItems = [
     showBadge: true,
   },
   {
-    title: "Logs de Auditoria",
-    path: "/admin/audit-logs",
-    icon: Activity,
-  },
-  {
     title: "Feedbacks",
     path: "/admin/feedbacks",
     icon: Megaphone,
