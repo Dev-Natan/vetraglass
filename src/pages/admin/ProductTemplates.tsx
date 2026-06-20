@@ -198,8 +198,9 @@ export default function ProductTemplates() {
   const [selectedTemplate, setSelectedTemplate] = useState<ProductTemplate | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState<string>("all");
-  const [showInactive, setShowInactive] = useState(false);
-  const [showReady, setShowReady] = useState(false);
+  const [showInactive, setShowInactive] = useState(true);
+  const [showReady, setShowReady] = useState(true);
+
   const [uploadingImageId, setUploadingImageId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'table' | 'grouped'>('grouped');
   const [expandedLinhas, setExpandedLinhas] = useState<Set<string>>(new Set());
