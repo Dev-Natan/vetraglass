@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -52,6 +53,7 @@ interface Subscription {
 
 export default function AdminCompanies() {
   const { isSaasAdmin } = useAuth();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'expiring' | 'no_plan'>('all');
   const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
@@ -517,7 +519,11 @@ export default function AdminCompanies() {
                     filteredCompanies.map((company) => {
                       const sub = subscriptionMap.get(company.id);
                       return (
-                        <TableRow key={company.id}>
+                        <TableRow
+                          key={company.id}
+                          className="cursor-pointer hover:bg-muted/40"
+                          onClick={() => navigate(`/admin/companies/${company.id}`)}
+                        >
                           <TableCell>
                             <div className="flex items-center gap-3">
                               {company.logo_url ? (
@@ -598,14 +604,14 @@ export default function AdminCompanies() {
                               {format(new Date(company.created_at), "dd/MM/yyyy", { locale: ptBR })}
                             </p>
                           </TableCell>
-                          <TableCell>
+                          <TableCell onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center gap-1">
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8"
-                                onClick={() => setSelectedCompany(company)}
-                                title="Ver detalhes"
+                                onClick={() => navigate(`/admin/companies/${company.id}`)}
+                                title="Abrir perfil"
                               >
                                 <Eye className="h-4 w-4" />
                               </Button>

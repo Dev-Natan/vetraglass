@@ -68,7 +68,7 @@ const AdminSupport = lazy(() => import("./pages/admin/AdminSupport"));
 const AdminAnnouncements = lazy(() => import("./pages/admin/AdminAnnouncements"));
 const AdminGlassFormulas = lazy(() => import("./pages/admin/AdminGlassFormulas"));
 const AdminCategories = lazy(() => import("./pages/admin/AdminCategories"));
-const AdminAuditLogs = lazy(() => import("./pages/admin/AdminAuditLogs"));
+const AdminCompanyDetail = lazy(() => import("./pages/admin/AdminCompanyDetail"));
 const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
 const AdminFeedbacks = lazy(() => import("./pages/admin/AdminFeedbacks"));
 const FormulaTester = lazy(() => import("./pages/admin/FormulaTester"));
@@ -270,6 +270,9 @@ function AppRoutes() {
       <Route path="/admin/companies" element={
         <ProtectedRoute><LazyRoute><AdminCompanies /></LazyRoute></ProtectedRoute>
       } />
+      <Route path="/admin/companies/:id" element={
+        <ProtectedRoute><LazyRoute><AdminCompanyDetail /></LazyRoute></ProtectedRoute>
+      } />
       <Route path="/admin/import-products" element={
         <ProtectedRoute><LazyRoute><ImportProducts /></LazyRoute></ProtectedRoute>
       } />
@@ -288,9 +291,8 @@ function AppRoutes() {
       <Route path="/admin/categories" element={
         <ProtectedRoute><LazyRoute><AdminCategories /></LazyRoute></ProtectedRoute>
       } />
-      <Route path="/admin/audit-logs" element={
-        <ProtectedRoute><LazyRoute><AdminAuditLogs /></LazyRoute></ProtectedRoute>
-      } />
+      {/* Audit logs migrated into /admin/companies/:id (Auditoria tab) */}
+      <Route path="/admin/audit-logs" element={<Navigate to="/admin/companies" replace />} />
       <Route path="/admin/settings" element={
         <ProtectedRoute><LazyRoute><AdminSettings /></LazyRoute></ProtectedRoute>
       } />

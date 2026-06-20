@@ -20,7 +20,7 @@ import {
   Megaphone,
   GlassWater,
   Tags,
-  Activity,
+  
 } from "lucide-react";
 import {
   Tooltip,
@@ -71,11 +71,6 @@ const adminMenuItems = [
     path: "/admin/support",
     icon: Headphones,
     showBadge: true,
-  },
-  {
-    title: "Logs de Auditoria",
-    path: "/admin/audit-logs",
-    icon: Activity,
   },
   {
     title: "Feedbacks",
