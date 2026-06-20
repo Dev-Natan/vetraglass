@@ -72,7 +72,7 @@ export const ClientsCardView = memo(function ClientsCardView({ clients, onView, 
           <div className="space-y-2 mb-4 pr-12">
             <div className="flex items-start gap-2">
               <User className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-              <span className="font-semibold text-foreground text-sm leading-tight">
+              <span className="font-semibold text-foreground text-sm leading-tight uppercase">
                 {client.name}
               </span>
             </div>
