@@ -258,10 +258,11 @@ export default function CompanySetup() {
                 <Label htmlFor="name">Nome da Empresa *</Label>
                 <Input
                   id="name"
-                  placeholder="Vidraçaria Central"
+                  placeholder="VIDRAÇARIA CENTRAL"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => setName(e.target.value.toUpperCase())}
                   disabled={isLoading}
+                  className="uppercase"
                 />
                 {errors.name && (
                   <p className="text-sm text-destructive">{errors.name}</p>
