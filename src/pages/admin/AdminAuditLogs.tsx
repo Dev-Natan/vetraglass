@@ -152,6 +152,51 @@ export default function AdminAuditLogs() {
     enabled: isSaasAdmin,
   });
 
+  // Resolve user_ids → profile name/email
+  const userIds = useMemo(
+    () => [...new Set((logs || []).map((l) => l.user_id).filter(Boolean) as string[])],
+    [logs],
+  );
+  const { data: usersMap } = useQuery({
+    queryKey: ["audit-logs-users", userIds],
+    enabled: isSaasAdmin && userIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", userIds);
+      if (error) throw error;
+      const map: Record<string, { name: string; email: string | null }> = {};
+      for (const p of data || []) {
+        map[p.id] = { name: p.full_name || p.email || p.id.slice(0, 8), email: p.email };
+      }
+      return map;
+    },
+  });
+
+  // Resolve company_ids → fantasy_name
+  const companyIds = useMemo(
+    () => [...new Set((logs || []).map((l) => l.company_id).filter(Boolean) as string[])],
+    [logs],
+  );
+  const { data: companiesMap } = useQuery({
+    queryKey: ["audit-logs-companies", companyIds],
+    enabled: isSaasAdmin && companyIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("companies")
+        .select("id, fantasy_name, name")
+        .in("id", companyIds);
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      for (const c of data || []) {
+        map[c.id] = (c as { fantasy_name?: string; name?: string }).fantasy_name ||
+          (c as { name?: string }).name || c.id.slice(0, 8);
+      }
+      return map;
+    },
+  });
+
   // Get unique tables from logs
   const uniqueTables = [...new Set(logs?.map((l) => l.table_name) || [])].sort();
 
@@ -159,11 +204,16 @@ export default function AdminAuditLogs() {
   const filteredLogs = logs?.filter((log) => {
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
+    const userName = log.user_id ? usersMap?.[log.user_id]?.name?.toLowerCase() : "";
+    const companyName = log.company_id ? companiesMap?.[log.company_id]?.toLowerCase() : "";
     return (
       log.table_name.toLowerCase().includes(term) ||
       log.action.toLowerCase().includes(term) ||
       log.record_id?.toLowerCase().includes(term) ||
-      log.user_id?.toLowerCase().includes(term)
+      log.user_id?.toLowerCase().includes(term) ||
+      userName?.includes(term) ||
+      companyName?.includes(term) ||
+      buildTargetRef(log).toLowerCase().includes(term)
     );
   });
 
