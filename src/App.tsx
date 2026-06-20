@@ -178,6 +178,9 @@ function AppRoutes() {
           <LazyRoute><CompanySetup /></LazyRoute>
         </CompanySetupRoute>
       } />
+      <Route path="/planos" element={
+        <CompanySetupRoute><LazyRoute><Planos /></LazyRoute></CompanySetupRoute>
+      } />
       
       {/* Dashboard - protected */}
       <Route path="/dashboard" element={<ProtectedRoute><IndexRedirect /></ProtectedRoute>} />
