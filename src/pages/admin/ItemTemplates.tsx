@@ -168,9 +168,13 @@ export default function ItemTemplates() {
     enabled: isSaasAdmin,
   });
 
-  // Linhas distintas (case-insensitive) cadastradas em item_templates
+  // Linhas: fonte oficial = product_linhas (gerenciada em /admin/categories).
+  // Inclui também slugs órfãos que existam em item_templates mas ainda não estejam cadastrados.
   const availableLines = useMemo(() => {
     const map = new Map<string, string>();
+    (productLinhas || []).forEach(l => {
+      if (l.is_active) map.set(l.slug.toLowerCase(), l.slug);
+    });
     (allItemsMeta || []).forEach((r: any) => {
       const n = (r.linha || '').trim();
       if (!n) return;
@@ -178,7 +182,7 @@ export default function ItemTemplates() {
       if (!map.has(k)) map.set(k, n);
     });
     return Array.from(map.values()).sort((a, b) => a.localeCompare(b));
-  }, [allItemsMeta]);
+  }, [productLinhas, allItemsMeta]);
 
   // Mapa global: linha (lowercase) -> Set de tipos
   const linhaTypesMap = useMemo(() => {
