@@ -954,7 +954,7 @@ export default function ItemTemplates() {
                         <ArrowLeft className="w-4 h-4 mr-1" /> Voltar às linhas
                       </Button>
                       <div>
-                        <CardTitle className="text-lg">{linha}</CardTitle>
+                        <CardTitle className="text-lg">{productLinhas?.find(l => l.slug.toLowerCase() === linha.toLowerCase() || l.name.toLowerCase() === linha.toLowerCase())?.name || linha}</CardTitle>
                         <CardDescription>{groupItems.length} itens cadastrados</CardDescription>
                       </div>
                     </div>
