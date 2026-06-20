@@ -344,10 +344,13 @@ export default function CompanySetup() {
                       inputMode="numeric"
                       className={cnpjValidated === true ? 'border-green-500 pr-10' : cnpjValidated === false ? 'border-destructive pr-10' : ''}
                     />
-                    {cnpjValidated === true && (
+                    {isValidating && (
+                      <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground animate-spin" />
+                    )}
+                    {!isValidating && cnpjValidated === true && (
                       <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-green-500" />
                     )}
-                    {cnpjValidated === false && (
+                    {!isValidating && cnpjValidated === false && (
                       <XCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-destructive" />
                     )}
                   </div>
