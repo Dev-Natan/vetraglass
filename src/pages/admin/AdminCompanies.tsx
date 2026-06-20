@@ -399,7 +399,10 @@ export default function AdminCompanies() {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card
+            onClick={() => setStatusFilter(s => s === 'active' ? 'all' : 'active')}
+            className={`cursor-pointer transition hover:shadow-md ${statusFilter === 'active' ? 'ring-2 ring-green-500' : ''}`}
+          >
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-green-500/10">
@@ -412,7 +415,10 @@ export default function AdminCompanies() {
               </div>
             </CardContent>
           </Card>
-          <Card className={expiringSoonCount > 0 ? 'border-orange-500/50' : ''}>
+          <Card
+            onClick={() => setStatusFilter(s => s === 'expiring' ? 'all' : 'expiring')}
+            className={`cursor-pointer transition hover:shadow-md ${expiringSoonCount > 0 ? 'border-orange-500/50' : ''} ${statusFilter === 'expiring' ? 'ring-2 ring-orange-500' : ''}`}
+          >
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-orange-500/10">
@@ -425,7 +431,10 @@ export default function AdminCompanies() {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card
+            onClick={() => setStatusFilter(s => s === 'no_plan' ? 'all' : 'no_plan')}
+            className={`cursor-pointer transition hover:shadow-md ${statusFilter === 'no_plan' ? 'ring-2 ring-muted-foreground' : ''}`}
+          >
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-muted">
@@ -438,7 +447,6 @@ export default function AdminCompanies() {
               </div>
             </CardContent>
           </Card>
-          <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-blue-500/10">
