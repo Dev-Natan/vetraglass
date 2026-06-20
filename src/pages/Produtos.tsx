@@ -31,6 +31,8 @@ export default function Produtos() {
   const [createLinhaDialogOpen, setCreateLinhaDialogOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const { labels: categoryLabels, categories } = useProductCategoryLabels();
+  const { data: productLinhas } = useProductLinhas();
+  const getLinhaLabel = (slug: string) => productLinhas?.find(l => l.slug.toLowerCase() === slug.toLowerCase() || l.name.toLowerCase() === slug.toLowerCase())?.name || slug;
 
   // Fetch company activated products
   const { data: companyProducts = [] } = useQuery({
