@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -72,6 +72,67 @@ export default function CompanySetup() {
     setCnpjData(null);
     setErrors(prev => ({ ...prev, document: '' }));
   };
+
+  // Auto-fetch BrasilAPI when CNPJ reaches 14 valid digits
+  useEffect(() => {
+    const digits = document.replace(/\D/g, '');
+    if (digits.length !== 14 || !validateCNPJ(digits)) return;
+
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      setIsValidating(true);
+      try {
+        const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${digits}`, {
+          signal: controller.signal,
+        });
+        if (!res.ok) throw new Error('CNPJ não encontrado');
+        const data = await res.json();
+
+        const razaoSocial = data.razao_social || '';
+        const nomeFantasia = data.nome_fantasia || '';
+        const empresa = (nomeFantasia || razaoSocial).toUpperCase();
+
+        if (empresa && !name) setName(empresa);
+        if (data.ddd_telefone_1 && !phone) setPhone(data.ddd_telefone_1);
+        if (data.logradouro && !street) {
+          setStreet(`${data.logradouro}${data.descricao_tipo_de_logradouro ? '' : ''}`.trim());
+        }
+        if (data.numero && !addressNumber) setAddressNumber(String(data.numero));
+        if (data.complemento && !complement) setComplement(data.complemento);
+        if (data.bairro && !neighborhood) setNeighborhood(data.bairro);
+        if (data.municipio && !city) setCity(data.municipio);
+        if (data.uf && !state) setState(String(data.uf).toUpperCase());
+        if (data.cep && !zipCode) {
+          const cep = String(data.cep).replace(/\D/g, '');
+          setZipCode(cep.length === 8 ? `${cep.slice(0, 5)}-${cep.slice(5)}` : cep);
+        }
+
+        setCnpjValidated(true);
+        setCnpjData({
+          razaoSocial,
+          nomeFantasia,
+          situacao: data.descricao_situacao_cadastral || '',
+          endereco: [data.logradouro, data.numero, data.bairro, data.municipio, data.uf].filter(Boolean).join(', '),
+          telefone: data.ddd_telefone_1 || '',
+          email: data.email || '',
+        });
+      } catch (err: any) {
+        if (err.name === 'AbortError') return;
+        toast({
+          title: 'Aviso',
+          description: 'Não foi possível buscar os dados automaticamente',
+        });
+      } finally {
+        setIsValidating(false);
+      }
+    }, 400);
+
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [document]);
 
   const validateCNPJWithReceita = async () => {
     const cleanDoc = document.replace(/\D/g, '');
@@ -283,10 +344,13 @@ export default function CompanySetup() {
                       inputMode="numeric"
                       className={cnpjValidated === true ? 'border-green-500 pr-10' : cnpjValidated === false ? 'border-destructive pr-10' : ''}
                     />
-                    {cnpjValidated === true && (
+                    {isValidating && (
+                      <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground animate-spin" />
+                    )}
+                    {!isValidating && cnpjValidated === true && (
                       <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-green-500" />
                     )}
-                    {cnpjValidated === false && (
+                    {!isValidating && cnpjValidated === false && (
                       <XCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-destructive" />
                     )}
                   </div>
