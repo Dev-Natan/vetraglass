@@ -195,7 +195,7 @@ export default function ProductTemplates() {
   const queryClient = useQueryClient();
   const compositionDraftRestoredRef = useRef(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isCompositionDialogOpen, setIsCompositionDialogOpen] = useState(false);
+  
   const [editingTemplate, setEditingTemplate] = useState<ProductTemplate | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<ProductTemplate | null>(null);
 
