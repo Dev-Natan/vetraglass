@@ -1423,12 +1423,27 @@ export default function ProductTemplates() {
 
 
         {/* Product Dialog */}
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <Dialog open={isDialogOpen} onOpenChange={(open) => {
+          setIsDialogOpen(open);
+          if (!open) {
+            clearCompositionDraft();
+            resetCompositionForm();
+          }
+        }}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingTemplate ? "Editar Produto" : "Novo Produto"}</DialogTitle>
             </DialogHeader>
+            <Tabs defaultValue="dados" className="space-y-4">
+              <TabsList className="grid grid-cols-2 w-full">
+                <TabsTrigger value="dados">Dados</TabsTrigger>
+                <TabsTrigger value="composicao" disabled={!editingTemplate}>
+                  <Settings2 className="w-4 h-4 mr-2" /> Composição
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="dados" className="mt-4">
             <form onSubmit={handleSubmit} className="space-y-6">
+
               {/* Image + Basic Info */}
               <div className="flex gap-6">
                 {/* Image upload */}
