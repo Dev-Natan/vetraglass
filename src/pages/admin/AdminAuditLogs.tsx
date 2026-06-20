@@ -371,23 +371,28 @@ export default function AdminAuditLogs() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[180px]">Data/Hora</TableHead>
+                      <TableHead className="w-[150px]">Data/Hora</TableHead>
                       <TableHead>Tabela</TableHead>
                       <TableHead>Ação</TableHead>
-                      <TableHead>ID do Registro</TableHead>
+                      <TableHead>Alvo / Referência</TableHead>
                       <TableHead>Usuário</TableHead>
+                      <TableHead>Empresa</TableHead>
                       <TableHead className="text-right">Detalhes</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredLogs?.slice(0, 100).map((log) => {
-                      const actionInfo = actionLabels[log.action] || {
-                        label: log.action,
-                        color: "bg-gray-500",
-                      };
+                      const actionInfo = getActionInfo(log.action);
+                      const userName = log.user_id
+                        ? usersMap?.[log.user_id]?.name || `${log.user_id.slice(0, 8)}…`
+                        : "Sistema";
+                      const companyName = log.company_id
+                        ? companiesMap?.[log.company_id] || `${log.company_id.slice(0, 8)}…`
+                        : "-";
+                      const targetRef = buildTargetRef(log);
                       return (
                         <TableRow key={log.id}>
-                          <TableCell className="font-mono text-sm">
+                          <TableCell className="font-mono text-xs">
                             <div className="flex items-center gap-2">
                               <Calendar className="h-3 w-3 text-muted-foreground" />
                               {format(new Date(log.created_at), "dd/MM/yy HH:mm", {
@@ -407,16 +412,19 @@ export default function AdminAuditLogs() {
                               {actionInfo.label}
                             </Badge>
                           </TableCell>
-                          <TableCell className="font-mono text-xs text-muted-foreground max-w-[150px] truncate">
-                            {log.record_id || "-"}
+                          <TableCell className="text-xs max-w-[220px] truncate" title={targetRef}>
+                            {targetRef}
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <User className="h-3 w-3" />
-                              <span className="max-w-[100px] truncate">
-                                {log.user_id?.slice(0, 8) || "Sistema"}
+                            <div className="flex items-center gap-1 text-xs">
+                              <User className="h-3 w-3 text-muted-foreground" />
+                              <span className="max-w-[140px] truncate" title={userName}>
+                                {userName}
                               </span>
                             </div>
+                          </TableCell>
+                          <TableCell className="text-xs max-w-[160px] truncate" title={companyName}>
+                            {companyName}
                           </TableCell>
                           <TableCell className="text-right">
                             <Button
