@@ -53,11 +53,15 @@ interface Subscription {
 export default function AdminCompanies() {
   const { isSaasAdmin } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'expiring' | 'no_plan'>('all');
   const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [subDialogOpen, setSubDialogOpen] = useState(false);
   const [subCompany, setSubCompany] = useState<Company | null>(null);
+  const [clearAllDialogOpen, setClearAllDialogOpen] = useState(false);
+  const [clearAllConfirmText, setClearAllConfirmText] = useState('');
+  const [isClearingAll, setIsClearingAll] = useState(false);
   const [subForm, setSubForm] = useState({
     plan_name: 'basico',
     plan_price: 98.99,
@@ -179,34 +183,44 @@ export default function AdminCompanies() {
   };
 
   const handleClearAllCompaniesProducts = async () => {
-    if (confirm('Deseja APAGAR TODOS os produtos de TODAS as empresas cadastradas?')) {
-      if (confirm('ESTA AÇÃO É IRREVERSÍVEL. Tem certeza que deseja prosseguir com a limpeza geral?')) {
-        const { error } = await supabase
-          .from('company_products')
-          .delete()
-          .not('id', 'is', null);
-        
-        if (error) {
-          toast.error('Erro ao apagar produtos: ' + error.message);
-        } else {
-          // Also clear company_linhas
-          await supabase.from('company_linhas').delete().not('id', 'is', null);
-          toast.success('Todos os produtos de todas as empresas foram apagados');
-          queryClient.invalidateQueries({ queryKey: ['admin-companies'] });
-        }
-      }
+    setIsClearingAll(true);
+    try {
+      const { error } = await supabase
+        .from('company_products')
+        .delete()
+        .not('id', 'is', null);
+      if (error) throw error;
+      await supabase.from('company_linhas').delete().not('id', 'is', null);
+      toast.success('Todos os produtos de todas as empresas foram apagados');
+      queryClient.invalidateQueries({ queryKey: ['admin-companies'] });
+      setClearAllDialogOpen(false);
+      setClearAllConfirmText('');
+    } catch (err: any) {
+      toast.error('Erro ao apagar produtos: ' + (err.message || ''));
+    } finally {
+      setIsClearingAll(false);
     }
   };
 
   const filteredCompanies = companies.filter(company => {
     const searchLower = searchTerm.toLowerCase();
-
-    return (
+    const matchesSearch = (
       company.name.toLowerCase().includes(searchLower) ||
       company.cnpj?.includes(searchTerm) ||
       company.email?.toLowerCase().includes(searchLower) ||
       company.phone?.includes(searchTerm)
     );
+    if (!matchesSearch) return false;
+
+    const sub = subscriptionMap.get(company.id);
+    if (statusFilter === 'active') return sub?.status === 'active';
+    if (statusFilter === 'no_plan') return !sub;
+    if (statusFilter === 'expiring') {
+      if (!sub?.expires_at) return false;
+      const days = differenceInDays(new Date(sub.expires_at), new Date());
+      return days >= 0 && days <= 7;
+    }
+    return true;
   });
 
   const handleDeleteCompany = async () => {
@@ -242,14 +256,31 @@ export default function AdminCompanies() {
     setSubDialogOpen(true);
   };
 
-  const formatCNPJ = (cnpj: string | null) => {
-    if (!cnpj) return '-';
-    const cleaned = cnpj.replace(/\D/g, '');
+  const formatDocument = (doc: string | null) => {
+    if (!doc) return '-';
+    const cleaned = doc.replace(/\D/g, '');
     if (cleaned.length === 14) {
       return cleaned.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
     }
-    return cnpj;
+    if (cleaned.length === 11) {
+      return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    }
+    return doc;
   };
+
+  const formatPhone = (phone: string | null) => {
+    if (!phone) return '-';
+    const cleaned = phone.replace(/\D/g, '');
+    if (cleaned.length === 11) {
+      return cleaned.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+    }
+    if (cleaned.length === 10) {
+      return cleaned.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+    }
+    return phone;
+  };
+
+  const formatCNPJ = formatDocument;
 
   const getSubscriptionBadge = (companyId: string) => {
     const sub = subscriptionMap.get(companyId);
@@ -340,11 +371,12 @@ export default function AdminCompanies() {
               <Shield className="h-3 w-3 mr-1" />
               SaaS Admin
             </Badge>
-            <Button 
-              variant="destructive" 
-              size="sm" 
-              onClick={handleClearAllCompaniesProducts}
-              className="gap-2"
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setClearAllDialogOpen(true)}
+              className="gap-2 text-muted-foreground hover:text-destructive"
+              title="Ação destrutiva — requer confirmação"
             >
               <Trash className="h-4 w-4" />
               Limpar Produtos (Geral)
@@ -367,7 +399,10 @@ export default function AdminCompanies() {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card
+            onClick={() => setStatusFilter(s => s === 'active' ? 'all' : 'active')}
+            className={`cursor-pointer transition hover:shadow-md ${statusFilter === 'active' ? 'ring-2 ring-green-500' : ''}`}
+          >
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-green-500/10">
@@ -380,7 +415,10 @@ export default function AdminCompanies() {
               </div>
             </CardContent>
           </Card>
-          <Card className={expiringSoonCount > 0 ? 'border-orange-500/50' : ''}>
+          <Card
+            onClick={() => setStatusFilter(s => s === 'expiring' ? 'all' : 'expiring')}
+            className={`cursor-pointer transition hover:shadow-md ${expiringSoonCount > 0 ? 'border-orange-500/50' : ''} ${statusFilter === 'expiring' ? 'ring-2 ring-orange-500' : ''}`}
+          >
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-orange-500/10">
@@ -393,7 +431,10 @@ export default function AdminCompanies() {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card
+            onClick={() => setStatusFilter(s => s === 'no_plan' ? 'all' : 'no_plan')}
+            className={`cursor-pointer transition hover:shadow-md ${statusFilter === 'no_plan' ? 'ring-2 ring-muted-foreground' : ''}`}
+          >
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-muted">
@@ -455,7 +496,7 @@ export default function AdminCompanies() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Empresa</TableHead>
-                    <TableHead>CNPJ</TableHead>
+                    <TableHead>CNPJ / CPF</TableHead>
                     <TableHead>Contato</TableHead>
                     <TableHead>Plano</TableHead>
                     <TableHead>Status</TableHead>
@@ -491,7 +532,7 @@ export default function AdminCompanies() {
                                 </div>
                               )}
                               <div>
-                                <p className="font-medium">{company.name}</p>
+                                <p className="font-medium uppercase">{company.name}</p>
                                 {(company.city || company.state) && (
                                   <p className="text-xs text-muted-foreground flex items-center gap-1">
                                     <MapPin className="h-3 w-3" />
@@ -517,7 +558,7 @@ export default function AdminCompanies() {
                               {company.phone && (
                                 <p className="text-xs flex items-center gap-1">
                                   <Phone className="h-3 w-3 text-muted-foreground" />
-                                  {company.phone}
+                                  {formatPhone(company.phone)}
                                 </p>
                               )}
                               {!company.email && !company.phone && (
@@ -624,7 +665,7 @@ export default function AdminCompanies() {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-xs text-muted-foreground">CNPJ</p>
+                    <p className="text-xs text-muted-foreground">CNPJ / CPF</p>
                     <p className="font-medium">{formatCNPJ(selectedCompany.cnpj)}</p>
                   </div>
                   <div>
@@ -637,7 +678,7 @@ export default function AdminCompanies() {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Telefone</p>
-                    <p className="font-medium">{selectedCompany.phone || '-'}</p>
+                    <p className="font-medium">{formatPhone(selectedCompany.phone)}</p>
                   </div>
                   <div className="col-span-2">
                     <p className="text-xs text-muted-foreground">Localização</p>
@@ -819,6 +860,46 @@ export default function AdminCompanies() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Clear All Products Confirmation Dialog */}
+      <Dialog open={clearAllDialogOpen} onOpenChange={(open) => {
+        setClearAllDialogOpen(open);
+        if (!open) setClearAllConfirmText('');
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Limpar Produtos de TODAS as empresas
+            </DialogTitle>
+            <DialogDescription>
+              Esta ação é <strong>irreversível</strong> e apagará todos os produtos e linhas de todas as empresas cadastradas. Para prosseguir, digite <strong>CONFIRMAR</strong> abaixo.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>Digite CONFIRMAR para habilitar a ação</Label>
+            <Input
+              value={clearAllConfirmText}
+              onChange={(e) => setClearAllConfirmText(e.target.value)}
+              placeholder="CONFIRMAR"
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setClearAllDialogOpen(false)} disabled={isClearingAll}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleClearAllCompaniesProducts}
+              disabled={clearAllConfirmText !== 'CONFIRMAR' || isClearingAll}
+            >
+              {isClearingAll && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Apagar Tudo
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }
