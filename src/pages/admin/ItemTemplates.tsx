@@ -130,7 +130,8 @@ export default function ItemTemplates() {
         query = query.eq('type', filterType as any);
       }
       if (filterLinha !== 'all') {
-        query = query.eq('linha', filterLinha);
+        // Case-insensitive: linhas podem estar cadastradas com caixas diferentes ("Gold" vs "gold")
+        query = query.ilike('linha', filterLinha);
       }
       if (!showInactive) {
         query = query.eq('is_active', true);
