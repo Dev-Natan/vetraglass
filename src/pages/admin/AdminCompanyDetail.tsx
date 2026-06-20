@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import {
   ArrowLeft, Building2, CreditCard, Activity, FileText, Loader2,
   CheckCircle2, XCircle, AlertTriangle, Clock, Calendar, User, Eye,
-  MapPin, Mail, Phone, Crown,
+  MapPin, Mail, Phone, Crown, Undo2,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -20,11 +20,14 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { JsonView } from "@/components/admin/JsonView";
+import { buildNarrative, diffFields } from "@/utils/auditLogNarrative";
 
 interface CompanyRow {
   id: string;
