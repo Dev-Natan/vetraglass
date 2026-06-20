@@ -77,7 +77,7 @@ const FormulaTester = lazy(() => import("./pages/admin/FormulaTester"));
 const queryClient = createQueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading, companies, isSaasAdmin } = useAuth();
+  const { user, loading, companies, currentCompany, isSaasAdmin } = useAuth();
 
   if (loading) {
     return (
@@ -94,6 +94,16 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   // SaaS admins can access the system without a company
   if (!isSaasAdmin && companies.length === 0) {
     return <Navigate to="/empresa/nova" replace />;
+  }
+
+  // Bloqueio de trial expirado — força ir para /planos
+  if (!isSaasAdmin && currentCompany) {
+    const status = currentCompany.subscription_status ?? 'trialing';
+    const trialEndsAt = currentCompany.trial_ends_at ? new Date(currentCompany.trial_ends_at) : null;
+    const expired = trialEndsAt ? trialEndsAt.getTime() < Date.now() : false;
+    if (status !== 'active' && expired) {
+      return <Navigate to="/planos" replace />;
+    }
   }
 
   return <>{children}</>;
