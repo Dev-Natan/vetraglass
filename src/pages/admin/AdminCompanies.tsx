@@ -604,14 +604,14 @@ export default function AdminCompanies() {
                               {format(new Date(company.created_at), "dd/MM/yyyy", { locale: ptBR })}
                             </p>
                           </TableCell>
-                          <TableCell>
+                          <TableCell onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center gap-1">
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8"
-                                onClick={() => setSelectedCompany(company)}
-                                title="Ver detalhes"
+                                onClick={() => navigate(`/admin/companies/${company.id}`)}
+                                title="Abrir perfil"
                               >
                                 <Eye className="h-4 w-4" />
                               </Button>
