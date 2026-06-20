@@ -201,6 +201,8 @@ export default function ProductTemplates() {
   const [uploadingImageId, setUploadingImageId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'table' | 'grouped'>('grouped');
   const [expandedLinhas, setExpandedLinhas] = useState<Set<string>>(new Set());
+  const [linhaView, setLinhaView] = useState<string | null>(null);
+
   
   const [compositionActiveTab, setCompositionActiveTab] = useState("glass");
   const [selectedItemToAdd, setSelectedItemToAdd] = useState("");
