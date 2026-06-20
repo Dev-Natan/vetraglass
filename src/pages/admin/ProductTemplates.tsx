@@ -1339,12 +1339,14 @@ export default function ProductTemplates() {
                           return (
                             <Card
                               key={template.id}
+                              onClick={() => handleEdit(template)}
                               className={cn(
-                                "group relative overflow-hidden transition-all hover:shadow-lg border-2",
+                                "group relative overflow-hidden transition-all hover:shadow-lg border-2 cursor-pointer",
                                 !template.is_active && "opacity-50",
                                 isReady ? "border-emerald-300 dark:border-emerald-700" : "border-transparent hover:border-primary/30"
                               )}
                             >
+
                               {isReady && (
                                 <div className="absolute top-2 left-2 z-10">
                                   <div className="bg-emerald-500 text-white rounded-full p-1 shadow-md">
