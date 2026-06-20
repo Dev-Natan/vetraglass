@@ -687,7 +687,7 @@ export default function ItemTemplates() {
                       <SelectTrigger><SelectValue placeholder="Selecione uma linha" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">Sem Linha</SelectItem>
-                        {availableLines?.map((line) => <SelectItem key={line} value={line}>{line}</SelectItem>)}
+                        {availableLines?.map((line) => <SelectItem key={line} value={line}>{productLinhas?.find(l => l.slug.toLowerCase() === line.toLowerCase() || l.name.toLowerCase() === line.toLowerCase())?.name || line}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -874,7 +874,7 @@ export default function ItemTemplates() {
             <SelectTrigger className="w-40"><SelectValue placeholder="Linha" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas Linhas</SelectItem>
-              {availableLines?.map((line) => <SelectItem key={line} value={line}>{line}</SelectItem>)}
+              {availableLines?.map((line) => <SelectItem key={line} value={line}>{productLinhas?.find(l => l.slug.toLowerCase() === line.toLowerCase() || l.name.toLowerCase() === line.toLowerCase())?.name || line}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={filterType} onValueChange={(v) => { setFilterType(v); setPage(1); }}>
@@ -927,6 +927,7 @@ export default function ItemTemplates() {
                     <LinhaCardSimple
                       key={linha}
                       linha={linha}
+                      label={productLinhas?.find(l => l.slug.toLowerCase() === linha.toLowerCase() || l.name.toLowerCase() === linha.toLowerCase())?.name || linha}
                       isRemovable={false}
                       categories={types}
                       categoryLabels={typeLabels}
@@ -953,7 +954,7 @@ export default function ItemTemplates() {
                         <ArrowLeft className="w-4 h-4 mr-1" /> Voltar às linhas
                       </Button>
                       <div>
-                        <CardTitle className="text-lg">{linha}</CardTitle>
+                        <CardTitle className="text-lg">{productLinhas?.find(l => l.slug.toLowerCase() === linha.toLowerCase() || l.name.toLowerCase() === linha.toLowerCase())?.name || linha}</CardTitle>
                         <CardDescription>{groupItems.length} itens cadastrados</CardDescription>
                       </div>
                     </div>
