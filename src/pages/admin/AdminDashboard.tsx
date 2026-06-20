@@ -75,13 +75,6 @@ export default function AdminDashboard() {
       badge: stats?.openTicketsCount,
     },
     {
-      title: "Logs de Auditoria",
-      description: "Histórico de ações do sistema",
-      icon: Activity,
-      path: "/admin/audit-logs",
-      color: "bg-amber-500",
-    },
-    {
       title: "Configurações",
       description: "Configurações gerais do sistema",
       icon: Settings,
