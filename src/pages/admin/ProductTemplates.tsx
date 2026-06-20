@@ -1354,7 +1354,8 @@ export default function ProductTemplates() {
                                   </div>
                                 </div>
                               )}
-                              <div className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div onClick={(e) => e.stopPropagation()} className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
                                     <Button variant="secondary" size="icon" className="h-7 w-7 shadow-sm">
