@@ -178,6 +178,7 @@ export default function Produtos() {
               <LinhaCardSimple
                 key={item.linha}
                 linha={item.linha}
+                label={getLinhaLabel(item.linha)}
                 onViewProducts={() => navigate(`/produtos/linha/${encodeURIComponent(item.linha)}`)}
                 onRemove={() => handleRemoveLinha(item.linha)}
                 isRemovable={showActive}
