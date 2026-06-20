@@ -447,6 +447,7 @@ export default function AdminCompanies() {
               </div>
             </CardContent>
           </Card>
+          <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-blue-500/10">
