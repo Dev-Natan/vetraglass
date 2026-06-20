@@ -896,6 +896,9 @@ export type Database = {
           secondary_color: string | null
           state: string | null
           street: string | null
+          stripe_customer_id: string | null
+          subscription_status: string
+          trial_ends_at: string | null
           updated_at: string
           zip_code: string | null
         }
@@ -932,6 +935,9 @@ export type Database = {
           secondary_color?: string | null
           state?: string | null
           street?: string | null
+          stripe_customer_id?: string | null
+          subscription_status?: string
+          trial_ends_at?: string | null
           updated_at?: string
           zip_code?: string | null
         }
@@ -968,6 +974,9 @@ export type Database = {
           secondary_color?: string | null
           state?: string | null
           street?: string | null
+          stripe_customer_id?: string | null
+          subscription_status?: string
+          trial_ends_at?: string | null
           updated_at?: string
           zip_code?: string | null
         }
@@ -7839,6 +7848,9 @@ export type Database = {
           secondary_color: string | null
           state: string | null
           street: string | null
+          stripe_customer_id: string | null
+          subscription_status: string
+          trial_ends_at: string | null
           updated_at: string
           zip_code: string | null
         }
