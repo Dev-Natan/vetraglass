@@ -519,7 +519,11 @@ export default function AdminCompanies() {
                     filteredCompanies.map((company) => {
                       const sub = subscriptionMap.get(company.id);
                       return (
-                        <TableRow key={company.id}>
+                        <TableRow
+                          key={company.id}
+                          className="cursor-pointer hover:bg-muted/40"
+                          onClick={() => navigate(`/admin/companies/${company.id}`)}
+                        >
                           <TableCell>
                             <div className="flex items-center gap-3">
                               {company.logo_url ? (
