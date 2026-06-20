@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Building2, ArrowLeft, CheckCircle, XCircle, Search } from 'lucide-react';
 import { z } from 'zod';
-import { validateCPFOrCNPJ, formatCPFOrCNPJ } from '@/utils/documentValidation';
+import { validateCNPJ, formatCNPJ } from '@/utils/documentValidation';
 
 interface CNPJData {
   razaoSocial: string;
@@ -22,11 +22,10 @@ interface CNPJData {
 
 const companySchema = z.object({
   name: z.string().min(2, 'Nome deve ter no mínimo 2 caracteres'),
-  document: z.string().optional().refine((val) => {
-    if (!val || val.trim() === '') return true;
-    const result = validateCPFOrCNPJ(val);
-    return result.valid;
-  }, 'CPF ou CNPJ inválido'),
+  document: z
+    .string()
+    .refine((v) => v.replace(/\D/g, '').length === 14, 'CNPJ deve conter 14 dígitos')
+    .refine((v) => validateCNPJ(v), 'CNPJ inválido'),
   phone: z.string().optional(),
   email: z.string().email('Email inválido').optional().or(z.literal('')),
   zipCode: z.string().optional(),
@@ -66,7 +65,8 @@ export default function CompanySetup() {
   const [state, setState] = useState('');
 
   const handleDocumentChange = (value: string) => {
-    const formatted = formatCPFOrCNPJ(value);
+    const digits = value.replace(/\D/g, '').slice(0, 14);
+    const formatted = formatCNPJ(digits);
     setDocument(formatted);
     setCnpjValidated(null);
     setCnpjData(null);
@@ -143,13 +143,15 @@ export default function CompanySetup() {
     e.preventDefault();
     setErrors({});
     
-    // Limpar documento antes de validar
-    const cleanDocument = document ? document.replace(/\D/g, '') : '';
-    
+    // Sanitize document and phone (digits only)
+    const cleanDocument = document.replace(/\D/g, '');
+    const cleanPhone = phone.replace(/\D/g, '');
+    const normalizedName = name.trim().toUpperCase();
+
     const validation = companySchema.safeParse({
-      name,
+      name: normalizedName,
       document: cleanDocument,
-      phone,
+      phone: cleanPhone,
       email,
       zipCode,
       street,
@@ -179,11 +181,11 @@ export default function CompanySetup() {
       // Use RPC to create company and assign admin role
       const { data: companyData, error: companyError } = await supabase
         .rpc('create_company_and_assign_admin', {
-          _name: name,
-          _cnpj: cleanDocument || null, // Envia null se vazio
-          _phone: phone || null,
+          _name: normalizedName,
+          _cnpj: cleanDocument,
+          _phone: cleanPhone || null,
           _email: email || null,
-          _address: [street, addressNumber, complement, neighborhood, city, state, zipCode].filter(Boolean).join(', ') || null,
+          _address: [street, addressNumber, complement, neighborhood, city, state, zipCode.replace(/\D/g, '')].filter(Boolean).join(', ') || null,
         });
       
       if (companyError) {
@@ -256,10 +258,11 @@ export default function CompanySetup() {
                 <Label htmlFor="name">Nome da Empresa *</Label>
                 <Input
                   id="name"
-                  placeholder="Vidraçaria Central"
+                  placeholder="VIDRAÇARIA CENTRAL"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => setName(e.target.value.toUpperCase())}
                   disabled={isLoading}
+                  className="uppercase"
                 />
                 {errors.name && (
                   <p className="text-sm text-destructive">{errors.name}</p>
@@ -267,16 +270,17 @@ export default function CompanySetup() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="document">CPF ou CNPJ (opcional)</Label>
+                <Label htmlFor="document">CNPJ *</Label>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <Input
                       id="document"
-                      placeholder="000.000.000-00 ou 00.000.000/0001-00"
+                      placeholder="00.000.000/0001-00"
                       value={document}
                       onChange={(e) => handleDocumentChange(e.target.value)}
                       disabled={isLoading || isValidating}
                       maxLength={18}
+                      inputMode="numeric"
                       className={cnpjValidated === true ? 'border-green-500 pr-10' : cnpjValidated === false ? 'border-destructive pr-10' : ''}
                     />
                     {cnpjValidated === true && (
@@ -315,7 +319,7 @@ export default function CompanySetup() {
                   </div>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  O documento é opcional. Se informado, será vinculado exclusivamente a esta empresa e não poderá ser usado em outra conta.
+                  O CNPJ é obrigatório e será vinculado exclusivamente a esta empresa — não poderá ser usado em outra conta.
                 </p>
               </div>
               
