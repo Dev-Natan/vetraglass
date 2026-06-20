@@ -1014,7 +1014,7 @@ export default function ProductTemplates() {
               variant="outline"
               size="sm"
               onClick={() => setShowReady(!showReady)}
-              className={cn("gap-2", !showReady && "bg-primary/10 border-primary/30")}
+              className={cn("gap-2", showReady && "bg-primary/10 border-primary/30")}
             >
               {showReady ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
               {showReady ? "Ocultar Prontos" : "Mostrar Prontos"}
