@@ -860,6 +860,46 @@ export default function AdminCompanies() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Clear All Products Confirmation Dialog */}
+      <Dialog open={clearAllDialogOpen} onOpenChange={(open) => {
+        setClearAllDialogOpen(open);
+        if (!open) setClearAllConfirmText('');
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Limpar Produtos de TODAS as empresas
+            </DialogTitle>
+            <DialogDescription>
+              Esta ação é <strong>irreversível</strong> e apagará todos os produtos e linhas de todas as empresas cadastradas. Para prosseguir, digite <strong>CONFIRMAR</strong> abaixo.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>Digite CONFIRMAR para habilitar a ação</Label>
+            <Input
+              value={clearAllConfirmText}
+              onChange={(e) => setClearAllConfirmText(e.target.value)}
+              placeholder="CONFIRMAR"
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setClearAllDialogOpen(false)} disabled={isClearingAll}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleClearAllCompaniesProducts}
+              disabled={clearAllConfirmText !== 'CONFIRMAR' || isClearingAll}
+            >
+              {isClearingAll && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Apagar Tudo
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }
