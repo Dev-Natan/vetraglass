@@ -254,6 +254,39 @@ export default function AdminCompanyDetail() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+  const revertLog = useMutation({
+    mutationFn: async (log: AuditLog) => {
+      if (!log.old_data || !log.table_name) {
+        throw new Error("Log sem dados anteriores — não é possível reverter.");
+      }
+      const table = log.table_name as never;
+      const action = (log.action || "").toLowerCase();
+      // Remove fields managed by DB
+      const payload: Record<string, unknown> = { ...(log.old_data as Record<string, unknown>) };
+      delete payload.updated_at;
+
+      if (action === "delete") {
+        const { error } = await supabase.from(table).insert(payload as never);
+        if (error) throw error;
+      } else if (action === "update") {
+        if (!log.record_id) throw new Error("Log sem record_id.");
+        delete payload.id;
+        delete payload.created_at;
+        const { error } = await supabase.from(table).update(payload as never).eq("id" as never, log.record_id as never);
+        if (error) throw error;
+      } else {
+        throw new Error("Apenas updates e exclusões podem ser revertidos.");
+      }
+    },
+    onSuccess: () => {
+      toast.success("Alteração revertida com sucesso");
+      queryClient.invalidateQueries({ queryKey: ["admin-company-logs", id] });
+      queryClient.invalidateQueries({ queryKey: ["admin-company-quotes", id] });
+      setRevertTarget(null);
+    },
+    onError: (e: Error) => toast.error(e.message || "Erro ao reverter"),
+  });
+
 
   const openSubDialog = () => {
     setSubForm({
