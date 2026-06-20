@@ -888,7 +888,7 @@ export default function ItemTemplates() {
           </Card>
           <Card className="bg-muted/30">
             <CardContent className="pt-3 pb-2">
-              <p className="text-2xl font-bold text-muted-foreground">{productLinhas?.length || 0}</p>
+              <p className="text-2xl font-bold text-muted-foreground">{availableLines.length}</p>
               <p className="text-xs text-muted-foreground">Linhas</p>
             </CardContent>
           </Card>
