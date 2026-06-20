@@ -3,6 +3,9 @@ export interface Company {
   name: string;
   logo?: string;
   cnpj?: string | null;
+  subscription_status?: string | null;
+  trial_ends_at?: string | null;
+  stripe_customer_id?: string | null;
 }
 
 export interface Order {

@@ -21,6 +21,9 @@ interface Company {
   phone: string | null;
   email: string | null;
   login_token: string | null;
+  subscription_status: string | null;
+  trial_ends_at: string | null;
+  stripe_customer_id: string | null;
 }
 
 interface UserCompany {
@@ -242,7 +245,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               address,
               phone,
               email,
-              login_token
+              login_token,
+              subscription_status,
+              trial_ends_at,
+              stripe_customer_id
             )
           `)
           .eq('user_id', userId)

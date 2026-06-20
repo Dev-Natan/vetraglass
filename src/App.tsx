@@ -43,6 +43,7 @@ const PedidosCompra = lazy(() => import("./pages/PedidosCompra"));
 const Feedbacks = lazy(() => import("./pages/Feedbacks"));
 
 const AceitarConvite = lazy(() => import("./pages/AceitarConvite"));
+const Planos = lazy(() => import("./pages/Planos"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Settings pages - lazy loaded
@@ -76,7 +77,7 @@ const FormulaTester = lazy(() => import("./pages/admin/FormulaTester"));
 const queryClient = createQueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading, companies, isSaasAdmin } = useAuth();
+  const { user, loading, companies, currentCompany, isSaasAdmin } = useAuth();
 
   if (loading) {
     return (
@@ -93,6 +94,16 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   // SaaS admins can access the system without a company
   if (!isSaasAdmin && companies.length === 0) {
     return <Navigate to="/empresa/nova" replace />;
+  }
+
+  // Bloqueio de trial expirado — força ir para /planos
+  if (!isSaasAdmin && currentCompany) {
+    const status = currentCompany.subscription_status ?? 'trialing';
+    const trialEndsAt = currentCompany.trial_ends_at ? new Date(currentCompany.trial_ends_at) : null;
+    const expired = trialEndsAt ? trialEndsAt.getTime() < Date.now() : false;
+    if (status !== 'active' && expired) {
+      return <Navigate to="/planos" replace />;
+    }
   }
 
   return <>{children}</>;
@@ -166,6 +177,9 @@ function AppRoutes() {
         <CompanySetupRoute>
           <LazyRoute><CompanySetup /></LazyRoute>
         </CompanySetupRoute>
+      } />
+      <Route path="/planos" element={
+        <CompanySetupRoute><LazyRoute><Planos /></LazyRoute></CompanySetupRoute>
       } />
       
       {/* Dashboard - protected */}

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import { OverdueOrdersNotification } from '@/components/notifications/OverdueOrdersNotification';
 import { AnnouncementBanner } from '@/components/announcements/AnnouncementBanner';
+import { TrialBanner } from '@/components/trial/TrialBanner';
 import { TutorialProvider } from '@/contexts/TutorialContext';
 import { TutorialOverlay } from '@/components/tutorial/TutorialOverlay';
 import { ModuleTutorialProvider } from '@/contexts/ModuleTutorialContext';
@@ -95,6 +96,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             {/* Page Content */}
             <div className="p-4 sm:p-8 max-w-7xl mx-auto min-h-[calc(100vh-210px)]">
               <div className="animate-fade-in">
+                <TrialBanner />
                 <AnnouncementBanner />
                 {children}
               </div>
