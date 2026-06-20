@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Building2, ArrowLeft, CheckCircle, XCircle, Search } from 'lucide-react';
 import { z } from 'zod';
-import { validateCPFOrCNPJ, formatCPFOrCNPJ } from '@/utils/documentValidation';
+import { validateCNPJ, formatCNPJ } from '@/utils/documentValidation';
 
 interface CNPJData {
   razaoSocial: string;
@@ -22,11 +22,10 @@ interface CNPJData {
 
 const companySchema = z.object({
   name: z.string().min(2, 'Nome deve ter no mínimo 2 caracteres'),
-  document: z.string().optional().refine((val) => {
-    if (!val || val.trim() === '') return true;
-    const result = validateCPFOrCNPJ(val);
-    return result.valid;
-  }, 'CPF ou CNPJ inválido'),
+  document: z
+    .string()
+    .refine((v) => v.replace(/\D/g, '').length === 14, 'CNPJ deve conter 14 dígitos')
+    .refine((v) => validateCNPJ(v), 'CNPJ inválido'),
   phone: z.string().optional(),
   email: z.string().email('Email inválido').optional().or(z.literal('')),
   zipCode: z.string().optional(),
