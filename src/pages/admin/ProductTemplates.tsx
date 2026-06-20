@@ -358,7 +358,7 @@ export default function ProductTemplates() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    if (!isCompositionDialogOpen || !selectedTemplate?.id) {
+    if (!isDialogOpen || !selectedTemplate?.id) {
       clearCompositionDraft();
       return;
     }
@@ -381,7 +381,8 @@ export default function ProductTemplates() {
 
     window.sessionStorage.setItem(COMPOSITION_DRAFT_STORAGE_KEY, JSON.stringify(draft));
   }, [
-    isCompositionDialogOpen,
+    isDialogOpen,
+
     selectedTemplate?.id,
     compositionActiveTab,
     selectedItemToAdd,
