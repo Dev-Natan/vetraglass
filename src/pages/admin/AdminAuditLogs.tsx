@@ -274,7 +274,7 @@ export default function AdminAuditLogs() {
           <Card>
             <CardContent className="pt-4">
               <div className="text-2xl font-bold text-green-500">
-                {logs?.filter((l) => l.action === "INSERT").length || 0}
+                {countAction(logs, "create", "insert")}
               </div>
               <p className="text-xs text-muted-foreground">Criações</p>
             </CardContent>
@@ -282,7 +282,7 @@ export default function AdminAuditLogs() {
           <Card>
             <CardContent className="pt-4">
               <div className="text-2xl font-bold text-blue-500">
-                {logs?.filter((l) => l.action === "UPDATE").length || 0}
+                {countAction(logs, "update")}
               </div>
               <p className="text-xs text-muted-foreground">Atualizações</p>
             </CardContent>
@@ -290,7 +290,7 @@ export default function AdminAuditLogs() {
           <Card>
             <CardContent className="pt-4">
               <div className="text-2xl font-bold text-red-500">
-                {logs?.filter((l) => l.action === "DELETE").length || 0}
+                {countAction(logs, "delete")}
               </div>
               <p className="text-xs text-muted-foreground">Exclusões</p>
             </CardContent>
