@@ -86,6 +86,8 @@ import { useItemTypeLabels } from "@/hooks/useItemTypes";
 import { useProductLinhas } from "@/hooks/useProductLinhas";
 import { Textarea } from "@/components/ui/textarea";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+
 
 
 type ProductTemplate = {
@@ -193,9 +195,10 @@ export default function ProductTemplates() {
   const queryClient = useQueryClient();
   const compositionDraftRestoredRef = useRef(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isCompositionDialogOpen, setIsCompositionDialogOpen] = useState(false);
+  
   const [editingTemplate, setEditingTemplate] = useState<ProductTemplate | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<ProductTemplate | null>(null);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [showInactive, setShowInactive] = useState(true);
@@ -336,9 +339,9 @@ export default function ProductTemplates() {
         return;
       }
 
-      setSelectedTemplate(draftTemplate);
-      setIsCompositionDialogOpen(true);
+      handleEdit(draftTemplate);
       setCompositionActiveTab(draft.activeTab || "glass");
+
       setSelectedItemToAdd(draft.selectedItemToAdd || "");
       setQuantityFormula(draft.quantityFormula || "1");
       setPiecesQuantity(typeof draft.piecesQuantity === "number" ? draft.piecesQuantity : 1);
@@ -356,7 +359,7 @@ export default function ProductTemplates() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    if (!isCompositionDialogOpen || !selectedTemplate?.id) {
+    if (!isDialogOpen || !selectedTemplate?.id) {
       clearCompositionDraft();
       return;
     }
@@ -379,7 +382,8 @@ export default function ProductTemplates() {
 
     window.sessionStorage.setItem(COMPOSITION_DRAFT_STORAGE_KEY, JSON.stringify(draft));
   }, [
-    isCompositionDialogOpen,
+    isDialogOpen,
+
     selectedTemplate?.id,
     compositionActiveTab,
     selectedItemToAdd,
@@ -526,6 +530,7 @@ export default function ProductTemplates() {
 
   const handleEdit = (template: ProductTemplate) => {
     setEditingTemplate(template);
+    setSelectedTemplate(template);
     setFormImageFile(null);
     setFormImagePreview(resolveProductImageUrl(template.image_url) || null);
     setFormData({
@@ -548,6 +553,7 @@ export default function ProductTemplates() {
     });
     setIsDialogOpen(true);
   };
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1085,12 +1091,10 @@ export default function ProductTemplates() {
                         <DropdownMenuItem onClick={() => copyMutation.mutate(template)}>
                           <Copy className="w-4 h-4 mr-2" /> Duplicar
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => {
-                          setSelectedTemplate(template);
-                          setIsCompositionDialogOpen(true);
-                        }}>
+                        <DropdownMenuItem onClick={() => handleEdit(template)}>
                           <Settings2 className="w-4 h-4 mr-2" /> Composição
                         </DropdownMenuItem>
+
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => toggleReadyMutation.mutate({ id: template.id, description: template.description, is_ready: !isReady })}>
                           {isReady ? (
@@ -1252,9 +1256,10 @@ export default function ProductTemplates() {
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => handleEdit(template)}><Pencil className="w-4 h-4 mr-2" /> Editar</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => copyMutation.mutate(template)}><Copy className="w-4 h-4 mr-2" /> Duplicar</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => { setSelectedTemplate(template); setIsCompositionDialogOpen(true); }}>
+                                <DropdownMenuItem onClick={() => handleEdit(template)}>
                                   <Settings2 className="w-4 h-4 mr-2" /> Composição
                                 </DropdownMenuItem>
+
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={() => toggleReadyMutation.mutate({ id: template.id, description: template.description, is_ready: !isReady })}>
                                   {isReady ? (
@@ -1365,9 +1370,10 @@ export default function ProductTemplates() {
                                   <DropdownMenuContent align="end">
                                     <DropdownMenuItem onClick={() => handleEdit(template)}><Pencil className="w-4 h-4 mr-2" /> Editar</DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => copyMutation.mutate(template)}><Copy className="w-4 h-4 mr-2" /> Duplicar</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => { setSelectedTemplate(template); setIsCompositionDialogOpen(true); }}>
+                                    <DropdownMenuItem onClick={() => handleEdit(template)}>
                                       <Settings2 className="w-4 h-4 mr-2" /> Composição
                                     </DropdownMenuItem>
+
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem onClick={() => toggleReadyMutation.mutate({ id: template.id, description: template.description, is_ready: !isReady })}>
                                       {isReady ? (
@@ -1419,12 +1425,27 @@ export default function ProductTemplates() {
 
 
         {/* Product Dialog */}
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <Dialog open={isDialogOpen} onOpenChange={(open) => {
+          setIsDialogOpen(open);
+          if (!open) {
+            clearCompositionDraft();
+            resetCompositionForm();
+          }
+        }}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingTemplate ? "Editar Produto" : "Novo Produto"}</DialogTitle>
             </DialogHeader>
+            <Tabs defaultValue="dados" className="space-y-4">
+              <TabsList className="grid grid-cols-2 w-full">
+                <TabsTrigger value="dados">Dados</TabsTrigger>
+                <TabsTrigger value="composicao" disabled={!editingTemplate}>
+                  <Settings2 className="w-4 h-4 mr-2" /> Composição
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="dados" className="mt-4">
             <form onSubmit={handleSubmit} className="space-y-6">
+
               {/* Image + Basic Info */}
               <div className="flex gap-6">
                 {/* Image upload */}
@@ -1613,24 +1634,9 @@ export default function ProductTemplates() {
                 </Button>
               </DialogFooter>
             </form>
-          </DialogContent>
-        </Dialog>
+              </TabsContent>
+              <TabsContent value="composicao" className="mt-4">
 
-        {/* Composition Dialog */}
-        <Dialog open={isCompositionDialogOpen} onOpenChange={(open) => {
-          setIsCompositionDialogOpen(open);
-          if (!open) {
-            clearCompositionDraft();
-            resetCompositionForm();
-          }
-        }}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Settings2 className="w-5 h-5" />
-                Composição: {selectedTemplate?.name}
-              </DialogTitle>
-            </DialogHeader>
             
             <div className="space-y-6">
               <div className="flex gap-1 p-1 bg-muted rounded-lg">
@@ -1886,8 +1892,12 @@ export default function ProductTemplates() {
                 )}
               </div>
             </div>
+              </TabsContent>
+
+            </Tabs>
           </DialogContent>
         </Dialog>
+
 
         {/* Edit Item Dialog */}
         <Dialog open={isEditItemDialogOpen} onOpenChange={(open) => {
