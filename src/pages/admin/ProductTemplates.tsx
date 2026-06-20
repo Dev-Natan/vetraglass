@@ -211,6 +211,7 @@ export default function ProductTemplates() {
 
   
   const [compositionActiveTab, setCompositionActiveTab] = useState("glass");
+  const [dialogTab, setDialogTab] = useState<"dados" | "composicao">("dados");
   const [selectedItemToAdd, setSelectedItemToAdd] = useState("");
   const [quantityFormula, setQuantityFormula] = useState("1");
   const [piecesQuantity, setPiecesQuantity] = useState(1);
@@ -1091,7 +1092,7 @@ export default function ProductTemplates() {
                         <DropdownMenuItem onClick={() => copyMutation.mutate(template)}>
                           <Copy className="w-4 h-4 mr-2" /> Duplicar
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleEdit(template)}>
+                        <DropdownMenuItem onClick={() => { handleEdit(template); setDialogTab("composicao"); }}>
                           <Settings2 className="w-4 h-4 mr-2" /> Composição
                         </DropdownMenuItem>
 
@@ -1256,7 +1257,7 @@ export default function ProductTemplates() {
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => handleEdit(template)}><Pencil className="w-4 h-4 mr-2" /> Editar</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => copyMutation.mutate(template)}><Copy className="w-4 h-4 mr-2" /> Duplicar</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleEdit(template)}>
+                                <DropdownMenuItem onClick={() => { handleEdit(template); setDialogTab("composicao"); }}>
                                   <Settings2 className="w-4 h-4 mr-2" /> Composição
                                 </DropdownMenuItem>
 
@@ -1370,7 +1371,7 @@ export default function ProductTemplates() {
                                   <DropdownMenuContent align="end">
                                     <DropdownMenuItem onClick={() => handleEdit(template)}><Pencil className="w-4 h-4 mr-2" /> Editar</DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => copyMutation.mutate(template)}><Copy className="w-4 h-4 mr-2" /> Duplicar</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleEdit(template)}>
+                                    <DropdownMenuItem onClick={() => { handleEdit(template); setDialogTab("composicao"); }}>
                                       <Settings2 className="w-4 h-4 mr-2" /> Composição
                                     </DropdownMenuItem>
 
@@ -1436,7 +1437,7 @@ export default function ProductTemplates() {
             <DialogHeader>
               <DialogTitle>{editingTemplate ? "Editar Produto" : "Novo Produto"}</DialogTitle>
             </DialogHeader>
-            <Tabs defaultValue="dados" className="space-y-4">
+            <Tabs value={dialogTab} onValueChange={(v) => setDialogTab(v as "dados" | "composicao")} className="space-y-4">
               <TabsList className="grid grid-cols-2 w-full">
                 <TabsTrigger value="dados">Dados</TabsTrigger>
                 <TabsTrigger value="composicao" disabled={!editingTemplate}>
