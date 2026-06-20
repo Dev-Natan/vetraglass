@@ -136,6 +136,7 @@ export function Client360Dialog({ open, onOpenChange, client, onSave, isLoading 
           value={form.name}
           onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
           placeholder="Nome completo ou razão social"
+          className="uppercase placeholder:normal-case"
           required
         />
       </div>
