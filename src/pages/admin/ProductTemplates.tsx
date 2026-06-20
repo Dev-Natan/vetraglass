@@ -1632,24 +1632,9 @@ export default function ProductTemplates() {
                 </Button>
               </DialogFooter>
             </form>
-          </DialogContent>
-        </Dialog>
+              </TabsContent>
+              <TabsContent value="composicao" className="mt-4">
 
-        {/* Composition Dialog */}
-        <Dialog open={isCompositionDialogOpen} onOpenChange={(open) => {
-          setIsCompositionDialogOpen(open);
-          if (!open) {
-            clearCompositionDraft();
-            resetCompositionForm();
-          }
-        }}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Settings2 className="w-5 h-5" />
-                Composição: {selectedTemplate?.name}
-              </DialogTitle>
-            </DialogHeader>
             
             <div className="space-y-6">
               <div className="flex gap-1 p-1 bg-muted rounded-lg">
