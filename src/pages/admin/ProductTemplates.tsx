@@ -443,13 +443,20 @@ export default function ProductTemplates() {
 
   const groupedTemplates = useMemo(() => {
     if (!filteredTemplates) return new Map<string, ProductTemplate[]>();
+    // Normaliza por slug case-insensitive para evitar grupos duplicados ("Gold" vs "gold")
     const groups = new Map<string, ProductTemplate[]>();
+    const displayName = new Map<string, string>();
     for (const t of filteredTemplates) {
-      const key = t.linha || 'Sem Linha';
-      if (!groups.has(key)) groups.set(key, []);
+      const raw = (t.linha || 'Sem Linha').trim();
+      const key = raw.toLowerCase();
+      if (!groups.has(key)) {
+        groups.set(key, []);
+        displayName.set(key, raw);
+      }
       groups.get(key)!.push(t);
     }
-    return new Map([...groups.entries()].sort(([a], [b]) => a.localeCompare(b)));
+    const sorted = [...groups.entries()].sort(([a], [b]) => a.localeCompare(b));
+    return new Map(sorted.map(([k, v]) => [displayName.get(k) || k, v]));
   }, [filteredTemplates]);
 
   const qualityStats = useMemo(() => {
