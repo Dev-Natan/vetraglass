@@ -242,7 +242,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               address,
               phone,
               email,
-              login_token
+              login_token,
+              subscription_status,
+              trial_ends_at,
+              stripe_customer_id
             )
           `)
           .eq('user_id', userId)
