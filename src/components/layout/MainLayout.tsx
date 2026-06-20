@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import { OverdueOrdersNotification } from '@/components/notifications/OverdueOrdersNotification';
 import { AnnouncementBanner } from '@/components/announcements/AnnouncementBanner';
+import { TrialBanner } from '@/components/trial/TrialBanner';
 import { TutorialProvider } from '@/contexts/TutorialContext';
 import { TutorialOverlay } from '@/components/tutorial/TutorialOverlay';
 import { ModuleTutorialProvider } from '@/contexts/ModuleTutorialContext';
