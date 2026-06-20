@@ -319,7 +319,7 @@ export default function CompanySetup() {
                   </div>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  O documento é opcional. Se informado, será vinculado exclusivamente a esta empresa e não poderá ser usado em outra conta.
+                  O CNPJ é obrigatório e será vinculado exclusivamente a esta empresa — não poderá ser usado em outra conta.
                 </p>
               </div>
               
