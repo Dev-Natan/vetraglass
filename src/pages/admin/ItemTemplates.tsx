@@ -153,7 +153,28 @@ export default function ItemTemplates() {
   const totalPages = Math.ceil(totalItems / pageSize);
 
   const { data: productLinhas } = useProductLinhas();
-  const availableLines = productLinhas?.map(l => l.name) || [];
+
+  // Busca TODAS as linhas distintas cadastradas em item_templates (independente de product_linhas)
+  const { data: itemLinhas } = useQuery({
+    queryKey: ['item-templates-distinct-linhas'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('item_templates')
+        .select('linha')
+        .not('linha', 'is', null);
+      if (error) throw error;
+      return Array.from(new Set((data || []).map((r: any) => (r.linha || '').trim()).filter(Boolean)));
+    },
+    enabled: isSaasAdmin,
+  });
+
+  // Une linhas do cadastro oficial + linhas presentes nos itens (case-insensitive, sem duplicatas)
+  const availableLines = useMemo(() => {
+    const map = new Map<string, string>();
+    (productLinhas || []).forEach(l => { if (l?.name) map.set(l.name.toLowerCase(), l.name); });
+    (itemLinhas || []).forEach(n => { const k = n.toLowerCase(); if (!map.has(k)) map.set(k, n); });
+    return Array.from(map.values()).sort((a, b) => a.localeCompare(b));
+  }, [productLinhas, itemLinhas]);
 
   const filteredItems = items;
 
