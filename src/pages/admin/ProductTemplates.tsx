@@ -198,6 +198,7 @@ export default function ProductTemplates() {
   const [isCompositionDialogOpen, setIsCompositionDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<ProductTemplate | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<ProductTemplate | null>(null);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [showInactive, setShowInactive] = useState(true);
