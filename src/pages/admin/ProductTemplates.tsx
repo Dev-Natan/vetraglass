@@ -1889,9 +1889,11 @@ export default function ProductTemplates() {
                   </div>
                 )}
               </div>
-            </div>
+              </TabsContent>
+            </Tabs>
           </DialogContent>
         </Dialog>
+
 
         {/* Edit Item Dialog */}
         <Dialog open={isEditItemDialogOpen} onOpenChange={(open) => {
