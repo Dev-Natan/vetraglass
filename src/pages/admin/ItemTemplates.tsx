@@ -886,6 +886,14 @@ export default function ItemTemplates() {
               <p className="text-xs text-muted-foreground flex items-center gap-1"><Image className="w-3 h-3" />Sem foto</p>
             </CardContent>
           </Card>
+          {stats.byType.other > 0 && (
+            <Card className="bg-slate-500/5 border-slate-500/20">
+              <CardContent className="pt-3 pb-2">
+                <p className="text-2xl font-bold text-slate-600">{stats.byType.other}</p>
+                <p className="text-xs text-muted-foreground">Outros</p>
+              </CardContent>
+            </Card>
+          )}
           <Card className="bg-muted/30">
             <CardContent className="pt-3 pb-2">
               <p className="text-2xl font-bold text-muted-foreground">{availableLines.length}</p>
