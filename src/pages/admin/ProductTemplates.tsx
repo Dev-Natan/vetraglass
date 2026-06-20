@@ -77,6 +77,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { FormulaEditor } from "@/components/produtos/FormulaEditor";
+import { LinhaCardSimple } from "@/components/produtos/LinhaCardSimple";
+
 import { GlassFormulaEditor } from "@/components/produtos/GlassFormulaEditor";
 import { cn } from "@/lib/utils";
 import { useProductCategoryLabels } from "@/hooks/useProductCategories";
@@ -1004,33 +1006,6 @@ export default function ProductTemplates() {
               </SelectContent>
             </Select>
 
-            <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
-              <Button 
-                variant={viewMode === 'grid' ? 'secondary' : 'ghost'} 
-                size="sm" 
-                className={cn("h-8 px-2", viewMode === 'grid' && "bg-background shadow-sm")}
-                onClick={() => setViewMode('grid')}
-              >
-                <LayoutGrid className="w-4 h-4 mr-1" /> Grid
-              </Button>
-              <Button 
-                variant={viewMode === 'table' ? 'secondary' : 'ghost'} 
-                size="sm" 
-                className={cn("h-8 px-2", viewMode === 'table' && "bg-background shadow-sm")}
-                onClick={() => setViewMode('table')}
-              >
-                <LayoutList className="w-4 h-4 mr-1" /> Lista
-              </Button>
-              <Button 
-                variant={viewMode === 'grouped' ? 'secondary' : 'ghost'} 
-                size="sm" 
-                className={cn("h-8 px-2", viewMode === 'grouped' && "bg-background shadow-sm")}
-                onClick={() => setViewMode('grouped')}
-              >
-                <Layers className="w-4 h-4 mr-1" /> Linhas
-              </Button>
-            </div>
-
           </div>
 
           <div className="flex items-center gap-2">
@@ -1055,12 +1030,7 @@ export default function ProductTemplates() {
           </div>
         </div>
 
-        {viewMode === 'grouped' && filteredTemplates && filteredTemplates.length > 0 && (
-          <div className="flex gap-2 mb-2">
-            <Button variant="ghost" size="sm" onClick={expandAll} className="text-xs h-7">Expandir todas</Button>
-            <Button variant="ghost" size="sm" onClick={collapseAll} className="text-xs h-7">Recolher todas</Button>
-          </div>
-        )}
+
 
         {isLoading ? (
           <div className="text-center py-12">
@@ -1311,70 +1281,30 @@ export default function ProductTemplates() {
                   const linhaMeta = (slug: string) =>
                     productLinhas?.find(l => l.slug === slug || l.name === slug);
 
-                  // ===== Visão 1: GRID de cards das linhas =====
+                  // ===== Visão 1: GRID de cards das linhas (estilo /produtos) =====
                   if (!linhaView) {
                     return (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                        {entries.map(([linha, templates]) => {
-                          const meta = linhaMeta(linha);
-                          const activeCount = templates.filter(t => t.is_active).length;
-                          const readyCount = templates.filter(t => t.description?.includes("[PRONTO]")).length;
-                          const cover = templates.find(t => t.image_url)?.image_url;
-                          const coverUrl = cover ? resolveProductImageUrl(cover) : null;
-                          const accent = meta?.color || 'hsl(var(--primary))';
-
-                          return (
-                            <button
-                              type="button"
-                              key={linha}
-                              onClick={() => setLinhaView(linha)}
-                              className="group relative text-left rounded-xl border-2 border-transparent hover:border-primary/40 bg-card overflow-hidden shadow-sm hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-primary/40"
-                            >
-                              <div
-                                className="aspect-[4/3] relative overflow-hidden flex items-center justify-center"
-                                style={{ background: `linear-gradient(135deg, ${accent}15, ${accent}05)` }}
-                              >
-                                {coverUrl ? (
-                                  <img
-                                    src={coverUrl}
-                                    alt={meta?.name || linha}
-                                    className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform"
-                                  />
-                                ) : (
-                                  <Layers className="w-14 h-14 opacity-30" style={{ color: accent }} />
-                                )}
-                                <div className="absolute top-2 right-2 flex gap-1.5">
-                                  <Badge
-                                    className="text-[10px] shadow-sm border-0"
-                                    style={{ background: accent, color: 'white' }}
-                                  >
-                                    {templates.length}
-                                  </Badge>
-                                </div>
-                              </div>
-                              <div className="p-3 space-y-1.5">
-                                <h3 className="font-bold text-sm leading-tight truncate" title={meta?.name || linha}>
-                                  {meta?.name || linha}
-                                </h3>
-                                <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                                  <span className="inline-flex items-center gap-1">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                    {activeCount} ativos
-                                  </span>
-                                  {readyCount > 0 && (
-                                    <span className="inline-flex items-center gap-1">
-                                      <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                                      {readyCount} prontos
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </button>
-                          );
-                        })}
+                      <div className="section-card p-3 sm:p-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                          {entries.map(([linha, templates]) => {
+                            const meta = linhaMeta(linha);
+                            const cats = Array.from(new Set(templates.map(t => t.category).filter(Boolean))) as string[];
+                            return (
+                              <LinhaCardSimple
+                                key={linha}
+                                linha={meta?.name || linha}
+                                onViewProducts={() => setLinhaView(linha)}
+                                isRemovable={false}
+                                categories={cats}
+                                categoryLabels={categoryLabels}
+                              />
+                            );
+                          })}
+                        </div>
                       </div>
                     );
                   }
+
 
                   // ===== Visão 2: produtos da linha selecionada =====
                   const meta = linhaMeta(linhaView);
