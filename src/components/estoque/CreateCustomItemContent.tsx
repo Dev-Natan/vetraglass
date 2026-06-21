@@ -219,7 +219,7 @@ export function CreateCustomItemContent({ onClose }: CreateCustomItemContentProp
 
 
         {/* Pricing Fields */}
-        <ItemPricingFields data={pricingData} onChange={setPricingData} itemType={category} />
+        <ItemPricingFields data={pricingData} onChange={setPricingData} itemType={category} unit={unit} />
 
         <div className="space-y-2">
           <Label htmlFor="custom-minQuantity">Estoque Mínimo (opcional)</Label>
