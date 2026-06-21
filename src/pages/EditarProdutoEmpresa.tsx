@@ -155,6 +155,7 @@ export default function EditarProdutoEmpresa() {
   const [addItemSection, setAddItemSection] = useState<'profile' | 'accessory' | 'glass' | 'contramarco'>('profile');
   const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
   const [itemSearchQuery, setItemSearchQuery] = useState('');
+  const [linhaFilter, setLinhaFilter] = useState<string>('__all__');
   const [isEditItemDialogOpen, setIsEditItemDialogOpen] = useState(false);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   
@@ -573,14 +574,48 @@ export default function EditarProdutoEmpresa() {
     }
   };
 
+  // Linhas disponíveis derivadas dos itens carregados (apenas perfis/contramarco usam)
+  const availableLinhas = useMemo(() => {
+    if (!availableItems) return [] as string[];
+    const set = new Set<string>();
+    availableItems.forEach(i => { if (i.linha) set.add(i.linha); });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [availableItems]);
+
+  // Detecta linha do produto pelo campo linha ou pelo nome comercial
+  const detectProductLinha = (): string | null => {
+    const explicit = product?.linha || product?.product_template?.linha;
+    if (explicit) return explicit;
+    const name = (product?.commercial_name || product?.product_template?.name || '').toLowerCase();
+    if (!name || !availableLinhas.length) return null;
+    return availableLinhas.find(l => name.includes(l.toLowerCase())) || null;
+  };
+
+  // Auto-preenche o filtro de Linha ao abrir o diálogo (apenas para perfis/contramarco)
+  useEffect(() => {
+    if (!isAddItemDialogOpen) return;
+    if (addItemSection !== 'profile' && addItemSection !== 'contramarco') {
+      setLinhaFilter('__all__');
+      return;
+    }
+    const detected = detectProductLinha();
+    setLinhaFilter(detected && availableLinhas.includes(detected) ? detected : '__all__');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAddItemDialogOpen, addItemSection, availableLinhas.length, product?.id]);
+
   const filteredAvailableItems = useMemo(() => {
     if (!availableItems) return [];
-    if (!itemSearchQuery) return availableItems;
+    const isProfileLike = addItemSection === 'profile' || addItemSection === 'contramarco';
+    let list = availableItems;
+    if (isProfileLike && linhaFilter && linhaFilter !== '__all__') {
+      list = list.filter(item => item.linha === linhaFilter);
+    }
+    if (!itemSearchQuery) return list;
     const q = itemSearchQuery.toLowerCase();
-    return availableItems.filter(
+    return list.filter(
       item => item.name.toLowerCase().includes(q) || item.linha?.toLowerCase().includes(q)
     );
-  }, [availableItems, itemSearchQuery]);
+  }, [availableItems, itemSearchQuery, linhaFilter, addItemSection]);
 
   const handleEditItem = (item: CompanyProductItem) => {
     setEditingItem(item);
@@ -887,6 +922,27 @@ export default function EditarProdutoEmpresa() {
             <DialogDescription>Selecione um item e configure sua fórmula</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {(addItemSection === 'profile' || addItemSection === 'contramarco') && (
+              <div className="space-y-2">
+                <Label>Filtrar por Linha</Label>
+                <Select value={linhaFilter} onValueChange={setLinhaFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todas as linhas" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background z-50 max-h-[260px]">
+                    <SelectItem value="__all__">Todas as linhas</SelectItem>
+                    {availableLinhas.map(l => (
+                      <SelectItem key={l} value={l}>{l}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {linhaFilter !== '__all__' && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Mostrando apenas itens da linha <strong>{linhaFilter}</strong>.
+                  </p>
+                )}
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Item:</Label>
               <div className="relative">
@@ -900,8 +956,11 @@ export default function EditarProdutoEmpresa() {
                       <div className="w-8 h-8 rounded border bg-muted flex-shrink-0 flex items-center justify-center overflow-hidden">
                         {item.image_url ? <img src={getStorageUrl(item.image_url)} alt={item.name} className="w-full h-full object-contain" /> : <span className="text-xs text-muted-foreground/50">📦</span>}
                       </div>
-                      <span className="text-sm truncate flex-1">{item.name}</span>
-                      {item.linha && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground font-medium flex-shrink-0">{item.linha}</span>}
+                      <span className="text-sm truncate flex-1">
+                        {item.name}
+                        {item.linha && <span className="text-muted-foreground"> — Linha {item.linha}</span>}
+                      </span>
+                      {item.linha && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium flex-shrink-0">{item.linha}</span>}
                     </button>
                   ))}
                 </div>
