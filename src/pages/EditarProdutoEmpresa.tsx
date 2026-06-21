@@ -922,6 +922,27 @@ export default function EditarProdutoEmpresa() {
             <DialogDescription>Selecione um item e configure sua fórmula</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {(addItemSection === 'profile' || addItemSection === 'contramarco') && (
+              <div className="space-y-2">
+                <Label>Filtrar por Linha</Label>
+                <Select value={linhaFilter} onValueChange={setLinhaFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todas as linhas" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background z-50 max-h-[260px]">
+                    <SelectItem value="__all__">Todas as linhas</SelectItem>
+                    {availableLinhas.map(l => (
+                      <SelectItem key={l} value={l}>{l}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {linhaFilter !== '__all__' && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Mostrando apenas itens da linha <strong>{linhaFilter}</strong>.
+                  </p>
+                )}
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Item:</Label>
               <div className="relative">
@@ -935,8 +956,11 @@ export default function EditarProdutoEmpresa() {
                       <div className="w-8 h-8 rounded border bg-muted flex-shrink-0 flex items-center justify-center overflow-hidden">
                         {item.image_url ? <img src={getStorageUrl(item.image_url)} alt={item.name} className="w-full h-full object-contain" /> : <span className="text-xs text-muted-foreground/50">📦</span>}
                       </div>
-                      <span className="text-sm truncate flex-1">{item.name}</span>
-                      {item.linha && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground font-medium flex-shrink-0">{item.linha}</span>}
+                      <span className="text-sm truncate flex-1">
+                        {item.name}
+                        {item.linha && <span className="text-muted-foreground"> — Linha {item.linha}</span>}
+                      </span>
+                      {item.linha && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium flex-shrink-0">{item.linha}</span>}
                     </button>
                   ))}
                 </div>
