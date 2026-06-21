@@ -110,12 +110,16 @@ export function CreateCustomItemContent({ onClose }: CreateCustomItemContentProp
           sale_price_per_kg: pNum(pricingData.salePricePerKg),
           sale_price_per_meter: pNum(pricingData.salePricePerMeter),
           sale_margin_percent: pNum(pricingData.saleMarginPercent) ?? 0,
+          altura_mm: pNum(pricingData.alturaMm),
+          largura_mm: pNum(pricingData.larguraMm),
+          comprimento_linear_mm: pNum(pricingData.comprimentoLinearMm) ?? pNum(pricingData.barLengthMm),
+          preco_unitario: pNum(pricingData.precoUnitario) ?? pNum(pricingData.costPerUnit),
           ncm: fiscalData.ncm || null, cfop_venda: fiscalData.cfop_venda || null,
           cfop_venda_interestadual: fiscalData.cfop_venda_interestadual || null,
           cest: fiscalData.cest || null, origem: fiscalData.origem || null,
           codigo_servico: fiscalData.codigo_servico || null,
           aliquota_iss: fiscalData.aliquota_iss ? parseFloat(fiscalData.aliquota_iss) : null,
-        })
+        } as any)
         .select().single();
       if (itemError) throw new Error(`Erro ao criar item: ${itemError.message}`);
 
