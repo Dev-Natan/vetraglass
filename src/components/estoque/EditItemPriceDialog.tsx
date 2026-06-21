@@ -255,6 +255,10 @@ export function EditItemPriceDialog({
         salePricePerUnit: companyItem.sale_price?.toString() ?? (isUnit ? (tpl?.default_price?.toString() ?? '') : ''),
         costPerSqm: companyItem.type === 'glass' ? (companyItem.cost_per_meter?.toString() ?? tpl?.default_cost?.toString() ?? '') : '',
         salePricePerSqm: companyItem.type === 'glass' ? (companyItem.sale_price_per_meter?.toString() ?? tpl?.default_price?.toString() ?? '') : '',
+        alturaMm: (companyItem as any).altura_mm?.toString() ?? '',
+        larguraMm: (companyItem as any).largura_mm?.toString() ?? '',
+        comprimentoLinearMm: (companyItem as any).comprimento_linear_mm?.toString() ?? companyItem.bar_length_mm?.toString() ?? '',
+        precoUnitario: (companyItem as any).preco_unitario?.toString() ?? companyItem.cost?.toString() ?? '',
       });
       setItemTypeLocal(companyItem.type || 'profile');
       setLinhaLocal(companyItem.linha || '');
