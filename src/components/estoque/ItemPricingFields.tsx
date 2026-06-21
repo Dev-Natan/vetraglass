@@ -344,7 +344,9 @@ export function ItemPricingFields({ data, onChange, itemType = 'profile', unit }
             </div>
           </div>
 
+          <div className="space-y-1.5">
             <div className="flex items-center gap-1.5">
+
               <Layers className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-xs font-medium text-muted-foreground">Preço por Metro Quadrado</span>
             </div>
