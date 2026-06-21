@@ -99,6 +99,7 @@ export default function OrdensServico() {
   const [statusFilter, setStatusFilter] = useState<OSStatus | 'all' | 'overdue'>('in_progress');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [osToDelete, setOsToDelete] = useState<string | null>(null);
+  const [romaneioOsId, setRomaneioOsId] = useState<string | null>(null);
 
   // Fetch ordens de serviço
   const { data: ordens, isLoading } = useQuery({
