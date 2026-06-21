@@ -103,8 +103,9 @@ export function createQueryClient() {
           return failureCount < 2;
         },
         retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-        // ZERO CACHE: sempre recarregar dados
-        refetchOnWindowFocus: true,
+        // Não recarrega ao trocar de aba/janela (evita perda de estado em formulários).
+        // Dados continuam frescos via refetchOnMount + invalidate explícito após mutations.
+        refetchOnWindowFocus: false,
         refetchOnMount: 'always',
         refetchOnReconnect: true,
       },
