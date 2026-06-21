@@ -1702,6 +1702,27 @@ export default function ProductTemplates() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-4 space-y-4">
+                  {getLinhasForAddTab(compositionActiveTab).length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Filtrar por Linha</Label>
+                      <Select value={linhaFilter} onValueChange={setLinhaFilter}>
+                        <SelectTrigger className="h-10">
+                          <SelectValue placeholder="Todas as linhas" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background border shadow-lg z-50 max-h-[260px]">
+                          <SelectItem value="__all__">Todas as linhas</SelectItem>
+                          {getLinhasForAddTab(compositionActiveTab).map((l) => (
+                            <SelectItem key={l} value={l}>{l}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {linhaFilter !== '__all__' && (
+                        <p className="text-[11px] text-muted-foreground">
+                          Mostrando apenas itens da linha <strong>{linhaFilter}</strong>.
+                        </p>
+                      )}
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Selecione o item:</Label>
                     <Select value={selectedItemToAdd} onValueChange={setSelectedItemToAdd}>
