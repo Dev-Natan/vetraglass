@@ -917,7 +917,7 @@ export default function EditarProdutoEmpresa() {
             <DialogDescription>Selecione um item e configure sua fórmula</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            {(addItemSection === 'profile' || addItemSection === 'contramarco') && (
+            {availableLinhas.length > 0 && (
               <div className="space-y-2">
                 <Label>Filtrar por Linha</Label>
                 <Select value={linhaFilter} onValueChange={setLinhaFilter}>
