@@ -21,12 +21,19 @@ export interface ItemPricingData {
   // Glass (m²)
   costPerSqm: string;
   salePricePerSqm: string;
+  // ── Campos estruturados por unidade (novo) ──
+  alturaMm: string;           // m² (chapa)
+  larguraMm: string;          // m² (chapa)
+  comprimentoLinearMm: string; // ml (barra)
+  precoUnitario: string;       // un / kit
 }
 
 interface ItemPricingFieldsProps {
   data: ItemPricingData;
   onChange: (data: ItemPricingData) => void;
   itemType?: string;
+  /** Unidade selecionada no formulário (m², ml, un, kit...). Quando informada, controla os campos exibidos. */
+  unit?: string;
 }
 
 export const defaultPricingData: ItemPricingData = {
@@ -44,6 +51,10 @@ export const defaultPricingData: ItemPricingData = {
   salePricePerUnit: '',
   costPerSqm: '',
   salePricePerSqm: '',
+  alturaMm: '',
+  larguraMm: '',
+  comprimentoLinearMm: '',
+  precoUnitario: '',
 };
 
 function safeNum(v: string): number {
@@ -63,6 +74,19 @@ const typeConfig: Record<string, { label: string; icon: string; color: string }>
   component: { label: 'Componente', icon: '🧩', color: 'text-purple-600' },
   service: { label: 'Serviço', icon: '🔧', color: 'text-emerald-600' },
 };
+
+/** Normaliza unidade → grupo de cálculo. */
+function unitGroup(unit?: string, itemType?: string): 'm2' | 'ml' | 'un' | 'kit' {
+  const u = String(unit || '').toLowerCase().trim();
+  if (u === 'm²' || u === 'm2') return 'm2';
+  if (u === 'ml' || u === 'm') return 'ml';
+  if (u === 'kit') return 'kit';
+  if (u === 'un' || u === 'pç' || u === 'par' || u === 'jg' || u === 'cx') return 'un';
+  // Fallback por tipo (compat)
+  if (itemType === 'glass') return 'm2';
+  if (itemType === 'profile') return 'ml';
+  return 'un';
+}
 
 export function ItemPricingFields({ data, onChange, itemType = 'profile' }: ItemPricingFieldsProps) {
   const isProfile = itemType === 'profile';
