@@ -213,6 +213,7 @@ export default function ProductTemplates() {
   const [compositionActiveTab, setCompositionActiveTab] = useState("glass");
   const [dialogTab, setDialogTab] = useState<"dados" | "composicao">("dados");
   const [selectedItemToAdd, setSelectedItemToAdd] = useState("");
+  const [linhaFilter, setLinhaFilter] = useState<string>("__all__");
   const [quantityFormula, setQuantityFormula] = useState("1");
   const [piecesQuantity, setPiecesQuantity] = useState(1);
   const [piecesFormula, setPiecesFormula] = useState<string | null>(null);
@@ -415,6 +416,19 @@ export default function ProductTemplates() {
     }
   }, [selectedItemToAdd, compositionActiveTab, itemTemplates]);
 
+  // Auto-detecta a Linha do template (campo explícito ou pelo nome) e preenche o filtro
+  useEffect(() => {
+    if (!isDialogOpen || dialogTab !== 'composicao') return;
+    const linhas = getLinhasForAddTab(compositionActiveTab);
+    if (!linhas.length) { setLinhaFilter('__all__'); return; }
+    const explicit = (selectedTemplate as any)?.linha;
+    if (explicit && linhas.includes(explicit)) { setLinhaFilter(explicit); return; }
+    const name = ((selectedTemplate as any)?.name || '').toLowerCase();
+    const detected = name ? linhas.find(l => name.includes(l.toLowerCase())) : null;
+    setLinhaFilter(detected || '__all__');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDialogOpen, dialogTab, compositionActiveTab, selectedTemplate?.id, itemTemplates?.length]);
+
   const filteredTemplates = templates?.filter((template) => {
     const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           template.description?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -485,7 +499,18 @@ export default function ProductTemplates() {
   const getItemsByTypeForAdd = (tabValue: string) => {
     const currentTab = itemTypeTabs.find(t => t.value === tabValue);
     const dbType = currentTab?.dbType;
-    return sortedItemTemplates?.filter((item) => item.type === dbType) || [];
+    const base = sortedItemTemplates?.filter((item) => item.type === dbType) || [];
+    if (!linhaFilter || linhaFilter === "__all__") return base;
+    return base.filter((item) => item.linha === linhaFilter);
+  };
+
+  const getLinhasForAddTab = (tabValue: string) => {
+    const currentTab = itemTypeTabs.find(t => t.value === tabValue);
+    const dbType = currentTab?.dbType;
+    const base = sortedItemTemplates?.filter((item) => item.type === dbType) || [];
+    const set = new Set<string>();
+    base.forEach((i: any) => { if (i.linha) set.add(i.linha); });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
   };
 
   const getCompositionItemsByType = (tabValue: string) => {
@@ -1677,6 +1702,27 @@ export default function ProductTemplates() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-4 space-y-4">
+                  {getLinhasForAddTab(compositionActiveTab).length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Filtrar por Linha</Label>
+                      <Select value={linhaFilter} onValueChange={setLinhaFilter}>
+                        <SelectTrigger className="h-10">
+                          <SelectValue placeholder="Todas as linhas" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background border shadow-lg z-50 max-h-[260px]">
+                          <SelectItem value="__all__">Todas as linhas</SelectItem>
+                          {getLinhasForAddTab(compositionActiveTab).map((l) => (
+                            <SelectItem key={l} value={l}>{l}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {linhaFilter !== '__all__' && (
+                        <p className="text-[11px] text-muted-foreground">
+                          Mostrando apenas itens da linha <strong>{linhaFilter}</strong>.
+                        </p>
+                      )}
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Selecione o item:</Label>
                     <Select value={selectedItemToAdd} onValueChange={setSelectedItemToAdd}>
