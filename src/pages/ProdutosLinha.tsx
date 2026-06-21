@@ -332,7 +332,7 @@ export default function ProdutosLinha() {
                     <div className="min-w-0 flex-1">
                       <h3 className="font-semibold text-sky-700 uppercase text-sm line-clamp-2">{product.name}</h3>
                       {product.is_custom && <Badge variant="secondary" className="mt-1 text-[10px] bg-purple-100 text-purple-700">Personalizado</Badge>}
-                      {lowStockStatus === 'zero' && <Badge variant="destructive" className="mt-1 text-[10px]">Sem Estoque</Badge>}
+                      
                     </div>
                   </div>
 
