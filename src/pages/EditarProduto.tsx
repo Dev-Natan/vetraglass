@@ -1074,6 +1074,29 @@ export default function EditarProduto() {
                 ))}
               </div>
               
+              {/* Filtro por Linha */}
+              {availableLinhas.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Filtrar por Linha</Label>
+                  <Select value={linhaFilter} onValueChange={setLinhaFilter}>
+                    <SelectTrigger className="h-10">
+                      <SelectValue placeholder="Todas as linhas" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background border shadow-lg z-50 max-h-[260px]">
+                      <SelectItem value="__all__">Todas as linhas</SelectItem>
+                      {availableLinhas.map((l) => (
+                        <SelectItem key={l} value={l}>{l}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {linhaFilter !== '__all__' && (
+                    <p className="text-[11px] text-muted-foreground">
+                      Mostrando {filteredAvailableItems.length} item(ns) da linha <strong>{linhaFilter}</strong>.
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Item selection with search */}
               <div className="space-y-2">
                 <Label className="text-sm font-medium">
@@ -1089,9 +1112,9 @@ export default function EditarProduto() {
                     <SelectValue placeholder="Clique para escolher um item" />
                   </SelectTrigger>
                   <SelectContent className="bg-background border shadow-lg z-50 max-h-[400px]">
-                    {availableItems?.map((item, index) => {
+                    {filteredAvailableItems?.map((item, index) => {
                       const isProductLinha = item.linha === product?.linha;
-                      const prevItem = index > 0 ? availableItems[index - 1] : null;
+                      const prevItem = index > 0 ? filteredAvailableItems[index - 1] : null;
                       const showSeparator = prevItem && prevItem.linha !== item.linha;
                       const isFirstOfProductLinha = isProductLinha && (!prevItem || prevItem.linha !== item.linha);
                       
