@@ -128,6 +128,7 @@ export default function EditarProduto() {
   const [glassName, setGlassName] = useState('');
   const [side, setSide] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [linhaFilter, setLinhaFilter] = useState<string>('__all__');
 
   const [formData, setFormData] = useState({
     name: '',
