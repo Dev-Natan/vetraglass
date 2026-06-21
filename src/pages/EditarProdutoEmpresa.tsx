@@ -574,14 +574,48 @@ export default function EditarProdutoEmpresa() {
     }
   };
 
+  // Linhas disponíveis derivadas dos itens carregados (apenas perfis/contramarco usam)
+  const availableLinhas = useMemo(() => {
+    if (!availableItems) return [] as string[];
+    const set = new Set<string>();
+    availableItems.forEach(i => { if (i.linha) set.add(i.linha); });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [availableItems]);
+
+  // Detecta linha do produto pelo campo linha ou pelo nome comercial
+  const detectProductLinha = (): string | null => {
+    const explicit = product?.linha || product?.product_template?.linha;
+    if (explicit) return explicit;
+    const name = (product?.commercial_name || product?.product_template?.name || '').toLowerCase();
+    if (!name || !availableLinhas.length) return null;
+    return availableLinhas.find(l => name.includes(l.toLowerCase())) || null;
+  };
+
+  // Auto-preenche o filtro de Linha ao abrir o diálogo (apenas para perfis/contramarco)
+  useEffect(() => {
+    if (!isAddItemDialogOpen) return;
+    if (addItemSection !== 'profile' && addItemSection !== 'contramarco') {
+      setLinhaFilter('__all__');
+      return;
+    }
+    const detected = detectProductLinha();
+    setLinhaFilter(detected && availableLinhas.includes(detected) ? detected : '__all__');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAddItemDialogOpen, addItemSection, availableLinhas.length, product?.id]);
+
   const filteredAvailableItems = useMemo(() => {
     if (!availableItems) return [];
-    if (!itemSearchQuery) return availableItems;
+    const isProfileLike = addItemSection === 'profile' || addItemSection === 'contramarco';
+    let list = availableItems;
+    if (isProfileLike && linhaFilter && linhaFilter !== '__all__') {
+      list = list.filter(item => item.linha === linhaFilter);
+    }
+    if (!itemSearchQuery) return list;
     const q = itemSearchQuery.toLowerCase();
-    return availableItems.filter(
+    return list.filter(
       item => item.name.toLowerCase().includes(q) || item.linha?.toLowerCase().includes(q)
     );
-  }, [availableItems, itemSearchQuery]);
+  }, [availableItems, itemSearchQuery, linhaFilter, addItemSection]);
 
   const handleEditItem = (item: CompanyProductItem) => {
     setEditingItem(item);
