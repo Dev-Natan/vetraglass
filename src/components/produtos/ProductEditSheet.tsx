@@ -256,15 +256,23 @@ export function ProductEditSheet({ open, onOpenChange, companyProductId }: Produ
                   )}
                   {compositionReady && composition.simpleBreakdown?.length > 0 && (
                     <div className="space-y-1 pt-1">
-                      {composition.simpleBreakdown.slice(0, 8).map((it: any, i: number) => (
-                        <div key={i} className="flex justify-between text-xs">
-                          <span className="truncate text-muted-foreground">{it.nome}</span>
-                          <span className="font-mono">R$ {(it.subtotal || 0).toFixed(2)}</span>
+                      <div className="text-[10px] text-muted-foreground pb-1">Simulação: box 1,20 × 1,90 m</div>
+                      {composition.simpleBreakdown.slice(0, 10).map((it: any, i: number) => (
+                        <div key={i} className="flex justify-between gap-2 text-xs">
+                          <span className="truncate text-muted-foreground">
+                            {it.nome} <span className="opacity-60">[{it.unidade}]</span>
+                            <span className="block text-[10px] opacity-60">{it.detalhe}</span>
+                          </span>
+                          <span className="font-mono shrink-0">R$ {(it.subtotal || 0).toFixed(2)}</span>
                         </div>
                       ))}
                       <div className="flex justify-between text-xs pt-1 border-t font-medium">
-                        <span>Custo total / m²</span>
-                        <span className="font-mono">R$ {(composition.compositionCostSimplePerSqm || composition.compositionCostPerSqm || 0).toFixed(2)}</span>
+                        <span>Custo total (simulação)</span>
+                        <span className="font-mono">R$ {(composition.compositionCostSimpleTotal || 0).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-xs font-medium">
+                        <span>Custo / m²</span>
+                        <span className="font-mono">R$ {(composition.compositionCostSimplePerSqm || 0).toFixed(2)}</span>
                       </div>
                     </div>
                   )}
