@@ -364,7 +364,33 @@ export function ItemPricingFields({ data, onChange, itemType = 'profile', unit }
                 <Input type="number" readOnly value={data.salePricePerSqm} className="h-8 text-sm bg-muted/50" placeholder="Auto" />
               </div>
             </div>
+            {/* Custo total calculado da chapa (Altura × Largura × Custo/m²) */}
+            {(() => {
+              const areaM2 = (safeNum(data.alturaMm) * safeNum(data.larguraMm)) / 1_000_000;
+              const custoSqm = safeNum(data.costPerSqm);
+              const vendaSqm = safeNum(data.salePricePerSqm);
+              if (areaM2 <= 0 || custoSqm <= 0) return null;
+              const custoTotal = areaM2 * custoSqm;
+              const vendaTotal = areaM2 * vendaSqm;
+              const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+              return (
+                <div className="mt-2 rounded-md border border-dashed border-primary/30 bg-primary/5 p-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">
+                      Chapa {safeNum(data.alturaMm)}×{safeNum(data.larguraMm)}mm · {areaM2.toFixed(3)} m²
+                    </span>
+                    <div className="flex gap-3">
+                      <span><span className="text-muted-foreground">Custo total:</span> <strong className="text-foreground">{fmt(custoTotal)}</strong></span>
+                      {vendaSqm > 0 && (
+                        <span><span className="text-muted-foreground">Venda total:</span> <strong className="text-primary">{fmt(vendaTotal)}</strong></span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
+
         </>
       )}
 
