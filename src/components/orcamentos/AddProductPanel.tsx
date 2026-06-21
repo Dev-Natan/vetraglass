@@ -332,8 +332,16 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
 
 
   // Get selected glass price details
-  const selectedGlassPrice = productGlassPrices?.find(p => p.id === selectedGlassPriceId);
-  const glassPricePerSqm = selectedGlassPrice?.price_per_sqm || 0;
+  const selectedGlassPrice = productGlassPrices?.find((p) => p.id === selectedGlassPriceId);
+  // ⬇︎ Match no estoque por Cor+Espessura selecionadas
+  const stockGlassMatch = useMemo(
+    () => glassStock.findMatch(selectedGlassThickness, selectedGlassColor),
+    [glassStock, selectedGlassThickness, selectedGlassColor],
+  );
+  const stockGlassPricePerSqm = stockGlassMatch?.salePricePerSqm || 0;
+  // Catálogo tem prioridade; senão, usa estoque
+  const glassPricePerSqm = selectedGlassPrice?.price_per_sqm || stockGlassPricePerSqm || 0;
+
 
   // Get selected aluminum price (only for aluminum-priced products)
   const selectedAluminumPriceOption = productUsesAluminum 
