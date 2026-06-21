@@ -153,11 +153,7 @@ export default function OrdensServico() {
       } else if (status === 'completed') {
         updates.actual_end = new Date().toISOString().split('T')[0];
         updates.current_stage = 'Finalizado';
-        
-        const consumeResult = await consumeOSMaterials(id);
-        if (!consumeResult.success) {
-          console.warn('Aviso ao consumir materiais:', consumeResult.error);
-        }
+        // A baixa de estoque agora é feita via RomaneioReviewDialog antes da chamada deste mutation.
       } else if (status === 'cancelled') {
         // Cancellation is now handled by the RPC which validates consumed status
         // and cancels both material_consumption and stock_reservations
