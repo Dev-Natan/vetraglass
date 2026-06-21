@@ -522,6 +522,21 @@ export default function OrdemServicoDetalhes() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <ReciboOSDialog
+        open={reciboOpen}
+        onOpenChange={setReciboOpen}
+        os={{
+          os_number: ordem.os_number,
+          customer_name: ordem.customer_name,
+          customer_phone: ordem.customer_phone,
+          customer_document: (ordem as any).customer_document ?? null,
+          customer_address: ordem.customer_address ?? null,
+          total_amount: Number(ordem.total_amount || 0),
+          paid_amount: Number(ordem.paid_amount || 0),
+        }}
+        company={getCompanyInfo()}
+      />
     </MainLayout>
   );
 }
