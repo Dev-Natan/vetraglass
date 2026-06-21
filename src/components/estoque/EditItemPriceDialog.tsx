@@ -615,7 +615,7 @@ export function EditItemPriceDialog({
             <div className="border-t" />
 
             {/* Pricing Section */}
-            <ItemPricingFields data={pricingData} onChange={setPricingData} itemType={itemTypeLocal} />
+            <ItemPricingFields data={pricingData} onChange={setPricingData} itemType={itemTypeLocal} unit={itemUnit} />
 
             {/* Separator */}
             <div className="border-t" />
