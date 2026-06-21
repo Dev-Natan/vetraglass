@@ -6,7 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Package, Scissors, Layers, FileText, User, Phone, MapPin, Calendar, RefreshCw, Loader2, Download, Camera, ExternalLink, CalendarDays, History } from 'lucide-react';
+import { ArrowLeft, Package, Scissors, Layers, FileText, User, Phone, MapPin, Calendar, RefreshCw, Loader2, Download, Camera, ExternalLink, CalendarDays, History, Receipt } from 'lucide-react';
+import { ReciboOSDialog } from '@/components/ordens-servico/ReciboOSDialog';
+import { useState } from 'react';
 import { OSMaterialsList } from '@/components/ordens-servico/OSMaterialsList';
 import { OSCuttingPlan } from '@/components/ordens-servico/OSCuttingPlan';
 import { OSPhotosGallery } from '@/components/ordens-servico/OSPhotosGallery';
@@ -39,6 +41,7 @@ export default function OrdemServicoDetalhes() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { currentCompany, companies } = useAuth();
+  const [reciboOpen, setReciboOpen] = useState(false);
 
   const { data: ordem, isLoading } = useQuery({
     queryKey: ['ordem-servico', id],
@@ -308,6 +311,14 @@ export default function OrdemServicoDetalhes() {
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
+              onClick={() => setReciboOpen(true)}
+              className="gap-2"
+            >
+              <Receipt className="w-4 h-4" />
+              Recibo
+            </Button>
+            <Button
+              variant="outline"
               onClick={handleDownloadCuttingPlanPdf}
               className="gap-2"
             >
@@ -511,6 +522,21 @@ export default function OrdemServicoDetalhes() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <ReciboOSDialog
+        open={reciboOpen}
+        onOpenChange={setReciboOpen}
+        os={{
+          os_number: ordem.os_number,
+          customer_name: ordem.customer_name,
+          customer_phone: ordem.customer_phone,
+          customer_document: (ordem as any).customer_document ?? null,
+          customer_address: ordem.customer_address ?? null,
+          total_amount: Number(ordem.total_amount || 0),
+          paid_amount: Number(ordem.paid_amount || 0),
+        }}
+        company={getCompanyInfo()}
+      />
     </MainLayout>
   );
 }
