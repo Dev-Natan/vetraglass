@@ -756,8 +756,8 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border shadow-lg z-50">
-                  {defaultGlassThicknessOptions.map(t => (
-                    <SelectItem key={t} value={t}>{t}mm</SelectItem>
+                  {(glassThicknessOptions.length > 0 ? glassThicknessOptions : defaultGlassThicknessOptions).map((t) => (
+                    <SelectItem key={String(t)} value={String(t)}>{t}mm</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -774,12 +774,28 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border shadow-lg z-50">
-                  {defaultGlassColorOptions.map(c => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
+                  {(glassColorOptions.length > 0 ? glassColorOptions : defaultGlassColorOptions).map((c) => {
+                    const stockOpt = glassStock.findMatch(selectedGlassThickness, c);
+                    return (
+                      <SelectItem key={c} value={c}>
+                        <div className="flex items-center justify-between gap-4 w-full">
+                          <span>{c}</span>
+                          {stockOpt && stockOpt.salePricePerSqm > 0 && (
+                            <span className="text-muted-foreground text-xs">{formatCurrency(stockOpt.salePricePerSqm)}/m²</span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
+              {stockGlassMatch && (
+                <p className="text-[11px] text-muted-foreground">
+                  Estoque: <span className="font-medium">{stockGlassMatch.displayName}</span> · {formatCurrency(stockGlassMatch.salePricePerSqm)}/m²
+                </p>
+              )}
             </div>
+
 
             {/* Cor do perfil */}
             <div className="space-y-1.5">
