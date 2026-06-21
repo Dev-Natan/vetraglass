@@ -155,6 +155,7 @@ export default function EditarProdutoEmpresa() {
   const [addItemSection, setAddItemSection] = useState<'profile' | 'accessory' | 'glass' | 'contramarco'>('profile');
   const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
   const [itemSearchQuery, setItemSearchQuery] = useState('');
+  const [linhaFilter, setLinhaFilter] = useState<string>('__all__');
   const [isEditItemDialogOpen, setIsEditItemDialogOpen] = useState(false);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   
