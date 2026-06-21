@@ -364,32 +364,44 @@ export function ItemPricingFields({ data, onChange, itemType = 'profile', unit }
                 <Input type="number" readOnly value={data.salePricePerSqm} className="h-8 text-sm bg-muted/50" placeholder="Auto" />
               </div>
             </div>
-            {/* Custo total calculado da chapa (Altura × Largura × Custo/m²) */}
+            {/* Resumo da chapa: Largura × Altura × Custo/m² (+ margem) */}
             {(() => {
-              const areaM2 = (safeNum(data.alturaMm) * safeNum(data.larguraMm)) / 1_000_000;
+              const alturaMm = safeNum(data.alturaMm);
+              const larguraMm = safeNum(data.larguraMm);
+              const areaM2 = (alturaMm * larguraMm) / 1_000_000;
               const custoSqm = safeNum(data.costPerSqm);
-              const vendaSqm = safeNum(data.salePricePerSqm);
+              const margem = safeNum(data.saleMarginPercent);
               if (areaM2 <= 0 || custoSqm <= 0) return null;
               const custoTotal = areaM2 * custoSqm;
+              const vendaSqm = custoSqm * (1 + margem / 100);
               const vendaTotal = areaM2 * vendaSqm;
               const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
               return (
-                <div className="mt-2 rounded-md border border-dashed border-primary/30 bg-primary/5 p-2 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">
-                      Chapa {safeNum(data.alturaMm)}×{safeNum(data.larguraMm)}mm · {areaM2.toFixed(3)} m²
+                <div className="mt-2 rounded-md border border-dashed border-primary/30 bg-primary/5 p-2 text-xs space-y-1">
+                  <div className="text-[11px] text-muted-foreground">
+                    Chapa {larguraMm} × {alturaMm} mm · <strong>{areaM2.toFixed(3)} m²</strong>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span>
+                      <span className="text-muted-foreground">Custo total:</span>{' '}
+                      <strong className="text-foreground">{fmt(custoTotal)}</strong>
+                      <span className="text-[10px] text-muted-foreground ml-1">
+                        ({larguraMm}×{alturaMm}×{fmt(custoSqm)}/m²)
+                      </span>
                     </span>
-                    <div className="flex gap-3">
-                      <span><span className="text-muted-foreground">Custo total:</span> <strong className="text-foreground">{fmt(custoTotal)}</strong></span>
-                      {vendaSqm > 0 && (
-                        <span><span className="text-muted-foreground">Venda total:</span> <strong className="text-primary">{fmt(vendaTotal)}</strong></span>
+                    <span>
+                      <span className="text-muted-foreground">Preço de venda:</span>{' '}
+                      <strong className="text-primary">{fmt(vendaTotal)}</strong>
+                      {margem > 0 && (
+                        <span className="text-[10px] text-muted-foreground ml-1">(+{margem}% margem)</span>
                       )}
-                    </div>
+                    </span>
                   </div>
                 </div>
               );
             })()}
           </div>
+
 
         </>
       )}
