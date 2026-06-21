@@ -10,7 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
-import { EditProductPricingDialog } from '@/components/produtos/EditProductPricingDialog';
+import { ProductEditSheet } from '@/components/produtos/ProductEditSheet';
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
 import { useProductLowStockStatus } from '@/hooks/useProductLowStockStatus';
 
