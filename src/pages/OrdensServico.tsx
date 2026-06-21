@@ -648,6 +648,20 @@ export default function OrdensServico() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {romaneioOsId && currentCompany?.id && (
+        <RomaneioReviewDialog
+          open={!!romaneioOsId}
+          onOpenChange={(v) => { if (!v) setRomaneioOsId(null); }}
+          ordemServicoId={romaneioOsId}
+          companyId={currentCompany.id}
+          onConfirmed={() => {
+            const id = romaneioOsId;
+            setRomaneioOsId(null);
+            if (id) updateStatusMutation.mutate({ id, status: 'completed' });
+          }}
+        />
+      )}
+
     </MainLayout>
   );
 }
