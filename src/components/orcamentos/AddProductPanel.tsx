@@ -260,20 +260,27 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   );
   const hasAluminumPrices = (aluminumPriceOptions?.length || 0) > 0;
 
+  // ── Opções de vidro vindas do ESTOQUE (company_items unit = m²) ──
+  const glassStock = useGlassStockOptions(!!selectedProductId);
+
   // Unique glass thicknesses and colors derived from the product's glass price catalog
+  // ⬇︎ Quando o produto NÃO tem catálogo próprio (product_glass_prices), caímos no estoque
   const glassThicknessOptions = useMemo(() => {
-    const set = new Set<number>();
-    productGlassPrices?.forEach(gp => set.add(gp.thickness_mm));
-    return Array.from(set).sort((a, b) => a - b);
-  }, [productGlassPrices]);
+    const set = new Set<string>();
+    productGlassPrices?.forEach((gp) => set.add(String(gp.thickness_mm)));
+    glassStock.thicknessOptions.forEach((t) => set.add(t));
+    return Array.from(set).sort((a, b) => Number(a) - Number(b));
+  }, [productGlassPrices, glassStock.thicknessOptions]);
 
   const glassColorOptions = useMemo(() => {
     const set = new Set<string>();
     productGlassPrices
-      ?.filter(gp => !selectedGlassThickness || String(gp.thickness_mm) === selectedGlassThickness)
-      .forEach(gp => set.add(gp.glass_color));
+      ?.filter((gp) => !selectedGlassThickness || String(gp.thickness_mm) === selectedGlassThickness)
+      .forEach((gp) => set.add(gp.glass_color));
+    glassStock.colorOptionsFor(selectedGlassThickness || undefined).forEach((c) => set.add(c));
     return Array.from(set).sort();
-  }, [productGlassPrices, selectedGlassThickness]);
+  }, [productGlassPrices, glassStock, selectedGlassThickness]);
+
 
   // Set defaults when product changes
   useEffect(() => {
