@@ -33,7 +33,8 @@ interface CreateCustomItemContentProps {
 
 const UNITS = [
   { value: 'un', label: 'Unidade (un)' },
-  { value: 'm', label: 'Metro (m)' },
+  { value: 'kit', label: 'Kit' },
+  { value: 'ml', label: 'Metro Linear (ml)' },
   { value: 'm²', label: 'Metro² (m²)' },
   { value: 'kg', label: 'Quilograma (kg)' },
   { value: 'l', label: 'Litro (l)' },
