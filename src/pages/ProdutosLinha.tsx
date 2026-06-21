@@ -308,7 +308,6 @@ export default function ProdutosLinha() {
             <div className="col-span-full p-12 text-center text-muted-foreground">Carregando...</div>
           ) : filteredProducts.length > 0 ? (
             filteredProducts.map((product) => {
-              const lowStockStatus = getLowStockStatus(product.productTemplateId, product.companyProductId);
               return (
                 <button
                   type="button"
@@ -321,10 +320,7 @@ export default function ProdutosLinha() {
                       quickActivateMutation.mutate(product.productTemplateId);
                     }
                   }}
-                  className={`text-left bg-card border rounded-lg p-4 flex items-center gap-4 shadow-sm hover:shadow-md hover:border-primary/40 hover:bg-accent/30 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                    lowStockStatus === 'zero' ? 'border-destructive/40 bg-destructive/5' :
-                    lowStockStatus === 'low' ? 'border-amber-500/40 bg-amber-50/20' : ''
-                  } ${!product.is_active ? 'opacity-70' : ''}`}
+                  className={`text-left bg-card border rounded-lg p-4 flex items-center gap-4 shadow-sm hover:shadow-md hover:border-primary/40 hover:bg-accent/30 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${!product.is_active ? 'opacity-70' : ''}`}
                 >
                   <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center shrink-0 p-1">
                     {product.image_url ? (
