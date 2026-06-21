@@ -307,6 +307,37 @@ export default function EditarProduto() {
     },
   });
 
+  // Linhas únicas disponíveis nos itens (para o filtro)
+  const availableLinhas = useMemo(() => {
+    if (!availableItems) return [] as string[];
+    const set = new Set<string>();
+    availableItems.forEach((i: any) => { if (i.linha) set.add(i.linha); });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [availableItems]);
+
+  // Detecta a linha do produto: campo explícito ou pelo nome
+  const detectLinhaFromProduct = (): string | null => {
+    const explicit = (product as any)?.linha;
+    if (explicit) return explicit;
+    const name = ((product as any)?.name || '').toLowerCase();
+    if (!name || !availableLinhas.length) return null;
+    return availableLinhas.find(l => name.includes(l.toLowerCase())) || null;
+  };
+
+  // Auto-preenche o filtro ao abrir o diálogo / trocar de aba
+  useEffect(() => {
+    if (!isAddItemDialogOpen) return;
+    const detected = detectLinhaFromProduct();
+    setLinhaFilter(detected && availableLinhas.includes(detected) ? detected : '__all__');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAddItemDialogOpen, activeTab, availableLinhas.length, (product as any)?.id]);
+
+  const filteredAvailableItems = useMemo(() => {
+    if (!availableItems) return [] as any[];
+    if (!linhaFilter || linhaFilter === '__all__') return availableItems;
+    return availableItems.filter((i: any) => i.linha === linhaFilter);
+  }, [availableItems, linhaFilter]);
+
   // Update form when product loads
   useEffect(() => {
     if (product) {
