@@ -88,10 +88,13 @@ function unitGroup(unit?: string, itemType?: string): 'm2' | 'ml' | 'un' | 'kit'
   return 'un';
 }
 
-export function ItemPricingFields({ data, onChange, itemType = 'profile' }: ItemPricingFieldsProps) {
-  const isProfile = itemType === 'profile';
-  const isGlass = itemType === 'glass';
-  const isUnit = !isProfile && !isGlass; // accessory, component, service
+export function ItemPricingFields({ data, onChange, itemType = 'profile', unit }: ItemPricingFieldsProps) {
+  // Quando `unit` é informada, ela controla qual bloco aparece (m²/ml/un/kit).
+  // Caso contrário, cai no comportamento legado por itemType.
+  const group = unitGroup(unit, itemType);
+  const isProfile = group === 'ml';
+  const isGlass = group === 'm2';
+  const isUnit = group === 'un' || group === 'kit';
 
   const barLengthM = safeNum(data.barLengthMm) / 1000;
   const weightKg = safeNum(data.weightKg);
