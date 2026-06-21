@@ -29,6 +29,10 @@ export interface ItemPricingData {
   larguraMm: string;          // m² (chapa)
   comprimentoLinearMm: string; // ml (barra)
   precoUnitario: string;       // un / kit
+  // ── Atributos específicos de vidro (m²) ──
+  thicknessMm: string;         // espessura em mm
+  color: string;               // cor (Incolor, Verde, ...)
+
 }
 
 interface ItemPricingFieldsProps {
