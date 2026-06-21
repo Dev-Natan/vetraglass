@@ -572,7 +572,7 @@ export default function OrdensServico() {
                               size="sm"
                               variant="default"
                               className="flex-1 gap-1"
-                              onClick={() => updateStatusMutation.mutate({ id: os.id, status: 'completed' })}
+                              onClick={() => setRomaneioOsId(os.id)}
                             >
                               <CheckCircle className="w-3 h-3" />
                               Concluir Serviço
