@@ -239,11 +239,49 @@ export function ProductEditSheet({ open, onOpenChange, companyProductId }: Produ
 
               <Separator />
 
-              <div className="grid grid-cols-2 gap-4">
+              {isCompositionMode && (
+                <div className="p-3 rounded-lg border bg-muted/30 space-y-2">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Info className="w-3.5 h-3.5" />
+                    Custo calculado automaticamente a partir do estoque da empresa (custo unitário atual × quantidade da composição), normalizado por m².
+                  </div>
+                  {!composition.isReady && (
+                    <div className="flex items-center gap-2 text-xs"><Loader2 className="w-3 h-3 animate-spin" />Calculando custo...</div>
+                  )}
+                  {composition.isReady && !composition.hasComposition && (
+                    <div className="text-xs text-destructive">Este produto ainda não possui composição cadastrada. Configure os itens em "Fórmulas" para usar este modo.</div>
+                  )}
+                  {compositionReady && composition.items?.length > 0 && (
+                    <div className="space-y-1 pt-1">
+                      {composition.items.slice(0, 8).map((it: any, i: number) => (
+                        <div key={i} className="flex justify-between text-xs">
+                          <span className="truncate text-muted-foreground">{it.name || it.itemName || 'Item'}</span>
+                          <span className="font-mono">R$ {(it.totalCost || 0).toFixed(2)}</span>
+                        </div>
+                      ))}
+                      <div className="flex justify-between text-xs pt-1 border-t font-medium">
+                        <span>Custo total / m²</span>
+                        <span className="font-mono">R$ {(composition.compositionCostPerSqm || 0).toFixed(2)}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-2">
-                  <Label>Custo/m² (R$)</Label>
+                  <Label className="flex items-center gap-1">
+                    Custo/m² (R$) {isCompositionMode && <Lock className="w-3 h-3" />}
+                  </Label>
                   <Input type="number" step="0.01" min="0" placeholder="0,00"
-                    value={costPerSqm} onChange={(e) => setCostPerSqm(e.target.value)} />
+                    value={costPerSqm} readOnly={isCompositionMode}
+                    className={isCompositionMode ? 'bg-muted cursor-not-allowed' : ''}
+                    onChange={(e) => setCostPerSqm(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Margem (%)</Label>
+                  <Input type="number" step="0.1" min="0" placeholder="50"
+                    value={marginPct} onChange={(e) => setMarginPct(e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label>Preço/m² (R$)</Label>
@@ -254,12 +292,13 @@ export function ProductEditSheet({ open, onOpenChange, companyProductId }: Produ
 
               {(parseFloat(pricePerSqm) > 0 || parseFloat(costPerSqm) > 0) && (
                 <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                  <span className="text-sm text-muted-foreground">Margem:</span>
+                  <span className="text-sm text-muted-foreground">Margem efetiva:</span>
                   <Badge variant={margin >= 30 ? 'default' : margin >= 15 ? 'secondary' : 'destructive'}>
                     {margin.toFixed(1)}%
                   </Badge>
                 </div>
               )}
+
 
               <div className="flex justify-end gap-2 pt-2">
                 <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
