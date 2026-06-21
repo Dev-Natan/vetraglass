@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 
 import { ProductEditSheet } from '@/components/produtos/ProductEditSheet';
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
-import { useProductLowStockStatus } from '@/hooks/useProductLowStockStatus';
+
 
 type ProductTemplate = {
   id: string;
