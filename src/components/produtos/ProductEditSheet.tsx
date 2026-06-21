@@ -68,9 +68,31 @@ export function ProductEditSheet({ open, onOpenChange, companyProductId }: Produ
       setCostPerSqm(String((product as any).cost_per_sqm || ''));
       setPricePerSqm(String((product as any).price_per_sqm || ''));
       setPricingType(((product as any).pricing_type === 'composition' ? 'composition' : 'fixed'));
+      const m = (product as any).margin_percent ?? (product as any).default_margin ?? 50;
+      setMarginPct(String(m));
       setTab('geral');
     }
   }, [product, open]);
+
+  // Calcula custo automático a partir da composição × estoque da empresa (custo unitário atual)
+  const composition = useCompositionPricing({
+    companyProductId: companyProductId || undefined,
+    width: 1000,
+    height: 1000,
+    quantity: 1,
+    enabled: open && pricingType === 'composition' && !!companyProductId,
+  });
+
+  // Quando composição estiver pronta, atualiza custo e sugere preço pela margem
+  useEffect(() => {
+    if (pricingType !== 'composition' || !composition.isReady || !composition.hasComposition) return;
+    const autoCost = composition.compositionCostPerSqm || 0;
+    setCostPerSqm(autoCost.toFixed(2));
+    const m = parseFloat(marginPct) || 0;
+    const suggested = autoCost * (1 + m / 100);
+    setPricePerSqm(suggested.toFixed(2));
+  }, [pricingType, composition.isReady, composition.hasComposition, composition.compositionCostPerSqm, marginPct]);
+
 
   const saveGeral = useMutation({
     mutationFn: async () => {
