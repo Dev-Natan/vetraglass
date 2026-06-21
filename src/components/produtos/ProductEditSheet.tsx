@@ -253,17 +253,17 @@ export function ProductEditSheet({ open, onOpenChange, companyProductId }: Produ
                   {composition.isReady && !composition.hasComposition && (
                     <div className="text-xs text-destructive">Este produto ainda não possui composição cadastrada. Configure os itens em "Fórmulas" para usar este modo.</div>
                   )}
-                  {compositionReady && composition.items?.length > 0 && (
+                  {compositionReady && composition.simpleBreakdown?.length > 0 && (
                     <div className="space-y-1 pt-1">
-                      {composition.items.slice(0, 8).map((it: any, i: number) => (
+                      {composition.simpleBreakdown.slice(0, 8).map((it: any, i: number) => (
                         <div key={i} className="flex justify-between text-xs">
-                          <span className="truncate text-muted-foreground">{it.name || it.itemName || 'Item'}</span>
-                          <span className="font-mono">R$ {(it.totalCost || 0).toFixed(2)}</span>
+                          <span className="truncate text-muted-foreground">{it.nome}</span>
+                          <span className="font-mono">R$ {(it.subtotal || 0).toFixed(2)}</span>
                         </div>
                       ))}
                       <div className="flex justify-between text-xs pt-1 border-t font-medium">
                         <span>Custo total / m²</span>
-                        <span className="font-mono">R$ {(composition.compositionCostPerSqm || 0).toFixed(2)}</span>
+                        <span className="font-mono">R$ {(composition.compositionCostSimplePerSqm || composition.compositionCostPerSqm || 0).toFixed(2)}</span>
                       </div>
                     </div>
                   )}
