@@ -1194,12 +1194,14 @@ export type Database = {
       company_items: {
         Row: {
           aliquota_iss: number | null
+          altura_mm: number | null
           bar_length_mm: number | null
           cest: string | null
           cfop_venda: string | null
           cfop_venda_interestadual: string | null
           codigo_servico: string | null
           company_id: string
+          comprimento_linear_mm: number | null
           cost: number | null
           cost_per_bar: number | null
           cost_per_kg: number | null
@@ -1214,10 +1216,12 @@ export type Database = {
           is_active: boolean
           is_custom: boolean
           item_template_id: string | null
+          largura_mm: number | null
           linha: string | null
           name: string
           ncm: string | null
           origem: string | null
+          preco_unitario: number | null
           sale_margin_percent: number | null
           sale_price: number | null
           sale_price_per_bar: number | null
@@ -1232,12 +1236,14 @@ export type Database = {
         }
         Insert: {
           aliquota_iss?: number | null
+          altura_mm?: number | null
           bar_length_mm?: number | null
           cest?: string | null
           cfop_venda?: string | null
           cfop_venda_interestadual?: string | null
           codigo_servico?: string | null
           company_id: string
+          comprimento_linear_mm?: number | null
           cost?: number | null
           cost_per_bar?: number | null
           cost_per_kg?: number | null
@@ -1252,10 +1258,12 @@ export type Database = {
           is_active?: boolean
           is_custom?: boolean
           item_template_id?: string | null
+          largura_mm?: number | null
           linha?: string | null
           name: string
           ncm?: string | null
           origem?: string | null
+          preco_unitario?: number | null
           sale_margin_percent?: number | null
           sale_price?: number | null
           sale_price_per_bar?: number | null
@@ -1270,12 +1278,14 @@ export type Database = {
         }
         Update: {
           aliquota_iss?: number | null
+          altura_mm?: number | null
           bar_length_mm?: number | null
           cest?: string | null
           cfop_venda?: string | null
           cfop_venda_interestadual?: string | null
           codigo_servico?: string | null
           company_id?: string
+          comprimento_linear_mm?: number | null
           cost?: number | null
           cost_per_bar?: number | null
           cost_per_kg?: number | null
@@ -1290,10 +1300,12 @@ export type Database = {
           is_active?: boolean
           is_custom?: boolean
           item_template_id?: string | null
+          largura_mm?: number | null
           linha?: string | null
           name?: string
           ncm?: string | null
           origem?: string | null
+          preco_unitario?: number | null
           sale_margin_percent?: number | null
           sale_price?: number | null
           sale_price_per_bar?: number | null

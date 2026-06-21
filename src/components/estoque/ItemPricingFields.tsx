@@ -21,12 +21,19 @@ export interface ItemPricingData {
   // Glass (m²)
   costPerSqm: string;
   salePricePerSqm: string;
+  // ── Campos estruturados por unidade (novo) ──
+  alturaMm: string;           // m² (chapa)
+  larguraMm: string;          // m² (chapa)
+  comprimentoLinearMm: string; // ml (barra)
+  precoUnitario: string;       // un / kit
 }
 
 interface ItemPricingFieldsProps {
   data: ItemPricingData;
   onChange: (data: ItemPricingData) => void;
   itemType?: string;
+  /** Unidade selecionada no formulário (m², ml, un, kit...). Quando informada, controla os campos exibidos. */
+  unit?: string;
 }
 
 export const defaultPricingData: ItemPricingData = {
@@ -44,6 +51,10 @@ export const defaultPricingData: ItemPricingData = {
   salePricePerUnit: '',
   costPerSqm: '',
   salePricePerSqm: '',
+  alturaMm: '',
+  larguraMm: '',
+  comprimentoLinearMm: '',
+  precoUnitario: '',
 };
 
 function safeNum(v: string): number {
@@ -64,10 +75,26 @@ const typeConfig: Record<string, { label: string; icon: string; color: string }>
   service: { label: 'Serviço', icon: '🔧', color: 'text-emerald-600' },
 };
 
-export function ItemPricingFields({ data, onChange, itemType = 'profile' }: ItemPricingFieldsProps) {
-  const isProfile = itemType === 'profile';
-  const isGlass = itemType === 'glass';
-  const isUnit = !isProfile && !isGlass; // accessory, component, service
+/** Normaliza unidade → grupo de cálculo. */
+function unitGroup(unit?: string, itemType?: string): 'm2' | 'ml' | 'un' | 'kit' {
+  const u = String(unit || '').toLowerCase().trim();
+  if (u === 'm²' || u === 'm2') return 'm2';
+  if (u === 'ml' || u === 'm') return 'ml';
+  if (u === 'kit') return 'kit';
+  if (u === 'un' || u === 'pç' || u === 'par' || u === 'jg' || u === 'cx') return 'un';
+  // Fallback por tipo (compat)
+  if (itemType === 'glass') return 'm2';
+  if (itemType === 'profile') return 'ml';
+  return 'un';
+}
+
+export function ItemPricingFields({ data, onChange, itemType = 'profile', unit }: ItemPricingFieldsProps) {
+  // Quando `unit` é informada, ela controla qual bloco aparece (m²/ml/un/kit).
+  // Caso contrário, cai no comportamento legado por itemType.
+  const group = unitGroup(unit, itemType);
+  const isProfile = group === 'ml';
+  const isGlass = group === 'm2';
+  const isUnit = group === 'un' || group === 'kit';
 
   const barLengthM = safeNum(data.barLengthMm) / 1000;
   const weightKg = safeNum(data.weightKg);
@@ -80,6 +107,11 @@ export function ItemPricingFields({ data, onChange, itemType = 'profile' }: Item
     const mult = margin > 0 ? 1 + margin / 100 : 1;
 
     if (isProfile) {
+      // Sincroniza comprimento linear (novo) → barLengthMm (legado)
+      const compLinear = safeNum(data.comprimentoLinearMm);
+      if (compLinear > 0 && safeNum(data.barLengthMm) !== compLinear) {
+        updates.barLengthMm = String(compLinear);
+      }
       // Weight per meter
       if (weightKg > 0 && barLengthM > 0) {
         updates.weightPerMeter = (weightKg / barLengthM).toFixed(3);
@@ -97,7 +129,6 @@ export function ItemPricingFields({ data, onChange, itemType = 'profile' }: Item
       if (derivedCostPerBar > 0 && barLengthM > 0) {
         updates.costPerMeter = (derivedCostPerBar / barLengthM).toFixed(2);
       }
-      // Sale prices
       if (margin > 0) {
         const cBar = safeNum(updates.costPerBar ?? data.costPerBar);
         const cKg = safeNum(updates.costPerKg ?? data.costPerKg);
@@ -111,21 +142,18 @@ export function ItemPricingFields({ data, onChange, itemType = 'profile' }: Item
       if (costSqm > 0 && margin > 0) {
         updates.salePricePerSqm = (costSqm * mult).toFixed(2);
       }
-      // Sync to costPerMeter for DB compatibility
       if (costSqm > 0) {
         updates.costPerMeter = costSqm.toFixed(2);
         updates.salePricePerMeter = (costSqm * mult).toFixed(2);
       }
     } else {
-      // Unit-based
-      const costUnit = safeNum(data.costPerUnit);
-      if (costUnit > 0 && margin > 0) {
-        updates.salePricePerUnit = (costUnit * mult).toFixed(2);
-      }
-      // Sync to costPerBar/salePrice for DB compatibility
-      if (costUnit > 0) {
-        updates.costPerBar = costUnit.toFixed(2);
-        updates.salePricePerBar = (costUnit * mult).toFixed(2);
+      // Unit-based — usa precoUnitario (novo) como fonte primária
+      const precoUnit = safeNum(data.precoUnitario) || safeNum(data.costPerUnit);
+      if (precoUnit > 0) {
+        if (data.costPerUnit !== precoUnit.toFixed(2)) updates.costPerUnit = precoUnit.toFixed(2);
+        if (margin > 0) updates.salePricePerUnit = (precoUnit * mult).toFixed(2);
+        updates.costPerBar = precoUnit.toFixed(2);
+        updates.salePricePerBar = (precoUnit * mult).toFixed(2);
       }
     }
 
@@ -137,7 +165,7 @@ export function ItemPricingFields({ data, onChange, itemType = 'profile' }: Item
       onChange({ ...data, ...updates });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data.barLengthMm, data.weightKg, data.costPerBar, data.costPerKg, data.saleMarginPercent, data.costPerUnit, data.costPerSqm, itemType]);
+  }, [data.barLengthMm, data.weightKg, data.costPerBar, data.costPerKg, data.saleMarginPercent, data.costPerUnit, data.costPerSqm, data.precoUnitario, data.comprimentoLinearMm, isProfile, isGlass, isUnit]);
 
   const update = (field: keyof ItemPricingData, value: string) => {
     onChange({ ...data, [field]: value });
@@ -169,8 +197,8 @@ export function ItemPricingFields({ data, onChange, itemType = 'profile' }: Item
             </div>
             <div className="grid grid-cols-3 gap-2">
               <div className="space-y-1">
-                <Label className="text-xs">Tamanho da Barra (mm)</Label>
-                <Input type="number" min="0" step="1" value={data.barLengthMm} onChange={(e) => update('barLengthMm', e.target.value)} placeholder="Ex: 6000" className="h-8 text-sm" />
+                <Label className="text-xs">Comprimento da Barra (mm)</Label>
+                <Input type="number" min="0" step="1" value={data.comprimentoLinearMm || data.barLengthMm} onChange={(e) => onChange({ ...data, comprimentoLinearMm: e.target.value, barLengthMm: e.target.value })} placeholder="Ex: 6000" className="h-8 text-sm" />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs flex items-center gap-1"><Weight className="h-3 w-3" /> Peso da Barra (Kg)</Label>
@@ -233,48 +261,72 @@ export function ItemPricingFields({ data, onChange, itemType = 'profile' }: Item
         </>
       )}
 
-      {/* ═══ GLASS FIELDS ═══ */}
+      {/* ═══ GLASS / m² FIELDS ═══ */}
       {isGlass && (
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-1.5">
-            <Layers className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-xs font-medium text-muted-foreground">Preço por Metro Quadrado</span>
+        <>
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <Ruler className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs font-medium text-muted-foreground">Dimensões da Chapa (referência)</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Altura (mm)</Label>
+                <Input type="number" min="0" step="1" value={data.alturaMm} onChange={(e) => update('alturaMm', e.target.value)} placeholder="Ex: 2200" className="h-8 text-sm" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Largura (mm)</Label>
+                <Input type="number" min="0" step="1" value={data.larguraMm} onChange={(e) => update('larguraMm', e.target.value)} placeholder="Ex: 3210" className="h-8 text-sm" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Área (m²)</Label>
+                <Input type="number" readOnly value={((safeNum(data.alturaMm) * safeNum(data.larguraMm)) / 1_000_000 || 0).toFixed(3)} className="h-8 text-sm bg-muted/50" />
+              </div>
+            </div>
           </div>
-          <div className="grid grid-cols-3 gap-2">
-            <div className="space-y-1">
-              <Label className="text-xs">Custo por m² (R$)</Label>
-              <Input type="number" min="0" step="0.01" value={data.costPerSqm} onChange={(e) => update('costPerSqm', e.target.value)} placeholder="0,00" className="h-8 text-sm" />
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <Layers className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs font-medium text-muted-foreground">Preço por Metro Quadrado</span>
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Margem (%)</Label>
-              <Input type="number" min="0" step="0.1" value={data.saleMarginPercent} onChange={(e) => update('saleMarginPercent', e.target.value)} placeholder="30" className="h-8 text-sm" />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Venda/m² (R$)</Label>
-              <Input type="number" readOnly value={data.salePricePerSqm} className="h-8 text-sm bg-muted/50" placeholder="Auto" />
+            <div className="grid grid-cols-3 gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Custo por m² (R$)</Label>
+                <Input type="number" min="0" step="0.01" value={data.costPerSqm} onChange={(e) => update('costPerSqm', e.target.value)} placeholder="0,00" className="h-8 text-sm" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Margem (%)</Label>
+                <Input type="number" min="0" step="0.1" value={data.saleMarginPercent} onChange={(e) => update('saleMarginPercent', e.target.value)} placeholder="30" className="h-8 text-sm" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Venda/m² (R$)</Label>
+                <Input type="number" readOnly value={data.salePricePerSqm} className="h-8 text-sm bg-muted/50" placeholder="Auto" />
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
 
-      {/* ═══ UNIT-BASED FIELDS (accessory, component, service) ═══ */}
+      {/* ═══ UNIT / KIT FIELDS ═══ */}
       {isUnit && (
         <div className="space-y-1.5">
           <div className="flex items-center gap-1.5">
             <Box className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-xs font-medium text-muted-foreground">Preço por Unidade</span>
+            <span className="text-xs font-medium text-muted-foreground">
+              {group === 'kit' ? 'Preço por Kit' : 'Preço por Unidade'}
+            </span>
           </div>
           <div className="grid grid-cols-3 gap-2">
             <div className="space-y-1">
-              <Label className="text-xs">Custo Unitário (R$)</Label>
-              <Input type="number" min="0" step="0.01" value={data.costPerUnit} onChange={(e) => update('costPerUnit', e.target.value)} placeholder="0,00" className="h-8 text-sm" />
+              <Label className="text-xs">Valor por {group === 'kit' ? 'Kit' : 'Unidade'} (R$)</Label>
+              <Input type="number" min="0" step="0.01" value={data.precoUnitario || data.costPerUnit} onChange={(e) => update('precoUnitario', e.target.value)} placeholder="0,00" className="h-8 text-sm" />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Margem (%)</Label>
               <Input type="number" min="0" step="0.1" value={data.saleMarginPercent} onChange={(e) => update('saleMarginPercent', e.target.value)} placeholder="30" className="h-8 text-sm" />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Venda Unitária (R$)</Label>
+              <Label className="text-xs text-muted-foreground">Venda {group === 'kit' ? 'Kit' : 'Unitária'} (R$)</Label>
               <Input type="number" readOnly value={data.salePricePerUnit} className="h-8 text-sm bg-muted/50" placeholder="Auto" />
             </div>
           </div>

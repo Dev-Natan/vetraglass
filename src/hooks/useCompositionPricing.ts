@@ -45,7 +45,7 @@ export function useCompositionPricing({
         .select(`
           id, quantity_formula, width_formula, height_formula, pieces_quantity, cut_angle, is_optional, section, side, calculation_type, applies_to,
           item_template:item_templates(id, name, type, unit, bar_length_mm, weight_per_bar, weight_per_meter),
-          company_item:company_items(id, name, type, unit, cost, cost_per_bar, cost_per_kg, cost_per_meter, bar_length_mm, weight_kg, weight_per_meter)
+          company_item:company_items(id, name, type, unit, cost, cost_per_bar, cost_per_kg, cost_per_meter, bar_length_mm, weight_kg, weight_per_meter, altura_mm, largura_mm, comprimento_linear_mm, preco_unitario)
         `)
         .eq('company_product_id', companyProductId)
         .order('sort_order');
@@ -70,7 +70,7 @@ export function useCompositionPricing({
       if (!currentCompany?.id || missingTemplateIds.length === 0) return [];
       const { data } = await supabase
         .from('company_items')
-        .select('id, item_template_id, cost, cost_per_bar, cost_per_kg, cost_per_meter, bar_length_mm, weight_kg, weight_per_meter')
+        .select('id, item_template_id, unit, cost, cost_per_bar, cost_per_kg, cost_per_meter, bar_length_mm, weight_kg, weight_per_meter, altura_mm, largura_mm, comprimento_linear_mm, preco_unitario')
         .eq('company_id', currentCompany.id)
         .in('item_template_id', missingTemplateIds);
       return data || [];
@@ -194,7 +194,8 @@ export function useCompositionPricing({
           subtotal = linearM * custoEstoque * qtd;
           detalhe = `${linearM.toFixed(2)} m × R$ ${custoEstoque.toFixed(2)} × ${qtd}`;
         } else {
-          custoEstoque = num(compItem?.cost) || num(compItem?.cost_per_bar);
+          // un / kit — prioriza coluna explícita preco_unitario
+          custoEstoque = num(compItem?.preco_unitario) || num(compItem?.cost) || num(compItem?.cost_per_bar);
           subtotal = qtd * custoEstoque;
           detalhe = `${qtd} ${unidade} × R$ ${custoEstoque.toFixed(2)}`;
         }

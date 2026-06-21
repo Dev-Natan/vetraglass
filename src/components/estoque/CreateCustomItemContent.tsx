@@ -33,7 +33,8 @@ interface CreateCustomItemContentProps {
 
 const UNITS = [
   { value: 'un', label: 'Unidade (un)' },
-  { value: 'm', label: 'Metro (m)' },
+  { value: 'kit', label: 'Kit' },
+  { value: 'ml', label: 'Metro Linear (ml)' },
   { value: 'm²', label: 'Metro² (m²)' },
   { value: 'kg', label: 'Quilograma (kg)' },
   { value: 'l', label: 'Litro (l)' },
@@ -109,12 +110,16 @@ export function CreateCustomItemContent({ onClose }: CreateCustomItemContentProp
           sale_price_per_kg: pNum(pricingData.salePricePerKg),
           sale_price_per_meter: pNum(pricingData.salePricePerMeter),
           sale_margin_percent: pNum(pricingData.saleMarginPercent) ?? 0,
+          altura_mm: pNum(pricingData.alturaMm),
+          largura_mm: pNum(pricingData.larguraMm),
+          comprimento_linear_mm: pNum(pricingData.comprimentoLinearMm) ?? pNum(pricingData.barLengthMm),
+          preco_unitario: pNum(pricingData.precoUnitario) ?? pNum(pricingData.costPerUnit),
           ncm: fiscalData.ncm || null, cfop_venda: fiscalData.cfop_venda || null,
           cfop_venda_interestadual: fiscalData.cfop_venda_interestadual || null,
           cest: fiscalData.cest || null, origem: fiscalData.origem || null,
           codigo_servico: fiscalData.codigo_servico || null,
           aliquota_iss: fiscalData.aliquota_iss ? parseFloat(fiscalData.aliquota_iss) : null,
-        })
+        } as any)
         .select().single();
       if (itemError) throw new Error(`Erro ao criar item: ${itemError.message}`);
 
@@ -214,7 +219,7 @@ export function CreateCustomItemContent({ onClose }: CreateCustomItemContentProp
 
 
         {/* Pricing Fields */}
-        <ItemPricingFields data={pricingData} onChange={setPricingData} itemType={category} />
+        <ItemPricingFields data={pricingData} onChange={setPricingData} itemType={category} unit={unit} />
 
         <div className="space-y-2">
           <Label htmlFor="custom-minQuantity">Estoque Mínimo (opcional)</Label>
