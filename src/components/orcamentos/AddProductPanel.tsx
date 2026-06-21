@@ -17,6 +17,8 @@ import { useProductCategoryLabels } from '@/hooks/useProductCategories';
 import { useProductLinhas } from '@/hooks/useProductLinhas';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useProductAluminumPriceOptions } from '@/hooks/useProductAluminumPrices';
+import { useGlassStockOptions } from '@/hooks/useGlassStockOptions';
+
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AddItemPanel } from './AddItemPanel';
 
@@ -258,20 +260,27 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   );
   const hasAluminumPrices = (aluminumPriceOptions?.length || 0) > 0;
 
+  // ── Opções de vidro vindas do ESTOQUE (company_items unit = m²) ──
+  const glassStock = useGlassStockOptions(!!selectedProductId);
+
   // Unique glass thicknesses and colors derived from the product's glass price catalog
+  // ⬇︎ Quando o produto NÃO tem catálogo próprio (product_glass_prices), caímos no estoque
   const glassThicknessOptions = useMemo(() => {
-    const set = new Set<number>();
-    productGlassPrices?.forEach(gp => set.add(gp.thickness_mm));
-    return Array.from(set).sort((a, b) => a - b);
-  }, [productGlassPrices]);
+    const set = new Set<string>();
+    productGlassPrices?.forEach((gp) => set.add(String(gp.thickness_mm)));
+    glassStock.thicknessOptions.forEach((t) => set.add(t));
+    return Array.from(set).sort((a, b) => Number(a) - Number(b));
+  }, [productGlassPrices, glassStock.thicknessOptions]);
 
   const glassColorOptions = useMemo(() => {
     const set = new Set<string>();
     productGlassPrices
-      ?.filter(gp => !selectedGlassThickness || String(gp.thickness_mm) === selectedGlassThickness)
-      .forEach(gp => set.add(gp.glass_color));
+      ?.filter((gp) => !selectedGlassThickness || String(gp.thickness_mm) === selectedGlassThickness)
+      .forEach((gp) => set.add(gp.glass_color));
+    glassStock.colorOptionsFor(selectedGlassThickness || undefined).forEach((c) => set.add(c));
     return Array.from(set).sort();
-  }, [productGlassPrices, selectedGlassThickness]);
+  }, [productGlassPrices, glassStock, selectedGlassThickness]);
+
 
   // Set defaults when product changes
   useEffect(() => {
@@ -323,8 +332,16 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
 
 
   // Get selected glass price details
-  const selectedGlassPrice = productGlassPrices?.find(p => p.id === selectedGlassPriceId);
-  const glassPricePerSqm = selectedGlassPrice?.price_per_sqm || 0;
+  const selectedGlassPrice = productGlassPrices?.find((p) => p.id === selectedGlassPriceId);
+  // ⬇︎ Match no estoque por Cor+Espessura selecionadas
+  const stockGlassMatch = useMemo(
+    () => glassStock.findMatch(selectedGlassThickness, selectedGlassColor),
+    [glassStock, selectedGlassThickness, selectedGlassColor],
+  );
+  const stockGlassPricePerSqm = stockGlassMatch?.salePricePerSqm || 0;
+  // Catálogo tem prioridade; senão, usa estoque
+  const glassPricePerSqm = selectedGlassPrice?.price_per_sqm || stockGlassPricePerSqm || 0;
+
 
   // Get selected aluminum price (only for aluminum-priced products)
   const selectedAluminumPriceOption = productUsesAluminum 
@@ -356,7 +373,8 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
 
   // Determine final price based on pricing type
   const finalPricePerSqm = (() => {
-    if (productUsesGlass && hasGlass && glassPricePerSqm > 0) {
+    // Vidro do catálogo OU do estoque (cor+espessura selecionadas)
+    if (hasGlass && glassPricePerSqm > 0) {
       return glassPricePerSqm;
     }
     if (productUsesAluminum && aluminumPricePerSqm > 0) {
@@ -364,6 +382,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     }
     return productBasePricePerSqm;
   })();
+
   
   const basePrice = customPrice !== null ? customPrice : finalPricePerSqm;
 
@@ -737,8 +756,8 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border shadow-lg z-50">
-                  {defaultGlassThicknessOptions.map(t => (
-                    <SelectItem key={t} value={t}>{t}mm</SelectItem>
+                  {(glassThicknessOptions.length > 0 ? glassThicknessOptions : defaultGlassThicknessOptions).map((t) => (
+                    <SelectItem key={String(t)} value={String(t)}>{t}mm</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -755,12 +774,28 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border shadow-lg z-50">
-                  {defaultGlassColorOptions.map(c => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
+                  {(glassColorOptions.length > 0 ? glassColorOptions : defaultGlassColorOptions).map((c) => {
+                    const stockOpt = glassStock.findMatch(selectedGlassThickness, c);
+                    return (
+                      <SelectItem key={c} value={c}>
+                        <div className="flex items-center justify-between gap-4 w-full">
+                          <span>{c}</span>
+                          {stockOpt && stockOpt.salePricePerSqm > 0 && (
+                            <span className="text-muted-foreground text-xs">{formatCurrency(stockOpt.salePricePerSqm)}/m²</span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
+              {stockGlassMatch && (
+                <p className="text-[11px] text-muted-foreground">
+                  Estoque: <span className="font-medium">{stockGlassMatch.displayName}</span> · {formatCurrency(stockGlassMatch.salePricePerSqm)}/m²
+                </p>
+              )}
             </div>
+
 
             {/* Cor do perfil */}
             <div className="space-y-1.5">
