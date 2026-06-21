@@ -201,14 +201,20 @@ export function useCompositionPricing({
           detalhe = `${qtd} ${unidade} × R$ ${custoEstoque.toFixed(2)}`;
         }
 
+        const baseName = tpl?.name || compItem?.name || 'Item';
+        const nome = unidade === 'm²'
+          ? formatGlassName(baseName, compItem?.glass_color, compItem?.thickness_mm)
+          : baseName;
+
         return {
-          nome: tpl?.name || compItem?.name || 'Item',
+          nome,
           qtd,
           unidade,
           custo_estoque: custoEstoque,
           subtotal,
           detalhe,
         };
+
       });
 
     const total = rows.reduce((s, r) => s + r.subtotal, 0);
