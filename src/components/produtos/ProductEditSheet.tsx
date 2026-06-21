@@ -1,0 +1,274 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useProductLinhas } from '@/hooks/useProductLinhas';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ImageUploadField } from '@/components/common/ImageUploadField';
+import { Loader2, DollarSign, Calculator, Settings2, FileCode2, ExternalLink } from 'lucide-react';
+import { toast } from 'sonner';
+
+interface ProductEditSheetProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  companyProductId: string | null;
+}
+
+export function ProductEditSheet({ open, onOpenChange, companyProductId }: ProductEditSheetProps) {
+  const { currentCompany } = useAuth();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const { data: linhas = [] } = useProductLinhas();
+
+  const [tab, setTab] = useState('geral');
+
+  // Geral
+  const [name, setName] = useState('');
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [linha, setLinha] = useState<string>('');
+  const [isActive, setIsActive] = useState(true);
+
+  // Preços
+  const [costPerSqm, setCostPerSqm] = useState('');
+  const [pricePerSqm, setPricePerSqm] = useState('');
+  const [pricingType, setPricingType] = useState<'fixed' | 'composition'>('fixed');
+
+  const { data: product, isLoading } = useQuery({
+    queryKey: ['company-product-edit', companyProductId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('company_products')
+        .select('*')
+        .eq('id', companyProductId!)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: open && !!companyProductId,
+  });
+
+  useEffect(() => {
+    if (product && open) {
+      setName((product as any).commercial_name || '');
+      setImageUrl((product as any).image_url || null);
+      setLinha((product as any).linha || '');
+      setIsActive(!!(product as any).is_active);
+      setCostPerSqm(String((product as any).cost_per_sqm || ''));
+      setPricePerSqm(String((product as any).price_per_sqm || ''));
+      setPricingType(((product as any).pricing_type === 'composition' ? 'composition' : 'fixed'));
+      setTab('geral');
+    }
+  }, [product, open]);
+
+  const saveGeral = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from('company_products')
+        .update({
+          commercial_name: name,
+          image_url: imageUrl,
+          linha: linha || null,
+          is_active: isActive,
+          updated_at: new Date().toISOString(),
+        } as any)
+        .eq('id', companyProductId!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-products'] });
+      queryClient.invalidateQueries({ queryKey: ['company-product-edit', companyProductId] });
+      toast.success('Dados atualizados');
+    },
+    onError: (e: any) => toast.error('Erro ao salvar', { description: e.message }),
+  });
+
+  const savePricing = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from('company_products')
+        .update({
+          cost_per_sqm: parseFloat(costPerSqm) || 0,
+          price_per_sqm: parseFloat(pricePerSqm) || 0,
+          pricing_type: pricingType,
+          updated_at: new Date().toISOString(),
+        } as any)
+        .eq('id', companyProductId!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-products'] });
+      queryClient.invalidateQueries({ queryKey: ['company-product-edit', companyProductId] });
+      toast.success('Preços atualizados');
+    },
+    onError: (e: any) => toast.error('Erro ao salvar', { description: e.message }),
+  });
+
+  const margin = (() => {
+    const p = parseFloat(pricePerSqm) || 0;
+    const c = parseFloat(costPerSqm) || 0;
+    if (c <= 0) return 0;
+    return ((p - c) / c) * 100;
+  })();
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>Editar Produto</SheetTitle>
+          <SheetDescription>{name || 'Carregando...'}</SheetDescription>
+        </SheetHeader>
+
+        {isLoading || !product ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <Tabs value={tab} onValueChange={setTab} className="mt-6">
+            <TabsList className="grid grid-cols-3 w-full">
+              <TabsTrigger value="geral"><Settings2 className="w-4 h-4 mr-1.5" />Dados Gerais</TabsTrigger>
+              <TabsTrigger value="precos"><DollarSign className="w-4 h-4 mr-1.5" />Preços e Custos</TabsTrigger>
+              <TabsTrigger value="formulas"><FileCode2 className="w-4 h-4 mr-1.5" />Fórmulas</TabsTrigger>
+            </TabsList>
+
+            {/* TAB 1 — Dados Gerais */}
+            <TabsContent value="geral" className="space-y-5 mt-6">
+              <ImageUploadField
+                label="Imagem do produto"
+                imageUrl={imageUrl}
+                onImageChange={setImageUrl}
+                bucket="company-product-images"
+                path={`${currentCompany?.id}/${companyProductId}`}
+                size="lg"
+              />
+
+              <div className="space-y-2">
+                <Label>Nome comercial</Label>
+                <Input value={name} onChange={(e) => setName(e.target.value)} />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Linha</Label>
+                <Select value={linha || 'none'} onValueChange={(v) => setLinha(v === 'none' ? '' : v)}>
+                  <SelectTrigger><SelectValue placeholder="Selecione uma linha" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem linha</SelectItem>
+                    {linhas.map((l) => (
+                      <SelectItem key={l.id} value={l.slug}>{l.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <Label className="text-sm font-medium">Status do produto</Label>
+                  <p className="text-xs text-muted-foreground">
+                    {isActive ? 'Ativo — disponível para venda' : 'Inativo — oculto da listagem'}
+                  </p>
+                </div>
+                <Switch checked={isActive} onCheckedChange={setIsActive} />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+                <Button onClick={() => saveGeral.mutate()} disabled={saveGeral.isPending}>
+                  {saveGeral.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Salvando...</> : 'Salvar alterações'}
+                </Button>
+              </div>
+            </TabsContent>
+
+            {/* TAB 2 — Preços e Custos */}
+            <TabsContent value="precos" className="space-y-5 mt-6">
+              <div className="space-y-3">
+                <Label>Forma de Precificação</Label>
+                <RadioGroup value={pricingType} onValueChange={(v) => setPricingType(v as any)} className="grid grid-cols-2 gap-3">
+                  <label className={`flex flex-col items-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${
+                    pricingType === 'fixed' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+                  }`}>
+                    <RadioGroupItem value="fixed" className="sr-only" />
+                    <DollarSign className="w-5 h-5 text-muted-foreground" />
+                    <span className="text-xs font-medium">Preços Fixos</span>
+                  </label>
+                  <label className={`flex flex-col items-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${
+                    pricingType === 'composition' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+                  }`}>
+                    <RadioGroupItem value="composition" className="sr-only" />
+                    <Calculator className="w-5 h-5 text-muted-foreground" />
+                    <span className="text-xs font-medium">Por Composição</span>
+                  </label>
+                </RadioGroup>
+              </div>
+
+              <Separator />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Custo/m² (R$)</Label>
+                  <Input type="number" step="0.01" min="0" placeholder="0,00"
+                    value={costPerSqm} onChange={(e) => setCostPerSqm(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Preço/m² (R$)</Label>
+                  <Input type="number" step="0.01" min="0" placeholder="0,00"
+                    value={pricePerSqm} onChange={(e) => setPricePerSqm(e.target.value)} />
+                </div>
+              </div>
+
+              {(parseFloat(pricePerSqm) > 0 || parseFloat(costPerSqm) > 0) && (
+                <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                  <span className="text-sm text-muted-foreground">Margem:</span>
+                  <Badge variant={margin >= 30 ? 'default' : margin >= 15 ? 'secondary' : 'destructive'}>
+                    {margin.toFixed(1)}%
+                  </Badge>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+                <Button onClick={() => savePricing.mutate()} disabled={savePricing.isPending}>
+                  {savePricing.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Salvando...</> : 'Salvar preços'}
+                </Button>
+              </div>
+            </TabsContent>
+
+            {/* TAB 3 — Fórmulas */}
+            <TabsContent value="formulas" className="space-y-4 mt-6">
+              <div className="p-4 border rounded-lg space-y-3">
+                <div className="flex items-start gap-3">
+                  <FileCode2 className="w-5 h-5 text-primary mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="font-medium text-sm">Editor de Fórmulas</h4>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Configure as fórmulas de corte, composição de materiais e dimensões dinâmicas
+                      (L, A, FL, FA) deste produto no editor avançado.
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  className="w-full"
+                  onClick={() => {
+                    onOpenChange(false);
+                    navigate(`/produtos/empresa/editar/${companyProductId}`);
+                  }}
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Abrir editor de fórmulas
+                </Button>
+              </div>
+            </TabsContent>
+          </Tabs>
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+}
