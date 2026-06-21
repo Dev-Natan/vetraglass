@@ -591,13 +591,9 @@ export default function EditarProdutoEmpresa() {
     return availableLinhas.find(l => name.includes(l.toLowerCase())) || null;
   };
 
-  // Auto-preenche o filtro de Linha ao abrir o diálogo (apenas para perfis/contramarco)
+  // Auto-preenche o filtro de Linha ao abrir o diálogo (todas as seções)
   useEffect(() => {
     if (!isAddItemDialogOpen) return;
-    if (addItemSection !== 'profile' && addItemSection !== 'contramarco') {
-      setLinhaFilter('__all__');
-      return;
-    }
     const detected = detectProductLinha();
     setLinhaFilter(detected && availableLinhas.includes(detected) ? detected : '__all__');
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -605,9 +601,8 @@ export default function EditarProdutoEmpresa() {
 
   const filteredAvailableItems = useMemo(() => {
     if (!availableItems) return [];
-    const isProfileLike = addItemSection === 'profile' || addItemSection === 'contramarco';
     let list = availableItems;
-    if (isProfileLike && linhaFilter && linhaFilter !== '__all__') {
+    if (linhaFilter && linhaFilter !== '__all__') {
       list = list.filter(item => item.linha === linhaFilter);
     }
     if (!itemSearchQuery) return list;
@@ -615,7 +610,7 @@ export default function EditarProdutoEmpresa() {
     return list.filter(
       item => item.name.toLowerCase().includes(q) || item.linha?.toLowerCase().includes(q)
     );
-  }, [availableItems, itemSearchQuery, linhaFilter, addItemSection]);
+  }, [availableItems, itemSearchQuery, linhaFilter]);
 
   const handleEditItem = (item: CompanyProductItem) => {
     setEditingItem(item);
@@ -922,7 +917,7 @@ export default function EditarProdutoEmpresa() {
             <DialogDescription>Selecione um item e configure sua fórmula</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            {(addItemSection === 'profile' || addItemSection === 'contramarco') && (
+            {availableLinhas.length > 0 && (
               <div className="space-y-2">
                 <Label>Filtrar por Linha</Label>
                 <Select value={linhaFilter} onValueChange={setLinhaFilter}>
