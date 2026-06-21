@@ -48,8 +48,8 @@ export default function ProdutosLinha() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showActive, setShowActive] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [editPricingDialogOpen, setEditPricingDialogOpen] = useState(false);
-  const [selectedProductForPricing, setSelectedProductForPricing] = useState<{ id: string; name: string; image_url?: string | null } | null>(null);
+  const [editSheetOpen, setEditSheetOpen] = useState(false);
+  const [selectedCompanyProductId, setSelectedCompanyProductId] = useState<string | null>(null);
 
   const currentLinha = linhaParam ? decodeURIComponent(linhaParam) : '';
   const { getStatus: getLowStockStatus } = useProductLowStockStatus(currentCompany?.id);
