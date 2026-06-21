@@ -41,6 +41,7 @@ export default function OrdemServicoDetalhes() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { currentCompany, companies } = useAuth();
+  const [reciboOpen, setReciboOpen] = useState(false);
 
   const { data: ordem, isLoading } = useQuery({
     queryKey: ['ordem-servico', id],
