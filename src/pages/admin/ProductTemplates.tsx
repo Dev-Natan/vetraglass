@@ -416,6 +416,19 @@ export default function ProductTemplates() {
     }
   }, [selectedItemToAdd, compositionActiveTab, itemTemplates]);
 
+  // Auto-detecta a Linha do template (campo explícito ou pelo nome) e preenche o filtro
+  useEffect(() => {
+    if (!isDialogOpen || dialogTab !== 'composicao') return;
+    const linhas = getLinhasForAddTab(compositionActiveTab);
+    if (!linhas.length) { setLinhaFilter('__all__'); return; }
+    const explicit = (selectedTemplate as any)?.linha;
+    if (explicit && linhas.includes(explicit)) { setLinhaFilter(explicit); return; }
+    const name = ((selectedTemplate as any)?.name || '').toLowerCase();
+    const detected = name ? linhas.find(l => name.includes(l.toLowerCase())) : null;
+    setLinhaFilter(detected || '__all__');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDialogOpen, dialogTab, compositionActiveTab, selectedTemplate?.id, sortedItemTemplates?.length]);
+
   const filteredTemplates = templates?.filter((template) => {
     const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           template.description?.toLowerCase().includes(searchTerm.toLowerCase());
