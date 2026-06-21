@@ -369,7 +369,10 @@ export default function ProdutosLinha() {
                         className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                         onClick={() => {
                           if (product.companyProductId) {
-                            reactivateProductMutation.mutate({ id: product.id, isCustom: product.is_custom });
+                            reactivateProductMutation.mutate({
+                              id: product.is_custom ? product.companyProductId : (product.productTemplateId || product.companyProductId),
+                              isCustom: product.is_custom,
+                            });
                           } else if (product.productTemplateId) {
                             quickActivateMutation.mutate(product.productTemplateId);
                           }
