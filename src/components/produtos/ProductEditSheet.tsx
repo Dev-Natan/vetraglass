@@ -86,12 +86,14 @@ export function ProductEditSheet({ open, onOpenChange, companyProductId }: Produ
   // Quando composição estiver pronta, atualiza custo e sugere preço pela margem
   useEffect(() => {
     if (pricingType !== 'composition' || !composition.isReady || !composition.hasComposition) return;
-    const autoCost = composition.compositionCostPerSqm || 0;
+    // Prefere a soma simples (Σ qtd × custo do estoque) — auditável e previsível
+    const autoCost = composition.compositionCostSimplePerSqm || composition.compositionCostPerSqm || 0;
+    console.log('[ProductEditSheet] Auto-cost por m² (composição):', autoCost, 'breakdown:', composition.simpleBreakdown);
     setCostPerSqm(autoCost.toFixed(2));
     const m = parseFloat(marginPct) || 0;
     const suggested = autoCost * (1 + m / 100);
     setPricePerSqm(suggested.toFixed(2));
-  }, [pricingType, composition.isReady, composition.hasComposition, composition.compositionCostPerSqm, marginPct]);
+  }, [pricingType, composition.isReady, composition.hasComposition, composition.compositionCostSimplePerSqm, composition.compositionCostPerSqm, marginPct]);
 
 
   const saveGeral = useMutation({

@@ -152,17 +152,65 @@ export function useCompositionPricing({
   }, [compositionItems, fallbackCompanyItems, width, height, widthB, heightB, quantity, excludeOptionalIds]);
 
   const hasComposition = !!compositionItems && compositionItems.length > 0;
-  const compositionCostPerUnit = result ? result.totalCost / (quantity || 1) : 0;
-  const compositionCostPerSqm = result?.costPerSqm ?? 0;
+
+  // ── Cálculo SIMPLES e auditável: Σ(quantidade × preço de custo do estoque) ──
+  // Mapeia explicitamente a coluna de preço de custo (cost_per_meter / cost_per_bar / cost_per_kg / cost)
+  // do estoque (company_items) — NUNCA a quantidade em estoque. Trata vírgula decimal via parseFloat.
+  const simpleBreakdown = useMemo(() => {
+    if (!compositionItems) return { rows: [] as Array<{ nome: string; qtd: number; custo_estoque: number; subtotal: number }>, total: 0 };
+
+    const rows = compositionItems
+      .filter(ci => !(ci.is_optional && excludeOptionalIds.includes(ci.id)))
+      .map(ci => {
+        const tpl = ci.item_template as any;
+        const compItem: any = ci.company_item || fallbackCompanyItems?.find(f => f.item_template_id === tpl?.id);
+
+        const qtd = parseFloat(String(ci.pieces_quantity ?? 1).replace(',', '.')) || 1;
+
+        const rawCost =
+          compItem?.cost_per_meter ??
+          compItem?.cost_per_bar ??
+          compItem?.cost_per_kg ??
+          compItem?.cost ??
+          0;
+        const custoEstoque = parseFloat(String(rawCost).replace(',', '.')) || 0;
+
+        const subtotal = qtd * custoEstoque;
+        return {
+          nome: tpl?.name || compItem?.name || 'Item',
+          qtd,
+          custo_estoque: custoEstoque,
+          subtotal,
+        };
+      });
+
+    const total = rows.reduce((s, r) => s + r.subtotal, 0);
+    // eslint-disable-next-line no-console
+    console.log('[useCompositionPricing] Itens calculados (soma simples):', rows, '→ total:', total);
+    return { rows, total };
+  }, [compositionItems, fallbackCompanyItems, excludeOptionalIds]);
+
+  const areaM2 = (width * height) / 1_000_000 || 1;
+  const compositionCostSimpleTotal = simpleBreakdown.total;
+  const compositionCostSimplePerSqm = compositionCostSimpleTotal / areaM2;
+
+  // Mantém compatibilidade: usa engine se disponível, senão cai para soma simples
+  const compositionCostPerUnit = result
+    ? result.totalCost / (quantity || 1)
+    : compositionCostSimpleTotal;
+  const compositionCostPerSqm = result?.costPerSqm || compositionCostSimplePerSqm;
 
   return {
     hasComposition,
     compositionCostPerUnit,
     compositionCostPerSqm,
-    totalCost: result?.totalCost ?? 0,
+    compositionCostSimpleTotal,
+    compositionCostSimplePerSqm,
+    simpleBreakdown: simpleBreakdown.rows,
+    totalCost: result?.totalCost ?? compositionCostSimpleTotal,
     costByType: result?.costByType ?? {},
     items: result?.items ?? [],
-    isReady: hasComposition && !!result,
+    isReady: hasComposition,
     optionalItems,
   };
 }
