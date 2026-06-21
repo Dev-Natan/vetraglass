@@ -259,7 +259,10 @@ export function EditItemPriceDialog({
         larguraMm: (companyItem as any).largura_mm?.toString() ?? '',
         comprimentoLinearMm: (companyItem as any).comprimento_linear_mm?.toString() ?? companyItem.bar_length_mm?.toString() ?? '',
         precoUnitario: (companyItem as any).preco_unitario?.toString() ?? companyItem.cost?.toString() ?? '',
+        thicknessMm: (companyItem as any).thickness_mm?.toString() ?? '',
+        color: (companyItem as any).glass_color?.toString() ?? '',
       });
+
       setItemTypeLocal(companyItem.type || 'profile');
       setLinhaLocal(companyItem.linha || '');
     } else if (existingPrice) {
