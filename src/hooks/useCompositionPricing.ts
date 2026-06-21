@@ -153,11 +153,15 @@ export function useCompositionPricing({
 
   const hasComposition = !!compositionItems && compositionItems.length > 0;
 
-  // ── Cálculo SIMPLES e auditável: Σ(quantidade × preço de custo do estoque) ──
-  // Mapeia explicitamente a coluna de preço de custo (cost_per_meter / cost_per_bar / cost_per_kg / cost)
-  // do estoque (company_items) — NUNCA a quantidade em estoque. Trata vírgula decimal via parseFloat.
+  // ── Cálculo SIMPLES e auditável por TIPO DE UNIDADE do insumo ──
+  // m²  → área do projeto (L×A) × preço/m² × qtd
+  // ml  → metros lineares (maior dimensão / 1000) × preço/m × qtd peças
+  // un / kit → quantidade fixa × preço unitário
   const simpleBreakdown = useMemo(() => {
-    if (!compositionItems) return { rows: [] as Array<{ nome: string; qtd: number; custo_estoque: number; subtotal: number }>, total: 0 };
+    if (!compositionItems) return { rows: [] as Array<{ nome: string; qtd: number; unidade: string; custo_estoque: number; subtotal: number; detalhe: string }>, total: 0 };
+
+    const areaM2Local = (width * height) / 1_000_000;
+    const linearM = Math.max(width, height) / 1000;
 
     const rows = compositionItems
       .filter(ci => !(ci.is_optional && excludeOptionalIds.includes(ci.id)))
@@ -166,29 +170,50 @@ export function useCompositionPricing({
         const compItem: any = ci.company_item || fallbackCompanyItems?.find(f => f.item_template_id === tpl?.id);
 
         const qtd = parseFloat(String(ci.pieces_quantity ?? 1).replace(',', '.')) || 1;
+        const rawUnit = String(tpl?.unit || compItem?.unit || 'un').toLowerCase().trim();
+        const type = String(tpl?.type || compItem?.type || '').toLowerCase();
 
-        const rawCost =
-          compItem?.cost_per_meter ??
-          compItem?.cost_per_bar ??
-          compItem?.cost_per_kg ??
-          compItem?.cost ??
-          0;
-        const custoEstoque = parseFloat(String(rawCost).replace(',', '.')) || 0;
+        const num = (v: any) => parseFloat(String(v ?? 0).replace(',', '.')) || 0;
 
-        const subtotal = qtd * custoEstoque;
+        let unidade: 'm²' | 'ml' | 'un' | 'kit' = 'un';
+        if (rawUnit === 'm2' || rawUnit === 'm²' || type === 'glass') unidade = 'm²';
+        else if (rawUnit === 'ml' || rawUnit === 'm' || type === 'profile') unidade = 'ml';
+        else if (rawUnit === 'kit') unidade = 'kit';
+
+        let custoEstoque = 0;
+        let subtotal = 0;
+        let detalhe = '';
+
+        if (unidade === 'm²') {
+          custoEstoque = num(compItem?.cost_per_meter) || num(compItem?.cost);
+          subtotal = areaM2Local * custoEstoque * qtd;
+          detalhe = `${areaM2Local.toFixed(2)} m² × R$ ${custoEstoque.toFixed(2)} × ${qtd}`;
+        } else if (unidade === 'ml') {
+          custoEstoque = num(compItem?.cost_per_meter) ||
+            (num(compItem?.cost_per_bar) && num(compItem?.bar_length_mm) ? num(compItem.cost_per_bar) / (num(compItem.bar_length_mm) / 1000) : 0);
+          subtotal = linearM * custoEstoque * qtd;
+          detalhe = `${linearM.toFixed(2)} m × R$ ${custoEstoque.toFixed(2)} × ${qtd}`;
+        } else {
+          custoEstoque = num(compItem?.cost) || num(compItem?.cost_per_bar);
+          subtotal = qtd * custoEstoque;
+          detalhe = `${qtd} ${unidade} × R$ ${custoEstoque.toFixed(2)}`;
+        }
+
         return {
           nome: tpl?.name || compItem?.name || 'Item',
           qtd,
+          unidade,
           custo_estoque: custoEstoque,
           subtotal,
+          detalhe,
         };
       });
 
     const total = rows.reduce((s, r) => s + r.subtotal, 0);
     // eslint-disable-next-line no-console
-    console.log('[useCompositionPricing] Itens calculados (soma simples):', rows, '→ total:', total);
+    console.log('[useCompositionPricing] Breakdown por unidade:', rows, '→ total:', total);
     return { rows, total };
-  }, [compositionItems, fallbackCompanyItems, excludeOptionalIds]);
+  }, [compositionItems, fallbackCompanyItems, excludeOptionalIds, width, height]);
 
   const areaM2 = (width * height) / 1_000_000 || 1;
   const compositionCostSimpleTotal = simpleBreakdown.total;
