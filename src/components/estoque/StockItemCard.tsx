@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { StockItem } from '@/types/estoque';
+import { formatGlassName, isGlassUnit } from '@/utils/glassName';
+
 
 const itemTypeLabels: Record<string, string> = {
   glass: 'Vidro',
