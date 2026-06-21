@@ -145,7 +145,7 @@ async function syncOSReceivable(
   // Busca dados da OS para criar AR
   const { data: os } = await supabase
     .from('ordens_servico')
-    .select('id, os_number, customer_name, total_amount, paid_amount, quote_id, client_id, estimated_end')
+    .select('id, os_number, customer_name, total_amount, paid_amount, quote_id, estimated_end')
     .eq('id', ordemServicoId)
     .maybeSingle();
 
@@ -156,6 +156,17 @@ async function syncOSReceivable(
   const remaining = Math.max(0, total - paid);
   if (remaining <= 0) return; // nada a receber
 
+  // Recupera client_id a partir do quote (OS não tem client_id direto)
+  let clientId: string | null = null;
+  if (os.quote_id) {
+    const { data: q } = await supabase
+      .from('quotes')
+      .select('client_id')
+      .eq('id', os.quote_id)
+      .maybeSingle();
+    clientId = (q as any)?.client_id ?? null;
+  }
+
   const dueDate = os.estimated_end
     ? new Date(os.estimated_end).toISOString().split('T')[0]
     : new Date().toISOString().split('T')[0];
@@ -164,7 +175,7 @@ async function syncOSReceivable(
     company_id: companyId,
     ordem_servico_id: ordemServicoId,
     quote_id: os.quote_id || null,
-    client_id: os.client_id || null,
+    client_id: clientId,
     customer_name: os.customer_name || 'Cliente',
     description: `Faturamento OS #${String(os.os_number).padStart(4, '0')}`,
     total_amount: remaining,
