@@ -39,8 +39,8 @@ import { PaginationControls } from '@/components/common/PaginationControls';
 import { OSProductionBadge } from '@/components/ordens-servico/OSProductionBadge';
 import { OSCalendarView } from '@/components/ordens-servico/OSCalendarView';
 import { OSTodayView } from '@/components/ordens-servico/OSTodayView';
+import { RomaneioReviewDialog } from '@/components/ordens-servico/RomaneioReviewDialog';
 import { CuttingPlanCalculator } from '@/components/plano-corte/CuttingPlanCalculator';
-import { consumeOSMaterials } from '@/utils/checkGlassStock';
 import { releaseMaterialsForProduction } from '@/utils/generateMaterialConsumption';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 import { useOSCancellation } from '@/hooks/useOSCancellation';
@@ -99,6 +99,7 @@ export default function OrdensServico() {
   const [statusFilter, setStatusFilter] = useState<OSStatus | 'all' | 'overdue'>('in_progress');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [osToDelete, setOsToDelete] = useState<string | null>(null);
+  const [romaneioOsId, setRomaneioOsId] = useState<string | null>(null);
 
   // Fetch ordens de serviço
   const { data: ordens, isLoading } = useQuery({
@@ -153,11 +154,7 @@ export default function OrdensServico() {
       } else if (status === 'completed') {
         updates.actual_end = new Date().toISOString().split('T')[0];
         updates.current_stage = 'Finalizado';
-        
-        const consumeResult = await consumeOSMaterials(id);
-        if (!consumeResult.success) {
-          console.warn('Aviso ao consumir materiais:', consumeResult.error);
-        }
+        // A baixa de estoque agora é feita via RomaneioReviewDialog antes da chamada deste mutation.
       } else if (status === 'cancelled') {
         // Cancellation is now handled by the RPC which validates consumed status
         // and cancels both material_consumption and stock_reservations
@@ -575,7 +572,7 @@ export default function OrdensServico() {
                               size="sm"
                               variant="default"
                               className="flex-1 gap-1"
-                              onClick={() => updateStatusMutation.mutate({ id: os.id, status: 'completed' })}
+                              onClick={() => setRomaneioOsId(os.id)}
                             >
                               <CheckCircle className="w-3 h-3" />
                               Concluir Serviço
@@ -650,6 +647,20 @@ export default function OrdensServico() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {romaneioOsId && currentCompany?.id && (
+        <RomaneioReviewDialog
+          open={!!romaneioOsId}
+          onOpenChange={(v) => { if (!v) setRomaneioOsId(null); }}
+          ordemServicoId={romaneioOsId}
+          companyId={currentCompany.id}
+          onConfirmed={() => {
+            const id = romaneioOsId;
+            setRomaneioOsId(null);
+            if (id) updateStatusMutation.mutate({ id, status: 'completed' });
+          }}
+        />
+      )}
 
     </MainLayout>
   );
