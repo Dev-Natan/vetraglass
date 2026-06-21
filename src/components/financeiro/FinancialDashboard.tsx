@@ -83,18 +83,33 @@ export function FinancialDashboard() {
         .eq('status', 'pending')
         .lt('due_date', new Date().toISOString().split('T')[0]);
 
+      // production costs do mês (baixa de romaneio em stock_movements)
+      const { data: prodMovs } = await supabase
+        .from('stock_movements')
+        .select('quantity, unit_cost')
+        .eq('company_id', currentCompany.id)
+        .eq('type', 'saida')
+        .eq('category', 'consumo_producao')
+        .gte('created_at', monthStart)
+        .lte('created_at', monthEnd);
+
       const currentRevenue = sales?.reduce((sum, s) => sum + (Number(s.total_amount) || 0), 0) || 0;
       const currentExpenses = expenses?.reduce((sum, e) => sum + (Number(e.amount) || 0), 0) || 0;
       const prevRevenue = prevSales?.reduce((sum, s) => sum + (Number(s.total_amount) || 0), 0) || 0;
       const totalPendingReceivables = pendingReceivables?.reduce((sum, r) => sum + (Number(r.total_amount) || 0), 0) || 0;
       const totalOverdueExpenses = overdueExpenses?.reduce((sum, e) => sum + (Number(e.amount) || 0), 0) || 0;
+      const productionCosts = prodMovs?.reduce(
+        (sum, m) => sum + (Number(m.quantity) || 0) * (Number(m.unit_cost) || 0),
+        0,
+      ) || 0;
 
       const revenueChange = prevRevenue > 0 ? ((currentRevenue - prevRevenue) / prevRevenue) * 100 : 0;
 
       return {
         currentRevenue,
         currentExpenses,
-        netProfit: currentRevenue - currentExpenses,
+        productionCosts,
+        netProfit: currentRevenue - currentExpenses - productionCosts,
         revenueChange,
         totalPendingReceivables,
         totalOverdueExpenses
