@@ -108,6 +108,9 @@ export async function applyRomaneioBaixa({
       }
     }
 
+    // 3) Sincroniza accounts_receivable da OS (cria se não existir; mantém se já existir)
+    await syncOSReceivable(companyId, ordemServicoId, userId);
+
     return { success: true };
   } catch (error) {
     console.error('Erro ao aplicar baixa de romaneio:', error);
@@ -116,4 +119,58 @@ export async function applyRomaneioBaixa({
       error: error instanceof Error ? error.message : 'Erro ao aplicar baixa',
     };
   }
+}
+
+/**
+ * Garante que exista um accounts_receivable para a OS faturada.
+ * - Se não existir: cria com base no total_amount da OS (status 'pending').
+ * - Se existir: mantém status atual (controle de pagamento é externo).
+ */
+async function syncOSReceivable(
+  companyId: string,
+  ordemServicoId: string,
+  userId: string | undefined,
+): Promise<void> {
+  // Já existe AR para essa OS?
+  const { data: existing } = await supabase
+    .from('accounts_receivable')
+    .select('id, status')
+    .eq('ordem_servico_id', ordemServicoId)
+    .neq('status', 'cancelled')
+    .limit(1)
+    .maybeSingle();
+
+  if (existing) return; // já faturado / em cobrança
+
+  // Busca dados da OS para criar AR
+  const { data: os } = await supabase
+    .from('ordens_servico')
+    .select('id, os_number, customer_name, total_amount, paid_amount, quote_id, client_id, estimated_end')
+    .eq('id', ordemServicoId)
+    .maybeSingle();
+
+  if (!os) return;
+
+  const total = Number(os.total_amount || 0);
+  const paid = Number(os.paid_amount || 0);
+  const remaining = Math.max(0, total - paid);
+  if (remaining <= 0) return; // nada a receber
+
+  const dueDate = os.estimated_end
+    ? new Date(os.estimated_end).toISOString().split('T')[0]
+    : new Date().toISOString().split('T')[0];
+
+  await supabase.from('accounts_receivable').insert({
+    company_id: companyId,
+    ordem_servico_id: ordemServicoId,
+    quote_id: os.quote_id || null,
+    client_id: os.client_id || null,
+    customer_name: os.customer_name || 'Cliente',
+    description: `Faturamento OS #${String(os.os_number).padStart(4, '0')}`,
+    total_amount: remaining,
+    due_date: dueDate,
+    status: 'pending',
+    receivable_type: 'os_billing',
+    created_by: userId,
+  });
 }
