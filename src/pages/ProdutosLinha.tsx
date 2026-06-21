@@ -10,7 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
-import { EditProductPricingDialog } from '@/components/produtos/EditProductPricingDialog';
+import { ProductEditSheet } from '@/components/produtos/ProductEditSheet';
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
 import { useProductLowStockStatus } from '@/hooks/useProductLowStockStatus';
 
@@ -48,8 +48,8 @@ export default function ProdutosLinha() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showActive, setShowActive] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [editPricingDialogOpen, setEditPricingDialogOpen] = useState(false);
-  const [selectedProductForPricing, setSelectedProductForPricing] = useState<{ id: string; name: string; image_url?: string | null } | null>(null);
+  const [editSheetOpen, setEditSheetOpen] = useState(false);
+  const [selectedCompanyProductId, setSelectedCompanyProductId] = useState<string | null>(null);
 
   const currentLinha = linhaParam ? decodeURIComponent(linhaParam) : '';
   const { getStatus: getLowStockStatus } = useProductLowStockStatus(currentCompany?.id);
@@ -310,88 +310,41 @@ export default function ProdutosLinha() {
             filteredProducts.map((product) => {
               const lowStockStatus = getLowStockStatus(product.productTemplateId, product.companyProductId);
               return (
-                <div
+                <button
+                  type="button"
                   key={product.id + (product.productTemplateId || '')}
-                  className={`bg-card border rounded-lg p-4 flex flex-col gap-4 shadow-sm hover:shadow-md transition-shadow ${
+                  onClick={() => {
+                    if (product.companyProductId) {
+                      setSelectedCompanyProductId(product.companyProductId);
+                      setEditSheetOpen(true);
+                    } else if (product.productTemplateId) {
+                      quickActivateMutation.mutate(product.productTemplateId);
+                    }
+                  }}
+                  className={`text-left bg-card border rounded-lg p-4 flex items-center gap-4 shadow-sm hover:shadow-md hover:border-primary/40 hover:bg-accent/30 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                     lowStockStatus === 'zero' ? 'border-destructive/40 bg-destructive/5' :
                     lowStockStatus === 'low' ? 'border-amber-500/40 bg-amber-50/20' : ''
-                  }`}
+                  } ${!product.is_active ? 'opacity-70' : ''}`}
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center shrink-0 p-1">
-                      {product.image_url ? (
-                        <img 
-                          src={getImageUrl(product.image_url, product.is_custom) || ''} 
-                          alt={product.name}
-                          className="w-full h-full object-contain"
-                        />
-                      ) : (
-                        <span className="text-2xl">{getCategoryIcon(product.category)}</span>
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-semibold text-sky-700 uppercase text-sm line-clamp-2">{product.name}</h3>
-                      {product.is_custom && <Badge variant="secondary" className="mt-1 text-[10px] bg-purple-100 text-purple-700">Personalizado</Badge>}
-                      
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2 mt-auto">
-                    {product.is_active ? (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="flex-1"
-                          onClick={() => {
-                            if (product.companyProductId) {
-                              setSelectedProductForPricing({ id: product.companyProductId, name: product.name, image_url: product.image_url });
-                              setEditPricingDialogOpen(true);
-                            }
-                          }}
-                        >
-                          <DollarSign className="w-4 h-4 mr-1" />
-                          Preços
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="flex-1 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                          onClick={() => deactivateProductMutation.mutate({ id: product.productTemplateId || product.id, isCustom: product.is_custom })}
-                          disabled={deactivateProductMutation.isPending}
-                        >
-                          Ocultar
-                        </Button>
-                      </>
+                  <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center shrink-0 p-1">
+                    {product.image_url ? (
+                      <img
+                        src={getImageUrl(product.image_url, product.is_custom) || ''}
+                        alt={product.name}
+                        className="w-full h-full object-contain"
+                      />
                     ) : (
-                      <Button
-                        size="sm"
-                        className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                        onClick={() => {
-                          if (product.companyProductId) {
-                            reactivateProductMutation.mutate({
-                              id: product.is_custom ? product.companyProductId : (product.productTemplateId || product.companyProductId),
-                              isCustom: product.is_custom,
-                            });
-                          } else if (product.productTemplateId) {
-                            quickActivateMutation.mutate(product.productTemplateId);
-                          }
-                        }}
-                        disabled={quickActivateMutation.isPending || reactivateProductMutation.isPending}
-                      >
-                        {quickActivateMutation.isPending ? 'Ativando...' : 'Habilitar'}
-                      </Button>
+                      <span className="text-2xl">{getCategoryIcon(product.category)}</span>
                     )}
-                    <Button
-                      size="sm"
-                      className="bg-orange-500 hover:bg-orange-600 text-white"
-                      onClick={() => product.companyProductId && navigate(`/produtos/empresa/editar/${product.companyProductId}`)}
-                      disabled={!product.companyProductId}
-                    >
-                      Editar
-                    </Button>
                   </div>
-                </div>
+                  <div className="min-w-0 flex-1 flex flex-col justify-center gap-1">
+                    <h3 className="font-semibold text-sky-700 uppercase text-sm line-clamp-2">{product.name}</h3>
+                    <div className="flex flex-wrap gap-1">
+                      {product.is_custom && <Badge variant="secondary" className="text-[10px] bg-purple-100 text-purple-700">Personalizado</Badge>}
+                      {!product.is_active && <Badge variant="outline" className="text-[10px]">Inativo</Badge>}
+                    </div>
+                  </div>
+                </button>
               );
             })
           ) : (
@@ -403,12 +356,10 @@ export default function ProdutosLinha() {
         </div>
       </div>
 
-      <EditProductPricingDialog
-        open={editPricingDialogOpen}
-        onOpenChange={setEditPricingDialogOpen}
-        companyProductId={selectedProductForPricing?.id || ''}
-        productName={selectedProductForPricing?.name || ''}
-        productImageUrl={selectedProductForPricing?.image_url}
+      <ProductEditSheet
+        open={editSheetOpen}
+        onOpenChange={setEditSheetOpen}
+        companyProductId={selectedCompanyProductId}
       />
 
     </MainLayout>
