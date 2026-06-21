@@ -198,7 +198,7 @@ export function RomaneioReviewDialog({ open, onOpenChange, ordemServicoId, compa
             </div>
           ) : (
             <div className="rounded-md border">
-              <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-muted text-xs font-medium text-muted-foreground">
+              <div className="hidden sm:grid grid-cols-12 gap-2 px-3 py-2 bg-muted text-xs font-medium text-muted-foreground">
                 <div className="col-span-5">Insumo</div>
                 <div className="col-span-2">Unid.</div>
                 <div className="col-span-2">Qtd</div>
@@ -206,26 +206,33 @@ export function RomaneioReviewDialog({ open, onOpenChange, ordemServicoId, compa
                 <div className="col-span-1" />
               </div>
               {lines.map((l) => (
-                <div key={l.key} className="grid grid-cols-12 gap-2 px-3 py-2 items-center border-t">
-                  <div className="col-span-5 text-sm">
+                <div
+                  key={l.key}
+                  className="grid grid-cols-2 sm:grid-cols-12 gap-2 px-3 py-2 sm:items-center border-t"
+                >
+                  <div className="col-span-2 sm:col-span-5 text-sm">
                     <div className="font-medium">{l.itemName}</div>
-                    {!l.consumptionId && <Badge variant="secondary" className="mt-1 text-[10px]">Extra</Badge>}
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-xs text-muted-foreground sm:hidden">{l.unit}</span>
+                      {!l.consumptionId && <Badge variant="secondary" className="text-[10px]">Extra</Badge>}
+                    </div>
                   </div>
-                  <div className="col-span-2 text-xs text-muted-foreground">{l.unit}</div>
-                  <div className="col-span-2">
+                  <div className="hidden sm:block sm:col-span-2 text-xs text-muted-foreground">{l.unit}</div>
+                  <div className="col-span-1 sm:col-span-2">
                     <Input
                       type="number"
                       step="0.01"
                       min="0"
+                      inputMode="decimal"
                       value={l.quantity}
                       onChange={(e) => updateLine(l.key, { quantity: Number(e.target.value) || 0 })}
                       className="h-8"
                     />
                   </div>
-                  <div className="col-span-2 text-right text-sm">
+                  <div className="col-span-1 sm:col-span-2 text-right text-sm self-center">
                     R$ {(l.quantity * l.unitCost).toFixed(2)}
                   </div>
-                  <div className="col-span-1 flex justify-end gap-1">
+                  <div className="col-span-2 sm:col-span-1 flex justify-end gap-1">
                     <StockPicker
                       options={stockCatalog || []}
                       onPick={(opt) => swapLineItem(l.key, opt)}
