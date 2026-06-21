@@ -373,7 +373,8 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
 
   // Determine final price based on pricing type
   const finalPricePerSqm = (() => {
-    if (productUsesGlass && hasGlass && glassPricePerSqm > 0) {
+    // Vidro do catálogo OU do estoque (cor+espessura selecionadas)
+    if (hasGlass && glassPricePerSqm > 0) {
       return glassPricePerSqm;
     }
     if (productUsesAluminum && aluminumPricePerSqm > 0) {
@@ -381,6 +382,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     }
     return productBasePricePerSqm;
   })();
+
   
   const basePrice = customPrice !== null ? customPrice : finalPricePerSqm;
 
