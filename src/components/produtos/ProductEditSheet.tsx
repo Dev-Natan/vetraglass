@@ -43,6 +43,7 @@ export function ProductEditSheet({ open, onOpenChange, companyProductId }: Produ
   const [costPerSqm, setCostPerSqm] = useState('');
   const [pricePerSqm, setPricePerSqm] = useState('');
   const [pricingType, setPricingType] = useState<'fixed' | 'composition'>('fixed');
+  const [marginPct, setMarginPct] = useState('50');
 
   const { data: product, isLoading } = useQuery({
     queryKey: ['company-product-edit', companyProductId],
