@@ -15,7 +15,8 @@ import { Separator } from '@/components/ui/separator';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ImageUploadField } from '@/components/common/ImageUploadField';
-import { Loader2, DollarSign, Calculator, Settings2, FileCode2, ExternalLink } from 'lucide-react';
+import { useCompositionPricing } from '@/hooks/useCompositionPricing';
+import { Loader2, DollarSign, Calculator, Settings2, FileCode2, ExternalLink, Lock, Info } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ProductEditSheetProps {
