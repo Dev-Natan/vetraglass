@@ -220,8 +220,6 @@ export function useCompositionPricing({
       });
 
     const total = rows.reduce((s, r) => s + r.subtotal, 0);
-    // eslint-disable-next-line no-console
-    console.log('[useCompositionPricing] Breakdown por unidade:', rows, '→ total:', total);
     return { rows, total };
   }, [compositionItems, fallbackCompanyItems, excludeOptionalIds, width, height]);
 
