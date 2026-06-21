@@ -89,7 +89,6 @@ export function ProductEditSheet({ open, onOpenChange, companyProductId }: Produ
     if (pricingType !== 'composition' || !composition.isReady || !composition.hasComposition) return;
     // Prefere a soma simples (Σ qtd × custo do estoque) — auditável e previsível
     const autoCost = composition.compositionCostSimplePerSqm || composition.compositionCostPerSqm || 0;
-    console.log('[ProductEditSheet] Auto-cost por m² (composição):', autoCost, 'breakdown:', composition.simpleBreakdown);
     setCostPerSqm(autoCost.toFixed(2));
     const m = parseFloat(marginPct) || 0;
     const suggested = autoCost * (1 + m / 100);
