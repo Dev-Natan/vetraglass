@@ -62,7 +62,10 @@ export const defaultPricingData: ItemPricingData = {
   larguraMm: '',
   comprimentoLinearMm: '',
   precoUnitario: '',
+  thicknessMm: '',
+  color: '',
 };
+
 
 function safeNum(v: string): number {
   if (!v) return 0;
