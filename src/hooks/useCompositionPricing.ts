@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { calculatePricing, DEFAULT_PRICING_POLICY, type CompositionItemInput, type PricingInput } from '@/utils/pricingEngine';
+import { formatGlassName } from '@/utils/glassName';
+
 
 interface UseCompositionPricingOptions {
   companyProductId?: string;
@@ -45,7 +47,8 @@ export function useCompositionPricing({
         .select(`
           id, quantity_formula, width_formula, height_formula, pieces_quantity, cut_angle, is_optional, section, side, calculation_type, applies_to,
           item_template:item_templates(id, name, type, unit, bar_length_mm, weight_per_bar, weight_per_meter),
-          company_item:company_items(id, name, type, unit, cost, cost_per_bar, cost_per_kg, cost_per_meter, bar_length_mm, weight_kg, weight_per_meter, altura_mm, largura_mm, comprimento_linear_mm, preco_unitario)
+          company_item:company_items(id, name, type, unit, cost, cost_per_bar, cost_per_kg, cost_per_meter, bar_length_mm, weight_kg, weight_per_meter, altura_mm, largura_mm, comprimento_linear_mm, preco_unitario, thickness_mm, glass_color)
+
         `)
         .eq('company_product_id', companyProductId)
         .order('sort_order');
@@ -70,7 +73,7 @@ export function useCompositionPricing({
       if (!currentCompany?.id || missingTemplateIds.length === 0) return [];
       const { data } = await supabase
         .from('company_items')
-        .select('id, item_template_id, unit, cost, cost_per_bar, cost_per_kg, cost_per_meter, bar_length_mm, weight_kg, weight_per_meter, altura_mm, largura_mm, comprimento_linear_mm, preco_unitario')
+        .select('id, name, item_template_id, unit, cost, cost_per_bar, cost_per_kg, cost_per_meter, bar_length_mm, weight_kg, weight_per_meter, altura_mm, largura_mm, comprimento_linear_mm, preco_unitario, thickness_mm, glass_color')
         .eq('company_id', currentCompany.id)
         .in('item_template_id', missingTemplateIds);
       return data || [];
@@ -200,14 +203,20 @@ export function useCompositionPricing({
           detalhe = `${qtd} ${unidade} × R$ ${custoEstoque.toFixed(2)}`;
         }
 
+        const baseName = tpl?.name || compItem?.name || 'Item';
+        const nome = unidade === 'm²'
+          ? formatGlassName(baseName, compItem?.glass_color, compItem?.thickness_mm)
+          : baseName;
+
         return {
-          nome: tpl?.name || compItem?.name || 'Item',
+          nome,
           qtd,
           unidade,
           custo_estoque: custoEstoque,
           subtotal,
           detalhe,
         };
+
       });
 
     const total = rows.reduce((s, r) => s + r.subtotal, 0);

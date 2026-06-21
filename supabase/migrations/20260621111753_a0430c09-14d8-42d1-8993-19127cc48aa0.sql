@@ -1,0 +1,1 @@
+ALTER TABLE public.company_items ADD COLUMN IF NOT EXISTS thickness_mm NUMERIC;

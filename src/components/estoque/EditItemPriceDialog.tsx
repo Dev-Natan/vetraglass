@@ -259,7 +259,10 @@ export function EditItemPriceDialog({
         larguraMm: (companyItem as any).largura_mm?.toString() ?? '',
         comprimentoLinearMm: (companyItem as any).comprimento_linear_mm?.toString() ?? companyItem.bar_length_mm?.toString() ?? '',
         precoUnitario: (companyItem as any).preco_unitario?.toString() ?? companyItem.cost?.toString() ?? '',
+        thicknessMm: (companyItem as any).thickness_mm?.toString() ?? '',
+        color: (companyItem as any).glass_color?.toString() ?? '',
       });
+
       setItemTypeLocal(companyItem.type || 'profile');
       setLinhaLocal(companyItem.linha || '');
     } else if (existingPrice) {
@@ -371,6 +374,9 @@ export function EditItemPriceDialog({
         largura_mm: pNum(pricingData.larguraMm),
         comprimento_linear_mm: pNum(pricingData.comprimentoLinearMm) ?? pNum(pricingData.barLengthMm),
         preco_unitario: pNum(pricingData.precoUnitario) ?? pNum(pricingData.costPerUnit),
+        thickness_mm: pNum(pricingData.thicknessMm),
+        glass_color: pricingData.color?.trim() || null,
+
         image_url: currentImageUrl || undefined,
         is_custom: isCustomItem,
         is_active: true,

@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { StockItem } from '@/types/estoque';
+import { formatGlassName, isGlassUnit } from '@/utils/glassName';
+
 
 const itemTypeLabels: Record<string, string> = {
   glass: 'Vidro',
@@ -106,7 +108,17 @@ export const StockItemCard = memo(function StockItemCard({
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 min-w-0 flex-wrap">
-            <p className="font-medium truncate">{item.item_template?.name ?? item.company_item?.name ?? 'Item'}</p>
+            <p className="font-medium truncate">{(() => {
+              const ci: any = item.company_item;
+              const baseName = item.item_template?.name ?? ci?.name ?? 'Item';
+              const unit = item.item_template?.unit || ci?.unit;
+              const type = item.item_template?.type || ci?.type;
+              if (isGlassUnit(unit) || type === 'glass') {
+                return formatGlassName(baseName, ci?.glass_color, ci?.thickness_mm);
+              }
+              return baseName;
+            })()}</p>
+
             <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground shrink-0">
               {itemTypeLabels[item.item_template?.type || item.company_item?.type || ''] || item.item_template?.type || item.company_item?.type}
             </span>

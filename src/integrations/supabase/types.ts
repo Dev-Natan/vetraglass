@@ -1228,6 +1228,7 @@ export type Database = {
           sale_price_per_kg: number | null
           sale_price_per_meter: number | null
           specifications: Json | null
+          thickness_mm: number | null
           type: string
           unit: string
           updated_at: string
@@ -1270,6 +1271,7 @@ export type Database = {
           sale_price_per_kg?: number | null
           sale_price_per_meter?: number | null
           specifications?: Json | null
+          thickness_mm?: number | null
           type?: string
           unit?: string
           updated_at?: string
@@ -1312,6 +1314,7 @@ export type Database = {
           sale_price_per_kg?: number | null
           sale_price_per_meter?: number | null
           specifications?: Json | null
+          thickness_mm?: number | null
           type?: string
           unit?: string
           updated_at?: string

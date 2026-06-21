@@ -114,6 +114,9 @@ export function CreateCustomItemContent({ onClose }: CreateCustomItemContentProp
           largura_mm: pNum(pricingData.larguraMm),
           comprimento_linear_mm: pNum(pricingData.comprimentoLinearMm) ?? pNum(pricingData.barLengthMm),
           preco_unitario: pNum(pricingData.precoUnitario) ?? pNum(pricingData.costPerUnit),
+          thickness_mm: pNum(pricingData.thicknessMm),
+          glass_color: pricingData.color?.trim() || null,
+
           ncm: fiscalData.ncm || null, cfop_venda: fiscalData.cfop_venda || null,
           cfop_venda_interestadual: fiscalData.cfop_venda_interestadual || null,
           cest: fiscalData.cest || null, origem: fiscalData.origem || null,

@@ -1,8 +1,11 @@
 import { useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Ruler, Weight, Calculator, TrendingUp, Layers, Box } from 'lucide-react';
+import { Ruler, Weight, Calculator, TrendingUp, Layers, Box, Palette } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { GLASS_THICKNESS_PRESETS, GLASS_COLOR_PRESETS } from '@/utils/glassName';
+
 
 export interface ItemPricingData {
   barLengthMm: string;
@@ -26,6 +29,10 @@ export interface ItemPricingData {
   larguraMm: string;          // m² (chapa)
   comprimentoLinearMm: string; // ml (barra)
   precoUnitario: string;       // un / kit
+  // ── Atributos específicos de vidro (m²) ──
+  thicknessMm: string;         // espessura em mm
+  color: string;               // cor (Incolor, Verde, ...)
+
 }
 
 interface ItemPricingFieldsProps {
@@ -55,7 +62,10 @@ export const defaultPricingData: ItemPricingData = {
   larguraMm: '',
   comprimentoLinearMm: '',
   precoUnitario: '',
+  thicknessMm: '',
+  color: '',
 };
+
 
 function safeNum(v: string): number {
   if (!v) return 0;
@@ -284,8 +294,59 @@ export function ItemPricingFields({ data, onChange, itemType = 'profile', unit }
               </div>
             </div>
           </div>
+          {/* Atributos do Vidro: Espessura + Cor */}
           <div className="space-y-1.5">
             <div className="flex items-center gap-1.5">
+              <Palette className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs font-medium text-muted-foreground">Atributos do Vidro</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Espessura (mm)</Label>
+                <div className="flex gap-1">
+                  <Select
+                    value={GLASS_THICKNESS_PRESETS.includes(data.thicknessMm) ? data.thicknessMm : (data.thicknessMm ? '__custom__' : '')}
+                    onValueChange={(v) => update('thicknessMm', v === '__custom__' ? (data.thicknessMm && !GLASS_THICKNESS_PRESETS.includes(data.thicknessMm) ? data.thicknessMm : '') : v)}
+                  >
+                    <SelectTrigger className="h-8 text-sm flex-1"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent>
+                      {GLASS_THICKNESS_PRESETS.map((t) => (
+                        <SelectItem key={t} value={t}>{t}mm</SelectItem>
+                      ))}
+                      <SelectItem value="__custom__">Outro…</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {(!GLASS_THICKNESS_PRESETS.includes(data.thicknessMm) && data.thicknessMm !== '') && (
+                    <Input type="number" min="0" step="0.1" value={data.thicknessMm} onChange={(e) => update('thicknessMm', e.target.value)} placeholder="mm" className="h-8 text-sm w-20" />
+                  )}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Cor</Label>
+                <div className="flex gap-1">
+                  <Select
+                    value={GLASS_COLOR_PRESETS.includes(data.color) ? data.color : (data.color ? '__custom__' : '')}
+                    onValueChange={(v) => update('color', v === '__custom__' ? (data.color && !GLASS_COLOR_PRESETS.includes(data.color) ? data.color : '') : v)}
+                  >
+                    <SelectTrigger className="h-8 text-sm flex-1"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent>
+                      {GLASS_COLOR_PRESETS.map((c) => (
+                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      ))}
+                      <SelectItem value="__custom__">Outra…</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {(!GLASS_COLOR_PRESETS.includes(data.color) && data.color !== '') && (
+                    <Input value={data.color} onChange={(e) => update('color', e.target.value)} placeholder="Cor" className="h-8 text-sm w-24" />
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5">
+
               <Layers className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-xs font-medium text-muted-foreground">Preço por Metro Quadrado</span>
             </div>
