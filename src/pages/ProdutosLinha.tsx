@@ -356,12 +356,10 @@ export default function ProdutosLinha() {
         </div>
       </div>
 
-      <EditProductPricingDialog
-        open={editPricingDialogOpen}
-        onOpenChange={setEditPricingDialogOpen}
-        companyProductId={selectedProductForPricing?.id || ''}
-        productName={selectedProductForPricing?.name || ''}
-        productImageUrl={selectedProductForPricing?.image_url}
+      <ProductEditSheet
+        open={editSheetOpen}
+        onOpenChange={setEditSheetOpen}
+        companyProductId={selectedCompanyProductId}
       />
 
     </MainLayout>
