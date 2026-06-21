@@ -179,7 +179,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           return;
         }
-        
+
+        // SIGNED_IN / USER_UPDATED disparam ao retomar foco da aba. Se o usuário
+        // já está carregado, apenas sincronizamos sessão sem refazer fetch (evita
+        // setLoading(true) que desmontaria formulários em edição).
+        if (
+          (event === 'SIGNED_IN' || event === 'USER_UPDATED') &&
+          newUserId &&
+          currentUserId === newUserId
+        ) {
+          setSession(newSession);
+          setUser(newSession?.user ?? null);
+          return;
+        }
+
         handleSession(newSession, `onAuthStateChange:${event}`);
       }
     );
