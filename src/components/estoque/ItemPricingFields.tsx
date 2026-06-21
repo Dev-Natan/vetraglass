@@ -107,6 +107,11 @@ export function ItemPricingFields({ data, onChange, itemType = 'profile', unit }
     const mult = margin > 0 ? 1 + margin / 100 : 1;
 
     if (isProfile) {
+      // Sincroniza comprimento linear (novo) → barLengthMm (legado)
+      const compLinear = safeNum(data.comprimentoLinearMm);
+      if (compLinear > 0 && safeNum(data.barLengthMm) !== compLinear) {
+        updates.barLengthMm = String(compLinear);
+      }
       // Weight per meter
       if (weightKg > 0 && barLengthM > 0) {
         updates.weightPerMeter = (weightKg / barLengthM).toFixed(3);
@@ -124,7 +129,6 @@ export function ItemPricingFields({ data, onChange, itemType = 'profile', unit }
       if (derivedCostPerBar > 0 && barLengthM > 0) {
         updates.costPerMeter = (derivedCostPerBar / barLengthM).toFixed(2);
       }
-      // Sale prices
       if (margin > 0) {
         const cBar = safeNum(updates.costPerBar ?? data.costPerBar);
         const cKg = safeNum(updates.costPerKg ?? data.costPerKg);
@@ -138,21 +142,18 @@ export function ItemPricingFields({ data, onChange, itemType = 'profile', unit }
       if (costSqm > 0 && margin > 0) {
         updates.salePricePerSqm = (costSqm * mult).toFixed(2);
       }
-      // Sync to costPerMeter for DB compatibility
       if (costSqm > 0) {
         updates.costPerMeter = costSqm.toFixed(2);
         updates.salePricePerMeter = (costSqm * mult).toFixed(2);
       }
     } else {
-      // Unit-based
-      const costUnit = safeNum(data.costPerUnit);
-      if (costUnit > 0 && margin > 0) {
-        updates.salePricePerUnit = (costUnit * mult).toFixed(2);
-      }
-      // Sync to costPerBar/salePrice for DB compatibility
-      if (costUnit > 0) {
-        updates.costPerBar = costUnit.toFixed(2);
-        updates.salePricePerBar = (costUnit * mult).toFixed(2);
+      // Unit-based — usa precoUnitario (novo) como fonte primária
+      const precoUnit = safeNum(data.precoUnitario) || safeNum(data.costPerUnit);
+      if (precoUnit > 0) {
+        if (data.costPerUnit !== precoUnit.toFixed(2)) updates.costPerUnit = precoUnit.toFixed(2);
+        if (margin > 0) updates.salePricePerUnit = (precoUnit * mult).toFixed(2);
+        updates.costPerBar = precoUnit.toFixed(2);
+        updates.salePricePerBar = (precoUnit * mult).toFixed(2);
       }
     }
 
@@ -164,7 +165,7 @@ export function ItemPricingFields({ data, onChange, itemType = 'profile', unit }
       onChange({ ...data, ...updates });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data.barLengthMm, data.weightKg, data.costPerBar, data.costPerKg, data.saleMarginPercent, data.costPerUnit, data.costPerSqm, itemType]);
+  }, [data.barLengthMm, data.weightKg, data.costPerBar, data.costPerKg, data.saleMarginPercent, data.costPerUnit, data.costPerSqm, data.precoUnitario, data.comprimentoLinearMm, isProfile, isGlass, isUnit]);
 
   const update = (field: keyof ItemPricingData, value: string) => {
     onChange({ ...data, [field]: value });
