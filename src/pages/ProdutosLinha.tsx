@@ -52,7 +52,7 @@ export default function ProdutosLinha() {
   const [selectedCompanyProductId, setSelectedCompanyProductId] = useState<string | null>(null);
 
   const currentLinha = linhaParam ? decodeURIComponent(linhaParam) : '';
-  const { getStatus: getLowStockStatus } = useProductLowStockStatus(currentCompany?.id);
+  
 
   // Fetch ALL product templates for this linha
   const { data: products, isLoading } = useQuery({
