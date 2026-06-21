@@ -1,8 +1,11 @@
 import { useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Ruler, Weight, Calculator, TrendingUp, Layers, Box } from 'lucide-react';
+import { Ruler, Weight, Calculator, TrendingUp, Layers, Box, Palette } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { GLASS_THICKNESS_PRESETS, GLASS_COLOR_PRESETS } from '@/utils/glassName';
+
 
 export interface ItemPricingData {
   barLengthMm: string;
