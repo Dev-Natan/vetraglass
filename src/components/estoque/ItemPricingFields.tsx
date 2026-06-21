@@ -261,48 +261,72 @@ export function ItemPricingFields({ data, onChange, itemType = 'profile', unit }
         </>
       )}
 
-      {/* ═══ GLASS FIELDS ═══ */}
+      {/* ═══ GLASS / m² FIELDS ═══ */}
       {isGlass && (
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-1.5">
-            <Layers className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-xs font-medium text-muted-foreground">Preço por Metro Quadrado</span>
+        <>
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <Ruler className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs font-medium text-muted-foreground">Dimensões da Chapa (referência)</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Altura (mm)</Label>
+                <Input type="number" min="0" step="1" value={data.alturaMm} onChange={(e) => update('alturaMm', e.target.value)} placeholder="Ex: 2200" className="h-8 text-sm" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Largura (mm)</Label>
+                <Input type="number" min="0" step="1" value={data.larguraMm} onChange={(e) => update('larguraMm', e.target.value)} placeholder="Ex: 3210" className="h-8 text-sm" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Área (m²)</Label>
+                <Input type="number" readOnly value={((safeNum(data.alturaMm) * safeNum(data.larguraMm)) / 1_000_000 || 0).toFixed(3)} className="h-8 text-sm bg-muted/50" />
+              </div>
+            </div>
           </div>
-          <div className="grid grid-cols-3 gap-2">
-            <div className="space-y-1">
-              <Label className="text-xs">Custo por m² (R$)</Label>
-              <Input type="number" min="0" step="0.01" value={data.costPerSqm} onChange={(e) => update('costPerSqm', e.target.value)} placeholder="0,00" className="h-8 text-sm" />
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <Layers className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs font-medium text-muted-foreground">Preço por Metro Quadrado</span>
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Margem (%)</Label>
-              <Input type="number" min="0" step="0.1" value={data.saleMarginPercent} onChange={(e) => update('saleMarginPercent', e.target.value)} placeholder="30" className="h-8 text-sm" />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Venda/m² (R$)</Label>
-              <Input type="number" readOnly value={data.salePricePerSqm} className="h-8 text-sm bg-muted/50" placeholder="Auto" />
+            <div className="grid grid-cols-3 gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Custo por m² (R$)</Label>
+                <Input type="number" min="0" step="0.01" value={data.costPerSqm} onChange={(e) => update('costPerSqm', e.target.value)} placeholder="0,00" className="h-8 text-sm" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Margem (%)</Label>
+                <Input type="number" min="0" step="0.1" value={data.saleMarginPercent} onChange={(e) => update('saleMarginPercent', e.target.value)} placeholder="30" className="h-8 text-sm" />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Venda/m² (R$)</Label>
+                <Input type="number" readOnly value={data.salePricePerSqm} className="h-8 text-sm bg-muted/50" placeholder="Auto" />
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
 
-      {/* ═══ UNIT-BASED FIELDS (accessory, component, service) ═══ */}
+      {/* ═══ UNIT / KIT FIELDS ═══ */}
       {isUnit && (
         <div className="space-y-1.5">
           <div className="flex items-center gap-1.5">
             <Box className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-xs font-medium text-muted-foreground">Preço por Unidade</span>
+            <span className="text-xs font-medium text-muted-foreground">
+              {group === 'kit' ? 'Preço por Kit' : 'Preço por Unidade'}
+            </span>
           </div>
           <div className="grid grid-cols-3 gap-2">
             <div className="space-y-1">
-              <Label className="text-xs">Custo Unitário (R$)</Label>
-              <Input type="number" min="0" step="0.01" value={data.costPerUnit} onChange={(e) => update('costPerUnit', e.target.value)} placeholder="0,00" className="h-8 text-sm" />
+              <Label className="text-xs">Valor por {group === 'kit' ? 'Kit' : 'Unidade'} (R$)</Label>
+              <Input type="number" min="0" step="0.01" value={data.precoUnitario || data.costPerUnit} onChange={(e) => update('precoUnitario', e.target.value)} placeholder="0,00" className="h-8 text-sm" />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Margem (%)</Label>
               <Input type="number" min="0" step="0.1" value={data.saleMarginPercent} onChange={(e) => update('saleMarginPercent', e.target.value)} placeholder="30" className="h-8 text-sm" />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Venda Unitária (R$)</Label>
+              <Label className="text-xs text-muted-foreground">Venda {group === 'kit' ? 'Kit' : 'Unitária'} (R$)</Label>
               <Input type="number" readOnly value={data.salePricePerUnit} className="h-8 text-sm bg-muted/50" placeholder="Auto" />
             </div>
           </div>
