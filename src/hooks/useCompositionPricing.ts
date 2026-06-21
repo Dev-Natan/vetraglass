@@ -45,7 +45,7 @@ export function useCompositionPricing({
         .select(`
           id, quantity_formula, width_formula, height_formula, pieces_quantity, cut_angle, is_optional, section, side, calculation_type, applies_to,
           item_template:item_templates(id, name, type, unit, bar_length_mm, weight_per_bar, weight_per_meter),
-          company_item:company_items(id, name, type, unit, cost, cost_per_bar, cost_per_kg, cost_per_meter, bar_length_mm, weight_kg, weight_per_meter)
+          company_item:company_items(id, name, type, unit, cost, cost_per_bar, cost_per_kg, cost_per_meter, bar_length_mm, weight_kg, weight_per_meter, altura_mm, largura_mm, comprimento_linear_mm, preco_unitario)
         `)
         .eq('company_product_id', companyProductId)
         .order('sort_order');
