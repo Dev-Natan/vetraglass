@@ -194,7 +194,8 @@ export function useCompositionPricing({
           subtotal = linearM * custoEstoque * qtd;
           detalhe = `${linearM.toFixed(2)} m × R$ ${custoEstoque.toFixed(2)} × ${qtd}`;
         } else {
-          custoEstoque = num(compItem?.cost) || num(compItem?.cost_per_bar);
+          // un / kit — prioriza coluna explícita preco_unitario
+          custoEstoque = num(compItem?.preco_unitario) || num(compItem?.cost) || num(compItem?.cost_per_bar);
           subtotal = qtd * custoEstoque;
           detalhe = `${qtd} ${unidade} × R$ ${custoEstoque.toFixed(2)}`;
         }
