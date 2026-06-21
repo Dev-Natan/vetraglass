@@ -427,7 +427,7 @@ export default function ProductTemplates() {
     const detected = name ? linhas.find(l => name.includes(l.toLowerCase())) : null;
     setLinhaFilter(detected || '__all__');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDialogOpen, dialogTab, compositionActiveTab, selectedTemplate?.id, sortedItemTemplates?.length]);
+  }, [isDialogOpen, dialogTab, compositionActiveTab, selectedTemplate?.id, itemTemplates?.length]);
 
   const filteredTemplates = templates?.filter((template) => {
     const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
