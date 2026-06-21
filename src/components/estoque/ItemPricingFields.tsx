@@ -197,8 +197,8 @@ export function ItemPricingFields({ data, onChange, itemType = 'profile', unit }
             </div>
             <div className="grid grid-cols-3 gap-2">
               <div className="space-y-1">
-                <Label className="text-xs">Tamanho da Barra (mm)</Label>
-                <Input type="number" min="0" step="1" value={data.barLengthMm} onChange={(e) => update('barLengthMm', e.target.value)} placeholder="Ex: 6000" className="h-8 text-sm" />
+                <Label className="text-xs">Comprimento da Barra (mm)</Label>
+                <Input type="number" min="0" step="1" value={data.comprimentoLinearMm || data.barLengthMm} onChange={(e) => onChange({ ...data, comprimentoLinearMm: e.target.value, barLengthMm: e.target.value })} placeholder="Ex: 6000" className="h-8 text-sm" />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs flex items-center gap-1"><Weight className="h-3 w-3" /> Peso da Barra (Kg)</Label>
