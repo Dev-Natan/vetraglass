@@ -486,7 +486,18 @@ export default function ProductTemplates() {
   const getItemsByTypeForAdd = (tabValue: string) => {
     const currentTab = itemTypeTabs.find(t => t.value === tabValue);
     const dbType = currentTab?.dbType;
-    return sortedItemTemplates?.filter((item) => item.type === dbType) || [];
+    const base = sortedItemTemplates?.filter((item) => item.type === dbType) || [];
+    if (!linhaFilter || linhaFilter === "__all__") return base;
+    return base.filter((item) => item.linha === linhaFilter);
+  };
+
+  const getLinhasForAddTab = (tabValue: string) => {
+    const currentTab = itemTypeTabs.find(t => t.value === tabValue);
+    const dbType = currentTab?.dbType;
+    const base = sortedItemTemplates?.filter((item) => item.type === dbType) || [];
+    const set = new Set<string>();
+    base.forEach((i: any) => { if (i.linha) set.add(i.linha); });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
   };
 
   const getCompositionItemsByType = (tabValue: string) => {
