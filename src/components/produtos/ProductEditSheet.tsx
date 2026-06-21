@@ -124,6 +124,7 @@ export function ProductEditSheet({ open, onOpenChange, companyProductId }: Produ
           cost_per_sqm: parseFloat(costPerSqm) || 0,
           price_per_sqm: parseFloat(pricePerSqm) || 0,
           pricing_type: pricingType,
+          margin_percent: parseFloat(marginPct) || 0,
           updated_at: new Date().toISOString(),
         } as any)
         .eq('id', companyProductId!);
@@ -136,6 +137,9 @@ export function ProductEditSheet({ open, onOpenChange, companyProductId }: Produ
     },
     onError: (e: any) => toast.error('Erro ao salvar', { description: e.message }),
   });
+
+  const isCompositionMode = pricingType === 'composition';
+  const compositionReady = composition.isReady && composition.hasComposition;
 
   const margin = (() => {
     const p = parseFloat(pricePerSqm) || 0;
