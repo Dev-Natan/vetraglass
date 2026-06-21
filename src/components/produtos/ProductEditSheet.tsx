@@ -75,10 +75,11 @@ export function ProductEditSheet({ open, onOpenChange, companyProductId }: Produ
   }, [product, open]);
 
   // Calcula custo automático a partir da composição × estoque da empresa (custo unitário atual)
+  // Tamanho-padrão de teste: box 1,20 × 1,90 m (em mm)
   const composition = useCompositionPricing({
     companyProductId: companyProductId || undefined,
-    width: 1000,
-    height: 1000,
+    width: 1200,
+    height: 1900,
     quantity: 1,
     enabled: open && pricingType === 'composition' && !!companyProductId,
   });
