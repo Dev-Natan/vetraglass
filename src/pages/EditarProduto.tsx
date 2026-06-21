@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { resolveImageUrl } from '@/utils/imageUrl';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -128,6 +128,7 @@ export default function EditarProduto() {
   const [glassName, setGlassName] = useState('');
   const [side, setSide] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [linhaFilter, setLinhaFilter] = useState<string>('__all__');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -305,6 +306,37 @@ export default function EditarProduto() {
       return items;
     },
   });
+
+  // Linhas únicas disponíveis nos itens (para o filtro)
+  const availableLinhas = useMemo(() => {
+    if (!availableItems) return [] as string[];
+    const set = new Set<string>();
+    availableItems.forEach((i: any) => { if (i.linha) set.add(i.linha); });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [availableItems]);
+
+  // Detecta a linha do produto: campo explícito ou pelo nome
+  const detectLinhaFromProduct = (): string | null => {
+    const explicit = (product as any)?.linha;
+    if (explicit) return explicit;
+    const name = ((product as any)?.name || '').toLowerCase();
+    if (!name || !availableLinhas.length) return null;
+    return availableLinhas.find(l => name.includes(l.toLowerCase())) || null;
+  };
+
+  // Auto-preenche o filtro ao abrir o diálogo / trocar de aba
+  useEffect(() => {
+    if (!isAddItemDialogOpen) return;
+    const detected = detectLinhaFromProduct();
+    setLinhaFilter(detected && availableLinhas.includes(detected) ? detected : '__all__');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAddItemDialogOpen, activeTab, availableLinhas.length, (product as any)?.id]);
+
+  const filteredAvailableItems = useMemo(() => {
+    if (!availableItems) return [] as any[];
+    if (!linhaFilter || linhaFilter === '__all__') return availableItems;
+    return availableItems.filter((i: any) => i.linha === linhaFilter);
+  }, [availableItems, linhaFilter]);
 
   // Update form when product loads
   useEffect(() => {
@@ -1042,6 +1074,29 @@ export default function EditarProduto() {
                 ))}
               </div>
               
+              {/* Filtro por Linha */}
+              {availableLinhas.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Filtrar por Linha</Label>
+                  <Select value={linhaFilter} onValueChange={setLinhaFilter}>
+                    <SelectTrigger className="h-10">
+                      <SelectValue placeholder="Todas as linhas" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background border shadow-lg z-50 max-h-[260px]">
+                      <SelectItem value="__all__">Todas as linhas</SelectItem>
+                      {availableLinhas.map((l) => (
+                        <SelectItem key={l} value={l}>{l}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {linhaFilter !== '__all__' && (
+                    <p className="text-[11px] text-muted-foreground">
+                      Mostrando {filteredAvailableItems.length} item(ns) da linha <strong>{linhaFilter}</strong>.
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Item selection with search */}
               <div className="space-y-2">
                 <Label className="text-sm font-medium">
@@ -1057,9 +1112,9 @@ export default function EditarProduto() {
                     <SelectValue placeholder="Clique para escolher um item" />
                   </SelectTrigger>
                   <SelectContent className="bg-background border shadow-lg z-50 max-h-[400px]">
-                    {availableItems?.map((item, index) => {
+                    {filteredAvailableItems?.map((item, index) => {
                       const isProductLinha = item.linha === product?.linha;
-                      const prevItem = index > 0 ? availableItems[index - 1] : null;
+                      const prevItem = index > 0 ? filteredAvailableItems[index - 1] : null;
                       const showSeparator = prevItem && prevItem.linha !== item.linha;
                       const isFirstOfProductLinha = isProductLinha && (!prevItem || prevItem.linha !== item.linha);
                       
