@@ -311,6 +311,14 @@ export default function OrdemServicoDetalhes() {
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
+              onClick={() => setReciboOpen(true)}
+              className="gap-2"
+            >
+              <Receipt className="w-4 h-4" />
+              Recibo
+            </Button>
+            <Button
+              variant="outline"
               onClick={handleDownloadCuttingPlanPdf}
               className="gap-2"
             >
