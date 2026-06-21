@@ -71,7 +71,7 @@ export function useCompositionPricing({
       if (!currentCompany?.id || missingTemplateIds.length === 0) return [];
       const { data } = await supabase
         .from('company_items')
-        .select('id, item_template_id, unit, cost, cost_per_bar, cost_per_kg, cost_per_meter, bar_length_mm, weight_kg, weight_per_meter, altura_mm, largura_mm, comprimento_linear_mm, preco_unitario')
+        .select('id, name, item_template_id, unit, cost, cost_per_bar, cost_per_kg, cost_per_meter, bar_length_mm, weight_kg, weight_per_meter, altura_mm, largura_mm, comprimento_linear_mm, preco_unitario, thickness_mm, glass_color')
         .eq('company_id', currentCompany.id)
         .in('item_template_id', missingTemplateIds);
       return data || [];
