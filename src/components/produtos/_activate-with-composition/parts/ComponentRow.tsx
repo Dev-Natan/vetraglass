@@ -266,12 +266,20 @@ export function ComponentRow({
     );
   }
 
-  // Display mode
+  // Display mode — usa <div role="button"> em vez de <button> para evitar
+  // aninhamento inválido (o trash interno é interativo) que quebra o click no Chrome.
   return (
-    <button
-      type="button"
-      className="flex items-center gap-3 p-3 rounded-lg border hover:border-primary/50 transition-colors group w-full text-left"
+    <div
+      role="button"
+      tabIndex={0}
+      className="flex items-center gap-3 p-3 rounded-lg border hover:border-primary/50 hover:bg-accent/30 transition-colors group w-full text-left cursor-pointer"
       onClick={() => onEdit(item)}
+      onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onEdit(item);
+        }
+      }}
     >
       <div className="w-12 h-12 rounded bg-muted flex items-center justify-center shrink-0">
         {item.item_template?.image_url ? (
@@ -296,14 +304,14 @@ export function ComponentRow({
         >
           {item.item_template?.name}
         </p>
-        <div className="flex items-center gap-2 mt-1 flex-wrap">
+        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
           <Badge variant="secondary" className={`text-xs ${typeColors[itemType] || ''}`}>
             {typeLabels[itemType] || itemType}
           </Badge>
           {itemType === 'glass' ? (
             <>
               <span className="text-xs px-2 py-0.5 rounded bg-muted">
-                {item.pieces_formula ? item.pieces_formula : (item.pieces_quantity || 1)}x
+                Peças: {item.pieces_formula ? item.pieces_formula : (item.pieces_quantity || 1)}
               </span>
               {item.width_formula && (
                 <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
@@ -318,35 +326,39 @@ export function ComponentRow({
             </>
           ) : (
             <>
-              <span className="text-xs text-muted-foreground">{item.quantity_formula}</span>
+              <span className="text-xs px-2 py-0.5 rounded bg-primary/10 text-primary font-mono">
+                Fórmula: {item.quantity_formula || '—'}
+              </span>
               {itemType === 'profile' && (
                 <>
                   <span className="text-xs px-2 py-0.5 rounded bg-muted">
-                    {item.pieces_formula ? item.pieces_formula : (item.pieces_quantity || 1)}x
+                    Peças: {item.pieces_formula ? item.pieces_formula : (item.pieces_quantity || 1)}
                   </span>
-                  <span className="text-xs px-2 py-0.5 rounded bg-muted">{item.cut_angle}°</span>
+                  <span className="text-xs px-2 py-0.5 rounded bg-muted">
+                    Ângulo: {item.cut_angle}°
+                  </span>
                 </>
               )}
             </>
           )}
-          {calculationType && calculationType !== 'formula' && (
+          {item.calculation_type && item.calculation_type !== 'formula' && (
             <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200">
-              {calculationType === 'fixed' && 'Fixo'}
-              {calculationType === 'per_side' && 'Por Lado'}
-              {calculationType === 'per_leaf' && 'Por Folha'}
-              {calculationType === 'per_glass' && 'Por Vidro'}
+              {item.calculation_type === 'fixed' && 'Fixo'}
+              {item.calculation_type === 'per_side' && 'Por Lado'}
+              {item.calculation_type === 'per_leaf' && 'Por Folha'}
+              {item.calculation_type === 'per_glass' && 'Por Vidro'}
             </Badge>
           )}
-          {side && (
-            <Badge 
-              variant="outline" 
+          {item.side && (
+            <Badge
+              variant="outline"
               className={
-                side === 'A' ? "bg-blue-50 text-blue-600 border-blue-200" : 
-                side === 'B' ? "bg-green-50 text-green-600 border-green-200" : 
+                item.side === 'A' ? "bg-blue-50 text-blue-600 border-blue-200" :
+                item.side === 'B' ? "bg-green-50 text-green-600 border-green-200" :
                 "bg-purple-50 text-purple-600 border-purple-200"
               }
             >
-              Lado {side}
+              Lado {item.side}
             </Badge>
           )}
           {item.isNew && (
@@ -358,25 +370,19 @@ export function ComponentRow({
       </div>
 
       <div className="flex items-center gap-1 shrink-0">
-        <div
-          role="button"
-          tabIndex={0}
+        <button
+          type="button"
           className="h-8 w-8 inline-flex items-center justify-center rounded-md text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
           onClick={e => {
             e.stopPropagation();
             onRemove(item.id);
           }}
-          onKeyDown={e => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.stopPropagation();
-              onRemove(item.id);
-            }
-          }}
+          aria-label="Remover item"
         >
           <Trash2 className="w-4 h-4" />
-        </div>
+        </button>
         <Edit2 className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
       </div>
-    </button>
+    </div>
   );
 }
