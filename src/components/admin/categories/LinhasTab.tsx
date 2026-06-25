@@ -1,8 +1,7 @@
-import { useMemo, useState } from "react";
+import { useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -11,8 +10,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Pencil, Trash2, Loader2, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import { SortableTableBody } from "@/components/common/SortableTable";
+import { SearchInput, PaginationFooter } from "@/components/common/SearchPaginationControls";
+import { useSearchPagination } from "@/hooks/useSearchPagination";
 import type { ProductLinha } from "@/hooks/useProductLinhas";
 
 interface LinhasTabProps {
@@ -25,8 +26,6 @@ interface LinhasTabProps {
   onReorder: (reorderedLinhas: ProductLinha[]) => void;
 }
 
-const PAGE_SIZE = 10;
-
 export function LinhasTab({
   linhas,
   isLoading,
@@ -36,34 +35,16 @@ export function LinhasTab({
   onDelete,
   onReorder,
 }: LinhasTabProps) {
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-
-  const filtered = useMemo(() => {
-    if (!linhas) return [];
-    const term = search.trim().toLowerCase();
-    if (!term) return linhas;
-    return linhas.filter(
-      (l) =>
-        l.name.toLowerCase().includes(term) ||
-        l.slug.toLowerCase().includes(term),
-    );
-  }, [linhas, search]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const paginated = useMemo(
-    () => filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
-    [filtered, currentPage],
+  const getSearchableFields = useCallback(
+    (l: ProductLinha) => [l.name, l.slug],
+    [],
   );
-  const isSearching = search.trim().length > 0;
+  const sp = useSearchPagination({ data: linhas, getSearchableFields });
 
   const renderLinhaCells = (linha: ProductLinha) => (
     <>
       <TableCell className="font-medium">{linha.name}</TableCell>
-      <TableCell className="text-muted-foreground font-mono text-sm">
-        {linha.slug}
-      </TableCell>
+      <TableCell className="text-muted-foreground font-mono text-sm">{linha.slug}</TableCell>
       <TableCell>
         <div className="flex items-center gap-2">
           <div className={`w-4 h-4 rounded ${getColorClass(linha.color)}`} />
@@ -74,10 +55,7 @@ export function LinhasTab({
         {linha.description || "-"}
       </TableCell>
       <TableCell>
-        <Switch
-          checked={linha.is_active}
-          onCheckedChange={() => onToggleActive(linha)}
-        />
+        <Switch checked={linha.is_active} onCheckedChange={() => onToggleActive(linha)} />
       </TableCell>
       <TableCell className="text-right">
         <div className="flex items-center justify-end gap-2">
@@ -107,18 +85,7 @@ export function LinhasTab({
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome ou slug..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            className="pl-9"
-          />
-        </div>
+        <SearchInput search={sp.search} onSearchChange={sp.setSearch} />
 
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
@@ -139,15 +106,15 @@ export function LinhasTab({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginated.length > 0 && !isSearching ? (
+                {sp.paginated.length > 0 && !sp.isSearching ? (
                   <SortableTableBody
-                    items={paginated}
+                    items={sp.paginated}
                     renderCells={renderLinhaCells}
                     getIsInactive={(linha) => !linha.is_active}
                     onReorder={onReorder}
                   />
-                ) : paginated.length > 0 ? (
-                  paginated.map((linha) => (
+                ) : sp.paginated.length > 0 ? (
+                  sp.paginated.map((linha) => (
                     <TableRow key={linha.id} className={!linha.is_active ? "opacity-50" : ""}>
                       <TableCell className="text-muted-foreground">{linha.sort_order}</TableCell>
                       {renderLinhaCells(linha)}
@@ -163,33 +130,17 @@ export function LinhasTab({
               </TableBody>
             </Table>
 
-            <div className="flex items-center justify-between pt-2">
-              <p className="text-sm text-muted-foreground">
-                {filtered.length} {filtered.length === 1 ? "linha" : "linhas"}
-                {isSearching && linhas ? ` de ${linhas.length}` : ""}
-              </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage <= 1}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <span className="text-sm tabular-nums">
-                  {currentPage} / {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage >= totalPages}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+            <PaginationFooter
+              currentPage={sp.currentPage}
+              totalPages={sp.totalPages}
+              filteredCount={sp.filtered.length}
+              totalCount={sp.totalCount}
+              isSearching={sp.isSearching}
+              itemLabelSingular="linha"
+              itemLabelPlural="linhas"
+              onPrevious={sp.goToPreviousPage}
+              onNext={sp.goToNextPage}
+            />
           </>
         )}
       </CardContent>
