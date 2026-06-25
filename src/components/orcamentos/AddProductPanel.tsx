@@ -211,7 +211,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     products = products.filter(p => p.linha === selectedLinha);
     
     if (selectedCategory) {
-      products = products.filter(p => categoriesMatch(p.category, selectedCategory));
+      products = products.filter(p => categoryNormalizer.match(p.category, selectedCategory));
     }
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
