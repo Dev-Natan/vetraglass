@@ -534,11 +534,11 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                   {categories.map((cat) => (
                     <Badge
                       key={cat}
-                      variant={selectedCategory === cat ? 'default' : 'outline'}
+                      variant={categoriesMatch(selectedCategory, cat) ? 'default' : 'outline'}
                       className="cursor-pointer shrink-0 h-8 px-4"
-                      onClick={() => handleCategoryChange(cat!)}
+                      onClick={() => handleCategoryChange(cat)}
                     >
-                      {categoryLabels[cat!] || cat}
+                      {cat}
                     </Badge>
                   ))}
                 </div>
