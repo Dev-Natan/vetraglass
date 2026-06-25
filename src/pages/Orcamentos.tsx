@@ -34,6 +34,9 @@ import { AprovarOrcamentoDialog } from '@/components/orcamentos/AprovarOrcamento
 import { usePagination } from '@/hooks/usePagination';
 import { PaginationControls } from '@/components/common/PaginationControls';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+type PeriodFilter = 'all' | '7d' | '30d' | 'this_month' | 'last_month';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 
 import { useQuotes } from '@/hooks/useQuotes';
