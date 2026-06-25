@@ -14,8 +14,11 @@ import {
   Copy,
   FileSignature,
   Printer,
-  RotateCcw
+  RotateCcw,
+  MessageCircle,
+  Download
 } from 'lucide-react';
+
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
