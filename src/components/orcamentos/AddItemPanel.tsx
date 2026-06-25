@@ -337,22 +337,19 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
 
       onAdd({
         company_item_id: newItem.id,
-        name: isM2 && width > 0 && height > 0 
-          ? `${selectedItem.name} [Medida: ${width}x${height}mm]` 
-          : isLinear && width > 0 
-            ? `${selectedItem.name} [Medida: ${width}mm]`
-            : selectedItem.name,
+        name: displayName,
         unit: selectedItem.unit,
         unit_price: unitPrice,
         quantity,
-        width: width > 0 ? width : undefined,
-        height: height > 0 ? height : undefined,
+        width: widthMm > 0 ? widthMm : undefined,
+        height: heightMm > 0 ? heightMm : undefined,
         total_price: totalPrice,
         image_url: selectedItem.image_url,
         linha: selectedItem.linha,
         type: selectedItem.type,
         notes: notes.trim() || undefined,
       });
+
 
       toast.success('Item adicionado ao catálogo da empresa automaticamente');
     } catch (err: any) {
