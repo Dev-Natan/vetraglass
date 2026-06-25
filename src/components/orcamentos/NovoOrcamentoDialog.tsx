@@ -254,11 +254,63 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
   const canProceedFromClient = (form.watch('customer_name')?.length ?? 0) >= 2;
   const canProceedFromProducts = items.length > 0;
 
-  const handleNext = () => {
-    if (currentStep === 'client' && canProceedFromClient) setCurrentStep('products');
-    else if (currentStep === 'products' && canProceedFromProducts) setCurrentStep('summary');
+  const autoCreateClientIfNeeded = async () => {
+    if (isEditing) return;
+    if (selectedClientId && selectedClientId !== 'new') return;
+    if (!currentCompany?.id) return;
+
+    const name = (form.getValues('customer_name') || '').trim();
+    const phone = (form.getValues('customer_phone') || '').trim();
+    const email = (form.getValues('customer_email') || '').trim();
+    const address = (form.getValues('customer_address') || '').trim();
+    if (name.length < 2) return;
+
+    const normalizedName = name.toLowerCase();
+    const phoneDigits = phone.replace(/\D/g, '');
+    const duplicate = (clients || []).find((c) => {
+      const cName = (c.name || '').trim().toLowerCase();
+      const cPhoneDigits = (c.phone || '').replace(/\D/g, '');
+      return cName === normalizedName || (phoneDigits.length >= 8 && cPhoneDigits === phoneDigits);
+    });
+    if (duplicate) {
+      setSelectedClientId(duplicate.id);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('clients')
+      .insert({
+        company_id: currentCompany.id,
+        name,
+        phone: phone || null,
+        email: email || null,
+        address: address || null,
+        document: form.getValues('customer_document') || null,
+        document_type:
+          form.getValues('customer_document_type') === 'juridica' ? 'CNPJ' : 'CPF',
+        is_active: true,
+      })
+      .select('id')
+      .single();
+
+    if (error) {
+      console.error('[auto-create-client] insert failed', error);
+      return;
+    }
+
+    if (data?.id) setSelectedClientId(data.id);
+    await queryClient.invalidateQueries({ queryKey: ['clients'] });
+    toast({ description: 'Novo cliente cadastrado automaticamente!' });
+  };
+
+  const handleNext = async () => {
+    if (currentStep === 'client' && canProceedFromClient) {
+      await autoCreateClientIfNeeded();
+      setCurrentStep('products');
+    } else if (currentStep === 'products' && canProceedFromProducts) setCurrentStep('summary');
     else if (currentStep === 'summary') setCurrentStep('finalize');
   };
+
 
   const handleBack = () => {
     if (currentStep === 'products') setCurrentStep('client');
