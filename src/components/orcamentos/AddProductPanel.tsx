@@ -165,17 +165,20 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     return Array.from(linhaSet).sort();
   }, [companyProducts]);
 
-  // Get categories for selected linha from active company products
+  // Get categories for selected linha (normalized & deduped)
   const categories = useMemo(() => {
     if (!selectedLinha) return [];
-    const catSet = new Set<string>();
+    const catMap = new Map<string, string>(); // normalized -> display label
     companyProducts
       ?.filter(p => (p.linha || (p.product_template as any)?.linha) === selectedLinha)
       .forEach(p => {
-        const cat = p.category || (p.product_template as any)?.category;
-        if (cat) catSet.add(cat);
+        const raw = p.category || (p.product_template as any)?.category;
+        const normalized = normalizeCategory(raw);
+        if (normalized && !catMap.has(normalized)) {
+          catMap.set(normalized, normalized);
+        }
       });
-    return Array.from(catSet).sort();
+    return Array.from(catMap.values()).sort();
   }, [companyProducts, selectedLinha]);
 
   // Get filtered products from active company products
