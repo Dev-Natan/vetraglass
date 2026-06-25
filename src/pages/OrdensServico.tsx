@@ -99,8 +99,25 @@ export default function OrdensServico() {
     setSearchParams({ tab });
   };
   
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<OSStatus | 'all' | 'overdue'>('in_progress');
+  const [searchTerm, setSearchTerm] = useState(() => searchParams.get('q') ?? '');
+  const [statusFilter, setStatusFilter] = useState<OSStatus | 'all' | 'overdue'>(
+    () => (searchParams.get('status') as OSStatus | 'all' | 'overdue') || 'in_progress'
+  );
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>(
+    () => (searchParams.get('period') as PeriodFilter) || 'all'
+  );
+
+  // Persist filters in URL
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    statusFilter && statusFilter !== 'in_progress' ? next.set('status', statusFilter) : next.delete('status');
+    periodFilter && periodFilter !== 'all' ? next.set('period', periodFilter) : next.delete('period');
+    searchTerm ? next.set('q', searchTerm) : next.delete('q');
+    if (next.toString() !== searchParams.toString()) {
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter, periodFilter, searchTerm]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [osToDelete, setOsToDelete] = useState<string | null>(null);
   const [romaneioOsId, setRomaneioOsId] = useState<string | null>(null);
