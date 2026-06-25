@@ -1,43 +1,7 @@
 /**
- * Dicionário de correções específicas (acentuação, singular/plural).
- * Chave = forma normalizada (lowercase, sem _/-), Valor = label final.
+ * Normalização de categorias baseada no cadastro do Admin (product_categories).
+ * Mantém um fallback estático mínimo para dados legados sem cadastro.
  */
-const CATEGORY_OVERRIDES: Record<string, string> = {
-  'divisoria': 'Divisória',
-  'divisorias': 'Divisória',
-  'espelho': 'Espelho',
-  'espelhos': 'Espelho',
-  'guarda corpo': 'Guarda Corpo',
-  'guarda corpos': 'Guarda Corpo',
-  'box': 'Box',
-  'janela': 'Janela',
-  'janelas': 'Janela',
-  'porta': 'Porta',
-  'portas': 'Porta',
-  'sacada': 'Sacada',
-  'sacadas': 'Sacada',
-  'fachada': 'Fachada',
-  'fachadas': 'Fachada',
-  'cobertura': 'Cobertura',
-  'coberturas': 'Cobertura',
-  'vidro': 'Vidro',
-  'vidros': 'Vidro',
-  'other': 'Outros',
-  'outros': 'Outros',
-};
-
-/** Plural -> singular para unificação de chave (sem acento, lowercase). */
-const PLURAL_TO_SINGULAR: Record<string, string> = {
-  'janelas': 'janela',
-  'portas': 'porta',
-  'divisorias': 'divisoria',
-  'espelhos': 'espelho',
-  'guarda corpos': 'guarda corpo',
-  'sacadas': 'sacada',
-  'fachadas': 'fachada',
-  'coberturas': 'cobertura',
-  'vidros': 'vidro',
-};
 
 function baseNormalize(raw?: string | null): string {
   if (!raw) return '';
@@ -52,26 +16,70 @@ function stripAccents(s: string): string {
   return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
-/**
- * Normaliza nome de categoria: troca _/- por espaço, Title Case e aplica
- * dicionário (acentuação + singular/plural). Ex.: "janelas" -> "Janela".
- */
+/** Chave canônica (sem acento, lowercase, espaços simples). */
+function canonicalKey(raw?: string | null): string {
+  return stripAccents(baseNormalize(raw));
+}
+
+/** Fallback genérico (sem dicionário): troca _/- por espaço + Title Case. */
 export function normalizeCategory(raw?: string | null): string {
   const base = baseNormalize(raw);
   if (!base) return '';
-  if (CATEGORY_OVERRIDES[base]) return CATEGORY_OVERRIDES[base];
   return base
     .split(' ')
     .map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w))
     .join(' ');
 }
 
-/** Chave estável para deduplicar (ignora acento, caixa e plural conhecido). */
-export function categoryKey(raw?: string | null): string {
-  const stripped = stripAccents(baseNormalize(raw));
-  return PLURAL_TO_SINGULAR[stripped] ?? stripped;
+/** Comparação simples (fallback) — ignora acento, caixa, _/-. */
+export function categoriesMatch(a?: string | null, b?: string | null): boolean {
+  return canonicalKey(a) === canonicalKey(b);
 }
 
-export function categoriesMatch(a?: string | null, b?: string | null): boolean {
-  return categoryKey(a) === categoryKey(b);
+export interface AdminCategoryEntry {
+  slug: string;
+  name: string;
+}
+
+export interface CategoryNormalizer {
+  /** Retorna o label oficial (Admin) ou Title Case fallback. */
+  normalize: (raw?: string | null) => string;
+  /** Chave estável para deduplicar/comparar. Usa o slug cadastrado quando existe. */
+  key: (raw?: string | null) => string;
+  /** Compara duas categorias (ex.: botão vs campo do produto). */
+  match: (a?: string | null, b?: string | null) => boolean;
+}
+
+/**
+ * Constrói um normalizador a partir das categorias cadastradas no Admin.
+ * Para qualquer variação digitada no banco (slug, nome com/sem acento, plural
+ * cadastrado como sinônimo), retorna o label e a chave canônica do Admin.
+ */
+export function buildCategoryNormalizer(
+  categories: AdminCategoryEntry[] | undefined | null
+): CategoryNormalizer {
+  // canonicalKey -> { slug, name }
+  const lookup = new Map<string, AdminCategoryEntry>();
+
+  (categories ?? []).forEach((c) => {
+    if (!c) return;
+    const entry = { slug: c.slug, name: c.name };
+    const candidates = [c.slug, c.name];
+    candidates.forEach((v) => {
+      const k = canonicalKey(v);
+      if (k && !lookup.has(k)) lookup.set(k, entry);
+    });
+  });
+
+  const resolve = (raw?: string | null) => lookup.get(canonicalKey(raw));
+
+  return {
+    normalize: (raw) => resolve(raw)?.name ?? normalizeCategory(raw),
+    key: (raw) => resolve(raw)?.slug ?? canonicalKey(raw),
+    match: (a, b) => {
+      const ka = resolve(a)?.slug ?? canonicalKey(a);
+      const kb = resolve(b)?.slug ?? canonicalKey(b);
+      return ka === kb;
+    },
+  };
 }

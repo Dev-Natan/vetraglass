@@ -13,12 +13,12 @@ import { Search, Package, Check, ArrowLeft, Ruler, DollarSign, Sparkles, Info, G
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import { useProductCategoryLabels } from '@/hooks/useProductCategories';
+import { useProductCategoryLabels, useProductCategories } from '@/hooks/useProductCategories';
 import { useProductLinhas } from '@/hooks/useProductLinhas';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useProductAluminumPriceOptions } from '@/hooks/useProductAluminumPrices';
 import { useGlassStockOptions } from '@/hooks/useGlassStockOptions';
-import { normalizeCategory, categoriesMatch } from '@/utils/normalizeCategory';
+import { buildCategoryNormalizer } from '@/utils/normalizeCategory';
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AddItemPanel } from './AddItemPanel';
@@ -82,6 +82,11 @@ interface AddProductPanelProps {
 export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   const { currentCompany } = useAuth();
   const { labels: categoryLabels } = useProductCategoryLabels();
+  const { data: adminCategories } = useProductCategories();
+  const categoryNormalizer = useMemo(
+    () => buildCategoryNormalizer(adminCategories?.map(c => ({ slug: c.slug, name: c.name }))),
+    [adminCategories]
+  );
   const { data: productLinhas } = useProductLinhas();
   
   const [selectedLinha, setSelectedLinha] = useState<string>('');
@@ -165,21 +170,20 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     return Array.from(linhaSet).sort();
   }, [companyProducts]);
 
-  // Get categories for selected linha (normalized & deduped)
+  // Get categories for selected linha (normalized via Admin dictionary)
   const categories = useMemo(() => {
     if (!selectedLinha) return [];
-    const catMap = new Map<string, string>(); // normalized -> display label
+    const catMap = new Map<string, string>(); // canonical key -> display label
     companyProducts
       ?.filter(p => (p.linha || (p.product_template as any)?.linha) === selectedLinha)
       .forEach(p => {
         const raw = p.category || (p.product_template as any)?.category;
-        const normalized = normalizeCategory(raw);
-        if (normalized && !catMap.has(normalized)) {
-          catMap.set(normalized, normalized);
-        }
+        const key = categoryNormalizer.key(raw);
+        const label = categoryNormalizer.normalize(raw);
+        if (label && !catMap.has(key)) catMap.set(key, label);
       });
     return Array.from(catMap.values()).sort();
-  }, [companyProducts, selectedLinha]);
+  }, [companyProducts, selectedLinha, categoryNormalizer]);
 
   // Get filtered products from active company products
   const filteredProducts = useMemo(() => {
@@ -207,7 +211,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     products = products.filter(p => p.linha === selectedLinha);
     
     if (selectedCategory) {
-      products = products.filter(p => categoriesMatch(p.category, selectedCategory));
+      products = products.filter(p => categoryNormalizer.match(p.category, selectedCategory));
     }
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -533,7 +537,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                 {categories.map((cat) => (
                   <Badge
                     key={cat}
-                    variant={categoriesMatch(selectedCategory, cat) ? 'default' : 'outline'}
+                    variant={categoryNormalizer.match(selectedCategory, cat) ? 'default' : 'outline'}
                     className="cursor-pointer h-8 px-4"
                     onClick={() => handleCategoryChange(cat)}
                   >
