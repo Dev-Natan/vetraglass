@@ -62,6 +62,15 @@ export function QuoteCard({
   const status = statusConfig[quote.status as QuoteStatus] || statusConfig.pending;
   const StatusIcon = status.icon;
 
+  const statusBadgeClass =
+    quote.status === 'pending'
+      ? 'bg-amber-100 text-amber-800 border border-amber-200'
+      : quote.status === 'approved' || quote.status === 'converted'
+      ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+      : quote.status === 'rejected'
+      ? 'bg-rose-100 text-rose-800 border border-rose-200'
+      : 'bg-slate-100 text-slate-800 border border-slate-200';
+
   return (
     <UICard className="overflow-hidden hover:shadow-md transition-shadow">
       <UICardContent className="p-0">
@@ -72,13 +81,14 @@ export function QuoteCard({
                 <span className="text-xs font-mono font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                   #{String(quote.quote_number).padStart(4, '0')}
                 </span>
-                <Badge variant={status.variant} className="gap-1 px-1.5 py-0 text-[10px] sm:text-xs">
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${statusBadgeClass}`}>
                   <StatusIcon className="w-3 h-3" />
                   {status.label}
-                </Badge>
+                </span>
               </div>
               <h3 className="font-bold text-base sm:text-lg line-clamp-1">{quote.customer_name}</h3>
             </div>
+
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
