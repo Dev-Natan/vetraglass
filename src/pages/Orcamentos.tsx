@@ -4,15 +4,16 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Plus, 
-  Search, 
-  FileText, 
+import {
+  Plus,
+  Search,
+  FileText,
   Clock,
   CheckCircle,
   XCircle,
   AlertCircle,
-  
+  LayoutGrid,
+  List,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
