@@ -179,35 +179,43 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
     return Array.from(typeSet).sort();
   }, [unifiedItems, selectedLinha]);
 
-  // Filtered items
+  // Filtered items — busca por nome/código funciona globalmente; filtros de Linha/Tipo refinam
   const filteredItems = useMemo(() => {
-    if (!selectedLinha) return [];
-    
     let items = unifiedItems;
-    
-    items = items.filter(item => item.linha === selectedLinha);
-    
+    const query = searchQuery.trim().toLowerCase();
+
+    if (selectedLinha) {
+      items = items.filter(item => item.linha === selectedLinha);
+    } else if (!query) {
+      return [];
+    }
+
     if (selectedType) {
       items = items.filter(item => item.type === selectedType);
     }
-    
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      items = items.filter(item => 
-        item.name.toLowerCase().includes(query)
+
+    if (query) {
+      items = items.filter(item =>
+        item.name.toLowerCase().includes(query) ||
+        item.id.toLowerCase().includes(query) ||
+        (item.item_template_id || '').toLowerCase().includes(query)
       );
     }
-    
+
     return items;
   }, [unifiedItems, selectedLinha, selectedType, searchQuery]);
 
   const selectedItem = filteredItems?.find(item => item.id === selectedItemId);
-  
+
   const unitPrice = customPrice !== null ? customPrice : (selectedItem?.sale_price || 0);
   const isM2 = selectedItem?.unit === 'm2';
+  const isGlass = selectedItem?.type === 'glass' || isM2;
   const isLinear = selectedItem?.unit === 'm' || selectedItem?.type === 'profile';
-  
-  const area = isM2 && width > 0 && height > 0 ? (width / 1000) * (height / 1000) : 1;
+
+  // Para vidros/m² entrada é em METROS; para perfis/lineares mantemos mm (compatibilidade)
+  const widthMeters = isGlass ? width : width / 1000;
+  const heightMeters = isGlass ? height : height / 1000;
+  const area = isM2 && widthMeters > 0 && heightMeters > 0 ? widthMeters * heightMeters : 1;
   const linearFactor = isLinear && width > 0 ? width / 1000 : 1;
   const totalPrice = unitPrice * (isM2 ? area : linearFactor) * quantity;
 
@@ -238,20 +246,30 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
   const handleAdd = async () => {
     if (!selectedItem || !currentCompany?.id) return;
 
+    // Sempre persistir em mm (compat). Vidro entra em metros.
+    const widthMm = isGlass ? Math.round(width * 1000) : width;
+    const heightMm = isGlass ? Math.round(height * 1000) : height;
+    const measureLabel = isM2 && widthMm > 0 && heightMm > 0
+      ? (isGlass
+          ? `${widthMeters.toFixed(2)}x${heightMeters.toFixed(2)}m`
+          : `${widthMm}x${heightMm}mm`)
+      : isLinear && widthMm > 0
+        ? `${widthMm}mm`
+        : '';
+    const displayName = measureLabel
+      ? `${selectedItem.name} [Medida: ${measureLabel}]`
+      : selectedItem.name;
+
     // If it's already a company item, add directly
     if (selectedItem.source === 'company') {
       onAdd({
         company_item_id: selectedItem.id,
-        name: isM2 && width > 0 && height > 0 
-          ? `${selectedItem.name} [Medida: ${width}x${height}mm]` 
-          : isLinear && width > 0 
-            ? `${selectedItem.name} [Medida: ${width}mm]`
-            : selectedItem.name,
+        name: displayName,
         unit: selectedItem.unit,
         unit_price: unitPrice,
         quantity,
-        width: width > 0 ? width : undefined,
-        height: height > 0 ? height : undefined,
+        width: widthMm > 0 ? widthMm : undefined,
+        height: heightMm > 0 ? heightMm : undefined,
         total_price: totalPrice,
         image_url: selectedItem.image_url,
         linha: selectedItem.linha,
@@ -260,6 +278,7 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
       });
       return;
     }
+
 
     // It's a template item — auto-create company_item
     setIsCreatingItem(true);
@@ -318,22 +337,19 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
 
       onAdd({
         company_item_id: newItem.id,
-        name: isM2 && width > 0 && height > 0 
-          ? `${selectedItem.name} [Medida: ${width}x${height}mm]` 
-          : isLinear && width > 0 
-            ? `${selectedItem.name} [Medida: ${width}mm]`
-            : selectedItem.name,
+        name: displayName,
         unit: selectedItem.unit,
         unit_price: unitPrice,
         quantity,
-        width: width > 0 ? width : undefined,
-        height: height > 0 ? height : undefined,
+        width: widthMm > 0 ? widthMm : undefined,
+        height: heightMm > 0 ? heightMm : undefined,
         total_price: totalPrice,
         image_url: selectedItem.image_url,
         linha: selectedItem.linha,
         type: selectedItem.type,
         notes: notes.trim() || undefined,
       });
+
 
       toast.success('Item adicionado ao catálogo da empresa automaticamente');
     } catch (err: any) {
@@ -544,38 +560,43 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
           )}>
             <div className="space-y-1.5">
               <label className="text-[10px] font-medium text-muted-foreground uppercase flex items-center gap-1">
-                <Ruler className="w-3 h-3" /> {isM2 ? 'Largura (mm)' : 'Tamanho (mm)'}
+                <Ruler className="w-3 h-3" /> {isGlass ? 'Largura (m)' : isM2 ? 'Largura (mm)' : 'Tamanho (mm)'}
               </label>
               <Input
                 type="number"
                 min="0"
+                step={isGlass ? '0.01' : '1'}
                 value={width || ''}
                 onChange={(e) => setWidth(Number(e.target.value))}
                 className="h-10"
-                placeholder={isM2 ? "Ex: 1000" : "Ex: 6000"}
+                placeholder={isGlass ? 'Ex: 1.20' : isM2 ? 'Ex: 1000' : 'Ex: 6000'}
               />
             </div>
             {isM2 && (
               <div className="space-y-1.5">
                 <label className="text-[10px] font-medium text-muted-foreground uppercase flex items-center gap-1">
-                  <Ruler className="w-3 h-3 rotate-90" /> Altura (mm)
+                  <Ruler className="w-3 h-3 rotate-90" /> {isGlass ? 'Altura (m)' : 'Altura (mm)'}
                 </label>
                 <Input
                   type="number"
                   min="0"
+                  step={isGlass ? '0.01' : '1'}
                   value={height || ''}
                   onChange={(e) => setHeight(Number(e.target.value))}
                   className="h-10"
-                  placeholder="Ex: 1000"
+                  placeholder={isGlass ? 'Ex: 1.90' : 'Ex: 1000'}
                 />
               </div>
             )}
           </div>
         )}
 
-        {isM2 && (
-          <div className="bg-muted/30 p-2 rounded-lg border border-dashed text-[10px] text-muted-foreground text-center">
-            Item vendido por m². Área calculada: <span className="font-bold">{(area).toFixed(2)} m²</span>
+        {isM2 && widthMeters > 0 && heightMeters > 0 && (
+          <div className="bg-primary/5 p-2 rounded-lg border border-primary/20 text-[11px] text-center">
+            <span className="font-medium">{widthMeters.toFixed(2)} m × {heightMeters.toFixed(2)} m = </span>
+            <span className="font-bold text-primary">{area.toFixed(3)} m²</span>
+            <span className="text-muted-foreground"> × {formatCurrency(unitPrice)}/m² = </span>
+            <span className="font-bold text-primary">{formatCurrency(unitPrice * area)}</span>
           </div>
         )}
 
