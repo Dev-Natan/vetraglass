@@ -21,6 +21,28 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "@typescript-eslint/no-unused-vars": "off",
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "CallExpression[callee.object.name='window'][callee.property.name='open'] Literal[value=/wa\\.me|whatsapp\\.com|whatsapp\\.me|api\\.whatsapp/i]",
+          message: "Não use window.open com URLs do WhatsApp. Use o util openWhatsapp de '@/utils/whatsapp'.",
+        },
+        {
+          selector: "Literal[value=/whatsapp\\.me|api\\.whatsapp\\.com/i]",
+          message: "Links diretos para whatsapp.me ou api.whatsapp.com são proibidos. Use openWhatsapp (wa.me) de '@/utils/whatsapp'.",
+        },
+        {
+          selector: "TemplateElement[value.raw=/whatsapp\\.me|api\\.whatsapp\\.com/i]",
+          message: "Links diretos para whatsapp.me ou api.whatsapp.com são proibidos. Use openWhatsapp (wa.me) de '@/utils/whatsapp'.",
+        },
+      ],
+    },
+  },
+  {
+    files: ["src/utils/whatsapp.ts"],
+    rules: {
+      "no-restricted-syntax": "off",
     },
   },
 );
+
