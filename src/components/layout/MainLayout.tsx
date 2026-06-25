@@ -82,13 +82,8 @@ export function MainLayout({ children }: MainLayoutProps) {
                       </p>
                     </div>
                   </div>
-                  <div className="relative w-full md:w-80 group">
-                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                    <Input 
-                      placeholder="Buscar por atalhos..." 
-                      className="pl-11 h-11 sm:h-12 bg-background border-border/50 rounded-xl sm:rounded-2xl shadow-sm focus-visible:ring-primary/20 focus-visible:border-primary transition-all group-hover:border-border text-sm"
-                    />
-                  </div>
+
+
                 </div>
               </div>
             )}
