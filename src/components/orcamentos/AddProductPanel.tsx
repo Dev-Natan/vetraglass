@@ -170,21 +170,20 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     return Array.from(linhaSet).sort();
   }, [companyProducts]);
 
-  // Get categories for selected linha (normalized & deduped)
+  // Get categories for selected linha (normalized via Admin dictionary)
   const categories = useMemo(() => {
     if (!selectedLinha) return [];
-    const catMap = new Map<string, string>(); // normalized -> display label
+    const catMap = new Map<string, string>(); // canonical key -> display label
     companyProducts
       ?.filter(p => (p.linha || (p.product_template as any)?.linha) === selectedLinha)
       .forEach(p => {
         const raw = p.category || (p.product_template as any)?.category;
-        const normalized = normalizeCategory(raw);
-        if (normalized && !catMap.has(normalized)) {
-          catMap.set(normalized, normalized);
-        }
+        const key = categoryNormalizer.key(raw);
+        const label = categoryNormalizer.normalize(raw);
+        if (label && !catMap.has(key)) catMap.set(key, label);
       });
     return Array.from(catMap.values()).sort();
-  }, [companyProducts, selectedLinha]);
+  }, [companyProducts, selectedLinha, categoryNormalizer]);
 
   // Get filtered products from active company products
   const filteredProducts = useMemo(() => {
