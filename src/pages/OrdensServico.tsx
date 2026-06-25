@@ -36,7 +36,6 @@ import { toast } from 'sonner';
 import { usePagination } from '@/hooks/usePagination';
 import { PaginationControls } from '@/components/common/PaginationControls';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useEffect } from 'react';
 
 type PeriodFilter = 'all' | '7d' | '30d' | 'this_month' | 'last_month';
 
