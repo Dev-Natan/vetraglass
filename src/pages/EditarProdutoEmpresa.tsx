@@ -99,6 +99,7 @@ type CompanyProductItem = {
   item_template_id: string | null;
   company_item_id: string | null;
   quantity_formula: string;
+  pieces_formula: string | null;
   width_formula: string | null;
   height_formula: string | null;
   is_optional: boolean | null;
@@ -106,6 +107,7 @@ type CompanyProductItem = {
   sort_order: number | null;
   cut_angle: number | null;
   pieces_quantity: number | null;
+  side: string | null;
   item_template?: {
     id: string;
     name: string;
@@ -168,6 +170,7 @@ export default function EditarProdutoEmpresa() {
   const [widthFormula, setWidthFormula] = useState('');
   const [heightFormula, setHeightFormula] = useState('');
   const [glassName, setGlassName] = useState('');
+  const [side, setSide] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [pricingType, setPricingType] = useState<string>('fixed');
   const [costPerSqm, setCostPerSqm] = useState<number>(0);
@@ -442,6 +445,7 @@ export default function EditarProdutoEmpresa() {
         pieces_formula: piecesFormula,
         is_optional: isContramarco ? true : false,
         cut_angle: cutAngle,
+        side: side,
         width_formula: addItemSection === 'glass' ? (widthFormula || null) : null,
         height_formula: addItemSection === 'glass' ? (heightFormula || null) : null,
         notes: addItemSection === 'glass' ? (glassName || null) : null,
@@ -498,11 +502,13 @@ export default function EditarProdutoEmpresa() {
         updateData.quantity_formula = quantityFormula || '1';
         updateData.pieces_quantity = piecesQuantity;
         updateData.pieces_formula = piecesFormula || null;
+        updateData.side = side;
       } else {
         updateData.quantity_formula = quantityFormula;
         updateData.pieces_quantity = piecesQuantity;
         updateData.pieces_formula = piecesFormula || null;
         updateData.cut_angle = cutAngle;
+        updateData.side = side;
       }
       const { error } = await supabase
         .from('company_product_items')
@@ -555,6 +561,7 @@ export default function EditarProdutoEmpresa() {
     setWidthFormula('');
     setHeightFormula('');
     setGlassName('');
+    setSide(null);
     setItemSearchQuery('');
   };
 
@@ -615,19 +622,21 @@ export default function EditarProdutoEmpresa() {
   const handleEditItem = (item: CompanyProductItem) => {
     setEditingItem(item);
     const itemType = item.item_template?.type || item.company_item?.type;
-    if (itemType === 'glass') {
-      setWidthFormula(item.width_formula || '');
-      setHeightFormula(item.height_formula || '');
-      setGlassName(item.notes || '');
-      setQuantityFormula(item.quantity_formula || '1');
-      setPiecesQuantity(item.pieces_quantity || 1);
-      setPiecesFormula((item as any).pieces_formula || null);
-    } else {
-      setQuantityFormula(item.quantity_formula || '1');
-      setPiecesQuantity(item.pieces_quantity || 1);
-      setPiecesFormula((item as any).pieces_formula || null);
-      setCutAngle(item.cut_angle || 90);
-    }
+    // Carrega TODOS os campos salvos antes de abrir o modal.
+    // Preserva quantity_formula mesmo quando vier como string vazia ('' -> '1' só se realmente nulo/undefined).
+    const savedFormula =
+      item.quantity_formula !== null && item.quantity_formula !== undefined
+        ? item.quantity_formula
+        : '1';
+
+    setQuantityFormula(savedFormula);
+    setPiecesQuantity(item.pieces_quantity ?? 1);
+    setPiecesFormula(item.pieces_formula ?? null);
+    setCutAngle(item.cut_angle ?? 90);
+    setSide(item.side ?? null);
+    setWidthFormula(item.width_formula ?? '');
+    setHeightFormula(item.height_formula ?? '');
+    setGlassName(itemType === 'glass' ? (item.notes ?? '') : '');
     setIsEditItemDialogOpen(true);
   };
 
@@ -975,7 +984,80 @@ export default function EditarProdutoEmpresa() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Editar Item</DialogTitle><DialogDescription>{editingItem?.item_template?.name || editingItem?.company_item?.name}</DialogDescription></DialogHeader>
           <div className="space-y-4">
-            {(editingItem?.item_template?.type === 'glass' || editingItem?.company_item?.type === 'glass') ? <GlassFormulaEditor widthFormula={widthFormula} heightFormula={heightFormula} onWidthFormulaChange={setWidthFormula} onHeightFormulaChange={setHeightFormula} showPiecesQuantity={true} piecesQuantity={piecesQuantity} onPiecesChange={setPiecesQuantity} piecesFormula={piecesFormula} onPiecesFormulaChange={setPiecesFormula} /> : <FormulaEditor value={quantityFormula} onChange={setQuantityFormula} showPiecesQuantity={true} piecesQuantity={piecesQuantity} onPiecesChange={setPiecesQuantity} piecesFormula={piecesFormula} onPiecesFormulaChange={setPiecesFormula} />}
+            {(() => {
+              const itemType = editingItem?.item_template?.type || editingItem?.company_item?.type;
+              const isGlass = itemType === 'glass';
+              return (
+                <>
+                  {isGlass ? (
+                    <GlassFormulaEditor
+                      widthFormula={widthFormula}
+                      heightFormula={heightFormula}
+                      onWidthFormulaChange={setWidthFormula}
+                      onHeightFormulaChange={setHeightFormula}
+                      showPiecesQuantity={true}
+                      piecesQuantity={piecesQuantity}
+                      onPiecesChange={setPiecesQuantity}
+                      piecesFormula={piecesFormula}
+                      onPiecesFormulaChange={setPiecesFormula}
+                    />
+                  ) : (
+                    <FormulaEditor
+                      value={quantityFormula}
+                      onChange={setQuantityFormula}
+                      showPiecesQuantity={true}
+                      piecesQuantity={piecesQuantity}
+                      onPiecesChange={setPiecesQuantity}
+                      piecesFormula={piecesFormula}
+                      onPiecesFormulaChange={setPiecesFormula}
+                    />
+                  )}
+
+                  {!isGlass && itemType === 'profile' && (
+                    <div className="space-y-2">
+                      <Label>Ângulo de corte</Label>
+                      <div className="flex gap-2">
+                        {[45, 90].map(angle => (
+                          <Button
+                            key={angle}
+                            type="button"
+                            variant={cutAngle === angle ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setCutAngle(angle)}
+                            className="flex-1"
+                          >
+                            {angle}°
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-2 border-t pt-4">
+                    <Label>Lado / Posição</Label>
+                    <div className="flex gap-2 flex-wrap">
+                      {[
+                        { value: null, label: 'Ambos' },
+                        { value: 'A', label: 'Lado A' },
+                        { value: 'B', label: 'Lado B' },
+                        { value: 'C', label: 'Lado C' },
+                      ].map(option => (
+                        <Button
+                          key={String(option.value)}
+                          type="button"
+                          variant={side === option.value ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setSide(option.value)}
+                          className="flex-1 min-w-[70px]"
+                        >
+                          {option.label}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditItemDialogOpen(false)}>Cancelar</Button>
