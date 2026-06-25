@@ -307,26 +307,36 @@ export default function Orcamentos() {
           </div>
         ) : pagination.paginatedData.length > 0 ? (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
-              {pagination.paginatedData.map((quote) => (
-                <QuoteCard
-                  key={quote.id}
-                  quote={quote}
-                  statusConfig={statusConfig}
-                  formatCurrency={formatCurrency}
-                  onView={(q) => { setSelectedQuote(q); setIsViewDialogOpen(true); }}
-                  onEdit={handleEdit}
-                  onDuplicate={handleDuplicate}
-                  onPrint={(q) => { setSelectedQuote(q); setIsViewDialogOpen(true); }}
-                  onApprove={handleApprove}
-                  onReject={handleReject}
-                  onReopen={handleReopen}
-                  onDelete={(q) => setQuoteToDelete(q)}
-                  onGenerateContract={handleGenerateContract}
-                  onCancelApproved={(q) => setQuoteToCancelApproved(q)}
-                />
-              ))}
-            </div>
+            {viewMode === 'grid' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
+                {pagination.paginatedData.map((quote) => (
+                  <QuoteCard
+                    key={quote.id}
+                    quote={quote}
+                    statusConfig={statusConfig}
+                    formatCurrency={formatCurrency}
+                    onView={(q) => { setSelectedQuote(q); setIsViewDialogOpen(true); }}
+                    onEdit={handleEdit}
+                    onDuplicate={handleDuplicate}
+                    onPrint={(q) => { setSelectedQuote(q); setIsViewDialogOpen(true); }}
+                    onApprove={handleApprove}
+                    onReject={handleReject}
+                    onReopen={handleReopen}
+                    onDelete={(q) => setQuoteToDelete(q)}
+                    onGenerateContract={handleGenerateContract}
+                    onCancelApproved={(q) => setQuoteToCancelApproved(q)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <QuotesTableView
+                quotes={pagination.paginatedData}
+                statusConfig={statusConfig}
+                formatCurrency={formatCurrency}
+                onView={(q) => { setSelectedQuote(q); setIsViewDialogOpen(true); }}
+                onPrint={(q) => { setSelectedQuote(q); setIsViewDialogOpen(true); }}
+              />
+            )}
             <PaginationControls 
               currentPage={pagination.currentPage}
               totalPages={pagination.totalPages}
