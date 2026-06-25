@@ -445,6 +445,7 @@ export default function EditarProdutoEmpresa() {
         pieces_formula: piecesFormula,
         is_optional: isContramarco ? true : false,
         cut_angle: cutAngle,
+        side: side,
         width_formula: addItemSection === 'glass' ? (widthFormula || null) : null,
         height_formula: addItemSection === 'glass' ? (heightFormula || null) : null,
         notes: addItemSection === 'glass' ? (glassName || null) : null,
