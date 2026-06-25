@@ -552,38 +552,43 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
           )}>
             <div className="space-y-1.5">
               <label className="text-[10px] font-medium text-muted-foreground uppercase flex items-center gap-1">
-                <Ruler className="w-3 h-3" /> {isM2 ? 'Largura (mm)' : 'Tamanho (mm)'}
+                <Ruler className="w-3 h-3" /> {isGlass ? 'Largura (m)' : isM2 ? 'Largura (mm)' : 'Tamanho (mm)'}
               </label>
               <Input
                 type="number"
                 min="0"
+                step={isGlass ? '0.01' : '1'}
                 value={width || ''}
                 onChange={(e) => setWidth(Number(e.target.value))}
                 className="h-10"
-                placeholder={isM2 ? "Ex: 1000" : "Ex: 6000"}
+                placeholder={isGlass ? 'Ex: 1.20' : isM2 ? 'Ex: 1000' : 'Ex: 6000'}
               />
             </div>
             {isM2 && (
               <div className="space-y-1.5">
                 <label className="text-[10px] font-medium text-muted-foreground uppercase flex items-center gap-1">
-                  <Ruler className="w-3 h-3 rotate-90" /> Altura (mm)
+                  <Ruler className="w-3 h-3 rotate-90" /> {isGlass ? 'Altura (m)' : 'Altura (mm)'}
                 </label>
                 <Input
                   type="number"
                   min="0"
+                  step={isGlass ? '0.01' : '1'}
                   value={height || ''}
                   onChange={(e) => setHeight(Number(e.target.value))}
                   className="h-10"
-                  placeholder="Ex: 1000"
+                  placeholder={isGlass ? 'Ex: 1.90' : 'Ex: 1000'}
                 />
               </div>
             )}
           </div>
         )}
 
-        {isM2 && (
-          <div className="bg-muted/30 p-2 rounded-lg border border-dashed text-[10px] text-muted-foreground text-center">
-            Item vendido por m². Área calculada: <span className="font-bold">{(area).toFixed(2)} m²</span>
+        {isM2 && widthMeters > 0 && heightMeters > 0 && (
+          <div className="bg-primary/5 p-2 rounded-lg border border-primary/20 text-[11px] text-center">
+            <span className="font-medium">{widthMeters.toFixed(2)} m × {heightMeters.toFixed(2)} m = </span>
+            <span className="font-bold text-primary">{area.toFixed(3)} m²</span>
+            <span className="text-muted-foreground"> × {formatCurrency(unitPrice)}/m² = </span>
+            <span className="font-bold text-primary">{formatCurrency(unitPrice * area)}</span>
           </div>
         )}
 
