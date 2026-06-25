@@ -18,6 +18,7 @@ import { useProductLinhas } from '@/hooks/useProductLinhas';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useProductAluminumPriceOptions } from '@/hooks/useProductAluminumPrices';
 import { useGlassStockOptions } from '@/hooks/useGlassStockOptions';
+import { normalizeCategory, categoriesMatch } from '@/utils/normalizeCategory';
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AddItemPanel } from './AddItemPanel';
@@ -164,17 +165,20 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     return Array.from(linhaSet).sort();
   }, [companyProducts]);
 
-  // Get categories for selected linha from active company products
+  // Get categories for selected linha (normalized & deduped)
   const categories = useMemo(() => {
     if (!selectedLinha) return [];
-    const catSet = new Set<string>();
+    const catMap = new Map<string, string>(); // normalized -> display label
     companyProducts
       ?.filter(p => (p.linha || (p.product_template as any)?.linha) === selectedLinha)
       .forEach(p => {
-        const cat = p.category || (p.product_template as any)?.category;
-        if (cat) catSet.add(cat);
+        const raw = p.category || (p.product_template as any)?.category;
+        const normalized = normalizeCategory(raw);
+        if (normalized && !catMap.has(normalized)) {
+          catMap.set(normalized, normalized);
+        }
       });
-    return Array.from(catSet).sort();
+    return Array.from(catMap.values()).sort();
   }, [companyProducts, selectedLinha]);
 
   // Get filtered products from active company products
@@ -203,7 +207,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     products = products.filter(p => p.linha === selectedLinha);
     
     if (selectedCategory) {
-      products = products.filter(p => p.category === selectedCategory);
+      products = products.filter(p => categoriesMatch(p.category, selectedCategory));
     }
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -530,11 +534,11 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                   {categories.map((cat) => (
                     <Badge
                       key={cat}
-                      variant={selectedCategory === cat ? 'default' : 'outline'}
+                      variant={categoriesMatch(selectedCategory, cat) ? 'default' : 'outline'}
                       className="cursor-pointer shrink-0 h-8 px-4"
-                      onClick={() => handleCategoryChange(cat!)}
+                      onClick={() => handleCategoryChange(cat)}
                     >
-                      {categoryLabels[cat!] || cat}
+                      {cat}
                     </Badge>
                   ))}
                 </div>
