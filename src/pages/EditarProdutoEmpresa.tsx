@@ -502,11 +502,13 @@ export default function EditarProdutoEmpresa() {
         updateData.quantity_formula = quantityFormula || '1';
         updateData.pieces_quantity = piecesQuantity;
         updateData.pieces_formula = piecesFormula || null;
+        updateData.side = side;
       } else {
         updateData.quantity_formula = quantityFormula;
         updateData.pieces_quantity = piecesQuantity;
         updateData.pieces_formula = piecesFormula || null;
         updateData.cut_angle = cutAngle;
+        updateData.side = side;
       }
       const { error } = await supabase
         .from('company_product_items')
