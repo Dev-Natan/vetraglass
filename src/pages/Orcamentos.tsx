@@ -185,17 +185,17 @@ export default function Orcamentos() {
           </div>
         </div>
 
-        <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as QuoteStatus | 'all')} className="w-full">
-          <TabsList className="w-full justify-start overflow-x-auto flex-nowrap">
-            <TabsTrigger value="all" className="gap-2">Todos <Badge variant="secondary" className="ml-1">{statusCounts.all}</Badge></TabsTrigger>
-            <TabsTrigger value="pending" className="gap-2"><Clock className="w-3.5 h-3.5" /> Pendentes <Badge variant="secondary" className="ml-1">{statusCounts.pending}</Badge></TabsTrigger>
-            <TabsTrigger value="approved" className="gap-2"><CheckCircle className="w-3.5 h-3.5" /> Aprovados <Badge variant="secondary" className="ml-1">{statusCounts.approved}</Badge></TabsTrigger>
-            <TabsTrigger value="converted" className="gap-2"><CheckCircle className="w-3.5 h-3.5" /> Convertidos <Badge variant="secondary" className="ml-1">{statusCounts.converted}</Badge></TabsTrigger>
-            <TabsTrigger value="rejected" className="gap-2"><XCircle className="w-3.5 h-3.5" /> Rejeitados <Badge variant="secondary" className="ml-1">{statusCounts.rejected}</Badge></TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="sticky top-0 z-30 -mx-4 px-4 pt-2 pb-3 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b space-y-3">
+          <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as QuoteStatus | 'all')} className="w-full">
+            <TabsList className="w-full justify-start overflow-x-auto flex-nowrap">
+              <TabsTrigger value="all" className="gap-2">Todos <Badge variant="secondary" className="ml-1">{statusCounts.all}</Badge></TabsTrigger>
+              <TabsTrigger value="pending" className="gap-2"><Clock className="w-3.5 h-3.5" /> Pendentes <Badge variant="secondary" className="ml-1">{statusCounts.pending}</Badge></TabsTrigger>
+              <TabsTrigger value="approved" className="gap-2"><CheckCircle className="w-3.5 h-3.5" /> Aprovados <Badge variant="secondary" className="ml-1">{statusCounts.approved}</Badge></TabsTrigger>
+              <TabsTrigger value="converted" className="gap-2"><CheckCircle className="w-3.5 h-3.5" /> Convertidos <Badge variant="secondary" className="ml-1">{statusCounts.converted}</Badge></TabsTrigger>
+              <TabsTrigger value="rejected" className="gap-2"><XCircle className="w-3.5 h-3.5" /> Rejeitados <Badge variant="secondary" className="ml-1">{statusCounts.rejected}</Badge></TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-        <div className="sticky top-0 z-20 -mx-4 px-4 py-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -207,6 +207,7 @@ export default function Orcamentos() {
             />
           </div>
         </div>
+
 
 
         {isLoading ? (
