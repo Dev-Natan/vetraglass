@@ -522,27 +522,25 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
             </div>
 
             {selectedLinha && categories.length > 0 && (
-              <ScrollArea className="w-full">
-                <div className="flex gap-2 pb-1">
+              <div className="flex flex-wrap gap-2 w-full">
+                <Badge
+                  variant={selectedCategory === '' ? 'default' : 'outline'}
+                  className="cursor-pointer h-8 px-4"
+                  onClick={() => setSelectedCategory('')}
+                >
+                  Todos
+                </Badge>
+                {categories.map((cat) => (
                   <Badge
-                    variant={selectedCategory === '' ? 'default' : 'outline'}
-                    className="cursor-pointer shrink-0 h-8 px-4"
-                    onClick={() => setSelectedCategory('')}
+                    key={cat}
+                    variant={categoriesMatch(selectedCategory, cat) ? 'default' : 'outline'}
+                    className="cursor-pointer h-8 px-4"
+                    onClick={() => handleCategoryChange(cat)}
                   >
-                    Todos
+                    {cat}
                   </Badge>
-                  {categories.map((cat) => (
-                    <Badge
-                      key={cat}
-                      variant={categoriesMatch(selectedCategory, cat) ? 'default' : 'outline'}
-                      className="cursor-pointer shrink-0 h-8 px-4"
-                      onClick={() => handleCategoryChange(cat)}
-                    >
-                      {cat}
-                    </Badge>
-                  ))}
-                </div>
-              </ScrollArea>
+                ))}
+              </div>
             )}
           </div>
 
