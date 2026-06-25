@@ -99,6 +99,7 @@ type CompanyProductItem = {
   item_template_id: string | null;
   company_item_id: string | null;
   quantity_formula: string;
+  pieces_formula: string | null;
   width_formula: string | null;
   height_formula: string | null;
   is_optional: boolean | null;
@@ -106,6 +107,7 @@ type CompanyProductItem = {
   sort_order: number | null;
   cut_angle: number | null;
   pieces_quantity: number | null;
+  side: string | null;
   item_template?: {
     id: string;
     name: string;
