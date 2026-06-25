@@ -148,11 +148,44 @@ export default function Orcamentos() {
     setIsContractDialogOpen(true);
   };
 
+  const getPeriodRange = (p: PeriodFilter): { start: Date | null; end: Date | null } => {
+    const now = new Date();
+    if (p === 'all') return { start: null, end: null };
+    if (p === '7d') {
+      const s = new Date(now); s.setDate(s.getDate() - 7); s.setHours(0,0,0,0);
+      return { start: s, end: null };
+    }
+    if (p === '30d') {
+      const s = new Date(now); s.setDate(s.getDate() - 30); s.setHours(0,0,0,0);
+      return { start: s, end: null };
+    }
+    if (p === 'this_month') {
+      const s = new Date(now.getFullYear(), now.getMonth(), 1);
+      return { start: s, end: null };
+    }
+    // last_month
+    const s = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const e = new Date(now.getFullYear(), now.getMonth(), 1);
+    return { start: s, end: e };
+  };
+
+  const { start: periodStart, end: periodEnd } = getPeriodRange(periodFilter);
+
   const filteredQuotes = quotes?.filter(quote => {
     const matchesSearch = quote.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       quote.quote_number.toString().includes(searchTerm);
     const matchesStatus = statusFilter === 'all' || quote.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    let matchesPeriod = true;
+    if (periodStart || periodEnd) {
+      const created = quote.created_at ? new Date(quote.created_at) : null;
+      if (!created || isNaN(created.getTime())) {
+        matchesPeriod = false;
+      } else {
+        if (periodStart && created < periodStart) matchesPeriod = false;
+        if (periodEnd && created >= periodEnd) matchesPeriod = false;
+      }
+    }
+    return matchesSearch && matchesStatus && matchesPeriod;
   }) || [];
 
   const statusCounts = {
