@@ -1,29 +1,42 @@
 /**
- * Dicionário de correções específicas (acentuação, termos compostos).
+ * Dicionário de correções específicas (acentuação, singular/plural).
  * Chave = forma normalizada (lowercase, sem _/-), Valor = label final.
  */
 const CATEGORY_OVERRIDES: Record<string, string> = {
   'divisoria': 'Divisória',
-  'divisorias': 'Divisórias',
+  'divisorias': 'Divisória',
   'espelho': 'Espelho',
-  'espelhos': 'Espelhos',
+  'espelhos': 'Espelho',
   'guarda corpo': 'Guarda Corpo',
-  'guarda corpos': 'Guarda Corpos',
+  'guarda corpos': 'Guarda Corpo',
   'box': 'Box',
   'janela': 'Janela',
-  'janelas': 'Janelas',
+  'janelas': 'Janela',
   'porta': 'Porta',
-  'portas': 'Portas',
+  'portas': 'Porta',
   'sacada': 'Sacada',
-  'sacadas': 'Sacadas',
+  'sacadas': 'Sacada',
   'fachada': 'Fachada',
-  'fachadas': 'Fachadas',
+  'fachadas': 'Fachada',
   'cobertura': 'Cobertura',
-  'coberturas': 'Coberturas',
+  'coberturas': 'Cobertura',
   'vidro': 'Vidro',
-  'vidros': 'Vidros',
+  'vidros': 'Vidro',
   'other': 'Outros',
   'outros': 'Outros',
+};
+
+/** Plural -> singular para unificação de chave (sem acento, lowercase). */
+const PLURAL_TO_SINGULAR: Record<string, string> = {
+  'janelas': 'janela',
+  'portas': 'porta',
+  'divisorias': 'divisoria',
+  'espelhos': 'espelho',
+  'guarda corpos': 'guarda corpo',
+  'sacadas': 'sacada',
+  'fachadas': 'fachada',
+  'coberturas': 'cobertura',
+  'vidros': 'vidro',
 };
 
 function baseNormalize(raw?: string | null): string {
@@ -35,9 +48,13 @@ function baseNormalize(raw?: string | null): string {
     .toLowerCase();
 }
 
+function stripAccents(s: string): string {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
 /**
  * Normaliza nome de categoria: troca _/- por espaço, Title Case e aplica
- * dicionário de acentuação (ex.: "divisoria" -> "Divisória").
+ * dicionário (acentuação + singular/plural). Ex.: "janelas" -> "Janela".
  */
 export function normalizeCategory(raw?: string | null): string {
   const base = baseNormalize(raw);
@@ -49,9 +66,10 @@ export function normalizeCategory(raw?: string | null): string {
     .join(' ');
 }
 
-/** Chave estável para deduplicar (ignora acento e caixa). */
+/** Chave estável para deduplicar (ignora acento, caixa e plural conhecido). */
 export function categoryKey(raw?: string | null): string {
-  return baseNormalize(raw).normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const stripped = stripAccents(baseNormalize(raw));
+  return PLURAL_TO_SINGULAR[stripped] ?? stripped;
 }
 
 export function categoriesMatch(a?: string | null, b?: string | null): boolean {
