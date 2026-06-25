@@ -18,6 +18,7 @@ import { useProductLinhas } from '@/hooks/useProductLinhas';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useProductAluminumPriceOptions } from '@/hooks/useProductAluminumPrices';
 import { useGlassStockOptions } from '@/hooks/useGlassStockOptions';
+import { normalizeCategory, categoriesMatch } from '@/utils/normalizeCategory';
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AddItemPanel } from './AddItemPanel';
