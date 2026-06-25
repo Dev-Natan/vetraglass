@@ -131,6 +131,31 @@ type ProductTemplateItem = {
   };
 };
 
+const getDisplayedItemFormula = (item: ProductTemplateItem): string => {
+  const quantityFormula = item.quantity_formula?.trim();
+  const widthFormula = item.width_formula?.trim();
+  const heightFormula = item.height_formula?.trim();
+
+  if (quantityFormula && quantityFormula !== '1') return quantityFormula;
+  if (widthFormula) return widthFormula;
+  if (heightFormula) return heightFormula;
+  return quantityFormula || '—';
+};
+
+const getDisplayedFormulaPosition = (item: ProductTemplateItem): string | null => {
+  const quantityFormula = item.quantity_formula?.trim();
+
+  if (quantityFormula && quantityFormula !== '1') return 'Quantidade';
+  if (item.width_formula?.trim()) return 'Largura';
+  if (item.height_formula?.trim()) return 'Altura';
+  return null;
+};
+
+const getDisplayedPieces = (item: ProductTemplateItem): string => {
+  const formula = item.pieces_formula?.trim();
+  return formula || String(item.pieces_quantity || 1);
+};
+
 type DefaultFormula = {
   formula: string;
   position: string;
