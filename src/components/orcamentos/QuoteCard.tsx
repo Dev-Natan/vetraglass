@@ -1,4 +1,5 @@
 import { Quote, QuoteStatus } from '@/services/quoteService';
+import { openWhatsapp } from '@/utils/whatsapp';
 import { Badge } from '@/components/ui/badge';
 import { 
   CheckCircle, 
