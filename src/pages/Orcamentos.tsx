@@ -4,15 +4,16 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Plus, 
-  Search, 
-  FileText, 
+import {
+  Plus,
+  Search,
+  FileText,
   Clock,
   CheckCircle,
   XCircle,
   AlertCircle,
-  
+  LayoutGrid,
+  List,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -42,6 +43,10 @@ import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 import { useQuotes } from '@/hooks/useQuotes';
 import { Quote, QuoteStatus, quoteService } from '@/services/quoteService';
 import { QuoteCard } from '@/components/orcamentos/QuoteCard';
+import { QuotesTableView } from '@/components/orcamentos/QuotesTableView';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+
+type ViewMode = 'grid' | 'list';
 
 const statusConfig: Record<QuoteStatus, { label: string; icon: any; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   pending: { label: 'Pendente', icon: Clock, variant: 'secondary' },
@@ -65,6 +70,9 @@ export default function Orcamentos() {
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>(
     () => (searchParams.get('period') as PeriodFilter) || 'all'
   );
+  const [viewMode, setViewMode] = useState<ViewMode>(
+    () => (searchParams.get('view') as ViewMode) || (typeof window !== 'undefined' && window.innerWidth < 768 ? 'grid' : 'list')
+  );
 
   // Persist filters in URL
   useEffect(() => {
@@ -72,11 +80,12 @@ export default function Orcamentos() {
     statusFilter && statusFilter !== 'pending' ? next.set('status', statusFilter) : next.delete('status');
     periodFilter && periodFilter !== 'all' ? next.set('period', periodFilter) : next.delete('period');
     searchTerm ? next.set('q', searchTerm) : next.delete('q');
+    viewMode ? next.set('view', viewMode) : next.delete('view');
     if (next.toString() !== searchParams.toString()) {
       setSearchParams(next, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, periodFilter, searchTerm]);
+  }, [statusFilter, periodFilter, searchTerm, viewMode]);
   const [isNewDialogOpen, setIsNewDialogOpen] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
@@ -272,6 +281,19 @@ export default function Orcamentos() {
                 <SelectItem value="last_month">Mês passado</SelectItem>
               </SelectContent>
             </Select>
+            <ToggleGroup
+              type="single"
+              value={viewMode}
+              onValueChange={(v) => v && setViewMode(v as ViewMode)}
+              className="bg-background border rounded-md p-0.5"
+            >
+              <ToggleGroupItem value="grid" aria-label="Visualização em grade" className="h-8 w-8 p-0">
+                <LayoutGrid className="w-4 h-4" />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="list" aria-label="Visualização em lista" className="h-8 w-8 p-0">
+                <List className="w-4 h-4" />
+              </ToggleGroupItem>
+            </ToggleGroup>
           </div>
         </div>
 
@@ -285,26 +307,36 @@ export default function Orcamentos() {
           </div>
         ) : pagination.paginatedData.length > 0 ? (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
-              {pagination.paginatedData.map((quote) => (
-                <QuoteCard
-                  key={quote.id}
-                  quote={quote}
-                  statusConfig={statusConfig}
-                  formatCurrency={formatCurrency}
-                  onView={(q) => { setSelectedQuote(q); setIsViewDialogOpen(true); }}
-                  onEdit={handleEdit}
-                  onDuplicate={handleDuplicate}
-                  onPrint={(q) => { setSelectedQuote(q); setIsViewDialogOpen(true); }}
-                  onApprove={handleApprove}
-                  onReject={handleReject}
-                  onReopen={handleReopen}
-                  onDelete={(q) => setQuoteToDelete(q)}
-                  onGenerateContract={handleGenerateContract}
-                  onCancelApproved={(q) => setQuoteToCancelApproved(q)}
-                />
-              ))}
-            </div>
+            {viewMode === 'grid' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
+                {pagination.paginatedData.map((quote) => (
+                  <QuoteCard
+                    key={quote.id}
+                    quote={quote}
+                    statusConfig={statusConfig}
+                    formatCurrency={formatCurrency}
+                    onView={(q) => { setSelectedQuote(q); setIsViewDialogOpen(true); }}
+                    onEdit={handleEdit}
+                    onDuplicate={handleDuplicate}
+                    onPrint={(q) => { setSelectedQuote(q); setIsViewDialogOpen(true); }}
+                    onApprove={handleApprove}
+                    onReject={handleReject}
+                    onReopen={handleReopen}
+                    onDelete={(q) => setQuoteToDelete(q)}
+                    onGenerateContract={handleGenerateContract}
+                    onCancelApproved={(q) => setQuoteToCancelApproved(q)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <QuotesTableView
+                quotes={pagination.paginatedData}
+                statusConfig={statusConfig}
+                formatCurrency={formatCurrency}
+                onView={(q) => { setSelectedQuote(q); setIsViewDialogOpen(true); }}
+                onPrint={(q) => { setSelectedQuote(q); setIsViewDialogOpen(true); }}
+              />
+            )}
             <PaginationControls 
               currentPage={pagination.currentPage}
               totalPages={pagination.totalPages}
