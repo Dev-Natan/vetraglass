@@ -179,35 +179,43 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
     return Array.from(typeSet).sort();
   }, [unifiedItems, selectedLinha]);
 
-  // Filtered items
+  // Filtered items — busca por nome/código funciona globalmente; filtros de Linha/Tipo refinam
   const filteredItems = useMemo(() => {
-    if (!selectedLinha) return [];
-    
     let items = unifiedItems;
-    
-    items = items.filter(item => item.linha === selectedLinha);
-    
+    const query = searchQuery.trim().toLowerCase();
+
+    if (selectedLinha) {
+      items = items.filter(item => item.linha === selectedLinha);
+    } else if (!query) {
+      return [];
+    }
+
     if (selectedType) {
       items = items.filter(item => item.type === selectedType);
     }
-    
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      items = items.filter(item => 
-        item.name.toLowerCase().includes(query)
+
+    if (query) {
+      items = items.filter(item =>
+        item.name.toLowerCase().includes(query) ||
+        item.id.toLowerCase().includes(query) ||
+        (item.item_template_id || '').toLowerCase().includes(query)
       );
     }
-    
+
     return items;
   }, [unifiedItems, selectedLinha, selectedType, searchQuery]);
 
   const selectedItem = filteredItems?.find(item => item.id === selectedItemId);
-  
+
   const unitPrice = customPrice !== null ? customPrice : (selectedItem?.sale_price || 0);
   const isM2 = selectedItem?.unit === 'm2';
+  const isGlass = selectedItem?.type === 'glass' || isM2;
   const isLinear = selectedItem?.unit === 'm' || selectedItem?.type === 'profile';
-  
-  const area = isM2 && width > 0 && height > 0 ? (width / 1000) * (height / 1000) : 1;
+
+  // Para vidros/m² entrada é em METROS; para perfis/lineares mantemos mm (compatibilidade)
+  const widthMeters = isGlass ? width : width / 1000;
+  const heightMeters = isGlass ? height : height / 1000;
+  const area = isM2 && widthMeters > 0 && heightMeters > 0 ? widthMeters * heightMeters : 1;
   const linearFactor = isLinear && width > 0 ? width / 1000 : 1;
   const totalPrice = unitPrice * (isM2 ? area : linearFactor) * quantity;
 
