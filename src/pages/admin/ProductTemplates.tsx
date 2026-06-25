@@ -2002,9 +2002,10 @@ export default function ProductTemplates() {
 
                               {item.item_template?.type === 'profile' && (
                                 <Badge variant="outline" className="text-[10px] px-2 py-0.5">
-                                  Ângulo: {item.cut_angle ?? 90}°
+                                  Ângulo: {item.cut_angle_start ?? item.cut_angle ?? 90}° / {item.cut_angle_end ?? item.cut_angle ?? 90}°
                                 </Badge>
                               )}
+
                             </div>
 
                             {item.side && (
