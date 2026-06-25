@@ -13,7 +13,7 @@ import { Search, Package, Check, ArrowLeft, Ruler, DollarSign, Sparkles, Info, G
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-import { useProductCategoryLabels } from '@/hooks/useProductCategories';
+import { useProductCategoryLabels, useProductCategories } from '@/hooks/useProductCategories';
 import { useProductLinhas } from '@/hooks/useProductLinhas';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useProductAluminumPriceOptions } from '@/hooks/useProductAluminumPrices';
