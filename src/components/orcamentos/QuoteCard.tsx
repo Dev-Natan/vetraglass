@@ -179,16 +179,46 @@ export function QuoteCard({
               {formatCurrency(quote.final_amount)}
             </span>
           </div>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="text-primary hover:text-primary hover:bg-primary/10 gap-1 h-8 px-2"
-            onClick={() => onView(quote)}
-          >
-            Detalhes
-            <Eye className="w-3.5 h-3.5" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 p-2 h-8 w-8"
+              title="Enviar via WhatsApp"
+              onClick={() => {
+                const phone = (quote.customer_phone || '').replace(/\D/g, '');
+                const msg = encodeURIComponent(
+                  `Olá ${quote.customer_name}, segue o seu orçamento #${String(quote.quote_number).padStart(4, '0')} para análise. Qualquer dúvida, estou à disposição!`
+                );
+                const url = phone
+                  ? `https://wa.me/${phone.length <= 11 ? '55' + phone : phone}?text=${msg}`
+                  : `https://wa.me/?text=${msg}`;
+                window.open(url, '_blank');
+              }}
+            >
+              <MessageCircle className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 p-2 h-8 w-8"
+              title="Gerar PDF"
+              onClick={() => onPrint(quote)}
+            >
+              <Download className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-primary hover:text-primary hover:bg-primary/10 gap-1 h-8 px-2"
+              onClick={() => onView(quote)}
+            >
+              Detalhes
+              <Eye className="w-3.5 h-3.5" />
+            </Button>
+          </div>
         </div>
+
       </UICardContent>
     </UICard>
   );
