@@ -984,7 +984,80 @@ export default function EditarProdutoEmpresa() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Editar Item</DialogTitle><DialogDescription>{editingItem?.item_template?.name || editingItem?.company_item?.name}</DialogDescription></DialogHeader>
           <div className="space-y-4">
-            {(editingItem?.item_template?.type === 'glass' || editingItem?.company_item?.type === 'glass') ? <GlassFormulaEditor widthFormula={widthFormula} heightFormula={heightFormula} onWidthFormulaChange={setWidthFormula} onHeightFormulaChange={setHeightFormula} showPiecesQuantity={true} piecesQuantity={piecesQuantity} onPiecesChange={setPiecesQuantity} piecesFormula={piecesFormula} onPiecesFormulaChange={setPiecesFormula} /> : <FormulaEditor value={quantityFormula} onChange={setQuantityFormula} showPiecesQuantity={true} piecesQuantity={piecesQuantity} onPiecesChange={setPiecesQuantity} piecesFormula={piecesFormula} onPiecesFormulaChange={setPiecesFormula} />}
+            {(() => {
+              const itemType = editingItem?.item_template?.type || editingItem?.company_item?.type;
+              const isGlass = itemType === 'glass';
+              return (
+                <>
+                  {isGlass ? (
+                    <GlassFormulaEditor
+                      widthFormula={widthFormula}
+                      heightFormula={heightFormula}
+                      onWidthFormulaChange={setWidthFormula}
+                      onHeightFormulaChange={setHeightFormula}
+                      showPiecesQuantity={true}
+                      piecesQuantity={piecesQuantity}
+                      onPiecesChange={setPiecesQuantity}
+                      piecesFormula={piecesFormula}
+                      onPiecesFormulaChange={setPiecesFormula}
+                    />
+                  ) : (
+                    <FormulaEditor
+                      value={quantityFormula}
+                      onChange={setQuantityFormula}
+                      showPiecesQuantity={true}
+                      piecesQuantity={piecesQuantity}
+                      onPiecesChange={setPiecesQuantity}
+                      piecesFormula={piecesFormula}
+                      onPiecesFormulaChange={setPiecesFormula}
+                    />
+                  )}
+
+                  {!isGlass && itemType === 'profile' && (
+                    <div className="space-y-2">
+                      <Label>Ângulo de corte</Label>
+                      <div className="flex gap-2">
+                        {[45, 90].map(angle => (
+                          <Button
+                            key={angle}
+                            type="button"
+                            variant={cutAngle === angle ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setCutAngle(angle)}
+                            className="flex-1"
+                          >
+                            {angle}°
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-2 border-t pt-4">
+                    <Label>Lado / Posição</Label>
+                    <div className="flex gap-2 flex-wrap">
+                      {[
+                        { value: null, label: 'Ambos' },
+                        { value: 'A', label: 'Lado A' },
+                        { value: 'B', label: 'Lado B' },
+                        { value: 'C', label: 'Lado C' },
+                      ].map(option => (
+                        <Button
+                          key={String(option.value)}
+                          type="button"
+                          variant={side === option.value ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setSide(option.value)}
+                          className="flex-1 min-w-[70px]"
+                        >
+                          {option.label}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditItemDialogOpen(false)}>Cancelar</Button>
