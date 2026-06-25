@@ -1928,47 +1928,83 @@ export default function ProductTemplates() {
                   </Card>
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {getCompositionItemsByType(compositionActiveTab).map((item) => (
-                      <div
-                        key={item.id}
-                        className="bg-card border rounded-lg p-3 relative group hover:shadow-md transition-shadow cursor-pointer hover:border-primary/50"
-                        onClick={() => handleEditItem(item)}
-                      >
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="absolute top-1 right-1 w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeCompositionMutation.mutate(item.id);
-                          }}
+                    {getCompositionItemsByType(compositionActiveTab).map((item) => {
+                      const displayedFormula = getDisplayedItemFormula(item);
+                      const formulaPosition = getDisplayedFormulaPosition(item);
+                      const displayedPieces = getDisplayedPieces(item);
+
+                      return (
+                        <div
+                          key={item.id}
+                          className="bg-card border rounded-lg p-3 relative group hover:shadow-md transition-shadow cursor-pointer hover:border-primary/50"
+                          onClick={() => handleEditItem(item)}
                         >
-                          <Trash2 className="w-3 h-3 text-destructive" />
-                        </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute top-1 right-1 w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeCompositionMutation.mutate(item.id);
+                            }}
+                          >
+                            <Trash2 className="w-3 h-3 text-destructive" />
+                          </Button>
 
-                        <div className="aspect-square bg-muted rounded-lg mb-2 flex items-center justify-center overflow-hidden">
-                          {item.item_template?.image_url ? (
-                            <img
-                              src={getStorageUrl(item.item_template.image_url)}
-                              alt={item.item_template.name}
-                              className="w-full h-full object-contain"
-                            />
-                          ) : (
-                            <div className="text-2xl text-muted-foreground/30 bg-muted w-full h-full flex items-center justify-center">📦</div>
-                          )}
+                          <div className="aspect-square bg-muted rounded-lg mb-2 flex items-center justify-center overflow-hidden">
+                            {item.item_template?.image_url ? (
+                              <img
+                                src={getStorageUrl(item.item_template.image_url)}
+                                alt={item.item_template.name}
+                                className="w-full h-full object-contain"
+                              />
+                            ) : (
+                              <div className="text-2xl text-muted-foreground/30 bg-muted w-full h-full flex items-center justify-center">📦</div>
+                            )}
+                          </div>
+
+                          <h4 className="font-medium text-[11px] truncate text-center text-primary">
+                            {item.item_template?.name}
+                          </h4>
+
+                          <div className="mt-2 flex flex-col items-center gap-1">
+                            <Badge
+                              variant="secondary"
+                              className="max-w-full justify-center text-[10px] font-mono px-2 py-0.5"
+                              title={displayedFormula}
+                            >
+                              <span className="font-sans font-semibold mr-1">Fórmula:</span>
+                              <span className="truncate">{displayedFormula}</span>
+                            </Badge>
+
+                            {formulaPosition && (
+                              <Badge variant="outline" className="text-[10px] px-2 py-0.5">
+                                Posição: {formulaPosition}
+                              </Badge>
+                            )}
+
+                            <div className="flex flex-wrap justify-center gap-1">
+                              <Badge variant="outline" className="text-[10px] px-2 py-0.5" title={displayedPieces}>
+                                <span className="font-semibold mr-1">Peças:</span>
+                                <span className="truncate max-w-[76px]">{displayedPieces}</span>
+                              </Badge>
+
+                              {item.item_template?.type === 'profile' && (
+                                <Badge variant="outline" className="text-[10px] px-2 py-0.5">
+                                  Ângulo: {item.cut_angle ?? 90}°
+                                </Badge>
+                              )}
+                            </div>
+
+                            {item.side && (
+                              <Badge variant="outline" className="text-[10px] px-2 py-0.5">
+                                Lado: {item.side}
+                              </Badge>
+                            )}
+                          </div>
                         </div>
-
-                        <h4 className="font-medium text-[11px] truncate text-center text-primary">
-                          {item.item_template?.name}
-                        </h4>
-                        
-                        {compositionActiveTab !== 'glass' && (
-                          <p className="text-[10px] text-muted-foreground text-center mt-1 font-mono">
-                            {item.quantity_formula}
-                          </p>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
