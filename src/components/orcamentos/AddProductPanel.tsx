@@ -82,6 +82,11 @@ interface AddProductPanelProps {
 export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   const { currentCompany } = useAuth();
   const { labels: categoryLabels } = useProductCategoryLabels();
+  const { data: adminCategories } = useProductCategories();
+  const categoryNormalizer = useMemo(
+    () => buildCategoryNormalizer(adminCategories?.map(c => ({ slug: c.slug, name: c.name }))),
+    [adminCategories]
+  );
   const { data: productLinhas } = useProductLinhas();
   
   const [selectedLinha, setSelectedLinha] = useState<string>('');
