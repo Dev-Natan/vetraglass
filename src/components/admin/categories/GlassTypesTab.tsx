@@ -1,8 +1,7 @@
-import { useMemo, useState } from "react";
+import { useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -11,8 +10,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Pencil, Trash2, Loader2, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import { SortableTableBody } from "@/components/common/SortableTable";
+import { SearchInput, PaginationFooter } from "@/components/common/SearchPaginationControls";
+import { useSearchPagination } from "@/hooks/useSearchPagination";
 import type { GlassType } from "@/hooks/useGlassTypes";
 
 interface GlassTypesTabProps {
@@ -24,8 +25,6 @@ interface GlassTypesTabProps {
   onReorder: (reorderedGlassTypes: GlassType[]) => void;
 }
 
-const PAGE_SIZE = 10;
-
 export function GlassTypesTab({
   glassTypes,
   isLoading,
@@ -34,42 +33,21 @@ export function GlassTypesTab({
   onDelete,
   onReorder,
 }: GlassTypesTabProps) {
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-
-  const filtered = useMemo(() => {
-    if (!glassTypes) return [];
-    const term = search.trim().toLowerCase();
-    if (!term) return glassTypes;
-    return glassTypes.filter(
-      (g) =>
-        g.name.toLowerCase().includes(term) ||
-        g.slug.toLowerCase().includes(term),
-    );
-  }, [glassTypes, search]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const paginated = useMemo(
-    () => filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
-    [filtered, currentPage],
+  const getSearchableFields = useCallback(
+    (g: GlassType) => [g.name, g.slug],
+    [],
   );
-  const isSearching = search.trim().length > 0;
+  const sp = useSearchPagination({ data: glassTypes, getSearchableFields });
 
   const renderGlassTypeCells = (glassType: GlassType) => (
     <>
       <TableCell className="font-medium">{glassType.name}</TableCell>
-      <TableCell className="text-muted-foreground font-mono text-sm">
-        {glassType.slug}
-      </TableCell>
+      <TableCell className="text-muted-foreground font-mono text-sm">{glassType.slug}</TableCell>
       <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">
         {glassType.description || "-"}
       </TableCell>
       <TableCell>
-        <Switch
-          checked={glassType.is_active}
-          onCheckedChange={() => onToggleActive(glassType)}
-        />
+        <Switch checked={glassType.is_active} onCheckedChange={() => onToggleActive(glassType)} />
       </TableCell>
       <TableCell className="text-right">
         <div className="flex items-center justify-end gap-2">
@@ -99,18 +77,7 @@ export function GlassTypesTab({
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome ou slug..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            className="pl-9"
-          />
-        </div>
+        <SearchInput search={sp.search} onSearchChange={sp.setSearch} />
 
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
@@ -130,15 +97,15 @@ export function GlassTypesTab({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginated.length > 0 && !isSearching ? (
+                {sp.paginated.length > 0 && !sp.isSearching ? (
                   <SortableTableBody
-                    items={paginated}
+                    items={sp.paginated}
                     renderCells={renderGlassTypeCells}
                     getIsInactive={(type) => !type.is_active}
                     onReorder={onReorder}
                   />
-                ) : paginated.length > 0 ? (
-                  paginated.map((type) => (
+                ) : sp.paginated.length > 0 ? (
+                  sp.paginated.map((type) => (
                     <TableRow key={type.id} className={!type.is_active ? "opacity-50" : ""}>
                       <TableCell className="text-muted-foreground">{type.sort_order}</TableCell>
                       {renderGlassTypeCells(type)}
@@ -154,33 +121,17 @@ export function GlassTypesTab({
               </TableBody>
             </Table>
 
-            <div className="flex items-center justify-between pt-2">
-              <p className="text-sm text-muted-foreground">
-                {filtered.length} {filtered.length === 1 ? "tipo" : "tipos"}
-                {isSearching && glassTypes ? ` de ${glassTypes.length}` : ""}
-              </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage <= 1}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <span className="text-sm tabular-nums">
-                  {currentPage} / {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage >= totalPages}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+            <PaginationFooter
+              currentPage={sp.currentPage}
+              totalPages={sp.totalPages}
+              filteredCount={sp.filtered.length}
+              totalCount={sp.totalCount}
+              isSearching={sp.isSearching}
+              itemLabelSingular="tipo"
+              itemLabelPlural="tipos"
+              onPrevious={sp.goToPreviousPage}
+              onNext={sp.goToNextPage}
+            />
           </>
         )}
       </CardContent>

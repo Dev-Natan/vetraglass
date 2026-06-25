@@ -1,8 +1,7 @@
-import { useMemo, useState } from "react";
+import { useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -11,8 +10,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Pencil, Trash2, Loader2, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import { SortableTableBody } from "@/components/common/SortableTable";
+import { SearchInput, PaginationFooter } from "@/components/common/SearchPaginationControls";
+import { useSearchPagination } from "@/hooks/useSearchPagination";
 import type { ProductCategory } from "@/hooks/useProductCategories";
 
 interface CategoriesTabProps {
@@ -25,8 +26,6 @@ interface CategoriesTabProps {
   onReorder: (reorderedCategories: ProductCategory[]) => void;
 }
 
-const PAGE_SIZE = 10;
-
 export function CategoriesTab({
   categories,
   isLoading,
@@ -36,35 +35,16 @@ export function CategoriesTab({
   onDelete,
   onReorder,
 }: CategoriesTabProps) {
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-
-  const filtered = useMemo(() => {
-    if (!categories) return [];
-    const term = search.trim().toLowerCase();
-    if (!term) return categories;
-    return categories.filter(
-      (c) =>
-        c.name.toLowerCase().includes(term) ||
-        c.slug.toLowerCase().includes(term),
-    );
-  }, [categories, search]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const paginated = useMemo(
-    () => filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
-    [filtered, currentPage],
+  const getSearchableFields = useCallback(
+    (c: ProductCategory) => [c.name, c.slug],
+    [],
   );
-
-  const isSearching = search.trim().length > 0;
+  const sp = useSearchPagination({ data: categories, getSearchableFields });
 
   const renderCategoryCells = (category: ProductCategory) => (
     <>
       <TableCell className="font-medium">{category.name}</TableCell>
-      <TableCell className="text-muted-foreground font-mono text-sm">
-        {category.slug}
-      </TableCell>
+      <TableCell className="text-muted-foreground font-mono text-sm">{category.slug}</TableCell>
       <TableCell>
         <div className="flex items-center gap-2">
           <div className={`w-4 h-4 rounded ${getColorClass(category.color)}`} />
@@ -72,25 +52,14 @@ export function CategoriesTab({
         </div>
       </TableCell>
       <TableCell>
-        <Switch
-          checked={category.is_active}
-          onCheckedChange={() => onToggleActive(category)}
-        />
+        <Switch checked={category.is_active} onCheckedChange={() => onToggleActive(category)} />
       </TableCell>
       <TableCell className="text-right">
         <div className="flex items-center justify-end gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onOpenDialog(category)}
-          >
+          <Button variant="ghost" size="icon" onClick={() => onOpenDialog(category)}>
             <Pencil className="h-4 w-4" />
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onDelete(category)}
-          >
+          <Button variant="ghost" size="icon" onClick={() => onDelete(category)}>
             <Trash2 className="h-4 w-4 text-destructive" />
           </Button>
         </div>
@@ -113,18 +82,7 @@ export function CategoriesTab({
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome ou slug..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            className="pl-9"
-          />
-        </div>
+        <SearchInput search={sp.search} onSearchChange={sp.setSearch} />
 
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
@@ -144,15 +102,15 @@ export function CategoriesTab({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginated.length > 0 && !isSearching ? (
+                {sp.paginated.length > 0 && !sp.isSearching ? (
                   <SortableTableBody
-                    items={paginated}
+                    items={sp.paginated}
                     renderCells={renderCategoryCells}
                     getIsInactive={(cat) => !cat.is_active}
                     onReorder={onReorder}
                   />
-                ) : paginated.length > 0 ? (
-                  paginated.map((cat) => (
+                ) : sp.paginated.length > 0 ? (
+                  sp.paginated.map((cat) => (
                     <TableRow key={cat.id} className={!cat.is_active ? "opacity-50" : ""}>
                       <TableCell className="text-muted-foreground">{cat.sort_order}</TableCell>
                       {renderCategoryCells(cat)}
@@ -168,33 +126,17 @@ export function CategoriesTab({
               </TableBody>
             </Table>
 
-            <div className="flex items-center justify-between pt-2">
-              <p className="text-sm text-muted-foreground">
-                {filtered.length} {filtered.length === 1 ? "categoria" : "categorias"}
-                {isSearching && categories ? ` de ${categories.length}` : ""}
-              </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage <= 1}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <span className="text-sm tabular-nums">
-                  {currentPage} / {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage >= totalPages}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+            <PaginationFooter
+              currentPage={sp.currentPage}
+              totalPages={sp.totalPages}
+              filteredCount={sp.filtered.length}
+              totalCount={sp.totalCount}
+              isSearching={sp.isSearching}
+              itemLabelSingular="categoria"
+              itemLabelPlural="categorias"
+              onPrevious={sp.goToPreviousPage}
+              onNext={sp.goToNextPage}
+            />
           </>
         )}
       </CardContent>
