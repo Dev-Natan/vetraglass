@@ -34,6 +34,9 @@ import { AprovarOrcamentoDialog } from '@/components/orcamentos/AprovarOrcamento
 import { usePagination } from '@/hooks/usePagination';
 import { PaginationControls } from '@/components/common/PaginationControls';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+type PeriodFilter = 'all' | '7d' | '30d' | 'this_month' | 'last_month';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 
 import { useQuotes } from '@/hooks/useQuotes';
@@ -57,6 +60,7 @@ export default function Orcamentos() {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<QuoteStatus | 'all'>('pending');
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('all');
   const [isNewDialogOpen, setIsNewDialogOpen] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
@@ -144,11 +148,44 @@ export default function Orcamentos() {
     setIsContractDialogOpen(true);
   };
 
+  const getPeriodRange = (p: PeriodFilter): { start: Date | null; end: Date | null } => {
+    const now = new Date();
+    if (p === 'all') return { start: null, end: null };
+    if (p === '7d') {
+      const s = new Date(now); s.setDate(s.getDate() - 7); s.setHours(0,0,0,0);
+      return { start: s, end: null };
+    }
+    if (p === '30d') {
+      const s = new Date(now); s.setDate(s.getDate() - 30); s.setHours(0,0,0,0);
+      return { start: s, end: null };
+    }
+    if (p === 'this_month') {
+      const s = new Date(now.getFullYear(), now.getMonth(), 1);
+      return { start: s, end: null };
+    }
+    // last_month
+    const s = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const e = new Date(now.getFullYear(), now.getMonth(), 1);
+    return { start: s, end: e };
+  };
+
+  const { start: periodStart, end: periodEnd } = getPeriodRange(periodFilter);
+
   const filteredQuotes = quotes?.filter(quote => {
     const matchesSearch = quote.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       quote.quote_number.toString().includes(searchTerm);
     const matchesStatus = statusFilter === 'all' || quote.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    let matchesPeriod = true;
+    if (periodStart || periodEnd) {
+      const created = quote.created_at ? new Date(quote.created_at) : null;
+      if (!created || isNaN(created.getTime())) {
+        matchesPeriod = false;
+      } else {
+        if (periodStart && created < periodStart) matchesPeriod = false;
+        if (periodEnd && created >= periodEnd) matchesPeriod = false;
+      }
+    }
+    return matchesSearch && matchesStatus && matchesPeriod;
   }) || [];
 
   const statusCounts = {
@@ -196,15 +233,29 @@ export default function Orcamentos() {
             </TabsList>
           </Tabs>
 
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Buscar por cliente ou número..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9"
-            />
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Buscar por cliente ou número..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Select value={periodFilter} onValueChange={(v) => setPeriodFilter(v as PeriodFilter)}>
+              <SelectTrigger className="w-full sm:w-[200px] bg-background">
+                <SelectValue placeholder="Período" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os períodos</SelectItem>
+                <SelectItem value="7d">Últimos 7 dias</SelectItem>
+                <SelectItem value="30d">Últimos 30 dias</SelectItem>
+                <SelectItem value="this_month">Este mês</SelectItem>
+                <SelectItem value="last_month">Mês passado</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
