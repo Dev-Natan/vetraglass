@@ -246,20 +246,30 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
   const handleAdd = async () => {
     if (!selectedItem || !currentCompany?.id) return;
 
+    // Sempre persistir em mm (compat). Vidro entra em metros.
+    const widthMm = isGlass ? Math.round(width * 1000) : width;
+    const heightMm = isGlass ? Math.round(height * 1000) : height;
+    const measureLabel = isM2 && widthMm > 0 && heightMm > 0
+      ? (isGlass
+          ? `${widthMeters.toFixed(2)}x${heightMeters.toFixed(2)}m`
+          : `${widthMm}x${heightMm}mm`)
+      : isLinear && widthMm > 0
+        ? `${widthMm}mm`
+        : '';
+    const displayName = measureLabel
+      ? `${selectedItem.name} [Medida: ${measureLabel}]`
+      : selectedItem.name;
+
     // If it's already a company item, add directly
     if (selectedItem.source === 'company') {
       onAdd({
         company_item_id: selectedItem.id,
-        name: isM2 && width > 0 && height > 0 
-          ? `${selectedItem.name} [Medida: ${width}x${height}mm]` 
-          : isLinear && width > 0 
-            ? `${selectedItem.name} [Medida: ${width}mm]`
-            : selectedItem.name,
+        name: displayName,
         unit: selectedItem.unit,
         unit_price: unitPrice,
         quantity,
-        width: width > 0 ? width : undefined,
-        height: height > 0 ? height : undefined,
+        width: widthMm > 0 ? widthMm : undefined,
+        height: heightMm > 0 ? heightMm : undefined,
         total_price: totalPrice,
         image_url: selectedItem.image_url,
         linha: selectedItem.linha,
@@ -268,6 +278,7 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
       });
       return;
     }
+
 
     // It's a template item — auto-create company_item
     setIsCreatingItem(true);
