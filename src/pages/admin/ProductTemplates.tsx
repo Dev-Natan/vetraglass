@@ -143,11 +143,22 @@ const getDisplayedItemFormula = (item: ProductTemplateItem): string => {
 };
 
 const getDisplayedFormulaPosition = (item: ProductTemplateItem): string | null => {
-  const quantityFormula = item.quantity_formula?.trim();
+  const sideMap: Record<string, string> = {
+    width: 'Largura',
+    largura: 'Largura',
+    horizontal: 'Largura',
+    height: 'Altura',
+    altura: 'Altura',
+    vertical: 'Altura',
+  };
+  const side = (item as any).side?.toString().trim().toLowerCase();
+  if (side && sideMap[side]) return sideMap[side];
+  if (side) return side.charAt(0).toUpperCase() + side.slice(1);
 
-  if (quantityFormula && quantityFormula !== '1') return 'Quantidade';
   if (item.width_formula?.trim()) return 'Largura';
   if (item.height_formula?.trim()) return 'Altura';
+  const quantityFormula = item.quantity_formula?.trim();
+  if (quantityFormula && quantityFormula !== '1') return 'Quantidade';
   return null;
 };
 
