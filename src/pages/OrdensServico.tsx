@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { 
@@ -35,6 +35,9 @@ import {
 import { toast } from 'sonner';
 import { usePagination } from '@/hooks/usePagination';
 import { PaginationControls } from '@/components/common/PaginationControls';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+type PeriodFilter = 'all' | '7d' | '30d' | 'this_month' | 'last_month';
 
 import { OSProductionBadge } from '@/components/ordens-servico/OSProductionBadge';
 import { OSCalendarView } from '@/components/ordens-servico/OSCalendarView';
@@ -95,8 +98,25 @@ export default function OrdensServico() {
     setSearchParams({ tab });
   };
   
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<OSStatus | 'all' | 'overdue'>('in_progress');
+  const [searchTerm, setSearchTerm] = useState(() => searchParams.get('q') ?? '');
+  const [statusFilter, setStatusFilter] = useState<OSStatus | 'all' | 'overdue'>(
+    () => (searchParams.get('status') as OSStatus | 'all' | 'overdue') || 'in_progress'
+  );
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>(
+    () => (searchParams.get('period') as PeriodFilter) || 'all'
+  );
+
+  // Persist filters in URL
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    statusFilter && statusFilter !== 'in_progress' ? next.set('status', statusFilter) : next.delete('status');
+    periodFilter && periodFilter !== 'all' ? next.set('period', periodFilter) : next.delete('period');
+    searchTerm ? next.set('q', searchTerm) : next.delete('q');
+    if (next.toString() !== searchParams.toString()) {
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter, periodFilter, searchTerm]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [osToDelete, setOsToDelete] = useState<string | null>(null);
   const [romaneioOsId, setRomaneioOsId] = useState<string | null>(null);
@@ -234,17 +254,38 @@ export default function OrdensServico() {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
+  // Period range
+  const getPeriodRange = (p: PeriodFilter): { start: Date | null; end: Date | null } => {
+    const now = new Date();
+    if (p === 'all') return { start: null, end: null };
+    if (p === '7d') { const s = new Date(now); s.setDate(s.getDate() - 7); s.setHours(0,0,0,0); return { start: s, end: null }; }
+    if (p === '30d') { const s = new Date(now); s.setDate(s.getDate() - 30); s.setHours(0,0,0,0); return { start: s, end: null }; }
+    if (p === 'this_month') return { start: new Date(now.getFullYear(), now.getMonth(), 1), end: null };
+    return { start: new Date(now.getFullYear(), now.getMonth() - 1, 1), end: new Date(now.getFullYear(), now.getMonth(), 1) };
+  };
+  const { start: periodStart, end: periodEnd } = getPeriodRange(periodFilter);
+
   // Filter ordens
   const filteredOrdens = ordens?.filter(os => {
     const matchesSearch = os.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       os.os_number.toString().includes(searchTerm);
-    
-    if (statusFilter === 'overdue') {
-      return matchesSearch && isOverdue(os);
+
+    let matchesPeriod = true;
+    if (periodStart || periodEnd) {
+      const created = os.created_at ? new Date(os.created_at) : null;
+      if (!created || isNaN(created.getTime())) matchesPeriod = false;
+      else {
+        if (periodStart && created < periodStart) matchesPeriod = false;
+        if (periodEnd && created >= periodEnd) matchesPeriod = false;
+      }
     }
-    
+
+    if (statusFilter === 'overdue') {
+      return matchesSearch && matchesPeriod && isOverdue(os);
+    }
+
     const matchesStatus = statusFilter === 'all' || os.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesStatus && matchesPeriod;
   }) || [];
 
   // Pagination
@@ -411,15 +452,29 @@ export default function OrdensServico() {
               </TabsList>
             </Tabs>
 
-            {/* Search */}
-            <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input 
-                placeholder="Buscar por cliente ou número..." 
-                className="pl-10"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+            {/* Search + Period */}
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por cliente ou número..."
+                  className="pl-10"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <Select value={periodFilter} onValueChange={(v) => setPeriodFilter(v as PeriodFilter)}>
+                <SelectTrigger className="w-full sm:w-[200px] bg-background">
+                  <SelectValue placeholder="Período" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os períodos</SelectItem>
+                  <SelectItem value="7d">Últimos 7 dias</SelectItem>
+                  <SelectItem value="30d">Últimos 30 dias</SelectItem>
+                  <SelectItem value="this_month">Este mês</SelectItem>
+                  <SelectItem value="last_month">Mês passado</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* List */}
