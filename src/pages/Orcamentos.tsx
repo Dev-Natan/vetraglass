@@ -43,6 +43,10 @@ import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 import { useQuotes } from '@/hooks/useQuotes';
 import { Quote, QuoteStatus, quoteService } from '@/services/quoteService';
 import { QuoteCard } from '@/components/orcamentos/QuoteCard';
+import { QuotesTableView } from '@/components/orcamentos/QuotesTableView';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+
+type ViewMode = 'grid' | 'list';
 
 const statusConfig: Record<QuoteStatus, { label: string; icon: any; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   pending: { label: 'Pendente', icon: Clock, variant: 'secondary' },
