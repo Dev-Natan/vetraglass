@@ -561,6 +561,7 @@ export default function EditarProdutoEmpresa() {
     setWidthFormula('');
     setHeightFormula('');
     setGlassName('');
+    setSide(null);
     setItemSearchQuery('');
   };
 
