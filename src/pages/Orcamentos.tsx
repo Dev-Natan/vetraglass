@@ -70,6 +70,9 @@ export default function Orcamentos() {
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>(
     () => (searchParams.get('period') as PeriodFilter) || 'all'
   );
+  const [viewMode, setViewMode] = useState<ViewMode>(
+    () => (searchParams.get('view') as ViewMode) || (typeof window !== 'undefined' && window.innerWidth < 768 ? 'grid' : 'list')
+  );
 
   // Persist filters in URL
   useEffect(() => {
