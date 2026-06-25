@@ -622,19 +622,21 @@ export default function EditarProdutoEmpresa() {
   const handleEditItem = (item: CompanyProductItem) => {
     setEditingItem(item);
     const itemType = item.item_template?.type || item.company_item?.type;
-    if (itemType === 'glass') {
-      setWidthFormula(item.width_formula || '');
-      setHeightFormula(item.height_formula || '');
-      setGlassName(item.notes || '');
-      setQuantityFormula(item.quantity_formula || '1');
-      setPiecesQuantity(item.pieces_quantity || 1);
-      setPiecesFormula((item as any).pieces_formula || null);
-    } else {
-      setQuantityFormula(item.quantity_formula || '1');
-      setPiecesQuantity(item.pieces_quantity || 1);
-      setPiecesFormula((item as any).pieces_formula || null);
-      setCutAngle(item.cut_angle || 90);
-    }
+    // Carrega TODOS os campos salvos antes de abrir o modal.
+    // Preserva quantity_formula mesmo quando vier como string vazia ('' -> '1' só se realmente nulo/undefined).
+    const savedFormula =
+      item.quantity_formula !== null && item.quantity_formula !== undefined
+        ? item.quantity_formula
+        : '1';
+
+    setQuantityFormula(savedFormula);
+    setPiecesQuantity(item.pieces_quantity ?? 1);
+    setPiecesFormula(item.pieces_formula ?? null);
+    setCutAngle(item.cut_angle ?? 90);
+    setSide(item.side ?? null);
+    setWidthFormula(item.width_formula ?? '');
+    setHeightFormula(item.height_formula ?? '');
+    setGlassName(itemType === 'glass' ? (item.notes ?? '') : '');
     setIsEditItemDialogOpen(true);
   };
 
