@@ -281,6 +281,19 @@ export default function Orcamentos() {
                 <SelectItem value="last_month">Mês passado</SelectItem>
               </SelectContent>
             </Select>
+            <ToggleGroup
+              type="single"
+              value={viewMode}
+              onValueChange={(v) => v && setViewMode(v as ViewMode)}
+              className="bg-background border rounded-md p-0.5"
+            >
+              <ToggleGroupItem value="grid" aria-label="Visualização em grade" className="h-8 w-8 p-0">
+                <LayoutGrid className="w-4 h-4" />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="list" aria-label="Visualização em lista" className="h-8 w-8 p-0">
+                <List className="w-4 h-4" />
+              </ToggleGroupItem>
+            </ToggleGroup>
           </div>
         </div>
 
