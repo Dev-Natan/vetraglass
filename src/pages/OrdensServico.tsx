@@ -254,17 +254,38 @@ export default function OrdensServico() {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
+  // Period range
+  const getPeriodRange = (p: PeriodFilter): { start: Date | null; end: Date | null } => {
+    const now = new Date();
+    if (p === 'all') return { start: null, end: null };
+    if (p === '7d') { const s = new Date(now); s.setDate(s.getDate() - 7); s.setHours(0,0,0,0); return { start: s, end: null }; }
+    if (p === '30d') { const s = new Date(now); s.setDate(s.getDate() - 30); s.setHours(0,0,0,0); return { start: s, end: null }; }
+    if (p === 'this_month') return { start: new Date(now.getFullYear(), now.getMonth(), 1), end: null };
+    return { start: new Date(now.getFullYear(), now.getMonth() - 1, 1), end: new Date(now.getFullYear(), now.getMonth(), 1) };
+  };
+  const { start: periodStart, end: periodEnd } = getPeriodRange(periodFilter);
+
   // Filter ordens
   const filteredOrdens = ordens?.filter(os => {
     const matchesSearch = os.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       os.os_number.toString().includes(searchTerm);
-    
-    if (statusFilter === 'overdue') {
-      return matchesSearch && isOverdue(os);
+
+    let matchesPeriod = true;
+    if (periodStart || periodEnd) {
+      const created = os.created_at ? new Date(os.created_at) : null;
+      if (!created || isNaN(created.getTime())) matchesPeriod = false;
+      else {
+        if (periodStart && created < periodStart) matchesPeriod = false;
+        if (periodEnd && created >= periodEnd) matchesPeriod = false;
+      }
     }
-    
+
+    if (statusFilter === 'overdue') {
+      return matchesSearch && matchesPeriod && isOverdue(os);
+    }
+
     const matchesStatus = statusFilter === 'all' || os.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesStatus && matchesPeriod;
   }) || [];
 
   // Pagination
