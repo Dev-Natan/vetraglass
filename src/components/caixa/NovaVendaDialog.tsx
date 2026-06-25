@@ -488,11 +488,45 @@ export function NovaVendaDialog({
     setPaymentConfig(config);
   };
 
+  const autoCreateClientIfNeeded = async () => {
+    if (mode !== 'avulsa') return;
+    if (!currentCompany?.id) return;
+    const name = (customerName || '').trim();
+    if (name.length < 2) return;
+
+    const normalized = name.toLowerCase();
+    const { data: existing } = await supabase
+      .from('clients')
+      .select('id, name')
+      .eq('company_id', currentCompany.id)
+      .ilike('name', name)
+      .limit(1);
+
+    if (existing && existing.some((c) => (c.name || '').trim().toLowerCase() === normalized)) {
+      return;
+    }
+
+    const { error } = await supabase.from('clients').insert({
+      company_id: currentCompany.id,
+      name,
+      is_active: true,
+    });
+
+    if (error) {
+      console.error('[auto-create-client] insert failed', error);
+      return;
+    }
+
+    await queryClient.invalidateQueries({ queryKey: ['clients'] });
+    toast.success('Novo cliente cadastrado automaticamente!');
+  };
+
   const handleConfirm = async () => {
     if (!paymentConfig) {
       toast.error('Configure o pagamento antes de finalizar');
       return;
     }
+    await autoCreateClientIfNeeded();
     await onConfirm({
       items,
       customerName,
@@ -505,6 +539,7 @@ export function NovaVendaDialog({
     });
     resetForm();
   };
+
 
   const resetForm = () => {
     setItems([]);
