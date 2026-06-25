@@ -58,9 +58,25 @@ export default function Orcamentos() {
   
   useModuleTutorialTrigger('orcamentos');
   
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<QuoteStatus | 'all'>('pending');
-  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('all');
+  const [searchTerm, setSearchTerm] = useState(() => searchParams.get('q') ?? '');
+  const [statusFilter, setStatusFilter] = useState<QuoteStatus | 'all'>(
+    () => (searchParams.get('status') as QuoteStatus | 'all') || 'pending'
+  );
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>(
+    () => (searchParams.get('period') as PeriodFilter) || 'all'
+  );
+
+  // Persist filters in URL
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    statusFilter && statusFilter !== 'pending' ? next.set('status', statusFilter) : next.delete('status');
+    periodFilter && periodFilter !== 'all' ? next.set('period', periodFilter) : next.delete('period');
+    searchTerm ? next.set('q', searchTerm) : next.delete('q');
+    if (next.toString() !== searchParams.toString()) {
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter, periodFilter, searchTerm]);
   const [isNewDialogOpen, setIsNewDialogOpen] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
