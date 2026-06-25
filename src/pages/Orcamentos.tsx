@@ -80,11 +80,12 @@ export default function Orcamentos() {
     statusFilter && statusFilter !== 'pending' ? next.set('status', statusFilter) : next.delete('status');
     periodFilter && periodFilter !== 'all' ? next.set('period', periodFilter) : next.delete('period');
     searchTerm ? next.set('q', searchTerm) : next.delete('q');
+    viewMode ? next.set('view', viewMode) : next.delete('view');
     if (next.toString() !== searchParams.toString()) {
       setSearchParams(next, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, periodFilter, searchTerm]);
+  }, [statusFilter, periodFilter, searchTerm, viewMode]);
   const [isNewDialogOpen, setIsNewDialogOpen] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
