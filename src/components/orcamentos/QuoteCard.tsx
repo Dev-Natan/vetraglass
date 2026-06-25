@@ -187,19 +187,8 @@ export function QuoteCard({
               className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 p-2 h-8 w-8"
               title="Enviar via WhatsApp"
               onClick={() => {
-                const phone = (quote.customer_phone || '').replace(/\D/g, '');
-                const numero = phone ? (phone.length <= 11 ? '55' + phone : phone) : '';
-                const mensagem = encodeURIComponent(
-                  `Olá ${quote.customer_name}, segue o seu orçamento #${String(quote.quote_number).padStart(4, '0')} para análise. Qualquer dúvida, estou à disposição!`
-                );
-                const url = `https://wa.me/${numero}?text=${mensagem}`;
-                const a = document.createElement('a');
-                a.href = url;
-                a.target = '_blank';
-                a.rel = 'noopener noreferrer';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
+                const mensagem = `Olá ${quote.customer_name}, segue o seu orçamento #${String(quote.quote_number).padStart(4, '0')} para análise. Qualquer dúvida, estou à disposição!`;
+                openWhatsapp(quote.customer_phone, mensagem);
               }}
             >
               <MessageCircle className="w-4 h-4" />
