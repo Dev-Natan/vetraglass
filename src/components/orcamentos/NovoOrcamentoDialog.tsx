@@ -39,6 +39,8 @@ import { WizardFooter } from './_novo-orcamento/parts/WizardFooter';
 export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamentoDialogProps) {
   const { currentCompany } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+
 
   const [discountPercent, setDiscountPercent] = useState(0);
   const [currentStep, setCurrentStep] = useState<Step>('client');
