@@ -54,7 +54,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
   const { items, setItems, addItem, removeItem, updateItem } = useQuoteItems();
 
   const { data: clients } = useClientsList(currentCompany?.id);
-  const { data: existingItems } = useExistingQuoteItems(quote?.id, open);
+  const { data: existingItems, isLoading: isLoadingExistingItems, isFetching: isFetchingExistingItems } = useExistingQuoteItems(quote?.id, open);
 
   const form = useForm<QuoteFormData>({
     resolver: zodResolver(quoteSchema),
