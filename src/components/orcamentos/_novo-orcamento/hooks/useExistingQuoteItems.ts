@@ -9,16 +9,24 @@ export function useExistingQuoteItems(quoteId: string | undefined, open: boolean
       if (!quoteId) return [];
       const { data, error } = await supabase
         .from('quote_items')
-        .select('*, company_products(linha), product_templates(linha)')
+        .select('*, company_products(linha, image_url), product_templates(linha, image_url), company_items(image_url), item_templates(image_url)')
         .eq('quote_id', quoteId);
 
       if (error) throw error;
       return (data || []).map((item: any) => {
         const hasMultiSide = Number(item.width_b) > 0 || Number(item.height_b) > 0;
         const linha = item.company_products?.linha || item.product_templates?.linha || null;
+        const resolvedImage =
+          item.image_url ||
+          item.company_products?.image_url ||
+          item.product_templates?.image_url ||
+          item.company_items?.image_url ||
+          item.item_templates?.image_url ||
+          null;
         return {
           ...item,
           linha,
+          image_url: resolvedImage,
           // Strip Lado B for single-side products so the form doesn't render those inputs
           width_b: hasMultiSide ? item.width_b : undefined,
           height_b: hasMultiSide ? item.height_b : undefined,
