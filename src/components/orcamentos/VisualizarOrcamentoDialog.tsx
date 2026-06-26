@@ -396,6 +396,7 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
       has_glass: item.has_glass,
       glass_color: item.glass_color,
       glass_thickness: item.glass_thickness,
+      linha: item.company_products?.linha || item.product_templates?.linha || null,
     }));
   };
 
