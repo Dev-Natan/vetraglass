@@ -517,7 +517,14 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
                   {items?.map((item) => (
                     <tr key={item.id} className="border-t">
                       <td className="p-3">
-                        <div>{item.description}</div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span>{item.description}</span>
+                          {(item.company_products?.linha || item.product_templates?.linha) && (
+                            <Badge variant="secondary" className="text-xs">
+                              Linha {item.company_products?.linha || item.product_templates?.linha}
+                            </Badge>
+                          )}
+                        </div>
                         {item.has_glass !== undefined && (
                           <div className="flex flex-wrap gap-1 mt-1">
                             {item.has_glass ? (
