@@ -15,6 +15,7 @@ interface QuoteItem {
   glass_color?: string | null;
   glass_thickness?: string | null;
   aluminum_color?: string | null;
+  linha?: string | null;
 }
 
 interface Quote {
