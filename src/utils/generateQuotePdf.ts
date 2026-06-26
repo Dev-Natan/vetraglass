@@ -254,9 +254,10 @@ export async function generateQuotePdf(
   const tableBody = items.map((item, index) => {
     const areaValue = (((item.width || 0) + (item.width_b || 0)) * (item.height || 0)) / 1_000_000;
     
-    let description = `${item.description}`;
+    let description = item.linha
+      ? `${item.description} — Linha ${item.linha}`
+      : `${item.description}`;
     let details = [];
-    if (item.linha) details.push(`Linha: ${item.linha}`);
     if (item.has_glass && item.glass_thickness) {
       details.push(`Vidro: ${item.glass_color || ''} ${item.glass_thickness}`);
     }
