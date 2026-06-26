@@ -37,5 +37,7 @@ export function useExistingQuoteItems(quoteId: string | undefined, open: boolean
       }) as QuoteItem[];
     },
     enabled: !!quoteId && open,
+    staleTime: 0,
+    gcTime: 0,
   });
 }
