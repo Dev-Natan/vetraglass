@@ -91,6 +91,8 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
   // Reset form when dialog opens/closes or quote changes
   useEffect(() => {
     if (open && quote) {
+      // Reset items immediately to avoid showing stale data from previous quote
+      setItems([]);
       form.reset({
         customer_name: quote.customer_name,
         customer_phone: quote.customer_phone || '',
@@ -109,6 +111,17 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
       setCurrentStep('products');
       setShowAddProduct(false);
     } else if (open && !quote) {
+      form.reset(DEFAULT_FORM_VALUES);
+      setItems([]);
+      setDiscountPercent(0);
+      setCurrentStep('client');
+      setShowAddProduct(false);
+      setSelectedClientId('');
+      setShowAddItem(false);
+      setShowMedidasColumn(true);
+      setShowM2Column(true);
+    }
+  }, [open, quote?.id, form, setItems]);
       form.reset(DEFAULT_FORM_VALUES);
       setItems([]);
       setDiscountPercent(0);
