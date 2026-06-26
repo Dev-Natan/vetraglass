@@ -28,6 +28,7 @@ interface QuoteItem {
   has_glass?: boolean;
   glass_color?: string | null;
   glass_thickness?: string | null;
+  linha?: string | null;
 }
 
 interface Quote {
