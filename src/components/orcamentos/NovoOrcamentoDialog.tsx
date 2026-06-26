@@ -375,12 +375,14 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
               {currentStep === 'products' && (
                 <ProductsStep
                   items={items}
+                  isLoading={isEditing && (isLoadingExistingItems || isFetchingExistingItems) && items.length === 0}
                   onAddProduct={() => setShowAddProduct(true)}
                   onAddItem={() => setShowAddItem(true)}
                   onUpdateItem={updateItem as (i: number, f: keyof QuoteItem, v: unknown) => void}
                   onRemoveItem={removeItem}
                   formatCurrency={formatCurrency}
                 />
+
               )}
 
               {currentStep === 'summary' && (
