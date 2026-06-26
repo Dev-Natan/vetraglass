@@ -13,13 +13,19 @@ export function useExistingQuoteItems(quoteId: string | undefined, open: boolean
         .eq('quote_id', quoteId);
 
       if (error) throw error;
-      return (data || []).map(item => ({
-        ...item,
-        base_price_m2: item.width && item.height
-          ? item.unit_price / ((item.width / 1000) * (item.height / 1000))
-          : item.unit_price,
-        item_type: item.company_item_id ? 'item' : 'product',
-      })) as QuoteItem[];
+      return (data || []).map(item => {
+        const hasMultiSide = Number(item.width_b) > 0 || Number(item.height_b) > 0;
+        return {
+          ...item,
+          // Strip Lado B for single-side products so the form doesn't render those inputs
+          width_b: hasMultiSide ? item.width_b : undefined,
+          height_b: hasMultiSide ? item.height_b : undefined,
+          base_price_m2: item.width && item.height
+            ? item.unit_price / ((item.width / 1000) * (item.height / 1000))
+            : item.unit_price,
+          item_type: item.company_item_id ? 'item' : 'product',
+        };
+      }) as QuoteItem[];
     },
     enabled: !!quoteId && open,
   });
