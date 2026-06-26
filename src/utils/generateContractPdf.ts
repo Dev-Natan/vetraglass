@@ -195,7 +195,7 @@ export async function generateContractPdf(
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
     
-    let itemDescription = `${index + 1}. ${item.description}`;
+    let itemDescription = `${index + 1}. ${item.description}${item.linha ? ` — Linha ${item.linha}` : ''}`;
     if (item.width && item.height) {
       itemDescription += ` - ${item.width}mm x ${item.height}mm`;
     }
