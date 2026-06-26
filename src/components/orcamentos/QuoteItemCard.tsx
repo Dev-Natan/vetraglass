@@ -3,9 +3,11 @@ import { resolveImageUrl, resolveProductImageUrl } from '@/utils/imageUrl';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Trash2, Package, Layers, Palette, Maximize2, Plus, X } from 'lucide-react';
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
 import { useItemTypes } from '@/hooks/useItemTypes';
+import { GLASS_COLOR_PRESETS, GLASS_THICKNESS_PRESETS } from '@/utils/glassName';
 import type { QuoteItem, QuoteComponent } from './_novo-orcamento/types';
 
 
