@@ -1,10 +1,12 @@
 import { Button } from '@/components/ui/button';
 import { Package, Layers } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { QuoteItemCard } from '../../QuoteItemCard';
 import type { QuoteItem } from '../types';
 
 interface Props {
   items: QuoteItem[];
+  isLoading?: boolean;
   onAddProduct: () => void;
   onAddItem: () => void;
   onUpdateItem: (index: number, field: keyof QuoteItem, value: unknown) => void;
@@ -12,7 +14,17 @@ interface Props {
   formatCurrency: (value: number) => string;
 }
 
-export function ProductsStep({ items, onAddProduct, onAddItem, onUpdateItem, onRemoveItem, formatCurrency }: Props) {
+export function ProductsStep({ items, isLoading, onAddProduct, onAddItem, onUpdateItem, onRemoveItem, formatCurrency }: Props) {
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        <Skeleton className="h-28 w-full" />
+        <Skeleton className="h-28 w-full" />
+        <Skeleton className="h-28 w-full" />
+      </div>
+    );
+  }
+
   if (items.length === 0) {
     return (
       <div className="space-y-4">

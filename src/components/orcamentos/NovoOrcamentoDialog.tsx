@@ -54,7 +54,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
   const { items, setItems, addItem, removeItem, updateItem } = useQuoteItems();
 
   const { data: clients } = useClientsList(currentCompany?.id);
-  const { data: existingItems } = useExistingQuoteItems(quote?.id, open);
+  const { data: existingItems, isLoading: isLoadingExistingItems, isFetching: isFetchingExistingItems } = useExistingQuoteItems(quote?.id, open);
 
   const form = useForm<QuoteFormData>({
     resolver: zodResolver(quoteSchema),
@@ -91,6 +91,8 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
   // Reset form when dialog opens/closes or quote changes
   useEffect(() => {
     if (open && quote) {
+      // Reset items immediately to avoid showing stale data from previous quote
+      setItems([]);
       form.reset({
         customer_name: quote.customer_name,
         customer_phone: quote.customer_phone || '',
@@ -119,7 +121,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
       setShowMedidasColumn(true);
       setShowM2Column(true);
     }
-  }, [open, quote, form, setItems]);
+  }, [open, quote?.id, form, setItems]);
 
   useEffect(() => {
     if (existingItems && existingItems.length > 0) {
@@ -373,12 +375,14 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
               {currentStep === 'products' && (
                 <ProductsStep
                   items={items}
+                  isLoading={isEditing && (isLoadingExistingItems || isFetchingExistingItems) && items.length === 0}
                   onAddProduct={() => setShowAddProduct(true)}
                   onAddItem={() => setShowAddItem(true)}
                   onUpdateItem={updateItem as (i: number, f: keyof QuoteItem, v: unknown) => void}
                   onRemoveItem={removeItem}
                   formatCurrency={formatCurrency}
                 />
+
               )}
 
               {currentStep === 'summary' && (
