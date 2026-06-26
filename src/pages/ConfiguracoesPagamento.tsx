@@ -625,12 +625,12 @@ export default function ConfiguracoesPagamento() {
 
             <div className="space-y-2">
               <Label htmlFor="condicao-forma">Forma de Pagamento (opcional)</Label>
-              <Select value={condicaoFormaId || ''} onValueChange={(v) => setCondicaoFormaId(v || null)}>
+              <Select value={condicaoFormaId || '__any__'} onValueChange={(v) => setCondicaoFormaId(v === '__any__' ? null : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Qualquer forma" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Qualquer forma</SelectItem>
+                  <SelectItem value="__any__">Qualquer forma</SelectItem>
                   {formas.filter(f => f.is_active).map((forma) => (
                     <SelectItem key={forma.id} value={forma.id}>
                       {forma.nome}
