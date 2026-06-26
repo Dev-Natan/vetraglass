@@ -112,15 +112,35 @@ export const QuoteItemCard = memo(function QuoteItemCard({ item, index, onUpdate
                     {isItem ? getItemTypeLabel(item.category) : (categoryLabels[item.category] || item.category)}
                   </Badge>
                 )}
-                {item.has_glass && item.glass_color && (
-                  <Badge variant="outline" className="text-xs bg-primary/10 border-primary/30 text-primary">
-                    {glassColorLabels[item.glass_color] || item.glass_color}
-                  </Badge>
-                )}
-                {item.has_glass && item.glass_thickness && (
-                  <Badge variant="outline" className="text-xs bg-success/10 border-success/30 text-success">
-                    {item.glass_thickness}
-                  </Badge>
+                {item.has_glass && (
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={item.glass_color || ''}
+                      onValueChange={(v) => onUpdate(index, 'glass_color', v)}
+                    >
+                      <SelectTrigger className="h-7 text-xs w-[120px] bg-primary/10 border-primary/30 text-primary">
+                        <SelectValue placeholder="Cor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {GLASS_COLOR_PRESETS.map(c => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={item.glass_thickness ? String(item.glass_thickness).replace('mm', '') : ''}
+                      onValueChange={(v) => onUpdate(index, 'glass_thickness', `${v}mm`)}
+                    >
+                      <SelectTrigger className="h-7 text-xs w-[100px] bg-success/10 border-success/30 text-success">
+                        <SelectValue placeholder="Espessura" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {GLASS_THICKNESS_PRESETS.map(t => (
+                          <SelectItem key={t} value={t}>{t}mm</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 )}
                 {item.aluminum_color && (
                   <Badge variant="outline" className="text-xs bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400">
