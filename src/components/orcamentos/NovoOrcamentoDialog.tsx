@@ -122,17 +122,6 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
       setShowM2Column(true);
     }
   }, [open, quote?.id, form, setItems]);
-      form.reset(DEFAULT_FORM_VALUES);
-      setItems([]);
-      setDiscountPercent(0);
-      setCurrentStep('client');
-      setShowAddProduct(false);
-      setSelectedClientId('');
-      setShowAddItem(false);
-      setShowMedidasColumn(true);
-      setShowM2Column(true);
-    }
-  }, [open, quote, form, setItems]);
 
   useEffect(() => {
     if (existingItems && existingItems.length > 0) {
