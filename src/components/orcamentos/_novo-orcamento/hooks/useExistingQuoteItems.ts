@@ -21,7 +21,6 @@ export function useExistingQuoteItems(quoteId: string | undefined, open: boolean
           item.company_products?.image_url ||
           item.product_templates?.image_url ||
           item.company_items?.image_url ||
-          item.item_templates?.image_url ||
           null;
         return {
           ...item,
