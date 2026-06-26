@@ -9,7 +9,7 @@ export function useExistingQuoteItems(quoteId: string | undefined, open: boolean
       if (!quoteId) return [];
       const { data, error } = await supabase
         .from('quote_items')
-        .select('*, company_products(linha, image_url), product_templates(linha, image_url), company_items(image_url), item_templates(image_url)')
+        .select('*, company_products(linha, image_url), product_templates(linha, image_url), company_items(image_url)')
         .eq('quote_id', quoteId);
 
       if (error) throw error;
