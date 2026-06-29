@@ -9,6 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { User, FileText, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { QuoteFormData } from '../types';
+import { formatPhoneBR } from '@/utils/phoneMask';
 
 interface Client {
   id: string;
