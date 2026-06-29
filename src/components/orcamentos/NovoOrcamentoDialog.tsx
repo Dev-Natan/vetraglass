@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { Form } from '@/components/ui/form';
 import { ShoppingCart } from 'lucide-react';
+import { formatPhoneBR } from '@/utils/phoneMask';
 
 import {
   quoteSchema,
