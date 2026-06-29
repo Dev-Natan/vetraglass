@@ -79,7 +79,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote, duplicate }: No
     const client = clients?.find(c => c.id === clientId);
     if (client) {
       form.setValue('customer_name', client.name || '');
-      form.setValue('customer_phone', client.phone || '');
+      form.setValue('customer_phone', formatPhoneBR(client.phone || ''));
       form.setValue('customer_email', client.email || '');
 
       const addressParts = [client.address, client.city, client.state, client.zip_code].filter(Boolean);
