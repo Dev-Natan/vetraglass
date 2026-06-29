@@ -9,6 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { User, FileText, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { QuoteFormData } from '../types';
+import { formatPhoneBR } from '@/utils/phoneMask';
 
 interface Client {
   id: string;
@@ -47,7 +48,7 @@ export function ClientStep({ form, isEditing, clients, selectedClientId, onClien
             <span className="font-medium">{form.watch('customer_name')}</span>
           </div>
           {form.watch('customer_phone') && (
-            <p className="text-sm text-muted-foreground pl-6">{form.watch('customer_phone')}</p>
+            <p className="text-sm text-muted-foreground pl-6">{formatPhoneBR(form.watch('customer_phone'))}</p>
           )}
           {form.watch('customer_email') && (
             <p className="text-sm text-muted-foreground pl-6">{form.watch('customer_email')}</p>
@@ -108,7 +109,14 @@ export function ClientStep({ form, isEditing, clients, selectedClientId, onClien
             <FormItem>
               <FormLabel>Telefone</FormLabel>
               <FormControl>
-                <Input placeholder="(00) 00000-0000" {...field} />
+                <Input
+                  placeholder="(00) 00000-0000"
+                  inputMode="tel"
+                  maxLength={16}
+                  {...field}
+                  value={formatPhoneBR(field.value as string)}
+                  onChange={(e) => field.onChange(formatPhoneBR(e.target.value))}
+                />
               </FormControl>
             </FormItem>
           )}

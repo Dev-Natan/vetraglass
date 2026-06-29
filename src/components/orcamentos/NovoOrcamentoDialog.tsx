@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { Form } from '@/components/ui/form';
 import { ShoppingCart } from 'lucide-react';
+import { formatPhoneBR } from '@/utils/phoneMask';
 
 import {
   quoteSchema,
@@ -79,7 +80,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote, duplicate }: No
     const client = clients?.find(c => c.id === clientId);
     if (client) {
       form.setValue('customer_name', client.name || '');
-      form.setValue('customer_phone', client.phone || '');
+      form.setValue('customer_phone', formatPhoneBR(client.phone || ''));
       form.setValue('customer_email', client.email || '');
 
       const addressParts = [client.address, client.city, client.state, client.zip_code].filter(Boolean);
@@ -97,7 +98,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote, duplicate }: No
       setItems([]);
       form.reset({
         customer_name: quote.customer_name,
-        customer_phone: quote.customer_phone || '',
+        customer_phone: formatPhoneBR(quote.customer_phone || ''),
         customer_email: quote.customer_email || '',
         customer_address: quote.customer_address || '',
         customer_document: quote.customer_document || '',
