@@ -98,7 +98,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote, duplicate }: No
       setItems([]);
       form.reset({
         customer_name: quote.customer_name,
-        customer_phone: quote.customer_phone || '',
+        customer_phone: formatPhoneBR(quote.customer_phone || ''),
         customer_email: quote.customer_email || '',
         customer_address: quote.customer_address || '',
         customer_document: quote.customer_document || '',
