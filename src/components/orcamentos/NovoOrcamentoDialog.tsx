@@ -36,7 +36,7 @@ import { FinalizeStep } from './_novo-orcamento/parts/FinalizeStep';
 import { AddProductDialog, AddItemDialog } from './_novo-orcamento/parts/AddPanels';
 import { WizardFooter } from './_novo-orcamento/parts/WizardFooter';
 
-export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamentoDialogProps) {
+export function NovoOrcamentoDialog({ open, onOpenChange, quote, duplicate }: NovoOrcamentoDialogProps) {
   const { currentCompany } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -50,7 +50,9 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote }: NovoOrcamento
   const [showMedidasColumn, setShowMedidasColumn] = useState(true);
   const [showM2Column, setShowM2Column] = useState(true);
 
-  const isEditing = !!quote;
+  const isEditing = !!quote && !duplicate;
+  const isDuplicating = !!quote && !!duplicate;
+
   const { items, setItems, addItem, removeItem, updateItem } = useQuoteItems();
 
   const { data: clients } = useClientsList(currentCompany?.id);
