@@ -87,6 +87,7 @@ export interface NovoOrcamentoDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   quote?: Quote | null;
+  duplicate?: boolean;
 }
 
 export type Step = 'client' | 'products' | 'summary' | 'finalize';

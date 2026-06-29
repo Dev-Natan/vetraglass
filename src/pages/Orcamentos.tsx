@@ -87,6 +87,7 @@ export default function Orcamentos() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, periodFilter, searchTerm, viewMode]);
   const [isNewDialogOpen, setIsNewDialogOpen] = useState(false);
+  const [isDuplicating, setIsDuplicating] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [quoteToDelete, setQuoteToDelete] = useState<Quote | null>(null);
@@ -137,13 +138,16 @@ export default function Orcamentos() {
       return;
     }
     setSelectedQuote(quote);
+    setIsDuplicating(false);
     setIsNewDialogOpen(true);
   };
 
-  const handleDuplicate = async (quote: Quote) => {
-    const items = await quoteService.fetchQuoteItems(quote.id);
-    await duplicateQuote({ quote, items });
+  const handleDuplicate = (quote: Quote) => {
+    setSelectedQuote(quote);
+    setIsDuplicating(true);
+    setIsNewDialogOpen(true);
   };
+
 
   const handleReopen = async (quote: Quote) => {
     await updateStatus({ id: quote.id, status: 'pending' });
@@ -354,7 +358,18 @@ export default function Orcamentos() {
         )}
       </div>
 
-      <NovoOrcamentoDialog open={isNewDialogOpen} onOpenChange={setIsNewDialogOpen} quote={selectedQuote || undefined} />
+      <NovoOrcamentoDialog
+        open={isNewDialogOpen}
+        onOpenChange={(o) => {
+          setIsNewDialogOpen(o);
+          if (!o) {
+            setIsDuplicating(false);
+            setSelectedQuote(null);
+          }
+        }}
+        quote={selectedQuote || undefined}
+        duplicate={isDuplicating}
+      />
       <VisualizarOrcamentoDialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen} quote={selectedQuote} />
       <EditarContratoDialog open={isContractDialogOpen} onOpenChange={setIsContractDialogOpen} quote={selectedQuote} items={contractItems} company={currentCompany} />
       <AprovarOrcamentoDialog open={isApproveDialogOpen} onOpenChange={setIsApproveDialogOpen} quote={selectedQuote} items={approveQuoteItems} />
