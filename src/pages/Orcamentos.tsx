@@ -141,10 +141,12 @@ export default function Orcamentos() {
     setIsNewDialogOpen(true);
   };
 
-  const handleDuplicate = async (quote: Quote) => {
-    const items = await quoteService.fetchQuoteItems(quote.id);
-    await duplicateQuote({ quote, items });
+  const handleDuplicate = (quote: Quote) => {
+    setSelectedQuote(quote);
+    setIsDuplicating(true);
+    setIsNewDialogOpen(true);
   };
+
 
   const handleReopen = async (quote: Quote) => {
     await updateStatus({ id: quote.id, status: 'pending' });
