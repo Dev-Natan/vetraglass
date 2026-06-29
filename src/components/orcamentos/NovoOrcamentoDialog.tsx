@@ -371,7 +371,8 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote, duplicate }: No
           <div>
             <DialogTitle className="flex items-center gap-2 text-2xl font-bold">
               <ShoppingCart className="w-6 h-6 text-primary" />
-              {isEditing ? 'Editar orçamento' : 'Novo orçamento'}
+              {isEditing ? 'Editar orçamento' : isDuplicating ? 'Duplicar orçamento' : 'Novo orçamento'}
+
             </DialogTitle>
             <DialogDescription className="text-primary/80 mt-1">
               Monte sua proposta com cálculo automático.
