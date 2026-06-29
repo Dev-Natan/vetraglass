@@ -358,7 +358,18 @@ export default function Orcamentos() {
         )}
       </div>
 
-      <NovoOrcamentoDialog open={isNewDialogOpen} onOpenChange={setIsNewDialogOpen} quote={selectedQuote || undefined} />
+      <NovoOrcamentoDialog
+        open={isNewDialogOpen}
+        onOpenChange={(o) => {
+          setIsNewDialogOpen(o);
+          if (!o) {
+            setIsDuplicating(false);
+            setSelectedQuote(null);
+          }
+        }}
+        quote={selectedQuote || undefined}
+        duplicate={isDuplicating}
+      />
       <VisualizarOrcamentoDialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen} quote={selectedQuote} />
       <EditarContratoDialog open={isContractDialogOpen} onOpenChange={setIsContractDialogOpen} quote={selectedQuote} items={contractItems} company={currentCompany} />
       <AprovarOrcamentoDialog open={isApproveDialogOpen} onOpenChange={setIsApproveDialogOpen} quote={selectedQuote} items={approveQuoteItems} />
