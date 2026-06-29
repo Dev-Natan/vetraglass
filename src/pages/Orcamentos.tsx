@@ -138,6 +138,7 @@ export default function Orcamentos() {
       return;
     }
     setSelectedQuote(quote);
+    setIsDuplicating(false);
     setIsNewDialogOpen(true);
   };
 
