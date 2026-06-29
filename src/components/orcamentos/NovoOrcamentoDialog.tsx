@@ -92,7 +92,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote, duplicate }: No
 
   // Reset form when dialog opens/closes or quote changes
   useEffect(() => {
-    if (open && quote) {
+    if (open && quote && !duplicate) {
       // Reset items immediately to avoid showing stale data from previous quote
       setItems([]);
       form.reset({
@@ -112,6 +112,21 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote, duplicate }: No
       setShowM2Column(quote.show_m2_column ?? true);
       setCurrentStep('products');
       setShowAddProduct(false);
+    } else if (open && quote && duplicate) {
+      // Duplicating: keep items (loaded below), but start fresh on client step with empty customer
+      setItems([]);
+      form.reset({
+        ...DEFAULT_FORM_VALUES,
+        payment_terms: quote.payment_terms || '',
+        notes: quote.notes || '',
+      });
+      setDiscountPercent(0);
+      setSelectedClientId('');
+      setCurrentStep('client');
+      setShowAddProduct(false);
+      setShowAddItem(false);
+      setShowMedidasColumn(quote.show_measures_column ?? true);
+      setShowM2Column(quote.show_m2_column ?? true);
     } else if (open && !quote) {
       form.reset(DEFAULT_FORM_VALUES);
       setItems([]);
@@ -123,13 +138,18 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote, duplicate }: No
       setShowMedidasColumn(true);
       setShowM2Column(true);
     }
-  }, [open, quote?.id, form, setItems]);
+  }, [open, quote?.id, duplicate, form, setItems]);
 
   useEffect(() => {
     if (existingItems && existingItems.length > 0) {
-      setItems(existingItems);
+      // When duplicating, strip ids so items are inserted as new records
+      const prepared = isDuplicating
+        ? existingItems.map(({ id, ...rest }) => rest as QuoteItem)
+        : existingItems;
+      setItems(prepared);
     }
-  }, [existingItems, setItems]);
+  }, [existingItems, setItems, isDuplicating]);
+
 
   const totals = useMemo(() => computeTotals(items, discountPercent), [items, discountPercent]);
 
