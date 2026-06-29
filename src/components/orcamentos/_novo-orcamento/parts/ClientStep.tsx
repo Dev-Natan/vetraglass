@@ -48,7 +48,7 @@ export function ClientStep({ form, isEditing, clients, selectedClientId, onClien
             <span className="font-medium">{form.watch('customer_name')}</span>
           </div>
           {form.watch('customer_phone') && (
-            <p className="text-sm text-muted-foreground pl-6">{form.watch('customer_phone')}</p>
+            <p className="text-sm text-muted-foreground pl-6">{formatPhoneBR(form.watch('customer_phone'))}</p>
           )}
           {form.watch('customer_email') && (
             <p className="text-sm text-muted-foreground pl-6">{form.watch('customer_email')}</p>
