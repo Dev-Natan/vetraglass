@@ -109,7 +109,14 @@ export function ClientStep({ form, isEditing, clients, selectedClientId, onClien
             <FormItem>
               <FormLabel>Telefone</FormLabel>
               <FormControl>
-                <Input placeholder="(00) 00000-0000" {...field} />
+                <Input
+                  placeholder="(00) 00000-0000"
+                  inputMode="tel"
+                  maxLength={16}
+                  {...field}
+                  value={formatPhoneBR(field.value as string)}
+                  onChange={(e) => field.onChange(formatPhoneBR(e.target.value))}
+                />
               </FormControl>
             </FormItem>
           )}
