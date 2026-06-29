@@ -681,12 +681,25 @@ export default function ProductTemplates() {
 
       // Upload image if a new file was selected
       if (formImageFile && savedId) {
-        const processedFile = await processFileWithWhiteBackground(formImageFile);
+        let toUpload: Blob = formImageFile;
+        let contentType = formImageFile.type || 'image/png';
+        try {
+          const processed = await processFileWithWhiteBackground(formImageFile);
+          if (processed && processed.size > 0) {
+            toUpload = processed;
+            contentType = 'image/png';
+          }
+        } catch (e) {
+          console.warn('[product-template-upload] background processing failed, uploading original', e);
+        }
         const fileName = `${savedId}.png`;
         const { error: uploadError } = await supabase.storage
           .from('product-templates')
-          .upload(fileName, processedFile, { upsert: true, contentType: 'image/png', cacheControl: '0' });
-        if (uploadError) throw uploadError;
+          .upload(fileName, toUpload, { upsert: true, contentType, cacheControl: '0' });
+        if (uploadError) {
+          console.error('[product-template-upload] storage error', uploadError);
+          throw new Error(uploadError.message || 'Falha no upload da imagem');
+        }
         const { data: urlData } = supabase.storage.from('product-templates').getPublicUrl(fileName);
         const newUrl = `${urlData.publicUrl}?t=${Date.now()}`;
         await supabase.from('product_templates').update({ image_url: newUrl }).eq('id', savedId);
