@@ -87,6 +87,7 @@ export default function Orcamentos() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, periodFilter, searchTerm, viewMode]);
   const [isNewDialogOpen, setIsNewDialogOpen] = useState(false);
+  const [isDuplicating, setIsDuplicating] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [quoteToDelete, setQuoteToDelete] = useState<Quote | null>(null);
