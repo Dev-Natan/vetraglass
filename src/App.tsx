@@ -110,13 +110,43 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function IndexRedirect() {
-  const { isSaasAdmin } = useAuth();
-  
+  const { isSaasAdmin, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   if (isSaasAdmin) {
     return <Navigate to="/admin" replace />;
   }
-  
+
   return <Suspense fallback={<LazyPageLoader />}><Index /></Suspense>;
+}
+
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading, isSaasAdmin } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  if (!isSaasAdmin) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <>{children}</>;
 }
 
 function LandingRedirect() {
