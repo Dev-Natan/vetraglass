@@ -34,7 +34,8 @@ import {
   ClipboardList,
   ExternalLink,
   CalendarDays,
-  Wallet
+  Wallet,
+  Loader2
 } from 'lucide-react';
 import {
   Select,
@@ -123,6 +124,7 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
   const navigate = useNavigate();
   const [aprovarDialogOpen, setAprovarDialogOpen] = useState(false);
   const [contractDialogOpen, setContractDialogOpen] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   
   // Check if user can see financial data
   const { isAdmin, isGerente, isCaixa, isFinanceiro } = usePermissionProfile();
@@ -371,12 +373,25 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
       category: item.product_templates?.category || null,
     }));
     
-    toast({ title: 'Gerando PDF...' });
-    await generateQuotePdf(quote, itemsForPdf, company, 'download', getPaymentSettings(), {
-      showMeasuresColumn: quote.show_measures_column ?? true,
-      showM2Column: quote.show_m2_column ?? true,
+    setIsGeneratingPdf(true);
+    const loadingToast = toast({
+      title: 'Gerando PDF, aguarde...',
+      description: itemsForPdf.length > 10 ? `Processando ${itemsForPdf.length} itens. Pode levar alguns segundos.` : undefined,
     });
-    toast({ title: 'PDF gerado com sucesso!' });
+    try {
+      await generateQuotePdf(quote, itemsForPdf, company, 'download', getPaymentSettings(), {
+        showMeasuresColumn: quote.show_measures_column ?? true,
+        showM2Column: quote.show_m2_column ?? true,
+      });
+      loadingToast.dismiss?.();
+      toast({ title: 'PDF gerado com sucesso!' });
+    } catch (err) {
+      console.error('Erro ao gerar PDF:', err);
+      loadingToast.dismiss?.();
+      toast({ title: 'Erro ao gerar PDF', description: 'Tente novamente em instantes.', variant: 'destructive' });
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   const handleDownloadContract = () => {
@@ -669,9 +684,9 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
 
           {/* Actions */}
           <div className="flex flex-wrap justify-end gap-2 border-t pt-4">
-            <Button variant="outline" onClick={handleDownloadPdf} className="gap-2">
-              <Download className="w-4 h-4" />
-              Baixar PDF
+            <Button variant="outline" onClick={handleDownloadPdf} disabled={isGeneratingPdf} className="gap-2">
+              {isGeneratingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              {isGeneratingPdf ? 'Gerando PDF...' : 'Baixar PDF'}
             </Button>
             <Button variant="outline" onClick={handleDownloadContract} className="gap-2">
               <FileSignature className="w-4 h-4" />
