@@ -405,6 +405,18 @@ export default function Financeiro() {
             <ContasReceberTab />
           </TabsContent>
 
+          <TabsContent value="pagar" className="mt-6">
+            <ContasPagarTab />
+          </TabsContent>
+
+          <TabsContent value="contas-bancarias" className="mt-6">
+            <BankAccountsTab />
+          </TabsContent>
+
+          <TabsContent value="plano-contas" className="mt-6">
+            <PlanoContasTab />
+          </TabsContent>
+
           <TabsContent value="comissoes" className="mt-6">
             <CommissionsTab selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
           </TabsContent>
