@@ -34,7 +34,6 @@ import {
   ClipboardList,
   ExternalLink,
   CalendarDays,
-  Wallet
   Wallet,
   Loader2
 } from 'lucide-react';
