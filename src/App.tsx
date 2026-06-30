@@ -260,48 +260,48 @@ function AppRoutes() {
       
       {/* Settings routes - all lazy */}
       <Route path="/configuracoes" element={
-        <ProtectedRoute><LazyRoute><Configuracoes /></LazyRoute></ProtectedRoute>
+        <AdminRoute><LazyRoute><Configuracoes /></LazyRoute></AdminRoute>
       } />
       <Route path="/configuracoes/usuarios" element={
-        <ProtectedRoute><LazyRoute><ConfiguracoesUsuarios /></LazyRoute></ProtectedRoute>
+        <AdminRoute><LazyRoute><ConfiguracoesUsuarios /></LazyRoute></AdminRoute>
       } />
       <Route path="/configuracoes/perfis" element={
-        <ProtectedRoute><LazyRoute><ConfiguracoesPerfis /></LazyRoute></ProtectedRoute>
+        <AdminRoute><LazyRoute><ConfiguracoesPerfis /></LazyRoute></AdminRoute>
       } />
       <Route path="/configuracoes/notificacoes" element={
-        <ProtectedRoute><LazyRoute><ConfiguracoesNotificacoes /></LazyRoute></ProtectedRoute>
+        <AdminRoute><LazyRoute><ConfiguracoesNotificacoes /></LazyRoute></AdminRoute>
       } />
       <Route path="/configuracoes/seguranca" element={
-        <ProtectedRoute><LazyRoute><ConfiguracoesSeguranca /></LazyRoute></ProtectedRoute>
+        <AdminRoute><LazyRoute><ConfiguracoesSeguranca /></LazyRoute></AdminRoute>
       } />
       <Route path="/configuracoes/dados" element={
-        <ProtectedRoute><LazyRoute><ConfiguracoesDados /></LazyRoute></ProtectedRoute>
+        <AdminRoute><LazyRoute><ConfiguracoesDados /></LazyRoute></AdminRoute>
       } />
       <Route path="/configuracoes/pagamento" element={
-        <ProtectedRoute><LazyRoute><ConfiguracoesPagamento /></LazyRoute></ProtectedRoute>
+        <AdminRoute><LazyRoute><ConfiguracoesPagamento /></LazyRoute></AdminRoute>
       } />
       
       {/* Admin routes - all lazy */}
       <Route path="/admin" element={
-        <ProtectedRoute><LazyRoute><AdminDashboard /></LazyRoute></ProtectedRoute>
+        <AdminRoute><LazyRoute><AdminDashboard /></LazyRoute></AdminRoute>
       } />
       <Route path="/admin/item-templates" element={
-        <ProtectedRoute><LazyRoute><ItemTemplates /></LazyRoute></ProtectedRoute>
+        <AdminRoute><LazyRoute><ItemTemplates /></LazyRoute></AdminRoute>
       } />
       <Route path="/admin/product-templates" element={
-        <ProtectedRoute><LazyRoute><ProductTemplates /></LazyRoute></ProtectedRoute>
+        <AdminRoute><LazyRoute><ProductTemplates /></LazyRoute></AdminRoute>
       } />
       <Route path="/admin/linhas" element={
-        <ProtectedRoute><LazyRoute><AdminLinhas /></LazyRoute></ProtectedRoute>
+        <AdminRoute><LazyRoute><AdminLinhas /></LazyRoute></AdminRoute>
       } />
       <Route path="/admin/linhas/:linha" element={
-        <ProtectedRoute><LazyRoute><ProductTemplates /></LazyRoute></ProtectedRoute>
+        <AdminRoute><LazyRoute><ProductTemplates /></LazyRoute></AdminRoute>
       } />
       <Route path="/admin/companies" element={
-        <ProtectedRoute><LazyRoute><AdminCompanies /></LazyRoute></ProtectedRoute>
+        <AdminRoute><LazyRoute><AdminCompanies /></LazyRoute></AdminRoute>
       } />
       <Route path="/admin/companies/:id" element={
-        <ProtectedRoute><LazyRoute><AdminCompanyDetail /></LazyRoute></ProtectedRoute>
+        <AdminRoute><LazyRoute><AdminCompanyDetail /></LazyRoute></AdminRoute>
       } />
       <Route path="/admin/import-products" element={
         <ProtectedRoute><LazyRoute><ImportProducts /></LazyRoute></ProtectedRoute>
