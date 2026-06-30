@@ -16,6 +16,8 @@ export type Database = {
     Tables: {
       accounts_receivable: {
         Row: {
+          bank_account_id: string | null
+          category_id: string | null
           client_id: string | null
           company_id: string
           created_at: string
@@ -39,6 +41,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          bank_account_id?: string | null
+          category_id?: string | null
           client_id?: string | null
           company_id: string
           created_at?: string
@@ -62,6 +66,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          bank_account_id?: string | null
+          category_id?: string | null
           client_id?: string | null
           company_id?: string
           created_at?: string
@@ -85,6 +91,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "accounts_receivable_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_receivable_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "financial_categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "accounts_receivable_client_id_fkey"
             columns: ["client_id"]
@@ -278,6 +298,84 @@ export type Database = {
           },
           {
             foreignKeyName: "audit_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bank_accounts: {
+        Row: {
+          account_number: string | null
+          account_type: string
+          active: boolean
+          agency: string | null
+          bank_code: string | null
+          bank_name: string | null
+          color: string | null
+          company_id: string
+          created_at: string
+          current_balance: number
+          id: string
+          initial_balance: number
+          is_default: boolean
+          name: string
+          notes: string | null
+          pix_key: string | null
+          pix_key_type: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_number?: string | null
+          account_type?: string
+          active?: boolean
+          agency?: string | null
+          bank_code?: string | null
+          bank_name?: string | null
+          color?: string | null
+          company_id: string
+          created_at?: string
+          current_balance?: number
+          id?: string
+          initial_balance?: number
+          is_default?: boolean
+          name: string
+          notes?: string | null
+          pix_key?: string | null
+          pix_key_type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_number?: string | null
+          account_type?: string
+          active?: boolean
+          agency?: string | null
+          bank_code?: string | null
+          bank_name?: string | null
+          color?: string | null
+          company_id?: string
+          created_at?: string
+          current_balance?: number
+          id?: string
+          initial_balance?: number
+          is_default?: boolean
+          name?: string
+          notes?: string | null
+          pix_key?: string | null
+          pix_key_type?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_accounts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_accounts_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies_safe"
@@ -2530,65 +2628,109 @@ export type Database = {
       expenses: {
         Row: {
           amount: number
+          attachment_url: string | null
+          bank_account_id: string | null
           category: string
+          category_id: string | null
           company_id: string
           created_at: string | null
           created_by: string | null
           description: string
+          document_number: string | null
           due_date: string | null
           employee_id: string | null
           id: string
+          installment_number: number
           is_auto_generated: boolean | null
           notes: string | null
+          paid_amount: number | null
           paid_date: string | null
           parent_expense_id: string | null
+          parent_payable_id: string | null
           payment_method: string | null
           recurrence: string | null
           recurrence_day: number | null
           status: string
+          supplier_document: string | null
+          supplier_name: string | null
+          total_installments: number
           updated_at: string | null
         }
         Insert: {
           amount?: number
+          attachment_url?: string | null
+          bank_account_id?: string | null
           category: string
+          category_id?: string | null
           company_id: string
           created_at?: string | null
           created_by?: string | null
           description: string
+          document_number?: string | null
           due_date?: string | null
           employee_id?: string | null
           id?: string
+          installment_number?: number
           is_auto_generated?: boolean | null
           notes?: string | null
+          paid_amount?: number | null
           paid_date?: string | null
           parent_expense_id?: string | null
+          parent_payable_id?: string | null
           payment_method?: string | null
           recurrence?: string | null
           recurrence_day?: number | null
           status?: string
+          supplier_document?: string | null
+          supplier_name?: string | null
+          total_installments?: number
           updated_at?: string | null
         }
         Update: {
           amount?: number
+          attachment_url?: string | null
+          bank_account_id?: string | null
           category?: string
+          category_id?: string | null
           company_id?: string
           created_at?: string | null
           created_by?: string | null
           description?: string
+          document_number?: string | null
           due_date?: string | null
           employee_id?: string | null
           id?: string
+          installment_number?: number
           is_auto_generated?: boolean | null
           notes?: string | null
+          paid_amount?: number | null
           paid_date?: string | null
           parent_expense_id?: string | null
+          parent_payable_id?: string | null
           payment_method?: string | null
           recurrence?: string | null
           recurrence_day?: number | null
           status?: string
+          supplier_document?: string | null
+          supplier_name?: string | null
+          total_installments?: number
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "expenses_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "financial_categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "expenses_company_id_fkey"
             columns: ["company_id"]
@@ -2627,6 +2769,13 @@ export type Database = {
           {
             foreignKeyName: "expenses_parent_expense_id_fkey"
             columns: ["parent_expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_parent_payable_id_fkey"
+            columns: ["parent_payable_id"]
             isOneToOne: false
             referencedRelation: "expenses"
             referencedColumns: ["id"]
@@ -2769,6 +2918,76 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_categories: {
+        Row: {
+          active: boolean
+          color: string | null
+          company_id: string
+          created_at: string
+          dre_group: string
+          icon: string | null
+          id: string
+          is_system: boolean
+          kind: string
+          name: string
+          parent_id: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          color?: string | null
+          company_id: string
+          created_at?: string
+          dre_group: string
+          icon?: string | null
+          id?: string
+          is_system?: boolean
+          kind: string
+          name: string
+          parent_id?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          color?: string | null
+          company_id?: string
+          created_at?: string
+          dre_group?: string
+          icon?: string | null
+          id?: string
+          is_system?: boolean
+          kind?: string
+          name?: string
+          parent_id?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_categories_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_categories_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "financial_categories"
             referencedColumns: ["id"]
           },
         ]
@@ -8175,6 +8394,10 @@ export type Database = {
       reset_company_product_to_template: {
         Args: { p_company_product_id: string; p_user_id: string }
         Returns: Json
+      }
+      seed_default_financial_categories: {
+        Args: { _company_id: string }
+        Returns: undefined
       }
       transfer_company_ownership: {
         Args: { _company_id: string; _new_admin_user_id: string }
