@@ -103,7 +103,7 @@ export function ProductsStep({ items, isLoading, onAddProduct, onAddItem, onUpda
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 pb-24">
       <AddItemsHeader onAddProduct={onAddProduct} onAddItem={onAddItem} />
 
       {items.map((item, index) => (
