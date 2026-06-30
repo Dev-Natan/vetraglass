@@ -210,7 +210,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     // Filtra pela linha selecionada
     products = products.filter(p => p.linha === selectedLinha);
     
-    if (selectedCategory) {
+    if (selectedCategory && selectedCategory !== '__all__') {
       products = products.filter(p => categoryNormalizer.match(p.category, selectedCategory));
     }
     if (searchQuery) {
