@@ -1227,7 +1227,12 @@ export default function ProductTemplates() {
                             queryClient.invalidateQueries({ queryKey: ['product-templates'] });
                             toast.success('Imagem atualizada!');
                           } catch (err: any) {
-                            toast.error('Erro ao enviar imagem: ' + err.message);
+                            const msg = String(err?.message || err);
+                            if (msg.includes('row-level security') || err?.code === '42501') {
+                              toast.error('Acesso negado. Apenas o administrador SaaS (natanjk7@gmail.com) pode alterar imagens de templates.');
+                            } else {
+                              toast.error('Erro ao enviar imagem: ' + msg);
+                            }
                           }
                           e.target.value = '';
                         }}
