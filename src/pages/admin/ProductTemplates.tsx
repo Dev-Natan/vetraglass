@@ -813,13 +813,24 @@ export default function ProductTemplates() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await supabase.from("product_template_items").delete().eq("product_template_id", id);
+      const { error: itemsError } = await supabase.from("product_template_items").delete().eq("product_template_id", id);
+      if (itemsError) throw itemsError;
       const { error } = await supabase.from("product_templates").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["product-templates"] });
       toast.success("Produto excluído!");
+    },
+    onError: (err: any) => {
+      const msg = String(err?.message || err);
+      if (msg.includes("row-level security") || err?.code === "42501") {
+        toast.error("Acesso negado. Apenas o ADM SaaS (natanjk7@gmail.com) pode excluir produtos.");
+      } else if (err?.code === "23503" || msg.includes("foreign key")) {
+        toast.error("Não foi possível excluir: este produto está vinculado a registros que bloqueiam a exclusão.");
+      } else {
+        toast.error("Erro ao excluir produto: " + msg);
+      }
     },
   });
 
