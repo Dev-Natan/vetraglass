@@ -710,8 +710,13 @@ export default function ProductTemplates() {
       toast.success(editingTemplate ? "Produto atualizado!" : "Produto criado!");
       handleCloseDialog();
     },
-    onError: (error) => {
-      toast.error("Erro ao salvar: " + error.message);
+    onError: (error: any) => {
+      const msg = String(error?.message || error);
+      if (msg.includes('row-level security') || error?.code === '42501') {
+        toast.error('Acesso negado. Apenas o administrador SaaS (natanjk7@gmail.com) pode editar templates de produtos.');
+      } else {
+        toast.error("Erro ao salvar: " + msg);
+      }
     },
   });
 
