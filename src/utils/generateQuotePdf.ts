@@ -290,11 +290,17 @@ export async function generateQuotePdf(
     ];
   });
 
+  // Reserve bottom margin so the table never overlaps the page footer/numbering
+  const bottomReserved = 18;
+
   autoTable(doc, {
     startY: y,
     head: [tableHead],
     body: tableBody,
     theme: 'grid',
+    margin: { left: marginLeft, right: 15, bottom: bottomReserved },
+    rowPageBreak: 'avoid',
+    showHead: 'everyPage',
     styles: {
       fontSize: 8,
       cellPadding: 2.5,
@@ -302,6 +308,7 @@ export async function generateQuotePdf(
       textColor: [60, 60, 60],
       lineColor: [240, 240, 240],
       lineWidth: 0.1,
+      overflow: 'linebreak',
     },
     headStyles: {
       fillColor: [250, 250, 250],
@@ -321,6 +328,7 @@ export async function generateQuotePdf(
     didDrawCell: (data) => {
       if (data.section === 'body' && data.column.index === 1) {
         const item = items[data.row.index];
+        if (!item) return;
         const imageUrl = getProductImageUrl(item.image_url);
         if (imageUrl) {
           const base64 = getCachedImage(imageUrl);
@@ -330,10 +338,28 @@ export async function generateQuotePdf(
             const imgSize = Math.max(6, Math.min(14, maxSize));
             const x = data.cell.x + (data.cell.width - imgSize) / 2;
             const y = data.cell.y + (data.cell.height - imgSize) / 2;
-            doc.addImage(base64, inferJsPdfImageFormat(base64), x, y, imgSize, imgSize);
+            try {
+              doc.addImage(base64, inferJsPdfImageFormat(base64), x, y, imgSize, imgSize);
+            } catch {}
           }
         }
       }
+    },
+    didDrawPage: () => {
+      // Footer with page number on every page
+      const pageSize = doc.internal.pageSize;
+      const pageH = pageSize.getHeight();
+      const pageW = pageSize.getWidth();
+      const currentPage = (doc as any).internal.getNumberOfPages();
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(150, 150, 150);
+      doc.text(
+        `Orçamento #${quote.quote_number.toString().padStart(4, '0')}  •  Página ${currentPage}`,
+        pageW / 2,
+        pageH - 8,
+        { align: 'center' }
+      );
     },
   });
 
