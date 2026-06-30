@@ -31,9 +31,8 @@ export function CreateCustomProductDialog({ open, onOpenChange, defaultLinha }: 
   
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
-  const [category, setCategory] = useState('other');
-  const [customCategory, setCustomCategory] = useState('');
-  const [showCustomCategory, setShowCustomCategory] = useState(false);
+  const [category, setCategory] = useState('');
+
   const [linha, setLinha] = useState('');
   const [customLinha, setCustomLinha] = useState('');
   const [showCustomLinha, setShowCustomLinha] = useState(false);
@@ -80,7 +79,8 @@ export function CreateCustomProductDialog({ open, onOpenChange, defaultLinha }: 
     mutationFn: async () => {
       if (!currentCompany?.id) throw new Error('Empresa não selecionada');
       
-      const finalCategory = showCustomCategory ? customCategory.trim() : category;
+      const finalCategory = category;
+
       const finalLinha = showCustomLinha ? customLinha.trim() : (linha || 'Personalizado');
       
       const { data, error } = await supabase.rpc('create_custom_product', {
@@ -111,9 +111,8 @@ export function CreateCustomProductDialog({ open, onOpenChange, defaultLinha }: 
   const resetForm = () => {
     setStep(1);
     setName('');
-    setCategory('other');
-    setCustomCategory('');
-    setShowCustomCategory(false);
+    setCategory('');
+
     setLinha(defaultLinha || '');
     setCustomLinha('');
     setShowCustomLinha(false);
@@ -129,7 +128,7 @@ export function CreateCustomProductDialog({ open, onOpenChange, defaultLinha }: 
     }
   }, [open, defaultLinha]);
 
-  const finalCategory = showCustomCategory ? customCategory.trim() : category;
+  const finalCategory = category;
   const finalLinha = showCustomLinha ? customLinha.trim() : (linha || 'Personalizado');
   const canCreate = name.trim().length > 0 && finalCategory.length > 0;
 
@@ -219,51 +218,23 @@ export function CreateCustomProductDialog({ open, onOpenChange, defaultLinha }: 
               <div className="grid grid-cols-1 gap-6">
                 <div className="space-y-3">
                   <Label className="text-sm font-semibold">Categoria</Label>
-                  {showCustomCategory ? (
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder="Nome da categoria"
-                        value={customCategory}
-                        onChange={(e) => setCustomCategory(e.target.value)}
-                        className="h-11 flex-1"
-                        autoFocus
-                      />
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
-                        onClick={() => {
-                          setShowCustomCategory(false);
-                          setCustomCategory('');
-                        }}
-                        className="h-11"
-                      >
-                        Voltar
-                      </Button>
-                    </div>
-                  ) : (
-                    <Select value={category} onValueChange={(val) => {
-                      if (val === '__new__') setShowCustomCategory(true);
-                      else setCategory(val);
-                    }}>
-                      <SelectTrigger className="h-11">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {allCategories.map((cat) => (
-                          <SelectItem key={cat.value} value={cat.value}>
-                            {cat.label}
-                          </SelectItem>
-                        ))}
-                        <SelectItem value="__new__" className="text-primary font-medium">
-                          <span className="flex items-center gap-2">
-                            <Plus className="w-4 h-4" />
-                            Criar nova categoria
-                          </span>
+                  <Select value={category} onValueChange={setCategory}>
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="Selecione uma categoria..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(productCategories || []).map((cat) => (
+                        <SelectItem key={cat.slug} value={cat.slug}>
+                          {cat.name}
                         </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Categorias são gerenciadas pelo administrador do sistema para evitar duplicidades.
+                  </p>
                 </div>
+
 
                 <div className="space-y-3">
                   <Label className="text-sm font-semibold">Linha de Produto</Label>
