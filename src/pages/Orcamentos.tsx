@@ -338,7 +338,15 @@ export default function Orcamentos() {
                 statusConfig={statusConfig}
                 formatCurrency={formatCurrency}
                 onView={(q) => { setSelectedQuote(q); setIsViewDialogOpen(true); }}
+                onEdit={handleEdit}
+                onDuplicate={handleDuplicate}
                 onPrint={(q) => { setSelectedQuote(q); setIsViewDialogOpen(true); }}
+                onApprove={handleApprove}
+                onReject={handleReject}
+                onReopen={handleReopen}
+                onDelete={(q) => setQuoteToDelete(q)}
+                onGenerateContract={handleGenerateContract}
+                onCancelApproved={(q) => setQuoteToCancelApproved(q)}
               />
             )}
             <PaginationControls 
