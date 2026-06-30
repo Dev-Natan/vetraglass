@@ -292,6 +292,9 @@ function AppRoutes() {
       <Route path="/admin/product-templates" element={
         <AdminRoute><LazyRoute><ProductTemplates /></LazyRoute></AdminRoute>
       } />
+      <Route path="/admin/product-images" element={
+        <AdminRoute><LazyRoute><AdminProductImages /></LazyRoute></AdminRoute>
+      } />
       <Route path="/admin/linhas" element={
         <AdminRoute><LazyRoute><AdminLinhas /></LazyRoute></AdminRoute>
       } />
