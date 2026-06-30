@@ -492,175 +492,273 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      {/* ── Etapa 1: Catálogo ── */}
-      {!selectedProduct && (
-        <>
-          {/* Stepper indicador */}
-          <div className="shrink-0 flex items-center gap-2 mb-4 text-xs">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary text-primary-foreground font-medium">
-              <span className="w-5 h-5 rounded-full bg-primary-foreground/20 flex items-center justify-center text-[10px]">1</span>
-              Catálogo
-            </div>
-            <div className="h-px flex-1 bg-border" />
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted text-muted-foreground">
-              <span className="w-5 h-5 rounded-full bg-muted-foreground/20 flex items-center justify-center text-[10px]">2</span>
-              Dimensões
-            </div>
-          </div>
+      {/* ── Etapa 1: Catálogo (Wizard: Linha → Categoria → Produto) ── */}
+      {!selectedProduct && (() => {
+        // Sub-passo do wizard de catálogo
+        const catalogStep: 1 | 2 | 3 = !selectedLinha ? 1 : !selectedCategory ? 2 : 3;
 
-          {/* Filtros: Linha + Busca alinhados */}
-          <div className="shrink-0 space-y-3 pb-4 border-b mb-4">
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Select value={selectedLinha} onValueChange={handleLinhaChange}>
-                <SelectTrigger className="bg-background h-11 sm:w-[260px]">
-                  <Frame className="w-4 h-4 text-muted-foreground mr-1" />
-                  <SelectValue placeholder="Selecione a linha..." />
-                </SelectTrigger>
-                <SelectContent className="bg-popover border shadow-lg z-50">
-                  {linhas.map((linha) => (
-                    <SelectItem key={linha} value={linha!}>{linha}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <div className="relative flex-1">
+        const StepChip = ({ n, label, state }: { n: number; label: string; state: 'done' | 'active' | 'pending' }) => (
+          <div className={cn(
+            "flex items-center gap-2 px-3 py-1.5 rounded-full font-medium transition-colors",
+            state === 'active' && "bg-primary text-primary-foreground",
+            state === 'done' && "bg-success/15 text-success",
+            state === 'pending' && "bg-muted text-muted-foreground"
+          )}>
+            {state === 'done' ? (
+              <Check className="w-3.5 h-3.5" />
+            ) : (
+              <span className={cn(
+                "w-5 h-5 rounded-full flex items-center justify-center text-[10px]",
+                state === 'active' ? "bg-primary-foreground/20" : "bg-muted-foreground/20"
+              )}>{n}</span>
+            )}
+            <span className="hidden sm:inline">{label}</span>
+          </div>
+        );
+
+        const handleBack = () => {
+          if (catalogStep === 3) setSelectedCategory('');
+          else if (catalogStep === 2) setSelectedLinha('');
+        };
+
+        return (
+          <>
+            {/* Stepper visual: 3 passos do catálogo + Dimensões */}
+            <div className="shrink-0 flex items-center gap-1.5 sm:gap-2 mb-3 text-xs">
+              <StepChip n={1} label="Linha" state={catalogStep === 1 ? 'active' : 'done'} />
+              <div className="h-px flex-1 bg-border" />
+              <StepChip n={2} label="Categoria" state={catalogStep === 2 ? 'active' : catalogStep > 2 ? 'done' : 'pending'} />
+              <div className="h-px flex-1 bg-border" />
+              <StepChip n={3} label="Produto" state={catalogStep === 3 ? 'active' : 'pending'} />
+              <div className="h-px flex-1 bg-border" />
+              <StepChip n={4} label="Dimensões" state="pending" />
+            </div>
+
+            {/* Voltar + breadcrumb */}
+            {catalogStep > 1 && (
+              <div className="shrink-0 flex items-center justify-between mb-3 gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleBack}
+                  className="gap-1.5 -ml-2 text-muted-foreground hover:text-foreground"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Voltar
+                </Button>
+                <div className="text-xs text-muted-foreground truncate">
+                  {selectedLinha}
+                  {selectedCategory && <> · <span className="text-foreground font-medium">{selectedCategory}</span></>}
+                </div>
+              </div>
+            )}
+
+            {/* Busca apenas no passo 3 */}
+            {catalogStep === 3 && (
+              <div className="shrink-0 relative mb-3">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder="Buscar produto pelo nome..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-9 bg-background h-11"
-                  disabled={!selectedLinha}
                 />
               </div>
-            </div>
-
-            {selectedLinha && categories.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                <Badge
-                  variant={selectedCategory === '' ? 'default' : 'outline'}
-                  className="cursor-pointer h-7 px-3 rounded-full transition-colors"
-                  onClick={() => setSelectedCategory('')}
-                >
-                  Todos
-                </Badge>
-                {categories.map((cat) => (
-                  <Badge
-                    key={cat}
-                    variant={categoryNormalizer.match(selectedCategory, cat) ? 'default' : 'outline'}
-                    className="cursor-pointer h-7 px-3 rounded-full transition-colors"
-                    onClick={() => handleCategoryChange(cat)}
-                  >
-                    {cat}
-                  </Badge>
-                ))}
-              </div>
             )}
-          </div>
 
-          {/* Catálogo */}
-          <div className="flex-1 min-h-0">
-            {selectedLinha && filteredProducts.length > 0 && (
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-xs text-muted-foreground">
-                  <span className="font-semibold text-foreground">{filteredProducts.length}</span> {filteredProducts.length === 1 ? 'produto disponível' : 'produtos disponíveis'}
-                </p>
-              </div>
-            )}
-            <ScrollArea className={cn("rounded-xl", selectedLinha && filteredProducts.length > 0 ? "h-[calc(100%-1.75rem)]" : "h-full")}>
-              {isLoading ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 p-1">
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                    <div key={i} className="rounded-2xl bg-muted animate-pulse h-52" />
-                  ))}
-                </div>
-              ) : !selectedLinha ? (
-                <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-16 px-6">
-                  <div className="relative mb-5">
-                    <div className="absolute inset-0 bg-primary/10 rounded-full blur-2xl" />
-                    <div className="relative w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/15 via-primary/5 to-transparent border border-primary/20 flex items-center justify-center">
-                      <Frame className="w-9 h-9 text-primary/70" strokeWidth={1.5} />
+            {/* Conteúdo do passo */}
+            <div className="flex-1 min-h-0">
+              <ScrollArea className="h-full rounded-xl">
+                {isLoading ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 p-1">
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                      <div key={i} className="rounded-2xl bg-muted animate-pulse h-44" />
+                    ))}
+                  </div>
+                ) : catalogStep === 1 ? (
+                  // ── Passo 1: Linhas ──
+                  linhas.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-16 px-6">
+                      <div className="w-16 h-16 rounded-2xl bg-muted/60 border border-dashed flex items-center justify-center mb-4">
+                        <Frame className="w-7 h-7 text-muted-foreground/50" strokeWidth={1.5} />
+                      </div>
+                      <p className="text-sm font-medium text-foreground">Nenhuma linha disponível</p>
+                      <p className="text-xs mt-1 text-center">Ative produtos no catálogo da empresa.</p>
                     </div>
-                  </div>
-                  <p className="text-base font-semibold text-foreground">Comece escolhendo uma linha</p>
-                  <p className="text-sm mt-1.5 text-center max-w-[300px] text-muted-foreground/80">
-                    Selecione a linha do produto no filtro acima para ver o catálogo disponível.
-                  </p>
-                </div>
-              ) : filteredProducts.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-16 px-6">
-                  <div className="w-16 h-16 rounded-2xl bg-muted/60 border border-dashed flex items-center justify-center mb-4">
-                    <Search className="w-7 h-7 text-muted-foreground/50" strokeWidth={1.5} />
-                  </div>
-                  <p className="text-sm font-medium text-foreground">Nenhum produto encontrado</p>
-                  <p className="text-xs mt-1">Tente ajustar a busca ou a categoria</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 p-1 pb-3">
-                  {filteredProducts.map((product) => {
-                    const imageUrl = getProductImage(product.image_url);
-                    const isCustomProduct = product.is_custom;
-                    return (
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 p-1 pb-3">
+                      {linhas.map((linha) => {
+                        const count = (companyProducts || []).filter(p => (p.linha || (p.product_template as any)?.linha) === linha).length;
+                        return (
+                          <button
+                            key={linha}
+                            type="button"
+                            onClick={() => handleLinhaChange(linha!)}
+                            className={cn(
+                              "group relative flex flex-col items-start gap-3 rounded-2xl border bg-card p-5 text-left min-h-[140px]",
+                              "transition-all duration-200 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/60 hover:-translate-y-0.5",
+                              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                            )}
+                          >
+                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 border border-primary/20 flex items-center justify-center">
+                              <Layers className="w-6 h-6 text-primary" strokeWidth={1.75} />
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-semibold text-foreground leading-tight">{linha}</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {count} {count === 1 ? 'produto' : 'produtos'}
+                              </p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )
+                ) : catalogStep === 2 ? (
+                  // ── Passo 2: Categorias ──
+                  categories.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-16 px-6">
+                      <div className="w-16 h-16 rounded-2xl bg-muted/60 border border-dashed flex items-center justify-center mb-4">
+                        <Package className="w-7 h-7 text-muted-foreground/50" strokeWidth={1.5} />
+                      </div>
+                      <p className="text-sm font-medium text-foreground">Nenhuma categoria nesta linha</p>
+                      <p className="text-xs mt-1 text-center">Esta linha ainda não possui produtos categorizados.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 p-1 pb-3">
                       <button
-                        key={product.id}
                         type="button"
-                        onClick={() => handleProductSelect(product.id)}
+                        onClick={() => handleCategoryChange('__all__' as any)}
                         className={cn(
-                          "group relative flex flex-col rounded-2xl border bg-card overflow-hidden text-left",
-                          "transition-all duration-200 hover:shadow-lg hover:shadow-primary/5 hover:border-primary/60 hover:-translate-y-0.5",
+                          "group relative flex flex-col items-start gap-3 rounded-2xl border-2 border-dashed bg-card p-5 text-left min-h-[140px]",
+                          "transition-all duration-200 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/60 hover:-translate-y-0.5",
                           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                         )}
                       >
-                        {isCustomProduct && (
-                          <div className="absolute top-2 right-2 z-10 flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning/95 text-warning-foreground text-[10px] font-medium shadow-sm">
-                            <Sparkles className="w-3 h-3" />
-                            Custom
-                          </div>
-                        )}
-                        <div className="aspect-[4/3] w-full bg-gradient-to-br from-muted/40 via-muted/20 to-background flex items-center justify-center p-3 border-b overflow-hidden">
-                          {imageUrl ? (
-                            <img
-                              src={imageUrl}
-                              alt={product.name}
-                              className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
-                              onError={(e) => {
-                                const target = e.currentTarget;
-                                target.style.display = 'none';
-                                const fallback = target.nextElementSibling;
-                                if (fallback) (fallback as HTMLElement).style.display = 'flex';
-                              }}
-                            />
-                          ) : null}
-                          <div className={cn(
-                            "flex-col items-center justify-center gap-1.5 text-muted-foreground/40",
-                            imageUrl ? "hidden" : "flex"
-                          )}>
-                            <Frame className="w-10 h-10" strokeWidth={1.25} />
-                            <span className="text-[10px] uppercase tracking-wider">Sem imagem</span>
-                          </div>
+                        <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center">
+                          <Package className="w-6 h-6 text-muted-foreground" strokeWidth={1.75} />
                         </div>
-                        <div className="p-2.5 flex-1 flex flex-col justify-between gap-1">
-                          <p className="text-xs sm:text-sm font-semibold text-foreground line-clamp-2 leading-snug">
-                            {product.name}
-                          </p>
-                          {product.category && (
-                            <p className="text-[10px] text-muted-foreground uppercase tracking-wide truncate">
-                              {categoryLabels[product.category] || product.category}
-                            </p>
-                          )}
+                        <div className="flex-1">
+                          <p className="font-semibold text-foreground leading-tight">Todos</p>
+                          <p className="text-xs text-muted-foreground mt-1">Ver todos os produtos</p>
                         </div>
                       </button>
-                    );
-                  })}
-                </div>
-              )}
-            </ScrollArea>
-          </div>
+                      {categories.map((cat) => {
+                        const count = (companyProducts || []).filter(p => {
+                          const linha = p.linha || (p.product_template as any)?.linha;
+                          const c = p.category || (p.product_template as any)?.category;
+                          return linha === selectedLinha && categoryNormalizer.match(c, cat);
+                        }).length;
+                        return (
+                          <button
+                            key={cat}
+                            type="button"
+                            onClick={() => handleCategoryChange(cat)}
+                            className={cn(
+                              "group relative flex flex-col items-start gap-3 rounded-2xl border bg-card p-5 text-left min-h-[140px]",
+                              "transition-all duration-200 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/60 hover:-translate-y-0.5",
+                              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                            )}
+                          >
+                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 border border-primary/20 flex items-center justify-center">
+                              <Frame className="w-6 h-6 text-primary" strokeWidth={1.75} />
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-semibold text-foreground leading-tight">{cat}</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {count} {count === 1 ? 'produto' : 'produtos'}
+                              </p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )
+                ) : (
+                  // ── Passo 3: Produtos ──
+                  filteredProducts.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-16 px-6">
+                      <div className="w-16 h-16 rounded-2xl bg-muted/60 border border-dashed flex items-center justify-center mb-4">
+                        <Search className="w-7 h-7 text-muted-foreground/50" strokeWidth={1.5} />
+                      </div>
+                      <p className="text-sm font-medium text-foreground">Nenhum produto encontrado nesta categoria</p>
+                      <p className="text-xs mt-1 text-center">Tente ajustar a busca ou voltar e escolher outra categoria.</p>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-xs text-muted-foreground mb-2 px-1">
+                        <span className="font-semibold text-foreground">{filteredProducts.length}</span> {filteredProducts.length === 1 ? 'produto disponível' : 'produtos disponíveis'}
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 p-1 pb-3">
+                        {filteredProducts.map((product) => {
+                          const imageUrl = getProductImage(product.image_url);
+                          const isCustomProduct = product.is_custom;
+                          return (
+                            <button
+                              key={product.id}
+                              type="button"
+                              onClick={() => handleProductSelect(product.id)}
+                              className={cn(
+                                "group relative flex flex-col rounded-2xl border bg-card overflow-hidden text-left",
+                                "transition-all duration-200 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/60 hover:-translate-y-0.5",
+                                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                              )}
+                            >
+                              {isCustomProduct && (
+                                <div className="absolute top-2 right-2 z-10 flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning/95 text-warning-foreground text-[10px] font-medium shadow-sm">
+                                  <Sparkles className="w-3 h-3" />
+                                  Custom
+                                </div>
+                              )}
+                              <div className="aspect-[4/3] w-full bg-gradient-to-br from-muted/40 via-muted/20 to-background flex items-center justify-center p-3 border-b overflow-hidden">
+                                {imageUrl ? (
+                                  <img
+                                    src={imageUrl}
+                                    alt={product.name}
+                                    className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
+                                    onError={(e) => {
+                                      const target = e.currentTarget;
+                                      target.style.display = 'none';
+                                      const fallback = target.nextElementSibling;
+                                      if (fallback) (fallback as HTMLElement).style.display = 'flex';
+                                    }}
+                                  />
+                                ) : null}
+                                <div className={cn(
+                                  "flex-col items-center justify-center gap-1.5 text-muted-foreground/40",
+                                  imageUrl ? "hidden" : "flex"
+                                )}>
+                                  <Frame className="w-10 h-10" strokeWidth={1.25} />
+                                  <span className="text-[10px] uppercase tracking-wider">Sem imagem</span>
+                                </div>
+                              </div>
+                              <div className="p-2.5 flex-1 flex flex-col justify-between gap-1">
+                                <p className="text-xs sm:text-sm font-semibold text-foreground line-clamp-2 leading-snug">
+                                  {product.name}
+                                </p>
+                                {product.category && (
+                                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide truncate">
+                                    {categoryLabels[product.category] || product.category}
+                                  </p>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )
+                )}
+              </ScrollArea>
+            </div>
 
-          <div className="shrink-0 pt-4 mt-4 border-t flex justify-end">
-            <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
-          </div>
-        </>
-      )}
+            <div className="shrink-0 pt-4 mt-4 border-t flex justify-end">
+              <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
+            </div>
+          </>
+        );
+      })()}
 
       {/* ── Etapa 2: Configuração das dimensões ── */}
       {selectedProduct && (
