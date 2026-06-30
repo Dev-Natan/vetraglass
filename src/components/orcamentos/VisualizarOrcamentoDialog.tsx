@@ -684,9 +684,9 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
 
           {/* Actions */}
           <div className="flex flex-wrap justify-end gap-2 border-t pt-4">
-            <Button variant="outline" onClick={handleDownloadPdf} className="gap-2">
-              <Download className="w-4 h-4" />
-              Baixar PDF
+            <Button variant="outline" onClick={handleDownloadPdf} disabled={isGeneratingPdf} className="gap-2">
+              {isGeneratingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              {isGeneratingPdf ? 'Gerando PDF...' : 'Baixar PDF'}
             </Button>
             <Button variant="outline" onClick={handleDownloadContract} className="gap-2">
               <FileSignature className="w-4 h-4" />
