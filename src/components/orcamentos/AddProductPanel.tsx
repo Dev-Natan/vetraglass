@@ -492,44 +492,53 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      {/* ── Etapa 1: Seleção do Produto (oculta quando um produto está selecionado) ── */}
+      {/* ── Etapa 1: Catálogo ── */}
       {!selectedProduct && (
         <>
-          {/* Fixed Header - Filters */}
-          <div className="shrink-0 space-y-4 pb-4 border-b mb-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Linha</label>
-                <Select value={selectedLinha} onValueChange={handleLinhaChange}>
-                  <SelectTrigger className="bg-background h-10">
-                    <SelectValue placeholder="Selecione a linha..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover border shadow-lg z-50">
-                    {linhas.map((linha) => (
-                      <SelectItem key={linha} value={linha!}>{linha}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Buscar</label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Filtrar produtos..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 bg-background h-10"
-                  />
-                </div>
+          {/* Stepper indicador */}
+          <div className="shrink-0 flex items-center gap-2 mb-4 text-xs">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary text-primary-foreground font-medium">
+              <span className="w-5 h-5 rounded-full bg-primary-foreground/20 flex items-center justify-center text-[10px]">1</span>
+              Catálogo
+            </div>
+            <div className="h-px flex-1 bg-border" />
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted text-muted-foreground">
+              <span className="w-5 h-5 rounded-full bg-muted-foreground/20 flex items-center justify-center text-[10px]">2</span>
+              Dimensões
+            </div>
+          </div>
+
+          {/* Filtros: Linha + Busca alinhados */}
+          <div className="shrink-0 space-y-3 pb-4 border-b mb-4">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Select value={selectedLinha} onValueChange={handleLinhaChange}>
+                <SelectTrigger className="bg-background h-11 sm:w-[260px]">
+                  <Frame className="w-4 h-4 text-muted-foreground mr-1" />
+                  <SelectValue placeholder="Selecione a linha..." />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border shadow-lg z-50">
+                  {linhas.map((linha) => (
+                    <SelectItem key={linha} value={linha!}>{linha}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar produto pelo nome..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 bg-background h-11"
+                  disabled={!selectedLinha}
+                />
               </div>
             </div>
 
             {selectedLinha && categories.length > 0 && (
-              <div className="flex flex-wrap gap-2 w-full">
+              <div className="flex flex-wrap gap-1.5">
                 <Badge
                   variant={selectedCategory === '' ? 'default' : 'outline'}
-                  className="cursor-pointer h-8 px-4"
+                  className="cursor-pointer h-7 px-3 rounded-full transition-colors"
                   onClick={() => setSelectedCategory('')}
                 >
                   Todos
@@ -538,7 +547,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                   <Badge
                     key={cat}
                     variant={categoryNormalizer.match(selectedCategory, cat) ? 'default' : 'outline'}
-                    className="cursor-pointer h-8 px-4"
+                    className="cursor-pointer h-7 px-3 rounded-full transition-colors"
                     onClick={() => handleCategoryChange(cat)}
                   >
                     {cat}
@@ -548,34 +557,45 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
             )}
           </div>
 
-          {/* Grid de produtos ocupa o espaço restante */}
+          {/* Catálogo */}
           <div className="flex-1 min-h-0">
-            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 block">
-              Selecione um produto {selectedLinha ? `(${filteredProducts.length})` : ''}
-            </label>
-            <ScrollArea className="h-[calc(100%-1.75rem)] rounded-xl border bg-muted/20 p-3">
+            {selectedLinha && filteredProducts.length > 0 && (
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-semibold text-foreground">{filteredProducts.length}</span> {filteredProducts.length === 1 ? 'produto disponível' : 'produtos disponíveis'}
+                </p>
+              </div>
+            )}
+            <ScrollArea className={cn("rounded-xl", selectedLinha && filteredProducts.length > 0 ? "h-[calc(100%-1.75rem)]" : "h-full")}>
               {isLoading ? (
-                <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">
-                  {[1, 2, 3, 4, 5, 6].map((i) => (
-                    <div key={i} className="aspect-square rounded-xl bg-muted animate-pulse" />
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 p-1">
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                    <div key={i} className="rounded-2xl bg-muted animate-pulse h-52" />
                   ))}
                 </div>
               ) : !selectedLinha ? (
-                <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-8">
-                  <Layers className="w-12 h-12 mb-3 opacity-50" />
-                  <p className="text-sm font-medium">Selecione uma linha</p>
-                  <p className="text-xs mt-1 text-center max-w-[200px]">
-                    Escolha a linha do produto no filtro acima para ver os produtos disponíveis
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-16 px-6">
+                  <div className="relative mb-5">
+                    <div className="absolute inset-0 bg-primary/10 rounded-full blur-2xl" />
+                    <div className="relative w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/15 via-primary/5 to-transparent border border-primary/20 flex items-center justify-center">
+                      <Frame className="w-9 h-9 text-primary/70" strokeWidth={1.5} />
+                    </div>
+                  </div>
+                  <p className="text-base font-semibold text-foreground">Comece escolhendo uma linha</p>
+                  <p className="text-sm mt-1.5 text-center max-w-[300px] text-muted-foreground/80">
+                    Selecione a linha do produto no filtro acima para ver o catálogo disponível.
                   </p>
                 </div>
               ) : filteredProducts.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-8">
-                  <Package className="w-12 h-12 mb-3 opacity-50" />
-                  <p className="text-sm font-medium">Nenhum produto encontrado</p>
-                  <p className="text-xs mt-1">Tente ajustar os filtros</p>
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-16 px-6">
+                  <div className="w-16 h-16 rounded-2xl bg-muted/60 border border-dashed flex items-center justify-center mb-4">
+                    <Search className="w-7 h-7 text-muted-foreground/50" strokeWidth={1.5} />
+                  </div>
+                  <p className="text-sm font-medium text-foreground">Nenhum produto encontrado</p>
+                  <p className="text-xs mt-1">Tente ajustar a busca ou a categoria</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 p-1 pb-3">
                   {filteredProducts.map((product) => {
                     const imageUrl = getProductImage(product.image_url);
                     const isCustomProduct = product.is_custom;
@@ -585,21 +605,23 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                         type="button"
                         onClick={() => handleProductSelect(product.id)}
                         className={cn(
-                          "relative aspect-square rounded-xl border-2 bg-card overflow-hidden transition-all",
-                          "hover:shadow-lg hover:border-primary/50 hover:scale-[1.02] border-border"
+                          "group relative flex flex-col rounded-2xl border bg-card overflow-hidden text-left",
+                          "transition-all duration-200 hover:shadow-lg hover:shadow-primary/5 hover:border-primary/60 hover:-translate-y-0.5",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                         )}
                       >
                         {isCustomProduct && (
-                          <div className="absolute top-1.5 right-1.5 z-10 w-6 h-6 rounded-full bg-warning flex items-center justify-center shadow-md" title="Produto Personalizado">
-                            <Sparkles className="w-3.5 h-3.5 text-warning-foreground" />
+                          <div className="absolute top-2 right-2 z-10 flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning/95 text-warning-foreground text-[10px] font-medium shadow-sm">
+                            <Sparkles className="w-3 h-3" />
+                            Custom
                           </div>
                         )}
-                        <div className="w-full h-[70%] bg-gradient-to-b from-muted/50 to-muted flex items-center justify-center p-2">
+                        <div className="aspect-[4/3] w-full bg-gradient-to-br from-muted/40 via-muted/20 to-background flex items-center justify-center p-3 border-b overflow-hidden">
                           {imageUrl ? (
                             <img
                               src={imageUrl}
                               alt={product.name}
-                              className="w-full h-full object-contain"
+                              className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
                               onError={(e) => {
                                 const target = e.currentTarget;
                                 target.style.display = 'none';
@@ -608,18 +630,24 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                               }}
                             />
                           ) : null}
-                          <div className={cn("items-center justify-center", imageUrl ? "hidden" : "flex")}>
-                            <Package className="w-10 h-10 text-muted-foreground/30" />
+                          <div className={cn(
+                            "flex-col items-center justify-center gap-1.5 text-muted-foreground/40",
+                            imageUrl ? "hidden" : "flex"
+                          )}>
+                            <Frame className="w-10 h-10" strokeWidth={1.25} />
+                            <span className="text-[10px] uppercase tracking-wider">Sem imagem</span>
                           </div>
                         </div>
-                        <div className="h-[30%] p-1.5 flex items-center justify-center bg-background">
-                          <span className="text-[9px] sm:text-[10px] font-medium text-center line-clamp-2 leading-tight">
+                        <div className="p-2.5 flex-1 flex flex-col justify-between gap-1">
+                          <p className="text-xs sm:text-sm font-semibold text-foreground line-clamp-2 leading-snug">
                             {product.name}
-                          </span>
+                          </p>
+                          {product.category && (
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-wide truncate">
+                              {categoryLabels[product.category] || product.category}
+                            </p>
+                          )}
                         </div>
-                        {!isCustomProduct && (
-                          <div className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-success ring-2 ring-background" />
-                        )}
                       </button>
                     );
                   })}
@@ -628,29 +656,43 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
             </ScrollArea>
           </div>
 
-          {/* Rodapé apenas com Cancelar quando ainda não há produto */}
           <div className="shrink-0 pt-4 mt-4 border-t flex justify-end">
             <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
           </div>
         </>
       )}
 
-      {/* ── Etapa 2: Configuração focada do produto selecionado ── */}
+      {/* ── Etapa 2: Configuração das dimensões ── */}
       {selectedProduct && (
         <>
-          {/* Header do produto com voltar */}
-          <div className="shrink-0 flex items-center gap-3 p-3 rounded-xl bg-muted/40 border mb-4">
+          {/* Stepper + Voltar */}
+          <div className="shrink-0 mb-3">
             <Button
               type="button"
               variant="ghost"
-              size="icon"
+              size="sm"
               onClick={() => setSelectedProductId('')}
-              title="Trocar produto"
-              className="shrink-0"
+              className="gap-1.5 -ml-2 text-muted-foreground hover:text-foreground"
             >
               <ArrowLeft className="w-4 h-4" />
+              Voltar para o catálogo
             </Button>
-            <div className="w-14 h-14 rounded-lg bg-background flex items-center justify-center shrink-0 overflow-hidden border">
+          </div>
+          <div className="shrink-0 flex items-center gap-2 mb-4 text-xs">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-success/15 text-success font-medium">
+              <Check className="w-3.5 h-3.5" />
+              Catálogo
+            </div>
+            <div className="h-px flex-1 bg-border" />
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary text-primary-foreground font-medium">
+              <span className="w-5 h-5 rounded-full bg-primary-foreground/20 flex items-center justify-center text-[10px]">2</span>
+              Dimensões
+            </div>
+          </div>
+
+          {/* Header do produto selecionado */}
+          <div className="shrink-0 flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-primary/5 to-transparent border mb-4">
+            <div className="w-16 h-16 rounded-lg bg-background flex items-center justify-center shrink-0 overflow-hidden border">
               {getProductImage(selectedProduct.image_url) ? (
                 <img
                   src={getProductImage(selectedProduct.image_url)!}
@@ -658,22 +700,20 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                   className="w-full h-full object-contain p-1"
                 />
               ) : (
-                <Package className="w-6 h-6 text-muted-foreground/50" />
+                <Frame className="w-7 h-7 text-muted-foreground/40" strokeWidth={1.5} />
               )}
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-sm leading-tight truncate">{selectedProduct.name}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {categoryLabels[selectedProduct.category] || selectedProduct.category}
-                {companyProduct?.id && (
-                  <span className="ml-1 font-mono">· #{String(companyProduct.id).slice(0, 8).toUpperCase()}</span>
+              <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                {selectedProduct.linha}
+                {selectedProduct.category && (
+                  <> · {categoryLabels[selectedProduct.category] || selectedProduct.category}</>
                 )}
               </p>
             </div>
-            <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedProductId('')}>
-              Trocar
-            </Button>
           </div>
+
 
           {/* Área de configuração rolável internamente */}
           <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-4">
