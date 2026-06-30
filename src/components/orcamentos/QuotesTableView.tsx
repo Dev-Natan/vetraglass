@@ -2,16 +2,34 @@ import { Quote, QuoteStatus } from '@/services/quoteService';
 import { openWhatsapp } from '@/utils/whatsapp';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { MessageCircle, Download, Eye } from 'lucide-react';
+import {
+  MessageCircle, Download, Eye, MoreVertical, Edit, Copy, FileSignature,
+  Printer, CheckCircle, XCircle, RotateCcw, Trash2,
+} from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface QuotesTableViewProps {
   quotes: Quote[];
   statusConfig: any;
   formatCurrency: (val: number) => string;
   onView: (quote: Quote) => void;
+  onEdit: (quote: Quote) => void;
+  onDuplicate: (quote: Quote) => void;
   onPrint: (quote: Quote) => void;
+  onApprove: (quote: Quote) => void;
+  onReject: (quote: Quote) => void;
+  onReopen: (quote: Quote) => void;
+  onDelete: (quote: Quote) => void;
+  onGenerateContract: (quote: Quote) => void;
+  onCancelApproved: (quote: Quote) => void;
 }
 
 const statusBadgeClass = (status: QuoteStatus) =>
@@ -23,7 +41,21 @@ const statusBadgeClass = (status: QuoteStatus) =>
     ? 'bg-rose-100 text-rose-800 border border-rose-200'
     : 'bg-slate-100 text-slate-800 border border-slate-200';
 
-export function QuotesTableView({ quotes, statusConfig, formatCurrency, onView, onPrint }: QuotesTableViewProps) {
+export function QuotesTableView({
+  quotes,
+  statusConfig,
+  formatCurrency,
+  onView,
+  onEdit,
+  onDuplicate,
+  onPrint,
+  onApprove,
+  onReject,
+  onReopen,
+  onDelete,
+  onGenerateContract,
+  onCancelApproved,
+}: QuotesTableViewProps) {
   return (
     <div className="rounded-xl border bg-card overflow-hidden">
       <div className="overflow-x-auto">
@@ -35,13 +67,15 @@ export function QuotesTableView({ quotes, statusConfig, formatCurrency, onView, 
               <TableHead className="hidden md:table-cell w-[140px]">Data</TableHead>
               <TableHead className="w-[130px]">Status</TableHead>
               <TableHead className="text-right w-[130px]">Total</TableHead>
-              <TableHead className="text-right w-[150px]">Ações</TableHead>
+              <TableHead className="text-right w-[190px]">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {quotes.map((quote) => {
               const status = statusConfig[quote.status as QuoteStatus] || statusConfig.pending;
               const StatusIcon = status.icon;
+              const isPending = quote.status === 'pending';
+              const isApprovedOrConverted = quote.status === 'approved' || quote.status === 'converted';
               return (
                 <TableRow
                   key={quote.id}
@@ -53,7 +87,7 @@ export function QuotesTableView({ quotes, statusConfig, formatCurrency, onView, 
                   </TableCell>
                   <TableCell className="font-medium line-clamp-1">{quote.customer_name}</TableCell>
                   <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
-                    {format(new Date(quote.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                    {format(new Date(quote.created_at), 'dd/MM/yyyy', { locale: ptBR })}
                   </TableCell>
                   <TableCell>
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${statusBadgeClass(quote.status as QuoteStatus)}`}>
@@ -85,15 +119,74 @@ export function QuotesTableView({ quotes, statusConfig, formatCurrency, onView, 
                       >
                         <Download className="w-4 h-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-primary hover:text-primary hover:bg-primary/10 h-8 w-8"
-                        title="Detalhes"
-                        onClick={() => onView(quote)}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
+                      {isPending && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-primary hover:text-primary hover:bg-primary/10 h-8 w-8"
+                          title="Editar"
+                          onClick={() => onEdit(quote)}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" title="Mais ações">
+                            <MoreVertical className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem onClick={() => onView(quote)}>
+                            <Eye className="w-4 h-4 mr-2" /> Visualizar
+                          </DropdownMenuItem>
+
+                          {isPending && (
+                            <>
+                              <DropdownMenuItem onClick={() => onEdit(quote)}>
+                                <Edit className="w-4 h-4 mr-2" /> Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => onApprove(quote)} className="text-primary font-medium">
+                                <CheckCircle className="w-4 h-4 mr-2" /> Aprovar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => onReject(quote)} className="text-destructive">
+                                <XCircle className="w-4 h-4 mr-2" /> Rejeitar
+                              </DropdownMenuItem>
+                            </>
+                          )}
+
+                          {isApprovedOrConverted && (
+                            <>
+                              <DropdownMenuItem onClick={() => onReopen(quote)}>
+                                <RotateCcw className="w-4 h-4 mr-2" /> Reabrir (Pendente)
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => onCancelApproved(quote)} className="text-destructive">
+                                <XCircle className="w-4 h-4 mr-2" /> Cancelar Aprovação
+                              </DropdownMenuItem>
+                            </>
+                          )}
+
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => onDuplicate(quote)}>
+                            <Copy className="w-4 h-4 mr-2" /> Duplicar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => onGenerateContract(quote)}>
+                            <FileSignature className="w-4 h-4 mr-2" /> Gerar Contrato
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => onPrint(quote)}>
+                            <Printer className="w-4 h-4 mr-2" /> Imprimir
+                          </DropdownMenuItem>
+
+                          {!isApprovedOrConverted && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => onDelete(quote)} className="text-destructive">
+                                <Trash2 className="w-4 h-4 mr-2" /> Excluir
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </TableCell>
                 </TableRow>
