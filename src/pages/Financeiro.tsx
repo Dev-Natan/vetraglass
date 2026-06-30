@@ -50,7 +50,8 @@ import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { DetalhesVendaDialog } from '@/components/caixa/DetalhesVendaDialog';
 import { generateSalePdf } from '@/utils/generateSalePdf';
-import { ExpensesTab } from '@/components/financeiro/ExpensesTab';
+import { DRETab } from '@/components/financeiro/DRETab';
+import { CashFlowTab } from '@/components/financeiro/CashFlowTab';
 import { CommissionsTab } from '@/components/financeiro/CommissionsTab';
 import { ContasReceberTab } from '@/components/financeiro/ContasReceberTab';
 import { ContasPagarTab } from '@/components/financeiro/ContasPagarTab';
@@ -241,14 +242,17 @@ export default function Financeiro() {
             <TabsTrigger value="plano-contas" className="gap-2 py-2 flex-1 min-w-[120px]">
               <BookOpen className="w-4 h-4" /> Plano de Contas
             </TabsTrigger>
+            <TabsTrigger value="dre" className="gap-2 py-2 flex-1 min-w-[120px]">
+              <BarChart3 className="w-4 h-4" /> DRE
+            </TabsTrigger>
+            <TabsTrigger value="fluxo-caixa" className="gap-2 py-2 flex-1 min-w-[120px]">
+              <PieChart className="w-4 h-4" /> Fluxo de Caixa
+            </TabsTrigger>
             <TabsTrigger value="relatorios" className="gap-2 py-2 flex-1 min-w-[120px]">
               <HistoryIcon className="w-4 h-4" /> Auditoria
             </TabsTrigger>
             <TabsTrigger value="auditoria-vendas" className="gap-2 py-2 flex-1 min-w-[120px]">
               <Receipt className="w-4 h-4" /> Vendas
-            </TabsTrigger>
-            <TabsTrigger value="despesas" className="gap-2 py-2 flex-1 min-w-[120px]">
-              <FileText className="w-4 h-4" /> Despesas (legado)
             </TabsTrigger>
           </TabsList>
 
@@ -421,8 +425,12 @@ export default function Financeiro() {
             <CommissionsTab selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
           </TabsContent>
 
-          <TabsContent value="despesas" className="mt-6">
-            <ExpensesTab selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
+          <TabsContent value="dre" className="mt-6">
+            <DRETab selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
+          </TabsContent>
+
+          <TabsContent value="fluxo-caixa" className="mt-6">
+            <CashFlowTab />
           </TabsContent>
         </Tabs>
       </div>

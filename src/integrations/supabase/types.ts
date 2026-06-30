@@ -8183,6 +8183,16 @@ export type Database = {
         Args: { _company_item_id: string }
         Returns: number
       }
+      get_cash_flow_projection: {
+        Args: { p_company_id: string; p_end: string; p_start: string }
+        Returns: {
+          date: string
+          projected_in: number
+          projected_out: number
+          realized_in: number
+          realized_out: number
+        }[]
+      }
       get_company_daily_summary: {
         Args: { _company_id: string; _end_date?: string; _start_date?: string }
         Returns: {
@@ -8193,6 +8203,18 @@ export type Database = {
           total_revenue: number
           total_sales: number
           unique_clients: number
+        }[]
+      }
+      get_dre_report: {
+        Args: { p_company_id: string; p_end: string; p_start: string }
+        Returns: {
+          amount: number
+          category_color: string
+          category_id: string
+          category_name: string
+          count: number
+          dre_group: string
+          kind: string
         }[]
       }
       get_employee_login_email: {
