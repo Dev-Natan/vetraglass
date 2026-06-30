@@ -9,7 +9,22 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Package, Check, ArrowLeft, Ruler, DollarSign, Sparkles, Info, GlassWater, Layers, Palette, Frame, Maximize2, FileText, Plus, X } from 'lucide-react';
+import { Search, Package, Check, ArrowLeft, Ruler, DollarSign, Sparkles, Info, GlassWater, Layers, LayoutGrid, Palette, Frame, Maximize2, FileText, Plus, X, DoorOpen, Square, AppWindow, Columns3, Box as BoxIcon, Minus, RectangleHorizontal } from 'lucide-react';
+
+// Ícone específico por categoria (slug ou nome normalizado)
+function getCategoryIcon(value?: string) {
+  const key = (value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (key.includes('janela')) return AppWindow;
+  if (key.includes('porta')) return DoorOpen;
+  if (key.includes('box')) return BoxIcon;
+  if (key.includes('espelho')) return Square;
+  if (key.includes('divisor')) return Columns3;
+  if (key.includes('guarda')) return RectangleHorizontal;
+  if (key.includes('corrimao') || key.includes('corrimão')) return Minus;
+  if (key.includes('basculante')) return RectangleHorizontal;
+  if (key.includes('tampo')) return Square;
+  return Frame;
+}
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
