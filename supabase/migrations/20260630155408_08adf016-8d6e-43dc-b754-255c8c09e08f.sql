@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.is_saas_admin(uuid) TO authenticated, anon, service_role;
