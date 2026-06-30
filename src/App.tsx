@@ -260,25 +260,25 @@ function AppRoutes() {
       
       {/* Settings routes - all lazy */}
       <Route path="/configuracoes" element={
-        <AdminRoute><LazyRoute><Configuracoes /></LazyRoute></AdminRoute>
+        <ProtectedRoute><LazyRoute><Configuracoes /></LazyRoute></ProtectedRoute>
       } />
       <Route path="/configuracoes/usuarios" element={
-        <AdminRoute><LazyRoute><ConfiguracoesUsuarios /></LazyRoute></AdminRoute>
+        <ProtectedRoute><LazyRoute><ConfiguracoesUsuarios /></LazyRoute></ProtectedRoute>
       } />
       <Route path="/configuracoes/perfis" element={
-        <AdminRoute><LazyRoute><ConfiguracoesPerfis /></LazyRoute></AdminRoute>
+        <ProtectedRoute><LazyRoute><ConfiguracoesPerfis /></LazyRoute></ProtectedRoute>
       } />
       <Route path="/configuracoes/notificacoes" element={
-        <AdminRoute><LazyRoute><ConfiguracoesNotificacoes /></LazyRoute></AdminRoute>
+        <ProtectedRoute><LazyRoute><ConfiguracoesNotificacoes /></LazyRoute></ProtectedRoute>
       } />
       <Route path="/configuracoes/seguranca" element={
-        <AdminRoute><LazyRoute><ConfiguracoesSeguranca /></LazyRoute></AdminRoute>
+        <ProtectedRoute><LazyRoute><ConfiguracoesSeguranca /></LazyRoute></ProtectedRoute>
       } />
       <Route path="/configuracoes/dados" element={
-        <AdminRoute><LazyRoute><ConfiguracoesDados /></LazyRoute></AdminRoute>
+        <ProtectedRoute><LazyRoute><ConfiguracoesDados /></LazyRoute></ProtectedRoute>
       } />
       <Route path="/configuracoes/pagamento" element={
-        <AdminRoute><LazyRoute><ConfiguracoesPagamento /></LazyRoute></AdminRoute>
+        <ProtectedRoute><LazyRoute><ConfiguracoesPagamento /></LazyRoute></ProtectedRoute>
       } />
       
       {/* Admin routes - all lazy */}
