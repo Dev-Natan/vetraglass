@@ -53,6 +53,9 @@ import { generateSalePdf } from '@/utils/generateSalePdf';
 import { ExpensesTab } from '@/components/financeiro/ExpensesTab';
 import { CommissionsTab } from '@/components/financeiro/CommissionsTab';
 import { ContasReceberTab } from '@/components/financeiro/ContasReceberTab';
+import { ContasPagarTab } from '@/components/financeiro/ContasPagarTab';
+import { PlanoContasTab } from '@/components/financeiro/PlanoContasTab';
+import { BankAccountsTab } from '@/components/financeiro/BankAccountsTab';
 import { CaixaEmpresaTab } from '@/components/financeiro/CaixaEmpresaTab';
 import { CaixaReportTab } from '@/components/financeiro/CaixaReportTab';
 import { FinancialDashboard } from '@/components/financeiro/FinancialDashboard';
@@ -60,6 +63,7 @@ import { CaixaOperacionalTab } from '@/components/financeiro/CaixaOperacionalTab
 import { MonthSelector, getMonthDateRange } from '@/components/common/MonthSelector';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 import { PaginationControls } from '@/components/common/PaginationControls';
+import { Landmark, BookOpen } from 'lucide-react';
 
 const paymentMethodConfig = {
   dinheiro: { label: 'Dinheiro', color: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' },
