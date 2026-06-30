@@ -37,7 +37,7 @@ function AddItemsHeader({ onAddProduct, onAddItem }: Pick<Props, 'onAddProduct' 
 
 function AddItemsFooter({ onAddProduct, onAddItem }: Pick<Props, 'onAddProduct' | 'onAddItem'>) {
   return (
-    <div className="sticky bottom-0 z-10 -mx-6 px-6 py-3 bg-muted/60 backdrop-blur supports-[backdrop-filter]:bg-muted/40 border-t border-border/60 mt-4">
+    <div className="sticky bottom-0 z-10 -mx-6 px-6 py-3 bg-muted/60 backdrop-blur supports-[backdrop-filter]:bg-muted/40 border-t border-border/60 !mt-4">
       <div className="flex gap-2">
         <Button type="button" className="flex-1 gap-2 shadow-sm" onClick={onAddProduct}>
           <Plus className="w-4 h-4" />
