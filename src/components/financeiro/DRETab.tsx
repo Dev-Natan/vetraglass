@@ -47,7 +47,7 @@ export function DRETab({ selectedMonth, onMonthChange }: DRETabProps) {
             Demonstrativo de Resultados por grupo do plano de contas (regime de caixa)
           </p>
         </div>
-        <MonthSelector value={selectedMonth} onChange={onMonthChange} />
+        <MonthSelector selectedDate={selectedMonth} onMonthChange={onMonthChange} />
       </div>
 
       {/* KPIs */}

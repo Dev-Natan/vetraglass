@@ -47,7 +47,7 @@ export function CashFlowTab() {
   }, [horizon]);
 
   const { data: days = [], isLoading } = useCashFlowProjection(start, end);
-  const { bankAccounts } = useBankAccounts();
+  const { data: bankAccounts = [] } = useBankAccounts();
 
   const totals = useMemo(() => {
     let realIn = 0, realOut = 0, projIn = 0, projOut = 0;
