@@ -124,6 +124,7 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
   const navigate = useNavigate();
   const [aprovarDialogOpen, setAprovarDialogOpen] = useState(false);
   const [contractDialogOpen, setContractDialogOpen] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   
   // Check if user can see financial data
   const { isAdmin, isGerente, isCaixa, isFinanceiro } = usePermissionProfile();
