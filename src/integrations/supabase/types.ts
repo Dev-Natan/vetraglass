@@ -1846,6 +1846,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "company_products_category_fkey"
+            columns: ["category"]
+            isOneToOne: false
+            referencedRelation: "product_categories"
+            referencedColumns: ["slug"]
+          },
+          {
             foreignKeyName: "company_products_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
@@ -5243,7 +5250,15 @@ export type Database = {
           reforco?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "product_templates_category_fkey"
+            columns: ["category"]
+            isOneToOne: false
+            referencedRelation: "product_categories"
+            referencedColumns: ["slug"]
+          },
+        ]
       }
       profiles: {
         Row: {
