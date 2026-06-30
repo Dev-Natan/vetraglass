@@ -304,33 +304,33 @@ function AppRoutes() {
         <AdminRoute><LazyRoute><AdminCompanyDetail /></LazyRoute></AdminRoute>
       } />
       <Route path="/admin/import-products" element={
-        <ProtectedRoute><LazyRoute><ImportProducts /></LazyRoute></ProtectedRoute>
+        <AdminRoute><LazyRoute><ImportProducts /></LazyRoute></AdminRoute>
       } />
       <Route path="/admin/import-excel" element={
-        <ProtectedRoute><LazyRoute><ImportExcelProducts /></LazyRoute></ProtectedRoute>
+        <AdminRoute><LazyRoute><ImportExcelProducts /></LazyRoute></AdminRoute>
       } />
       <Route path="/admin/support" element={
-        <ProtectedRoute><LazyRoute><AdminSupport /></LazyRoute></ProtectedRoute>
+        <AdminRoute><LazyRoute><AdminSupport /></LazyRoute></AdminRoute>
       } />
       <Route path="/admin/announcements" element={
-        <ProtectedRoute><LazyRoute><AdminAnnouncements /></LazyRoute></ProtectedRoute>
+        <AdminRoute><LazyRoute><AdminAnnouncements /></LazyRoute></AdminRoute>
       } />
       <Route path="/admin/glass-formulas" element={
-        <ProtectedRoute><LazyRoute><AdminGlassFormulas /></LazyRoute></ProtectedRoute>
+        <AdminRoute><LazyRoute><AdminGlassFormulas /></LazyRoute></AdminRoute>
       } />
       <Route path="/admin/categories" element={
-        <ProtectedRoute><LazyRoute><AdminCategories /></LazyRoute></ProtectedRoute>
+        <AdminRoute><LazyRoute><AdminCategories /></LazyRoute></AdminRoute>
       } />
       {/* Audit logs migrated into /admin/companies/:id (Auditoria tab) */}
       <Route path="/admin/audit-logs" element={<Navigate to="/admin/companies" replace />} />
       <Route path="/admin/settings" element={
-        <ProtectedRoute><LazyRoute><AdminSettings /></LazyRoute></ProtectedRoute>
+        <AdminRoute><LazyRoute><AdminSettings /></LazyRoute></AdminRoute>
       } />
       <Route path="/admin/feedbacks" element={
-        <ProtectedRoute><LazyRoute><AdminFeedbacks /></LazyRoute></ProtectedRoute>
+        <AdminRoute><LazyRoute><AdminFeedbacks /></LazyRoute></AdminRoute>
       } />
       <Route path="/admin/formula-tester" element={
-        <ProtectedRoute><LazyRoute><FormulaTester /></LazyRoute></ProtectedRoute>
+        <AdminRoute><LazyRoute><FormulaTester /></LazyRoute></AdminRoute>
       } />
       
       <Route path="*" element={<LazyRoute><NotFound /></LazyRoute>} />
