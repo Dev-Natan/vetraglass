@@ -72,6 +72,7 @@ const AdminCompanyDetail = lazy(() => import("./pages/admin/AdminCompanyDetail")
 const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
 const AdminFeedbacks = lazy(() => import("./pages/admin/AdminFeedbacks"));
 const FormulaTester = lazy(() => import("./pages/admin/FormulaTester"));
+const AdminProductImages = lazy(() => import("./pages/admin/AdminProductImages"));
 
 // Create optimized QueryClient with caching
 const queryClient = createQueryClient();
@@ -290,6 +291,9 @@ function AppRoutes() {
       } />
       <Route path="/admin/product-templates" element={
         <AdminRoute><LazyRoute><ProductTemplates /></LazyRoute></AdminRoute>
+      } />
+      <Route path="/admin/product-images" element={
+        <AdminRoute><LazyRoute><AdminProductImages /></LazyRoute></AdminRoute>
       } />
       <Route path="/admin/linhas" element={
         <AdminRoute><LazyRoute><AdminLinhas /></LazyRoute></AdminRoute>

@@ -8261,6 +8261,7 @@ export type Database = {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      grant_saas_admin: { Args: { _email: string }; Returns: string }
       initialize_company_cash: {
         Args: {
           _company_id: string
@@ -8306,6 +8307,14 @@ export type Database = {
       }
       is_module_enabled: { Args: { _module_key: string }; Returns: boolean }
       is_saas_admin: { Args: { _user_id: string }; Returns: boolean }
+      list_saas_admins: {
+        Args: never
+        Returns: {
+          created_at: string
+          email: string
+          user_id: string
+        }[]
+      }
       log_audit_event: {
         Args: {
           _action: string
@@ -8417,6 +8426,7 @@ export type Database = {
         Args: { p_company_product_id: string; p_user_id: string }
         Returns: Json
       }
+      revoke_saas_admin: { Args: { _user_id: string }; Returns: undefined }
       seed_default_financial_categories: {
         Args: { _company_id: string }
         Returns: undefined

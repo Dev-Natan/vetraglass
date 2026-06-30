@@ -34,6 +34,7 @@ import {
   Puzzle
 } from "lucide-react";
 import { ModulesTab } from "@/components/admin/settings/ModulesTab";
+import { SaasAdminsTab } from "@/components/admin/settings/SaasAdminsTab";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -151,7 +152,7 @@ export default function AdminSettings() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid grid-cols-5 w-full max-w-3xl">
+          <TabsList className="grid grid-cols-3 md:grid-cols-6 w-full max-w-4xl">
             <TabsTrigger value="general" className="gap-2">
               <Globe className="h-4 w-4" />
               Geral
@@ -159,6 +160,10 @@ export default function AdminSettings() {
             <TabsTrigger value="modules" className="gap-2">
               <Puzzle className="h-4 w-4" />
               Módulos
+            </TabsTrigger>
+            <TabsTrigger value="admins" className="gap-2">
+              <Shield className="h-4 w-4" />
+              Admins SaaS
             </TabsTrigger>
             <TabsTrigger value="notifications" className="gap-2">
               <Bell className="h-4 w-4" />
@@ -178,6 +183,12 @@ export default function AdminSettings() {
           <TabsContent value="modules">
             <ModulesTab />
           </TabsContent>
+
+          {/* SaaS Admins Tab */}
+          <TabsContent value="admins">
+            <SaasAdminsTab />
+          </TabsContent>
+
 
           {/* General Settings */}
           <TabsContent value="general" className="space-y-6">
