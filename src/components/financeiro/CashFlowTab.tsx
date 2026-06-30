@@ -61,7 +61,7 @@ export function CashFlowTab() {
   }, [days]);
 
   const saldoAtual = useMemo(
-    () => (bankAccounts ?? []).filter((b) => b.active).reduce((s, b) => s + Number(b.current_balance || 0), 0),
+    () => (bankAccounts ?? []).filter((b: any) => b.active).reduce((s: number, b: any) => s + Number(b.current_balance || 0), 0),
     [bankAccounts]
   );
 
