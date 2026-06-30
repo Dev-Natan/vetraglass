@@ -9,7 +9,22 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Package, Check, ArrowLeft, Ruler, DollarSign, Sparkles, Info, GlassWater, Layers, Palette, Frame, Maximize2, FileText, Plus, X } from 'lucide-react';
+import { Search, Package, Check, ArrowLeft, Ruler, DollarSign, Sparkles, Info, GlassWater, Layers, LayoutGrid, Palette, Frame, Maximize2, FileText, Plus, X, DoorOpen, Square, AppWindow, Columns3, Box as BoxIcon, Minus, RectangleHorizontal } from 'lucide-react';
+
+// Ícone específico por categoria (slug ou nome normalizado)
+function getCategoryIcon(value?: string) {
+  const key = (value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (key.includes('janela')) return AppWindow;
+  if (key.includes('porta')) return DoorOpen;
+  if (key.includes('box')) return BoxIcon;
+  if (key.includes('espelho')) return Square;
+  if (key.includes('divisor')) return Columns3;
+  if (key.includes('guarda')) return RectangleHorizontal;
+  if (key.includes('corrimao') || key.includes('corrimão')) return Minus;
+  if (key.includes('basculante')) return RectangleHorizontal;
+  if (key.includes('tampo')) return Square;
+  return Frame;
+}
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
@@ -590,23 +605,24 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 p-1 pb-3">
                       {linhas.map((linha) => {
                         const count = (companyProducts || []).filter(p => (p.linha || (p.product_template as any)?.linha) === linha).length;
+                        const displayName = (linha || '').replace(/^#/, '').replace(/\b\w/g, c => c.toUpperCase());
                         return (
                           <button
                             key={linha}
                             type="button"
                             onClick={() => handleLinhaChange(linha!)}
                             className={cn(
-                              "group relative flex flex-col items-start gap-3 rounded-2xl border bg-card p-5 text-left min-h-[140px]",
-                              "transition-all duration-200 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/60 hover:-translate-y-0.5",
+                              "group relative flex flex-col items-start gap-4 rounded-2xl border border-border/60 bg-card p-5 text-left min-h-[140px]",
+                              "transition-all duration-200 hover:border-primary/40 hover:bg-accent/30 hover:-translate-y-0.5",
                               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                             )}
                           >
-                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 border border-primary/20 flex items-center justify-center">
-                              <Layers className="w-6 h-6 text-primary" strokeWidth={1.75} />
+                            <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center">
+                              <LayoutGrid className="w-5 h-5 text-primary" strokeWidth={2} />
                             </div>
                             <div className="flex-1">
-                              <p className="font-semibold text-foreground leading-tight">{linha}</p>
-                              <p className="text-xs text-muted-foreground mt-1">
+                              <p className="text-base font-semibold text-foreground leading-tight">{displayName}</p>
+                              <p className="text-xs text-muted-foreground/70 mt-1">
                                 {count} {count === 1 ? 'produto' : 'produtos'}
                               </p>
                             </div>
@@ -631,17 +647,17 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                         type="button"
                         onClick={() => handleCategoryChange('__all__' as any)}
                         className={cn(
-                          "group relative flex flex-col items-start gap-3 rounded-2xl border-2 border-dashed bg-card p-5 text-left min-h-[140px]",
-                          "transition-all duration-200 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/60 hover:-translate-y-0.5",
+                          "group relative flex flex-col items-start gap-4 rounded-2xl border border-dashed border-border bg-card p-5 text-left min-h-[140px]",
+                          "transition-all duration-200 hover:border-primary/40 hover:bg-accent/30 hover:-translate-y-0.5",
                           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                         )}
                       >
-                        <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center">
-                          <Package className="w-6 h-6 text-muted-foreground" strokeWidth={1.75} />
+                        <div className="w-11 h-11 rounded-xl bg-muted flex items-center justify-center">
+                          <LayoutGrid className="w-5 h-5 text-muted-foreground" strokeWidth={2} />
                         </div>
                         <div className="flex-1">
-                          <p className="font-semibold text-foreground leading-tight">Todos</p>
-                          <p className="text-xs text-muted-foreground mt-1">Ver todos os produtos</p>
+                          <p className="text-base font-semibold text-foreground leading-tight">Todos</p>
+                          <p className="text-xs text-muted-foreground/70 mt-1">Ver todos os produtos</p>
                         </div>
                       </button>
                       {categories.map((cat) => {
@@ -650,23 +666,25 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                           const c = p.category || (p.product_template as any)?.category;
                           return linha === selectedLinha && categoryNormalizer.match(c, cat);
                         }).length;
+                        const CategoryIcon = getCategoryIcon(cat);
+                        const displayName = (cat || '').replace(/^#/, '');
                         return (
                           <button
                             key={cat}
                             type="button"
                             onClick={() => handleCategoryChange(cat)}
                             className={cn(
-                              "group relative flex flex-col items-start gap-3 rounded-2xl border bg-card p-5 text-left min-h-[140px]",
-                              "transition-all duration-200 hover:shadow-lg hover:shadow-primary/10 hover:border-primary/60 hover:-translate-y-0.5",
+                              "group relative flex flex-col items-start gap-4 rounded-2xl border border-border/60 bg-card p-5 text-left min-h-[140px]",
+                              "transition-all duration-200 hover:border-primary/40 hover:bg-accent/30 hover:-translate-y-0.5",
                               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                             )}
                           >
-                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 border border-primary/20 flex items-center justify-center">
-                              <Frame className="w-6 h-6 text-primary" strokeWidth={1.75} />
+                            <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center">
+                              <CategoryIcon className="w-5 h-5 text-primary" strokeWidth={2} />
                             </div>
                             <div className="flex-1">
-                              <p className="font-semibold text-foreground leading-tight">{cat}</p>
-                              <p className="text-xs text-muted-foreground mt-1">
+                              <p className="text-base font-semibold text-foreground leading-tight">{displayName}</p>
+                              <p className="text-xs text-muted-foreground/70 mt-1">
                                 {count} {count === 1 ? 'produto' : 'produtos'}
                               </p>
                             </div>
