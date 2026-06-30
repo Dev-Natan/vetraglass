@@ -20,7 +20,7 @@ import {
   Megaphone,
   GlassWater,
   Tags,
-  
+  Image as ImageIcon,
 } from "lucide-react";
 import {
   Tooltip,
@@ -45,6 +45,11 @@ const adminMenuItems = [
     title: "Product Templates",
     path: "/admin/product-templates",
     icon: Package,
+  },
+  {
+    title: "Imagens de Produtos",
+    path: "/admin/product-images",
+    icon: ImageIcon,
   },
   {
     title: "Categorias",
