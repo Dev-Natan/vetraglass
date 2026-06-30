@@ -373,12 +373,25 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
       category: item.product_templates?.category || null,
     }));
     
-    toast({ title: 'Gerando PDF...' });
-    await generateQuotePdf(quote, itemsForPdf, company, 'download', getPaymentSettings(), {
-      showMeasuresColumn: quote.show_measures_column ?? true,
-      showM2Column: quote.show_m2_column ?? true,
+    setIsGeneratingPdf(true);
+    const loadingToast = toast({
+      title: 'Gerando PDF, aguarde...',
+      description: itemsForPdf.length > 10 ? `Processando ${itemsForPdf.length} itens. Pode levar alguns segundos.` : undefined,
     });
-    toast({ title: 'PDF gerado com sucesso!' });
+    try {
+      await generateQuotePdf(quote, itemsForPdf, company, 'download', getPaymentSettings(), {
+        showMeasuresColumn: quote.show_measures_column ?? true,
+        showM2Column: quote.show_m2_column ?? true,
+      });
+      loadingToast.dismiss?.();
+      toast({ title: 'PDF gerado com sucesso!' });
+    } catch (err) {
+      console.error('Erro ao gerar PDF:', err);
+      loadingToast.dismiss?.();
+      toast({ title: 'Erro ao gerar PDF', description: 'Tente novamente em instantes.', variant: 'destructive' });
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   const handleDownloadContract = () => {
