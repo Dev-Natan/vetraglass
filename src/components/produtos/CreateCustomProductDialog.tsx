@@ -31,9 +31,8 @@ export function CreateCustomProductDialog({ open, onOpenChange, defaultLinha }: 
   
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
-  const [category, setCategory] = useState('other');
-  const [customCategory, setCustomCategory] = useState('');
-  const [showCustomCategory, setShowCustomCategory] = useState(false);
+  const [category, setCategory] = useState('');
+
   const [linha, setLinha] = useState('');
   const [customLinha, setCustomLinha] = useState('');
   const [showCustomLinha, setShowCustomLinha] = useState(false);
