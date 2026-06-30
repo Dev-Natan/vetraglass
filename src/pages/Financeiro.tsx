@@ -53,6 +53,9 @@ import { generateSalePdf } from '@/utils/generateSalePdf';
 import { ExpensesTab } from '@/components/financeiro/ExpensesTab';
 import { CommissionsTab } from '@/components/financeiro/CommissionsTab';
 import { ContasReceberTab } from '@/components/financeiro/ContasReceberTab';
+import { ContasPagarTab } from '@/components/financeiro/ContasPagarTab';
+import { PlanoContasTab } from '@/components/financeiro/PlanoContasTab';
+import { BankAccountsTab } from '@/components/financeiro/BankAccountsTab';
 import { CaixaEmpresaTab } from '@/components/financeiro/CaixaEmpresaTab';
 import { CaixaReportTab } from '@/components/financeiro/CaixaReportTab';
 import { FinancialDashboard } from '@/components/financeiro/FinancialDashboard';
@@ -60,6 +63,7 @@ import { CaixaOperacionalTab } from '@/components/financeiro/CaixaOperacionalTab
 import { MonthSelector, getMonthDateRange } from '@/components/common/MonthSelector';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 import { PaginationControls } from '@/components/common/PaginationControls';
+import { Landmark, BookOpen } from 'lucide-react';
 
 const paymentMethodConfig = {
   dinheiro: { label: 'Dinheiro', color: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' },
@@ -212,38 +216,39 @@ export default function Financeiro() {
         </header>
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-8 h-auto p-1 bg-muted/50 border">
-            <TabsTrigger value="dashboard" className="gap-2 py-2">
-              <PieChart className="w-4 h-4" />
-              Dashboard
+          <TabsList className="flex flex-wrap w-full h-auto p-1 bg-muted/50 border gap-1">
+            <TabsTrigger value="dashboard" className="gap-2 py-2 flex-1 min-w-[120px]">
+              <PieChart className="w-4 h-4" /> Dashboard
             </TabsTrigger>
-            <TabsTrigger value="caixa" className="gap-2 py-2">
-              <ShoppingCart className="w-4 h-4" />
-              Caixa Diário
+            <TabsTrigger value="caixa" className="gap-2 py-2 flex-1 min-w-[120px]">
+              <ShoppingCart className="w-4 h-4" /> Caixa Diário
             </TabsTrigger>
-            <TabsTrigger value="caixa-empresa" className="gap-2 py-2">
-              <Wallet className="w-4 h-4" />
-              Fluxo Empresa
+            <TabsTrigger value="caixa-empresa" className="gap-2 py-2 flex-1 min-w-[120px]">
+              <Wallet className="w-4 h-4" /> Fluxo Empresa
             </TabsTrigger>
-            <TabsTrigger value="relatorios" className="gap-2 py-2">
-              <HistoryIcon className="w-4 h-4" />
-              Auditoria
+            <TabsTrigger value="receber" className="gap-2 py-2 flex-1 min-w-[120px]">
+              <DollarSign className="w-4 h-4" /> A Receber
             </TabsTrigger>
-            <TabsTrigger value="auditoria-vendas" className="gap-2 py-2">
-              <Receipt className="w-4 h-4" />
-              Vendas
+            <TabsTrigger value="pagar" className="gap-2 py-2 flex-1 min-w-[120px]">
+              <FileText className="w-4 h-4" /> A Pagar
             </TabsTrigger>
-            <TabsTrigger value="receber" className="gap-2 py-2">
-              <DollarSign className="w-4 h-4" />
-              A Receber
+            <TabsTrigger value="comissoes" className="gap-2 py-2 flex-1 min-w-[120px]">
+              <Users className="w-4 h-4" /> Comissões
             </TabsTrigger>
-            <TabsTrigger value="despesas" className="gap-2 py-2">
-              <FileText className="w-4 h-4" />
-              Despesas
+            <TabsTrigger value="contas-bancarias" className="gap-2 py-2 flex-1 min-w-[120px]">
+              <Landmark className="w-4 h-4" /> Bancos
             </TabsTrigger>
-            <TabsTrigger value="comissoes" className="gap-2 py-2">
-              <Users className="w-4 h-4" />
-              Comissões
+            <TabsTrigger value="plano-contas" className="gap-2 py-2 flex-1 min-w-[120px]">
+              <BookOpen className="w-4 h-4" /> Plano de Contas
+            </TabsTrigger>
+            <TabsTrigger value="relatorios" className="gap-2 py-2 flex-1 min-w-[120px]">
+              <HistoryIcon className="w-4 h-4" /> Auditoria
+            </TabsTrigger>
+            <TabsTrigger value="auditoria-vendas" className="gap-2 py-2 flex-1 min-w-[120px]">
+              <Receipt className="w-4 h-4" /> Vendas
+            </TabsTrigger>
+            <TabsTrigger value="despesas" className="gap-2 py-2 flex-1 min-w-[120px]">
+              <FileText className="w-4 h-4" /> Despesas (legado)
             </TabsTrigger>
           </TabsList>
 
@@ -398,6 +403,18 @@ export default function Financeiro() {
 
           <TabsContent value="receber" className="mt-6">
             <ContasReceberTab />
+          </TabsContent>
+
+          <TabsContent value="pagar" className="mt-6">
+            <ContasPagarTab />
+          </TabsContent>
+
+          <TabsContent value="contas-bancarias" className="mt-6">
+            <BankAccountsTab />
+          </TabsContent>
+
+          <TabsContent value="plano-contas" className="mt-6">
+            <PlanoContasTab />
           </TabsContent>
 
           <TabsContent value="comissoes" className="mt-6">
