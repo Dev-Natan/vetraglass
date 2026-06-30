@@ -549,7 +549,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                 </Button>
                 <div className="text-xs text-muted-foreground truncate">
                   {selectedLinha}
-                  {selectedCategory && <> · <span className="text-foreground font-medium">{selectedCategory}</span></>}
+                  {selectedCategory && <> · <span className="text-foreground font-medium">{selectedCategory === '__all__' ? 'Todos' : selectedCategory}</span></>}
                 </div>
               </div>
             )}
