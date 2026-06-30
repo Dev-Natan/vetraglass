@@ -710,10 +710,17 @@ export default function ProductTemplates() {
       toast.success(editingTemplate ? "Produto atualizado!" : "Produto criado!");
       handleCloseDialog();
     },
-    onError: (error: any) => {
+    onError: async (error: any) => {
       const msg = String(error?.message || error);
       if (msg.includes('row-level security') || error?.code === '42501') {
-        toast.error('Acesso negado. Apenas o administrador SaaS (natanjk7@gmail.com) pode editar templates de produtos.');
+        const { data: { user } } = await supabase.auth.getUser();
+        const loggedEmail = user?.email ?? 'desconhecido';
+        toast.error(
+          `Acesso negado. Sessão atual: ${loggedEmail}. Apenas natanjk7@gmail.com pode editar templates. ` +
+          (loggedEmail !== 'natanjk7@gmail.com'
+            ? 'Faça logout e entre novamente com a conta correta.'
+            : 'Tente sair e entrar novamente para renovar o token.')
+        );
       } else {
         toast.error("Erro ao salvar: " + msg);
       }
