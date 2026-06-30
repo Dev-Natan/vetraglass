@@ -425,8 +425,12 @@ export default function Financeiro() {
             <CommissionsTab selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
           </TabsContent>
 
-          <TabsContent value="despesas" className="mt-6">
-            <ExpensesTab selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
+          <TabsContent value="dre" className="mt-6">
+            <DRETab selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
+          </TabsContent>
+
+          <TabsContent value="fluxo-caixa" className="mt-6">
+            <CashFlowTab />
           </TabsContent>
         </Tabs>
       </div>
