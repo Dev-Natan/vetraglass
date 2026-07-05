@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Package, Check, ArrowLeft, Ruler, DollarSign, Sparkles, Info, GlassWater, Layers, LayoutGrid, Palette, Frame, Maximize2, FileText, Plus, X, DoorOpen, Square, AppWindow, Columns3, Box as BoxIcon, Minus, RectangleHorizontal } from 'lucide-react';
+import { Search, Package, Check, ArrowLeft, Ruler, DollarSign, Sparkles, Info, GlassWater, Layers, LayoutGrid, Palette, Frame, Maximize2, FileText, Plus, X, DoorOpen, Square, AppWindow, Columns3, Box as BoxIcon, Minus, RectangleHorizontal, RotateCcw, AlertTriangle } from 'lucide-react';
 
 // Ícone específico por categoria (slug ou nome normalizado)
 function getCategoryIcon(value?: string) {
@@ -121,6 +121,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   const [useVao, setUseVao] = useState<boolean>(false);
   const [quantity, setQuantity] = useState<number>(1);
   const [customPrice, setCustomPrice] = useState<number | null>(null);
+  const [manualTotalOverride, setManualTotalOverride] = useState<number | null>(null);
   const [hasGlass, setHasGlass] = useState<boolean>(true);
   const [selectedGlassPriceId, setSelectedGlassPriceId] = useState<string>('');
   const [selectedGlassThickness, setSelectedGlassThickness] = useState<string>('');
@@ -430,9 +431,14 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     ? compositionPricing.compositionCostPerUnit
     : (area > 0 ? basePrice * area : 0);
   const componentsTotal = components.reduce((sum, c) => sum + (c.unit_price * c.quantity), 0);
-  const totalPrice = ((productUsesComposition && compositionPricing.isReady)
+  const computedTotalPrice = ((productUsesComposition && compositionPricing.isReady)
     ? compositionPricing.totalCost
     : unitPrice * quantity) + componentsTotal;
+  const isPriceOverridden = manualTotalOverride !== null && Math.abs(manualTotalOverride - computedTotalPrice) > 0.005;
+  const totalPrice = manualTotalOverride !== null ? manualTotalOverride : computedTotalPrice;
+  const effectiveUnitPrice = quantity > 0
+    ? Math.max(0, (totalPrice - componentsTotal) / quantity)
+    : unitPrice;
 
   // Check if the selected product is from "Temperado" line (always has glass)
   const isTemperadoLine = selectedProduct?.linha?.toLowerCase().includes('temperado');
@@ -441,6 +447,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   const handleProductSelect = (productId: string) => {
     setSelectedProductId(productId);
     setCustomPrice(null);
+    setManualTotalOverride(null);
     setSelectedGlassPriceId('');
     setSelectedGlassThickness('');
     setSelectedGlassColor('');
@@ -487,7 +494,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
       glasses_count: companyProduct?.glasses_count || 1,
       panels_count: companyProduct?.panels_count || 1,
       sides_count: companyProduct?.sides_count || 1,
-      unit_price: unitPrice,
+      unit_price: effectiveUnitPrice,
       total_price: totalPrice,
       has_glass: hasGlass && (!!selectedGlassThickness || !!selectedGlassColor || productUsesGlass),
       glass_type: hasGlass && selectedGlassPrice ? selectedGlassPrice.glass_type : undefined,
@@ -1176,7 +1183,38 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
               </div>
               <div className="text-right">
                 <p className="text-[10px] uppercase tracking-wider opacity-80">Total</p>
-                <p className="text-xl font-bold leading-tight">{formatCurrency(totalPrice)}</p>
+                <div className="flex items-center gap-1.5 justify-end">
+                  <span className="text-sm font-semibold opacity-90">R$</span>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min={0}
+                    value={totalPrice.toFixed(2)}
+                    onChange={(e) => {
+                      const v = parseFloat(e.target.value);
+                      setManualTotalOverride(Number.isFinite(v) ? v : 0);
+                    }}
+                    className="h-8 w-28 text-right text-lg font-bold bg-white/15 border-white/30 text-primary-foreground placeholder:text-primary-foreground/60"
+                  />
+                  {isPriceOverridden && (
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 text-primary-foreground hover:bg-white/20"
+                      title="Restaurar preço original"
+                      onClick={() => setManualTotalOverride(null)}
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+                {isPriceOverridden && (
+                  <div className="flex items-center justify-end gap-1 mt-1 text-[10px] opacity-90">
+                    <AlertTriangle className="w-3 h-3" />
+                    <span>Preço alterado manualmente · original {formatCurrency(computedTotalPrice)}</span>
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex items-center justify-end gap-2 bg-card px-4 py-3 border-t">
