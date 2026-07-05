@@ -197,6 +197,7 @@ export function useUpdatePurchaseOrderStatus() {
 
 export function useReceivePurchaseOrderItems() {
   const queryClient = useQueryClient();
+  const invalidateStock = useInvalidateStock();
   
   return useMutation({
     mutationFn: async ({ 
