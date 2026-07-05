@@ -1,11 +1,13 @@
 import { useState, useMemo, useCallback } from 'react';
+import { useParams, Link } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { estoqueService } from '@/services/estoqueService';
 import { useAuth } from '@/contexts/AuthContext';
 
-import { Boxes, TrendingDown, TrendingUp, History, Plus, PackageCheck, PackageX, Trash2, RefreshCw } from 'lucide-react';
+import { Boxes, TrendingDown, TrendingUp, History, Plus, PackageCheck, PackageX, Trash2, RefreshCw, ArrowLeft } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { recalculateProductPrice } from '@/utils/productPriceUpdater';
 import { UnifiedAddItemDialog } from '@/components/estoque/UnifiedAddItemDialog';
