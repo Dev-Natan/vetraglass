@@ -1,4 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,13 +12,18 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Trash2, Pencil, Palette, Ruler, Layers, DollarSign } from 'lucide-react';
+import { Plus, Trash2, Pencil, Palette, Ruler, Layers, DollarSign, GlassWater, ChevronRight } from 'lucide-react';
 import {
   useAdminGlassColors,
   useAdminGlassThicknesses,
   useAdminAluminumColors,
   useAdminSuggestedPrices,
 } from '@/hooks/useAdminPricingLists';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const sb = supabase as any;
+const ADMIN_VIDROS_KEY = '__vidros__';
+export const linhaToSlug = (l: string) => encodeURIComponent(l);
 
 const slugify = (s: string) =>
   s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
