@@ -8,6 +8,9 @@ export interface ProductAluminumPrice {
   color_name: string;
   price_per_sqm: number;
   cost_per_sqm: number;
+  /** Preço linear por metro de perfil (opcional — Fase 5). */
+  price_per_meter?: number | null;
+  cost_per_meter?: number | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -34,7 +37,7 @@ export function useProductAluminumPrices(companyProductId: string | null) {
   });
 
   const addPrice = useMutation({
-    mutationFn: async (input: { company_product_id: string; color_name: string; price_per_sqm: number; cost_per_sqm: number }) => {
+    mutationFn: async (input: { company_product_id: string; color_name: string; price_per_sqm: number; cost_per_sqm: number; price_per_meter?: number | null; cost_per_meter?: number | null }) => {
       const { data, error } = await supabase
         .from(TABLE)
         .insert(input)
@@ -107,6 +110,8 @@ export function useProductAluminumPriceOptions(companyProductId: string | null) 
         colorName: p.color_name,
         pricePerSqm: p.price_per_sqm,
         costPerSqm: p.cost_per_sqm,
+        pricePerMeter: p.price_per_meter ?? null,
+        costPerMeter: p.cost_per_meter ?? null,
       }));
     },
     enabled: !!companyProductId,
