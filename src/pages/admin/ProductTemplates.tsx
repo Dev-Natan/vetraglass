@@ -1756,140 +1756,113 @@ export default function ProductTemplates() {
             </form>
               </TabsContent>
               <TabsContent value="composicao" className="mt-4">
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,32%)_1fr] gap-4">
+              {/* LEFT COLUMN — Add form */}
+              <aside className="bg-muted/40 dark:bg-muted/20 border rounded-lg p-4 space-y-4 lg:sticky lg:top-0 self-start">
+                <div className="flex items-center gap-2 pb-2 border-b">
+                  <Plus className="w-4 h-4 text-primary" />
+                  <h3 className="text-sm font-semibold">Adicionar Item</h3>
+                </div>
 
-            
-            <div className="space-y-6">
-              <div className="flex gap-1 p-1 bg-muted rounded-lg">
-                {itemTypeTabs.map((tab) => (
-                  <button
-                    key={tab.value}
-                    onClick={() => {
-                      setCompositionActiveTab(tab.value);
-                      setSelectedItemToAdd("");
-                    }}
-                    className={cn(
-                      "flex-1 px-4 py-2.5 text-sm font-medium rounded-md transition-all",
-                      compositionActiveTab === tab.value
-                        ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-
-              <Card className="border-primary/20">
-                <CardHeader className="py-3 bg-primary/5">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <Plus className="w-4 h-4" />
-                    Adicionar Item
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-4 space-y-4">
-                  {getLinhasForAddTab(compositionActiveTab).length > 0 && (
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Filtrar por Linha</Label>
-                      <Select value={linhaFilter} onValueChange={setLinhaFilter}>
-                        <SelectTrigger className="h-10">
-                          <SelectValue placeholder="Todas as linhas" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-background border shadow-lg z-50 max-h-[260px]">
-                          <SelectItem value="__all__">Todas as linhas</SelectItem>
-                          {getLinhasForAddTab(compositionActiveTab).map((l) => (
-                            <SelectItem key={l} value={l}>{l}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {linhaFilter !== '__all__' && (
-                        <p className="text-[11px] text-muted-foreground">
-                          Mostrando apenas itens da linha <strong>{linhaFilter}</strong>.
-                        </p>
-                      )}
-                    </div>
-                  )}
+                {getLinhasForAddTab(compositionActiveTab).length > 0 && (
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium">Selecione o item:</Label>
-                    <Select value={selectedItemToAdd} onValueChange={setSelectedItemToAdd}>
-                      <SelectTrigger className="h-12">
-                        <SelectValue placeholder="Clique para escolher um item" />
+                    <Label className="text-xs font-medium">Filtrar por Linha</Label>
+                    <Select value={linhaFilter} onValueChange={setLinhaFilter}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Todas as linhas" />
                       </SelectTrigger>
-                      <SelectContent className="max-h-[400px]">
-                        {getItemsByTypeForAdd(compositionActiveTab).map((item) => (
-                          <SelectItem key={item.id} value={item.id}>
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded bg-muted flex items-center justify-center shrink-0 overflow-hidden">
-                                {item.image_url ? (
-                                  <img src={getStorageUrl(item.image_url)} alt={item.name} className="w-full h-full object-contain p-0.5" />
-                                ) : (
-                                  <Package className="w-5 h-5 text-muted-foreground/50" />
-                                )}
-                              </div>
-                              <span className="font-medium">{item.name}</span>
-                            </div>
-                          </SelectItem>
+                      <SelectContent className="bg-background border shadow-lg z-50 max-h-[260px]">
+                        <SelectItem value="__all__">Todas as linhas</SelectItem>
+                        {getLinhasForAddTab(compositionActiveTab).map((l) => (
+                          <SelectItem key={l} value={l}>{l}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-                  
-                  {compositionActiveTab === 'glass' ? (
-                    <>
-                      <div className="space-y-2">
-                        <Label>Nome do Vidro (opcional)</Label>
-                        <Input
-                          placeholder="Ex: Vidro Fixo, Vidro Móvel..."
-                          value={glassName}
-                          onChange={(e) => setGlassName(e.target.value)}
-                        />
-                      </div>
-                      <GlassFormulaEditor
-                        widthFormula={widthFormula}
-                        heightFormula={heightFormula}
-                        onWidthFormulaChange={setWidthFormula}
-                        onHeightFormulaChange={setHeightFormula}
-                        showPiecesQuantity={true}
-                        piecesQuantity={piecesQuantity}
-                        onPiecesChange={setPiecesQuantity}
-                        piecesFormula={piecesFormula}
-                        onPiecesFormulaChange={setPiecesFormula}
+                )}
+
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium">Selecione o item</Label>
+                  <Select value={selectedItemToAdd} onValueChange={setSelectedItemToAdd}>
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="Clique para escolher" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[400px]">
+                      {getItemsByTypeForAdd(compositionActiveTab).map((item) => (
+                        <SelectItem key={item.id} value={item.id}>
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+                              {item.image_url ? (
+                                <img src={getStorageUrl(item.image_url)} alt={item.name} className="w-full h-full object-contain p-0.5" />
+                              ) : (
+                                <Package className="w-4 h-4 text-muted-foreground/50" />
+                              )}
+                            </div>
+                            <span className="font-medium text-sm">{item.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {compositionActiveTab === 'glass' ? (
+                  <>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Nome do Vidro (opcional)</Label>
+                      <Input
+                        placeholder="Ex: Vidro Fixo, Vidro Móvel..."
+                        value={glassName}
+                        onChange={(e) => setGlassName(e.target.value)}
                       />
-                    </>
-                  ) : (
-                    <FormulaEditor
-                      value={quantityFormula}
-                      onChange={setQuantityFormula}
-                      showPiecesQuantity={compositionActiveTab === 'profile'}
+                    </div>
+                    <GlassFormulaEditor
+                      widthFormula={widthFormula}
+                      heightFormula={heightFormula}
+                      onWidthFormulaChange={setWidthFormula}
+                      onHeightFormulaChange={setHeightFormula}
+                      showPiecesQuantity={true}
                       piecesQuantity={piecesQuantity}
                       onPiecesChange={setPiecesQuantity}
                       piecesFormula={piecesFormula}
                       onPiecesFormulaChange={setPiecesFormula}
                     />
-                  )}
-                  
-                  {compositionActiveTab === 'profile' && (
-                    <>
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Posição do Perfil</Label>
-                        <div className="flex gap-2">
-                          {(['Largura', 'Altura'] as const).map((pos) => (
-                            <Button
-                              key={pos}
-                              type="button"
-                              variant={profilePosition === pos ? 'default' : 'outline'}
-                              size="sm"
-                              onClick={() => setProfilePosition(pos)}
-                              className="flex-1"
-                            >
-                              {pos}
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
+                  </>
+                ) : (
+                  <FormulaEditor
+                    value={quantityFormula}
+                    onChange={setQuantityFormula}
+                    showPiecesQuantity={compositionActiveTab === 'profile'}
+                    piecesQuantity={piecesQuantity}
+                    onPiecesChange={setPiecesQuantity}
+                    piecesFormula={piecesFormula}
+                    onPiecesFormulaChange={setPiecesFormula}
+                  />
+                )}
 
-                      <div className="grid grid-cols-2 gap-4">
+                {compositionActiveTab === 'profile' && (
+                  <>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Posição do Perfil</Label>
+                      <div className="flex gap-2">
+                        {(['Largura', 'Altura'] as const).map((pos) => (
+                          <Button
+                            key={pos}
+                            type="button"
+                            variant={profilePosition === pos ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setProfilePosition(pos)}
+                            className="flex-1"
+                          >
+                            {pos}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium">Ângulo Início</Label>
+                        <Label className="text-xs font-medium">Ângulo Início</Label>
                         <div className="flex gap-2">
                           {[45, 90].map((angle) => (
                             <Button
@@ -1900,8 +1873,8 @@ export default function ProductTemplates() {
                               onClick={() => setCutAngleStart(angle)}
                               className="flex-1 relative overflow-hidden"
                             >
-                              <div 
-                                className="absolute left-0 top-0 bottom-0 w-1 bg-primary/20" 
+                              <div
+                                className="absolute left-0 top-0 bottom-0 w-1 bg-primary/20"
                                 style={{ transform: angle === 45 ? 'skewY(-45deg)' : 'none', transformOrigin: 'top' }}
                               />
                               {angle}°
@@ -1910,7 +1883,7 @@ export default function ProductTemplates() {
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm font-medium">Ângulo Fim</Label>
+                        <Label className="text-xs font-medium">Ângulo Fim</Label>
                         <div className="flex gap-2">
                           {[45, 90].map((angle) => (
                             <Button
@@ -1921,8 +1894,8 @@ export default function ProductTemplates() {
                               onClick={() => setCutAngleEnd(angle)}
                               className="flex-1 relative overflow-hidden"
                             >
-                              <div 
-                                className="absolute right-0 top-0 bottom-0 w-1 bg-primary/20" 
+                              <div
+                                className="absolute right-0 top-0 bottom-0 w-1 bg-primary/20"
                                 style={{ transform: angle === 45 ? 'skewY(45deg)' : 'none', transformOrigin: 'top' }}
                               />
                               {angle}°
@@ -1930,68 +1903,96 @@ export default function ProductTemplates() {
                           ))}
                         </div>
                       </div>
-                      </div>
-                    </>
-                  )}
-
-                  {/* Side selector for multi-side products */}
-                  {selectedTemplate?.has_multiple_sides && (
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Lado do Produto</Label>
-                      <div className="flex gap-2">
-                        {[
-                          { value: "", label: "Ambos", color: "bg-muted" },
-                          { value: "A", label: "Lado A", color: "bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700" },
-                          { value: "B", label: "Lado B", color: "bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700" },
-                        ].map((opt) => (
-                          <Button
-                            key={opt.value}
-                            type="button"
-                            variant={compositionSide === opt.value ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setCompositionSide(opt.value)}
-                            className="flex-1"
-                          >
-                            {opt.label}
-                          </Button>
-                        ))}
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Defina a qual lado este item pertence. As fórmulas usarão a largura do lado correspondente.
-                      </p>
                     </div>
-                  )}
-                  
-                  <div className="flex justify-end">
-                    <Button 
-                      onClick={handleAddCompositionItem}
-                      disabled={!selectedItemToAdd || addCompositionMutation.isPending}
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Adicionar
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                  </>
+                )}
 
-              <div className="space-y-3">
-                <h4 className="text-sm font-medium text-muted-foreground">
-                  Itens adicionados ({getCompositionItemsByType(compositionActiveTab).length})
-                </h4>
-                
+                {selectedTemplate?.has_multiple_sides && (
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium">Lado do Produto</Label>
+                    <div className="flex gap-2">
+                      {[
+                        { value: "", label: "Ambos" },
+                        { value: "A", label: "Lado A" },
+                        { value: "B", label: "Lado B" },
+                      ].map((opt) => (
+                        <Button
+                          key={opt.value}
+                          type="button"
+                          variant={compositionSide === opt.value ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setCompositionSide(opt.value)}
+                          className="flex-1"
+                        >
+                          {opt.label}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="pt-2 border-t">
+                  <Button
+                    onClick={handleAddCompositionItem}
+                    disabled={!selectedItemToAdd || addCompositionMutation.isPending}
+                    className="w-full"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Adicionar
+                  </Button>
+                </div>
+              </aside>
+
+              {/* RIGHT COLUMN — Category tabs + list */}
+              <section className="space-y-4 min-w-0">
+                {/* Category sub-tabs */}
+                <div className="flex flex-wrap gap-1 p-1 bg-muted rounded-lg sticky top-0 z-10">
+                  {itemTypeTabs.map((tab) => (
+                    <button
+                      key={tab.value}
+                      onClick={() => {
+                        setCompositionActiveTab(tab.value);
+                        setSelectedItemToAdd("");
+                      }}
+                      className={cn(
+                        "flex-1 min-w-[80px] px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-all",
+                        compositionActiveTab === tab.value
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Action bar */}
+                <div className="flex items-center justify-between gap-3 px-1">
+                  <h4 className="text-sm font-medium text-muted-foreground">
+                    Itens adicionados ({getCompositionItemsByType(compositionActiveTab).length})
+                  </h4>
+                  <Button size="sm" variant="default" onClick={handleCloseDialog}>
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    Pronto
+                  </Button>
+                </div>
+
+                {/* Grid */}
                 {getCompositionItemsByType(compositionActiveTab).length === 0 ? (
                   <Card className="border-dashed">
-                    <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+                    <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                       <Layers className="w-10 h-10 text-muted-foreground/50 mb-2" />
                       <p className="text-sm text-muted-foreground">Nenhum item desta categoria na composição</p>
                     </CardContent>
                   </Card>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
                     {getCompositionItemsByType(compositionActiveTab).map((item) => {
                       const displayedFormula = getDisplayedItemFormula(item);
                       const formulaPosition = getDisplayedFormulaPosition(item);
                       const displayedPieces = getDisplayedPieces(item);
+                      const widthF = item.width_formula ?? item.quantity_formula;
+                      const heightF = item.height_formula;
 
                       return (
                         <div
@@ -2028,14 +2029,27 @@ export default function ProductTemplates() {
                           </h4>
 
                           <div className="mt-2 flex flex-col items-center gap-1">
-                            <Badge
-                              variant="secondary"
-                              className="max-w-full justify-center text-[10px] font-mono px-2 py-0.5"
-                              title={displayedFormula}
-                            >
-                              <span className="font-sans font-semibold mr-1">Fórmula:</span>
-                              <span className="truncate">{displayedFormula}</span>
-                            </Badge>
+                            {item.item_template?.type === 'glass' && heightF ? (
+                              <>
+                                <Badge variant="secondary" className="max-w-full justify-center text-[10px] font-mono px-2 py-0.5" title={`Largura: ${widthF}`}>
+                                  <span className="font-sans font-semibold mr-1">Fórmula Largura:</span>
+                                  <span className="truncate">{widthF}</span>
+                                </Badge>
+                                <Badge variant="secondary" className="max-w-full justify-center text-[10px] font-mono px-2 py-0.5" title={`Altura: ${heightF}`}>
+                                  <span className="font-sans font-semibold mr-1">Fórmula Altura:</span>
+                                  <span className="truncate">{heightF}</span>
+                                </Badge>
+                              </>
+                            ) : (
+                              <Badge
+                                variant="secondary"
+                                className="max-w-full justify-center text-[10px] font-mono px-2 py-0.5"
+                                title={displayedFormula}
+                              >
+                                <span className="font-sans font-semibold mr-1">Fórmula:</span>
+                                <span className="truncate">{displayedFormula}</span>
+                              </Badge>
+                            )}
 
                             {formulaPosition && (
                               <Badge variant="outline" className="text-[10px] px-2 py-0.5">
@@ -2054,7 +2068,6 @@ export default function ProductTemplates() {
                                   Ângulo: {item.cut_angle_start ?? item.cut_angle ?? 90}° / {item.cut_angle_end ?? item.cut_angle ?? 90}°
                                 </Badge>
                               )}
-
                             </div>
 
                             {item.side && (
@@ -2068,9 +2081,10 @@ export default function ProductTemplates() {
                     })}
                   </div>
                 )}
-              </div>
+              </section>
             </div>
               </TabsContent>
+
 
               <TabsContent value="variaveis" className="mt-4">
                 <VariablesTab />
