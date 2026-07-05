@@ -215,6 +215,7 @@ export function useCompositionPricing({
           custo_estoque: custoEstoque,
           subtotal,
           detalhe,
+          item_template_id: tpl?.id ?? null,
         };
 
       });
