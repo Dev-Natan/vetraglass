@@ -79,6 +79,7 @@ export function RegistrarMovimentoDialog({
 }: RegistrarMovimentoDialogProps) {
   const { currentCompany, user } = useAuth();
   const queryClient = useQueryClient();
+  const invalidateStock = useInvalidateStock();
   const { labels: itemTypeLabels } = useItemTypeLabels();
   const { data: productLinhas } = useProductLinhas();
   
