@@ -103,16 +103,24 @@ export default function Estoque() {
     };
   }, []);
 
-  const linhas = useMemo(() => {
-    const oficialLinhas = productLinhas?.map(l => l.name) || [];
-    const uniqueLinhas = new Set<string>(oficialLinhas);
-    activeItems.forEach((item) => {
-      const linha = item.company_item?.linha ?? item.item_template?.linha;
-      if (linha) uniqueLinhas.add(linha);
+  // Conjunto (case-insensitive) de linhas ATIVAS no dicionário do Admin SaaS
+  const activeLinhaKeys = useMemo(() => {
+    const set = new Set<string>();
+    (productLinhas || []).forEach(l => {
+      if (l.slug) set.add(l.slug.toLowerCase());
+      if (l.name) set.add(l.name.toLowerCase());
     });
-    itemTemplates.forEach((t) => { if (t.linha) uniqueLinhas.add(t.linha); });
-    return Array.from(uniqueLinhas).sort();
-  }, [productLinhas, itemTemplates, activeItems]);
+    return set;
+  }, [productLinhas]);
+  const isLinhaAllowed = useCallback((linha: string | null | undefined) => {
+    if (!linha) return true; // itens sem linha continuam visíveis
+    return activeLinhaKeys.has(String(linha).toLowerCase());
+  }, [activeLinhaKeys]);
+
+  const linhas = useMemo(() => {
+    // Somente linhas ativas do dicionário (ordenadas por sort_order)
+    return (productLinhas || []).map(l => l.name);
+  }, [productLinhas]);
 
   // Get unique categories from active items
   const activeCategories = useMemo(() => {
