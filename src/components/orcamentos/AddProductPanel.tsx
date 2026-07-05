@@ -1004,7 +1004,19 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-foreground">Cor do perfil</label>
                 <div className="space-y-2">
-                  {productUsesAluminum && hasAluminumPrices ? (
+                  {hasProfileColorPrices ? (
+                    <Select value={selectedAluminumColor} onValueChange={setSelectedAluminumColor}>
+                      <SelectTrigger className="bg-background h-10">
+                        <SelectValue placeholder="Selecione..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border shadow-lg z-50">
+                        {profileAvailableColors.map((c) => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                        <SelectItem value="Outros">Outros</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : productUsesAluminum && hasAluminumPrices ? (
                     <Select value={selectedAluminumColor} onValueChange={setSelectedAluminumColor}>
                       <SelectTrigger className="bg-background h-10">
                         <SelectValue placeholder="Selecione..." />
