@@ -48,14 +48,24 @@ export function useDynamicCompositionPricing(options: UseDynamicCompositionPrici
     return match ? Number(match.costPerSqm) || Number(match.pricePerSqm) || null : null;
   }, [glassOptions, options.glassColor, options.glassThicknessMm]);
 
-  const aluminumCostPerSqm = useMemo(() => {
+  const aluminumMatch = useMemo(() => {
     if (!aluminumOptions.length) return null;
     const color = norm(options.aluminumColor);
-    const match =
+    return (
       aluminumOptions.find(a => !color || norm(a.colorName) === color) ||
-      aluminumOptions[0];
-    return match ? Number(match.costPerSqm) || Number(match.pricePerSqm) || null : null;
+      aluminumOptions[0]
+    );
   }, [aluminumOptions, options.aluminumColor]);
+
+  const aluminumCostPerMeter = useMemo(() => {
+    if (!aluminumMatch) return null;
+    return Number(aluminumMatch.costPerMeter) || Number(aluminumMatch.pricePerMeter) || null;
+  }, [aluminumMatch]);
+
+  const aluminumCostPerSqm = useMemo(() => {
+    if (!aluminumMatch) return null;
+    return Number(aluminumMatch.costPerSqm) || Number(aluminumMatch.pricePerSqm) || null;
+  }, [aluminumMatch]);
 
   const override = useMemo(() => {
     if (!base.simpleBreakdown?.length) {
