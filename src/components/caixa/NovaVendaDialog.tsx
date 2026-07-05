@@ -230,6 +230,7 @@ export function NovaVendaDialog({
       
       toast.success('Item adicionado ao estoque com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['company-stock', currentCompany.id] });
+      invalidateStock();
     } catch (error) {
       console.error('Error adding to stock:', error);
       toast.error('Erro ao adicionar item ao estoque');
