@@ -224,7 +224,11 @@ export default function Estoque() {
   };
 
   const { inStockItems, outOfStockItems } = useMemo(() => {
-    let items = [...activeItems];
+    // Ocultar itens cuja linha esteja desativada no Admin SaaS
+    let items = activeItems.filter((item) => {
+      const linha = item.company_item?.linha ?? item.item_template?.linha;
+      return isLinhaAllowed(linha);
+    });
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
       items = items.filter((item) => {
