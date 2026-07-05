@@ -206,6 +206,34 @@ export default function MeusPrecos() {
   );
 }
 
+function LinhaGroup({ linha, profiles }: { linha: string; profiles: Array<{ id: string; name: string; linha: string | null }> }) {
+  const [open, setOpen] = useState(true);
+  return (
+    <Card>
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <CollapsibleTrigger asChild>
+          <button className="w-full flex items-center justify-between p-4 hover:bg-muted/40 text-left border-b">
+            <div className="flex items-center gap-3">
+              {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+              <div>
+                <div className="font-semibold text-base">{linha}</div>
+                <div className="text-xs text-muted-foreground">{profiles.length} perfil(is)</div>
+              </div>
+            </div>
+            <Badge variant="outline">Linha</Badge>
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="p-3 space-y-2">
+            {profiles.map(p => <ProfileCard key={p.id} profile={p} />)}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    </Card>
+  );
+}
+
+
 function ProfileCard({ profile }: { profile: { id: string; name: string; linha: string | null } }) {
   const [open, setOpen] = useState(false);
   const { data: adminRows = [] } = useItemTemplateColorPrices(open ? profile.id : undefined);
