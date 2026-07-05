@@ -109,16 +109,19 @@ export default function Produtos() {
     });
 
     let result = Array.from((showActive ? activeLinhasMap : inactiveLinhasMap).values());
-    
+
+    // Ocultar grupos cuja linha esteja desativada no dicionário do Admin SaaS
+    result = result.filter(item => isLinhaAllowed(item.linha));
+
     if (searchTerm) {
       result = result.filter(item => item.linha.toLowerCase().includes(searchTerm.toLowerCase()));
     }
     if (selectedCategory) {
       result = result.filter(item => item.categories.has(selectedCategory));
     }
-    
+
     return result.sort((a, b) => a.linha.localeCompare(b.linha));
-  }, [companyProducts, allProducts, searchTerm, selectedCategory, showActive]);
+  }, [companyProducts, allProducts, searchTerm, selectedCategory, showActive, activeLinhaKeys]);
 
   const handleRemoveLinha = async (linha: string) => {
     if (!currentCompany?.id) return;
