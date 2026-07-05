@@ -14,6 +14,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useInvalidateStock } from '@/hooks/useInvalidateStock';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -88,6 +89,7 @@ export default function OrdensServico() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { currentCompany } = useAuth();
   const queryClient = useQueryClient();
+  const invalidateStock = useInvalidateStock();
   
   // Module tutorial trigger
   useModuleTutorialTrigger('ordens-servico');
@@ -199,6 +201,7 @@ export default function OrdensServico() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ordens-servico'] });
       queryClient.invalidateQueries({ queryKey: ['company-stock'] });
+      invalidateStock();
       queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
       queryClient.invalidateQueries({ queryKey: ['stock-reservations'] });
       queryClient.invalidateQueries({ queryKey: ['material-consumption'] });

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useInvalidateStock } from '@/hooks/useInvalidateStock';
 import { toast } from 'sonner';
 
 import { registerStockEntry } from '@/utils/stockMovements';
@@ -155,6 +156,7 @@ export function usePendingPurchasesCount() {
 
 export function useUpdatePurchaseOrderStatus() {
   const queryClient = useQueryClient();
+  const invalidateStock = useInvalidateStock();
   
   return useMutation({
     mutationFn: async ({ 
@@ -195,6 +197,7 @@ export function useUpdatePurchaseOrderStatus() {
 
 export function useReceivePurchaseOrderItems() {
   const queryClient = useQueryClient();
+  const invalidateStock = useInvalidateStock();
   
   return useMutation({
     mutationFn: async ({ 
@@ -335,6 +338,7 @@ export function useReceivePurchaseOrderItems() {
       queryClient.invalidateQueries({ queryKey: ['pending-purchases-count'] });
       queryClient.invalidateQueries({ queryKey: ['os-glass-projects'] });
       queryClient.invalidateQueries({ queryKey: ['company-stock'] });
+      invalidateStock();
       queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
       queryClient.invalidateQueries({ queryKey: ['material-consumption'] });
       toast.success('Itens recebidos e estoque atualizado!');

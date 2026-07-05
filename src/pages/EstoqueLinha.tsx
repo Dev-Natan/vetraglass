@@ -5,6 +5,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { estoqueService } from '@/services/estoqueService';
 import { useAuth } from '@/contexts/AuthContext';
+import { useInvalidateStock } from '@/hooks/useInvalidateStock';
 
 import { Boxes, TrendingDown, TrendingUp, History, Plus, PackageCheck, PackageX, Trash2, RefreshCw, ArrowLeft } from 'lucide-react';
 
@@ -64,6 +65,7 @@ export default function EstoqueLinha() {
 
   const { currentCompany } = useAuth();
   const queryClient = useQueryClient();
+  const invalidateStock = useInvalidateStock();
 
   
   useModuleTutorialTrigger('estoque');
@@ -151,6 +153,7 @@ export default function EstoqueLinha() {
 
     onSuccess: (_, { isActive }) => {
       queryClient.invalidateQueries({ queryKey: ['company-stock'] });
+      invalidateStock();
       toast.success(isActive ? 'Item ativado' : 'Item desativado');
     },
     onError: (error: Error) => { toast.error('Erro ao atualizar item: ' + error.message); },
@@ -191,6 +194,7 @@ export default function EstoqueLinha() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company-stock'] });
+      invalidateStock();
       queryClient.invalidateQueries({ queryKey: ['company-items'] });
       queryClient.invalidateQueries({ queryKey: ['company-item-prices'] });
       toast.success('Estoque zerado com sucesso!');

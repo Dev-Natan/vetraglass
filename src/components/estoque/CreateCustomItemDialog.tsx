@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useInvalidateStock } from '@/hooks/useInvalidateStock';
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -59,6 +60,7 @@ export function CreateCustomItemDialog({
   const { currentCompany, user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const invalidateStock = useInvalidateStock();
   
   // Form states
   const [name, setName] = useState('');
@@ -210,6 +212,7 @@ export function CreateCustomItemDialog({
         description: 'O item personalizado foi adicionado ao seu estoque.',
       });
       queryClient.invalidateQueries({ queryKey: ['company-stock'] });
+      invalidateStock();
       queryClient.invalidateQueries({ queryKey: ['company-items'] });
       queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
       queryClient.invalidateQueries({ queryKey: ['precificacao-products'] });

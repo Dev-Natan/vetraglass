@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useInvalidateStock } from '@/hooks/useInvalidateStock';
 import {
   Dialog,
   DialogContent,
@@ -147,6 +148,7 @@ export function NovaVendaDialog({
   const [isAddingStock, setIsAddingStock] = useState(false);
   
   const queryClient = useQueryClient();
+  const invalidateStock = useInvalidateStock();
   
   // Fetch company stock to check if item exists
   const { data: companyStock } = useQuery({
@@ -228,6 +230,7 @@ export function NovaVendaDialog({
       
       toast.success('Item adicionado ao estoque com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['company-stock', currentCompany.id] });
+      invalidateStock();
     } catch (error) {
       console.error('Error adding to stock:', error);
       toast.error('Erro ao adicionar item ao estoque');

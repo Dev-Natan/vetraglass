@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useInvalidateStock } from '@/hooks/useInvalidateStock';
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -43,6 +44,7 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
   const { currentCompany, user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const invalidateStock = useInvalidateStock();
   
   // Filter states
   const [selectedLinhaFilter, setSelectedLinhaFilter] = useState<string | null>(null);
@@ -289,6 +291,7 @@ export function AddStockDialog({ open, onOpenChange }: AddStockDialogProps) {
         description: 'O item foi adicionado ao estoque com sucesso.',
       });
       queryClient.invalidateQueries({ queryKey: ['company-stock'] });
+      invalidateStock();
       queryClient.invalidateQueries({ queryKey: ['company-stock-item-ids'] });
       queryClient.invalidateQueries({ queryKey: ['company-item-prices'] });
       queryClient.invalidateQueries({ queryKey: ['company-items'] });

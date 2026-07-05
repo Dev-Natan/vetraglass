@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useInvalidateStock } from '@/hooks/useInvalidateStock';
 import { useToast } from '@/hooks/use-toast';
 import {
   Select,
@@ -48,6 +49,7 @@ export function CreateCustomItemContent({ onClose }: CreateCustomItemContentProp
   const { currentCompany, user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const invalidateStock = useInvalidateStock();
   
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -145,6 +147,7 @@ export function CreateCustomItemContent({ onClose }: CreateCustomItemContentProp
     onSuccess: () => {
       toast({ title: 'Item criado com sucesso!', description: 'O item personalizado foi adicionado ao seu estoque.' });
       queryClient.invalidateQueries({ queryKey: ['company-stock'] });
+      invalidateStock();
       queryClient.invalidateQueries({ queryKey: ['company-items'] });
       queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
       queryClient.invalidateQueries({ queryKey: ['precificacao-products'] });
