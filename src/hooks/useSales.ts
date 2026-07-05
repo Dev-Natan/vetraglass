@@ -7,6 +7,7 @@ import { calculateFormulaQuantity } from '@/utils/safeFormulaEvaluator';
 
 export function useSales() {
   const queryClient = useQueryClient();
+  const invalidateStock = useInvalidateStock();
 
   const cancelSaleMutation = useMutation({
     mutationFn: async ({ saleId, companyId, userId, reason }: { saleId: string; companyId: string; userId: string; reason: string }) => {
@@ -29,6 +30,7 @@ export function useSales() {
       queryClient.invalidateQueries({ queryKey: ['accounts-receivable'] });
       queryClient.invalidateQueries({ queryKey: ['receivables-due-today'] });
       queryClient.invalidateQueries({ queryKey: ['company-stock'] });
+      invalidateStock();
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
       queryClient.invalidateQueries({ queryKey: ['approved-quotes-financial'] });
       queryClient.invalidateQueries({ queryKey: ['completed-os-pending-billing'] });
@@ -185,6 +187,7 @@ export function useSales() {
       toast.success(`Venda #${String(sale.sale_number).padStart(4, '0')} registrada!`);
       queryClient.invalidateQueries({ queryKey: ['sales-today'] });
       queryClient.invalidateQueries({ queryKey: ['company-stock'] });
+      invalidateStock();
       queryClient.invalidateQueries({ queryKey: ['approved-quotes'] });
       queryClient.invalidateQueries({ queryKey: ['accounts-receivable'] });
       queryClient.invalidateQueries({ queryKey: ['receivables-due-today'] });
