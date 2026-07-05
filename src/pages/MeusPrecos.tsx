@@ -209,7 +209,11 @@ export default function MeusPrecos() {
   );
 }
 
-function LinhaGroup({ linha, profiles }: { linha: string; profiles: Array<{ id: string; name: string; linha: string | null }> }) {
+function LinhaGroup({ linha, profiles, stockMap }: {
+  linha: string;
+  profiles: Array<{ id: string; name: string; linha: string | null }>;
+  stockMap?: Map<string, { quantity: number; unit: string | null }>;
+}) {
   const [open, setOpen] = useState(true);
   return (
     <Card>
@@ -228,7 +232,7 @@ function LinhaGroup({ linha, profiles }: { linha: string; profiles: Array<{ id: 
         </CollapsibleTrigger>
         <CollapsibleContent>
           <div className="p-3 space-y-2">
-            {profiles.map(p => <ProfileCard key={p.id} profile={p} />)}
+            {profiles.map(p => <ProfileCard key={p.id} profile={p} stock={stockMap?.get(p.id)} />)}
           </div>
         </CollapsibleContent>
       </Collapsible>
