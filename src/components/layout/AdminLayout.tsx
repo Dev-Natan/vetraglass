@@ -47,11 +47,6 @@ const adminMenuItems = [
     icon: Package,
   },
   {
-    title: "Imagens de Produtos",
-    path: "/admin/product-images",
-    icon: ImageIcon,
-  },
-  {
     title: "Categorias",
     path: "/admin/categories",
     icon: Tags,
