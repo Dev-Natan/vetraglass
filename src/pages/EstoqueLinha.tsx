@@ -409,41 +409,7 @@ export default function EstoqueLinha() {
               </div>
             )}
 
-            {/* Linha Selection Chips */}
-            {linhas.length > 0 && (
-              <div className="section-card">
-                <p className="text-xs font-medium text-muted-foreground mb-2">Filtrar por Linha</p>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => setLinhaFilter('all')}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${
-                      linhaFilter === 'all'
-                        ? 'bg-primary text-primary-foreground border-primary'
-                        : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
-                    }`}
-                  >
-                    Todas ({activeItems.length})
-                  </button>
-                  {linhas.map((linha) => {
-                    const count = activeItems.filter(i => (i.company_item?.linha ?? i.item_template?.linha) === linha).length;
-                    if (count === 0) return null;
-                    return (
-                      <button
-                        key={linha}
-                        onClick={() => setLinhaFilter(linha)}
-                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${
-                          linhaFilter === linha
-                            ? 'bg-primary text-primary-foreground border-primary'
-                            : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
-                        }`}
-                      >
-                        {linha} ({count})
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+
 
             {/* Category Selection Chips */}
             {itemTypes && itemTypes.length > 0 && (
