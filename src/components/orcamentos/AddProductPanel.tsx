@@ -447,6 +447,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   const handleProductSelect = (productId: string) => {
     setSelectedProductId(productId);
     setCustomPrice(null);
+    setManualTotalOverride(null);
     setSelectedGlassPriceId('');
     setSelectedGlassThickness('');
     setSelectedGlassColor('');
