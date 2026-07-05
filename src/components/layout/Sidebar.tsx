@@ -52,6 +52,7 @@ const menuItems: MenuItem[] = [
   { icon: Users, label: 'Clientes', path: '/clientes', module: 'clientes', tutorialId: 'menu-clientes' },
   { icon: Package, label: 'Produtos', path: '/produtos', module: 'produtos', tutorialId: 'menu-produtos' },
   { icon: Boxes, label: 'Estoque', path: '/estoque', module: 'estoque', tutorialId: 'menu-estoque' },
+  { icon: Tag, label: 'Meus Preços', path: '/meus-precos', module: 'produtos' },
   
   { icon: FileText, label: 'Orçamentos', path: '/orcamentos', module: 'orcamentos', tutorialId: 'menu-orcamentos' },
   { icon: ClipboardList, label: 'Ordens de Serviço', path: '/ordens-servico', module: 'ordens-servico', tutorialId: 'menu-ordens-servico' },
