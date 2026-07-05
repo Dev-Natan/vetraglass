@@ -123,13 +123,24 @@ export default function MeusPrecos() {
               <TabsTrigger value="glass"><Palette className="w-4 h-4 mr-1" />Vidros</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="aluminum" className="space-y-3">
+            <TabsContent value="aluminum" className="space-y-4">
               {profiles.length === 0 ? (
                 <Card><CardContent className="py-8 text-center text-muted-foreground">
                   Nenhum perfil cadastrado pelo Admin ainda.
                 </CardContent></Card>
               ) : (
-                profiles.map(p => <ProfileCard key={p.id} profile={p} />)
+                Array.from(
+                  profiles.reduce((map, p) => {
+                    const key = p.linha || 'Sem Linha';
+                    if (!map.has(key)) map.set(key, []);
+                    map.get(key)!.push(p);
+                    return map;
+                  }, new Map<string, typeof profiles>())
+                )
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([linha, list]) => (
+                    <LinhaGroup key={linha} linha={linha} profiles={list} />
+                  ))
               )}
             </TabsContent>
 
