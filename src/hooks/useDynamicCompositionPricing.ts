@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useCompositionPricing } from './useCompositionPricing';
 import { useProductGlassPriceOptions } from './useProductGlassPrices';
 import { useProductAluminumPriceOptions } from './useProductAluminumPrices';
+import { useAllItemTemplateColorPrices, useAllCompanyItemColorPrices } from './useItemColorPrices';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
