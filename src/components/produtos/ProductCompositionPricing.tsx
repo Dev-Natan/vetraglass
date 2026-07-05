@@ -11,6 +11,7 @@ import { Calculator, TrendingUp, AlertTriangle, RefreshCw, Link2, Save, Loader2 
 import { calculatePricing, DEFAULT_PRICING_POLICY, type CompositionItemInput, type PricingInput } from '@/utils/pricingEngine';
 import { recalculatePricesForProductsWithItem } from '@/utils/productPriceUpdater';
 import { toast } from 'sonner';
+import { DynamicPricingMatrix } from './DynamicPricingMatrix';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatBRLInput, parseBRLInput } from '@/utils/currencyMask';
 
@@ -577,6 +578,12 @@ export function ProductCompositionPricing({
             </div>
           </div>
         )}
+
+        <DynamicPricingMatrix
+          companyProductId={productId}
+          marginPercent={marginPercent}
+          baseCostPerSqm={pricingResult?.costPerSqm ?? 0}
+        />
       </CardContent>
     </Card>
   );
