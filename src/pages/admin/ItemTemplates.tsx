@@ -800,6 +800,9 @@ export default function ItemTemplates() {
                     </div>
                   </div>
                 )}
+                {formData.type === 'profile' && (
+                  <ProfileColorPricesSection itemTemplateId={editingItem?.id ?? null} />
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="description">Descrição</Label>
                   <Textarea id="description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={2} placeholder="Descrição do item..." />
