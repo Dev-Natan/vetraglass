@@ -221,7 +221,8 @@ export default function ProductTemplates() {
   
   const { labels: categoryLabels, colors: categoryColors, categories: productCategories } = useProductCategoryLabels();
   const { labels: typeLabels, colors: typeColors, itemTypes } = useItemTypeLabels();
-  const { data: productLinhas } = useProductLinhas();
+  // Admin: inclui linhas inativas para permitir editar produtos de linhas desativadas
+  const { data: productLinhas } = useProductLinhas(true);
   
   const categoriesList = productCategories?.map(c => c.slug) || [];
   const itemTypeTabs = getItemTypeTabs(itemTypes);
