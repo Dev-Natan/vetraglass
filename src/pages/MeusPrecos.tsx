@@ -142,7 +142,7 @@ export default function MeusPrecos() {
                 )
                   .sort(([a], [b]) => a.localeCompare(b))
                   .map(([linha, list]) => (
-                    <LinhaGroup key={linha} linha={linha} profiles={list} />
+                    <LinhaGroup key={linha} linha={linha} profiles={list} stockMap={stockMap} />
                   ))
               )}
             </TabsContent>
