@@ -18,7 +18,7 @@ import {
   Shield,
   Headphones,
   Megaphone,
-  GlassWater,
+  
   Tags,
   Image as ImageIcon,
 } from "lucide-react";
