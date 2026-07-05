@@ -212,12 +212,16 @@ export function useDynamicCompositionPricing(options: UseDynamicCompositionPrici
         };
       }
       if (row.unidade === 'ml') {
-        // Fase 5: usar preço linear real quando cadastrado; senão, converter de m².
+        // Prioridade: preço por perfil (template) + cor > preço legado por produto > sugerido genérico > custo original.
         let perMeter: number | null = null;
         let source = '';
-        if (aluminumCostPerMeter && aluminumCostPerMeter > 0) {
+        const perTemplate = pickTemplateColorPerMeter(row.item_template_id ?? null, options.aluminumColor ?? null);
+        if (perTemplate && perTemplate > 0) {
+          perMeter = perTemplate;
+          source = 'perfil × cor';
+        } else if (aluminumCostPerMeter && aluminumCostPerMeter > 0) {
           perMeter = aluminumCostPerMeter;
-          source = 'alumínio linear';
+          source = 'alumínio linear (legado)';
         } else if (aluminumCostPerSqm && aluminumCostPerSqm > 0) {
           perMeter = aluminumCostPerSqm * (areaM2 / Math.max(linearM, 0.001));
           source = 'alumínio (m²→ml)';
@@ -237,7 +241,7 @@ export function useDynamicCompositionPricing(options: UseDynamicCompositionPrici
 
     const total = rows.reduce((s, r) => s + r.subtotal, 0);
     return { rows, total, perSqm: total / areaM2 };
-  }, [base.simpleBreakdown, base.compositionCostSimpleTotal, base.compositionCostSimplePerSqm, glassCostPerSqm, aluminumCostPerSqm, aluminumCostPerMeter, options.width, options.height]);
+  }, [base.simpleBreakdown, base.compositionCostSimpleTotal, base.compositionCostSimplePerSqm, glassCostPerSqm, aluminumCostPerSqm, aluminumCostPerMeter, templateColorPrices, companyTemplateColorPrices, options.aluminumColor, options.width, options.height]);
 
   return {
     ...base,
