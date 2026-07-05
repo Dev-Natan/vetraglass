@@ -226,19 +226,25 @@ export function useDynamicCompositionPricing(options: UseDynamicCompositionPrici
         };
       }
       if (row.unidade === 'ml') {
-        // Prioridade: preço por perfil (template) + cor > preço legado por produto > sugerido genérico > custo original.
+        // Prioridade: ESTOQUE (company_items) > perfil × cor (legado) > preço legado por produto > sugerido.
         let perMeter: number | null = null;
         let source = '';
-        const perTemplate = pickTemplateColorPerMeter(row.item_template_id ?? null, options.aluminumColor ?? null);
-        if (perTemplate && perTemplate > 0) {
-          perMeter = perTemplate;
-          source = 'perfil × cor';
-        } else if (aluminumCostPerMeter && aluminumCostPerMeter > 0) {
-          perMeter = aluminumCostPerMeter;
-          source = 'alumínio linear (legado)';
-        } else if (aluminumCostPerSqm && aluminumCostPerSqm > 0) {
-          perMeter = aluminumCostPerSqm * (areaM2 / Math.max(linearM, 0.001));
-          source = 'alumínio (m²→ml)';
+        const fromStock = pickTemplateCostFromStock(row.item_template_id ?? null);
+        if (fromStock && fromStock > 0) {
+          perMeter = fromStock;
+          source = 'estoque';
+        } else {
+          const perTemplate = pickTemplateColorPerMeter(row.item_template_id ?? null, options.aluminumColor ?? null);
+          if (perTemplate && perTemplate > 0) {
+            perMeter = perTemplate;
+            source = 'perfil × cor (legado)';
+          } else if (aluminumCostPerMeter && aluminumCostPerMeter > 0) {
+            perMeter = aluminumCostPerMeter;
+            source = 'alumínio linear (legado)';
+          } else if (aluminumCostPerSqm && aluminumCostPerSqm > 0) {
+            perMeter = aluminumCostPerSqm * (areaM2 / Math.max(linearM, 0.001));
+            source = 'alumínio (m²→ml)';
+          }
         }
         if (perMeter && perMeter > 0) {
           const subtotal = linearM * perMeter * row.qtd;
@@ -255,7 +261,7 @@ export function useDynamicCompositionPricing(options: UseDynamicCompositionPrici
 
     const total = rows.reduce((s, r) => s + r.subtotal, 0);
     return { rows, total, perSqm: total / areaM2 };
-  }, [base.simpleBreakdown, base.compositionCostSimpleTotal, base.compositionCostSimplePerSqm, glassCostPerSqm, aluminumCostPerSqm, aluminumCostPerMeter, templateColorPrices, companyTemplateColorPrices, options.aluminumColor, options.width, options.height]);
+  }, [base.simpleBreakdown, base.compositionCostSimpleTotal, base.compositionCostSimplePerSqm, glassCostPerSqm, aluminumCostPerSqm, aluminumCostPerMeter, templateColorPrices, companyTemplateColorPrices, stockPricingByTemplate, options.aluminumColor, options.width, options.height]);
 
   return {
     ...base,
