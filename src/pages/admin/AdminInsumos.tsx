@@ -1,4 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,13 +12,18 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Trash2, Pencil, Palette, Ruler, Layers, DollarSign } from 'lucide-react';
+import { Plus, Trash2, Pencil, Palette, Ruler, Layers, DollarSign, GlassWater, ChevronRight } from 'lucide-react';
 import {
   useAdminGlassColors,
   useAdminGlassThicknesses,
   useAdminAluminumColors,
   useAdminSuggestedPrices,
 } from '@/hooks/useAdminPricingLists';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const sb = supabase as any;
+const ADMIN_VIDROS_KEY = '__vidros__';
+export const linhaToSlug = (l: string) => encodeURIComponent(l);
 
 const slugify = (s: string) =>
   s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -315,6 +323,91 @@ function AluPriceRow({ label, initial, onSave }: {
   );
 }
 
+function LinhasDashboard() {
+  const { data: templates = [], isLoading } = useQuery({
+    queryKey: ['admin-insumos-linhas'],
+    queryFn: async () => {
+      const { data, error } = await sb
+        .from('item_templates')
+        .select('id, linha, type')
+        .eq('is_active', true)
+        .in('type', ['profile', 'accessory']);
+      if (error) throw error;
+      return (data ?? []) as Array<{ id: string; linha: string | null; type: string }>;
+    },
+    staleTime: 60_000,
+  });
+
+  const linhas = useMemo(() => {
+    const map = new Map<string, { profiles: number; accessories: number }>();
+    for (const t of templates) {
+      const key = t.linha || 'Sem Linha';
+      const cur = map.get(key) ?? { profiles: 0, accessories: 0 };
+      if (t.type === 'profile') cur.profiles++;
+      else if (t.type === 'accessory') cur.accessories++;
+      map.set(key, cur);
+    }
+    return Array.from(map.entries())
+      .map(([name, s]) => ({ name, ...s, total: s.profiles + s.accessories }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  }, [templates]);
+
+  if (isLoading) {
+    return <Card><CardContent className="py-10 text-center text-muted-foreground">Carregando…</CardContent></Card>;
+  }
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <LinhaCard
+        to={`/admin/insumos/linha/${linhaToSlug(ADMIN_VIDROS_KEY)}`}
+        icon={<GlassWater className="w-6 h-6" />}
+        title="Vidros"
+        subtitle="Cores × espessuras × preço sugerido"
+        badge="Global"
+      />
+      {linhas.map(l => (
+        <LinhaCard
+          key={l.name}
+          to={`/admin/insumos/linha/${linhaToSlug(l.name)}`}
+          icon={<Layers className="w-6 h-6" />}
+          title={l.name}
+          subtitle={`${l.profiles} perfil(is) · ${l.accessories} acessório(s)`}
+          badge={`${l.total} itens`}
+        />
+      ))}
+      {linhas.length === 0 && (
+        <Card className="col-span-full"><CardContent className="py-8 text-center text-muted-foreground">
+          Nenhuma linha cadastrada ainda.
+        </CardContent></Card>
+      )}
+    </div>
+  );
+}
+
+function LinhaCard({ to, icon, title, subtitle, badge }: {
+  to: string; icon: React.ReactNode; title: string; subtitle: string; badge: string;
+}) {
+  return (
+    <Link to={to} className="group">
+      <Card className="h-full transition-all hover:border-primary/60 hover:shadow-lg hover:-translate-y-0.5">
+        <CardContent className="p-5 flex items-start gap-4">
+          <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            {icon}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="font-semibold text-base truncate group-hover:text-primary">{title}</h3>
+              <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+            <p className="text-xs text-muted-foreground mt-1 truncate">{subtitle}</p>
+            <Badge variant="outline" className="mt-2 text-[10px]">{badge}</Badge>
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
+
 export default function AdminInsumos() {
   return (
     <AdminLayout>
@@ -327,14 +420,18 @@ export default function AdminInsumos() {
           </p>
         </div>
 
-        <Tabs defaultValue="glass-colors" className="space-y-4">
+        <Tabs defaultValue="linhas" className="space-y-4">
           <TabsList>
+            <TabsTrigger value="linhas"><Layers className="w-4 h-4 mr-1" />Insumos por Linha</TabsTrigger>
             <TabsTrigger value="glass-colors"><Palette className="w-4 h-4 mr-1" />Cores de Vidro</TabsTrigger>
             <TabsTrigger value="thicknesses"><Ruler className="w-4 h-4 mr-1" />Espessuras</TabsTrigger>
             <TabsTrigger value="aluminum"><Layers className="w-4 h-4 mr-1" />Cores de Alumínio</TabsTrigger>
             <TabsTrigger value="prices"><DollarSign className="w-4 h-4 mr-1" />Preços Sugeridos</TabsTrigger>
           </TabsList>
 
+          <TabsContent value="linhas">
+            <LinhasDashboard />
+          </TabsContent>
           <TabsContent value="glass-colors">
             <NameListSection title="Cores de Vidro" icon={<Palette className="w-5 h-5" />} hook={useAdminGlassColors} />
           </TabsContent>
