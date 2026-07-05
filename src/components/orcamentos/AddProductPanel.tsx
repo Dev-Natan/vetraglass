@@ -431,9 +431,14 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     ? compositionPricing.compositionCostPerUnit
     : (area > 0 ? basePrice * area : 0);
   const componentsTotal = components.reduce((sum, c) => sum + (c.unit_price * c.quantity), 0);
-  const totalPrice = ((productUsesComposition && compositionPricing.isReady)
+  const computedTotalPrice = ((productUsesComposition && compositionPricing.isReady)
     ? compositionPricing.totalCost
     : unitPrice * quantity) + componentsTotal;
+  const isPriceOverridden = manualTotalOverride !== null && Math.abs(manualTotalOverride - computedTotalPrice) > 0.005;
+  const totalPrice = manualTotalOverride !== null ? manualTotalOverride : computedTotalPrice;
+  const effectiveUnitPrice = quantity > 0
+    ? Math.max(0, (totalPrice - componentsTotal) / quantity)
+    : unitPrice;
 
   // Check if the selected product is from "Temperado" line (always has glass)
   const isTemperadoLine = selectedProduct?.linha?.toLowerCase().includes('temperado');
