@@ -67,7 +67,8 @@ import {
   LayoutList,
   ChevronDown,
   ChevronRight,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Palette
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -87,6 +88,7 @@ import { useProductLinhas } from "@/hooks/useProductLinhas";
 import { Textarea } from "@/components/ui/textarea";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { VariablesTab } from "@/components/admin/product-templates/VariablesTab";
 
 
 
@@ -248,7 +250,7 @@ export default function ProductTemplates() {
 
   
   const [compositionActiveTab, setCompositionActiveTab] = useState("glass");
-  const [dialogTab, setDialogTab] = useState<"dados" | "composicao">("dados");
+  const [dialogTab, setDialogTab] = useState<"dados" | "composicao" | "variaveis">("dados");
   const [selectedItemToAdd, setSelectedItemToAdd] = useState("");
   const [linhaFilter, setLinhaFilter] = useState<string>("__all__");
   const [quantityFormula, setQuantityFormula] = useState("1");
@@ -1549,11 +1551,14 @@ export default function ProductTemplates() {
             <DialogHeader>
               <DialogTitle>{editingTemplate ? "Editar Produto" : "Novo Produto"}</DialogTitle>
             </DialogHeader>
-            <Tabs value={dialogTab} onValueChange={(v) => setDialogTab(v as "dados" | "composicao")} className="space-y-4">
-              <TabsList className="grid grid-cols-2 w-full">
+            <Tabs value={dialogTab} onValueChange={(v) => setDialogTab(v as "dados" | "composicao" | "variaveis")} className="space-y-4">
+              <TabsList className="grid grid-cols-3 w-full">
                 <TabsTrigger value="dados">Dados</TabsTrigger>
                 <TabsTrigger value="composicao" disabled={!editingTemplate}>
                   <Settings2 className="w-4 h-4 mr-2" /> Composição
+                </TabsTrigger>
+                <TabsTrigger value="variaveis" disabled={!editingTemplate}>
+                  <Palette className="w-4 h-4 mr-2" /> Variáveis
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="dados" className="mt-4">
@@ -2065,9 +2070,14 @@ export default function ProductTemplates() {
             </div>
               </TabsContent>
 
+              <TabsContent value="variaveis" className="mt-4">
+                <VariablesTab />
+              </TabsContent>
+
             </Tabs>
           </DialogContent>
         </Dialog>
+
 
 
         {/* Edit Item Dialog */}
