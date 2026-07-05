@@ -23,6 +23,7 @@ import {
   useCompanyItemColorPrices,
 } from '@/hooks/useItemColorPrices';
 import { useStockByTemplate } from '@/hooks/useStockByTemplate';
+import { useGlassStockByColorThickness, glassStockKey } from '@/hooks/useGlassStockByColorThickness';
 import { Package } from 'lucide-react';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -88,6 +89,7 @@ export default function MeusPrecos() {
   const { data: companyPrices = [], upsert, isLoading } = useCompanySuggestedPrices();
   const { data: profiles = [] } = useProfileTemplates();
   const { data: stockMap } = useStockByTemplate();
+  const { data: glassStockMap } = useGlassStockByColorThickness();
 
   const getCompanyGlass = (color: string, thick: number) =>
     companyPrices.find(p => p.kind === 'glass' && p.glass_color === color && p.thickness_mm === thick);
@@ -159,6 +161,7 @@ export default function MeusPrecos() {
                       <TableRow>
                         <TableHead>Cor</TableHead>
                         <TableHead>Espessura</TableHead>
+                        <TableHead className="w-40">Em Estoque</TableHead>
                         <TableHead className="w-32">Meu Custo/m²</TableHead>
                         <TableHead className="w-32">Meu Preço/m²</TableHead>
                         <TableHead>Sugerido</TableHead>
@@ -170,11 +173,13 @@ export default function MeusPrecos() {
                         thicknesses.filter(t => t.is_active).map(t => {
                           const cp = getCompanyGlass(c.name, t.thickness_mm);
                           const ap = getAdminGlass(c.name, t.thickness_mm);
+                          const stock = glassStockMap?.get(glassStockKey(c.name, t.thickness_mm));
                           return (
                             <GlassRow
                               key={`${c.id}-${t.id}`}
                               colorName={c.name}
                               thicknessLabel={`${t.thickness_mm}mm`}
+                              stock={stock}
                               initialCost={cp?.cost_per_sqm}
                               initialPrice={cp?.price_per_sqm}
                               suggested={
@@ -193,7 +198,7 @@ export default function MeusPrecos() {
                         })
                       )}
                       {(glassColors.length === 0 || thicknesses.length === 0) && (
-                        <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-6">
+                        <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-6">
                           O Admin ainda não cadastrou cores ou espessuras.
                         </TableCell></TableRow>
                       )}
@@ -352,8 +357,9 @@ function ProfileColorRow({ colorName, initialCost, initialPrice, suggested, onSa
   );
 }
 
-function GlassRow({ colorName, thicknessLabel, initialCost, initialPrice, suggested, onSave }: {
+function GlassRow({ colorName, thicknessLabel, stock, initialCost, initialPrice, suggested, onSave }: {
   colorName: string; thicknessLabel: string;
+  stock?: { quantity: number; unit: string | null };
   initialCost?: number | null; initialPrice?: number | null;
   suggested: string;
   onSave: (cost: number | null, price: number | null) => void;
@@ -361,10 +367,19 @@ function GlassRow({ colorName, thicknessLabel, initialCost, initialPrice, sugges
   const [cost, setCost] = useState(initialCost != null ? String(initialCost) : '');
   const [price, setPrice] = useState(initialPrice != null ? String(initialPrice) : '');
   const isSet = cost !== '' || price !== '';
+  const qty = stock?.quantity ?? 0;
+  const unit = stock?.unit ?? 'm²';
+  const hasStock = qty > 0;
   return (
     <TableRow>
       <TableCell className="font-medium">{colorName}</TableCell>
       <TableCell><Badge variant="secondary">{thicknessLabel}</Badge></TableCell>
+      <TableCell>
+        <Badge variant={hasStock ? 'secondary' : 'outline'} className="gap-1">
+          <Package className="w-3 h-3" />
+          {hasStock ? `${qty} ${unit}` : 'Sem estoque'}
+        </Badge>
+      </TableCell>
       <TableCell><Input type="number" step="0.01" value={cost} onChange={e => setCost(e.target.value)} /></TableCell>
       <TableCell><Input type="number" step="0.01" value={price} onChange={e => setPrice(e.target.value)} /></TableCell>
       <TableCell className="text-xs text-muted-foreground">{suggested}</TableCell>

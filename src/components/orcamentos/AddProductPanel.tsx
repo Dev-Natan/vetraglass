@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useDynamicCompositionPricing } from '@/hooks/useDynamicCompositionPricing';
+import { useProductsProfileStock } from '@/hooks/useProductsProfileStock';
 import { resolveProductImageUrl, resolveItemImageUrl } from '@/utils/imageUrl';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -252,6 +253,13 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     
     return products;
   }, [companyProducts, selectedLinha, selectedCategory, searchQuery]);
+
+  // Saldo de perfis por produto listado — para alertar o vendedor sobre falta de estoque.
+  const filteredProductIds = useMemo(
+    () => filteredProducts.map(p => p.id).filter(Boolean),
+    [filteredProducts],
+  );
+  const { data: productsProfileStock } = useProductsProfileStock(filteredProductIds);
 
   const selectedProduct = filteredProducts?.find(p => p.id === selectedProductId);
   const companyProduct = selectedProduct?.company_product;
@@ -758,6 +766,14 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                         {filteredProducts.map((product) => {
                           const imageUrl = getProductImage(product.image_url);
                           const isCustomProduct = product.is_custom;
+                          const stockInfo = productsProfileStock?.get(product.id);
+                          const stockBadge = stockInfo && stockInfo.totalProfiles > 0
+                            ? stockInfo.withStock === 0
+                              ? { label: 'Sem estoque de perfis', tone: 'danger' as const }
+                              : stockInfo.withStock < stockInfo.totalProfiles
+                                ? { label: `${stockInfo.withStock}/${stockInfo.totalProfiles} perfis c/ saldo`, tone: 'warning' as const }
+                                : { label: 'Perfis em estoque', tone: 'ok' as const }
+                            : null;
                           return (
                             <button
                               key={product.id}
@@ -805,6 +821,19 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                                   <p className="text-[10px] text-muted-foreground uppercase tracking-wide truncate">
                                     {categoryLabels[product.category] || product.category}
                                   </p>
+                                )}
+                                {stockBadge && (
+                                  <div
+                                    className={cn(
+                                      "mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium w-fit",
+                                      stockBadge.tone === 'ok' && "bg-success/15 text-success",
+                                      stockBadge.tone === 'warning' && "bg-warning/15 text-warning",
+                                      stockBadge.tone === 'danger' && "bg-destructive/15 text-destructive",
+                                    )}
+                                  >
+                                    <Package className="w-3 h-3" />
+                                    {stockBadge.label}
+                                  </div>
                                 )}
                               </div>
                             </button>
