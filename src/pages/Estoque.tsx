@@ -267,7 +267,7 @@ export default function Estoque() {
       inStockItems: items.filter(item => item.quantity > 0),
       outOfStockItems: items.filter(item => item.quantity === 0),
     };
-  }, [activeItems, searchTerm, categoryFilter, linhaFilter, statusFilter, sortBy]);
+  }, [activeItems, searchTerm, categoryFilter, linhaFilter, statusFilter, sortBy, isLinhaAllowed]);
 
   const filteredItems = useMemo(() => [...inStockItems, ...outOfStockItems], [inStockItems, outOfStockItems]);
 
