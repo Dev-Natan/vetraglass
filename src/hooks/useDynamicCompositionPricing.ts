@@ -4,6 +4,7 @@ import { useCompositionPricing } from './useCompositionPricing';
 import { useProductGlassPriceOptions } from './useProductGlassPrices';
 import { useProductAluminumPriceOptions } from './useProductAluminumPrices';
 import { useAllItemTemplateColorPrices, useAllCompanyItemColorPrices } from './useItemColorPrices';
+import { usePricingByTemplate } from './useStockPricing';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -90,8 +91,21 @@ export function useDynamicCompositionPricing(options: UseDynamicCompositionPrici
   const { data: adminPrices = [] } = useAdminSuggestedPricesCache();
   const { data: templateColorPrices = [] } = useAllItemTemplateColorPrices();
   const { data: companyTemplateColorPrices = [] } = useAllCompanyItemColorPrices();
+  const { data: stockPricingByTemplate } = usePricingByTemplate();
 
-  /** Preço/ml específico por item_template + cor (empresa → admin). */
+  /**
+   * Prioridade 1 — precificação centralizada no estoque (company_items).
+   * Retorna o CUSTO (custo_unitario). Se ausente, cai no legado por cor.
+   */
+  const pickTemplateCostFromStock = (templateId: string | null): number | null => {
+    if (!templateId || !stockPricingByTemplate) return null;
+    const row = stockPricingByTemplate.get(templateId);
+    if (!row) return null;
+    const v = Number(row.costPerMeter) || Number(row.cost) || 0;
+    return v > 0 ? v : null;
+  };
+
+  /** Preço/ml específico por item_template + cor (empresa → admin) — legado. */
   const pickTemplateColorPerMeter = (templateId: string | null, color: string | null): number | null => {
     if (!templateId) return null;
     const c = norm(color);
