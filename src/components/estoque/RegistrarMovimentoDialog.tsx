@@ -222,8 +222,7 @@ export function RegistrarMovimentoDialog({
       return { newQuantity };
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['company-stock'] });
-      queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
+      invalidateStock();
       toast.success(
         isEntrada 
           ? `Entrada registrada. Novo saldo: ${data.newQuantity}` 
