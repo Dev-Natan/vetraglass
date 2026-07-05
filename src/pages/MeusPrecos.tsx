@@ -123,13 +123,24 @@ export default function MeusPrecos() {
               <TabsTrigger value="glass"><Palette className="w-4 h-4 mr-1" />Vidros</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="aluminum" className="space-y-3">
+            <TabsContent value="aluminum" className="space-y-4">
               {profiles.length === 0 ? (
                 <Card><CardContent className="py-8 text-center text-muted-foreground">
                   Nenhum perfil cadastrado pelo Admin ainda.
                 </CardContent></Card>
               ) : (
-                profiles.map(p => <ProfileCard key={p.id} profile={p} />)
+                Array.from(
+                  profiles.reduce((map, p) => {
+                    const key = p.linha || 'Sem Linha';
+                    if (!map.has(key)) map.set(key, []);
+                    map.get(key)!.push(p);
+                    return map;
+                  }, new Map<string, typeof profiles>())
+                )
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([linha, list]) => (
+                    <LinhaGroup key={linha} linha={linha} profiles={list} />
+                  ))
               )}
             </TabsContent>
 
@@ -194,6 +205,34 @@ export default function MeusPrecos() {
     </MainLayout>
   );
 }
+
+function LinhaGroup({ linha, profiles }: { linha: string; profiles: Array<{ id: string; name: string; linha: string | null }> }) {
+  const [open, setOpen] = useState(true);
+  return (
+    <Card>
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <CollapsibleTrigger asChild>
+          <button className="w-full flex items-center justify-between p-4 hover:bg-muted/40 text-left border-b">
+            <div className="flex items-center gap-3">
+              {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+              <div>
+                <div className="font-semibold text-base">{linha}</div>
+                <div className="text-xs text-muted-foreground">{profiles.length} perfil(is)</div>
+              </div>
+            </div>
+            <Badge variant="outline">Linha</Badge>
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="p-3 space-y-2">
+            {profiles.map(p => <ProfileCard key={p.id} profile={p} />)}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    </Card>
+  );
+}
+
 
 function ProfileCard({ profile }: { profile: { id: string; name: string; linha: string | null } }) {
   const [open, setOpen] = useState(false);
