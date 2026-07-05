@@ -683,18 +683,16 @@ export default function ItemTemplates() {
               {stats.total} itens cadastrados • {availableLines.length} linhas
             </p>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) handleCloseDialog(); else setDialogOpen(true); }}>
             <div className="flex gap-2">
               <Button variant="outline" onClick={openBulkUploadDialog}>
                 <ImageUp className="w-4 h-4 mr-2" />
                 Upload em Massa
               </Button>
-              <DialogTrigger asChild>
-                <Button onClick={handleCloseDialog}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Novo Item
-                </Button>
-              </DialogTrigger>
+              <Button onClick={() => { handleCloseDialog(); setDialogOpen(true); }}>
+                <Plus className="w-4 h-4 mr-2" />
+                Novo Item
+              </Button>
             </div>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
