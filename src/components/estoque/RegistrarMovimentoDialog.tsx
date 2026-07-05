@@ -28,6 +28,7 @@ import { TrendingUp, TrendingDown, Package, Search, FolderOpen, Check, Layers, C
 import { useItemTypeLabels } from '@/hooks/useItemTypes';
 import { useProductLinhas } from '@/hooks/useProductLinhas';
 import { cn } from '@/lib/utils';
+import { useInvalidateStock } from '@/hooks/useInvalidateStock';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface StockItem {
