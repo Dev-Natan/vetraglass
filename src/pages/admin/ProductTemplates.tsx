@@ -1046,7 +1046,7 @@ export default function ProductTemplates() {
               <Package className="w-4 h-4" />
               Itens
             </Button>
-            <Button onClick={() => setIsDialogOpen(true)}>
+            <Button onClick={() => { handleCloseDialog(); setDialogTab("dados"); setIsDialogOpen(true); }}>
               <Plus className="w-4 h-4 mr-2" />
               Novo Produto
             </Button>
@@ -1541,10 +1541,12 @@ export default function ProductTemplates() {
 
         {/* Product Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
-          setIsDialogOpen(open);
           if (!open) {
+            handleCloseDialog();
             clearCompositionDraft();
             resetCompositionForm();
+          } else {
+            setIsDialogOpen(true);
           }
         }}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
