@@ -67,7 +67,8 @@ import {
   LayoutList,
   ChevronDown,
   ChevronRight,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Palette
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -87,6 +88,7 @@ import { useProductLinhas } from "@/hooks/useProductLinhas";
 import { Textarea } from "@/components/ui/textarea";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { VariablesTab } from "@/components/admin/product-templates/VariablesTab";
 
 
 
