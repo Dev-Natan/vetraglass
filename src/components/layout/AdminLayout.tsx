@@ -21,6 +21,7 @@ import {
   
   Tags,
   Image as ImageIcon,
+  Droplet,
 } from "lucide-react";
 import {
   Tooltip,
@@ -45,6 +46,11 @@ const adminMenuItems = [
     title: "Product Templates",
     path: "/admin/product-templates",
     icon: Package,
+  },
+  {
+    title: "Tabela de Insumos",
+    path: "/admin/insumos",
+    icon: Droplet,
   },
   {
     title: "Categorias",

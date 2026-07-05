@@ -177,6 +177,144 @@ export type Database = {
           },
         ]
       }
+      admin_aluminum_colors: {
+        Row: {
+          created_at: string
+          hex_color: string | null
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          hex_color?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          hex_color?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      admin_glass_colors: {
+        Row: {
+          created_at: string
+          hex_color: string | null
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          hex_color?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          hex_color?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      admin_glass_thicknesses: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          sort_order: number
+          thickness_mm: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          thickness_mm: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          thickness_mm?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      admin_suggested_prices: {
+        Row: {
+          aluminum_color: string | null
+          cost_per_meter: number | null
+          cost_per_sqm: number | null
+          created_at: string
+          glass_color: string | null
+          id: string
+          kind: string
+          price_per_meter: number | null
+          price_per_sqm: number | null
+          thickness_mm: number | null
+          updated_at: string
+        }
+        Insert: {
+          aluminum_color?: string | null
+          cost_per_meter?: number | null
+          cost_per_sqm?: number | null
+          created_at?: string
+          glass_color?: string | null
+          id?: string
+          kind: string
+          price_per_meter?: number | null
+          price_per_sqm?: number | null
+          thickness_mm?: number | null
+          updated_at?: string
+        }
+        Update: {
+          aluminum_color?: string | null
+          cost_per_meter?: number | null
+          cost_per_sqm?: number | null
+          created_at?: string
+          glass_color?: string | null
+          id?: string
+          kind?: string
+          price_per_meter?: number | null
+          price_per_sqm?: number | null
+          thickness_mm?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       announcement_dismissals: {
         Row: {
           announcement_id: string

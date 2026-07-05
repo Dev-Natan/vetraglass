@@ -72,6 +72,7 @@ const AdminCompanyDetail = lazy(() => import("./pages/admin/AdminCompanyDetail")
 const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
 const AdminFeedbacks = lazy(() => import("./pages/admin/AdminFeedbacks"));
 const FormulaTester = lazy(() => import("./pages/admin/FormulaTester"));
+const AdminInsumos = lazy(() => import("./pages/admin/AdminInsumos"));
 
 
 // Create optimized QueryClient with caching
@@ -330,6 +331,10 @@ function AppRoutes() {
       <Route path="/admin/formula-tester" element={
         <AdminRoute><LazyRoute><FormulaTester /></LazyRoute></AdminRoute>
       } />
+      <Route path="/admin/insumos" element={
+        <AdminRoute><LazyRoute><AdminInsumos /></LazyRoute></AdminRoute>
+      } />
+      
       
       <Route path="*" element={<LazyRoute><NotFound /></LazyRoute>} />
     </Routes>
