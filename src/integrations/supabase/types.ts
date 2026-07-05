@@ -8280,6 +8280,15 @@ export type Database = {
         Args: { _company_id: string; _product_template_id: string }
         Returns: string
       }
+      bulk_adjust_item_cost: {
+        Args: {
+          p_company_id: string
+          p_linha?: string
+          p_percent: number
+          p_type?: string
+        }
+        Returns: number
+      }
       calculate_sale_commission: {
         Args: { _employee_id: string; _sale_id: string }
         Returns: number
