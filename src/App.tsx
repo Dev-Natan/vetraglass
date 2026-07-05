@@ -44,6 +44,7 @@ const Feedbacks = lazy(() => import("./pages/Feedbacks"));
 
 const AceitarConvite = lazy(() => import("./pages/AceitarConvite"));
 const MeusPrecos = lazy(() => import("./pages/MeusPrecos"));
+const MeusPrecosLinha = lazy(() => import("./pages/MeusPrecosLinha"));
 const Planos = lazy(() => import("./pages/Planos"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -224,6 +225,7 @@ function AppRoutes() {
       <Route path="/ordens-servico" element={<ProtectedRoute><ModuleGuard moduleKey="ordens_servico"><LazyRoute><OrdensServico /></LazyRoute></ModuleGuard></ProtectedRoute>} />
       <Route path="/estoque" element={<ProtectedRoute><ModuleGuard moduleKey="estoque"><LazyRoute><Estoque /></LazyRoute></ModuleGuard></ProtectedRoute>} />
       <Route path="/meus-precos" element={<ProtectedRoute><LazyRoute><MeusPrecos /></LazyRoute></ProtectedRoute>} />
+      <Route path="/meus-precos/linha/:linha" element={<ProtectedRoute><LazyRoute><MeusPrecosLinha /></LazyRoute></ProtectedRoute>} />
       <Route path="/caixa-vendas" element={<Navigate to="/financeiro?tab=caixa" replace />} />
       <Route path="/vendas" element={<Navigate to="/financeiro?tab=caixa" replace />} />
       
