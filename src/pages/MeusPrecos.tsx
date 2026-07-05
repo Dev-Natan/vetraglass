@@ -241,12 +241,19 @@ function LinhaGroup({ linha, profiles, stockMap }: {
 }
 
 
-function ProfileCard({ profile }: { profile: { id: string; name: string; linha: string | null } }) {
+function ProfileCard({ profile, stock }: {
+  profile: { id: string; name: string; linha: string | null };
+  stock?: { quantity: number; unit: string | null };
+}) {
   const [open, setOpen] = useState(false);
   const { data: adminRows = [] } = useItemTemplateColorPrices(open ? profile.id : undefined);
   const { data: companyRows = [], upsert } = useCompanyItemColorPrices(open ? profile.id : undefined);
 
   const getCompany = (color: string) => companyRows.find(r => r.color_name === color);
+
+  const stockQty = stock?.quantity ?? 0;
+  const stockUnit = stock?.unit ?? 'un';
+  const hasStock = stockQty > 0;
 
   return (
     <Card>
@@ -260,7 +267,13 @@ function ProfileCard({ profile }: { profile: { id: string; name: string; linha: 
                 {profile.linha && <div className="text-xs text-muted-foreground">{profile.linha}</div>}
               </div>
             </div>
-            {open && <Badge variant="secondary">{adminRows.length} cor(es)</Badge>}
+            <div className="flex items-center gap-2">
+              <Badge variant={hasStock ? 'secondary' : 'outline'} className="gap-1">
+                <Package className="w-3 h-3" />
+                {hasStock ? `${stockQty} ${stockUnit} em estoque` : 'Sem estoque'}
+              </Badge>
+              {open && <Badge variant="secondary">{adminRows.length} cor(es)</Badge>}
+            </div>
           </button>
         </CollapsibleTrigger>
         <CollapsibleContent>
