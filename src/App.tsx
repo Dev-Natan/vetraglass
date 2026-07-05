@@ -23,6 +23,7 @@ const OrdensServico = lazy(() => import("./pages/OrdensServico"));
 const Clientes = lazy(() => import("./pages/Clientes"));
 
 const Estoque = lazy(() => import("./pages/Estoque"));
+const EstoqueLinha = lazy(() => import("./pages/EstoqueLinha"));
 
 
 const RecuperarSenha = lazy(() => import("./pages/RecuperarSenha"));
