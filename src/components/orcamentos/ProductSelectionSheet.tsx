@@ -109,14 +109,26 @@ export function ProductSelectionSheet({ open, onOpenChange, onSelectProduct }: P
     });
   }, [companyProducts]);
 
-  // Get unique linhas from active company products
+  // Get unique linhas, ocultando as desativadas no Admin SaaS
+  const activeLinhaKeys = useMemo(() => {
+    const set = new Set<string>();
+    (productLinhas || []).forEach(l => {
+      if (l.slug) set.add(l.slug.toLowerCase());
+      if (l.name) set.add(l.name.toLowerCase());
+    });
+    return set;
+  }, [productLinhas]);
   const linhas = useMemo(() => {
     const linhaSet = new Set<string>();
     activeProducts.forEach(p => {
-      if (p.linha) linhaSet.add(p.linha);
+      if (!p.linha) return;
+      const key = String(p.linha).toLowerCase();
+      if (key === 'personalizado' || activeLinhaKeys.has(key)) {
+        linhaSet.add(p.linha);
+      }
     });
     return Array.from(linhaSet).sort();
-  }, [activeProducts]);
+  }, [activeProducts, activeLinhaKeys]);
 
   // Get categories for selected linha
   const categories = useMemo(() => {
