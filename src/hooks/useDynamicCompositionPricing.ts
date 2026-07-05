@@ -88,6 +88,31 @@ export function useDynamicCompositionPricing(options: UseDynamicCompositionPrici
   const { data: aluminumOptions = [] } = useProductAluminumPriceOptions(options.companyProductId || null);
   const { data: companyPrices = [] } = useCompanySuggestedPricesCache(currentCompany?.id);
   const { data: adminPrices = [] } = useAdminSuggestedPricesCache();
+  const { data: templateColorPrices = [] } = useAllItemTemplateColorPrices();
+  const { data: companyTemplateColorPrices = [] } = useAllCompanyItemColorPrices();
+
+  /** Preço/ml específico por item_template + cor (empresa → admin). */
+  const pickTemplateColorPerMeter = (templateId: string | null, color: string | null): number | null => {
+    if (!templateId) return null;
+    const c = norm(color);
+    // 1) override da empresa
+    const cRow = companyTemplateColorPrices.find(
+      (r) => r.item_template_id === templateId && (!c || norm(r.color_name) === c)
+    );
+    if (cRow) {
+      const v = Number(cRow.cost_per_meter) || Number(cRow.price_per_meter) || 0;
+      if (v > 0) return v;
+    }
+    // 2) sugerido do admin
+    const aRow = templateColorPrices.find(
+      (r) => r.item_template_id === templateId && (!c || norm(r.color_name) === c)
+    );
+    if (aRow) {
+      const v = Number(aRow.cost_per_meter) || Number(aRow.price_per_meter) || 0;
+      if (v > 0) return v;
+    }
+    return null;
+  };
 
   const glassCostPerSqm = useMemo(() => {
     const color = norm(options.glassColor);
