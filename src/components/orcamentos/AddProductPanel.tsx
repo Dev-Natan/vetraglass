@@ -494,7 +494,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
       glasses_count: companyProduct?.glasses_count || 1,
       panels_count: companyProduct?.panels_count || 1,
       sides_count: companyProduct?.sides_count || 1,
-      unit_price: unitPrice,
+      unit_price: effectiveUnitPrice,
       total_price: totalPrice,
       has_glass: hasGlass && (!!selectedGlassThickness || !!selectedGlassColor || productUsesGlass),
       glass_type: hasGlass && selectedGlassPrice ? selectedGlassPrice.glass_type : undefined,
