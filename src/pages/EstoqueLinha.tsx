@@ -319,12 +319,16 @@ export default function EstoqueLinha() {
       <div className="space-y-6 animate-fade-in">
         <div data-tutorial="estoque-header" className="flex flex-col sm:flex-row justify-between gap-4">
           <div>
+            <Link to="/estoque" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary mb-1">
+              <ArrowLeft className="w-3.5 h-3.5" /> Voltar para Linhas
+            </Link>
             <h1 className="font-display font-bold text-2xl text-foreground flex items-center gap-2">
               <Boxes className="w-7 h-7 text-primary" />
-              Estoque
+              Estoque · {pageTitle}
             </h1>
-            <p className="text-muted-foreground">Controle de entradas e saídas</p>
+            <p className="text-muted-foreground">Controle de entradas e saídas desta linha</p>
           </div>
+
           <div data-tutorial="estoque-acoes" className="flex flex-wrap gap-2">
             <AlertDialog>
               <AlertDialogTrigger asChild>
