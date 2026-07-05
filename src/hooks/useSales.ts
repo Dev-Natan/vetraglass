@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { VendaItem } from '@/components/caixa/NovaVendaDialog';
 import { PaymentConfig } from '@/components/caixa/InstallmentPaymentSheet';
 import { calculateFormulaQuantity } from '@/utils/safeFormulaEvaluator';
+import { useInvalidateStock } from '@/hooks/useInvalidateStock';
 
 export function useSales() {
   const queryClient = useQueryClient();
