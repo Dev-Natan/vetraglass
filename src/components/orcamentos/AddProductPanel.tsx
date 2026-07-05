@@ -1183,7 +1183,38 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
               </div>
               <div className="text-right">
                 <p className="text-[10px] uppercase tracking-wider opacity-80">Total</p>
-                <p className="text-xl font-bold leading-tight">{formatCurrency(totalPrice)}</p>
+                <div className="flex items-center gap-1.5 justify-end">
+                  <span className="text-sm font-semibold opacity-90">R$</span>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min={0}
+                    value={totalPrice.toFixed(2)}
+                    onChange={(e) => {
+                      const v = parseFloat(e.target.value);
+                      setManualTotalOverride(Number.isFinite(v) ? v : 0);
+                    }}
+                    className="h-8 w-28 text-right text-lg font-bold bg-white/15 border-white/30 text-primary-foreground placeholder:text-primary-foreground/60"
+                  />
+                  {isPriceOverridden && (
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 text-primary-foreground hover:bg-white/20"
+                      title="Restaurar preço original"
+                      onClick={() => setManualTotalOverride(null)}
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+                {isPriceOverridden && (
+                  <div className="flex items-center justify-end gap-1 mt-1 text-[10px] opacity-90">
+                    <AlertTriangle className="w-3 h-3" />
+                    <span>Preço alterado manualmente · original {formatCurrency(computedTotalPrice)}</span>
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex items-center justify-end gap-2 bg-card px-4 py-3 border-t">
