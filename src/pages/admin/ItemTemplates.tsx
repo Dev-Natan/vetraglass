@@ -721,11 +721,13 @@ export default function ItemTemplates() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="linha">Linha</Label>
+                    <Label htmlFor="linha">
+                      Linha {formData.type === 'profile' && <span className="text-destructive">*</span>}
+                    </Label>
                     <Select value={formData.linha} onValueChange={(value) => setFormData({ ...formData, linha: value === 'none' ? '' : value })}>
                       <SelectTrigger><SelectValue placeholder="Selecione uma linha" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">Sem Linha</SelectItem>
+                        {formData.type !== 'profile' && <SelectItem value="none">Sem Linha</SelectItem>}
                         {availableLines?.map((line) => <SelectItem key={line} value={line}>{prettifyLinha(line)}</SelectItem>)}
                       </SelectContent>
                     </Select>
