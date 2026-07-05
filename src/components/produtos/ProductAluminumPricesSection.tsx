@@ -205,6 +205,29 @@ export function ProductAluminumPricesSection({ companyProductId, productName }: 
                 />
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Preço/ml (R$) <span className="text-[10px] text-muted-foreground">opcional</span></Label>
+                <Input
+                  type="number" step="0.01" min="0"
+                  value={pricePerMeter}
+                  onChange={(e) => setPricePerMeter(e.target.value)}
+                  placeholder="Preço linear real do perfil"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Custo/ml (R$) <span className="text-[10px] text-muted-foreground">opcional</span></Label>
+                <Input
+                  type="number" step="0.01" min="0"
+                  value={costPerMeter}
+                  onChange={(e) => setCostPerMeter(e.target.value)}
+                  placeholder="Custo linear real do perfil"
+                />
+              </div>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Quando o custo por metro é informado, o cálculo dinâmico usa esse valor no lugar da conversão a partir do m².
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
