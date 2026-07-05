@@ -297,6 +297,29 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   );
   const hasAluminumPrices = (aluminumPriceOptions?.length || 0) > 0;
 
+  // Perfis (item_templates) usados na composição deste produto — dirige as cores disponíveis.
+  const { data: productProfileTemplateIds = [] } = useQuery({
+    queryKey: ['product-profile-template-ids', companyProduct?.id],
+    queryFn: async () => {
+      if (!companyProduct?.id) return [] as string[];
+      const { data, error } = await supabase
+        .from('company_product_items')
+        .select('item_template:item_templates(id, type)')
+        .eq('company_product_id', companyProduct.id);
+      if (error) throw error;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return (data ?? [])
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .map((r: any) => r.item_template)
+        .filter((t: { type: string } | null) => t && t.type === 'profile')
+        .map((t: { id: string }) => t.id);
+    },
+    enabled: !!companyProduct?.id,
+    staleTime: 60_000,
+  });
+  const { data: profileAvailableColors = [] } = useAvailableColorsForTemplates(productProfileTemplateIds);
+  const hasProfileColorPrices = profileAvailableColors.length > 0;
+
   // ── Opções de vidro vindas do ESTOQUE (company_items unit = m²) ──
   const glassStock = useGlassStockOptions(!!selectedProductId);
 
