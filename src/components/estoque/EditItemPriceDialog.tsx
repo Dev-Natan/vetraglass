@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useInvalidateStock } from '@/hooks/useInvalidateStock';
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -73,6 +74,7 @@ export function EditItemPriceDialog({
   const { currentCompany } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const invalidateStock = useInvalidateStock();
 
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(itemImageUrl || null);
 
@@ -476,6 +478,7 @@ export function EditItemPriceDialog({
       queryClient.invalidateQueries({ queryKey: ['company-item-prices'] });
       queryClient.invalidateQueries({ queryKey: ['company-item-price'] });
       queryClient.invalidateQueries({ queryKey: ['company-stock'] });
+      invalidateStock();
       queryClient.invalidateQueries({ queryKey: ['company-stock-item'] });
       queryClient.invalidateQueries({ queryKey: ['item-template-fiscal'] });
       queryClient.invalidateQueries({ queryKey: ['company-items'] });
@@ -501,6 +504,7 @@ export function EditItemPriceDialog({
     onSuccess: () => {
       toast({ title: 'Item removido', description: 'O item foi removido do estoque.' });
       queryClient.invalidateQueries({ queryKey: ['company-stock'] });
+      invalidateStock();
       queryClient.invalidateQueries({ queryKey: ['company-stock-item-ids'] });
       queryClient.invalidateQueries({ queryKey: ['company-item-prices'] });
       onOpenChange(false);
