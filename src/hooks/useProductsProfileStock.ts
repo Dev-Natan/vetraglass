@@ -89,6 +89,8 @@ export function useProductsProfileStock(productIds: string[]) {
       return result;
     },
     enabled: !!companyId && ids.length > 0,
-    staleTime: 30_000,
+    staleTime: 0,
+    gcTime: 0,
   });
+
 }
