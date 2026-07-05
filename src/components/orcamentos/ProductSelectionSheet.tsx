@@ -51,6 +51,7 @@ const categoryIcons: Record<string, string> = {
 export function ProductSelectionSheet({ open, onOpenChange, onSelectProduct }: ProductSelectionSheetProps) {
   const { currentCompany } = useAuth();
   const { labels: categoryLabels } = useProductCategoryLabels();
+  const { data: productLinhas } = useProductLinhas();
   const [step, setStep] = useState<SelectionStep>('linha');
   const [selectedLinha, setSelectedLinha] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
