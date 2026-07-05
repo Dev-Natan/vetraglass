@@ -5115,30 +5115,36 @@ export type Database = {
         Row: {
           color_name: string
           company_product_id: string
+          cost_per_meter: number | null
           cost_per_sqm: number
           created_at: string
           id: string
           is_active: boolean
+          price_per_meter: number | null
           price_per_sqm: number
           updated_at: string
         }
         Insert: {
           color_name: string
           company_product_id: string
+          cost_per_meter?: number | null
           cost_per_sqm?: number
           created_at?: string
           id?: string
           is_active?: boolean
+          price_per_meter?: number | null
           price_per_sqm?: number
           updated_at?: string
         }
         Update: {
           color_name?: string
           company_product_id?: string
+          cost_per_meter?: number | null
           cost_per_sqm?: number
           created_at?: string
           id?: string
           is_active?: boolean
+          price_per_meter?: number | null
           price_per_sqm?: number
           updated_at?: string
         }
