@@ -2338,6 +2338,66 @@ export type Database = {
           },
         ]
       }
+      company_suggested_prices: {
+        Row: {
+          aluminum_color: string | null
+          company_id: string
+          cost_per_meter: number | null
+          cost_per_sqm: number | null
+          created_at: string
+          glass_color: string | null
+          id: string
+          kind: string
+          price_per_meter: number | null
+          price_per_sqm: number | null
+          thickness_mm: number | null
+          updated_at: string
+        }
+        Insert: {
+          aluminum_color?: string | null
+          company_id: string
+          cost_per_meter?: number | null
+          cost_per_sqm?: number | null
+          created_at?: string
+          glass_color?: string | null
+          id?: string
+          kind: string
+          price_per_meter?: number | null
+          price_per_sqm?: number | null
+          thickness_mm?: number | null
+          updated_at?: string
+        }
+        Update: {
+          aluminum_color?: string | null
+          company_id?: string
+          cost_per_meter?: number | null
+          cost_per_sqm?: number | null
+          created_at?: string
+          glass_color?: string | null
+          id?: string
+          kind?: string
+          price_per_meter?: number | null
+          price_per_sqm?: number | null
+          thickness_mm?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_suggested_prices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_suggested_prices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_tax_config: {
         Row: {
           aliquota_efetiva: number

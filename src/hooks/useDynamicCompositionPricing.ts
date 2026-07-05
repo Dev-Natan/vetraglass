@@ -4,11 +4,12 @@ import { useCompositionPricing } from './useCompositionPricing';
 import { useProductGlassPriceOptions } from './useProductGlassPrices';
 import { useProductAluminumPriceOptions } from './useProductAluminumPrices';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const sb = supabase as any;
 
-interface AdminSuggested {
+interface SuggestedPrice {
   kind: 'glass' | 'aluminum';
   glass_color: string | null;
   thickness_mm: number | null;
@@ -25,11 +26,29 @@ function useAdminSuggestedPricesCache() {
     queryFn: async () => {
       const { data, error } = await sb.from('admin_suggested_prices').select('*');
       if (error) throw error;
-      return (data ?? []) as AdminSuggested[];
+      return (data ?? []) as SuggestedPrice[];
     },
     staleTime: 60_000,
   });
 }
+
+function useCompanySuggestedPricesCache(companyId: string | undefined) {
+  return useQuery({
+    queryKey: ['company-suggested-prices-cache', companyId],
+    queryFn: async () => {
+      if (!companyId) return [] as SuggestedPrice[];
+      const { data, error } = await sb
+        .from('company_suggested_prices')
+        .select('*')
+        .eq('company_id', companyId);
+      if (error) throw error;
+      return (data ?? []) as SuggestedPrice[];
+    },
+    enabled: !!companyId,
+    staleTime: 60_000,
+  });
+}
+
 
 
 interface UseDynamicCompositionPricingOptions {
@@ -62,15 +81,17 @@ const norm = (v: unknown) => String(v ?? '').toLowerCase().trim();
  */
 export function useDynamicCompositionPricing(options: UseDynamicCompositionPricingOptions) {
   const base = useCompositionPricing(options);
+  const { currentCompany } = useAuth();
 
   const { data: glassOptions = [] } = useProductGlassPriceOptions(options.companyProductId || null);
   const { data: aluminumOptions = [] } = useProductAluminumPriceOptions(options.companyProductId || null);
+  const { data: companyPrices = [] } = useCompanySuggestedPricesCache(currentCompany?.id);
   const { data: adminPrices = [] } = useAdminSuggestedPricesCache();
 
   const glassCostPerSqm = useMemo(() => {
     const color = norm(options.glassColor);
     const thick = options.glassThicknessMm;
-    // 1) preço da empresa
+    // 1) preço da empresa por produto
     if (glassOptions.length) {
       const match =
         glassOptions.find(g => (!color || norm(g.glassColor) === color) && (!thick || g.thicknessMm === thick)) ||
@@ -79,12 +100,19 @@ export function useDynamicCompositionPricing(options: UseDynamicCompositionPrici
       const v = match ? Number(match.costPerSqm) || Number(match.pricePerSqm) : 0;
       if (v > 0) return v;
     }
-    // 2) fallback: preço sugerido do Admin
-    const fb =
-      adminPrices.find(p => p.kind === 'glass' && (!color || norm(p.glass_color) === color) && (!thick || p.thickness_mm === thick)) ||
-      adminPrices.find(p => p.kind === 'glass' && (!color || norm(p.glass_color) === color));
-    return fb ? Number(fb.cost_per_sqm) || Number(fb.price_per_sqm) || null : null;
-  }, [glassOptions, adminPrices, options.glassColor, options.glassThicknessMm]);
+    // 2) "Meus Preços" da empresa
+    const findIn = (list: SuggestedPrice[]) =>
+      list.find(p => p.kind === 'glass' && (!color || norm(p.glass_color) === color) && (!thick || p.thickness_mm === thick)) ||
+      list.find(p => p.kind === 'glass' && (!color || norm(p.glass_color) === color));
+    const cp = findIn(companyPrices);
+    if (cp) {
+      const v = Number(cp.cost_per_sqm) || Number(cp.price_per_sqm) || 0;
+      if (v > 0) return v;
+    }
+    // 3) fallback: preço sugerido do Admin
+    const ap = findIn(adminPrices);
+    return ap ? Number(ap.cost_per_sqm) || Number(ap.price_per_sqm) || null : null;
+  }, [glassOptions, companyPrices, adminPrices, options.glassColor, options.glassThicknessMm]);
 
   const aluminumMatch = useMemo(() => {
     if (!aluminumOptions.length) return null;
@@ -95,26 +123,45 @@ export function useDynamicCompositionPricing(options: UseDynamicCompositionPrici
     );
   }, [aluminumOptions, options.aluminumColor]);
 
+  const companyAluFallback = useMemo(() => {
+    const color = norm(options.aluminumColor);
+    return companyPrices.find(p => p.kind === 'aluminum' && (!color || norm(p.aluminum_color) === color)) || null;
+  }, [companyPrices, options.aluminumColor]);
+
   const adminAluFallback = useMemo(() => {
     const color = norm(options.aluminumColor);
     return adminPrices.find(p => p.kind === 'aluminum' && (!color || norm(p.aluminum_color) === color)) || null;
   }, [adminPrices, options.aluminumColor]);
+
+  const pickAluValue = (
+    getter: (p: SuggestedPrice) => number | null,
+    getterAlt: (p: SuggestedPrice) => number | null,
+  ): number | null => {
+    for (const fb of [companyAluFallback, adminAluFallback]) {
+      if (!fb) continue;
+      const v = Number(getter(fb)) || Number(getterAlt(fb)) || 0;
+      if (v > 0) return v;
+    }
+    return null;
+  };
 
   const aluminumCostPerMeter = useMemo(() => {
     if (aluminumMatch) {
       const v = Number(aluminumMatch.costPerMeter) || Number(aluminumMatch.pricePerMeter);
       if (v > 0) return v;
     }
-    return adminAluFallback ? Number(adminAluFallback.cost_per_meter) || Number(adminAluFallback.price_per_meter) || null : null;
-  }, [aluminumMatch, adminAluFallback]);
+    return pickAluValue(p => p.cost_per_meter, p => p.price_per_meter);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aluminumMatch, companyAluFallback, adminAluFallback]);
 
   const aluminumCostPerSqm = useMemo(() => {
     if (aluminumMatch) {
       const v = Number(aluminumMatch.costPerSqm) || Number(aluminumMatch.pricePerSqm);
       if (v > 0) return v;
     }
-    return adminAluFallback ? Number(adminAluFallback.cost_per_sqm) || Number(adminAluFallback.price_per_sqm) || null : null;
-  }, [aluminumMatch, adminAluFallback]);
+    return pickAluValue(p => p.cost_per_sqm, p => p.price_per_sqm);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aluminumMatch, companyAluFallback, adminAluFallback]);
 
   const override = useMemo(() => {
     if (!base.simpleBreakdown?.length) {
