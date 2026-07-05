@@ -48,14 +48,24 @@ export function useDynamicCompositionPricing(options: UseDynamicCompositionPrici
     return match ? Number(match.costPerSqm) || Number(match.pricePerSqm) || null : null;
   }, [glassOptions, options.glassColor, options.glassThicknessMm]);
 
-  const aluminumCostPerSqm = useMemo(() => {
+  const aluminumMatch = useMemo(() => {
     if (!aluminumOptions.length) return null;
     const color = norm(options.aluminumColor);
-    const match =
+    return (
       aluminumOptions.find(a => !color || norm(a.colorName) === color) ||
-      aluminumOptions[0];
-    return match ? Number(match.costPerSqm) || Number(match.pricePerSqm) || null : null;
+      aluminumOptions[0]
+    );
   }, [aluminumOptions, options.aluminumColor]);
+
+  const aluminumCostPerMeter = useMemo(() => {
+    if (!aluminumMatch) return null;
+    return Number(aluminumMatch.costPerMeter) || Number(aluminumMatch.pricePerMeter) || null;
+  }, [aluminumMatch]);
+
+  const aluminumCostPerSqm = useMemo(() => {
+    if (!aluminumMatch) return null;
+    return Number(aluminumMatch.costPerSqm) || Number(aluminumMatch.pricePerSqm) || null;
+  }, [aluminumMatch]);
 
   const override = useMemo(() => {
     if (!base.simpleBreakdown?.length) {
@@ -79,24 +89,33 @@ export function useDynamicCompositionPricing(options: UseDynamicCompositionPrici
           detalhe: `${areaM2.toFixed(2)} m² × R$ ${glassCostPerSqm.toFixed(2)} × ${row.qtd} (vidro dinâmico)`,
         };
       }
-      if (row.unidade === 'ml' && aluminumCostPerSqm && aluminumCostPerSqm > 0) {
-        // Converte referência por m² em custo/ml usando a razão área/perímetro
-        // efetivo do projeto — mantém compat com preço cadastrado por m².
-        const perMeter = aluminumCostPerSqm * (areaM2 / Math.max(linearM, 0.001));
-        const subtotal = linearM * perMeter * row.qtd;
-        return {
-          ...row,
-          custo_estoque: perMeter,
-          subtotal,
-          detalhe: `${linearM.toFixed(2)} m × R$ ${perMeter.toFixed(2)} × ${row.qtd} (alumínio dinâmico)`,
-        };
+      if (row.unidade === 'ml') {
+        // Fase 5: usar preço linear real quando cadastrado; senão, converter de m².
+        let perMeter: number | null = null;
+        let source = '';
+        if (aluminumCostPerMeter && aluminumCostPerMeter > 0) {
+          perMeter = aluminumCostPerMeter;
+          source = 'alumínio linear';
+        } else if (aluminumCostPerSqm && aluminumCostPerSqm > 0) {
+          perMeter = aluminumCostPerSqm * (areaM2 / Math.max(linearM, 0.001));
+          source = 'alumínio (m²→ml)';
+        }
+        if (perMeter && perMeter > 0) {
+          const subtotal = linearM * perMeter * row.qtd;
+          return {
+            ...row,
+            custo_estoque: perMeter,
+            subtotal,
+            detalhe: `${linearM.toFixed(2)} m × R$ ${perMeter.toFixed(2)} × ${row.qtd} (${source})`,
+          };
+        }
       }
       return row;
     });
 
     const total = rows.reduce((s, r) => s + r.subtotal, 0);
     return { rows, total, perSqm: total / areaM2 };
-  }, [base.simpleBreakdown, base.compositionCostSimpleTotal, base.compositionCostSimplePerSqm, glassCostPerSqm, aluminumCostPerSqm, options.width, options.height]);
+  }, [base.simpleBreakdown, base.compositionCostSimpleTotal, base.compositionCostSimplePerSqm, glassCostPerSqm, aluminumCostPerSqm, aluminumCostPerMeter, options.width, options.height]);
 
   return {
     ...base,
@@ -106,7 +125,8 @@ export function useDynamicCompositionPricing(options: UseDynamicCompositionPrici
     /** custo/m² efetivamente aplicado (dinâmico ou fallback) */
     resolvedGlassCostPerSqm: glassCostPerSqm,
     resolvedAluminumCostPerSqm: aluminumCostPerSqm,
+    resolvedAluminumCostPerMeter: aluminumCostPerMeter,
     hasDynamicGlassPricing: !!glassCostPerSqm,
-    hasDynamicAluminumPricing: !!aluminumCostPerSqm,
+    hasDynamicAluminumPricing: !!(aluminumCostPerMeter || aluminumCostPerSqm),
   };
 }

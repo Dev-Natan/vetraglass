@@ -34,12 +34,16 @@ export function ProductAluminumPricesSection({ companyProductId, productName }: 
   const [colorName, setColorName] = useState('');
   const [pricePerSqm, setPricePerSqm] = useState('');
   const [costPerSqm, setCostPerSqm] = useState('');
+  const [pricePerMeter, setPricePerMeter] = useState('');
+  const [costPerMeter, setCostPerMeter] = useState('');
 
   const openAdd = () => {
     setEditing(null);
     setColorName('');
     setPricePerSqm('');
     setCostPerSqm('');
+    setPricePerMeter('');
+    setCostPerMeter('');
     setDialogOpen(true);
   };
 
@@ -48,25 +52,24 @@ export function ProductAluminumPricesSection({ companyProductId, productName }: 
     setColorName(p.color_name);
     setPricePerSqm(String(p.price_per_sqm));
     setCostPerSqm(String(p.cost_per_sqm));
+    setPricePerMeter(p.price_per_meter != null ? String(p.price_per_meter) : '');
+    setCostPerMeter(p.cost_per_meter != null ? String(p.cost_per_meter) : '');
     setDialogOpen(true);
   };
 
   const handleSave = async () => {
     if (!colorName.trim()) return;
+    const payload = {
+      color_name: colorName.trim(),
+      price_per_sqm: parseFloat(pricePerSqm) || 0,
+      cost_per_sqm: parseFloat(costPerSqm) || 0,
+      price_per_meter: pricePerMeter ? parseFloat(pricePerMeter) : null,
+      cost_per_meter: costPerMeter ? parseFloat(costPerMeter) : null,
+    };
     if (editing) {
-      await updatePrice.mutateAsync({
-        id: editing.id,
-        color_name: colorName.trim(),
-        price_per_sqm: parseFloat(pricePerSqm) || 0,
-        cost_per_sqm: parseFloat(costPerSqm) || 0,
-      });
+      await updatePrice.mutateAsync({ id: editing.id, ...payload });
     } else {
-      await addPrice.mutateAsync({
-        company_product_id: companyProductId,
-        color_name: colorName.trim(),
-        price_per_sqm: parseFloat(pricePerSqm) || 0,
-        cost_per_sqm: parseFloat(costPerSqm) || 0,
-      });
+      await addPrice.mutateAsync({ company_product_id: companyProductId, ...payload });
     }
     setDialogOpen(false);
   };
@@ -202,6 +205,29 @@ export function ProductAluminumPricesSection({ companyProductId, productName }: 
                 />
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Preço/ml (R$) <span className="text-[10px] text-muted-foreground">opcional</span></Label>
+                <Input
+                  type="number" step="0.01" min="0"
+                  value={pricePerMeter}
+                  onChange={(e) => setPricePerMeter(e.target.value)}
+                  placeholder="Preço linear real do perfil"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Custo/ml (R$) <span className="text-[10px] text-muted-foreground">opcional</span></Label>
+                <Input
+                  type="number" step="0.01" min="0"
+                  value={costPerMeter}
+                  onChange={(e) => setCostPerMeter(e.target.value)}
+                  placeholder="Custo linear real do perfil"
+                />
+              </div>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Quando o custo por metro é informado, o cálculo dinâmico usa esse valor no lugar da conversão a partir do m².
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
