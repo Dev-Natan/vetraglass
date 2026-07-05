@@ -48,6 +48,11 @@ const adminMenuItems = [
     icon: Package,
   },
   {
+    title: "Tabela de Insumos",
+    path: "/admin/insumos",
+    icon: Droplet,
+  },
+  {
     title: "Categorias",
     path: "/admin/categories",
     icon: Tags,
