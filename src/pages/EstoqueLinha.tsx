@@ -236,10 +236,13 @@ export default function EstoqueLinha() {
   };
 
   const { inStockItems, outOfStockItems } = useMemo(() => {
-    // Ocultar itens cuja linha esteja desativada no Admin SaaS
+    // Lock scope to current line (from URL)
     let items = activeItems.filter((item) => {
       const linha = item.company_item?.linha ?? item.item_template?.linha;
-      return isLinhaAllowed(linha);
+      const type = item.company_item?.type ?? item.item_template?.type;
+      if (isVidros) return type === 'glass';
+      if (isDiversos) return !linha && type !== 'glass';
+      return (linha || '') === decodedLinha;
     });
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
@@ -252,12 +255,6 @@ export default function EstoqueLinha() {
       items = items.filter((item) => {
         const type = item.company_item?.type ?? item.item_template?.type;
         return type === categoryFilter;
-      });
-    }
-    if (linhaFilter !== 'all') {
-      items = items.filter((item) => {
-        const linha = item.company_item?.linha ?? item.item_template?.linha;
-        return linha === linhaFilter;
       });
     }
     if (statusFilter === 'low') items = items.filter((item) => item.quantity <= (item.min_quantity || 0) && (item.min_quantity || 0) > 0);
@@ -279,7 +276,8 @@ export default function EstoqueLinha() {
       inStockItems: items.filter(item => item.quantity > 0),
       outOfStockItems: items.filter(item => item.quantity === 0),
     };
-  }, [activeItems, searchTerm, categoryFilter, linhaFilter, statusFilter, sortBy, isLinhaAllowed]);
+  }, [activeItems, searchTerm, categoryFilter, statusFilter, sortBy, isVidros, isDiversos, decodedLinha]);
+
 
   const filteredItems = useMemo(() => [...inStockItems, ...outOfStockItems], [inStockItems, outOfStockItems]);
 
