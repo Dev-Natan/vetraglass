@@ -331,6 +331,10 @@ function AppRoutes() {
       <Route path="/admin/formula-tester" element={
         <AdminRoute><LazyRoute><FormulaTester /></LazyRoute></AdminRoute>
       } />
+      <Route path="/admin/insumos" element={
+        <AdminRoute><LazyRoute><AdminInsumos /></LazyRoute></AdminRoute>
+      } />
+      
       
       <Route path="*" element={<LazyRoute><NotFound /></LazyRoute>} />
     </Routes>
