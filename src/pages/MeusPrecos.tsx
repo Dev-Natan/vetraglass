@@ -22,6 +22,8 @@ import {
   useItemTemplateColorPrices,
   useCompanyItemColorPrices,
 } from '@/hooks/useItemColorPrices';
+import { useStockByTemplate } from '@/hooks/useStockByTemplate';
+import { Package } from 'lucide-react';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const sb = supabase as any;
