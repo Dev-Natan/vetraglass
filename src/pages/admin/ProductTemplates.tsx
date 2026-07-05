@@ -1945,37 +1945,42 @@ export default function ProductTemplates() {
 
               {/* RIGHT COLUMN — Category tabs + list */}
               <section className="space-y-4 min-w-0">
-                {/* Category sub-tabs */}
-                <div className="flex flex-wrap gap-1 p-1 bg-muted rounded-lg sticky top-0 z-10">
-                  {itemTypeTabs.map((tab) => (
-                    <button
-                      key={tab.value}
-                      onClick={() => {
-                        setCompositionActiveTab(tab.value);
-                        setSelectedItemToAdd("");
-                      }}
-                      className={cn(
-                        "flex-1 min-w-[80px] px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition-all",
-                        compositionActiveTab === tab.value
-                          ? "bg-background text-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
+                {/* Category sub-tabs — pill style like reference */}
+                <div className="flex flex-wrap gap-2 p-2 bg-white dark:bg-muted/30 border rounded-xl shadow-sm sticky top-0 z-10">
+                  {itemTypeTabs.map((tab) => {
+                    const active = compositionActiveTab === tab.value;
+                    return (
+                      <button
+                        key={tab.value}
+                        onClick={() => {
+                          setCompositionActiveTab(tab.value);
+                          setSelectedItemToAdd("");
+                        }}
+                        className={cn(
+                          "flex-1 min-w-[90px] px-4 py-2.5 text-xs sm:text-sm font-semibold tracking-wide rounded-lg transition-all",
+                          active
+                            ? "bg-primary/10 text-primary ring-1 ring-primary/30"
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                        )}
+                      >
+                        {tab.label}
+                      </button>
+                    );
+                  })}
                 </div>
 
-                {/* Action bar */}
-                <div className="flex items-center justify-between gap-3 px-1">
-                  <h4 className="text-sm font-medium text-muted-foreground">
-                    Itens adicionados ({getCompositionItemsByType(compositionActiveTab).length})
-                  </h4>
-                  <Button size="sm" variant="default" onClick={handleCloseDialog}>
-                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                {/* Action bar — blank surface with Pronto on the right */}
+                <div className="flex items-center justify-end gap-3 bg-white dark:bg-muted/20 border rounded-xl shadow-sm px-4 py-3 min-h-[56px]">
+                  <Button size="sm" variant="secondary" onClick={handleCloseDialog} className="gap-2">
+                    <CheckCircle2 className="w-4 h-4" />
                     Pronto
                   </Button>
                 </div>
+
+                {/* Items count */}
+                <h4 className="text-sm text-muted-foreground px-1">
+                  Itens adicionados ({getCompositionItemsByType(compositionActiveTab).length})
+                </h4>
 
                 {/* Grid */}
                 {getCompositionItemsByType(compositionActiveTab).length === 0 ? (
@@ -1986,95 +1991,95 @@ export default function ProductTemplates() {
                     </CardContent>
                   </Card>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                     {getCompositionItemsByType(compositionActiveTab).map((item) => {
                       const displayedFormula = getDisplayedItemFormula(item);
                       const formulaPosition = getDisplayedFormulaPosition(item);
                       const displayedPieces = getDisplayedPieces(item);
                       const widthF = item.width_formula ?? item.quantity_formula;
                       const heightF = item.height_formula;
+                      const typeLabel =
+                        item.item_template?.type === 'glass' ? 'Vidro'
+                        : item.item_template?.type === 'profile' ? 'Perfil'
+                        : item.item_template?.type === 'accessory' ? 'Acessório'
+                        : item.item_template?.type === 'service' ? 'Serviço'
+                        : item.item_template?.type === 'sheet' ? 'Chaparia'
+                        : (item.item_template?.type ?? '');
 
                       return (
                         <div
                           key={item.id}
-                          className="bg-card border rounded-lg p-3 relative group hover:shadow-md transition-shadow cursor-pointer hover:border-primary/50"
+                          className="bg-white dark:bg-muted/20 border rounded-2xl p-4 relative group hover:shadow-md transition-shadow cursor-pointer hover:border-primary/50 flex flex-col"
                           onClick={() => handleEditItem(item)}
                         >
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="absolute top-1 right-1 w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                            className="absolute top-2 right-2 w-7 h-7 opacity-0 group-hover:opacity-100 transition-opacity z-10"
                             onClick={(e) => {
                               e.stopPropagation();
                               removeCompositionMutation.mutate(item.id);
                             }}
                           >
-                            <Trash2 className="w-3 h-3 text-destructive" />
+                            <Trash2 className="w-4 h-4 text-destructive" />
                           </Button>
 
-                          <div className="aspect-square bg-muted rounded-lg mb-2 flex items-center justify-center overflow-hidden">
+                          {/* Image tile */}
+                          <div className="aspect-square bg-muted/60 rounded-xl mb-3 flex items-center justify-center overflow-hidden">
                             {item.item_template?.image_url ? (
                               <img
                                 src={getStorageUrl(item.item_template.image_url)}
                                 alt={item.item_template.name}
-                                className="w-full h-full object-contain"
+                                className="w-full h-full object-contain p-3"
                               />
                             ) : (
-                              <div className="text-2xl text-muted-foreground/30 bg-muted w-full h-full flex items-center justify-center">📦</div>
+                              <div className="text-3xl text-muted-foreground/30">📦</div>
                             )}
                           </div>
 
-                          <h4 className="font-medium text-[11px] truncate text-center text-primary">
+                          {/* Title: NAME (Category) — blue */}
+                          <h4 className="font-semibold text-sm text-center text-primary truncate">
                             {item.item_template?.name}
+                            {typeLabel && (
+                              <span className="font-normal"> ({typeLabel})</span>
+                            )}
                           </h4>
 
-                          <div className="mt-2 flex flex-col items-center gap-1">
+                          {/* Formula lines — plain text */}
+                          <div className="mt-2 space-y-0.5 text-center text-xs text-muted-foreground">
                             {item.item_template?.type === 'glass' && heightF ? (
                               <>
-                                <Badge variant="secondary" className="max-w-full justify-center text-[10px] font-mono px-2 py-0.5" title={`Largura: ${widthF}`}>
-                                  <span className="font-sans font-semibold mr-1">Fórmula Largura:</span>
-                                  <span className="truncate">{widthF}</span>
-                                </Badge>
-                                <Badge variant="secondary" className="max-w-full justify-center text-[10px] font-mono px-2 py-0.5" title={`Altura: ${heightF}`}>
-                                  <span className="font-sans font-semibold mr-1">Fórmula Altura:</span>
-                                  <span className="truncate">{heightF}</span>
-                                </Badge>
+                                <p><span className="font-medium text-foreground/80">Fórmula Largura:</span> {widthF}</p>
+                                <p><span className="font-medium text-foreground/80">Fórmula Altura:</span> {heightF}</p>
+                              </>
+                            ) : item.item_template?.type === 'profile' && heightF ? (
+                              <>
+                                <p><span className="font-medium text-foreground/80">Fórmula Largura:</span> {widthF}</p>
+                                <p><span className="font-medium text-foreground/80">Fórmula Altura:</span> {heightF}</p>
                               </>
                             ) : (
-                              <Badge
-                                variant="secondary"
-                                className="max-w-full justify-center text-[10px] font-mono px-2 py-0.5"
-                                title={displayedFormula}
-                              >
-                                <span className="font-sans font-semibold mr-1">Fórmula:</span>
-                                <span className="truncate">{displayedFormula}</span>
-                              </Badge>
+                              <p><span className="font-medium text-foreground/80">Fórmula:</span> {displayedFormula}</p>
                             )}
 
                             {formulaPosition && (
-                              <Badge variant="outline" className="text-[10px] px-2 py-0.5">
-                                Posição: {formulaPosition}
-                              </Badge>
+                              <p><span className="font-medium text-foreground/80">Posição:</span> {formulaPosition}</p>
                             )}
 
-                            <div className="flex flex-wrap justify-center gap-1">
-                              <Badge variant="outline" className="text-[10px] px-2 py-0.5" title={displayedPieces}>
-                                <span className="font-semibold mr-1">Peças:</span>
-                                <span className="truncate max-w-[76px]">{displayedPieces}</span>
-                              </Badge>
-
-                              {item.item_template?.type === 'profile' && (
-                                <Badge variant="outline" className="text-[10px] px-2 py-0.5">
-                                  Ângulo: {item.cut_angle_start ?? item.cut_angle ?? 90}° / {item.cut_angle_end ?? item.cut_angle ?? 90}°
-                                </Badge>
-                              )}
-                            </div>
+                            {item.item_template?.type === 'profile' && (
+                              <p><span className="font-medium text-foreground/80">Ângulo:</span> {item.cut_angle_start ?? item.cut_angle ?? 90}° / {item.cut_angle_end ?? item.cut_angle ?? 90}°</p>
+                            )}
 
                             {item.side && (
-                              <Badge variant="outline" className="text-[10px] px-2 py-0.5">
-                                Lado: {item.side}
-                              </Badge>
+                              <p><span className="font-medium text-foreground/80">Lado:</span> {item.side}</p>
                             )}
+                          </div>
+
+                          {/* Pieces pill */}
+                          <div className="mt-3 flex justify-center">
+                            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full border bg-muted/40 text-xs">
+                              <span className="font-semibold">Peças:</span>
+                              <span>{displayedPieces}</span>
+                            </span>
                           </div>
                         </div>
                       );
@@ -2083,6 +2088,7 @@ export default function ProductTemplates() {
                 )}
               </section>
             </div>
+
               </TabsContent>
 
 
