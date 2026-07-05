@@ -223,6 +223,7 @@ function AppRoutes() {
       <Route path="/orcamentos" element={<ProtectedRoute><ModuleGuard moduleKey="orcamentos"><LazyRoute><Orcamentos /></LazyRoute></ModuleGuard></ProtectedRoute>} />
       <Route path="/ordens-servico" element={<ProtectedRoute><ModuleGuard moduleKey="ordens_servico"><LazyRoute><OrdensServico /></LazyRoute></ModuleGuard></ProtectedRoute>} />
       <Route path="/estoque" element={<ProtectedRoute><ModuleGuard moduleKey="estoque"><LazyRoute><Estoque /></LazyRoute></ModuleGuard></ProtectedRoute>} />
+      <Route path="/meus-precos" element={<ProtectedRoute><LazyRoute><MeusPrecos /></LazyRoute></ProtectedRoute>} />
       <Route path="/caixa-vendas" element={<Navigate to="/financeiro?tab=caixa" replace />} />
       <Route path="/vendas" element={<Navigate to="/financeiro?tab=caixa" replace />} />
       
