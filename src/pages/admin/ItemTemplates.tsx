@@ -30,6 +30,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { useItemTypeLabels } from '@/hooks/useItemTypes';
 import { useProductLinhas } from '@/hooks/useProductLinhas';
 import { LinhaCardSimple } from '@/components/produtos/LinhaCardSimple';
+import { ProfileColorPricesSection } from '@/components/admin/product-templates/ProfileColorPricesSection';
 
 interface ItemTemplate {
   id: string;
@@ -798,6 +799,9 @@ export default function ItemTemplates() {
                       </div>
                     </div>
                   </div>
+                )}
+                {formData.type === 'profile' && (
+                  <ProfileColorPricesSection itemTemplateId={editingItem?.id ?? null} />
                 )}
                 <div className="space-y-2">
                   <Label htmlFor="description">Descrição</Label>

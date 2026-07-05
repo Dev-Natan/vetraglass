@@ -1375,6 +1375,61 @@ export type Database = {
           },
         ]
       }
+      company_item_color_prices: {
+        Row: {
+          color_name: string
+          company_id: string
+          cost_per_meter: number | null
+          created_at: string
+          id: string
+          item_template_id: string
+          price_per_meter: number | null
+          updated_at: string
+        }
+        Insert: {
+          color_name: string
+          company_id: string
+          cost_per_meter?: number | null
+          created_at?: string
+          id?: string
+          item_template_id: string
+          price_per_meter?: number | null
+          updated_at?: string
+        }
+        Update: {
+          color_name?: string
+          company_id?: string
+          cost_per_meter?: number | null
+          created_at?: string
+          id?: string
+          item_template_id?: string
+          price_per_meter?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_item_color_prices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_item_color_prices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_item_color_prices_item_template_id_fkey"
+            columns: ["item_template_id"]
+            isOneToOne: false
+            referencedRelation: "item_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_item_prices: {
         Row: {
           company_id: string
@@ -3612,6 +3667,44 @@ export type Database = {
           sort_order?: number | null
         }
         Relationships: []
+      }
+      item_template_color_prices: {
+        Row: {
+          color_name: string
+          cost_per_meter: number | null
+          created_at: string
+          id: string
+          item_template_id: string
+          price_per_meter: number | null
+          updated_at: string
+        }
+        Insert: {
+          color_name: string
+          cost_per_meter?: number | null
+          created_at?: string
+          id?: string
+          item_template_id: string
+          price_per_meter?: number | null
+          updated_at?: string
+        }
+        Update: {
+          color_name?: string
+          cost_per_meter?: number | null
+          created_at?: string
+          id?: string
+          item_template_id?: string
+          price_per_meter?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_template_color_prices_item_template_id_fkey"
+            columns: ["item_template_id"]
+            isOneToOne: false
+            referencedRelation: "item_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       item_templates: {
         Row: {

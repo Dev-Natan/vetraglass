@@ -33,6 +33,7 @@ import { useProductLinhas } from '@/hooks/useProductLinhas';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useProductAluminumPriceOptions } from '@/hooks/useProductAluminumPrices';
 import { useGlassStockOptions } from '@/hooks/useGlassStockOptions';
+import { useAvailableColorsForTemplates } from '@/hooks/useItemColorPrices';
 import { buildCategoryNormalizer } from '@/utils/normalizeCategory';
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -295,6 +296,29 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     productUsesAluminum ? (companyProduct?.id || null) : null
   );
   const hasAluminumPrices = (aluminumPriceOptions?.length || 0) > 0;
+
+  // Perfis (item_templates) usados na composição deste produto — dirige as cores disponíveis.
+  const { data: productProfileTemplateIds = [] } = useQuery({
+    queryKey: ['product-profile-template-ids', companyProduct?.id],
+    queryFn: async () => {
+      if (!companyProduct?.id) return [] as string[];
+      const { data, error } = await supabase
+        .from('company_product_items')
+        .select('item_template:item_templates(id, type)')
+        .eq('company_product_id', companyProduct.id);
+      if (error) throw error;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return (data ?? [])
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .map((r: any) => r.item_template)
+        .filter((t: { type: string } | null) => t && t.type === 'profile')
+        .map((t: { id: string }) => t.id);
+    },
+    enabled: !!companyProduct?.id,
+    staleTime: 60_000,
+  });
+  const { data: profileAvailableColors = [] } = useAvailableColorsForTemplates(productProfileTemplateIds);
+  const hasProfileColorPrices = profileAvailableColors.length > 0;
 
   // ── Opções de vidro vindas do ESTOQUE (company_items unit = m²) ──
   const glassStock = useGlassStockOptions(!!selectedProductId);
@@ -980,7 +1004,19 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-foreground">Cor do perfil</label>
                 <div className="space-y-2">
-                  {productUsesAluminum && hasAluminumPrices ? (
+                  {hasProfileColorPrices ? (
+                    <Select value={selectedAluminumColor} onValueChange={setSelectedAluminumColor}>
+                      <SelectTrigger className="bg-background h-10">
+                        <SelectValue placeholder="Selecione..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border shadow-lg z-50">
+                        {profileAvailableColors.map((c) => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                        <SelectItem value="Outros">Outros</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : productUsesAluminum && hasAluminumPrices ? (
                     <Select value={selectedAluminumColor} onValueChange={setSelectedAluminumColor}>
                       <SelectTrigger className="bg-background h-10">
                         <SelectValue placeholder="Selecione..." />

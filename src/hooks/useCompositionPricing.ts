@@ -161,7 +161,7 @@ export function useCompositionPricing({
   // ml  → metros lineares (maior dimensão / 1000) × preço/m × qtd peças
   // un / kit → quantidade fixa × preço unitário
   const simpleBreakdown = useMemo(() => {
-    if (!compositionItems) return { rows: [] as Array<{ nome: string; qtd: number; unidade: string; custo_estoque: number; subtotal: number; detalhe: string }>, total: 0 };
+    if (!compositionItems) return { rows: [] as Array<{ nome: string; qtd: number; unidade: string; custo_estoque: number; subtotal: number; detalhe: string; item_template_id: string | null }>, total: 0 };
 
     const areaM2Local = (width * height) / 1_000_000;
     const linearM = Math.max(width, height) / 1000;
@@ -215,6 +215,7 @@ export function useCompositionPricing({
           custo_estoque: custoEstoque,
           subtotal,
           detalhe,
+          item_template_id: tpl?.id ?? null,
         };
 
       });
