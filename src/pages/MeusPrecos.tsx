@@ -22,6 +22,8 @@ import {
   useItemTemplateColorPrices,
   useCompanyItemColorPrices,
 } from '@/hooks/useItemColorPrices';
+import { useStockByTemplate } from '@/hooks/useStockByTemplate';
+import { Package } from 'lucide-react';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const sb = supabase as any;
@@ -85,6 +87,7 @@ export default function MeusPrecos() {
   const { data: adminPrices = [] } = useAdminSuggestedPrices();
   const { data: companyPrices = [], upsert, isLoading } = useCompanySuggestedPrices();
   const { data: profiles = [] } = useProfileTemplates();
+  const { data: stockMap } = useStockByTemplate();
 
   const getCompanyGlass = (color: string, thick: number) =>
     companyPrices.find(p => p.kind === 'glass' && p.glass_color === color && p.thickness_mm === thick);
@@ -139,7 +142,7 @@ export default function MeusPrecos() {
                 )
                   .sort(([a], [b]) => a.localeCompare(b))
                   .map(([linha, list]) => (
-                    <LinhaGroup key={linha} linha={linha} profiles={list} />
+                    <LinhaGroup key={linha} linha={linha} profiles={list} stockMap={stockMap} />
                   ))
               )}
             </TabsContent>
@@ -206,7 +209,11 @@ export default function MeusPrecos() {
   );
 }
 
-function LinhaGroup({ linha, profiles }: { linha: string; profiles: Array<{ id: string; name: string; linha: string | null }> }) {
+function LinhaGroup({ linha, profiles, stockMap }: {
+  linha: string;
+  profiles: Array<{ id: string; name: string; linha: string | null }>;
+  stockMap?: Map<string, { quantity: number; unit: string | null }>;
+}) {
   const [open, setOpen] = useState(true);
   return (
     <Card>
@@ -225,7 +232,7 @@ function LinhaGroup({ linha, profiles }: { linha: string; profiles: Array<{ id: 
         </CollapsibleTrigger>
         <CollapsibleContent>
           <div className="p-3 space-y-2">
-            {profiles.map(p => <ProfileCard key={p.id} profile={p} />)}
+            {profiles.map(p => <ProfileCard key={p.id} profile={p} stock={stockMap?.get(p.id)} />)}
           </div>
         </CollapsibleContent>
       </Collapsible>
@@ -234,12 +241,19 @@ function LinhaGroup({ linha, profiles }: { linha: string; profiles: Array<{ id: 
 }
 
 
-function ProfileCard({ profile }: { profile: { id: string; name: string; linha: string | null } }) {
+function ProfileCard({ profile, stock }: {
+  profile: { id: string; name: string; linha: string | null };
+  stock?: { quantity: number; unit: string | null };
+}) {
   const [open, setOpen] = useState(false);
   const { data: adminRows = [] } = useItemTemplateColorPrices(open ? profile.id : undefined);
   const { data: companyRows = [], upsert } = useCompanyItemColorPrices(open ? profile.id : undefined);
 
   const getCompany = (color: string) => companyRows.find(r => r.color_name === color);
+
+  const stockQty = stock?.quantity ?? 0;
+  const stockUnit = stock?.unit ?? 'un';
+  const hasStock = stockQty > 0;
 
   return (
     <Card>
@@ -253,7 +267,13 @@ function ProfileCard({ profile }: { profile: { id: string; name: string; linha: 
                 {profile.linha && <div className="text-xs text-muted-foreground">{profile.linha}</div>}
               </div>
             </div>
-            {open && <Badge variant="secondary">{adminRows.length} cor(es)</Badge>}
+            <div className="flex items-center gap-2">
+              <Badge variant={hasStock ? 'secondary' : 'outline'} className="gap-1">
+                <Package className="w-3 h-3" />
+                {hasStock ? `${stockQty} ${stockUnit} em estoque` : 'Sem estoque'}
+              </Badge>
+              {open && <Badge variant="secondary">{adminRows.length} cor(es)</Badge>}
+            </div>
           </button>
         </CollapsibleTrigger>
         <CollapsibleContent>
