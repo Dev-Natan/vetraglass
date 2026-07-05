@@ -9,14 +9,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tag, Palette, Layers, Info, Loader2 } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Tag, Palette, Layers, Info, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useAdminGlassColors,
   useAdminGlassThicknesses,
-  useAdminAluminumColors,
   useAdminSuggestedPrices,
 } from '@/hooks/useAdminPricingLists';
+import {
+  useProfileTemplates,
+  useItemTemplateColorPrices,
+  useCompanyItemColorPrices,
+} from '@/hooks/useItemColorPrices';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const sb = supabase as any;
@@ -74,25 +79,17 @@ function useCompanySuggestedPrices() {
   return { ...query, upsert, companyId };
 }
 
-interface RowPriceState { cost: string; price: string }
-
 export default function MeusPrecos() {
   const { data: glassColors = [] } = useAdminGlassColors();
   const { data: thicknesses = [] } = useAdminGlassThicknesses();
-  const { data: aluColors = [] } = useAdminAluminumColors();
   const { data: adminPrices = [] } = useAdminSuggestedPrices();
   const { data: companyPrices = [], upsert, isLoading } = useCompanySuggestedPrices();
+  const { data: profiles = [] } = useProfileTemplates();
 
-  const getCompany = (kind: 'glass' | 'aluminum', a: string, b?: number) =>
-    companyPrices.find(p =>
-      p.kind === kind &&
-      (kind === 'glass' ? p.glass_color === a && p.thickness_mm === b : p.aluminum_color === a)
-    );
-  const getAdmin = (kind: 'glass' | 'aluminum', a: string, b?: number) =>
-    adminPrices.find(p =>
-      p.kind === kind &&
-      (kind === 'glass' ? p.glass_color === a && p.thickness_mm === b : p.aluminum_color === a)
-    );
+  const getCompanyGlass = (color: string, thick: number) =>
+    companyPrices.find(p => p.kind === 'glass' && p.glass_color === color && p.thickness_mm === thick);
+  const getAdminGlass = (color: string, thick: number) =>
+    adminPrices.find(p => p.kind === 'glass' && p.glass_color === color && p.thickness_mm === thick);
 
   return (
     <MainLayout>
@@ -102,8 +99,7 @@ export default function MeusPrecos() {
           <div>
             <h1 className="text-2xl font-bold">Meus Preços</h1>
             <p className="text-sm text-muted-foreground">
-              Cadastre seu custo e preço por m² / metro linear. Os valores têm prioridade sobre o
-              preço sugerido do sistema nos seus orçamentos.
+              Cadastre seu custo e preço. Os valores têm prioridade sobre o sugerido do sistema nos seus orçamentos.
             </p>
           </div>
         </div>
@@ -111,8 +107,8 @@ export default function MeusPrecos() {
         <Card className="p-4 bg-primary/5 border-primary/20 flex gap-3">
           <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />
           <div className="text-sm text-muted-foreground">
-            Se você deixar em branco, o orçamento usa o <strong>Preço Sugerido</strong> do sistema
-            (mostrado ao lado como referência).
+            Em branco → orçamento usa o <strong>Preço Sugerido</strong> do sistema. Para alumínio,
+            o preço agora é <strong>por perfil × cor</strong>.
           </div>
         </Card>
 
@@ -121,11 +117,21 @@ export default function MeusPrecos() {
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <Tabs defaultValue="glass">
+          <Tabs defaultValue="aluminum">
             <TabsList>
+              <TabsTrigger value="aluminum"><Layers className="w-4 h-4 mr-1" />Alumínio (por perfil)</TabsTrigger>
               <TabsTrigger value="glass"><Palette className="w-4 h-4 mr-1" />Vidros</TabsTrigger>
-              <TabsTrigger value="aluminum"><Layers className="w-4 h-4 mr-1" />Alumínio</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="aluminum" className="space-y-3">
+              {profiles.length === 0 ? (
+                <Card><CardContent className="py-8 text-center text-muted-foreground">
+                  Nenhum perfil cadastrado pelo Admin ainda.
+                </CardContent></Card>
+              ) : (
+                profiles.map(p => <ProfileCard key={p.id} profile={p} />)
+              )}
+            </TabsContent>
 
             <TabsContent value="glass">
               <Card>
@@ -148,16 +154,20 @@ export default function MeusPrecos() {
                     <TableBody>
                       {glassColors.filter(c => c.is_active).flatMap(c =>
                         thicknesses.filter(t => t.is_active).map(t => {
-                          const cp = getCompany('glass', c.name, t.thickness_mm);
-                          const ap = getAdmin('glass', c.name, t.thickness_mm);
+                          const cp = getCompanyGlass(c.name, t.thickness_mm);
+                          const ap = getAdminGlass(c.name, t.thickness_mm);
                           return (
-                            <PriceRow
+                            <GlassRow
                               key={`${c.id}-${t.id}`}
-                              nameCell={c.name}
-                              extraCell={<Badge variant="secondary">{t.thickness_mm}mm</Badge>}
+                              colorName={c.name}
+                              thicknessLabel={`${t.thickness_mm}mm`}
                               initialCost={cp?.cost_per_sqm}
                               initialPrice={cp?.price_per_sqm}
-                              suggested={`${ap?.cost_per_sqm != null ? `Custo R$ ${ap.cost_per_sqm}` : ''}${ap?.price_per_sqm != null ? ` · Preço R$ ${ap.price_per_sqm}` : ''}` || '—'}
+                              suggested={
+                                `${ap?.cost_per_sqm != null ? `Custo R$ ${ap.cost_per_sqm}` : ''}` +
+                                `${ap?.price_per_sqm != null ? ` · Preço R$ ${ap.price_per_sqm}` : ''}`
+                                || '—'
+                              }
                               onSave={(cost, price) => upsert.mutate({
                                 kind: 'glass', glass_color: c.name, thickness_mm: t.thickness_mm,
                                 aluminum_color: null,
@@ -178,60 +188,6 @@ export default function MeusPrecos() {
                 </CardContent>
               </Card>
             </TabsContent>
-
-            <TabsContent value="aluminum">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Preços de Alumínio</CardTitle>
-                  <CardDescription>Por metro linear (perfis) e por m² (fallback).</CardDescription>
-                </CardHeader>
-                <CardContent className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Cor</TableHead>
-                        <TableHead className="w-28">Custo/ml</TableHead>
-                        <TableHead className="w-28">Preço/ml</TableHead>
-                        <TableHead className="w-28">Custo/m²</TableHead>
-                        <TableHead className="w-28">Preço/m²</TableHead>
-                        <TableHead>Sugerido</TableHead>
-                        <TableHead className="text-right">Ação</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {aluColors.filter(c => c.is_active).map(c => {
-                        const cp = getCompany('aluminum', c.name);
-                        const ap = getAdmin('aluminum', c.name);
-                        return (
-                          <AluRow
-                            key={c.id}
-                            name={c.name}
-                            initial={{
-                              costM: cp?.cost_per_meter, priceM: cp?.price_per_meter,
-                              costS: cp?.cost_per_sqm, priceS: cp?.price_per_sqm,
-                            }}
-                            suggested={ap
-                              ? `ml: ${ap.cost_per_meter ?? '—'}/${ap.price_per_meter ?? '—'} · m²: ${ap.cost_per_sqm ?? '—'}/${ap.price_per_sqm ?? '—'}`
-                              : '—'}
-                            onSave={(v) => upsert.mutate({
-                              kind: 'aluminum', aluminum_color: c.name,
-                              glass_color: null, thickness_mm: null,
-                              cost_per_meter: v.costM, price_per_meter: v.priceM,
-                              cost_per_sqm: v.costS, price_per_sqm: v.priceS,
-                            })}
-                          />
-                        );
-                      })}
-                      {aluColors.length === 0 && (
-                        <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-6">
-                          O Admin ainda não cadastrou cores de alumínio.
-                        </TableCell></TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </TabsContent>
           </Tabs>
         )}
       </div>
@@ -239,9 +195,82 @@ export default function MeusPrecos() {
   );
 }
 
-function PriceRow({ nameCell, extraCell, initialCost, initialPrice, suggested, onSave }: {
-  nameCell: string; extraCell: React.ReactNode;
-  initialCost?: number | null; initialPrice?: number | null;
+function ProfileCard({ profile }: { profile: { id: string; name: string; linha: string | null } }) {
+  const [open, setOpen] = useState(false);
+  const { data: adminRows = [] } = useItemTemplateColorPrices(open ? profile.id : undefined);
+  const { data: companyRows = [], upsert } = useCompanyItemColorPrices(open ? profile.id : undefined);
+
+  const getCompany = (color: string) => companyRows.find(r => r.color_name === color);
+
+  return (
+    <Card>
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <CollapsibleTrigger asChild>
+          <button className="w-full flex items-center justify-between p-4 hover:bg-muted/40 text-left">
+            <div className="flex items-center gap-3">
+              {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+              <div>
+                <div className="font-semibold">{profile.name}</div>
+                {profile.linha && <div className="text-xs text-muted-foreground">{profile.linha}</div>}
+              </div>
+            </div>
+            {open && <Badge variant="secondary">{adminRows.length} cor(es)</Badge>}
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="px-4 pb-4">
+            {adminRows.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-3">
+                O Admin ainda não cadastrou cores para este perfil.
+              </p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Cor</TableHead>
+                    <TableHead className="w-32">Meu Custo/ml</TableHead>
+                    <TableHead className="w-32">Meu Preço/ml</TableHead>
+                    <TableHead>Sugerido</TableHead>
+                    <TableHead className="text-right">Ação</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {adminRows.map(ar => {
+                    const cr = getCompany(ar.color_name);
+                    return (
+                      <ProfileColorRow
+                        key={ar.color_name}
+                        colorName={ar.color_name}
+                        initialCost={cr?.cost_per_meter}
+                        initialPrice={cr?.price_per_meter}
+                        suggested={
+                          `${ar.cost_per_meter != null ? `Custo R$ ${ar.cost_per_meter}` : ''}` +
+                          `${ar.price_per_meter != null ? ` · Preço R$ ${ar.price_per_meter}` : ''}`
+                          || '—'
+                        }
+                        onSave={(cost, price) => upsert.mutate({
+                          item_template_id: profile.id,
+                          color_name: ar.color_name,
+                          cost_per_meter: cost,
+                          price_per_meter: price,
+                        })}
+                      />
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    </Card>
+  );
+}
+
+function ProfileColorRow({ colorName, initialCost, initialPrice, suggested, onSave }: {
+  colorName: string;
+  initialCost?: number | null;
+  initialPrice?: number | null;
   suggested: string;
   onSave: (cost: number | null, price: number | null) => void;
 }) {
@@ -250,10 +279,9 @@ function PriceRow({ nameCell, extraCell, initialCost, initialPrice, suggested, o
   const isSet = cost !== '' || price !== '';
   return (
     <TableRow>
-      <TableCell className="font-medium">{nameCell}</TableCell>
-      <TableCell>{extraCell}</TableCell>
-      <TableCell><Input type="number" step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} /></TableCell>
-      <TableCell><Input type="number" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} /></TableCell>
+      <TableCell className="font-medium">{colorName}</TableCell>
+      <TableCell><Input type="number" step="0.01" value={cost} onChange={e => setCost(e.target.value)} /></TableCell>
+      <TableCell><Input type="number" step="0.01" value={price} onChange={e => setPrice(e.target.value)} /></TableCell>
       <TableCell className="text-xs text-muted-foreground">{suggested}</TableCell>
       <TableCell className="text-right">
         <Button size="sm" variant={isSet ? 'default' : 'outline'}
@@ -265,27 +293,25 @@ function PriceRow({ nameCell, extraCell, initialCost, initialPrice, suggested, o
   );
 }
 
-function AluRow({ name, initial, suggested, onSave }: {
-  name: string;
-  initial: { costM?: number | null; priceM?: number | null; costS?: number | null; priceS?: number | null };
+function GlassRow({ colorName, thicknessLabel, initialCost, initialPrice, suggested, onSave }: {
+  colorName: string; thicknessLabel: string;
+  initialCost?: number | null; initialPrice?: number | null;
   suggested: string;
-  onSave: (v: { costM: number | null; priceM: number | null; costS: number | null; priceS: number | null }) => void;
+  onSave: (cost: number | null, price: number | null) => void;
 }) {
-  const [costM, setCostM] = useState(initial.costM != null ? String(initial.costM) : '');
-  const [priceM, setPriceM] = useState(initial.priceM != null ? String(initial.priceM) : '');
-  const [costS, setCostS] = useState(initial.costS != null ? String(initial.costS) : '');
-  const [priceS, setPriceS] = useState(initial.priceS != null ? String(initial.priceS) : '');
-  const num = (v: string) => (v ? parseFloat(v) : null);
+  const [cost, setCost] = useState(initialCost != null ? String(initialCost) : '');
+  const [price, setPrice] = useState(initialPrice != null ? String(initialPrice) : '');
+  const isSet = cost !== '' || price !== '';
   return (
     <TableRow>
-      <TableCell className="font-medium">{name}</TableCell>
-      <TableCell><Input type="number" step="0.01" value={costM} onChange={(e) => setCostM(e.target.value)} /></TableCell>
-      <TableCell><Input type="number" step="0.01" value={priceM} onChange={(e) => setPriceM(e.target.value)} /></TableCell>
-      <TableCell><Input type="number" step="0.01" value={costS} onChange={(e) => setCostS(e.target.value)} /></TableCell>
-      <TableCell><Input type="number" step="0.01" value={priceS} onChange={(e) => setPriceS(e.target.value)} /></TableCell>
+      <TableCell className="font-medium">{colorName}</TableCell>
+      <TableCell><Badge variant="secondary">{thicknessLabel}</Badge></TableCell>
+      <TableCell><Input type="number" step="0.01" value={cost} onChange={e => setCost(e.target.value)} /></TableCell>
+      <TableCell><Input type="number" step="0.01" value={price} onChange={e => setPrice(e.target.value)} /></TableCell>
       <TableCell className="text-xs text-muted-foreground">{suggested}</TableCell>
       <TableCell className="text-right">
-        <Button size="sm" onClick={() => onSave({ costM: num(costM), priceM: num(priceM), costS: num(costS), priceS: num(priceS) })}>
+        <Button size="sm" variant={isSet ? 'default' : 'outline'}
+          onClick={() => onSave(cost ? parseFloat(cost) : null, price ? parseFloat(price) : null)}>
           Salvar
         </Button>
       </TableCell>
