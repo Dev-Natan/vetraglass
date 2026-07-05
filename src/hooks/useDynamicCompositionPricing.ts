@@ -4,11 +4,12 @@ import { useCompositionPricing } from './useCompositionPricing';
 import { useProductGlassPriceOptions } from './useProductGlassPrices';
 import { useProductAluminumPriceOptions } from './useProductAluminumPrices';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const sb = supabase as any;
 
-interface AdminSuggested {
+interface SuggestedPrice {
   kind: 'glass' | 'aluminum';
   glass_color: string | null;
   thickness_mm: number | null;
@@ -25,11 +26,29 @@ function useAdminSuggestedPricesCache() {
     queryFn: async () => {
       const { data, error } = await sb.from('admin_suggested_prices').select('*');
       if (error) throw error;
-      return (data ?? []) as AdminSuggested[];
+      return (data ?? []) as SuggestedPrice[];
     },
     staleTime: 60_000,
   });
 }
+
+function useCompanySuggestedPricesCache(companyId: string | undefined) {
+  return useQuery({
+    queryKey: ['company-suggested-prices-cache', companyId],
+    queryFn: async () => {
+      if (!companyId) return [] as SuggestedPrice[];
+      const { data, error } = await sb
+        .from('company_suggested_prices')
+        .select('*')
+        .eq('company_id', companyId);
+      if (error) throw error;
+      return (data ?? []) as SuggestedPrice[];
+    },
+    enabled: !!companyId,
+    staleTime: 60_000,
+  });
+}
+
 
 
 interface UseDynamicCompositionPricingOptions {
