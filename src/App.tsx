@@ -316,9 +316,6 @@ function AppRoutes() {
       <Route path="/admin/announcements" element={
         <AdminRoute><LazyRoute><AdminAnnouncements /></LazyRoute></AdminRoute>
       } />
-      <Route path="/admin/glass-formulas" element={
-        <AdminRoute><LazyRoute><AdminGlassFormulas /></LazyRoute></AdminRoute>
-      } />
       <Route path="/admin/categories" element={
         <AdminRoute><LazyRoute><AdminCategories /></LazyRoute></AdminRoute>
       } />
