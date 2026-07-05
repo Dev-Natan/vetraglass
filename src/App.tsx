@@ -48,6 +48,7 @@ const MeusPrecos = lazy(() => import("./pages/MeusPrecos"));
 
 const Planos = lazy(() => import("./pages/Planos"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const OAuthConsent = lazy(() => import("./pages/OAuthConsent"));
 
 // Settings pages - lazy loaded
 const Configuracoes = lazy(() => import("./pages/Configuracoes"));
@@ -206,6 +207,7 @@ function AppRoutes() {
       
       {/* Auth routes */}
       <Route path="/auth" element={<Auth />} />
+      <Route path="/.lovable/oauth/consent" element={<LazyRoute><OAuthConsent /></LazyRoute>} />
       <Route path="/recuperar-senha" element={<LazyRoute><RecuperarSenha /></LazyRoute>} />
       <Route path="/redefinir-senha" element={<LazyRoute><RedefinirSenha /></LazyRoute>} />
       <Route path="/aceitar-convite" element={<LazyRoute><AceitarConvite /></LazyRoute>} />
