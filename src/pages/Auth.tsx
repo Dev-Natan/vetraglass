@@ -52,11 +52,16 @@ export default function Auth() {
   const [signupPassword, setSignupPassword] = useState('');
   const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
 
+  const nextParam = searchParams.get('next');
+  const isSafeNext = (n: string | null): n is string =>
+    !!n && n.startsWith('/') && !n.startsWith('//');
+  const postLoginTarget = isSafeNext(nextParam) ? nextParam : '/dashboard';
+
   useEffect(() => {
     if (user) {
-      navigate('/dashboard');
+      navigate(postLoginTarget);
     }
-  }, [user, navigate]);
+  }, [user, navigate, postLoginTarget]);
   
   // Update active tab when URL changes
   useEffect(() => {
@@ -122,7 +127,7 @@ export default function Auth() {
     if (error) {
       setErrors({ password: 'Usuário ou senha incorretos' });
     } else {
-      navigate('/dashboard');
+      navigate(postLoginTarget);
     }
   };
 
