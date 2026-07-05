@@ -254,6 +254,13 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     return products;
   }, [companyProducts, selectedLinha, selectedCategory, searchQuery]);
 
+  // Saldo de perfis por produto listado — para alertar o vendedor sobre falta de estoque.
+  const filteredProductIds = useMemo(
+    () => filteredProducts.map(p => p.id).filter(Boolean),
+    [filteredProducts],
+  );
+  const { data: productsProfileStock } = useProductsProfileStock(filteredProductIds);
+
   const selectedProduct = filteredProducts?.find(p => p.id === selectedProductId);
   const companyProduct = selectedProduct?.company_product;
 
