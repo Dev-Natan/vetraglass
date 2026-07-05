@@ -208,51 +208,29 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         {/* Footer */}
         <div className="p-3 border-t space-y-2">
           {collapsed ? (
-            <>
-              <Tooltip delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <Link
-                    to="/"
-                    className="flex items-center justify-center p-2.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
-                  >
-                    <ChevronLeft className="w-5 h-5" />
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent side="right">Voltar ao Sistema</TooltipContent>
-              </Tooltip>
-              <Tooltip delayDuration={0}>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="w-full h-10 text-destructive hover:text-destructive hover:bg-destructive/10"
-                    onClick={() => signOut()}
-                  >
-                    <LogOut className="w-5 h-5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="right">Sair do Sistema</TooltipContent>
-              </Tooltip>
-            </>
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-full h-10 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => signOut()}
+                >
+                  <LogOut className="w-5 h-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">Sair do Sistema</TooltipContent>
+            </Tooltip>
           ) : (
-            <>
-              <Link
-                to="/"
-                className="flex items-center gap-2 px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                Voltar ao Sistema
-              </Link>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
-                onClick={() => signOut()}
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                Sair do Sistema
-              </Button>
-            </>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
+              onClick={() => signOut()}
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Sair do Sistema
+            </Button>
           )}
         </div>
 
