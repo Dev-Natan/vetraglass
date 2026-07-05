@@ -492,6 +492,10 @@ export default function ItemTemplates() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.type === 'profile' && !formData.linha) {
+      toast.error('Linha é obrigatória para perfis de alumínio.');
+      return;
+    }
     saveMutation.mutate({ ...formData, id: editingItem?.id, image_url: editingItem?.image_url });
   };
 
