@@ -125,7 +125,8 @@ export function useDynamicCompositionPricing(options: UseDynamicCompositionPrici
     /** custo/m² efetivamente aplicado (dinâmico ou fallback) */
     resolvedGlassCostPerSqm: glassCostPerSqm,
     resolvedAluminumCostPerSqm: aluminumCostPerSqm,
+    resolvedAluminumCostPerMeter: aluminumCostPerMeter,
     hasDynamicGlassPricing: !!glassCostPerSqm,
-    hasDynamicAluminumPricing: !!aluminumCostPerSqm,
+    hasDynamicAluminumPricing: !!(aluminumCostPerMeter || aluminumCostPerSqm),
   };
 }
