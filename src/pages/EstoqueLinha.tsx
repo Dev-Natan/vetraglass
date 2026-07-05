@@ -52,9 +52,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 
-export default function Estoque() {
+const VIDROS_KEY = '__vidros__';
+const DIVERSOS_KEY = '__diversos__';
+
+export default function EstoqueLinha() {
+  const { linha: linhaParam = '' } = useParams<{ linha: string }>();
+  const decodedLinha = decodeURIComponent(linhaParam);
+  const isVidros = decodedLinha === VIDROS_KEY;
+  const isDiversos = decodedLinha === DIVERSOS_KEY;
+  const pageTitle = isVidros ? 'Vidros' : isDiversos ? 'Acessórios / Diversos' : decodedLinha;
+
   const { currentCompany } = useAuth();
   const queryClient = useQueryClient();
+
   
   useModuleTutorialTrigger('estoque');
   
