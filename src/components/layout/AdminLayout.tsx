@@ -62,11 +62,6 @@ const adminMenuItems = [
     icon: Megaphone,
   },
   {
-    title: "Fórmulas de Vidro",
-    path: "/admin/glass-formulas",
-    icon: GlassWater,
-  },
-  {
     title: "Suporte",
     path: "/admin/support",
     icon: Headphones,
