@@ -66,13 +66,13 @@ const ImportProducts = lazy(() => import("./pages/admin/ImportProducts"));
 const ImportExcelProducts = lazy(() => import("./pages/admin/ImportExcelProducts"));
 const AdminSupport = lazy(() => import("./pages/admin/AdminSupport"));
 const AdminAnnouncements = lazy(() => import("./pages/admin/AdminAnnouncements"));
-const AdminGlassFormulas = lazy(() => import("./pages/admin/AdminGlassFormulas"));
+
 const AdminCategories = lazy(() => import("./pages/admin/AdminCategories"));
 const AdminCompanyDetail = lazy(() => import("./pages/admin/AdminCompanyDetail"));
 const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
 const AdminFeedbacks = lazy(() => import("./pages/admin/AdminFeedbacks"));
 const FormulaTester = lazy(() => import("./pages/admin/FormulaTester"));
-const AdminProductImages = lazy(() => import("./pages/admin/AdminProductImages"));
+
 
 // Create optimized QueryClient with caching
 const queryClient = createQueryClient();
@@ -292,9 +292,6 @@ function AppRoutes() {
       <Route path="/admin/product-templates" element={
         <AdminRoute><LazyRoute><ProductTemplates /></LazyRoute></AdminRoute>
       } />
-      <Route path="/admin/product-images" element={
-        <AdminRoute><LazyRoute><AdminProductImages /></LazyRoute></AdminRoute>
-      } />
       <Route path="/admin/linhas" element={
         <AdminRoute><LazyRoute><AdminLinhas /></LazyRoute></AdminRoute>
       } />
@@ -318,9 +315,6 @@ function AppRoutes() {
       } />
       <Route path="/admin/announcements" element={
         <AdminRoute><LazyRoute><AdminAnnouncements /></LazyRoute></AdminRoute>
-      } />
-      <Route path="/admin/glass-formulas" element={
-        <AdminRoute><LazyRoute><AdminGlassFormulas /></LazyRoute></AdminRoute>
       } />
       <Route path="/admin/categories" element={
         <AdminRoute><LazyRoute><AdminCategories /></LazyRoute></AdminRoute>
