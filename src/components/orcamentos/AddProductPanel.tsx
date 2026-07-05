@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useCompositionPricing } from '@/hooks/useCompositionPricing';
+import { useDynamicCompositionPricing } from '@/hooks/useDynamicCompositionPricing';
 import { resolveProductImageUrl, resolveItemImageUrl } from '@/utils/imageUrl';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -387,8 +387,8 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
   // Use price_per_sqm as the primary pricing method
   const productBasePricePerSqm = Number((companyProduct as any)?.price_per_sqm) || Number(companyProduct?.base_price) || 0;
   
-  // Composition-based dynamic pricing
-  const compositionPricing = useCompositionPricing({
+  // Composition-based dynamic pricing (Fase 2: variáveis dinâmicas)
+  const compositionPricing = useDynamicCompositionPricing({
     companyProductId: companyProduct?.id,
     width: width || 1000,
     height: height || 1000,
@@ -401,6 +401,9 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     quantity: quantity || 1,
     enabled: !!companyProduct?.id && width > 0 && height > 0,
     excludeOptionalIds: excludedOptionalIds,
+    glassColor: selectedGlassColor || null,
+    glassThicknessMm: selectedGlassThickness ? Number(selectedGlassThickness) : null,
+    aluminumColor: selectedAluminumColor || customAluminumColor || null,
   });
 
   // Get optional items for toggle UI
