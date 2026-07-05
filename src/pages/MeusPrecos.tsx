@@ -87,6 +87,7 @@ export default function MeusPrecos() {
   const { data: adminPrices = [] } = useAdminSuggestedPrices();
   const { data: companyPrices = [], upsert, isLoading } = useCompanySuggestedPrices();
   const { data: profiles = [] } = useProfileTemplates();
+  const { data: stockMap } = useStockByTemplate();
 
   const getCompanyGlass = (color: string, thick: number) =>
     companyPrices.find(p => p.kind === 'glass' && p.glass_color === color && p.thickness_mm === thick);
