@@ -1,7 +1,36 @@
 import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useCompositionPricing } from './useCompositionPricing';
 import { useProductGlassPriceOptions } from './useProductGlassPrices';
 import { useProductAluminumPriceOptions } from './useProductAluminumPrices';
+import { supabase } from '@/integrations/supabase/client';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const sb = supabase as any;
+
+interface AdminSuggested {
+  kind: 'glass' | 'aluminum';
+  glass_color: string | null;
+  thickness_mm: number | null;
+  aluminum_color: string | null;
+  cost_per_sqm: number | null;
+  price_per_sqm: number | null;
+  cost_per_meter: number | null;
+  price_per_meter: number | null;
+}
+
+function useAdminSuggestedPricesCache() {
+  return useQuery({
+    queryKey: ['admin-suggested-prices-cache'],
+    queryFn: async () => {
+      const { data, error } = await sb.from('admin_suggested_prices').select('*');
+      if (error) throw error;
+      return (data ?? []) as AdminSuggested[];
+    },
+    staleTime: 60_000,
+  });
+}
+
 
 interface UseDynamicCompositionPricingOptions {
   companyProductId?: string;
