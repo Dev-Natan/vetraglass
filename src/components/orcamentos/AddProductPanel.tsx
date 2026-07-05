@@ -175,15 +175,27 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     enabled: !!currentCompany?.id
   });
 
-  // Get unique linhas from active company products
+  // Get unique linhas from active company products, filtrando linhas desativadas no Admin SaaS
+  const activeLinhaKeys = useMemo(() => {
+    const set = new Set<string>();
+    (productLinhas || []).forEach(l => {
+      if (l.slug) set.add(l.slug.toLowerCase());
+      if (l.name) set.add(l.name.toLowerCase());
+    });
+    return set;
+  }, [productLinhas]);
   const linhas = useMemo(() => {
     const linhaSet = new Set<string>();
     companyProducts?.forEach(p => {
       const linha = p.linha || (p.product_template as any)?.linha;
-      if (linha) linhaSet.add(linha);
+      if (!linha) return;
+      const key = String(linha).toLowerCase();
+      if (key === 'personalizado' || activeLinhaKeys.has(key)) {
+        linhaSet.add(linha);
+      }
     });
     return Array.from(linhaSet).sort();
-  }, [companyProducts]);
+  }, [companyProducts, activeLinhaKeys]);
 
   // Get categories for selected linha (normalized via Admin dictionary)
   const categories = useMemo(() => {

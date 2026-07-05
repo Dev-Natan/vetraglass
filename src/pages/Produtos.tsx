@@ -33,6 +33,18 @@ export default function Produtos() {
   const { labels: categoryLabels, categories } = useProductCategoryLabels();
   const { data: productLinhas } = useProductLinhas();
   const getLinhaLabel = (slug: string) => productLinhas?.find(l => l.slug.toLowerCase() === slug.toLowerCase() || l.name.toLowerCase() === slug.toLowerCase())?.name || slug;
+  const activeLinhaKeys = useMemo(() => {
+    const set = new Set<string>();
+    (productLinhas || []).forEach(l => {
+      if (l.slug) set.add(l.slug.toLowerCase());
+      if (l.name) set.add(l.name.toLowerCase());
+    });
+    return set;
+  }, [productLinhas]);
+  const isLinhaAllowed = (linhaName: string) => {
+    if (linhaName === 'Sem Linha' || linhaName === 'Personalizado') return true;
+    return activeLinhaKeys.has(linhaName.toLowerCase());
+  };
 
   // Fetch company activated products
   const { data: companyProducts = [] } = useQuery({
@@ -97,16 +109,19 @@ export default function Produtos() {
     });
 
     let result = Array.from((showActive ? activeLinhasMap : inactiveLinhasMap).values());
-    
+
+    // Ocultar grupos cuja linha esteja desativada no dicionário do Admin SaaS
+    result = result.filter(item => isLinhaAllowed(item.linha));
+
     if (searchTerm) {
       result = result.filter(item => item.linha.toLowerCase().includes(searchTerm.toLowerCase()));
     }
     if (selectedCategory) {
       result = result.filter(item => item.categories.has(selectedCategory));
     }
-    
+
     return result.sort((a, b) => a.linha.localeCompare(b.linha));
-  }, [companyProducts, allProducts, searchTerm, selectedCategory, showActive]);
+  }, [companyProducts, allProducts, searchTerm, selectedCategory, showActive, activeLinhaKeys]);
 
   const handleRemoveLinha = async (linha: string) => {
     if (!currentCompany?.id) return;

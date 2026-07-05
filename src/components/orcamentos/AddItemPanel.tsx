@@ -158,14 +158,26 @@ export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
 
   const isLoading = loadingCompanyItems || loadingTemplates;
 
-  // Get unique linhas from all items
+  // Get unique linhas, ocultando as desativadas no Admin SaaS
+  const activeLinhaKeys = useMemo(() => {
+    const set = new Set<string>();
+    (productLinhas || []).forEach(l => {
+      if (l.slug) set.add(l.slug.toLowerCase());
+      if (l.name) set.add(l.name.toLowerCase());
+    });
+    return set;
+  }, [productLinhas]);
   const linhas = useMemo(() => {
     const linhaSet = new Set<string>();
     unifiedItems.forEach(item => {
-      if (item.linha) linhaSet.add(item.linha);
+      if (!item.linha) return;
+      const key = String(item.linha).toLowerCase();
+      if (key === 'personalizado' || activeLinhaKeys.has(key)) {
+        linhaSet.add(item.linha);
+      }
     });
     return Array.from(linhaSet).sort();
-  }, [unifiedItems]);
+  }, [unifiedItems, activeLinhaKeys]);
 
   // Get types for selected linha
   const types = useMemo(() => {
