@@ -66,7 +66,7 @@ const ImportProducts = lazy(() => import("./pages/admin/ImportProducts"));
 const ImportExcelProducts = lazy(() => import("./pages/admin/ImportExcelProducts"));
 const AdminSupport = lazy(() => import("./pages/admin/AdminSupport"));
 const AdminAnnouncements = lazy(() => import("./pages/admin/AdminAnnouncements"));
-const AdminGlassFormulas = lazy(() => import("./pages/admin/AdminGlassFormulas"));
+
 const AdminCategories = lazy(() => import("./pages/admin/AdminCategories"));
 const AdminCompanyDetail = lazy(() => import("./pages/admin/AdminCompanyDetail"));
 const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
