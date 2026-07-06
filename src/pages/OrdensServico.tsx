@@ -400,17 +400,6 @@ export default function OrdensServico() {
               <ClipboardList className="w-4 h-4" />
               Lista de OS
             </TabsTrigger>
-            <TabsTrigger value="calendario" className="gap-2">
-              <Calendar className="w-4 h-4" />
-              Calendário
-            </TabsTrigger>
-            <TabsTrigger value="hoje" className="gap-2">
-              <Clock className="w-4 h-4" />
-              Hoje
-              {todayAppointmentsCount > 0 && (
-                <Badge variant="secondary" className="ml-1">{todayAppointmentsCount}</Badge>
-              )}
-            </TabsTrigger>
             <TabsTrigger value="plano-corte" className="gap-2">
               <Scissors className="w-4 h-4" />
               Calculadora de Corte
