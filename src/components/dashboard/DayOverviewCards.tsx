@@ -1,8 +1,9 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Calendar, DollarSign, Receipt, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { TodayAppointmentsDialog } from './TodayAppointmentsDialog';
 
 interface DayOverviewData {
   appointmentsCount: number;
