@@ -257,7 +257,9 @@ function AppRoutes() {
       <Route path="/pedidos-compra" element={
         <ProtectedRoute><ModuleGuard moduleKey="pedidos_compra"><LazyRoute><PedidosCompra /></LazyRoute></ModuleGuard></ProtectedRoute>
       } />
-      <Route path="/agenda" element={<Navigate to="/ordens-servico?tab=calendario" replace />} />
+      <Route path="/agenda" element={
+        <ProtectedRoute><ModuleGuard moduleKey="agenda"><LazyRoute><Agenda /></LazyRoute></ModuleGuard></ProtectedRoute>
+      } />
       <Route path="/medicoes" element={
         <ProtectedRoute><ModuleGuard moduleKey="medicoes"><LazyRoute><Medicoes /></LazyRoute></ModuleGuard></ProtectedRoute>
       } />

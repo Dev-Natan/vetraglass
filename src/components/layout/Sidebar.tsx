@@ -20,6 +20,7 @@ import {
   Headphones,
   Lightbulb,
   Tag,
+  CalendarDays,
   LucideIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -56,6 +57,7 @@ const menuItems: MenuItem[] = [
   
   { icon: FileText, label: 'Orçamentos', path: '/orcamentos', module: 'orcamentos', tutorialId: 'menu-orcamentos' },
   { icon: ClipboardList, label: 'Ordens de Serviço', path: '/ordens-servico', module: 'ordens-servico', tutorialId: 'menu-ordens-servico' },
+  { icon: CalendarDays, label: 'Agenda', path: '/agenda', module: 'agenda', tutorialId: 'menu-agenda' },
   
   // Operacional
   { icon: Ruler, label: 'Medições', path: '/medicoes', module: 'medicoes', tutorialId: 'menu-medicoes' },

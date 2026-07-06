@@ -41,8 +41,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 type PeriodFilter = 'all' | '7d' | '30d' | 'this_month' | 'last_month';
 
 import { OSProductionBadge } from '@/components/ordens-servico/OSProductionBadge';
-import { OSCalendarView } from '@/components/ordens-servico/OSCalendarView';
-import { OSTodayView } from '@/components/ordens-servico/OSTodayView';
 import { RomaneioReviewDialog } from '@/components/ordens-servico/RomaneioReviewDialog';
 import { CuttingPlanCalculator } from '@/components/plano-corte/CuttingPlanCalculator';
 import { releaseMaterialsForProduction } from '@/utils/generateMaterialConsumption';
@@ -52,7 +50,7 @@ import { useOSCancellation } from '@/hooks/useOSCancellation';
 
 type OSStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
 type OSPriority = 'low' | 'normal' | 'high' | 'urgent';
-type MainTab = 'lista' | 'calendario' | 'hoje' | 'plano-corte';
+type MainTab = 'lista' | 'plano-corte';
 
 interface OrdemServico {
   id: string;
@@ -400,17 +398,6 @@ export default function OrdensServico() {
               <ClipboardList className="w-4 h-4" />
               Lista de OS
             </TabsTrigger>
-            <TabsTrigger value="calendario" className="gap-2">
-              <Calendar className="w-4 h-4" />
-              Calendário
-            </TabsTrigger>
-            <TabsTrigger value="hoje" className="gap-2">
-              <Clock className="w-4 h-4" />
-              Hoje
-              {todayAppointmentsCount > 0 && (
-                <Badge variant="secondary" className="ml-1">{todayAppointmentsCount}</Badge>
-              )}
-            </TabsTrigger>
             <TabsTrigger value="plano-corte" className="gap-2">
               <Scissors className="w-4 h-4" />
               Calculadora de Corte
@@ -663,14 +650,6 @@ export default function OrdensServico() {
                 pageSize={pageSize}
               />
             )}
-          </TabsContent>
-
-          <TabsContent value="calendario" className="mt-6">
-            <OSCalendarView />
-          </TabsContent>
-
-          <TabsContent value="hoje" className="mt-6">
-            <OSTodayView />
           </TabsContent>
 
           <TabsContent value="plano-corte" className="mt-6">
