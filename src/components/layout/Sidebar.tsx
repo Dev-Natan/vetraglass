@@ -20,6 +20,7 @@ import {
   Headphones,
   Lightbulb,
   Tag,
+  CalendarDays,
   LucideIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
