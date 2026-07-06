@@ -52,7 +52,7 @@ import { useOSCancellation } from '@/hooks/useOSCancellation';
 
 type OSStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled';
 type OSPriority = 'low' | 'normal' | 'high' | 'urgent';
-type MainTab = 'lista' | 'calendario' | 'hoje' | 'plano-corte';
+type MainTab = 'lista' | 'plano-corte';
 
 interface OrdemServico {
   id: string;
