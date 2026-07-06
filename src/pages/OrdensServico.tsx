@@ -654,14 +654,6 @@ export default function OrdensServico() {
             )}
           </TabsContent>
 
-          <TabsContent value="calendario" className="mt-6">
-            <OSCalendarView />
-          </TabsContent>
-
-          <TabsContent value="hoje" className="mt-6">
-            <OSTodayView />
-          </TabsContent>
-
           <TabsContent value="plano-corte" className="mt-6">
             <CuttingPlanCalculator />
           </TabsContent>
