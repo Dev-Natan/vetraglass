@@ -41,8 +41,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 type PeriodFilter = 'all' | '7d' | '30d' | 'this_month' | 'last_month';
 
 import { OSProductionBadge } from '@/components/ordens-servico/OSProductionBadge';
-import { OSCalendarView } from '@/components/ordens-servico/OSCalendarView';
-import { OSTodayView } from '@/components/ordens-servico/OSTodayView';
 import { RomaneioReviewDialog } from '@/components/ordens-servico/RomaneioReviewDialog';
 import { CuttingPlanCalculator } from '@/components/plano-corte/CuttingPlanCalculator';
 import { releaseMaterialsForProduction } from '@/utils/generateMaterialConsumption';
