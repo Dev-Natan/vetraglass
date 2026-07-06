@@ -19,6 +19,8 @@ interface DayOverviewCardsProps {
 }
 
 export const DayOverviewCards = memo(function DayOverviewCards({ data }: DayOverviewCardsProps) {
+  const [appointmentsOpen, setAppointmentsOpen] = useState(false);
+
   const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
@@ -32,7 +34,8 @@ export const DayOverviewCards = memo(function DayOverviewCards({ data }: DayOver
       color: 'text-blue-600 dark:text-blue-400',
       bgColor: 'bg-blue-500/10',
       borderColor: 'border-blue-500/20',
-      link: '/ordens-servico?tab=hoje',
+      link: null,
+      onClick: () => setAppointmentsOpen(true),
     },
     {
       icon: DollarSign,
