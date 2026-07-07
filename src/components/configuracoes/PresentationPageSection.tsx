@@ -17,21 +17,22 @@ import { FileText, Loader2, Save } from "lucide-react";
 
 export const PRESENTATION_TEMPLATES: Record<string, { label: string; text: string }> = {
   tradicional: {
-    label: "Tradicional / Formal",
+    label: "Tradicional / Corporativo",
     text:
-      "Prezado(a) cliente, é com grande satisfação que apresentamos nossa proposta comercial para o fornecimento e instalação de vidros e esquadrias. Nossa empresa preza pela máxima segurança, cumprimento rigoroso de prazos e alinhamento com as normas técnicas da ABNT. Abaixo, detalhamos as especificações técnicas e valores para o seu projeto.",
+      "É com distinta satisfação que apresentamos a proposta comercial elaborada exclusivamente para o seu projeto. Cada especificação a seguir foi desenvolvida por nossa equipe técnica com rigoroso cumprimento das normas ABNT NBR 7199 e 14.207, assegurando desempenho estrutural, segurança e durabilidade. Trabalhamos com fornecedores certificados e processos auditados, garantindo previsibilidade de prazos, transparência de valores e a excelência que sua obra merece. Colocamo-nos à inteira disposição para os esclarecimentos que julgar necessários.",
   },
   moderno: {
-    label: "Moderno / Residencial",
+    label: "Moderno / Assinatura",
     text:
-      "Olá! Agradecemos a oportunidade de fazer parte do seu projeto. Aqui na nossa vidraçaria, transformamos seu ambiente com o que há de melhor em vidros temperados, laminados e acabamentos de alto padrão. Preparamos um orçamento detalhado com as melhores opções para sua casa. Dê uma olhada nos detalhes abaixo!",
+      "Obrigado por nos convidar a fazer parte do seu projeto. Preparamos esta proposta com a mesma atenção que dedicamos a cada detalhe do nosso trabalho — do desenho ao acabamento final. Utilizamos vidros de alta performance, perfis premium e ferragens de engenharia europeia, combinados a uma execução impecável em obra. Mais do que fornecer produtos, entregamos ambientes com identidade, conforto e valorização real do imóvel. Convidamos você a percorrer as próximas páginas e conhecer, em detalhe, a solução desenhada especialmente para o seu espaço.",
   },
   premium: {
     label: "Premium / Alto Padrão",
     text:
-      "Sua obra merece sofisticação e durabilidade. Apresentamos nossa proposta comercial utilizando exclusivamente materiais de primeira linha e mão de obra altamente qualificada. Mais do que vidros, entregamos conforto térmico, acústico e valorização para o seu imóvel. Confira a seguir os detalhes do seu investimento.",
+      "Existe um limite tênue entre um bom projeto e um projeto memorável — e é exatamente nele que nossa empresa opera. Esta proposta reúne materiais de origem certificada, engenharia de precisão milimétrica e uma equipe de instalação treinada para entregar acabamentos dignos de arquitetura autoral. Cada vidro, cada perfil e cada componente foi selecionado para oferecer performance térmica, acústica e estética por décadas. Assumimos o compromisso integral com o resultado: da primeira medição à assinatura da entrega técnica. Seja bem-vindo a um novo padrão em vidraçaria.",
   },
 };
+
 
 interface Props {
   companyId?: string;
