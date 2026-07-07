@@ -140,116 +140,216 @@ export async function generateQuotePdf(
   const marginRight = pageWidth - 15;
   const contentWidth = pageWidth - 30;
 
-  // ========== COVER PAGE (optional) ==========
+  // ========== PREMIUM COVER PAGE (optional) ==========
   if (company?.enable_presentation_page && (company?.default_presentation_text || '').trim()) {
-    const coverLogoUrl = logoUrl;
-    let coverY = 40;
+    // Palette
+    const NAVY: [number, number, number] = [15, 23, 42];
+    const NAVY_SOFT: [number, number, number] = [30, 41, 59];
+    const GOLD: [number, number, number] = [198, 168, 108];
+    const IVORY: [number, number, number] = [245, 243, 238];
+    const INK: [number, number, number] = [28, 32, 44];
+    const MUTED: [number, number, number] = [110, 116, 130];
 
-    if (coverLogoUrl) {
-      const logoB64 = getCachedImage(coverLogoUrl);
+    // Top dark band (hero)
+    const bandH = 78;
+    doc.setFillColor(...NAVY);
+    doc.rect(0, 0, pageWidth, bandH, 'F');
+
+    // Subtle inner band for depth
+    doc.setFillColor(...NAVY_SOFT);
+    doc.rect(0, bandH - 14, pageWidth, 14, 'F');
+
+    // Gold hairline divider between bands
+    doc.setDrawColor(...GOLD);
+    doc.setLineWidth(0.4);
+    doc.line(marginLeft, bandH, marginRight, bandH);
+
+    // Company mark (letter-spaced small caps at top-left)
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...GOLD);
+    const brandMark = (company?.name || '').toUpperCase().split('').join(' ');
+    doc.text(brandMark, marginLeft, 14);
+
+    // Top-right meta (CNPJ)
+    if (company?.cnpj) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(200, 200, 210);
+      doc.text(`CNPJ ${company.cnpj}`, marginRight, 14, { align: 'right' });
+    }
+
+    // Centered circular logo
+    let heroCursor = 22;
+    if (logoUrl) {
+      const logoB64 = getCachedImage(logoUrl);
       if (logoB64) {
-        const size = 55;
+        const size = 42;
         try {
           const circular = await cropImageToCircle(logoB64);
-          doc.addImage(circular, 'PNG', (pageWidth - size) / 2, coverY, size, size);
+          // Gold ring
+          doc.setDrawColor(...GOLD);
+          doc.setLineWidth(0.6);
+          doc.circle(pageWidth / 2, heroCursor + size / 2, size / 2 + 1.2, 'S');
+          doc.addImage(circular, 'PNG', (pageWidth - size) / 2, heroCursor, size, size);
         } catch {
           try {
-            doc.addImage(logoB64, inferJsPdfImageFormat(logoB64), (pageWidth - size) / 2, coverY, size, size);
+            doc.addImage(logoB64, inferJsPdfImageFormat(logoB64), (pageWidth - size) / 2, heroCursor, size, size);
           } catch {}
         }
-        coverY += size + 12;
+        heroCursor += size + 6;
       }
     }
 
-    // Company name
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(18);
-    doc.setTextColor(30, 30, 30);
-    doc.text((company?.name || '').toUpperCase(), pageWidth / 2, coverY, { align: 'center' });
-    coverY += 18;
+    // Body area starts below the band
+    let coverY = bandH + 22;
 
-    // Title
+    // Kicker
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(26);
-    doc.setTextColor(20, 20, 20);
+    doc.setFontSize(8);
+    doc.setTextColor(...GOLD);
+    doc.text('P R O P O S T A   E X C L U S I V A', pageWidth / 2, coverY, { align: 'center' });
+    coverY += 10;
+
+    // Editorial title (serif for sophistication)
+    doc.setFont('times', 'bold');
+    doc.setFontSize(34);
+    doc.setTextColor(...INK);
     doc.text('Proposta Comercial', pageWidth / 2, coverY, { align: 'center' });
-    coverY += 6;
+    coverY += 4;
 
-    // Thin divider
-    doc.setDrawColor(180, 180, 180);
-    doc.setLineWidth(0.3);
-    const divW = 60;
-    doc.line((pageWidth - divW) / 2, coverY, (pageWidth + divW) / 2, coverY);
+    // Subtitle italic
+    doc.setFont('times', 'italic');
+    doc.setFontSize(12);
+    doc.setTextColor(...MUTED);
+    doc.text('Soluções em vidro e esquadrias sob medida', pageWidth / 2, coverY + 6, { align: 'center' });
     coverY += 14;
 
-    // Quote number + date
+    // Gold ornament divider (short line + diamond + short line)
+    const ornCenter = pageWidth / 2;
+    const ornGap = 4;
+    const ornLine = 22;
+    doc.setDrawColor(...GOLD);
+    doc.setLineWidth(0.5);
+    doc.line(ornCenter - ornLine - ornGap, coverY + 3, ornCenter - ornGap, coverY + 3);
+    doc.line(ornCenter + ornGap, coverY + 3, ornCenter + ornLine + ornGap, coverY + 3);
+    doc.setFillColor(...GOLD);
+    // small diamond
+    const dSize = 1.6;
+    doc.triangle(
+      ornCenter, coverY + 3 - dSize,
+      ornCenter + dSize, coverY + 3,
+      ornCenter - dSize, coverY + 3,
+      'F'
+    );
+    doc.triangle(
+      ornCenter, coverY + 3 + dSize,
+      ornCenter + dSize, coverY + 3,
+      ornCenter - dSize, coverY + 3,
+      'F'
+    );
+    coverY += 14;
+
+    // Quote meta line
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(11);
-    doc.setTextColor(90, 90, 90);
+    doc.setFontSize(10);
+    doc.setTextColor(...MUTED);
     const coverDate = quote.created_at ? new Date(quote.created_at) : new Date();
     doc.text(
-      `Orçamento Nº ${quote.quote_number.toString().padStart(4, '0')}  •  ${format(coverDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`,
+      `Orçamento Nº ${quote.quote_number.toString().padStart(4, '0')}   ·   ${format(coverDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`,
       pageWidth / 2,
       coverY,
       { align: 'center' }
     );
-    coverY += 20;
+    coverY += 18;
 
-    // Customer block
+    // ===== Client card =====
+    const cardX = marginLeft + 10;
+    const cardW = contentWidth - 20;
+    const cardH = 38;
+    doc.setFillColor(...IVORY);
+    doc.roundedRect(cardX, coverY, cardW, cardH, 2, 2, 'F');
+    // Gold left border
+    doc.setFillColor(...GOLD);
+    doc.rect(cardX, coverY, 1.2, cardH, 'F');
+
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.setTextColor(120, 120, 120);
-    doc.text('APRESENTADO A', pageWidth / 2, coverY, { align: 'center' });
-    coverY += 6;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
-    doc.setTextColor(40, 40, 40);
-    doc.text(quote.customer_name || '', pageWidth / 2, coverY, { align: 'center' });
-    coverY += 6;
+    doc.setFontSize(8);
+    doc.setTextColor(...GOLD);
+    doc.text('APRESENTADO A', cardX + 8, coverY + 8);
+
+    doc.setFont('times', 'bold');
+    doc.setFontSize(16);
+    doc.setTextColor(...INK);
+    doc.text(quote.customer_name || '', cardX + 8, coverY + 17);
+
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
-    doc.setTextColor(110, 110, 110);
-    const custLine = [quote.customer_phone, quote.customer_email].filter(Boolean).join('  •  ');
-    if (custLine) {
-      doc.text(custLine, pageWidth / 2, coverY, { align: 'center' });
-      coverY += 5;
-    }
+    doc.setTextColor(...MUTED);
+    const custLine = [quote.customer_phone, quote.customer_email].filter(Boolean).join('   ·   ');
+    if (custLine) doc.text(custLine, cardX + 8, coverY + 24);
     if (quote.customer_address) {
-      const addrLines = doc.splitTextToSize(quote.customer_address, contentWidth - 20);
-      addrLines.forEach((ln: string) => {
-        doc.text(ln, pageWidth / 2, coverY, { align: 'center' });
-        coverY += 5;
-      });
+      const addr = doc.splitTextToSize(quote.customer_address, cardW - 16);
+      doc.text(addr[0], cardX + 8, coverY + 30);
     }
-    coverY += 12;
+    coverY += cardH + 16;
 
-    // Presentation text
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(11);
-    doc.setTextColor(60, 60, 60);
-    const textLines = doc.splitTextToSize(company.default_presentation_text!.trim(), contentWidth - 10);
+    // ===== Presentation text (editorial pull-quote) =====
+    // Large gold opening quote mark
+    doc.setFont('times', 'bold');
+    doc.setFontSize(48);
+    doc.setTextColor(...GOLD);
+    doc.text('“', marginLeft + 4, coverY + 6);
+
+    doc.setFont('times', 'italic');
+    doc.setFontSize(12);
+    doc.setTextColor(60, 66, 78);
+    const textLines = doc.splitTextToSize(company.default_presentation_text!.trim(), contentWidth - 30);
+    let textY = coverY + 2;
+    const maxTextY = pageHeight - 42;
     textLines.forEach((ln: string) => {
-      if (coverY > pageHeight - 30) return;
-      doc.text(ln, marginLeft + 5, coverY, { maxWidth: contentWidth - 10 });
-      coverY += 6;
+      if (textY > maxTextY) return;
+      doc.text(ln, marginLeft + 18, textY);
+      textY += 6.2;
     });
 
-    // Footer signature
-    doc.setDrawColor(220, 220, 220);
-    doc.setLineWidth(0.2);
-    doc.line(marginLeft, pageHeight - 22, marginRight, pageHeight - 22);
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(9);
-    doc.setTextColor(140, 140, 140);
-    doc.text(company?.name || '', pageWidth / 2, pageHeight - 15, { align: 'center' });
-    if (company?.phone || company?.email) {
-      doc.text([company?.phone, company?.email].filter(Boolean).join('  •  '), pageWidth / 2, pageHeight - 10, { align: 'center' });
+    // ===== Bottom trust bar =====
+    const footerTop = pageHeight - 30;
+    doc.setFillColor(...NAVY);
+    doc.rect(0, footerTop, pageWidth, 30, 'F');
+    // Gold top hairline
+    doc.setDrawColor(...GOLD);
+    doc.setLineWidth(0.4);
+    doc.line(0, footerTop, pageWidth, footerTop);
+
+    // Trust pillars
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(...GOLD);
+    const pillars = ['QUALIDADE CERTIFICADA', 'PRAZOS GARANTIDOS', 'ATENDIMENTO PREMIUM'];
+    const pillarY = footerTop + 10;
+    const colW = pageWidth / 3;
+    pillars.forEach((p, i) => {
+      doc.text(p, colW * i + colW / 2, pillarY, { align: 'center' });
+    });
+
+    // Contact line
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(220, 220, 228);
+    const contact = [company?.phone, company?.email, company?.address]
+      .filter(Boolean)
+      .join('   ·   ');
+    if (contact) {
+      doc.text(contact, pageWidth / 2, footerTop + 20, { align: 'center', maxWidth: contentWidth });
     }
 
     // Force items to start on a new page
     doc.addPage();
     y = 15;
   }
+
+
 
   // ========== SLIM HEADER ==========
   let logoHeight = 0;
