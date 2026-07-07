@@ -134,12 +134,123 @@ export async function generateQuotePdf(
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  
+
   let y = 15;
   const marginLeft = 15;
   const marginRight = pageWidth - 15;
   const contentWidth = pageWidth - 30;
-  
+
+  // ========== COVER PAGE (optional) ==========
+  if (company?.enable_presentation_page && (company?.default_presentation_text || '').trim()) {
+    const coverLogoUrl = logoUrl;
+    let coverY = 40;
+
+    if (coverLogoUrl) {
+      const logoB64 = getCachedImage(coverLogoUrl);
+      if (logoB64) {
+        const size = 55;
+        try {
+          const circular = await cropImageToCircle(logoB64);
+          doc.addImage(circular, 'PNG', (pageWidth - size) / 2, coverY, size, size);
+        } catch {
+          try {
+            doc.addImage(logoB64, inferJsPdfImageFormat(logoB64), (pageWidth - size) / 2, coverY, size, size);
+          } catch {}
+        }
+        coverY += size + 12;
+      }
+    }
+
+    // Company name
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(18);
+    doc.setTextColor(30, 30, 30);
+    doc.text((company?.name || '').toUpperCase(), pageWidth / 2, coverY, { align: 'center' });
+    coverY += 18;
+
+    // Title
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(26);
+    doc.setTextColor(20, 20, 20);
+    doc.text('Proposta Comercial', pageWidth / 2, coverY, { align: 'center' });
+    coverY += 6;
+
+    // Thin divider
+    doc.setDrawColor(180, 180, 180);
+    doc.setLineWidth(0.3);
+    const divW = 60;
+    doc.line((pageWidth - divW) / 2, coverY, (pageWidth + divW) / 2, coverY);
+    coverY += 14;
+
+    // Quote number + date
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(90, 90, 90);
+    const coverDate = quote.created_at ? new Date(quote.created_at) : new Date();
+    doc.text(
+      `Orçamento Nº ${quote.quote_number.toString().padStart(4, '0')}  •  ${format(coverDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`,
+      pageWidth / 2,
+      coverY,
+      { align: 'center' }
+    );
+    coverY += 20;
+
+    // Customer block
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(120, 120, 120);
+    doc.text('APRESENTADO A', pageWidth / 2, coverY, { align: 'center' });
+    coverY += 6;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(40, 40, 40);
+    doc.text(quote.customer_name || '', pageWidth / 2, coverY, { align: 'center' });
+    coverY += 6;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(110, 110, 110);
+    const custLine = [quote.customer_phone, quote.customer_email].filter(Boolean).join('  •  ');
+    if (custLine) {
+      doc.text(custLine, pageWidth / 2, coverY, { align: 'center' });
+      coverY += 5;
+    }
+    if (quote.customer_address) {
+      const addrLines = doc.splitTextToSize(quote.customer_address, contentWidth - 20);
+      addrLines.forEach((ln: string) => {
+        doc.text(ln, pageWidth / 2, coverY, { align: 'center' });
+        coverY += 5;
+      });
+    }
+    coverY += 12;
+
+    // Presentation text
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(60, 60, 60);
+    const textLines = doc.splitTextToSize(company.default_presentation_text!.trim(), contentWidth - 10);
+    textLines.forEach((ln: string) => {
+      if (coverY > pageHeight - 30) return;
+      doc.text(ln, marginLeft + 5, coverY, { maxWidth: contentWidth - 10 });
+      coverY += 6;
+    });
+
+    // Footer signature
+    doc.setDrawColor(220, 220, 220);
+    doc.setLineWidth(0.2);
+    doc.line(marginLeft, pageHeight - 22, marginRight, pageHeight - 22);
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(9);
+    doc.setTextColor(140, 140, 140);
+    doc.text(company?.name || '', pageWidth / 2, pageHeight - 15, { align: 'center' });
+    if (company?.phone || company?.email) {
+      doc.text([company?.phone, company?.email].filter(Boolean).join('  •  '), pageWidth / 2, pageHeight - 10, { align: 'center' });
+    }
+
+    // Force items to start on a new page
+    doc.addPage();
+    y = 15;
+  }
+
   // ========== SLIM HEADER ==========
   let logoHeight = 0;
   let logoRenderedWidth = 0;
