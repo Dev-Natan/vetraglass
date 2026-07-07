@@ -61,6 +61,8 @@ interface Company {
   address?: string | null;
   logo_url?: string | null;
   logo_size?: number | null;
+  enable_presentation_page?: boolean | null;
+  default_presentation_text?: string | null;
 }
 
 interface InstallmentFee {
