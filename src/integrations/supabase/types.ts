@@ -1116,7 +1116,9 @@ export type Database = {
           codigo_municipio_ibge: string | null
           complement: string | null
           created_at: string
+          default_presentation_text: string | null
           email: string | null
+          enable_presentation_page: boolean
           id: string
           inscricao_estadual: string | null
           inscricao_municipal: string | null
@@ -1155,7 +1157,9 @@ export type Database = {
           codigo_municipio_ibge?: string | null
           complement?: string | null
           created_at?: string
+          default_presentation_text?: string | null
           email?: string | null
+          enable_presentation_page?: boolean
           id?: string
           inscricao_estadual?: string | null
           inscricao_municipal?: string | null
@@ -1194,7 +1198,9 @@ export type Database = {
           codigo_municipio_ibge?: string | null
           complement?: string | null
           created_at?: string
+          default_presentation_text?: string | null
           email?: string | null
+          enable_presentation_page?: boolean
           id?: string
           inscricao_estadual?: string | null
           inscricao_municipal?: string | null
@@ -8387,7 +8393,9 @@ export type Database = {
           codigo_municipio_ibge: string | null
           complement: string | null
           created_at: string
+          default_presentation_text: string | null
           email: string | null
+          enable_presentation_page: boolean
           id: string
           inscricao_estadual: string | null
           inscricao_municipal: string | null

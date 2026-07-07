@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Building2, Users, Bell, Shield, Database, Upload, ImageIcon, Trash2, KeyRound, Save, Loader2, CreditCard, Pencil } from 'lucide-react';
 import { EditCompanyDialog } from "@/components/configuracoes/EditCompanyDialog";
+import { PresentationPageSection } from "@/components/configuracoes/PresentationPageSection";
 
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -430,6 +431,12 @@ export default function Configuracoes() {
           </div>
         </div>
 
+
+        <PresentationPageSection
+          companyId={currentCompany?.id}
+          enabled={(company as any)?.enable_presentation_page}
+          text={(company as any)?.default_presentation_text}
+        />
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 animate-slide-up">
           {settingsGroups.map((group, index) => (
