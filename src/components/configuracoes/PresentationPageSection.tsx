@@ -47,7 +47,12 @@ export function PresentationPageSection({ companyId, enabled, text }: Props) {
 
   useEffect(() => {
     setIsEnabled(!!enabled);
-    setPresentationText(text ?? "");
+    const currentText = text ?? "";
+    setPresentationText(currentText);
+    const match = Object.entries(PRESENTATION_TEMPLATES).find(
+      ([, tpl]) => tpl.text.trim() === currentText.trim()
+    );
+    setTemplateKey(match ? match[0] : "");
   }, [enabled, text]);
 
   const saveMutation = useMutation({
