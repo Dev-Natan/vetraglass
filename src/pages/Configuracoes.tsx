@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Building2, Users, Bell, Shield, Database, Upload, ImageIcon, Trash2, KeyRound, Save, Loader2, CreditCard, Pencil } from 'lucide-react';
 import { EditCompanyDialog } from "@/components/configuracoes/EditCompanyDialog";
+import { PresentationPageSection } from "@/components/configuracoes/PresentationPageSection";
 
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
