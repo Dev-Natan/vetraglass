@@ -315,6 +315,8 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
       address: companyData.address,
       logo_url: companyData.logo_url,
       logo_size: companyData.logo_size,
+      enable_presentation_page: (companyData as any).enable_presentation_page,
+      default_presentation_text: (companyData as any).default_presentation_text,
     } : null;
     
     const itemsForPdf = items.map(item => ({
