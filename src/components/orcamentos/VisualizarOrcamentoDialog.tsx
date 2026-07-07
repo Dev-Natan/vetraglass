@@ -137,7 +137,7 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
       if (!currentCompany?.id) return null;
       const { data, error } = await supabase
         .from('companies')
-        .select('id, name, cnpj, phone, email, address, logo_url, logo_size')
+        .select('id, name, cnpj, phone, email, address, logo_url, logo_size, enable_presentation_page, default_presentation_text')
         .eq('id', currentCompany.id)
         .single();
       if (error) throw error;
