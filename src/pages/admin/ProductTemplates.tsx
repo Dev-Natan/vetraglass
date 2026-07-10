@@ -451,23 +451,39 @@ export default function ProductTemplates() {
     if (!selectedItem) return;
 
     const df = Array.isArray(selectedItem.default_formulas) ? selectedItem.default_formulas : [];
-    const pick = (keys: string[]) => {
-      const found = df.find((f: any) => keys.includes(String(f?.position ?? '').toLowerCase()));
-      return typeof found?.formula === 'string' ? found.formula : '';
-    };
-    const widthDefault = pick(['width', 'largura']);
-    const heightDefault = pick(['height', 'altura']);
+    const pick = (keys: string[]) =>
+      df.find((f: any) => keys.includes(String(f?.position ?? '').toLowerCase()));
+    const widthEntry: any = pick(['width', 'largura']);
+    const heightEntry: any = pick(['height', 'altura']);
 
-    if (widthDefault) {
-      setWidthFormula(widthDefault);
+    if (widthEntry?.formula) {
+      setWidthFormula(widthEntry.formula);
     } else if (compositionActiveTab === 'glass' && !widthFormula) {
       setWidthFormula('Largura');
     }
 
-    if (heightDefault) {
-      setHeightFormula(heightDefault);
+    if (heightEntry?.formula) {
+      setHeightFormula(heightEntry.formula);
     } else if (compositionActiveTab === 'glass' && !heightFormula) {
       setHeightFormula('Altura');
+    }
+
+    // Perfil: aplica campos ricos (posição, peças, ângulos) da fórmula padrão
+    if (compositionActiveTab === 'profile') {
+      const profileEntry: any = widthEntry || heightEntry;
+      if (profileEntry) {
+        const isHeight = ['height', 'altura'].includes(String(profileEntry.position ?? '').toLowerCase());
+        setProfilePosition(isHeight ? 'Altura' : 'Largura');
+        if (typeof profileEntry.pieces === 'string' && profileEntry.pieces.trim()) {
+          setPiecesFormula(profileEntry.pieces.trim());
+        }
+        if (typeof profileEntry.cutAngleStart === 'number') {
+          setCutAngleStart(profileEntry.cutAngleStart);
+        }
+        if (typeof profileEntry.cutAngleEnd === 'number') {
+          setCutAngleEnd(profileEntry.cutAngleEnd);
+        }
+      }
     }
 
     lastAutoFilledItemRef.current = selectedItemToAdd;
