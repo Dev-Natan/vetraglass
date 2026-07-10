@@ -30,6 +30,8 @@ interface Employee {
   user_id?: string | null;
   username?: string | null;
   photo_url?: string | null;
+  admission_date?: string | null;
+  salary_payment_day?: number | null;
 }
 
 interface EmployeeDialogProps {
