@@ -32,6 +32,11 @@ import { useProductLinhas } from '@/hooks/useProductLinhas';
 import { LinhaCardSimple } from '@/components/produtos/LinhaCardSimple';
 import { ProfileColorPricesSection } from '@/components/admin/product-templates/ProfileColorPricesSection';
 
+interface DefaultFormulaEntry {
+  position: string;
+  formula: string;
+}
+
 interface ItemTemplate {
   id: string;
   name: string;
@@ -48,7 +53,24 @@ interface ItemTemplate {
   specifications: unknown;
   image_url: string | null;
   is_active: boolean;
+  default_formulas: DefaultFormulaEntry[] | unknown | null;
   created_at: string;
+}
+
+/** Lê largura/altura de default_formulas aceitando os formatos 'width'|'height' e legado 'Largura'|'Altura'. */
+function readDefaultFormulas(raw: unknown): { width: string; height: string } {
+  if (!Array.isArray(raw)) return { width: '', height: '' };
+  const findPos = (keys: string[]) => {
+    const found = (raw as any[]).find((f) => {
+      const p = String(f?.position ?? '').toLowerCase();
+      return keys.includes(p);
+    });
+    return typeof found?.formula === 'string' ? found.formula : '';
+  };
+  return {
+    width: findPos(['width', 'largura']),
+    height: findPos(['height', 'altura']),
+  };
 }
 
 const unitLabels: Record<string, string> = {
@@ -92,6 +114,8 @@ export default function ItemTemplates() {
     bar_length_mm: '6000',
     specifications: '{}',
     is_active: true,
+    default_width_formula: '',
+    default_height_formula: '',
   };
   const [formData, setFormData] = useState(defaultFormData);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -123,7 +147,7 @@ export default function ItemTemplates() {
       
       let query = supabase
         .from('item_templates')
-        .select('id, name, description, type, unit, linha, default_price, weight_per_meter, weight_per_bar, default_cost, default_sale_price, bar_length_mm, specifications, image_url, is_active, created_at', { count: 'exact' });
+        .select('id, name, description, type, unit, linha, default_price, weight_per_meter, weight_per_bar, default_cost, default_sale_price, bar_length_mm, specifications, image_url, is_active, default_formulas, created_at', { count: 'exact' });
       
       if (searchTerm) {
         query = query.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
@@ -274,6 +298,11 @@ export default function ItemTemplates() {
         imageUrl = urlData.publicUrl;
       }
       const specsBase = JSON.parse(data.specifications || '{}');
+      const wf = (data.default_width_formula || '').trim();
+      const hf = (data.default_height_formula || '').trim();
+      const df: DefaultFormulaEntry[] = [];
+      if (wf) df.push({ position: 'width', formula: wf });
+      if (hf) df.push({ position: 'height', formula: hf });
       const itemData: any = {
         name: data.name,
         description: data.description || null,
@@ -284,6 +313,7 @@ export default function ItemTemplates() {
         specifications: specsBase,
         image_url: imageUrl,
         is_active: data.is_active,
+        default_formulas: df.length ? df : null,
       };
       if (data.type === 'profile') {
         itemData.weight_per_meter = parseFloat(data.weight_per_meter) || null;
@@ -461,6 +491,7 @@ export default function ItemTemplates() {
 
   const handleEdit = (item: ItemTemplate) => {
     setEditingItem(item);
+    const { width: dwf, height: dhf } = readDefaultFormulas(item.default_formulas as unknown);
     setFormData({
       name: item.name,
       description: item.description || '',
@@ -475,6 +506,8 @@ export default function ItemTemplates() {
       bar_length_mm: item.bar_length_mm?.toString() || '6000',
       specifications: JSON.stringify(item.specifications, null, 2),
       is_active: item.is_active,
+      default_width_formula: dwf,
+      default_height_formula: dhf,
     });
     setImagePreview(item.image_url);
     setDialogOpen(true);
@@ -810,6 +843,36 @@ export default function ItemTemplates() {
                 <div className="space-y-2">
                   <Label htmlFor="description">Descrição</Label>
                   <Textarea id="description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={2} placeholder="Descrição do item..." />
+                </div>
+                <div className="space-y-3 p-4 rounded-lg border border-primary/20 bg-primary/5">
+                  <div>
+                    <h4 className="text-sm font-semibold text-foreground">Fórmulas padrão (opcional)</h4>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Sugeridas automaticamente ao adicionar este insumo na composição de um produto. Podem usar variáveis como <code>L</code>, <code>A</code>, <code>FL</code>, <code>FA</code>.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="default_width_formula">Fórmula Padrão de Largura</Label>
+                      <Input
+                        id="default_width_formula"
+                        value={formData.default_width_formula}
+                        onChange={(e) => setFormData({ ...formData, default_width_formula: e.target.value })}
+                        placeholder="Ex: L - 40"
+                        className="font-mono text-sm"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="default_height_formula">Fórmula Padrão de Altura</Label>
+                      <Input
+                        id="default_height_formula"
+                        value={formData.default_height_formula}
+                        onChange={(e) => setFormData({ ...formData, default_height_formula: e.target.value })}
+                        placeholder="Ex: A - 40"
+                        className="font-mono text-sm"
+                      />
+                    </div>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="specifications">Especificações (JSON)</Label>
