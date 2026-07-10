@@ -147,7 +147,7 @@ export default function ItemTemplates() {
       
       let query = supabase
         .from('item_templates')
-        .select('id, name, description, type, unit, linha, default_price, weight_per_meter, weight_per_bar, default_cost, default_sale_price, bar_length_mm, specifications, image_url, is_active, created_at', { count: 'exact' });
+        .select('id, name, description, type, unit, linha, default_price, weight_per_meter, weight_per_bar, default_cost, default_sale_price, bar_length_mm, specifications, image_url, is_active, default_formulas, created_at', { count: 'exact' });
       
       if (searchTerm) {
         query = query.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
