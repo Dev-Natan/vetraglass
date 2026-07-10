@@ -638,7 +638,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                   Voltar
                 </Button>
                 <div className="text-xs text-muted-foreground truncate">
-                  {selectedLinha}
+                  {linhas.find(l => l.slug === selectedLinha)?.name || selectedLinha}
                   {selectedCategory && <> · <span className="text-foreground font-medium">{selectedCategory === '__all__' ? 'Todos' : selectedCategory}</span></>}
                 </div>
               </div>
