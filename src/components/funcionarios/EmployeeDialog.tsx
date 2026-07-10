@@ -248,6 +248,18 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
     if (!validateAllFields()) return;
     if (!validatePassword()) return;
 
+    // Validação: se tem salário, admission_date é obrigatório e payment_day é 1-31
+    if (formData.hourly_rate > 0) {
+      if (!formData.admission_date) {
+        setFieldErrors((prev) => ({ ...prev, admission_date: 'Informe a data de admissão' }));
+        return;
+      }
+      if (!formData.salary_payment_day || formData.salary_payment_day < 1 || formData.salary_payment_day > 31) {
+        setFieldErrors((prev) => ({ ...prev, salary_payment_day: 'Dia deve estar entre 1 e 31' }));
+        return;
+      }
+    }
+
     await onSave({
       name: formData.name,
       email: formData.email || null,
@@ -262,6 +274,8 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
       commission_type: formData.commission_type,
       permission_profile_id: formData.permission_profile_id,
       photo_url: formData.photo_url,
+      admission_date: formData.hourly_rate > 0 ? (formData.admission_date || null) : (formData.admission_date || null),
+      salary_payment_day: formData.hourly_rate > 0 ? formData.salary_payment_day : null,
       createSystemAccess: formData.createSystemAccess,
       username: generatedLogin || null, // Login gerado automaticamente
       password: formData.createSystemAccess ? formData.password : undefined,
