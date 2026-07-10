@@ -33,8 +33,11 @@ import { LinhaCardSimple } from '@/components/produtos/LinhaCardSimple';
 import { ProfileColorPricesSection } from '@/components/admin/product-templates/ProfileColorPricesSection';
 
 interface DefaultFormulaEntry {
-  position: string;
-  formula: string;
+  position: string;              // 'width' | 'height' | 'largura' | 'altura'
+  formula: string;               // fórmula do comprimento
+  pieces?: string | null;        // qtd de peças (ex: "2", "N", "N*2")
+  cutAngleStart?: number | null; // ângulo início (°)
+  cutAngleEnd?: number | null;   // ângulo fim (°)
 }
 
 interface ItemTemplate {
@@ -57,19 +60,31 @@ interface ItemTemplate {
   created_at: string;
 }
 
-/** Lê largura/altura de default_formulas aceitando os formatos 'width'|'height' e legado 'Largura'|'Altura'. */
-function readDefaultFormulas(raw: unknown): { width: string; height: string } {
-  if (!Array.isArray(raw)) return { width: '', height: '' };
-  const findPos = (keys: string[]) => {
-    const found = (raw as any[]).find((f) => {
-      const p = String(f?.position ?? '').toLowerCase();
-      return keys.includes(p);
-    });
-    return typeof found?.formula === 'string' ? found.formula : '';
-  };
+/** Lê as fórmulas padrão com suporte a formatos novo/legado e campos ricos (peças, ângulos). */
+function readDefaultFormulas(raw: unknown): {
+  width: string;
+  height: string;
+  profilePosition: 'Largura' | 'Altura';
+  profileFormula: string;
+  profilePieces: string;
+  profileAngleStart: number;
+  profileAngleEnd: number;
+} {
+  const arr = Array.isArray(raw) ? (raw as any[]) : [];
+  const findPos = (keys: string[]) =>
+    arr.find((f) => keys.includes(String(f?.position ?? '').toLowerCase()));
+  const widthEntry = findPos(['width', 'largura']);
+  const heightEntry = findPos(['height', 'altura']);
+  const profileEntry = widthEntry || heightEntry || arr[0];
+  const isHeight = profileEntry && ['height', 'altura'].includes(String(profileEntry.position ?? '').toLowerCase());
   return {
-    width: findPos(['width', 'largura']),
-    height: findPos(['height', 'altura']),
+    width: typeof widthEntry?.formula === 'string' ? widthEntry.formula : '',
+    height: typeof heightEntry?.formula === 'string' ? heightEntry.formula : '',
+    profilePosition: isHeight ? 'Altura' : 'Largura',
+    profileFormula: typeof profileEntry?.formula === 'string' ? profileEntry.formula : '',
+    profilePieces: profileEntry?.pieces != null ? String(profileEntry.pieces) : '',
+    profileAngleStart: typeof profileEntry?.cutAngleStart === 'number' ? profileEntry.cutAngleStart : 90,
+    profileAngleEnd: typeof profileEntry?.cutAngleEnd === 'number' ? profileEntry.cutAngleEnd : 90,
   };
 }
 
@@ -116,6 +131,12 @@ export default function ItemTemplates() {
     is_active: true,
     default_width_formula: '',
     default_height_formula: '',
+    // Perfil: fórmula padrão rica (posição + peças + ângulos)
+    default_profile_position: 'Largura' as 'Largura' | 'Altura',
+    default_profile_formula: '',
+    default_profile_pieces: '',
+    default_profile_angle_start: '90',
+    default_profile_angle_end: '90',
   };
   const [formData, setFormData] = useState(defaultFormData);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -298,11 +319,28 @@ export default function ItemTemplates() {
         imageUrl = urlData.publicUrl;
       }
       const specsBase = JSON.parse(data.specifications || '{}');
-      const wf = (data.default_width_formula || '').trim();
-      const hf = (data.default_height_formula || '').trim();
       const df: DefaultFormulaEntry[] = [];
-      if (wf) df.push({ position: 'width', formula: wf });
-      if (hf) df.push({ position: 'height', formula: hf });
+      if (data.type === 'profile') {
+        const pf = (data.default_profile_formula || '').trim();
+        if (pf) {
+          const pos = data.default_profile_position === 'Altura' ? 'height' : 'width';
+          const pieces = (data.default_profile_pieces || '').trim();
+          const as = parseInt(data.default_profile_angle_start);
+          const ae = parseInt(data.default_profile_angle_end);
+          df.push({
+            position: pos,
+            formula: pf,
+            pieces: pieces || null,
+            cutAngleStart: Number.isFinite(as) ? as : 90,
+            cutAngleEnd: Number.isFinite(ae) ? ae : 90,
+          });
+        }
+      } else {
+        const wf = (data.default_width_formula || '').trim();
+        const hf = (data.default_height_formula || '').trim();
+        if (wf) df.push({ position: 'width', formula: wf });
+        if (hf) df.push({ position: 'height', formula: hf });
+      }
       const itemData: any = {
         name: data.name,
         description: data.description || null,
@@ -491,7 +529,7 @@ export default function ItemTemplates() {
 
   const handleEdit = (item: ItemTemplate) => {
     setEditingItem(item);
-    const { width: dwf, height: dhf } = readDefaultFormulas(item.default_formulas as unknown);
+    const parsed = readDefaultFormulas(item.default_formulas as unknown);
     setFormData({
       name: item.name,
       description: item.description || '',
@@ -506,8 +544,13 @@ export default function ItemTemplates() {
       bar_length_mm: item.bar_length_mm?.toString() || '6000',
       specifications: JSON.stringify(item.specifications, null, 2),
       is_active: item.is_active,
-      default_width_formula: dwf,
-      default_height_formula: dhf,
+      default_width_formula: parsed.width,
+      default_height_formula: parsed.height,
+      default_profile_position: parsed.profilePosition,
+      default_profile_formula: parsed.profileFormula,
+      default_profile_pieces: parsed.profilePieces,
+      default_profile_angle_start: String(parsed.profileAngleStart),
+      default_profile_angle_end: String(parsed.profileAngleEnd),
     });
     setImagePreview(item.image_url);
     setDialogOpen(true);
@@ -848,31 +891,145 @@ export default function ItemTemplates() {
                   <div>
                     <h4 className="text-sm font-semibold text-foreground">Fórmulas padrão (opcional)</h4>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Sugeridas automaticamente ao adicionar este insumo na composição de um produto. Podem usar variáveis como <code>L</code>, <code>A</code>, <code>FL</code>, <code>FA</code>.
+                      Sugeridas automaticamente ao adicionar este insumo na composição de um produto. Variáveis disponíveis:{' '}
+                      <code>L</code> (largura), <code>A</code> (altura), <code>FL</code>/<code>FA</code> (folgas), <code>N</code> (nº de folhas).
                     </p>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="default_width_formula">Fórmula Padrão de Largura</Label>
-                      <Input
-                        id="default_width_formula"
-                        value={formData.default_width_formula}
-                        onChange={(e) => setFormData({ ...formData, default_width_formula: e.target.value })}
-                        placeholder="Ex: L - 40"
-                        className="font-mono text-sm"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="default_height_formula">Fórmula Padrão de Altura</Label>
-                      <Input
-                        id="default_height_formula"
-                        value={formData.default_height_formula}
-                        onChange={(e) => setFormData({ ...formData, default_height_formula: e.target.value })}
-                        placeholder="Ex: A - 40"
-                        className="font-mono text-sm"
-                      />
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {['L', 'A', 'L/2', 'A/2', 'L-FL', 'A-FA', 'L-40', 'A-40'].map((hint) => (
+                        <button
+                          key={hint}
+                          type="button"
+                          onClick={() => {
+                            if (formData.type === 'profile') {
+                              setFormData({ ...formData, default_profile_formula: (formData.default_profile_formula || '') + hint });
+                            }
+                          }}
+                          className="px-2 py-0.5 text-[10px] font-mono rounded border border-border bg-background hover:bg-accent"
+                        >
+                          {hint}
+                        </button>
+                      ))}
                     </div>
                   </div>
+
+                  {formData.type === 'profile' ? (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <Label>Posição padrão</Label>
+                          <div className="flex gap-2">
+                            {(['Largura', 'Altura'] as const).map((pos) => (
+                              <Button
+                                key={pos}
+                                type="button"
+                                size="sm"
+                                variant={formData.default_profile_position === pos ? 'default' : 'outline'}
+                                onClick={() => setFormData({ ...formData, default_profile_position: pos })}
+                                className="flex-1"
+                              >
+                                {pos}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="default_profile_pieces">Peças (quantidade)</Label>
+                          <Input
+                            id="default_profile_pieces"
+                            value={formData.default_profile_pieces}
+                            onChange={(e) => setFormData({ ...formData, default_profile_pieces: e.target.value })}
+                            placeholder="Ex: 2 ou N"
+                            className="font-mono text-sm"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="default_profile_formula">
+                          Fórmula Padrão de {formData.default_profile_position}
+                        </Label>
+                        <Input
+                          id="default_profile_formula"
+                          value={formData.default_profile_formula}
+                          onChange={(e) => setFormData({ ...formData, default_profile_formula: e.target.value })}
+                          placeholder={formData.default_profile_position === 'Largura' ? 'Ex: L - 40' : 'Ex: A - 40'}
+                          className="font-mono text-sm"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <Label htmlFor="default_profile_angle_start">Ângulo Início (°)</Label>
+                          <div className="flex gap-1">
+                            {[45, 90, 135].map((ang) => (
+                              <Button
+                                key={ang}
+                                type="button"
+                                size="sm"
+                                variant={parseInt(formData.default_profile_angle_start) === ang ? 'default' : 'outline'}
+                                onClick={() => setFormData({ ...formData, default_profile_angle_start: String(ang) })}
+                                className="flex-1"
+                              >
+                                {ang}°
+                              </Button>
+                            ))}
+                            <Input
+                              id="default_profile_angle_start"
+                              type="number"
+                              value={formData.default_profile_angle_start}
+                              onChange={(e) => setFormData({ ...formData, default_profile_angle_start: e.target.value })}
+                              className="w-16 text-sm"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="default_profile_angle_end">Ângulo Fim (°)</Label>
+                          <div className="flex gap-1">
+                            {[45, 90, 135].map((ang) => (
+                              <Button
+                                key={ang}
+                                type="button"
+                                size="sm"
+                                variant={parseInt(formData.default_profile_angle_end) === ang ? 'default' : 'outline'}
+                                onClick={() => setFormData({ ...formData, default_profile_angle_end: String(ang) })}
+                                className="flex-1"
+                              >
+                                {ang}°
+                              </Button>
+                            ))}
+                            <Input
+                              id="default_profile_angle_end"
+                              type="number"
+                              value={formData.default_profile_angle_end}
+                              onChange={(e) => setFormData({ ...formData, default_profile_angle_end: e.target.value })}
+                              className="w-16 text-sm"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="default_width_formula">Fórmula Padrão de Largura</Label>
+                        <Input
+                          id="default_width_formula"
+                          value={formData.default_width_formula}
+                          onChange={(e) => setFormData({ ...formData, default_width_formula: e.target.value })}
+                          placeholder="Ex: L - 40"
+                          className="font-mono text-sm"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="default_height_formula">Fórmula Padrão de Altura</Label>
+                        <Input
+                          id="default_height_formula"
+                          value={formData.default_height_formula}
+                          onChange={(e) => setFormData({ ...formData, default_height_formula: e.target.value })}
+                          placeholder="Ex: A - 40"
+                          className="font-mono text-sm"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="specifications">Especificações (JSON)</Label>
