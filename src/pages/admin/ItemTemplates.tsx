@@ -874,7 +874,7 @@ export default function ItemTemplates() {
                     </div>
                   </div>
                 </div>
-
+                <div className="space-y-2">
                   <Label htmlFor="specifications">Especificações (JSON)</Label>
                   <Textarea id="specifications" value={formData.specifications} onChange={(e) => setFormData({ ...formData, specifications: e.target.value })} rows={2} className="font-mono text-sm" placeholder='{"peso": "0.5kg/m"}' />
                 </div>
