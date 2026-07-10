@@ -678,14 +678,15 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 p-1 pb-3">
-                      {linhas.map((linha) => {
-                        const count = (companyProducts || []).filter(p => (p.linha || (p.product_template as any)?.linha) === linha).length;
-                        const displayName = (linha || '').replace(/^#/, '').replace(/\b\w/g, c => c.toUpperCase());
+                      {linhas.map(({ slug, name }) => {
+                        const count = (companyProducts || []).filter(p =>
+                          productMatchesLinha(p.linha || (p.product_template as any)?.linha, slug)
+                        ).length;
                         return (
                           <button
-                            key={linha}
+                            key={slug}
                             type="button"
-                            onClick={() => handleLinhaChange(linha!)}
+                            onClick={() => handleLinhaChange(slug)}
                             className={cn(
                               "group relative flex flex-col items-start gap-4 rounded-2xl border border-border/60 bg-card p-5 text-left min-h-[140px]",
                               "transition-all duration-200 hover:border-primary/40 hover:bg-accent/30 hover:-translate-y-0.5",
@@ -696,7 +697,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                               <LayoutGrid className="w-5 h-5 text-primary" strokeWidth={2} />
                             </div>
                             <div className="flex-1">
-                              <p className="text-base font-semibold text-foreground leading-tight">{displayName}</p>
+                              <p className="text-base font-semibold text-foreground leading-tight">{name}</p>
                               <p className="text-xs text-muted-foreground/70 mt-1">
                                 {count} {count === 1 ? 'produto' : 'produtos'}
                               </p>
@@ -705,6 +706,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                         );
                       })}
                     </div>
+
                   )
                 ) : catalogStep === 2 ? (
                   // ── Passo 2: Categorias ──
