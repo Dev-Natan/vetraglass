@@ -53,7 +53,7 @@ interface ItemTemplate {
   specifications: unknown;
   image_url: string | null;
   is_active: boolean;
-  default_formulas: DefaultFormulaEntry[] | null;
+  default_formulas: DefaultFormulaEntry[] | unknown | null;
   created_at: string;
 }
 
