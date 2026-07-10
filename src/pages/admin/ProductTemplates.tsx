@@ -456,24 +456,15 @@ export default function ProductTemplates() {
     const widthEntry: any = pick(['width', 'largura']);
     const heightEntry: any = pick(['height', 'altura']);
 
-    if (widthEntry?.formula) {
-      setWidthFormula(widthEntry.formula);
-    } else if (compositionActiveTab === 'glass' && !widthFormula) {
-      setWidthFormula('Largura');
-    }
-
-    if (heightEntry?.formula) {
-      setHeightFormula(heightEntry.formula);
-    } else if (compositionActiveTab === 'glass' && !heightFormula) {
-      setHeightFormula('Altura');
-    }
-
-    // Perfil: aplica campos ricos (posição, peças, ângulos) da fórmula padrão
     if (compositionActiveTab === 'profile') {
+      // Perfil: a fórmula do comprimento é gravada em quantityFormula (não width/height)
       const profileEntry: any = widthEntry || heightEntry;
       if (profileEntry) {
         const isHeight = ['height', 'altura'].includes(String(profileEntry.position ?? '').toLowerCase());
         setProfilePosition(isHeight ? 'Altura' : 'Largura');
+        if (typeof profileEntry.formula === 'string' && profileEntry.formula.trim()) {
+          setQuantityFormula(profileEntry.formula.trim());
+        }
         if (typeof profileEntry.pieces === 'string' && profileEntry.pieces.trim()) {
           setPiecesFormula(profileEntry.pieces.trim());
         }
@@ -484,7 +475,19 @@ export default function ProductTemplates() {
           setCutAngleEnd(profileEntry.cutAngleEnd);
         }
       }
+    } else {
+      if (widthEntry?.formula) {
+        setWidthFormula(widthEntry.formula);
+      } else if (compositionActiveTab === 'glass' && !widthFormula) {
+        setWidthFormula('Largura');
+      }
+      if (heightEntry?.formula) {
+        setHeightFormula(heightEntry.formula);
+      } else if (compositionActiveTab === 'glass' && !heightFormula) {
+        setHeightFormula('Altura');
+      }
     }
+
 
     lastAutoFilledItemRef.current = selectedItemToAdd;
     // eslint-disable-next-line react-hooks/exhaustive-deps
