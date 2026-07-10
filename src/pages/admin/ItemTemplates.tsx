@@ -491,6 +491,7 @@ export default function ItemTemplates() {
 
   const handleEdit = (item: ItemTemplate) => {
     setEditingItem(item);
+    const { width: dwf, height: dhf } = readDefaultFormulas(item.default_formulas as unknown);
     setFormData({
       name: item.name,
       description: item.description || '',
@@ -505,6 +506,8 @@ export default function ItemTemplates() {
       bar_length_mm: item.bar_length_mm?.toString() || '6000',
       specifications: JSON.stringify(item.specifications, null, 2),
       is_active: item.is_active,
+      default_width_formula: dwf,
+      default_height_formula: dhf,
     });
     setImagePreview(item.image_url);
     setDialogOpen(true);
