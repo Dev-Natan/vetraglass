@@ -358,17 +358,17 @@ export function ProductSelectionSheet({ open, onOpenChange, onSelectProduct }: P
                       Escolha uma linha de produtos para começar
                     </p>
                     <div className="grid grid-cols-2 gap-3">
-                      {linhas.map((linha) => {
-                        const count = activeProducts.filter(p => p.linha === linha).length;
+                      {linhas.map(({ slug, name }) => {
+                        const count = activeProducts.filter(p => productMatchesLinha(p.linha, slug)).length;
                         return (
                           <button
-                            key={linha}
-                            onClick={() => handleSelectLinha(linha)}
+                            key={slug}
+                            onClick={() => handleSelectLinha(slug)}
                             className="group relative p-5 rounded-xl border-2 border-border bg-card hover:border-primary hover:shadow-lg transition-all text-left"
                           >
                             <div className="text-2xl mb-2">📐</div>
                             <h3 className="font-semibold text-base group-hover:text-primary transition-colors">
-                              {linha}
+                              {name}
                             </h3>
                             <p className="text-xs text-muted-foreground mt-1">
                               {count} {count === 1 ? 'produto' : 'produtos'}
@@ -377,6 +377,7 @@ export function ProductSelectionSheet({ open, onOpenChange, onSelectProduct }: P
                           </button>
                         );
                       })}
+
                     </div>
                   </div>
                 )}
