@@ -151,25 +151,26 @@ export function ProductSelectionSheet({ open, onOpenChange, onSelectProduct }: P
   }, [activeProducts, linhaSlugToName, productLinhas]);
 
 
-  // Get categories for selected linha
+  // Get categories for selected linha (by slug)
   const categories = useMemo(() => {
     if (!selectedLinha) return [];
     const catSet = new Set<string>();
     activeProducts
-      .filter(p => p.linha === selectedLinha)
+      .filter(p => productMatchesLinha(p.linha, selectedLinha))
       .forEach(p => {
         if (p.category) catSet.add(p.category);
       });
     return Array.from(catSet).sort();
-  }, [activeProducts, selectedLinha]);
+  }, [activeProducts, selectedLinha, linhaSlugToName, productLinhas]);
 
   // Get products for selected linha and category
   const products = useMemo(() => {
     if (!selectedLinha || !selectedCategory) return [];
     return activeProducts.filter(
-      p => p.linha === selectedLinha && p.category === selectedCategory
+      p => productMatchesLinha(p.linha, selectedLinha) && p.category === selectedCategory
     );
-  }, [activeProducts, selectedLinha, selectedCategory]);
+  }, [activeProducts, selectedLinha, selectedCategory, linhaSlugToName, productLinhas]);
+
 
   // Filtered products by search
   const filteredProducts = useMemo(() => {
