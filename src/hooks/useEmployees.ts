@@ -114,28 +114,15 @@ export function useEmployees() {
 
       if (error) throw error;
 
-      // Create automatic expense if employee has a salary (hourly_rate)
+      // Gera despesa mensal de salário (idempotente)
       if (employeeData.hourly_rate && employeeData.hourly_rate > 0) {
-        const monthlyAmount = employeeData.hourly_rate;
-        const nextDueDate = new Date();
-        nextDueDate.setDate(5); // Day 5 of each month as default payment day
-        if (nextDueDate.getDate() < 5) {
-          // If we're before day 5, use current month
-        } else {
-          // If we're past day 5, use next month
-          nextDueDate.setMonth(nextDueDate.getMonth() + 1);
-        }
-
-        await supabase.from('expenses').insert({
-          company_id: currentCompany.id,
-          category: 'funcionarios',
-          description: `Salário - ${employeeData.name}`,
-          amount: monthlyAmount,
-          due_date: nextDueDate.toISOString().split('T')[0],
-          status: 'pending',
-          recurrence: 'monthly',
-          employee_id: data.id,
-          notes: 'Despesa gerada automaticamente ao cadastrar funcionário',
+        await ensureMonthlySalaryExpense({
+          companyId: currentCompany.id,
+          employeeId: data.id,
+          employeeName: employeeData.name,
+          amount: employeeData.hourly_rate,
+          paymentDay: employeeData.salary_payment_day ?? 5,
+          admissionDate: employeeData.admission_date ?? null,
         });
       }
 
