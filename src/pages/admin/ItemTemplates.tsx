@@ -298,6 +298,11 @@ export default function ItemTemplates() {
         imageUrl = urlData.publicUrl;
       }
       const specsBase = JSON.parse(data.specifications || '{}');
+      const wf = (data.default_width_formula || '').trim();
+      const hf = (data.default_height_formula || '').trim();
+      const df: DefaultFormulaEntry[] = [];
+      if (wf) df.push({ position: 'width', formula: wf });
+      if (hf) df.push({ position: 'height', formula: hf });
       const itemData: any = {
         name: data.name,
         description: data.description || null,
@@ -308,6 +313,7 @@ export default function ItemTemplates() {
         specifications: specsBase,
         image_url: imageUrl,
         is_active: data.is_active,
+        default_formulas: df.length ? df : null,
       };
       if (data.type === 'profile') {
         itemData.weight_per_meter = parseFloat(data.weight_per_meter) || null;
