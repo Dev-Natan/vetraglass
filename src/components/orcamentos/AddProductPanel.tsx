@@ -741,7 +741,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                         const count = (companyProducts || []).filter(p => {
                           const linha = p.linha || (p.product_template as any)?.linha;
                           const c = p.category || (p.product_template as any)?.category;
-                          return linha === selectedLinha && categoryNormalizer.match(c, cat);
+                          return productMatchesLinha(linha, selectedLinha) && categoryNormalizer.match(c, cat);
                         }).length;
                         const CategoryIcon = getCategoryIcon(cat);
                         const displayName = (cat || '').replace(/^#/, '');
