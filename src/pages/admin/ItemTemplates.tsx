@@ -844,7 +844,37 @@ export default function ItemTemplates() {
                   <Label htmlFor="description">Descrição</Label>
                   <Textarea id="description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={2} placeholder="Descrição do item..." />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-3 p-4 rounded-lg border border-primary/20 bg-primary/5">
+                  <div>
+                    <h4 className="text-sm font-semibold text-foreground">Fórmulas padrão (opcional)</h4>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Sugeridas automaticamente ao adicionar este insumo na composição de um produto. Podem usar variáveis como <code>L</code>, <code>A</code>, <code>FL</code>, <code>FA</code>.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="default_width_formula">Fórmula Padrão de Largura</Label>
+                      <Input
+                        id="default_width_formula"
+                        value={formData.default_width_formula}
+                        onChange={(e) => setFormData({ ...formData, default_width_formula: e.target.value })}
+                        placeholder="Ex: L - 40"
+                        className="font-mono text-sm"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="default_height_formula">Fórmula Padrão de Altura</Label>
+                      <Input
+                        id="default_height_formula"
+                        value={formData.default_height_formula}
+                        onChange={(e) => setFormData({ ...formData, default_height_formula: e.target.value })}
+                        placeholder="Ex: A - 40"
+                        className="font-mono text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+
                   <Label htmlFor="specifications">Especificações (JSON)</Label>
                   <Textarea id="specifications" value={formData.specifications} onChange={(e) => setFormData({ ...formData, specifications: e.target.value })} rows={2} className="font-mono text-sm" placeholder='{"peso": "0.5kg/m"}' />
                 </div>
