@@ -135,18 +135,29 @@ function TemplateCard({ template }: { template: Template }) {
   return (
     <Card>
       <Collapsible open={open} onOpenChange={setOpen}>
-        <CollapsibleTrigger asChild>
-          <button className="w-full flex items-center justify-between p-4 hover:bg-muted/40 text-left">
-            <div className="flex items-center gap-3">
-              {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-              <div>
-                <div className="font-semibold">{template.name}</div>
-                {template.linha && <div className="text-xs text-muted-foreground">{template.linha}</div>}
-              </div>
+        <div className="w-full flex items-stretch">
+          <Link
+            to={`/admin/insumos?edit=${template.id}`}
+            className="flex-1 flex items-center gap-3 p-4 hover:bg-muted/40 text-left rounded-l-lg transition-colors"
+            title="Editar insumo"
+          >
+            <div>
+              <div className="font-semibold hover:underline">{template.name}</div>
+              {template.linha && <div className="text-xs text-muted-foreground">{template.linha}</div>}
             </div>
-            {open && <Badge variant="secondary">{rows.length} cor(es)</Badge>}
-          </button>
-        </CollapsibleTrigger>
+          </Link>
+          <CollapsibleTrigger asChild>
+            <button
+              className="flex items-center gap-2 px-4 border-l hover:bg-muted/40 text-sm text-muted-foreground"
+              title={open ? 'Ocultar cores' : 'Ver cores'}
+            >
+              {open && <Badge variant="secondary">{rows.length} cor(es)</Badge>}
+              <span className="hidden sm:inline">Cores</span>
+              {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            </button>
+          </CollapsibleTrigger>
+        </div>
+
         <CollapsibleContent>
           <div className="px-4 pb-4 space-y-3">
             <div className="flex gap-2">
