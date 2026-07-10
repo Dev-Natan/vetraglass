@@ -438,22 +438,41 @@ export default function ProductTemplates() {
     cutAngleEnd,
   ]);
 
+  const lastAutoFilledItemRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!selectedItemToAdd || compositionActiveTab !== 'glass') return;
-    
-    const selectedItem = itemTemplates?.find(it => it.id === selectedItemToAdd);
-    if (selectedItem?.default_formulas) {
-      const widthDef = selectedItem.default_formulas.find(f => f.position === 'width');
-      const heightDef = selectedItem.default_formulas.find(f => f.position === 'height');
-      
-      if (widthDef) setWidthFormula(widthDef.formula);
-      if (heightDef) setHeightFormula(heightDef.formula);
-    } else {
-      // Set some common defaults if none provided
-      if (!widthFormula) setWidthFormula("Largura");
-      if (!heightFormula) setHeightFormula("Altura");
+    if (!selectedItemToAdd) {
+      lastAutoFilledItemRef.current = null;
+      return;
     }
-  }, [selectedItemToAdd, compositionActiveTab, itemTemplates]);
+    // Só auto-preenche quando o usuário TROCA de item selecionado
+    if (lastAutoFilledItemRef.current === selectedItemToAdd) return;
+
+    const selectedItem = itemTemplates?.find((it) => it.id === selectedItemToAdd);
+    if (!selectedItem) return;
+
+    const df = Array.isArray(selectedItem.default_formulas) ? selectedItem.default_formulas : [];
+    const pick = (keys: string[]) => {
+      const found = df.find((f: any) => keys.includes(String(f?.position ?? '').toLowerCase()));
+      return typeof found?.formula === 'string' ? found.formula : '';
+    };
+    const widthDefault = pick(['width', 'largura']);
+    const heightDefault = pick(['height', 'altura']);
+
+    if (widthDefault) {
+      setWidthFormula(widthDefault);
+    } else if (compositionActiveTab === 'glass' && !widthFormula) {
+      setWidthFormula('Largura');
+    }
+
+    if (heightDefault) {
+      setHeightFormula(heightDefault);
+    } else if (compositionActiveTab === 'glass' && !heightFormula) {
+      setHeightFormula('Altura');
+    }
+
+    lastAutoFilledItemRef.current = selectedItemToAdd;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedItemToAdd, itemTemplates]);
 
   // Auto-detecta a Linha do template (campo explícito ou pelo nome) e preenche o filtro
   useEffect(() => {
