@@ -312,7 +312,7 @@ export function ProductSelectionSheet({ open, onOpenChange, onSelectProduct }: P
                       : "text-muted-foreground hover:text-foreground hover:bg-muted"
                   )}
                 >
-                  {selectedLinha}
+                  {linhas.find(l => l.slug === selectedLinha)?.name || selectedLinha}
                 </button>
               </>
             )}
