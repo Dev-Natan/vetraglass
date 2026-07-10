@@ -891,31 +891,145 @@ export default function ItemTemplates() {
                   <div>
                     <h4 className="text-sm font-semibold text-foreground">Fórmulas padrão (opcional)</h4>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Sugeridas automaticamente ao adicionar este insumo na composição de um produto. Podem usar variáveis como <code>L</code>, <code>A</code>, <code>FL</code>, <code>FA</code>.
+                      Sugeridas automaticamente ao adicionar este insumo na composição de um produto. Variáveis disponíveis:{' '}
+                      <code>L</code> (largura), <code>A</code> (altura), <code>FL</code>/<code>FA</code> (folgas), <code>N</code> (nº de folhas).
                     </p>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="default_width_formula">Fórmula Padrão de Largura</Label>
-                      <Input
-                        id="default_width_formula"
-                        value={formData.default_width_formula}
-                        onChange={(e) => setFormData({ ...formData, default_width_formula: e.target.value })}
-                        placeholder="Ex: L - 40"
-                        className="font-mono text-sm"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="default_height_formula">Fórmula Padrão de Altura</Label>
-                      <Input
-                        id="default_height_formula"
-                        value={formData.default_height_formula}
-                        onChange={(e) => setFormData({ ...formData, default_height_formula: e.target.value })}
-                        placeholder="Ex: A - 40"
-                        className="font-mono text-sm"
-                      />
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {['L', 'A', 'L/2', 'A/2', 'L-FL', 'A-FA', 'L-40', 'A-40'].map((hint) => (
+                        <button
+                          key={hint}
+                          type="button"
+                          onClick={() => {
+                            if (formData.type === 'profile') {
+                              setFormData({ ...formData, default_profile_formula: (formData.default_profile_formula || '') + hint });
+                            }
+                          }}
+                          className="px-2 py-0.5 text-[10px] font-mono rounded border border-border bg-background hover:bg-accent"
+                        >
+                          {hint}
+                        </button>
+                      ))}
                     </div>
                   </div>
+
+                  {formData.type === 'profile' ? (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <Label>Posição padrão</Label>
+                          <div className="flex gap-2">
+                            {(['Largura', 'Altura'] as const).map((pos) => (
+                              <Button
+                                key={pos}
+                                type="button"
+                                size="sm"
+                                variant={formData.default_profile_position === pos ? 'default' : 'outline'}
+                                onClick={() => setFormData({ ...formData, default_profile_position: pos })}
+                                className="flex-1"
+                              >
+                                {pos}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="default_profile_pieces">Peças (quantidade)</Label>
+                          <Input
+                            id="default_profile_pieces"
+                            value={formData.default_profile_pieces}
+                            onChange={(e) => setFormData({ ...formData, default_profile_pieces: e.target.value })}
+                            placeholder="Ex: 2 ou N"
+                            className="font-mono text-sm"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="default_profile_formula">
+                          Fórmula Padrão de {formData.default_profile_position}
+                        </Label>
+                        <Input
+                          id="default_profile_formula"
+                          value={formData.default_profile_formula}
+                          onChange={(e) => setFormData({ ...formData, default_profile_formula: e.target.value })}
+                          placeholder={formData.default_profile_position === 'Largura' ? 'Ex: L - 40' : 'Ex: A - 40'}
+                          className="font-mono text-sm"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <Label htmlFor="default_profile_angle_start">Ângulo Início (°)</Label>
+                          <div className="flex gap-1">
+                            {[45, 90, 135].map((ang) => (
+                              <Button
+                                key={ang}
+                                type="button"
+                                size="sm"
+                                variant={parseInt(formData.default_profile_angle_start) === ang ? 'default' : 'outline'}
+                                onClick={() => setFormData({ ...formData, default_profile_angle_start: String(ang) })}
+                                className="flex-1"
+                              >
+                                {ang}°
+                              </Button>
+                            ))}
+                            <Input
+                              id="default_profile_angle_start"
+                              type="number"
+                              value={formData.default_profile_angle_start}
+                              onChange={(e) => setFormData({ ...formData, default_profile_angle_start: e.target.value })}
+                              className="w-16 text-sm"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="default_profile_angle_end">Ângulo Fim (°)</Label>
+                          <div className="flex gap-1">
+                            {[45, 90, 135].map((ang) => (
+                              <Button
+                                key={ang}
+                                type="button"
+                                size="sm"
+                                variant={parseInt(formData.default_profile_angle_end) === ang ? 'default' : 'outline'}
+                                onClick={() => setFormData({ ...formData, default_profile_angle_end: String(ang) })}
+                                className="flex-1"
+                              >
+                                {ang}°
+                              </Button>
+                            ))}
+                            <Input
+                              id="default_profile_angle_end"
+                              type="number"
+                              value={formData.default_profile_angle_end}
+                              onChange={(e) => setFormData({ ...formData, default_profile_angle_end: e.target.value })}
+                              className="w-16 text-sm"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="default_width_formula">Fórmula Padrão de Largura</Label>
+                        <Input
+                          id="default_width_formula"
+                          value={formData.default_width_formula}
+                          onChange={(e) => setFormData({ ...formData, default_width_formula: e.target.value })}
+                          placeholder="Ex: L - 40"
+                          className="font-mono text-sm"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="default_height_formula">Fórmula Padrão de Altura</Label>
+                        <Input
+                          id="default_height_formula"
+                          value={formData.default_height_formula}
+                          onChange={(e) => setFormData({ ...formData, default_height_formula: e.target.value })}
+                          placeholder="Ex: A - 40"
+                          className="font-mono text-sm"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="specifications">Especificações (JSON)</Label>
