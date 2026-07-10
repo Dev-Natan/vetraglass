@@ -391,7 +391,7 @@ export function ProductSelectionSheet({ open, onOpenChange, onSelectProduct }: P
                     <div className="grid grid-cols-2 gap-3">
                       {categories.map((category) => {
                         const count = activeProducts.filter(
-                          p => p.linha === selectedLinha && p.category === category
+                          p => productMatchesLinha(p.linha, selectedLinha!) && p.category === category
                         ).length;
                         return (
                           <button
