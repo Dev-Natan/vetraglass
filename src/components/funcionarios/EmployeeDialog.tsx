@@ -78,6 +78,8 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
     commission_type: 'sales',
     permission_profile_id: null as string | null,
     photo_url: null as string | null,
+    admission_date: '' as string,
+    salary_payment_day: 5 as number,
     createSystemAccess: false,
     password: '',
     confirmPassword: '',
