@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { getNextSalaryDueDate, toISODate } from '@/utils/salaryDueDate';
 
 export interface Employee {
   id: string;
@@ -21,8 +22,58 @@ export interface Employee {
   permission_profile_id: string | null;
   username: string | null;
   photo_url: string | null;
+  admission_date: string | null;
+  salary_payment_day: number | null;
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * Insere idempotentemente uma despesa mensal de salário para o funcionário.
+ * Se já existir despesa `funcionarios` para o employee no mês do dueDate, não faz nada.
+ */
+async function ensureMonthlySalaryExpense(params: {
+  companyId: string;
+  employeeId: string;
+  employeeName: string;
+  amount: number;
+  paymentDay: number;
+  admissionDate: string | null;
+}) {
+  const dueDate = getNextSalaryDueDate(
+    params.paymentDay,
+    params.admissionDate ? new Date(params.admissionDate) : null,
+  );
+  const year = dueDate.getFullYear();
+  const month = dueDate.getMonth();
+  const monthStart = toISODate(new Date(year, month, 1));
+  const monthEnd = toISODate(new Date(year, month + 1, 0));
+
+  const { data: existing } = await supabase
+    .from('expenses')
+    .select('id')
+    .eq('company_id', params.companyId)
+    .eq('employee_id', params.employeeId)
+    .eq('category', 'funcionarios')
+    .gte('due_date', monthStart)
+    .lte('due_date', monthEnd)
+    .maybeSingle();
+
+  if (existing) return;
+
+  await supabase.from('expenses').insert({
+    company_id: params.companyId,
+    category: 'funcionarios',
+    description: `Salário - ${params.employeeName}`,
+    amount: params.amount,
+    due_date: toISODate(dueDate),
+    status: 'pending',
+    recurrence: 'monthly',
+    recurrence_day: params.paymentDay,
+    is_auto_generated: true,
+    employee_id: params.employeeId,
+    notes: 'Despesa gerada automaticamente a partir do cadastro do funcionário',
+  });
 }
 
 export function useEmployees() {
