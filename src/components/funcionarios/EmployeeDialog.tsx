@@ -30,6 +30,8 @@ interface Employee {
   user_id?: string | null;
   username?: string | null;
   photo_url?: string | null;
+  admission_date?: string | null;
+  salary_payment_day?: number | null;
 }
 
 interface EmployeeDialogProps {
@@ -76,6 +78,8 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
     commission_type: 'sales',
     permission_profile_id: null as string | null,
     photo_url: null as string | null,
+    admission_date: '' as string,
+    salary_payment_day: 5 as number,
     createSystemAccess: false,
     password: '',
     confirmPassword: '',
@@ -120,6 +124,8 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
         commission_type: employee.commission_type || 'sales',
         permission_profile_id: employee.permission_profile_id || null,
         photo_url: employee.photo_url || null,
+        admission_date: employee.admission_date || '',
+        salary_payment_day: employee.salary_payment_day ?? 5,
         createSystemAccess: false,
         password: '',
         confirmPassword: '',
@@ -139,6 +145,8 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
         commission_type: 'sales',
         permission_profile_id: null,
         photo_url: null,
+        admission_date: '',
+        salary_payment_day: 5,
         createSystemAccess: false,
         password: '',
         confirmPassword: '',
@@ -240,6 +248,18 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
     if (!validateAllFields()) return;
     if (!validatePassword()) return;
 
+    // Validação: se tem salário, admission_date é obrigatório e payment_day é 1-31
+    if (formData.hourly_rate > 0) {
+      if (!formData.admission_date) {
+        setFieldErrors((prev) => ({ ...prev, admission_date: 'Informe a data de admissão' }));
+        return;
+      }
+      if (!formData.salary_payment_day || formData.salary_payment_day < 1 || formData.salary_payment_day > 31) {
+        setFieldErrors((prev) => ({ ...prev, salary_payment_day: 'Dia deve estar entre 1 e 31' }));
+        return;
+      }
+    }
+
     await onSave({
       name: formData.name,
       email: formData.email || null,
@@ -254,6 +274,8 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
       commission_type: formData.commission_type,
       permission_profile_id: formData.permission_profile_id,
       photo_url: formData.photo_url,
+      admission_date: formData.hourly_rate > 0 ? (formData.admission_date || null) : (formData.admission_date || null),
+      salary_payment_day: formData.hourly_rate > 0 ? formData.salary_payment_day : null,
       createSystemAccess: formData.createSystemAccess,
       username: generatedLogin || null, // Login gerado automaticamente
       password: formData.createSystemAccess ? formData.password : undefined,
@@ -407,18 +429,66 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="hourly_rate">Valor/Hora (R$)</Label>
-            <Input
-              id="hourly_rate"
-              type="number"
-              step="0.01"
-              min="0"
-              value={formData.hourly_rate}
-              onChange={(e) => setFormData({ ...formData, hourly_rate: parseFloat(e.target.value) || 0 })}
-              placeholder="0,00"
-            />
+          <div className="space-y-3 p-3 rounded-lg border border-border bg-muted/30">
+            <Label className="font-medium">Remuneração</Label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="hourly_rate" className="text-xs">Salário (R$)</Label>
+                <Input
+                  id="hourly_rate"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.hourly_rate}
+                  onChange={(e) => setFormData({ ...formData, hourly_rate: parseFloat(e.target.value) || 0 })}
+                  placeholder="0,00"
+                />
+              </div>
+              {formData.hourly_rate > 0 && (
+                <>
+                  <div className="space-y-1">
+                    <Label htmlFor="admission_date" className="text-xs">Data de admissão</Label>
+                    <Input
+                      id="admission_date"
+                      type="date"
+                      value={formData.admission_date}
+                      onChange={(e) => {
+                        setFormData({ ...formData, admission_date: e.target.value });
+                        setFieldErrors((p) => ({ ...p, admission_date: '' }));
+                      }}
+                    />
+                    {fieldErrors.admission_date && (
+                      <p className="text-xs text-destructive">{fieldErrors.admission_date}</p>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="salary_payment_day" className="text-xs">Dia de pagamento</Label>
+                    <Input
+                      id="salary_payment_day"
+                      type="number"
+                      min={1}
+                      max={31}
+                      value={formData.salary_payment_day}
+                      onChange={(e) => {
+                        const v = parseInt(e.target.value, 10);
+                        setFormData({ ...formData, salary_payment_day: Number.isFinite(v) ? v : 5 });
+                        setFieldErrors((p) => ({ ...p, salary_payment_day: '' }));
+                      }}
+                    />
+                    {fieldErrors.salary_payment_day && (
+                      <p className="text-xs text-destructive">{fieldErrors.salary_payment_day}</p>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+            {formData.hourly_rate > 0 && (
+              <p className="text-xs text-muted-foreground">
+                O sistema gera automaticamente uma despesa mensal em Contas a Pagar no dia informado.
+              </p>
+            )}
           </div>
+
 
           {/* Permission Profile Section */}
           <div className="space-y-2 p-3 rounded-lg border border-primary/20 bg-primary/5">

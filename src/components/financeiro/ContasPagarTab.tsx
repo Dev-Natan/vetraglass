@@ -106,9 +106,14 @@ export function ContasPagarTab() {
   const { data: categories = [] } = useFinancialCategories('despesa');
   const { data: bankAccounts = [] } = useBankAccounts(true);
 
+  const initialSearch =
+    typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('search') || ''
+      : '';
+
   const [month, setMonth] = useState(new Date());
   const range = getMonthDateRange(month);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(initialSearch);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [dialogOpen, setDialogOpen] = useState(false);

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { getNextSalaryDueDate, toISODate } from '@/utils/salaryDueDate';
 
 export interface Employee {
   id: string;
@@ -21,8 +22,58 @@ export interface Employee {
   permission_profile_id: string | null;
   username: string | null;
   photo_url: string | null;
+  admission_date: string | null;
+  salary_payment_day: number | null;
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * Insere idempotentemente uma despesa mensal de salário para o funcionário.
+ * Se já existir despesa `funcionarios` para o employee no mês do dueDate, não faz nada.
+ */
+async function ensureMonthlySalaryExpense(params: {
+  companyId: string;
+  employeeId: string;
+  employeeName: string;
+  amount: number;
+  paymentDay: number;
+  admissionDate: string | null;
+}) {
+  const dueDate = getNextSalaryDueDate(
+    params.paymentDay,
+    params.admissionDate ? new Date(params.admissionDate) : null,
+  );
+  const year = dueDate.getFullYear();
+  const month = dueDate.getMonth();
+  const monthStart = toISODate(new Date(year, month, 1));
+  const monthEnd = toISODate(new Date(year, month + 1, 0));
+
+  const { data: existing } = await supabase
+    .from('expenses')
+    .select('id')
+    .eq('company_id', params.companyId)
+    .eq('employee_id', params.employeeId)
+    .eq('category', 'funcionarios')
+    .gte('due_date', monthStart)
+    .lte('due_date', monthEnd)
+    .maybeSingle();
+
+  if (existing) return;
+
+  await supabase.from('expenses').insert({
+    company_id: params.companyId,
+    category: 'funcionarios',
+    description: `Salário - ${params.employeeName}`,
+    amount: params.amount,
+    due_date: toISODate(dueDate),
+    status: 'pending',
+    recurrence: 'monthly',
+    recurrence_day: params.paymentDay,
+    is_auto_generated: true,
+    employee_id: params.employeeId,
+    notes: 'Despesa gerada automaticamente a partir do cadastro do funcionário',
+  });
 }
 
 export function useEmployees() {
@@ -63,28 +114,15 @@ export function useEmployees() {
 
       if (error) throw error;
 
-      // Create automatic expense if employee has a salary (hourly_rate)
+      // Gera despesa mensal de salário (idempotente)
       if (employeeData.hourly_rate && employeeData.hourly_rate > 0) {
-        const monthlyAmount = employeeData.hourly_rate;
-        const nextDueDate = new Date();
-        nextDueDate.setDate(5); // Day 5 of each month as default payment day
-        if (nextDueDate.getDate() < 5) {
-          // If we're before day 5, use current month
-        } else {
-          // If we're past day 5, use next month
-          nextDueDate.setMonth(nextDueDate.getMonth() + 1);
-        }
-
-        await supabase.from('expenses').insert({
-          company_id: currentCompany.id,
-          category: 'funcionarios',
-          description: `Salário - ${employeeData.name}`,
-          amount: monthlyAmount,
-          due_date: nextDueDate.toISOString().split('T')[0],
-          status: 'pending',
-          recurrence: 'monthly',
-          employee_id: data.id,
-          notes: 'Despesa gerada automaticamente ao cadastrar funcionário',
+        await ensureMonthlySalaryExpense({
+          companyId: currentCompany.id,
+          employeeId: data.id,
+          employeeName: employeeData.name,
+          amount: employeeData.hourly_rate,
+          paymentDay: employeeData.salary_payment_day ?? 5,
+          admissionDate: employeeData.admission_date ?? null,
         });
       }
 
@@ -135,50 +173,50 @@ export function useEmployees() {
 
       if (error) throw error;
 
-      // Update or create expense when salary changes
-      if (currentCompany?.id && employeeData.hourly_rate !== undefined) {
-        // Check if expense already exists for this employee
-        const { data: existingExpense } = await supabase
-          .from('expenses')
-          .select('id')
-          .eq('company_id', currentCompany.id)
-          .eq('employee_id', id)
-          .eq('category', 'funcionarios')
-          .single();
+      // Atualiza/gera despesas de salário conforme alterações do funcionário
+      if (currentCompany?.id) {
+        const newRate =
+          employeeData.hourly_rate !== undefined ? employeeData.hourly_rate : data.hourly_rate;
+        const paymentDay =
+          employeeData.salary_payment_day ?? data.salary_payment_day ?? 5;
+        const admissionDate =
+          employeeData.admission_date !== undefined
+            ? employeeData.admission_date
+            : data.admission_date;
+        const name = employeeData.name || data.name;
 
-        if (employeeData.hourly_rate > 0) {
-          const nextDueDate = new Date();
-          nextDueDate.setDate(5);
-          if (nextDueDate.getDate() >= 5) {
-            nextDueDate.setMonth(nextDueDate.getMonth() + 1);
-          }
+        if (newRate && newRate > 0) {
+          // Atualiza valor/descrição das despesas pendentes futuras
+          const todayIso = toISODate(new Date());
+          await supabase
+            .from('expenses')
+            .update({ amount: newRate, description: `Salário - ${name}` })
+            .eq('company_id', currentCompany.id)
+            .eq('employee_id', id)
+            .eq('category', 'funcionarios')
+            .eq('status', 'pending')
+            .gte('due_date', todayIso);
 
-          if (existingExpense) {
-            // Update existing expense
-            await supabase
-              .from('expenses')
-              .update({
-                description: `Salário - ${employeeData.name || data.name}`,
-                amount: employeeData.hourly_rate,
-              })
-              .eq('id', existingExpense.id);
-          } else {
-            // Create new expense
-            await supabase.from('expenses').insert({
-              company_id: currentCompany.id,
-              category: 'funcionarios',
-              description: `Salário - ${employeeData.name || data.name}`,
-              amount: employeeData.hourly_rate,
-              due_date: nextDueDate.toISOString().split('T')[0],
-              status: 'pending',
-              recurrence: 'monthly',
-              employee_id: id,
-              notes: 'Despesa gerada automaticamente ao atualizar funcionário',
-            });
-          }
-        } else if (existingExpense) {
-          // Remove expense if salary is zero or removed
-          await supabase.from('expenses').delete().eq('id', existingExpense.id);
+          // Garante que a despesa do próximo ciclo exista
+          await ensureMonthlySalaryExpense({
+            companyId: currentCompany.id,
+            employeeId: id,
+            employeeName: name,
+            amount: newRate,
+            paymentDay,
+            admissionDate: admissionDate ?? null,
+          });
+        } else {
+          // Salário removido/zerado: apaga apenas despesas futuras pendentes
+          const todayIso = toISODate(new Date());
+          await supabase
+            .from('expenses')
+            .delete()
+            .eq('company_id', currentCompany.id)
+            .eq('employee_id', id)
+            .eq('category', 'funcionarios')
+            .eq('status', 'pending')
+            .gt('due_date', todayIso);
         }
       }
 

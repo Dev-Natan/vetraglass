@@ -2795,6 +2795,7 @@ export type Database = {
       }
       employees: {
         Row: {
+          admission_date: string | null
           commission_enabled: boolean | null
           commission_percent: number | null
           commission_trigger: string | null
@@ -2811,12 +2812,14 @@ export type Database = {
           phone: string | null
           photo_url: string | null
           role: string | null
+          salary_payment_day: number | null
           specialty: string | null
           updated_at: string
           user_id: string | null
           username: string | null
         }
         Insert: {
+          admission_date?: string | null
           commission_enabled?: boolean | null
           commission_percent?: number | null
           commission_trigger?: string | null
@@ -2833,12 +2836,14 @@ export type Database = {
           phone?: string | null
           photo_url?: string | null
           role?: string | null
+          salary_payment_day?: number | null
           specialty?: string | null
           updated_at?: string
           user_id?: string | null
           username?: string | null
         }
         Update: {
+          admission_date?: string | null
           commission_enabled?: boolean | null
           commission_percent?: number | null
           commission_trigger?: string | null
@@ -2855,6 +2860,7 @@ export type Database = {
           phone?: string | null
           photo_url?: string | null
           role?: string | null
+          salary_payment_day?: number | null
           specialty?: string | null
           updated_at?: string
           user_id?: string | null

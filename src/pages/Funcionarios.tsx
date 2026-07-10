@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { UserCog, Plus, Search, MoreVertical, Pencil, Trash2, UserCheck, UserX, CheckCircle, ShieldOff, FileText, Printer, IdCard } from 'lucide-react';
+import { UserCog, Plus, Search, MoreVertical, Pencil, Trash2, UserCheck, UserX, CheckCircle, ShieldOff, FileText, Printer, IdCard, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -40,6 +41,7 @@ const specialtyLabels: Record<string, string> = {
 };
 
 export default function Funcionarios() {
+  const navigate = useNavigate();
   const { employees, isLoading, createEmployee, updateEmployee, deleteEmployee, toggleEmployeeStatus } = useEmployees();
   const { canCreate, isAdmin, isManager } = usePermissions();
   const { currentCompany } = useAuth();
@@ -253,6 +255,18 @@ export default function Funcionarios() {
                   Editar
                 </DropdownMenuItem>
               </PermissionGuard>
+
+              <DropdownMenuItem
+                onClick={() =>
+                  navigate(
+                    `/financeiro?tab=contas-pagar&search=${encodeURIComponent('Salário - ' + employee.name)}`,
+                  )
+                }
+              >
+                <Wallet className="w-4 h-4 mr-2" />
+                Ver pagamentos
+              </DropdownMenuItem>
+
 
               {/* Badge generation - available for all employees */}
               <DropdownMenuSeparator />
