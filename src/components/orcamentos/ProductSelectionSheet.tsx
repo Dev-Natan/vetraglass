@@ -109,26 +109,47 @@ export function ProductSelectionSheet({ open, onOpenChange, onSelectProduct }: P
     });
   }, [companyProducts]);
 
-  // Get unique linhas, ocultando as desativadas no Admin SaaS
-  const activeLinhaKeys = useMemo(() => {
-    const set = new Set<string>();
+  // Mapa slug -> nome oficial (fonte: product_linhas). Aceita nome como chave para dados legados.
+  const linhaSlugToName = useMemo(() => {
+    const map = new Map<string, string>();
     (productLinhas || []).forEach(l => {
-      if (l.slug) set.add(l.slug.toLowerCase());
-      if (l.name) set.add(l.name.toLowerCase());
+      if (l.slug) map.set(l.slug.toLowerCase(), l.name || l.slug);
+      if (l.name) map.set(l.name.toLowerCase(), l.name);
     });
-    return set;
+    return map;
   }, [productLinhas]);
+
+  const productMatchesLinha = (rawLinha: string | null | undefined, slug: string) => {
+    if (!rawLinha) return false;
+    const key = String(rawLinha).toLowerCase();
+    if (slug === 'personalizado') return key === 'personalizado';
+    const officialName = linhaSlugToName.get(key);
+    if (!officialName) return false;
+    const officialSlug = (productLinhas || []).find(l => l.name === officialName)?.slug?.toLowerCase();
+    return officialSlug === slug;
+  };
+
+  // Dedupe por slug oficial: variações textuais colapsam no mesmo card.
   const linhas = useMemo(() => {
-    const linhaSet = new Set<string>();
+    const bySlug = new Map<string, string>();
     activeProducts.forEach(p => {
       if (!p.linha) return;
       const key = String(p.linha).toLowerCase();
-      if (key === 'personalizado' || activeLinhaKeys.has(key)) {
-        linhaSet.add(p.linha);
+      if (key === 'personalizado') {
+        bySlug.set('personalizado', 'Personalizado');
+        return;
+      }
+      const officialName = linhaSlugToName.get(key);
+      if (officialName) {
+        const officialSlug = (productLinhas || []).find(l => l.name === officialName)?.slug?.toLowerCase() || key;
+        bySlug.set(officialSlug, officialName);
       }
     });
-    return Array.from(linhaSet).sort();
-  }, [activeProducts, activeLinhaKeys]);
+    return Array.from(bySlug.entries())
+      .map(([slug, name]) => ({ slug, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [activeProducts, linhaSlugToName, productLinhas]);
+
 
   // Get categories for selected linha
   const categories = useMemo(() => {
