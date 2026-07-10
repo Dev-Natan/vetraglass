@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { UserCog, Plus, Search, MoreVertical, Pencil, Trash2, UserCheck, UserX, CheckCircle, ShieldOff, FileText, Printer, IdCard } from 'lucide-react';
+import { UserCog, Plus, Search, MoreVertical, Pencil, Trash2, UserCheck, UserX, CheckCircle, ShieldOff, FileText, Printer, IdCard, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
