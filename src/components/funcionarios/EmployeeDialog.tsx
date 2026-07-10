@@ -124,6 +124,8 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
         commission_type: employee.commission_type || 'sales',
         permission_profile_id: employee.permission_profile_id || null,
         photo_url: employee.photo_url || null,
+        admission_date: employee.admission_date || '',
+        salary_payment_day: employee.salary_payment_day ?? 5,
         createSystemAccess: false,
         password: '',
         confirmPassword: '',
