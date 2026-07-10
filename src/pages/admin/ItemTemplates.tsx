@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -555,6 +556,39 @@ export default function ItemTemplates() {
     setImagePreview(item.image_url);
     setDialogOpen(true);
   };
+
+  // Auto-abrir dialog de edição via ?edit=<itemId> na URL (deep-link vindo de outras páginas)
+  const [searchParams, setSearchParams] = useSearchParams();
+  const editIdFromUrl = searchParams.get('edit');
+  useEffect(() => {
+    if (!editIdFromUrl || !isSaasAdmin) return;
+    if (editingItem?.id === editIdFromUrl && dialogOpen) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from('item_templates')
+        .select('id, name, description, type, unit, linha, default_price, weight_per_meter, weight_per_bar, default_cost, default_sale_price, bar_length_mm, specifications, image_url, is_active, default_formulas, created_at')
+        .eq('id', editIdFromUrl)
+        .maybeSingle();
+      if (cancelled) return;
+      if (error || !data) {
+        toast.error('Item não encontrado para edição.');
+        setSearchParams(prev => { const p = new URLSearchParams(prev); p.delete('edit'); return p; }, { replace: true });
+        return;
+      }
+      handleEdit(data as ItemTemplate);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editIdFromUrl, isSaasAdmin]);
+
+  // Limpa o ?edit quando o dialog é fechado
+  useEffect(() => {
+    if (!dialogOpen && editIdFromUrl) {
+      setSearchParams(prev => { const p = new URLSearchParams(prev); p.delete('edit'); return p; }, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dialogOpen]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
