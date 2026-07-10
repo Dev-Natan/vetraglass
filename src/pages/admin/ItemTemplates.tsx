@@ -32,6 +32,11 @@ import { useProductLinhas } from '@/hooks/useProductLinhas';
 import { LinhaCardSimple } from '@/components/produtos/LinhaCardSimple';
 import { ProfileColorPricesSection } from '@/components/admin/product-templates/ProfileColorPricesSection';
 
+interface DefaultFormulaEntry {
+  position: string;
+  formula: string;
+}
+
 interface ItemTemplate {
   id: string;
   name: string;
@@ -48,7 +53,24 @@ interface ItemTemplate {
   specifications: unknown;
   image_url: string | null;
   is_active: boolean;
+  default_formulas: DefaultFormulaEntry[] | null;
   created_at: string;
+}
+
+/** Lê largura/altura de default_formulas aceitando os formatos 'width'|'height' e legado 'Largura'|'Altura'. */
+function readDefaultFormulas(raw: unknown): { width: string; height: string } {
+  if (!Array.isArray(raw)) return { width: '', height: '' };
+  const findPos = (keys: string[]) => {
+    const found = (raw as any[]).find((f) => {
+      const p = String(f?.position ?? '').toLowerCase();
+      return keys.includes(p);
+    });
+    return typeof found?.formula === 'string' ? found.formula : '';
+  };
+  return {
+    width: findPos(['width', 'largura']),
+    height: findPos(['height', 'altura']),
+  };
 }
 
 const unitLabels: Record<string, string> = {
