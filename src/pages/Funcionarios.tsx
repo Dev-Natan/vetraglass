@@ -41,6 +41,7 @@ const specialtyLabels: Record<string, string> = {
 };
 
 export default function Funcionarios() {
+  const navigate = useNavigate();
   const { employees, isLoading, createEmployee, updateEmployee, deleteEmployee, toggleEmployeeStatus } = useEmployees();
   const { canCreate, isAdmin, isManager } = usePermissions();
   const { currentCompany } = useAuth();
