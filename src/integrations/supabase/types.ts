@@ -8740,6 +8740,7 @@ export type Database = {
         Args: { p_company_product_id: string; p_user_id: string }
         Returns: Json
       }
+      resolve_product_linha_slug: { Args: { _input: string }; Returns: string }
       revoke_saas_admin: { Args: { _user_id: string }; Returns: undefined }
       seed_default_financial_categories: {
         Args: { _company_id: string }
@@ -8749,6 +8750,7 @@ export type Database = {
         Args: { _company_id: string; _new_admin_user_id: string }
         Returns: Json
       }
+      unaccent: { Args: { "": string }; Returns: string }
       update_overdue_receivables: { Args: never; Returns: undefined }
       user_belongs_to_company: {
         Args: { _company_id: string; _user_id: string }
