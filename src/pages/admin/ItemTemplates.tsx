@@ -131,6 +131,12 @@ export default function ItemTemplates() {
     is_active: true,
     default_width_formula: '',
     default_height_formula: '',
+    // Perfil: fórmula padrão rica (posição + peças + ângulos)
+    default_profile_position: 'Largura' as 'Largura' | 'Altura',
+    default_profile_formula: '',
+    default_profile_pieces: '',
+    default_profile_angle_start: '90',
+    default_profile_angle_end: '90',
   };
   const [formData, setFormData] = useState(defaultFormData);
   const [imageFile, setImageFile] = useState<File | null>(null);
