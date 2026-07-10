@@ -114,6 +114,8 @@ export default function ItemTemplates() {
     bar_length_mm: '6000',
     specifications: '{}',
     is_active: true,
+    default_width_formula: '',
+    default_height_formula: '',
   };
   const [formData, setFormData] = useState(defaultFormData);
   const [imageFile, setImageFile] = useState<File | null>(null);
