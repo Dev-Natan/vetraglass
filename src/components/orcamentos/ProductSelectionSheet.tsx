@@ -109,46 +109,68 @@ export function ProductSelectionSheet({ open, onOpenChange, onSelectProduct }: P
     });
   }, [companyProducts]);
 
-  // Get unique linhas, ocultando as desativadas no Admin SaaS
-  const activeLinhaKeys = useMemo(() => {
-    const set = new Set<string>();
+  // Mapa slug -> nome oficial (fonte: product_linhas). Aceita nome como chave para dados legados.
+  const linhaSlugToName = useMemo(() => {
+    const map = new Map<string, string>();
     (productLinhas || []).forEach(l => {
-      if (l.slug) set.add(l.slug.toLowerCase());
-      if (l.name) set.add(l.name.toLowerCase());
+      if (l.slug) map.set(l.slug.toLowerCase(), l.name || l.slug);
+      if (l.name) map.set(l.name.toLowerCase(), l.name);
     });
-    return set;
+    return map;
   }, [productLinhas]);
+
+  const productMatchesLinha = (rawLinha: string | null | undefined, slug: string) => {
+    if (!rawLinha) return false;
+    const key = String(rawLinha).toLowerCase();
+    if (slug === 'personalizado') return key === 'personalizado';
+    const officialName = linhaSlugToName.get(key);
+    if (!officialName) return false;
+    const officialSlug = (productLinhas || []).find(l => l.name === officialName)?.slug?.toLowerCase();
+    return officialSlug === slug;
+  };
+
+  // Dedupe por slug oficial: variações textuais colapsam no mesmo card.
   const linhas = useMemo(() => {
-    const linhaSet = new Set<string>();
+    const bySlug = new Map<string, string>();
     activeProducts.forEach(p => {
       if (!p.linha) return;
       const key = String(p.linha).toLowerCase();
-      if (key === 'personalizado' || activeLinhaKeys.has(key)) {
-        linhaSet.add(p.linha);
+      if (key === 'personalizado') {
+        bySlug.set('personalizado', 'Personalizado');
+        return;
+      }
+      const officialName = linhaSlugToName.get(key);
+      if (officialName) {
+        const officialSlug = (productLinhas || []).find(l => l.name === officialName)?.slug?.toLowerCase() || key;
+        bySlug.set(officialSlug, officialName);
       }
     });
-    return Array.from(linhaSet).sort();
-  }, [activeProducts, activeLinhaKeys]);
+    return Array.from(bySlug.entries())
+      .map(([slug, name]) => ({ slug, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [activeProducts, linhaSlugToName, productLinhas]);
 
-  // Get categories for selected linha
+
+  // Get categories for selected linha (by slug)
   const categories = useMemo(() => {
     if (!selectedLinha) return [];
     const catSet = new Set<string>();
     activeProducts
-      .filter(p => p.linha === selectedLinha)
+      .filter(p => productMatchesLinha(p.linha, selectedLinha))
       .forEach(p => {
         if (p.category) catSet.add(p.category);
       });
     return Array.from(catSet).sort();
-  }, [activeProducts, selectedLinha]);
+  }, [activeProducts, selectedLinha, linhaSlugToName, productLinhas]);
 
   // Get products for selected linha and category
   const products = useMemo(() => {
     if (!selectedLinha || !selectedCategory) return [];
     return activeProducts.filter(
-      p => p.linha === selectedLinha && p.category === selectedCategory
+      p => productMatchesLinha(p.linha, selectedLinha) && p.category === selectedCategory
     );
-  }, [activeProducts, selectedLinha, selectedCategory]);
+  }, [activeProducts, selectedLinha, selectedCategory, linhaSlugToName, productLinhas]);
+
 
   // Filtered products by search
   const filteredProducts = useMemo(() => {
@@ -290,7 +312,7 @@ export function ProductSelectionSheet({ open, onOpenChange, onSelectProduct }: P
                       : "text-muted-foreground hover:text-foreground hover:bg-muted"
                   )}
                 >
-                  {selectedLinha}
+                  {linhas.find(l => l.slug === selectedLinha)?.name || selectedLinha}
                 </button>
               </>
             )}
@@ -336,17 +358,17 @@ export function ProductSelectionSheet({ open, onOpenChange, onSelectProduct }: P
                       Escolha uma linha de produtos para começar
                     </p>
                     <div className="grid grid-cols-2 gap-3">
-                      {linhas.map((linha) => {
-                        const count = activeProducts.filter(p => p.linha === linha).length;
+                      {linhas.map(({ slug, name }) => {
+                        const count = activeProducts.filter(p => productMatchesLinha(p.linha, slug)).length;
                         return (
                           <button
-                            key={linha}
-                            onClick={() => handleSelectLinha(linha)}
+                            key={slug}
+                            onClick={() => handleSelectLinha(slug)}
                             className="group relative p-5 rounded-xl border-2 border-border bg-card hover:border-primary hover:shadow-lg transition-all text-left"
                           >
                             <div className="text-2xl mb-2">📐</div>
                             <h3 className="font-semibold text-base group-hover:text-primary transition-colors">
-                              {linha}
+                              {name}
                             </h3>
                             <p className="text-xs text-muted-foreground mt-1">
                               {count} {count === 1 ? 'produto' : 'produtos'}
@@ -355,6 +377,7 @@ export function ProductSelectionSheet({ open, onOpenChange, onSelectProduct }: P
                           </button>
                         );
                       })}
+
                     </div>
                   </div>
                 )}
@@ -368,7 +391,7 @@ export function ProductSelectionSheet({ open, onOpenChange, onSelectProduct }: P
                     <div className="grid grid-cols-2 gap-3">
                       {categories.map((category) => {
                         const count = activeProducts.filter(
-                          p => p.linha === selectedLinha && p.category === category
+                          p => productMatchesLinha(p.linha, selectedLinha!) && p.category === category
                         ).length;
                         return (
                           <button

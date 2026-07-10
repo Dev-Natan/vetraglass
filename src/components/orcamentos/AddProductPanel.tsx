@@ -178,34 +178,56 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
     enabled: !!currentCompany?.id
   });
 
-  // Get unique linhas from active company products, filtrando linhas desativadas no Admin SaaS
-  const activeLinhaKeys = useMemo(() => {
-    const set = new Set<string>();
+  // Mapa slug -> nome oficial (fonte: product_linhas). Também aceita nome como chave para dados legados.
+  const linhaSlugToName = useMemo(() => {
+    const map = new Map<string, string>();
     (productLinhas || []).forEach(l => {
-      if (l.slug) set.add(l.slug.toLowerCase());
-      if (l.name) set.add(l.name.toLowerCase());
+      if (l.slug) map.set(l.slug.toLowerCase(), l.name || l.slug);
+      if (l.name) map.set(l.name.toLowerCase(), l.name);
     });
-    return set;
+    return map;
   }, [productLinhas]);
+
+  // Dedupe por slug oficial: qualquer variação textual (com/sem acento, com/sem underscore)
+  // colapsa no mesmo card. Só linhas ativas em product_linhas aparecem (+ Personalizado).
   const linhas = useMemo(() => {
-    const linhaSet = new Set<string>();
+    const bySlug = new Map<string, string>(); // slug -> display name
     companyProducts?.forEach(p => {
-      const linha = p.linha || (p.product_template as any)?.linha;
-      if (!linha) return;
-      const key = String(linha).toLowerCase();
-      if (key === 'personalizado' || activeLinhaKeys.has(key)) {
-        linhaSet.add(linha);
+      const raw = p.linha || (p.product_template as any)?.linha;
+      if (!raw) return;
+      const key = String(raw).toLowerCase();
+      if (key === 'personalizado') {
+        bySlug.set('personalizado', 'Personalizado');
+        return;
+      }
+      const officialName = linhaSlugToName.get(key);
+      if (officialName) {
+        bySlug.set(key, officialName);
       }
     });
-    return Array.from(linhaSet).sort();
-  }, [companyProducts, activeLinhaKeys]);
+    return Array.from(bySlug.entries())
+      .map(([slug, name]) => ({ slug, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [companyProducts, linhaSlugToName]);
+
+  // Helper: compara se um produto pertence à linha selecionada (por slug oficial)
+  const productMatchesLinha = (rawLinha: string | null | undefined, slug: string) => {
+    if (!rawLinha) return false;
+    const key = String(rawLinha).toLowerCase();
+    if (slug === 'personalizado') return key === 'personalizado';
+    // resolve raw para slug oficial via nome/slug lookup
+    const officialName = linhaSlugToName.get(key);
+    if (!officialName) return false;
+    const officialSlug = (productLinhas || []).find(l => l.name === officialName)?.slug?.toLowerCase();
+    return officialSlug === slug;
+  };
 
   // Get categories for selected linha (normalized via Admin dictionary)
   const categories = useMemo(() => {
     if (!selectedLinha) return [];
-    const catMap = new Map<string, string>(); // canonical key -> display label
+    const catMap = new Map<string, string>();
     companyProducts
-      ?.filter(p => (p.linha || (p.product_template as any)?.linha) === selectedLinha)
+      ?.filter(p => productMatchesLinha(p.linha || (p.product_template as any)?.linha, selectedLinha))
       .forEach(p => {
         const raw = p.category || (p.product_template as any)?.category;
         const key = categoryNormalizer.key(raw);
@@ -213,13 +235,12 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
         if (label && !catMap.has(key)) catMap.set(key, label);
       });
     return Array.from(catMap.values()).sort();
-  }, [companyProducts, selectedLinha, categoryNormalizer]);
+  }, [companyProducts, selectedLinha, categoryNormalizer, linhaSlugToName, productLinhas]);
 
   // Get filtered products from active company products
   const filteredProducts = useMemo(() => {
-    // Se não há linha selecionada, não mostrar produtos
     if (!selectedLinha) return [];
-    
+
     let products = (companyProducts || []).map(cp => {
       const template = cp.product_template as any;
       return {
@@ -236,23 +257,23 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
         has_multiple_sides: (template as any)?.has_multiple_sides ?? false
       };
     });
-    
-    // Filtra pela linha selecionada
-    products = products.filter(p => p.linha === selectedLinha);
-    
+
+    products = products.filter(p => productMatchesLinha(p.linha, selectedLinha));
+
     if (selectedCategory && selectedCategory !== '__all__') {
       products = products.filter(p => categoryNormalizer.match(p.category, selectedCategory));
     }
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      products = products.filter(p => 
+      products = products.filter(p =>
         p.name.toLowerCase().includes(query) ||
         p.description?.toLowerCase().includes(query)
       );
     }
-    
+
     return products;
-  }, [companyProducts, selectedLinha, selectedCategory, searchQuery]);
+  }, [companyProducts, selectedLinha, selectedCategory, searchQuery, linhaSlugToName, productLinhas]);
+
 
   // Saldo de perfis por produto listado — para alertar o vendedor sobre falta de estoque.
   const filteredProductIds = useMemo(
@@ -617,7 +638,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                   Voltar
                 </Button>
                 <div className="text-xs text-muted-foreground truncate">
-                  {selectedLinha}
+                  {linhas.find(l => l.slug === selectedLinha)?.name || selectedLinha}
                   {selectedCategory && <> · <span className="text-foreground font-medium">{selectedCategory === '__all__' ? 'Todos' : selectedCategory}</span></>}
                 </div>
               </div>
@@ -657,14 +678,15 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 p-1 pb-3">
-                      {linhas.map((linha) => {
-                        const count = (companyProducts || []).filter(p => (p.linha || (p.product_template as any)?.linha) === linha).length;
-                        const displayName = (linha || '').replace(/^#/, '').replace(/\b\w/g, c => c.toUpperCase());
+                      {linhas.map(({ slug, name }) => {
+                        const count = (companyProducts || []).filter(p =>
+                          productMatchesLinha(p.linha || (p.product_template as any)?.linha, slug)
+                        ).length;
                         return (
                           <button
-                            key={linha}
+                            key={slug}
                             type="button"
-                            onClick={() => handleLinhaChange(linha!)}
+                            onClick={() => handleLinhaChange(slug)}
                             className={cn(
                               "group relative flex flex-col items-start gap-4 rounded-2xl border border-border/60 bg-card p-5 text-left min-h-[140px]",
                               "transition-all duration-200 hover:border-primary/40 hover:bg-accent/30 hover:-translate-y-0.5",
@@ -675,7 +697,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                               <LayoutGrid className="w-5 h-5 text-primary" strokeWidth={2} />
                             </div>
                             <div className="flex-1">
-                              <p className="text-base font-semibold text-foreground leading-tight">{displayName}</p>
+                              <p className="text-base font-semibold text-foreground leading-tight">{name}</p>
                               <p className="text-xs text-muted-foreground/70 mt-1">
                                 {count} {count === 1 ? 'produto' : 'produtos'}
                               </p>
@@ -684,6 +706,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                         );
                       })}
                     </div>
+
                   )
                 ) : catalogStep === 2 ? (
                   // ── Passo 2: Categorias ──
@@ -718,7 +741,7 @@ export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
                         const count = (companyProducts || []).filter(p => {
                           const linha = p.linha || (p.product_template as any)?.linha;
                           const c = p.category || (p.product_template as any)?.category;
-                          return linha === selectedLinha && categoryNormalizer.match(c, cat);
+                          return productMatchesLinha(linha, selectedLinha) && categoryNormalizer.match(c, cat);
                         }).length;
                         const CategoryIcon = getCategoryIcon(cat);
                         const displayName = (cat || '').replace(/^#/, '');
