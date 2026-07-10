@@ -256,6 +256,18 @@ export default function Funcionarios() {
                 </DropdownMenuItem>
               </PermissionGuard>
 
+              <DropdownMenuItem
+                onClick={() =>
+                  navigate(
+                    `/financeiro?tab=contas-pagar&search=${encodeURIComponent('Salário - ' + employee.name)}`,
+                  )
+                }
+              >
+                <Wallet className="w-4 h-4 mr-2" />
+                Ver pagamentos
+              </DropdownMenuItem>
+
+
               {/* Badge generation - available for all employees */}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => handlePrintBadge(employee)}>
