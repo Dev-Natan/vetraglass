@@ -33,8 +33,11 @@ import { LinhaCardSimple } from '@/components/produtos/LinhaCardSimple';
 import { ProfileColorPricesSection } from '@/components/admin/product-templates/ProfileColorPricesSection';
 
 interface DefaultFormulaEntry {
-  position: string;
-  formula: string;
+  position: string;              // 'width' | 'height' | 'largura' | 'altura'
+  formula: string;               // fórmula do comprimento
+  pieces?: string | null;        // qtd de peças (ex: "2", "N", "N*2")
+  cutAngleStart?: number | null; // ângulo início (°)
+  cutAngleEnd?: number | null;   // ângulo fim (°)
 }
 
 interface ItemTemplate {
@@ -57,19 +60,31 @@ interface ItemTemplate {
   created_at: string;
 }
 
-/** Lê largura/altura de default_formulas aceitando os formatos 'width'|'height' e legado 'Largura'|'Altura'. */
-function readDefaultFormulas(raw: unknown): { width: string; height: string } {
-  if (!Array.isArray(raw)) return { width: '', height: '' };
-  const findPos = (keys: string[]) => {
-    const found = (raw as any[]).find((f) => {
-      const p = String(f?.position ?? '').toLowerCase();
-      return keys.includes(p);
-    });
-    return typeof found?.formula === 'string' ? found.formula : '';
-  };
+/** Lê as fórmulas padrão com suporte a formatos novo/legado e campos ricos (peças, ângulos). */
+function readDefaultFormulas(raw: unknown): {
+  width: string;
+  height: string;
+  profilePosition: 'Largura' | 'Altura';
+  profileFormula: string;
+  profilePieces: string;
+  profileAngleStart: number;
+  profileAngleEnd: number;
+} {
+  const arr = Array.isArray(raw) ? (raw as any[]) : [];
+  const findPos = (keys: string[]) =>
+    arr.find((f) => keys.includes(String(f?.position ?? '').toLowerCase()));
+  const widthEntry = findPos(['width', 'largura']);
+  const heightEntry = findPos(['height', 'altura']);
+  const profileEntry = widthEntry || heightEntry || arr[0];
+  const isHeight = profileEntry && ['height', 'altura'].includes(String(profileEntry.position ?? '').toLowerCase());
   return {
-    width: findPos(['width', 'largura']),
-    height: findPos(['height', 'altura']),
+    width: typeof widthEntry?.formula === 'string' ? widthEntry.formula : '',
+    height: typeof heightEntry?.formula === 'string' ? heightEntry.formula : '',
+    profilePosition: isHeight ? 'Altura' : 'Largura',
+    profileFormula: typeof profileEntry?.formula === 'string' ? profileEntry.formula : '',
+    profilePieces: profileEntry?.pieces != null ? String(profileEntry.pieces) : '',
+    profileAngleStart: typeof profileEntry?.cutAngleStart === 'number' ? profileEntry.cutAngleStart : 90,
+    profileAngleEnd: typeof profileEntry?.cutAngleEnd === 'number' ? profileEntry.cutAngleEnd : 90,
   };
 }
 
