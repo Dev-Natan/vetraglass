@@ -707,6 +707,49 @@ export default function ItemTemplates() {
             )}
           </div>
         )}
+        {(() => {
+          const f = readDefaultFormulas(item.default_formulas as unknown);
+          const hasProfile = item.type === 'profile' && !!f.profileFormula;
+          const hasGlass = item.type === 'glass' && (!!f.width || !!f.height);
+          if (!hasProfile && !hasGlass) return null;
+          return (
+            <div className="pt-1 border-t space-y-1">
+              <div className="flex items-center gap-1">
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/40 text-primary">Fórmula</Badge>
+              </div>
+              {hasProfile && (
+                <div className="text-xs space-y-0.5">
+                  <div className="flex justify-between gap-2">
+                    <span className="text-muted-foreground">{f.profilePosition}</span>
+                    <code className="font-mono text-[11px] truncate max-w-[65%]" title={f.profileFormula}>{f.profileFormula}</code>
+                  </div>
+                  {(f.profilePieces || f.profileAngleStart !== 90 || f.profileAngleEnd !== 90) && (
+                    <div className="flex justify-between text-[10px] text-muted-foreground">
+                      {f.profilePieces && <span>Peças: {f.profilePieces}</span>}
+                      <span>{f.profileAngleStart}° / {f.profileAngleEnd}°</span>
+                    </div>
+                  )}
+                </div>
+              )}
+              {hasGlass && (
+                <div className="text-xs space-y-0.5">
+                  {f.width && (
+                    <div className="flex justify-between gap-2">
+                      <span className="text-muted-foreground">Largura</span>
+                      <code className="font-mono text-[11px] truncate max-w-[65%]" title={f.width}>{f.width}</code>
+                    </div>
+                  )}
+                  {f.height && (
+                    <div className="flex justify-between gap-2">
+                      <span className="text-muted-foreground">Altura</span>
+                      <code className="font-mono text-[11px] truncate max-w-[65%]" title={f.height}>{f.height}</code>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </CardContent>
     </Card>
   );
