@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Scissors, Maximize2, Layers, Square, CheckCircle, Clock, Palette, AlertTriangle, FileDown } from 'lucide-react';
+import { Scissors, Maximize2, Layers, Square, CheckCircle, Clock, Palette, AlertTriangle, FileDown, Printer } from 'lucide-react';
 import { OSGlassUnifiedView } from './OSGlassUnifiedView';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,7 +15,9 @@ import { regenerateOSDocuments } from '@/utils/generateOSDocuments';
 import { generateCuttingPlanPdf } from '@/utils/generateCuttingPlanPdf';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { BarOptimizationView } from '@/components/plano-corte/BarOptimizationView';
+import { PrintableCuttingReport, type PrintableProfileCut, type PrintableProductSummary } from '@/components/plano-corte/PrintableCuttingReport';
 import { useMemo } from 'react';
+
 
 
 interface OSCuttingPlanProps {
