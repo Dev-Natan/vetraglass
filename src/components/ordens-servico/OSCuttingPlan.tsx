@@ -14,6 +14,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { regenerateOSDocuments } from '@/utils/generateOSDocuments';
 import { generateCuttingPlanPdf } from '@/utils/generateCuttingPlanPdf';
 import { Loader2, RefreshCw } from 'lucide-react';
+import { BarOptimizationView } from '@/components/plano-corte/BarOptimizationView';
+import { useMemo } from 'react';
 
 
 interface OSCuttingPlanProps {
@@ -28,6 +30,7 @@ interface CutData {
   cutAngle: number;
   position: string;
   side?: string;
+  itemTemplateId?: string;
 }
 
 interface GlassCutData {
@@ -126,6 +129,34 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
   const handleItemToggle = (planId: string, itemKey: string, currentValue: boolean) => {
     updateStatusMutation.mutate({ planId, itemKey, completed: !currentValue });
   };
+
+  // Aggregated bar-optimization data across ALL plans of this OS.
+  // Groups identical profiles by itemTemplateId (fallback to profileName)
+  // and multiplies each cut by the plan quantity so the FFD packer
+  // produces a single consolidated bar layout per profile.
+  const aggregatedBarCuts = useMemo(() => {
+    const all: Array<{
+      itemTemplateId: string;
+      itemName: string;
+      cutLength: number;
+      quantity: number;
+      barLengthMm: number;
+    }> = [];
+    (plans || []).forEach((plan: any) => {
+      const planQty = plan.quantity || 1;
+      (plan.cuts_data || []).forEach((cut: CutData) => {
+        if (!cut?.calculatedLength || !cut?.quantity) return;
+        all.push({
+          itemTemplateId: cut.itemTemplateId || cut.profileName,
+          itemName: cut.profileName,
+          cutLength: Math.round(cut.calculatedLength),
+          quantity: cut.quantity * planQty,
+          barLengthMm: 6000,
+        });
+      });
+    });
+    return all;
+  }, [plans]);
 
   const recalculateMutation = useMutation({
     mutationFn: (osItemId: string) => regenerateOSDocuments(ordemServicoId, osItemId),
@@ -229,9 +260,15 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
     }
   };
 
+
   return (
     <div className="space-y-6">
 
+
+      {/* Consolidated Bar Optimization for the entire OS */}
+      {aggregatedBarCuts.length > 0 && (
+        <BarOptimizationView cuts={aggregatedBarCuts} />
+      )}
 
       {/* Summary Card for Glass */}
       {totalGlassPanels > 0 && (
