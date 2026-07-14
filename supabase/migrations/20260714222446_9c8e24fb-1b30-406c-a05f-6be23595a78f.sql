@@ -1,0 +1,1 @@
+ALTER TABLE public.product_templates ADD COLUMN IF NOT EXISTS has_cutting_plan BOOLEAN NOT NULL DEFAULT true;

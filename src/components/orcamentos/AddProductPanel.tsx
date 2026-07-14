@@ -176,7 +176,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
           panels_count,
           sides_count,
           product_template:product_templates (
-            id, name, description, category, linha, image_url, has_multiple_sides,
+            id, name, description, category, linha, image_url, has_multiple_sides, has_cutting_plan,
             default_leaves_count, default_glasses_count, default_panels_count, default_sides_count
           )
         `)
@@ -265,9 +265,15 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
         uses_glass: cp.uses_glass ?? true,
         company_product: cp,
         product_template_id: cp.product_template_id,
-        has_multiple_sides: (template as any)?.has_multiple_sides ?? false
+        has_multiple_sides: (template as any)?.has_multiple_sides ?? false,
+        has_cutting_plan: (template as any)?.has_cutting_plan ?? true,
       };
     });
+
+    if (mode === 'cutting') {
+      products = products.filter(p => p.has_cutting_plan !== false);
+    }
+
 
     products = products.filter(p => productMatchesLinha(p.linha, selectedLinha));
 
@@ -283,7 +289,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     }
 
     return products;
-  }, [companyProducts, selectedLinha, selectedCategory, searchQuery, linhaSlugToName, productLinhas]);
+  }, [companyProducts, selectedLinha, selectedCategory, searchQuery, linhaSlugToName, productLinhas, mode]);
 
 
   // Saldo de perfis por produto listado — para alertar o vendedor sobre falta de estoque.

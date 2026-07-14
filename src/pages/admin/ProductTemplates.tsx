@@ -68,7 +68,8 @@ import {
   ChevronDown,
   ChevronRight,
   Image as ImageIcon,
-  Palette
+  Palette,
+  Scissors
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -105,6 +106,7 @@ type ProductTemplate = {
   min_height: number | null;
   max_height: number | null;
   has_multiple_sides: boolean;
+  has_cutting_plan: boolean;
   created_at: string;
 };
 
@@ -298,6 +300,7 @@ export default function ProductTemplates() {
     is_active: true,
     is_ready: false,
     has_multiple_sides: false,
+    has_cutting_plan: true,
     base_price: "",
     ncm: "",
     cest: "",
@@ -630,6 +633,7 @@ export default function ProductTemplates() {
       is_active: true,
       is_ready: false,
       has_multiple_sides: false,
+      has_cutting_plan: true,
       base_price: "",
       ncm: "",
       cest: "",
@@ -656,6 +660,7 @@ export default function ProductTemplates() {
       is_active: template.is_active,
       is_ready: template.description?.includes("[PRONTO]") || false,
       has_multiple_sides: template.has_multiple_sides || false,
+      has_cutting_plan: (template as any).has_cutting_plan ?? true,
       base_price: (template as any).base_price?.toString() || "",
       ncm: (template as any).ncm || "",
       cest: (template as any).cest || "",
@@ -702,6 +707,7 @@ export default function ProductTemplates() {
         cfop_venda: data.cfop_venda || null,
         origem: data.origem || null,
         has_multiple_sides: data.has_multiple_sides,
+        has_cutting_plan: data.has_cutting_plan,
       };
 
 
@@ -1594,7 +1600,7 @@ export default function ProductTemplates() {
             <Tabs value={dialogTab} onValueChange={(v) => setDialogTab(v as "dados" | "composicao" | "variaveis")} className="space-y-4">
               <TabsList className="grid grid-cols-3 w-full">
                 <TabsTrigger value="dados">Dados</TabsTrigger>
-                <TabsTrigger value="composicao" disabled={!editingTemplate}>
+                <TabsTrigger value="composicao" disabled={!editingTemplate || !formData.has_cutting_plan}>
                   <Settings2 className="w-4 h-4 mr-2" /> Composição
                 </TabsTrigger>
                 <TabsTrigger value="variaveis" disabled={!editingTemplate}>
@@ -1781,6 +1787,17 @@ export default function ProductTemplates() {
                   <Label htmlFor="has_multiple_sides" className="text-sm flex items-center gap-1">
                     <Layers className="w-4 h-4 text-primary" />
                     Múltiplos Lados (ex: Box de Canto)
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="has_cutting_plan"
+                    checked={formData.has_cutting_plan}
+                    onCheckedChange={(checked) => setFormData({ ...formData, has_cutting_plan: checked })}
+                  />
+                  <Label htmlFor="has_cutting_plan" className="text-sm flex items-center gap-1">
+                    <Scissors className="w-4 h-4 text-primary" />
+                    Este produto possui plano de corte?
                   </Label>
                 </div>
               </div>
