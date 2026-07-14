@@ -268,13 +268,14 @@ export function CuttingPlanCalculator() {
 
   const barOptimizationData = useMemo(() => {
     return calculatedCuts.map(cut => ({
-      itemTemplateId: cut.id,
+      itemTemplateId: (cut as any).itemTemplateId || cut.profileName,
       itemName: cut.profileName,
       cutLength: cut.calculatedLength,
       quantity: cut.quantity,
       barLengthMm: 6000,
     }));
   }, [calculatedCuts]);
+
 
   const selectedProductData = selectedProduct
     ? { id: selectedProduct, name: productName, image_url: productImage }
