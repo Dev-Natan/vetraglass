@@ -228,6 +228,7 @@ function AppRoutes() {
       <Route path="/produtos/linha/:linha" element={<ProtectedRoute><ModuleGuard moduleKey="produtos"><LazyRoute><ProdutosLinha /></LazyRoute></ModuleGuard></ProtectedRoute>} />
       <Route path="/orcamentos" element={<ProtectedRoute><ModuleGuard moduleKey="orcamentos"><LazyRoute><Orcamentos /></LazyRoute></ModuleGuard></ProtectedRoute>} />
       <Route path="/ordens-servico" element={<ProtectedRoute><ModuleGuard moduleKey="ordens_servico"><LazyRoute><OrdensServico /></LazyRoute></ModuleGuard></ProtectedRoute>} />
+      <Route path="/plano-de-corte" element={<ProtectedRoute><LazyRoute><PlanoDeCorte /></LazyRoute></ProtectedRoute>} />
       <Route path="/estoque" element={<ProtectedRoute><ModuleGuard moduleKey="estoque"><LazyRoute><Estoque /></LazyRoute></ModuleGuard></ProtectedRoute>} />
       <Route path="/estoque/linha/:linha" element={<ProtectedRoute><ModuleGuard moduleKey="estoque"><LazyRoute><EstoqueLinha /></LazyRoute></ModuleGuard></ProtectedRoute>} />
       <Route path="/meus-precos" element={<ProtectedRoute><LazyRoute><MeusPrecos /></LazyRoute></ProtectedRoute>} />
