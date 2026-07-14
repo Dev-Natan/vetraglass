@@ -566,7 +566,7 @@ export function CuttingPlanCalculator() {
             <AddProductPanel
               mode="cutting"
               submitLabel="Gerar Plano de Corte"
-              submitIcon={<Settings2 className="w-4 h-4" />}
+              submitIcon={<Scissors className="w-4 h-4" />}
               onAdd={handleProductConfigured}
               onCancel={() => setShowConfigurator(false)}
             />
