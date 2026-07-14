@@ -1,19 +1,17 @@
 import { useState, useMemo } from 'react';
 import { resolveProductImageUrl } from '@/utils/imageUrl';
-import { Printer, Download, Tags, BarChart3 } from 'lucide-react';
+import { Printer, Download, Tags, BarChart3, Settings2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { evaluateFormula, getFormulaPosition } from '@/utils/safeFormulaEvaluator';
-import { CuttingPlanFilters } from '@/components/plano-corte/CuttingPlanFilters';
 import { ProfileCutsTable, type ProfileCutItem } from '@/components/plano-corte/ProfileCutsTable';
 import { GlassCutsTable, type GlassCutItem } from '@/components/plano-corte/GlassCutsTable';
 import { BarOptimizationView } from '@/components/plano-corte/BarOptimizationView';
 import { FramePreviewSVG } from '@/components/plano-corte/FramePreviewSVG';
 import { CuttingSummaryCards } from '@/components/plano-corte/CuttingSummaryCards';
+import { AddProductPanel } from '@/components/orcamentos/AddProductPanel';
 import { generateCuttingLabels, expandCutsToLabels } from '@/utils/generateCuttingLabels';
 import { exportCuttingPlanToCSV, type CuttingPlanExport } from '@/utils/exportCuttingToExcel';
 import {
@@ -29,15 +27,17 @@ const getStorageUrl = (path: string | null) => resolveProductImageUrl(path);
 
 export function CuttingPlanCalculator() {
   const { currentCompany, isSaasAdmin } = useAuth();
-  const [selectedLinha, setSelectedLinha] = useState<string>('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedProduct, setSelectedProduct] = useState<string>('');
-  const [width, setWidth] = useState<number>(1000);
-  const [height, setHeight] = useState<number>(1000);
+  const [productName, setProductName] = useState<string>('');
+  const [productImage, setProductImage] = useState<string | null>(null);
+  const [width, setWidth] = useState<number>(0);
+  const [height, setHeight] = useState<number>(0);
   const [quantity, setQuantity] = useState<number>(1);
   const [activeTab, setActiveTab] = useState<'cortes' | 'otimizacao'>('cortes');
   const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
   const [hoveredProfileId, setHoveredProfileId] = useState<string | null>(null);
+  const [showConfigurator, setShowConfigurator] = useState<boolean>(true);
+
 
 
   const { data: productTemplates } = useQuery({
