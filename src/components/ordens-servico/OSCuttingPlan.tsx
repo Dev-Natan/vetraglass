@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Scissors, Maximize2, Layers, Square, CheckCircle, Clock, Palette, AlertTriangle, FileDown } from 'lucide-react';
+import { Scissors, Maximize2, Layers, Square, CheckCircle, Clock, Palette, AlertTriangle, FileDown, Printer } from 'lucide-react';
 import { OSGlassUnifiedView } from './OSGlassUnifiedView';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,7 +15,9 @@ import { regenerateOSDocuments } from '@/utils/generateOSDocuments';
 import { generateCuttingPlanPdf } from '@/utils/generateCuttingPlanPdf';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { BarOptimizationView } from '@/components/plano-corte/BarOptimizationView';
+import { PrintableCuttingReport, type PrintableProfileCut, type PrintableProductSummary } from '@/components/plano-corte/PrintableCuttingReport';
 import { useMemo } from 'react';
+
 
 
 interface OSCuttingPlanProps {
@@ -158,6 +160,38 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
     return all;
   }, [plans]);
 
+  // Aggregated data for printable report (products + all cuts)
+  const printProducts: PrintableProductSummary[] = useMemo(
+    () =>
+      (plans || []).map((p: any) => ({
+        productName: p.product_name,
+        width: p.os_items?.largura_producao || p.vao_width,
+        height: p.os_items?.altura_producao || p.vao_height,
+        quantity: p.quantity || 1,
+      })),
+    [plans]
+  );
+
+  const printProfileCuts: PrintableProfileCut[] = useMemo(() => {
+    const rows: PrintableProfileCut[] = [];
+    (plans || []).forEach((plan: any) => {
+      const planQty = plan.quantity || 1;
+      (plan.cuts_data || []).forEach((cut: CutData) => {
+        if (!cut?.calculatedLength || !cut?.quantity) return;
+        rows.push({
+          profileName: cut.profileName,
+          calculatedLength: Math.round(cut.calculatedLength),
+          quantity: cut.quantity * planQty,
+          cutAngle: cut.cutAngle,
+          position: cut.position,
+          itemTemplateId: cut.itemTemplateId || cut.profileName,
+        });
+      });
+    });
+    return rows;
+  }, [plans]);
+
+
   const recalculateMutation = useMutation({
     mutationFn: (osItemId: string) => regenerateOSDocuments(ordemServicoId, osItemId),
     onSuccess: () => {
@@ -263,12 +297,26 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
 
   return (
     <div className="space-y-6">
+      {/* Print / PDF actions (hidden on print) */}
+      <div className="flex items-center justify-end gap-2 no-print">
+        <Button variant="outline" size="sm" className="gap-2" onClick={() => window.print()}>
+          <Printer className="w-4 h-4" />
+          Imprimir Plano
+        </Button>
+        <Button variant="outline" size="sm" className="gap-2" onClick={handleDownloadPdf}>
+          <FileDown className="w-4 h-4" />
+          Baixar PDF
+        </Button>
+      </div>
 
+      {/* On-screen content (hidden on print) */}
+      <div className="no-print space-y-6">
 
       {/* Consolidated Bar Optimization for the entire OS */}
       {aggregatedBarCuts.length > 0 && (
         <BarOptimizationView cuts={aggregatedBarCuts} />
       )}
+
 
       {/* Summary Card for Glass */}
       {totalGlassPanels > 0 && (
@@ -554,6 +602,18 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
           </Card>
         );
       })}
+      </div>
+
+      {/* Print-only report (visible exclusively via @media print) */}
+      <div className="print-area">
+        <PrintableCuttingReport
+          companyName={currentCompany?.name || 'Urbano Vidros'}
+          documentSubtitle={plans[0]?.os_number ? `OS ${plans[0].os_number}` : undefined}
+          products={printProducts}
+          profileCuts={printProfileCuts}
+        />
+      </div>
     </div>
   );
 }
+

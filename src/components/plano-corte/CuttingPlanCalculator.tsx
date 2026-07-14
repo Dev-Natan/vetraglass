@@ -9,6 +9,8 @@ import { evaluateFormula, getFormulaPosition } from '@/utils/safeFormulaEvaluato
 import { ProfileCutsTable, type ProfileCutItem } from '@/components/plano-corte/ProfileCutsTable';
 import { GlassCutsTable, type GlassCutItem } from '@/components/plano-corte/GlassCutsTable';
 import { BarOptimizationView } from '@/components/plano-corte/BarOptimizationView';
+import { PrintableCuttingReport } from '@/components/plano-corte/PrintableCuttingReport';
+
 
 import { CuttingSummaryCards } from '@/components/plano-corte/CuttingSummaryCards';
 import { AddProductPanel } from '@/components/orcamentos/AddProductPanel';
@@ -579,35 +581,10 @@ export function CuttingPlanCalculator() {
 
 
 
-      <div className="print-area">
-        {/* Cabeçalho exibido apenas na impressão */}
-        <div className="print-only" style={{ marginBottom: '16px', borderBottom: '2px solid #000', paddingBottom: '12px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <h1 style={{ fontSize: '22px', fontWeight: 700, textTransform: 'uppercase', margin: 0 }}>
-                {currentCompany?.name || 'Urbano Vidros'}
-              </h1>
-              <div style={{ fontSize: '12px', color: '#555', marginTop: '2px' }}>Plano de Corte</div>
-            </div>
-            <div style={{ fontSize: '11px', color: '#555', textAlign: 'right' }}>
-              {new Date().toLocaleDateString('pt-BR')} — {new Date().toLocaleTimeString('pt-BR')}
-            </div>
-          </div>
-          {selectedProductData && (
-            <div style={{ marginTop: '10px' }}>
-              <div style={{ fontSize: '16px', fontWeight: 700, textTransform: 'uppercase' }}>
-                {selectedProductData.name}
-              </div>
-              <div style={{ fontSize: '13px', marginTop: '4px' }}>
-                <strong>Dimensões:</strong> {width} mm (L) × {height} mm (A) &nbsp;•&nbsp;
-                <strong>Quantidade:</strong> {quantity}
-              </div>
-            </div>
-          )}
-        </div>
-
+      {/* On-screen content (hidden on print) */}
+      <div className="no-print">
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'cortes' | 'otimizacao')}>
-          <TabsList className="w-auto no-print">
+          <TabsList className="w-auto">
             <TabsTrigger value="cortes" className="px-6 gap-2">
               <Printer className="w-4 h-4" />
               Plano de Corte
@@ -620,7 +597,7 @@ export function CuttingPlanCalculator() {
 
           <TabsContent value="cortes" className="mt-4 space-y-6">
             {calculatedGlassCuts.length === 0 && calculatedCuts.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground no-print">
+              <div className="text-center py-12 text-muted-foreground">
                 {selectedProduct
                   ? 'Nenhuma composição encontrada para este produto.'
                   : 'Selecione um produto e informe as medidas para gerar o plano de corte.'}
@@ -648,13 +625,11 @@ export function CuttingPlanCalculator() {
                     onHoverChange={setHoveredProfileId}
                   />
                 </div>
-
               </>
             )}
           </TabsContent>
 
-
-          <TabsContent value="otimizacao" className="mt-4 no-print">
+          <TabsContent value="otimizacao" className="mt-4">
             {barOptimizationData.length > 0 ? (
               <BarOptimizationView cuts={barOptimizationData} />
             ) : (
@@ -665,7 +640,35 @@ export function CuttingPlanCalculator() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Print-only report (visible exclusively via @media print) */}
+      <div className="print-area">
+        <PrintableCuttingReport
+          companyName={currentCompany?.name || 'Urbano Vidros'}
+          products={
+            selectedProductData
+              ? [{
+                  productName: selectedProductData.name,
+                  width,
+                  height,
+                  quantity,
+                }]
+              : []
+          }
+          profileCuts={calculatedCuts.map((c) => ({
+            profileName: c.profileName,
+            calculatedLength: c.calculatedLength,
+            quantity: c.quantity,
+            cutAngle: c.cutAngle,
+            cutAngleStart: c.cutAngleStart,
+            cutAngleEnd: c.cutAngleEnd,
+            position: c.position,
+            itemTemplateId: (c as any).itemTemplateId,
+          }))}
+        />
+      </div>
     </div>
   );
 }
+
 

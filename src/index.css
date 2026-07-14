@@ -253,7 +253,7 @@ a[href*="lovable.dev"][target="_blank"] {
 }
 
 /* ============================================================
-   Print styles — used by /plano-de-corte "Imprimir Plano (PDF)"
+   Print styles — /plano-de-corte and OS cutting plan reports
    ============================================================ */
 @media print {
   @page {
@@ -263,6 +263,16 @@ a[href*="lovable.dev"][target="_blank"] {
 
   html, body {
     background: #fff !important;
+    color: #000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Force ink-saving black on white for every text node */
+  body, body * {
+    color: #000 !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
   }
 
   /* Hide everything by default */
@@ -285,17 +295,44 @@ a[href*="lovable.dev"][target="_blank"] {
     padding: 0 !important;
     margin: 0 !important;
     background: #fff !important;
-    color: #000 !important;
   }
 
-  /* Explicitly hide chrome/controls */
+  /* Explicitly hide chrome/controls (sidebar, headers, footers, inputs, buttons) */
   .no-print,
-  .no-print * {
+  .no-print *,
+  header:not(.print-area header),
+  nav:not(.print-area nav),
+  aside,
+  [role="navigation"],
+  [data-sidebar],
+  button:not(.print-area button),
+  input:not(.print-area input),
+  select:not(.print-area select),
+  textarea:not(.print-area textarea) {
     display: none !important;
   }
 
-  /* Header shown only on print */
-  .print-only { display: block !important; }
+  /* Print-only wrapper */
+  .print-only,
+  .printable-report { display: block !important; }
+
+  /* Page-break protection for report blocks */
+  .printable-report table,
+  .printable-report tr,
+  .printable-report thead,
+  .printable-report section,
+  .printable-report [style*="pageBreakInside"] {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  .printable-report h1,
+  .printable-report h2,
+  .printable-report h3 {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
 }
 
-.print-only { display: none; }
+.print-only,
+.printable-report { display: none; }
+
