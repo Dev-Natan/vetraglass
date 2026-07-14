@@ -524,7 +524,7 @@ export function CuttingPlanCalculator() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-end">
+      <div className="flex items-center justify-end no-print">
         <div className="flex items-center gap-2">
           {totalItems > 0 && (
             <div className="hidden sm:flex items-center gap-2 mr-4">
@@ -537,7 +537,16 @@ export function CuttingPlanCalculator() {
               <span className="text-sm text-muted-foreground">{progressPercent}%</span>
             </div>
           )}
-          
+
+          <Button
+            onClick={() => window.print()}
+            className="gap-2"
+            disabled={!selectedProduct || (calculatedCuts.length === 0 && calculatedGlassCuts.length === 0)}
+          >
+            <Printer className="w-4 h-4" />
+            Imprimir Plano (PDF)
+          </Button>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="gap-2" disabled={!selectedProduct || calculatedCuts.length === 0}>
@@ -548,7 +557,7 @@ export function CuttingPlanCalculator() {
             <DropdownMenuContent align="end" className="bg-popover border shadow-md">
               <DropdownMenuItem onClick={handlePrint}>
                 <Printer className="w-4 h-4 mr-2" />
-                Imprimir PDF
+                Imprimir (Nova janela)
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleExportCSV}>
                 <Download className="w-4 h-4 mr-2" />
@@ -563,7 +572,7 @@ export function CuttingPlanCalculator() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 no-print">
         <div className="flex justify-center">
           <div className="w-full max-w-[250px] aspect-square bg-muted rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
             {selectedProductData?.image_url ? (
@@ -630,42 +639,81 @@ export function CuttingPlanCalculator() {
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'cortes' | 'otimizacao')}>
-        <TabsList className="w-auto">
-          <TabsTrigger value="cortes" className="px-6 gap-2">
-            <Printer className="w-4 h-4" />
-            Plano de Corte
-          </TabsTrigger>
-          <TabsTrigger value="otimizacao" className="px-6 gap-2">
-            <BarChart3 className="w-4 h-4" />
-            Otimização de Barras
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="cortes" className="mt-4 space-y-6">
-          <GlassCutsTable 
-            glassCuts={calculatedGlassCuts}
-            showCheckboxes
-            onToggleComplete={handleToggleComplete}
-          />
-          <ProfileCutsTable 
-            cuts={calculatedCuts}
-            showCheckboxes
-            onToggleComplete={handleToggleComplete}
-            getStorageUrl={getStorageUrl}
-          />
-        </TabsContent>
-
-        <TabsContent value="otimizacao" className="mt-4">
-          {barOptimizationData.length > 0 ? (
-            <BarOptimizationView cuts={barOptimizationData} />
-          ) : (
-            <div className="text-center py-12 text-muted-foreground">
-              Selecione um produto para ver a otimização de barras
+      <div className="print-area">
+        {/* Cabeçalho exibido apenas na impressão */}
+        <div className="print-only" style={{ marginBottom: '16px', borderBottom: '2px solid #000', paddingBottom: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <h1 style={{ fontSize: '22px', fontWeight: 700, textTransform: 'uppercase', margin: 0 }}>
+                {currentCompany?.name || 'Urbano Vidros'}
+              </h1>
+              <div style={{ fontSize: '12px', color: '#555', marginTop: '2px' }}>Plano de Corte</div>
+            </div>
+            <div style={{ fontSize: '11px', color: '#555', textAlign: 'right' }}>
+              {new Date().toLocaleDateString('pt-BR')} — {new Date().toLocaleTimeString('pt-BR')}
+            </div>
+          </div>
+          {selectedProductData && (
+            <div style={{ marginTop: '10px' }}>
+              <div style={{ fontSize: '16px', fontWeight: 700, textTransform: 'uppercase' }}>
+                {selectedProductData.name}
+              </div>
+              <div style={{ fontSize: '13px', marginTop: '4px' }}>
+                <strong>Dimensões:</strong> {width} mm (L) × {height} mm (A) &nbsp;•&nbsp;
+                <strong>Quantidade:</strong> {quantity}
+              </div>
             </div>
           )}
-        </TabsContent>
-      </Tabs>
+        </div>
+
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'cortes' | 'otimizacao')}>
+          <TabsList className="w-auto no-print">
+            <TabsTrigger value="cortes" className="px-6 gap-2">
+              <Printer className="w-4 h-4" />
+              Plano de Corte
+            </TabsTrigger>
+            <TabsTrigger value="otimizacao" className="px-6 gap-2">
+              <BarChart3 className="w-4 h-4" />
+              Otimização de Barras
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="cortes" className="mt-4 space-y-6">
+            {calculatedGlassCuts.length === 0 && calculatedCuts.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground no-print">
+                {selectedProduct
+                  ? 'Nenhuma composição encontrada para este produto.'
+                  : 'Selecione um produto e informe as medidas para gerar o plano de corte.'}
+              </div>
+            ) : (
+              <>
+                <GlassCutsTable
+                  glassCuts={calculatedGlassCuts}
+                  showCheckboxes
+                  onToggleComplete={handleToggleComplete}
+                />
+                <ProfileCutsTable
+                  cuts={calculatedCuts}
+                  showCheckboxes
+                  onToggleComplete={handleToggleComplete}
+                  getStorageUrl={getStorageUrl}
+                />
+              </>
+            )}
+          </TabsContent>
+
+          <TabsContent value="otimizacao" className="mt-4 no-print">
+            {barOptimizationData.length > 0 ? (
+              <BarOptimizationView cuts={barOptimizationData} />
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                Selecione um produto para ver a otimização de barras
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 }
+
