@@ -222,9 +222,10 @@ export async function generateOSDocuments(
 
       // Get composition and glass formulas
       const [allComposition, glassFormulas] = await Promise.all([
-        getProductComposition(item.product_id),
+        getProductComposition(item.product_id, companyId),
         getGlassFormulas(item.product_id, product.linha || '')
       ]);
+
 
       const includeContramarco = item.include_contramarco !== false;
       const composition = allComposition.filter(comp => {
