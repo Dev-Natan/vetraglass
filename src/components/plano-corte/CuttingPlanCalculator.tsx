@@ -109,6 +109,7 @@ export function CuttingPlanCalculator() {
       const selectCols = `
           id,
           quantity_formula,
+          pieces_formula,
           pieces_quantity,
           cut_angle,
           cut_angle_start,
@@ -124,6 +125,7 @@ export function CuttingPlanCalculator() {
             image_url
           )
         `;
+
 
       // 1. Prefer company-specific composition when available
       if (!isSaasAdmin && currentCompany?.id) {
@@ -209,7 +211,14 @@ export function CuttingPlanCalculator() {
           }
         }
         
-        const totalPieces = piecesPerProduct * quantity;
+        const piecesFormula = (item as any).pieces_formula as string | null;
+        let piecesFromFormula = piecesPerProduct;
+        if (piecesFormula && piecesFormula.trim() !== '') {
+          const evaluated = evaluateFormula(piecesFormula, width, height, null, 'ceil');
+          if (evaluated > 0) piecesFromFormula = evaluated;
+        }
+        const totalPieces = piecesFromFormula * quantity;
+
         
         return {
           id: item.id,
