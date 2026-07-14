@@ -160,6 +160,38 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
     return all;
   }, [plans]);
 
+  // Aggregated data for printable report (products + all cuts)
+  const printProducts: PrintableProductSummary[] = useMemo(
+    () =>
+      (plans || []).map((p: any) => ({
+        productName: p.product_name,
+        width: p.os_items?.largura_producao || p.vao_width,
+        height: p.os_items?.altura_producao || p.vao_height,
+        quantity: p.quantity || 1,
+      })),
+    [plans]
+  );
+
+  const printProfileCuts: PrintableProfileCut[] = useMemo(() => {
+    const rows: PrintableProfileCut[] = [];
+    (plans || []).forEach((plan: any) => {
+      const planQty = plan.quantity || 1;
+      (plan.cuts_data || []).forEach((cut: CutData) => {
+        if (!cut?.calculatedLength || !cut?.quantity) return;
+        rows.push({
+          profileName: cut.profileName,
+          calculatedLength: Math.round(cut.calculatedLength),
+          quantity: cut.quantity * planQty,
+          cutAngle: cut.cutAngle,
+          position: cut.position,
+          itemTemplateId: cut.itemTemplateId || cut.profileName,
+        });
+      });
+    });
+    return rows;
+  }, [plans]);
+
+
   const recalculateMutation = useMutation({
     mutationFn: (osItemId: string) => regenerateOSDocuments(ordemServicoId, osItemId),
     onSuccess: () => {
