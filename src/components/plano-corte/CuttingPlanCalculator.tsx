@@ -544,72 +544,67 @@ export function CuttingPlanCalculator() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 no-print">
-        <div className="flex justify-center">
-          <div className="w-full max-w-[250px] aspect-square bg-muted rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
-            {selectedProductData?.image_url ? (
-              <img 
-                src={getStorageUrl(selectedProductData.image_url) || ''} 
-                alt={selectedProductData.name}
-                className="w-full h-full object-contain rounded-lg"
-              />
-            ) : (
-              <div className="text-6xl text-muted-foreground/30">🪟</div>
-            )}
+      <div className="no-print rounded-lg border bg-card">
+        {showConfigurator ? (
+          <div className="p-4 md:p-6">
+            <div className="mb-4 flex items-center justify-between gap-2">
+              <div>
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <Settings2 className="w-5 h-5 text-primary" />
+                  Configurar Produto
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Use os mesmos campos do orçamento — a simulação não cria registros.
+                </p>
+              </div>
+              {selectedProduct && (
+                <Button variant="ghost" size="sm" onClick={() => setShowConfigurator(false)}>
+                  Ver plano atual
+                </Button>
+              )}
+            </div>
+            <AddProductPanel
+              onAdd={handleProductConfigured}
+              onCancel={() => setShowConfigurator(false)}
+            />
           </div>
-        </div>
-
-        <div className="lg:col-span-2 space-y-4">
-          <CuttingPlanFilters
-            availableLinhas={availableLinhas}
-            availableCategories={availableCategories}
-            filteredProducts={filteredProducts}
-            selectedLinha={selectedLinha}
-            selectedCategory={selectedCategory}
-            selectedProduct={selectedProduct}
-            onLinhaChange={handleLinhaChange}
-            onCategoryChange={handleCategoryChange}
-            onProductChange={setSelectedProduct}
-          />
-
-          {selectedProductData && (
-            <h2 className="text-xl font-bold uppercase text-foreground">
-              {selectedProductData.name}
-            </h2>
-          )}
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label>Largura do Vão</Label>
-              <Input 
-                type="number" 
-                value={width} 
-                onChange={e => setWidth(Number(e.target.value))}
-                className="bg-muted"
-              />
+        ) : (
+          <div className="flex items-center justify-between gap-4 p-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center overflow-hidden shrink-0">
+                {selectedProductData?.image_url ? (
+                  <img
+                    src={getStorageUrl(selectedProductData.image_url) || ''}
+                    alt={selectedProductData.name}
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <span className="text-2xl">🪟</span>
+                )}
+              </div>
+              <div className="min-w-0">
+                <div className="font-semibold truncate uppercase text-sm">
+                  {selectedProductData?.name || 'Produto'}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {width} × {height} mm • Qtd: {quantity}
+                </div>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Altura do Vão</Label>
-              <Input 
-                type="number" 
-                value={height} 
-                onChange={e => setHeight(Number(e.target.value))}
-                className="bg-muted"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Quantidade</Label>
-              <Input 
-                type="number" 
-                value={quantity} 
-                onChange={e => setQuantity(Number(e.target.value))}
-                min={1}
-                className="bg-muted"
-              />
+            <div className="flex gap-2 shrink-0">
+              <Button variant="outline" size="sm" onClick={() => setShowConfigurator(true)}>
+                <Settings2 className="w-4 h-4 mr-2" />
+                Alterar
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleReset}>
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Novo
+              </Button>
             </div>
           </div>
-        </div>
+        )}
       </div>
+
 
       <div className="print-area">
         {/* Cabeçalho exibido apenas na impressão */}
