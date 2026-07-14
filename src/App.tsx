@@ -45,6 +45,7 @@ const Feedbacks = lazy(() => import("./pages/Feedbacks"));
 
 const AceitarConvite = lazy(() => import("./pages/AceitarConvite"));
 const MeusPrecos = lazy(() => import("./pages/MeusPrecos"));
+const PlanoDeCorte = lazy(() => import("./pages/PlanoDeCorte"));
 
 const Planos = lazy(() => import("./pages/Planos"));
 const NotFound = lazy(() => import("./pages/NotFound"));
