@@ -1,19 +1,17 @@
 import { useState, useMemo } from 'react';
 import { resolveProductImageUrl } from '@/utils/imageUrl';
-import { Printer, Download, Tags, BarChart3 } from 'lucide-react';
+import { Printer, Download, Tags, BarChart3, Settings2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { evaluateFormula, getFormulaPosition } from '@/utils/safeFormulaEvaluator';
-import { CuttingPlanFilters } from '@/components/plano-corte/CuttingPlanFilters';
 import { ProfileCutsTable, type ProfileCutItem } from '@/components/plano-corte/ProfileCutsTable';
 import { GlassCutsTable, type GlassCutItem } from '@/components/plano-corte/GlassCutsTable';
 import { BarOptimizationView } from '@/components/plano-corte/BarOptimizationView';
 import { FramePreviewSVG } from '@/components/plano-corte/FramePreviewSVG';
 import { CuttingSummaryCards } from '@/components/plano-corte/CuttingSummaryCards';
+import { AddProductPanel } from '@/components/orcamentos/AddProductPanel';
 import { generateCuttingLabels, expandCutsToLabels } from '@/utils/generateCuttingLabels';
 import { exportCuttingPlanToCSV, type CuttingPlanExport } from '@/utils/exportCuttingToExcel';
 import {
@@ -29,81 +27,40 @@ const getStorageUrl = (path: string | null) => resolveProductImageUrl(path);
 
 export function CuttingPlanCalculator() {
   const { currentCompany, isSaasAdmin } = useAuth();
-  const [selectedLinha, setSelectedLinha] = useState<string>('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedProduct, setSelectedProduct] = useState<string>('');
-  const [width, setWidth] = useState<number>(1000);
-  const [height, setHeight] = useState<number>(1000);
+  const [productName, setProductName] = useState<string>('');
+  const [productImage, setProductImage] = useState<string | null>(null);
+  const [width, setWidth] = useState<number>(0);
+  const [height, setHeight] = useState<number>(0);
   const [quantity, setQuantity] = useState<number>(1);
   const [activeTab, setActiveTab] = useState<'cortes' | 'otimizacao'>('cortes');
   const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
   const [hoveredProfileId, setHoveredProfileId] = useState<string | null>(null);
+  const [showConfigurator, setShowConfigurator] = useState<boolean>(true);
 
+  const handleProductConfigured = (payload: Parameters<React.ComponentProps<typeof AddProductPanel>['onAdd']>[0]) => {
+    setSelectedProduct(payload.product_template_id || '');
+    setProductName(payload.name);
+    setProductImage(payload.image_url || null);
+    setWidth(Number(payload.width) || 0);
+    setHeight(Number(payload.height) || 0);
+    setQuantity(Number(payload.quantity) || 1);
+    setCompletedItems(new Set());
+    setShowConfigurator(false);
+    toast.success('Plano de corte gerado');
+  };
 
-  const { data: productTemplates } = useQuery({
-    queryKey: ['product-templates-for-cutting'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('product_templates')
-        .select(`
-          id,
-          name,
-          category,
-          linha,
-          image_url,
-          min_width,
-          max_width,
-          min_height,
-          max_height
-        `)
-        .eq('is_active', true);
-      
-      if (error) throw error;
-      return data || [];
-    }
-  });
-
-  const availableLinhas = useMemo(() => {
-    if (!productTemplates) return [];
-    const linhas = new Set<string>();
-    productTemplates.forEach(p => {
-      if (p.linha) linhas.add(p.linha);
-    });
-    return Array.from(linhas).sort();
-  }, [productTemplates]);
-
-  const availableCategories = useMemo(() => {
-    if (!productTemplates) return [];
-    const categories = new Set<string>();
-    productTemplates
-      .filter(p => !selectedLinha || p.linha === selectedLinha)
-      .forEach(p => {
-        if (p.category) categories.add(p.category);
-      });
-    return Array.from(categories).sort();
-  }, [productTemplates, selectedLinha]);
-
-  const filteredProducts = useMemo(() => {
-    if (!productTemplates) return [];
-    return productTemplates.filter(p => {
-      if (selectedLinha && p.linha !== selectedLinha) return false;
-      if (selectedCategory && p.category !== selectedCategory) return false;
-      return true;
-    });
-  }, [productTemplates, selectedLinha, selectedCategory]);
-
-  const handleLinhaChange = (value: string) => {
-    setSelectedLinha(value);
-    setSelectedCategory('');
+  const handleReset = () => {
+    setShowConfigurator(true);
     setSelectedProduct('');
+    setProductName('');
+    setProductImage(null);
+    setWidth(0);
+    setHeight(0);
+    setQuantity(1);
     setCompletedItems(new Set());
   };
 
-  const handleCategoryChange = (value: string) => {
-    setSelectedCategory(value);
-    setSelectedProduct('');
-    setCompletedItems(new Set());
-  };
 
   const { data: productItems } = useQuery({
     queryKey: ['product-template-items-cutting', selectedProduct, currentCompany?.id, isSaasAdmin],
@@ -315,7 +272,9 @@ export function CuttingPlanCalculator() {
     }));
   }, [calculatedCuts]);
 
-  const selectedProductData = productTemplates?.find(p => p.id === selectedProduct);
+  const selectedProductData = selectedProduct
+    ? { id: selectedProduct, name: productName, image_url: productImage }
+    : null;
 
   const handleToggleComplete = (id: string, completed: boolean) => {
     setCompletedItems(prev => {
@@ -585,72 +544,67 @@ export function CuttingPlanCalculator() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 no-print">
-        <div className="flex justify-center">
-          <div className="w-full max-w-[250px] aspect-square bg-muted rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
-            {selectedProductData?.image_url ? (
-              <img 
-                src={getStorageUrl(selectedProductData.image_url) || ''} 
-                alt={selectedProductData.name}
-                className="w-full h-full object-contain rounded-lg"
-              />
-            ) : (
-              <div className="text-6xl text-muted-foreground/30">🪟</div>
-            )}
+      <div className="no-print rounded-lg border bg-card">
+        {showConfigurator ? (
+          <div className="p-4 md:p-6">
+            <div className="mb-4 flex items-center justify-between gap-2">
+              <div>
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <Settings2 className="w-5 h-5 text-primary" />
+                  Configurar Produto
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Use os mesmos campos do orçamento — a simulação não cria registros.
+                </p>
+              </div>
+              {selectedProduct && (
+                <Button variant="ghost" size="sm" onClick={() => setShowConfigurator(false)}>
+                  Ver plano atual
+                </Button>
+              )}
+            </div>
+            <AddProductPanel
+              onAdd={handleProductConfigured}
+              onCancel={() => setShowConfigurator(false)}
+            />
           </div>
-        </div>
-
-        <div className="lg:col-span-2 space-y-4">
-          <CuttingPlanFilters
-            availableLinhas={availableLinhas}
-            availableCategories={availableCategories}
-            filteredProducts={filteredProducts}
-            selectedLinha={selectedLinha}
-            selectedCategory={selectedCategory}
-            selectedProduct={selectedProduct}
-            onLinhaChange={handleLinhaChange}
-            onCategoryChange={handleCategoryChange}
-            onProductChange={setSelectedProduct}
-          />
-
-          {selectedProductData && (
-            <h2 className="text-xl font-bold uppercase text-foreground">
-              {selectedProductData.name}
-            </h2>
-          )}
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label>Largura do Vão</Label>
-              <Input 
-                type="number" 
-                value={width} 
-                onChange={e => setWidth(Number(e.target.value))}
-                className="bg-muted"
-              />
+        ) : (
+          <div className="flex items-center justify-between gap-4 p-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center overflow-hidden shrink-0">
+                {selectedProductData?.image_url ? (
+                  <img
+                    src={getStorageUrl(selectedProductData.image_url) || ''}
+                    alt={selectedProductData.name}
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <span className="text-2xl">🪟</span>
+                )}
+              </div>
+              <div className="min-w-0">
+                <div className="font-semibold truncate uppercase text-sm">
+                  {selectedProductData?.name || 'Produto'}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {width} × {height} mm • Qtd: {quantity}
+                </div>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Altura do Vão</Label>
-              <Input 
-                type="number" 
-                value={height} 
-                onChange={e => setHeight(Number(e.target.value))}
-                className="bg-muted"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Quantidade</Label>
-              <Input 
-                type="number" 
-                value={quantity} 
-                onChange={e => setQuantity(Number(e.target.value))}
-                min={1}
-                className="bg-muted"
-              />
+            <div className="flex gap-2 shrink-0">
+              <Button variant="outline" size="sm" onClick={() => setShowConfigurator(true)}>
+                <Settings2 className="w-4 h-4 mr-2" />
+                Alterar
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleReset}>
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Novo
+              </Button>
             </div>
           </div>
-        </div>
+        )}
       </div>
+
 
       <div className="print-area">
         {/* Cabeçalho exibido apenas na impressão */}
