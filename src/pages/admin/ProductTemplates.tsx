@@ -105,6 +105,7 @@ type ProductTemplate = {
   min_height: number | null;
   max_height: number | null;
   has_multiple_sides: boolean;
+  has_cutting_plan: boolean;
   created_at: string;
 };
 
