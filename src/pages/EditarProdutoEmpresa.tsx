@@ -922,6 +922,7 @@ export default function EditarProdutoEmpresa() {
           onAddItem={(section) => { setAddItemSection(section); setIsAddItemDialogOpen(true); }}
           onEditItem={handleEditItem}
           onRemoveItem={(itemId) => removeItemMutation.mutate(itemId)}
+          onResetItem={product?.product_template_id ? (itemId) => resetItemMutation.mutate(itemId) : undefined}
         />
 
         {/* Composition-Based Pricing (Visible if composition selected) */}
