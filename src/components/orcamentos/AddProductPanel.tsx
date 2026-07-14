@@ -1260,70 +1260,87 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
             </div>
           </div>
 
-          {/* Barra azul fixa de total + ações */}
-          <div className="shrink-0 mt-4 overflow-hidden rounded-xl border shadow-sm">
-            <div className="flex items-center justify-between gap-3 px-4 py-3 bg-gradient-to-r from-primary/95 to-primary text-primary-foreground">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <span>{area.toFixed(2)} m²</span>
-                <span className="opacity-70">×</span>
-                <span>{quantity} un</span>
-                {compositionPricing.isReady && (
-                  <Badge variant="outline" className="ml-2 text-[10px] bg-white/15 border-white/30 text-primary-foreground">
-                    <Sparkles className="w-3 h-3 mr-1" />
-                    Composição
-                  </Badge>
-                )}
-              </div>
-              <div className="text-right">
-                <p className="text-[10px] uppercase tracking-wider opacity-80">Total</p>
-                <div className="flex items-center gap-1.5 justify-end">
-                  <span className="text-sm font-semibold opacity-90">R$</span>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min={0}
-                    value={totalPrice.toFixed(2)}
-                    onChange={(e) => {
-                      const v = parseFloat(e.target.value);
-                      setManualTotalOverride(Number.isFinite(v) ? v : 0);
-                    }}
-                    className="h-8 w-28 text-right text-lg font-bold bg-white/15 border-white/30 text-primary-foreground placeholder:text-primary-foreground/60"
-                  />
-                  {isPriceOverridden && (
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      className="h-7 w-7 text-primary-foreground hover:bg-white/20"
-                      title="Restaurar preço original"
-                      onClick={() => setManualTotalOverride(null)}
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-                {isPriceOverridden && (
-                  <div className="flex items-center justify-end gap-1 mt-1 text-[10px] opacity-90">
-                    <AlertTriangle className="w-3 h-3" />
-                    <span>Preço alterado manualmente · original {formatCurrency(computedTotalPrice)}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center justify-end gap-2 bg-card px-4 py-3 border-t">
-              <Button type="button" variant="outline" onClick={onCancel}>
-                Cancelar
-              </Button>
+          {mode === 'cutting' ? (
+            /* Rodapé limpo — modo Plano de Corte */
+            <div className="shrink-0 mt-4 flex items-center justify-end gap-2">
               <Button
                 type="button"
                 onClick={handleAdd}
                 disabled={!canAdd}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground px-6"
+                size="lg"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 gap-2"
               >
-                Adicionar ao orçamento
+                {submitIcon}
+                {submitLabel || 'Gerar Plano de Corte'}
               </Button>
             </div>
-          </div>
+          ) : (
+            /* Barra azul fixa de total + ações (Orçamento) */
+            <div className="shrink-0 mt-4 overflow-hidden rounded-xl border shadow-sm">
+              <div className="flex items-center justify-between gap-3 px-4 py-3 bg-gradient-to-r from-primary/95 to-primary text-primary-foreground">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <span>{area.toFixed(2)} m²</span>
+                  <span className="opacity-70">×</span>
+                  <span>{quantity} un</span>
+                  {compositionPricing.isReady && (
+                    <Badge variant="outline" className="ml-2 text-[10px] bg-white/15 border-white/30 text-primary-foreground">
+                      <Sparkles className="w-3 h-3 mr-1" />
+                      Composição
+                    </Badge>
+                  )}
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] uppercase tracking-wider opacity-80">Total</p>
+                  <div className="flex items-center gap-1.5 justify-end">
+                    <span className="text-sm font-semibold opacity-90">R$</span>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min={0}
+                      value={totalPrice.toFixed(2)}
+                      onChange={(e) => {
+                        const v = parseFloat(e.target.value);
+                        setManualTotalOverride(Number.isFinite(v) ? v : 0);
+                      }}
+                      className="h-8 w-28 text-right text-lg font-bold bg-white/15 border-white/30 text-primary-foreground placeholder:text-primary-foreground/60"
+                    />
+                    {isPriceOverridden && (
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 text-primary-foreground hover:bg-white/20"
+                        title="Restaurar preço original"
+                        onClick={() => setManualTotalOverride(null)}
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                  {isPriceOverridden && (
+                    <div className="flex items-center justify-end gap-1 mt-1 text-[10px] opacity-90">
+                      <AlertTriangle className="w-3 h-3" />
+                      <span>Preço alterado manualmente · original {formatCurrency(computedTotalPrice)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-2 bg-card px-4 py-3 border-t">
+                <Button type="button" variant="outline" onClick={onCancel}>
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleAdd}
+                  disabled={!canAdd}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-6"
+                >
+                  Adicionar ao orçamento
+                </Button>
+              </div>
+            </div>
+          )}
+
         </>
       )}
     </div>
