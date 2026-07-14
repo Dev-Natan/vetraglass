@@ -33,6 +33,7 @@ interface ProductCompositionItem {
   height_formula: string | null;
   cut_angle: number;
   pieces_quantity: number;
+  pieces_formula: string | null;
   is_optional: boolean;
   section: string | null;
   side: string | null;
@@ -45,6 +46,7 @@ interface ProductCompositionItem {
     bar_length_mm: number | null;
   };
 }
+
 
 interface GlassFormula {
   id: string;
