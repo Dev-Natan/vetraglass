@@ -57,6 +57,7 @@ const menuItems: MenuItem[] = [
   
   { icon: FileText, label: 'Orçamentos', path: '/orcamentos', module: 'orcamentos', tutorialId: 'menu-orcamentos' },
   { icon: ClipboardList, label: 'Ordens de Serviço', path: '/ordens-servico', module: 'ordens-servico', tutorialId: 'menu-ordens-servico' },
+  { icon: Scissors, label: 'Plano de Corte', path: '/plano-de-corte' },
   { icon: CalendarDays, label: 'Agenda', path: '/agenda', module: 'agenda', tutorialId: 'menu-agenda' },
   
   // Operacional
