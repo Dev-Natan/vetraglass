@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { resolveProductImageUrl } from '@/utils/imageUrl';
-import { Printer, Download, Tags, BarChart3, Settings2, RotateCcw } from 'lucide-react';
+import { Printer, Download, Tags, BarChart3, Settings2, RotateCcw, Scissors } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery } from '@tanstack/react-query';
@@ -551,10 +551,10 @@ export function CuttingPlanCalculator() {
               <div>
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <Settings2 className="w-5 h-5 text-primary" />
-                  Configurar Produto
+                  Especificações Técnicas do Vão
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  Use os mesmos campos do orçamento — a simulação não cria registros.
+                  Informe produto, dimensões e acabamentos. Nenhum registro é criado.
                 </p>
               </div>
               {selectedProduct && (
@@ -564,9 +564,13 @@ export function CuttingPlanCalculator() {
               )}
             </div>
             <AddProductPanel
+              mode="cutting"
+              submitLabel="Gerar Plano de Corte"
+              submitIcon={<Scissors className="w-4 h-4" />}
               onAdd={handleProductConfigured}
               onCancel={() => setShowConfigurator(false)}
             />
+
           </div>
         ) : (
           <div className="flex items-center justify-between gap-4 p-4">
