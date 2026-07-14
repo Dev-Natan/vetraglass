@@ -12,6 +12,8 @@ import { CuttingPlanFilters } from '@/components/plano-corte/CuttingPlanFilters'
 import { ProfileCutsTable, type ProfileCutItem } from '@/components/plano-corte/ProfileCutsTable';
 import { GlassCutsTable, type GlassCutItem } from '@/components/plano-corte/GlassCutsTable';
 import { BarOptimizationView } from '@/components/plano-corte/BarOptimizationView';
+import { FramePreviewSVG } from '@/components/plano-corte/FramePreviewSVG';
+import { CuttingSummaryCards } from '@/components/plano-corte/CuttingSummaryCards';
 import { generateCuttingLabels, expandCutsToLabels } from '@/utils/generateCuttingLabels';
 import { exportCuttingPlanToCSV, type CuttingPlanExport } from '@/utils/exportCuttingToExcel';
 import {
@@ -35,6 +37,8 @@ export function CuttingPlanCalculator() {
   const [quantity, setQuantity] = useState<number>(1);
   const [activeTab, setActiveTab] = useState<'cortes' | 'otimizacao'>('cortes');
   const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
+  const [hoveredProfileId, setHoveredProfileId] = useState<string | null>(null);
+
 
   const { data: productTemplates } = useQuery({
     queryKey: ['product-templates-for-cutting'],
