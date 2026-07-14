@@ -1289,19 +1289,21 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
           </div>
 
           {mode === 'cutting' ? (
-            /* Rodapé limpo — modo Plano de Corte */
-            <div className="shrink-0 mt-4 flex items-center justify-end gap-2">
-              <Button
-                type="button"
-                onClick={handleAdd}
-                disabled={!canAdd}
-                size="lg"
-                className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 gap-2"
-              >
-                {submitIcon}
-                {submitLabel || 'Gerar Plano de Corte'}
-              </Button>
-            </div>
+            /* Rodapé limpo — modo Plano de Corte (omitido se onLiveChange estiver ativo) */
+            onLiveChange ? null : (
+              <div className="shrink-0 mt-4 flex items-center justify-end gap-2">
+                <Button
+                  type="button"
+                  onClick={handleAdd}
+                  disabled={!canAdd}
+                  size="lg"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 gap-2"
+                >
+                  {submitIcon}
+                  {submitLabel || 'Gerar Plano de Corte'}
+                </Button>
+              </div>
+            )
           ) : (
             /* Barra azul fixa de total + ações (Orçamento) */
             <div className="shrink-0 mt-4 overflow-hidden rounded-xl border shadow-sm">
