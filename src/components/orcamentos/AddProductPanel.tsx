@@ -176,7 +176,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
           panels_count,
           sides_count,
           product_template:product_templates (
-            id, name, description, category, linha, image_url, has_multiple_sides,
+            id, name, description, category, linha, image_url, has_multiple_sides, has_cutting_plan,
             default_leaves_count, default_glasses_count, default_panels_count, default_sides_count
           )
         `)
