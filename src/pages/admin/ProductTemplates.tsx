@@ -68,7 +68,8 @@ import {
   ChevronDown,
   ChevronRight,
   Image as ImageIcon,
-  Palette
+  Palette,
+  Scissors
 } from "lucide-react";
 import {
   DropdownMenu,
