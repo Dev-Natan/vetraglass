@@ -334,6 +334,7 @@ export const FormulaEditor = forwardRef<HTMLDivElement, FormulaEditorProps>(
                       type="button"
                       variant="outline"
                       size="sm"
+                      title={f.description || f.formula}
                       className={cn(
                         "text-[11px] h-7 px-2",
                         piecesFormula === f.formula && "border-primary bg-primary/5"
