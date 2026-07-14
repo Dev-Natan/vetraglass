@@ -297,12 +297,26 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
 
   return (
     <div className="space-y-6">
+      {/* Print / PDF actions (hidden on print) */}
+      <div className="flex items-center justify-end gap-2 no-print">
+        <Button variant="outline" size="sm" className="gap-2" onClick={() => window.print()}>
+          <Printer className="w-4 h-4" />
+          Imprimir Plano
+        </Button>
+        <Button variant="outline" size="sm" className="gap-2" onClick={handleDownloadPdf}>
+          <FileDown className="w-4 h-4" />
+          Baixar PDF
+        </Button>
+      </div>
 
+      {/* On-screen content (hidden on print) */}
+      <div className="no-print space-y-6">
 
       {/* Consolidated Bar Optimization for the entire OS */}
       {aggregatedBarCuts.length > 0 && (
         <BarOptimizationView cuts={aggregatedBarCuts} />
       )}
+
 
       {/* Summary Card for Glass */}
       {totalGlassPanels > 0 && (
