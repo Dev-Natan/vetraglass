@@ -495,28 +495,32 @@ export function CompositionSections({ items, onAddItem, onEditItem, onRemoveItem
         items={profiles} 
         onAdd={() => onAddItem('profile')} 
         onEdit={onEditItem} 
-        onRemove={onRemoveItem} 
+        onRemove={onRemoveItem}
+        onReset={onResetItem}
       />
       
       <ComponentsSection 
         items={components} 
         onAdd={() => onAddItem('accessory')} 
         onEdit={onEditItem} 
-        onRemove={onRemoveItem} 
+        onRemove={onRemoveItem}
+        onReset={onResetItem}
       />
       
       <GlassSection 
         items={glasses} 
         onAdd={() => onAddItem('glass')} 
         onEdit={onEditItem} 
-        onRemove={onRemoveItem} 
+        onRemove={onRemoveItem}
+        onReset={onResetItem}
       />
 
       <ContramarcoSection 
         items={contramarcoItems} 
         onAdd={() => onAddItem('contramarco')} 
         onEdit={onEditItem} 
-        onRemove={onRemoveItem} 
+        onRemove={onRemoveItem}
+        onReset={onResetItem}
       />
     </div>
   );
