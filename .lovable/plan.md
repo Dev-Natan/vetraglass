@@ -1,44 +1,60 @@
 ## Objetivo
+Permitir que cada empresa personalize um produto global (ex.: Janela Correr 2 Folhas Suprema) — trocando perfis, ajustando fórmulas, editando dados básicos e preço — sem afetar o template global nem outras empresas. Manter botão de **reset ao padrão** (total e por item), e **congelar orçamentos antigos** com a versão usada no momento.
 
-Ocultar completamente das telas das Empresas qualquer linha que esteja com `is_active = false` em `product_linhas` (gerenciada pelo Admin SaaS), sem apagar dados nem afetar documentos históricos.
+## Estado atual (já existe)
+- `company_products` já é o "fork" por empresa (unique `company_id + product_template_id`) e tem flag `is_custom`.
+- `company_product_items` já armazena a composição por empresa (perfis, vidros, fórmulas, ângulos, peças).
+- `product_templates` + `product_template_items` são o padrão global.
+- Falta: fluxo de fork on-demand, UI de edição em "Meus Produtos", rastreamento de campos sobrescritos, reset e snapshot em orçamentos.
 
-## Diagnóstico
+## O que será feito
 
-O campo `linha` em `company_products` e `product_templates` é armazenado como texto (ex.: "SUPREMA", "suprema"). Hoje as telas montam os grupos de linhas lendo esse texto diretamente, sem cruzar com a tabela `product_linhas`. Por isso a "Suprema" continua aparecendo mesmo desativada.
+### 1. Banco
+- Adicionar em `company_products`:
+  - `overridden_fields jsonb default '[]'` — lista de campos customizados (`['linha','composition','base_price',...]`) para reset granular e badge "Customizado".
+  - `customized_at timestamptz` — quando foi personalizado.
+- Adicionar em `quote_items`:
+  - `composition_snapshot jsonb` — snapshot da composição usada no momento da emissão do orçamento (itens, fórmulas, ângulos, dados do produto). Congela o histórico.
+- RPCs:
+  - `fork_product_template(p_template_id)` → cria `company_products` + copia todos os `product_template_items` para `company_product_items` da empresa que chama. Idempotente (retorna existente se já forked).
+  - `reset_company_product(p_company_product_id)` → apaga customização e recopia do template (reset total).
+  - `reset_company_product_field(p_company_product_id, p_field)` → reseta apenas um campo (composição, preço, nome, etc.) reaplicando do template.
+  - `reset_company_product_item(p_company_product_item_id)` → reseta apenas 1 item da composição para o padrão do template.
 
-O hook `useProductLinhas()` (sem argumento) já retorna somente linhas ativas — basta usar esse conjunto como filtro em todos os pontos onde a Empresa escolhe/vê linhas para uso operacional.
+### 2. UI — Página "Meus Produtos" (`/produtos`)
+- Card do produto ganha botão **"Personalizar"** (chama `fork_product_template` se ainda não existir e abre editor).
+- Novo modal/página de edição por empresa com 4 abas:
+  - **Dados**: nome comercial, descrição, imagem, linha, categoria.
+  - **Composição**: reaproveita o split-view já existente em `ProductTemplates.tsx` (adicionar/remover/editar itens, fórmulas, ângulos).
+  - **Fórmulas de corte**: edição rápida por item da composição.
+  - **Preço**: `base_price`, `price_per_sqm`, `margin_percent`.
+- Cada campo/aba exibe badge **"Customizado"** quando presente em `overridden_fields`, com botão **"Restaurar padrão"** ao lado (reset granular).
+- Header do editor tem botão **"Resetar tudo ao padrão original"** (reset total, com confirmação).
+- Card na listagem mostra badge global "Customizado" quando `is_custom = true`.
 
-## Alterações
+### 3. Motor de cálculo do orçamento
+- `useDynamicCompositionPricing.ts` já consulta `company_product_items` — continua funcionando; apenas garantir que ao selecionar um produto no orçamento ele consulte a versão da empresa (forkada) e não caia no template global.
+- `AddProductPanel` / `ProductSelectionSheet`: ao inserir produto no orçamento, chamar `fork_product_template` automaticamente na primeira vez (transparente ao usuário) para garantir que exista `company_product_id`.
 
-### 1. `src/pages/Produtos.tsx` (catálogo em blocos/cards)
-- Consumir `useProductLinhas()` (já importado) e montar um `Set` case-insensitive com `slug` e `name` das linhas ativas.
-- Em `filteredLinhas`, descartar qualquer entrada cujo `linhaName` não pertença ao set — vale tanto para templates do sistema quanto para `company_products` com `is_custom = true` que estejam vinculados a uma linha desativada.
-- Manter a exceção "Personalizado" / "Sem Linha" visível (não pertence a `product_linhas`).
-- Atualizar o contador do cabeçalho ("N linhas ativas/inativas") já reflete o filtro automaticamente.
+### 4. Snapshot em orçamentos
+- Ao salvar `quote_items`, gravar `composition_snapshot` com a composição atual + dados do produto.
+- Ao abrir orçamento antigo (edição/PDF/OS), usar `composition_snapshot` como fonte de verdade — orçamentos antigos ficam congelados mesmo se a empresa alterar o produto depois.
+- Novos orçamentos sempre pegam a versão vigente do `company_products`.
 
-### 2. `src/components/orcamentos/AddProductPanel.tsx` (adicionar produto ao orçamento)
-- No `useMemo` que monta `linhas`, filtrar `linhaSet` contra o conjunto de linhas ativas de `useProductLinhas()`.
-- Isso remove a linha desativada dos botões de escolha e da contagem.
+### 5. Feedback visual
+- Badges "Customizado" nos cards e nos campos.
+- Toast ao personalizar / resetar.
+- Confirmação clara antes de reset total.
 
-### 3. `src/components/orcamentos/ProductSelectionSheet.tsx` (sheet passo-a-passo)
-- Mesma filtragem no `useMemo` de `linhas`.
-- Adicionar `useProductLinhas()` (ainda não usado neste arquivo).
+## Não incluído
+- Versionamento histórico completo por produto (só o snapshot dentro do orçamento).
+- Compartilhar customização entre empresas.
+- Alterar o template global — permanece exclusivo do admin SaaS.
 
-### 4. `src/components/orcamentos/AddItemPanel.tsx` (itens/materiais)
-- Confirmar/ajustar filtragem análoga sobre os chips de linha.
-
-### Não alterar (preservação de histórico)
-- `ProdutosLinha.tsx` (detalhe de uma linha) e telas de visualização/impressão de orçamentos e OS antigos continuam sem filtrar por `is_active`. Se um documento antigo referenciar uma linha hoje desativada, o texto continuará aparecendo normalmente.
-- Nenhuma migração de banco: a coluna `is_active` e o toggle no Admin já existem e funcionam.
-
-## Regra de matching (importante)
-
-Para comparar o texto salvo em `company_products.linha` / `product_templates.linha` com as linhas ativas, usar comparação **case-insensitive contra `slug` e `name`** (`toLowerCase()`), replicando a lógica já presente em `getLinhaLabel` do `Produtos.tsx`. Isso evita falsos negativos com variações de caixa.
-
-## Validação
-
-1. Desativar "Suprema" em `/admin/categories` → aba Linhas.
-2. Em uma empresa: `/produtos` não mostra mais o card "Suprema"; contador atualiza.
-3. Novo orçamento → `AddProductPanel` e `ProductSelectionSheet` não listam "Suprema".
-4. Abrir orçamento antigo que usava "Suprema" → linha ainda aparece no detalhe/impressão.
-5. Reativar "Suprema" no admin → volta a aparecer imediatamente em todos os pontos.
+## Arquivos principais a tocar
+- Migration nova (colunas + RPCs).
+- `src/pages/Produtos.tsx` e `src/pages/EditarProdutoEmpresa.tsx` (editor por empresa).
+- `src/components/produtos/*` (abas de composição/dados/preço reutilizadas).
+- `src/components/orcamentos/_novo-orcamento/*` (fork automático + gravar snapshot).
+- `src/hooks/useDynamicCompositionPricing.ts` (ler snapshot em orçamentos antigos).
+- `src/utils/generateQuotePdf.ts` / OS (ler snapshot).
