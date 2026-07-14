@@ -296,6 +296,20 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
   const selectedProduct = filteredProducts?.find(p => p.id === selectedProductId);
   const companyProduct = selectedProduct?.company_product;
 
+  // Live change: emite mudanças em tempo real (usado pelo Simulador de Plano de Corte)
+  useEffect(() => {
+    if (!onLiveChange) return;
+    onLiveChange({
+      product_template_id: selectedProduct?.is_custom ? null : (selectedProduct?.product_template_id || null),
+      name: selectedProduct?.name || '',
+      image_url: selectedProduct?.image_url || null,
+      width,
+      height,
+      quantity,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedProductId, selectedProduct?.name, selectedProduct?.image_url, selectedProduct?.product_template_id, width, height, quantity]);
+
   // Fetch glass prices for selected product
   const { data: productGlassPrices } = useQuery({
     queryKey: ['product-glass-prices', companyProduct?.id],
