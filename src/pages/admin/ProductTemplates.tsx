@@ -706,6 +706,7 @@ export default function ProductTemplates() {
         cfop_venda: data.cfop_venda || null,
         origem: data.origem || null,
         has_multiple_sides: data.has_multiple_sides,
+        has_cutting_plan: data.has_cutting_plan,
       };
 
 
