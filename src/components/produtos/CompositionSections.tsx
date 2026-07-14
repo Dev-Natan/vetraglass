@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Plus, MoreHorizontal, Layers, Package, Gem, Frame } from 'lucide-react';
+import { Plus, MoreHorizontal, Layers, Package, Gem, Frame, RotateCcw } from 'lucide-react';
 
 interface CompositionItem {
   id: string;
@@ -45,6 +45,7 @@ interface CompositionSectionsProps {
   onAddItem: (section: 'profile' | 'accessory' | 'glass' | 'contramarco') => void;
   onEditItem: (item: CompositionItem) => void;
   onRemoveItem: (itemId: string) => void;
+  onResetItem?: (itemId: string) => void;
 }
 
 const getStorageUrl = (path: string | null) => resolveImageUrl(path, 'item-templates');
@@ -84,7 +85,7 @@ function SectionHeader({
   );
 }
 
-function ItemActions({ item, onEdit, onRemove }: { item: CompositionItem; onEdit: () => void; onRemove: () => void }) {
+function ItemActions({ item, onEdit, onRemove, onReset }: { item: CompositionItem; onEdit: () => void; onRemove: () => void; onReset?: () => void }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -94,6 +95,11 @@ function ItemActions({ item, onEdit, onRemove }: { item: CompositionItem; onEdit
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="bg-background border shadow-lg z-50">
         <DropdownMenuItem onClick={onEdit}>Editar</DropdownMenuItem>
+        {onReset && (
+          <DropdownMenuItem onClick={onReset}>
+            <RotateCcw className="w-3.5 h-3.5 mr-2" /> Restaurar padrão
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem className="text-destructive" onClick={onRemove}>Remover</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -152,11 +158,12 @@ function SideBadge({ side }: { side?: string | null }) {
 }
 
 // ==================== PERFIS SECTION ====================
-function ProfilesSection({ items, onAdd, onEdit, onRemove }: {
+function ProfilesSection({ items, onAdd, onEdit, onRemove, onReset }: {
   items: CompositionItem[];
   onAdd: () => void;
   onEdit: (item: CompositionItem) => void;
   onRemove: (id: string) => void;
+  onReset?: (id: string) => void;
 }) {
   // Calculate total weight (simplified - would need actual weight data)
   return (
@@ -217,7 +224,7 @@ function ProfilesSection({ items, onAdd, onEdit, onRemove }: {
                         </Badge>
                       </td>
                       <td className="py-2 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                        <ItemActions item={item} onEdit={() => onEdit(item)} onRemove={() => onRemove(item.id)} />
+                        <ItemActions item={item} onEdit={() => onEdit(item)} onRemove={() => onRemove(item.id)} onReset={onReset ? () => onReset(item.id) : undefined} />
                       </td>
                     </tr>
                   );
@@ -232,11 +239,12 @@ function ProfilesSection({ items, onAdd, onEdit, onRemove }: {
 }
 
 // ==================== COMPONENTES SECTION ====================
-function ComponentsSection({ items, onAdd, onEdit, onRemove }: {
+function ComponentsSection({ items, onAdd, onEdit, onRemove, onReset }: {
   items: CompositionItem[];
   onAdd: () => void;
   onEdit: (item: CompositionItem) => void;
   onRemove: (id: string) => void;
+  onReset?: (id: string) => void;
 }) {
   return (
     <Card>
@@ -278,7 +286,7 @@ function ComponentsSection({ items, onAdd, onEdit, onRemove }: {
                         <span className="text-xs text-muted-foreground ml-1">{itemData?.unit === 'metro' ? 'm' : itemData?.unit === 'barra' ? 'br' : 'pç'}</span>
                       </td>
                       <td className="py-2 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                        <ItemActions item={item} onEdit={() => onEdit(item)} onRemove={() => onRemove(item.id)} />
+                        <ItemActions item={item} onEdit={() => onEdit(item)} onRemove={() => onRemove(item.id)} onReset={onReset ? () => onReset(item.id) : undefined} />
                       </td>
                     </tr>
                   );
@@ -293,11 +301,12 @@ function ComponentsSection({ items, onAdd, onEdit, onRemove }: {
 }
 
 // ==================== VIDROS SECTION ====================
-function GlassSection({ items, onAdd, onEdit, onRemove }: {
+function GlassSection({ items, onAdd, onEdit, onRemove, onReset }: {
   items: CompositionItem[];
   onAdd: () => void;
   onEdit: (item: CompositionItem) => void;
   onRemove: (id: string) => void;
+  onReset?: (id: string) => void;
 }) {
   return (
     <Card>
@@ -355,7 +364,7 @@ function GlassSection({ items, onAdd, onEdit, onRemove }: {
                         )}
                       </td>
                       <td className="py-2 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                        <ItemActions item={item} onEdit={() => onEdit(item)} onRemove={() => onRemove(item.id)} />
+                        <ItemActions item={item} onEdit={() => onEdit(item)} onRemove={() => onRemove(item.id)} onReset={onReset ? () => onReset(item.id) : undefined} />
                       </td>
                     </tr>
                   );
@@ -370,11 +379,12 @@ function GlassSection({ items, onAdd, onEdit, onRemove }: {
 }
 
 // ==================== CONTRAMARCO SECTION ====================
-function ContramarcoSection({ items, onAdd, onEdit, onRemove }: {
+function ContramarcoSection({ items, onAdd, onEdit, onRemove, onReset }: {
   items: CompositionItem[];
   onAdd: () => void;
   onEdit: (item: CompositionItem) => void;
   onRemove: (id: string) => void;
+  onReset?: (id: string) => void;
 }) {
   return (
     <Card className="border-amber-200 dark:border-amber-800">
@@ -437,7 +447,7 @@ function ContramarcoSection({ items, onAdd, onEdit, onRemove }: {
                         </Badge>
                       </td>
                       <td className="py-2 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                        <ItemActions item={item} onEdit={() => onEdit(item)} onRemove={() => onRemove(item.id)} />
+                        <ItemActions item={item} onEdit={() => onEdit(item)} onRemove={() => onRemove(item.id)} onReset={onReset ? () => onReset(item.id) : undefined} />
                       </td>
                     </tr>
                   );
@@ -452,7 +462,7 @@ function ContramarcoSection({ items, onAdd, onEdit, onRemove }: {
 }
 
 // ==================== MAIN EXPORT ====================
-export function CompositionSections({ items, onAddItem, onEditItem, onRemoveItem }: CompositionSectionsProps) {
+export function CompositionSections({ items, onAddItem, onEditItem, onRemoveItem, onResetItem }: CompositionSectionsProps) {
   // Separate contramarco items first (by section field)
   const contramarcoItems = items.filter(i => (i as any).section === 'contramarco');
   const nonContramarcoItems = items.filter(i => (i as any).section !== 'contramarco');
@@ -485,28 +495,32 @@ export function CompositionSections({ items, onAddItem, onEditItem, onRemoveItem
         items={profiles} 
         onAdd={() => onAddItem('profile')} 
         onEdit={onEditItem} 
-        onRemove={onRemoveItem} 
+        onRemove={onRemoveItem}
+        onReset={onResetItem}
       />
       
       <ComponentsSection 
         items={components} 
         onAdd={() => onAddItem('accessory')} 
         onEdit={onEditItem} 
-        onRemove={onRemoveItem} 
+        onRemove={onRemoveItem}
+        onReset={onResetItem}
       />
       
       <GlassSection 
         items={glasses} 
         onAdd={() => onAddItem('glass')} 
         onEdit={onEditItem} 
-        onRemove={onRemoveItem} 
+        onRemove={onRemoveItem}
+        onReset={onResetItem}
       />
 
       <ContramarcoSection 
         items={contramarcoItems} 
         onAdd={() => onAddItem('contramarco')} 
         onEdit={onEditItem} 
-        onRemove={onRemoveItem} 
+        onRemove={onRemoveItem}
+        onReset={onResetItem}
       />
     </div>
   );

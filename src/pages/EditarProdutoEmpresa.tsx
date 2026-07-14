@@ -489,6 +489,28 @@ export default function EditarProdutoEmpresa() {
     },
   });
 
+  // Reset item to template default
+  const resetItemMutation = useMutation({
+    mutationFn: async (itemId: string) => {
+      const { data, error } = await supabase.rpc('reset_company_product_item', {
+        p_company_product_item_id: itemId,
+      });
+      if (error) throw error;
+      return data as { success: boolean; action?: string; error?: string };
+    },
+    onSuccess: (res) => {
+      if (!res?.success) {
+        toast.error(res?.error || 'Erro ao restaurar item');
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: ['company-product-items', id] });
+      queryClient.invalidateQueries({ queryKey: ['company-product', id] });
+      if (id) recalculateProductPrice(id);
+      toast.success(res.action === 'reset' ? 'Item restaurado ao padrão!' : 'Item removido (não existe no template)');
+    },
+    onError: (error: Error) => toast.error('Erro ao restaurar: ' + error.message),
+  });
+
   // Update item mutation
   const updateItemMutation = useMutation({
     mutationFn: async () => {
@@ -900,6 +922,7 @@ export default function EditarProdutoEmpresa() {
           onAddItem={(section) => { setAddItemSection(section); setIsAddItemDialogOpen(true); }}
           onEditItem={handleEditItem}
           onRemoveItem={(itemId) => removeItemMutation.mutate(itemId)}
+          onResetItem={product?.product_template_id ? (itemId) => resetItemMutation.mutate(itemId) : undefined}
         />
 
         {/* Composition-Based Pricing (Visible if composition selected) */}
