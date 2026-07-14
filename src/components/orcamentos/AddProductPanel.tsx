@@ -1115,21 +1115,23 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
               </div>
             </div>
 
-            {/* Valor R$ / m² */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-foreground">
-                Valor R$ / m² <span className="text-destructive">*</span>
-              </label>
-              <Input
-                type="number"
-                value={customPrice !== null ? customPrice : finalPricePerSqm || ''}
-                onChange={(e) => setCustomPrice(e.target.value ? Number(e.target.value) : null)}
-                placeholder="0.00"
-                min={0}
-                step="0.01"
-                className="bg-background h-10 font-mono"
-              />
-            </div>
+            {/* Valor R$ / m² — oculto no modo Plano de Corte */}
+            {mode !== 'cutting' && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground">
+                  Valor R$ / m² <span className="text-destructive">*</span>
+                </label>
+                <Input
+                  type="number"
+                  value={customPrice !== null ? customPrice : finalPricePerSqm || ''}
+                  onChange={(e) => setCustomPrice(e.target.value ? Number(e.target.value) : null)}
+                  placeholder="0.00"
+                  min={0}
+                  step="0.01"
+                  className="bg-background h-10 font-mono"
+                />
+              </div>
+            )}
 
             {/* Componentes / Acessórios */}
             <div className="space-y-3 pt-2">
