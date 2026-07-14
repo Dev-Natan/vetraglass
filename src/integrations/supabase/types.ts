@@ -2048,6 +2048,7 @@ export type Database = {
           corte_contramarco: string | null
           cost_per_sqm: number | null
           created_at: string
+          customized_at: string | null
           description: string | null
           glasses_count: number | null
           has_multiple_sides: boolean | null
@@ -2062,6 +2063,7 @@ export type Database = {
           max_width: number | null
           min_height: number | null
           min_width: number | null
+          overridden_fields: Json
           panels_count: number | null
           price_per_sqm: number | null
           pricing_type: string
@@ -2083,6 +2085,7 @@ export type Database = {
           corte_contramarco?: string | null
           cost_per_sqm?: number | null
           created_at?: string
+          customized_at?: string | null
           description?: string | null
           glasses_count?: number | null
           has_multiple_sides?: boolean | null
@@ -2097,6 +2100,7 @@ export type Database = {
           max_width?: number | null
           min_height?: number | null
           min_width?: number | null
+          overridden_fields?: Json
           panels_count?: number | null
           price_per_sqm?: number | null
           pricing_type?: string
@@ -2118,6 +2122,7 @@ export type Database = {
           corte_contramarco?: string | null
           cost_per_sqm?: number | null
           created_at?: string
+          customized_at?: string | null
           description?: string | null
           glasses_count?: number | null
           has_multiple_sides?: boolean | null
@@ -2132,6 +2137,7 @@ export type Database = {
           max_width?: number | null
           min_height?: number | null
           min_width?: number | null
+          overridden_fields?: Json
           panels_count?: number | null
           price_per_sqm?: number | null
           pricing_type?: string
@@ -6096,6 +6102,7 @@ export type Database = {
           aluminum_color: string | null
           company_item_id: string | null
           company_product_id: string | null
+          composition_snapshot: Json | null
           created_at: string
           description: string
           excluded_optional_ids: Json | null
@@ -6127,6 +6134,7 @@ export type Database = {
           aluminum_color?: string | null
           company_item_id?: string | null
           company_product_id?: string | null
+          composition_snapshot?: Json | null
           created_at?: string
           description: string
           excluded_optional_ids?: Json | null
@@ -6158,6 +6166,7 @@ export type Database = {
           aluminum_color?: string | null
           company_item_id?: string | null
           company_product_id?: string | null
+          composition_snapshot?: Json | null
           created_at?: string
           description?: string
           excluded_optional_ids?: Json | null
@@ -8647,6 +8656,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      mark_company_product_override: {
+        Args: { p_company_product_id: string; p_field: string }
+        Returns: undefined
+      }
       normalize_text: { Args: { input_text: string }; Returns: string }
       open_daily_cash: {
         Args: { _company_id: string; _opening_amount: number; _user_id: string }
@@ -8740,6 +8753,14 @@ export type Database = {
           _reason: string
           _required_amount: number
         }
+        Returns: Json
+      }
+      reset_company_product_field: {
+        Args: { p_company_product_id: string; p_field: string }
+        Returns: Json
+      }
+      reset_company_product_item: {
+        Args: { p_company_product_item_id: string }
         Returns: Json
       }
       reset_company_product_to_template: {
