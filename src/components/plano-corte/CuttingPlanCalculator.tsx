@@ -9,7 +9,7 @@ import { evaluateFormula, getFormulaPosition } from '@/utils/safeFormulaEvaluato
 import { ProfileCutsTable, type ProfileCutItem } from '@/components/plano-corte/ProfileCutsTable';
 import { GlassCutsTable, type GlassCutItem } from '@/components/plano-corte/GlassCutsTable';
 import { BarOptimizationView } from '@/components/plano-corte/BarOptimizationView';
-import { FramePreviewSVG } from '@/components/plano-corte/FramePreviewSVG';
+
 import { CuttingSummaryCards } from '@/components/plano-corte/CuttingSummaryCards';
 import { AddProductPanel } from '@/components/orcamentos/AddProductPanel';
 import { generateCuttingLabels, expandCutsToLabels } from '@/utils/generateCuttingLabels';
@@ -630,32 +630,22 @@ export function CuttingPlanCalculator() {
                   totalAccessories={calculatedGlassCuts.reduce((sum, g) => sum + (g.quantity || 0), 0)}
                 />
 
-                <div className="grid grid-cols-1 lg:grid-cols-[35%_1fr] gap-6">
-                  <div className="no-print">
-                    <FramePreviewSVG
-                      width={width}
-                      height={height}
-                      profileCuts={calculatedCuts}
-                      hoveredId={hoveredProfileId}
-                    />
-                  </div>
-
-                  <div className="space-y-6 min-w-0">
-                    <GlassCutsTable
-                      glassCuts={calculatedGlassCuts}
-                      showCheckboxes
-                      onToggleComplete={handleToggleComplete}
-                    />
-                    <ProfileCutsTable
-                      cuts={calculatedCuts}
-                      showCheckboxes
-                      onToggleComplete={handleToggleComplete}
-                      getStorageUrl={getStorageUrl}
-                      hoveredId={hoveredProfileId}
-                      onHoverChange={setHoveredProfileId}
-                    />
-                  </div>
+                <div className="space-y-6 w-full min-w-0">
+                  <GlassCutsTable
+                    glassCuts={calculatedGlassCuts}
+                    showCheckboxes
+                    onToggleComplete={handleToggleComplete}
+                  />
+                  <ProfileCutsTable
+                    cuts={calculatedCuts}
+                    showCheckboxes
+                    onToggleComplete={handleToggleComplete}
+                    getStorageUrl={getStorageUrl}
+                    hoveredId={hoveredProfileId}
+                    onHoverChange={setHoveredProfileId}
+                  />
                 </div>
+
               </>
             )}
           </TabsContent>
