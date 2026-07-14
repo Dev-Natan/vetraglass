@@ -38,72 +38,29 @@ export function CuttingPlanCalculator() {
   const [hoveredProfileId, setHoveredProfileId] = useState<string | null>(null);
   const [showConfigurator, setShowConfigurator] = useState<boolean>(true);
 
+  const handleProductConfigured = (payload: Parameters<React.ComponentProps<typeof AddProductPanel>['onAdd']>[0]) => {
+    setSelectedProduct(payload.product_template_id || '');
+    setProductName(payload.name);
+    setProductImage(payload.image_url || null);
+    setWidth(Number(payload.width) || 0);
+    setHeight(Number(payload.height) || 0);
+    setQuantity(Number(payload.quantity) || 1);
+    setCompletedItems(new Set());
+    setShowConfigurator(false);
+    toast.success('Plano de corte gerado');
+  };
 
-
-  const { data: productTemplates } = useQuery({
-    queryKey: ['product-templates-for-cutting'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('product_templates')
-        .select(`
-          id,
-          name,
-          category,
-          linha,
-          image_url,
-          min_width,
-          max_width,
-          min_height,
-          max_height
-        `)
-        .eq('is_active', true);
-      
-      if (error) throw error;
-      return data || [];
-    }
-  });
-
-  const availableLinhas = useMemo(() => {
-    if (!productTemplates) return [];
-    const linhas = new Set<string>();
-    productTemplates.forEach(p => {
-      if (p.linha) linhas.add(p.linha);
-    });
-    return Array.from(linhas).sort();
-  }, [productTemplates]);
-
-  const availableCategories = useMemo(() => {
-    if (!productTemplates) return [];
-    const categories = new Set<string>();
-    productTemplates
-      .filter(p => !selectedLinha || p.linha === selectedLinha)
-      .forEach(p => {
-        if (p.category) categories.add(p.category);
-      });
-    return Array.from(categories).sort();
-  }, [productTemplates, selectedLinha]);
-
-  const filteredProducts = useMemo(() => {
-    if (!productTemplates) return [];
-    return productTemplates.filter(p => {
-      if (selectedLinha && p.linha !== selectedLinha) return false;
-      if (selectedCategory && p.category !== selectedCategory) return false;
-      return true;
-    });
-  }, [productTemplates, selectedLinha, selectedCategory]);
-
-  const handleLinhaChange = (value: string) => {
-    setSelectedLinha(value);
-    setSelectedCategory('');
+  const handleReset = () => {
+    setShowConfigurator(true);
     setSelectedProduct('');
+    setProductName('');
+    setProductImage(null);
+    setWidth(0);
+    setHeight(0);
+    setQuantity(1);
     setCompletedItems(new Set());
   };
 
-  const handleCategoryChange = (value: string) => {
-    setSelectedCategory(value);
-    setSelectedProduct('');
-    setCompletedItems(new Set());
-  };
 
   const { data: productItems } = useQuery({
     queryKey: ['product-template-items-cutting', selectedProduct, currentCompany?.id, isSaasAdmin],
