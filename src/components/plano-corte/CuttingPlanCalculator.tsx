@@ -105,10 +105,8 @@ export function CuttingPlanCalculator() {
     queryKey: ['product-template-items-cutting', selectedProduct, currentCompany?.id, isSaasAdmin],
     queryFn: async () => {
       if (!selectedProduct) return [];
-      
-      let query = supabase
-        .from('product_template_items')
-        .select(`
+
+      const selectCols = `
           id,
           quantity_formula,
           pieces_quantity,
@@ -125,21 +123,33 @@ export function CuttingPlanCalculator() {
             type,
             image_url
           )
-        `)
-        .eq('product_template_id', selectedProduct);
-      
-      if (isSaasAdmin) {
-        query = query.is('company_id', null);
-      } else if (currentCompany?.id) {
-        query = query.eq('company_id', currentCompany.id);
+        `;
+
+      // 1. Prefer company-specific composition when available
+      if (!isSaasAdmin && currentCompany?.id) {
+        const { data: companyItems, error: companyErr } = await supabase
+          .from('product_template_items')
+          .select(selectCols)
+          .eq('product_template_id', selectedProduct)
+          .eq('company_id', currentCompany.id);
+
+        if (companyErr) throw companyErr;
+        if (companyItems && companyItems.length > 0) return companyItems;
       }
-      
-      const { data, error } = await query;
+
+      // 2. Fallback to the global template composition
+      const { data, error } = await supabase
+        .from('product_template_items')
+        .select(selectCols)
+        .eq('product_template_id', selectedProduct)
+        .is('company_id', null);
+
       if (error) throw error;
       return data || [];
     },
     enabled: !!selectedProduct
   });
+
 
   const { data: glassFormulas } = useQuery({
     queryKey: ['glass-formulas-cutting', selectedProduct],
