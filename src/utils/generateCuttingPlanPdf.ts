@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { optimizeProfiles, distributeAcrossBars, formatMm, type CutPiece } from '@/utils/profileOptimization';
 
 interface CutData {
   profileName: string;
@@ -11,6 +12,7 @@ interface CutData {
   cutAngle: number;
   position: string;
   side?: string;
+  itemTemplateId?: string;
 }
 
 interface GlassCutData {
