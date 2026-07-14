@@ -659,6 +659,7 @@ export default function ProductTemplates() {
       is_active: template.is_active,
       is_ready: template.description?.includes("[PRONTO]") || false,
       has_multiple_sides: template.has_multiple_sides || false,
+      has_cutting_plan: (template as any).has_cutting_plan ?? true,
       base_price: (template as any).base_price?.toString() || "",
       ncm: (template as any).ncm || "",
       cest: (template as any).cest || "",
