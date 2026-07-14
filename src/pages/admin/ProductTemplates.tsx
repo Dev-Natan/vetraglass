@@ -1788,6 +1788,17 @@ export default function ProductTemplates() {
                     Múltiplos Lados (ex: Box de Canto)
                   </Label>
                 </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="has_cutting_plan"
+                    checked={formData.has_cutting_plan}
+                    onCheckedChange={(checked) => setFormData({ ...formData, has_cutting_plan: checked })}
+                  />
+                  <Label htmlFor="has_cutting_plan" className="text-sm flex items-center gap-1">
+                    <Scissors className="w-4 h-4 text-primary" />
+                    Este produto possui plano de corte?
+                  </Label>
+                </div>
               </div>
 
               <DialogFooter>
