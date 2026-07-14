@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Plus, MoreHorizontal, Layers, Package, Gem, Frame } from 'lucide-react';
+import { Plus, MoreHorizontal, Layers, Package, Gem, Frame, RotateCcw } from 'lucide-react';
 
 interface CompositionItem {
   id: string;
