@@ -186,7 +186,11 @@ export function evaluateFormula(
       return 0;
     }
     
+    if (rounding === 'ceil') return Math.ceil(result);
+    if (rounding === 'floor') return Math.floor(result);
+    if (rounding === 'none') return result;
     return Math.round(result);
+
   } catch (error) {
     console.warn('Error evaluating formula:', formula, error);
     return 0;
