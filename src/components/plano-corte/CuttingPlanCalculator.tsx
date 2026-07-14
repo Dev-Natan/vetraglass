@@ -9,7 +9,7 @@ import { evaluateFormula, getFormulaPosition } from '@/utils/safeFormulaEvaluato
 import { ProfileCutsTable, type ProfileCutItem } from '@/components/plano-corte/ProfileCutsTable';
 import { GlassCutsTable, type GlassCutItem } from '@/components/plano-corte/GlassCutsTable';
 import { BarOptimizationView } from '@/components/plano-corte/BarOptimizationView';
-import { FramePreviewSVG } from '@/components/plano-corte/FramePreviewSVG';
+
 import { CuttingSummaryCards } from '@/components/plano-corte/CuttingSummaryCards';
 import { AddProductPanel } from '@/components/orcamentos/AddProductPanel';
 import { generateCuttingLabels, expandCutsToLabels } from '@/utils/generateCuttingLabels';
