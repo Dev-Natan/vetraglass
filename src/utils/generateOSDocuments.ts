@@ -271,9 +271,10 @@ export async function generateOSDocuments(
         };
         let piecesQty = comp.pieces_quantity || 1;
         if (comp.pieces_formula && comp.pieces_formula.trim() !== '') {
-          const raw = evaluateFormula(comp.pieces_formula, evalCtx, undefined, comp.side as any);
-          if (raw > 0) piecesQty = Math.ceil(raw);
+          const raw = evaluateFormula(comp.pieces_formula, evalCtx, undefined, comp.side as any, 'ceil');
+          if (raw > 0) piecesQty = raw;
         }
+
         const totalPieces = piecesQty * quantity;
 
 
