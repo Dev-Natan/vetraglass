@@ -299,6 +299,7 @@ export default function ProductTemplates() {
     is_active: true,
     is_ready: false,
     has_multiple_sides: false,
+    has_cutting_plan: true,
     base_price: "",
     ncm: "",
     cest: "",
