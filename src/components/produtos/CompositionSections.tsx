@@ -462,7 +462,7 @@ function ContramarcoSection({ items, onAdd, onEdit, onRemove, onReset }: {
 }
 
 // ==================== MAIN EXPORT ====================
-export function CompositionSections({ items, onAddItem, onEditItem, onRemoveItem }: CompositionSectionsProps) {
+export function CompositionSections({ items, onAddItem, onEditItem, onRemoveItem, onResetItem }: CompositionSectionsProps) {
   // Separate contramarco items first (by section field)
   const contramarcoItems = items.filter(i => (i as any).section === 'contramarco');
   const nonContramarcoItems = items.filter(i => (i as any).section !== 'contramarco');
