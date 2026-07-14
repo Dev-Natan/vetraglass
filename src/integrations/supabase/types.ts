@@ -5701,6 +5701,7 @@ export type Database = {
           default_panels_count: number | null
           default_sides_count: number | null
           description: string | null
+          has_cutting_plan: boolean
           has_multiple_sides: boolean | null
           id: string
           image_url: string | null
@@ -5735,6 +5736,7 @@ export type Database = {
           default_panels_count?: number | null
           default_sides_count?: number | null
           description?: string | null
+          has_cutting_plan?: boolean
           has_multiple_sides?: boolean | null
           id?: string
           image_url?: string | null
@@ -5769,6 +5771,7 @@ export type Database = {
           default_panels_count?: number | null
           default_sides_count?: number | null
           description?: string | null
+          has_cutting_plan?: boolean
           has_multiple_sides?: boolean | null
           id?: string
           image_url?: string | null
