@@ -158,11 +158,12 @@ function SideBadge({ side }: { side?: string | null }) {
 }
 
 // ==================== PERFIS SECTION ====================
-function ProfilesSection({ items, onAdd, onEdit, onRemove }: {
+function ProfilesSection({ items, onAdd, onEdit, onRemove, onReset }: {
   items: CompositionItem[];
   onAdd: () => void;
   onEdit: (item: CompositionItem) => void;
   onRemove: (id: string) => void;
+  onReset?: (id: string) => void;
 }) {
   // Calculate total weight (simplified - would need actual weight data)
   return (
@@ -223,7 +224,7 @@ function ProfilesSection({ items, onAdd, onEdit, onRemove }: {
                         </Badge>
                       </td>
                       <td className="py-2 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                        <ItemActions item={item} onEdit={() => onEdit(item)} onRemove={() => onRemove(item.id)} />
+                        <ItemActions item={item} onEdit={() => onEdit(item)} onRemove={() => onRemove(item.id)} onReset={onReset ? () => onReset(item.id) : undefined} />
                       </td>
                     </tr>
                   );
@@ -238,11 +239,12 @@ function ProfilesSection({ items, onAdd, onEdit, onRemove }: {
 }
 
 // ==================== COMPONENTES SECTION ====================
-function ComponentsSection({ items, onAdd, onEdit, onRemove }: {
+function ComponentsSection({ items, onAdd, onEdit, onRemove, onReset }: {
   items: CompositionItem[];
   onAdd: () => void;
   onEdit: (item: CompositionItem) => void;
   onRemove: (id: string) => void;
+  onReset?: (id: string) => void;
 }) {
   return (
     <Card>
@@ -284,7 +286,7 @@ function ComponentsSection({ items, onAdd, onEdit, onRemove }: {
                         <span className="text-xs text-muted-foreground ml-1">{itemData?.unit === 'metro' ? 'm' : itemData?.unit === 'barra' ? 'br' : 'pç'}</span>
                       </td>
                       <td className="py-2 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                        <ItemActions item={item} onEdit={() => onEdit(item)} onRemove={() => onRemove(item.id)} />
+                        <ItemActions item={item} onEdit={() => onEdit(item)} onRemove={() => onRemove(item.id)} onReset={onReset ? () => onReset(item.id) : undefined} />
                       </td>
                     </tr>
                   );
@@ -299,11 +301,12 @@ function ComponentsSection({ items, onAdd, onEdit, onRemove }: {
 }
 
 // ==================== VIDROS SECTION ====================
-function GlassSection({ items, onAdd, onEdit, onRemove }: {
+function GlassSection({ items, onAdd, onEdit, onRemove, onReset }: {
   items: CompositionItem[];
   onAdd: () => void;
   onEdit: (item: CompositionItem) => void;
   onRemove: (id: string) => void;
+  onReset?: (id: string) => void;
 }) {
   return (
     <Card>
@@ -361,7 +364,7 @@ function GlassSection({ items, onAdd, onEdit, onRemove }: {
                         )}
                       </td>
                       <td className="py-2 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                        <ItemActions item={item} onEdit={() => onEdit(item)} onRemove={() => onRemove(item.id)} />
+                        <ItemActions item={item} onEdit={() => onEdit(item)} onRemove={() => onRemove(item.id)} onReset={onReset ? () => onReset(item.id) : undefined} />
                       </td>
                     </tr>
                   );
@@ -376,11 +379,12 @@ function GlassSection({ items, onAdd, onEdit, onRemove }: {
 }
 
 // ==================== CONTRAMARCO SECTION ====================
-function ContramarcoSection({ items, onAdd, onEdit, onRemove }: {
+function ContramarcoSection({ items, onAdd, onEdit, onRemove, onReset }: {
   items: CompositionItem[];
   onAdd: () => void;
   onEdit: (item: CompositionItem) => void;
   onRemove: (id: string) => void;
+  onReset?: (id: string) => void;
 }) {
   return (
     <Card className="border-amber-200 dark:border-amber-800">
@@ -443,7 +447,7 @@ function ContramarcoSection({ items, onAdd, onEdit, onRemove }: {
                         </Badge>
                       </td>
                       <td className="py-2 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                        <ItemActions item={item} onEdit={() => onEdit(item)} onRemove={() => onRemove(item.id)} />
+                        <ItemActions item={item} onEdit={() => onEdit(item)} onRemove={() => onRemove(item.id)} onReset={onReset ? () => onReset(item.id) : undefined} />
                       </td>
                     </tr>
                   );
