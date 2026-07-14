@@ -111,7 +111,8 @@ export function optimizeProfiles(cuts: CutPiece[]): MaterialSummary {
  */
 export function distributeAcrossBars(
   cuts: Array<{ length: number; qty: number }>,
-  barLength: number
+  barLength: number,
+  kerfMm: number = 4,
 ): Array<{ barIndex: number; cuts: Array<{ length: number; qty: number }>; usedLength: number; remainingLength: number }> {
   // Expand cuts into individual pieces and sort by length (descending)
   const pieces: number[] = [];
@@ -122,22 +123,21 @@ export function distributeAcrossBars(
   });
   pieces.sort((a, b) => b - a);
 
-  // First Fit Decreasing algorithm
+  // First Fit Decreasing algorithm w/ kerf (saw blade width between pieces)
   const bars: Array<{ cuts: number[]; usedLength: number }> = [];
 
   pieces.forEach(pieceLength => {
-    // Find first bar that can fit this piece
     let placed = false;
     for (const bar of bars) {
-      if (bar.usedLength + pieceLength <= barLength) {
+      const extra = bar.cuts.length > 0 ? kerfMm : 0;
+      if (bar.usedLength + pieceLength + extra <= barLength) {
         bar.cuts.push(pieceLength);
-        bar.usedLength += pieceLength;
+        bar.usedLength += pieceLength + extra;
         placed = true;
         break;
       }
     }
-    
-    // If no bar can fit, create a new one
+
     if (!placed) {
       bars.push({
         cuts: [pieceLength],
@@ -145,6 +145,7 @@ export function distributeAcrossBars(
       });
     }
   });
+
 
   // Group identical cuts per bar
   return bars.map((bar, index) => {
