@@ -33,6 +33,7 @@ interface ProductCompositionItem {
   height_formula: string | null;
   cut_angle: number;
   pieces_quantity: number;
+  pieces_formula: string | null;
   is_optional: boolean;
   section: string | null;
   side: string | null;
@@ -45,6 +46,7 @@ interface ProductCompositionItem {
     bar_length_mm: number | null;
   };
 }
+
 
 interface GlassFormula {
   id: string;
@@ -68,7 +70,52 @@ interface ProductTemplate {
 /**
  * Fetch product composition from database
  */
-async function getProductComposition(productTemplateId: string): Promise<ProductCompositionItem[]> {
+async function getProductComposition(
+  productTemplateId: string,
+  companyId?: string
+): Promise<ProductCompositionItem[]> {
+  // Prefer company-specific composition when the company has customized this product
+  if (companyId) {
+    const { data: companyProduct } = await supabase
+      .from('company_products')
+      .select('id')
+      .eq('company_id', companyId)
+      .eq('product_template_id', productTemplateId)
+      .maybeSingle();
+
+    if (companyProduct?.id) {
+      const { data: companyItems, error: ciError } = await supabase
+        .from('company_product_items')
+        .select(`
+          id,
+          item_template_id,
+          quantity_formula,
+          width_formula,
+          height_formula,
+          cut_angle,
+          pieces_quantity,
+          pieces_formula,
+          is_optional,
+          section,
+          side,
+          item_template:item_templates!inner(
+            id,
+            name,
+            type,
+            unit,
+            image_url,
+            bar_length_mm
+          )
+        `)
+        .eq('company_product_id', companyProduct.id);
+
+      if (ciError) throw ciError;
+      if (companyItems && companyItems.length > 0) {
+        return companyItems as unknown as ProductCompositionItem[];
+      }
+    }
+  }
+
   const { data, error } = await supabase
     .from('product_template_items')
     .select(`
@@ -79,6 +126,7 @@ async function getProductComposition(productTemplateId: string): Promise<Product
       height_formula,
       cut_angle,
       pieces_quantity,
+      pieces_formula,
       is_optional,
       section,
       side,
@@ -95,8 +143,9 @@ async function getProductComposition(productTemplateId: string): Promise<Product
     .is('company_id', null);
 
   if (error) throw error;
-  return (data || []) as ProductCompositionItem[];
+  return (data || []) as unknown as ProductCompositionItem[];
 }
+
 
 /**
  * Fetch glass formulas for a product
@@ -173,9 +222,10 @@ export async function generateOSDocuments(
 
       // Get composition and glass formulas
       const [allComposition, glassFormulas] = await Promise.all([
-        getProductComposition(item.product_id),
+        getProductComposition(item.product_id, companyId),
         getGlassFormulas(item.product_id, product.linha || '')
       ]);
+
 
       const includeContramarco = item.include_contramarco !== false;
       const composition = allComposition.filter(comp => {
@@ -212,8 +262,21 @@ export async function generateOSDocuments(
           position = getFormulaPosition(formula);
         }
 
-        const piecesQty = comp.pieces_quantity || 1;
+        // Evaluate pieces from formula (with parentheses / division supported),
+        // rounded up per Math.ceil. Falls back to pieces_quantity or 1.
+        const evalCtx = {
+          width, height,
+          widthB: width_b, heightB: height_b,
+          widthC: width_c, heightC: height_c,
+        };
+        let piecesQty = comp.pieces_quantity || 1;
+        if (comp.pieces_formula && comp.pieces_formula.trim() !== '') {
+          const raw = evaluateFormula(comp.pieces_formula, evalCtx, undefined, comp.side as any, 'ceil');
+          if (raw > 0) piecesQty = raw;
+        }
+
         const totalPieces = piecesQty * quantity;
+
 
         const sidesToCalculate = [];
         if (!product.has_multiple_sides) {
@@ -523,8 +586,9 @@ export async function generateOSDocuments(
       if (!item.product_id) continue;
       
       const [allComposition] = await Promise.all([
-        getProductComposition(item.product_id)
+        getProductComposition(item.product_id, companyId)
       ]);
+
 
       const accessories = allComposition.filter(comp => 
         comp.item_template.type !== 'profile' && comp.item_template.type !== 'glass'
@@ -541,7 +605,12 @@ export async function generateOSDocuments(
         const formulaContext = { width, height, widthB: width_b, heightB: height_b, widthC: width_c, heightC: height_c };
 
         for (const comp of accessories) {
-          const piecesQty = comp.pieces_quantity || 1;
+          let piecesQty = comp.pieces_quantity || 1;
+          if (comp.pieces_formula && comp.pieces_formula.trim() !== '') {
+            const raw = evaluateFormula(comp.pieces_formula, formulaContext, undefined, comp.side as any, 'ceil');
+            if (raw > 0) piecesQty = raw;
+          }
+
           const qty = item.quantity || 1;
           
           let calculatedQty = piecesQty * qty;

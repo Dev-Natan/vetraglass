@@ -101,8 +101,11 @@ export function evaluateFormula(
   widthOrContext: number | FormulaContext, 
   height?: number,
   /** Which side this component belongs to: null/A uses main width, B uses widthB */
-  side?: string | null
+  side?: string | null,
+  /** Rounding strategy applied to the final result. Defaults to 'round'. */
+  rounding: 'round' | 'ceil' | 'floor' | 'none' = 'round'
 ): number {
+
   try {
     if (!formula || formula.trim() === '') return 0;
     
@@ -183,7 +186,11 @@ export function evaluateFormula(
       return 0;
     }
     
+    if (rounding === 'ceil') return Math.ceil(result);
+    if (rounding === 'floor') return Math.floor(result);
+    if (rounding === 'none') return result;
     return Math.round(result);
+
   } catch (error) {
     console.warn('Error evaluating formula:', formula, error);
     return 0;
