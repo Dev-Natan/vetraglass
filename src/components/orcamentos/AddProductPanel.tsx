@@ -97,9 +97,17 @@ interface AddProductPanelProps {
   mode?: 'quote' | 'cutting';
   submitLabel?: string;
   submitIcon?: React.ReactNode;
+  onLiveChange?: (payload: {
+    product_template_id: string | null;
+    name: string;
+    image_url: string | null;
+    width: number;
+    height: number;
+    quantity: number;
+  }) => void;
 }
 
-export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, submitIcon }: AddProductPanelProps) {
+export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, submitIcon, onLiveChange }: AddProductPanelProps) {
   const { currentCompany } = useAuth();
   const { labels: categoryLabels } = useProductCategoryLabels();
   const { data: adminCategories } = useProductCategories();
