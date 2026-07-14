@@ -101,23 +101,10 @@ export function ProfileCutsTable({
                         <span className={`font-medium ${cut.isCompleted ? 'line-through text-muted-foreground' : ''}`}>
                           {cut.profileName}
                         </span>
-                        {(cut.widthFormula || cut.heightFormula) && (
-                          <div className="flex gap-2 mt-1">
-                            {cut.widthFormula && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-                                L: {cut.widthFormula}
-                              </span>
-                            )}
-                            {cut.heightFormula && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                                A: {cut.heightFormula}
-                              </span>
-                            )}
-                          </div>
-                        )}
                       </div>
                     </div>
                   </TableCell>
+
                   <TableCell className="text-center font-bold text-lg text-primary tabular-nums">
                     {cut.calculatedLength}
                   </TableCell>
