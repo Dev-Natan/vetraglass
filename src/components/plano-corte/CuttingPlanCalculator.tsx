@@ -66,6 +66,23 @@ export function CuttingPlanCalculator() {
   };
 
 
+  const { data: selectedTemplateInfo } = useQuery({
+    queryKey: ['product-template-has-cutting', selectedProduct],
+    queryFn: async () => {
+      if (!selectedProduct) return null;
+      const { data, error } = await supabase
+        .from('product_templates')
+        .select('has_cutting_plan')
+        .eq('id', selectedProduct)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!selectedProduct,
+  });
+
+  const hasCuttingPlan = selectedTemplateInfo ? (selectedTemplateInfo as any).has_cutting_plan !== false : true;
+
   const { data: productItems } = useQuery({
     queryKey: ['product-template-items-cutting', selectedProduct, currentCompany?.id, isSaasAdmin],
     queryFn: async () => {
