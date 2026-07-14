@@ -70,7 +70,52 @@ interface ProductTemplate {
 /**
  * Fetch product composition from database
  */
-async function getProductComposition(productTemplateId: string): Promise<ProductCompositionItem[]> {
+async function getProductComposition(
+  productTemplateId: string,
+  companyId?: string
+): Promise<ProductCompositionItem[]> {
+  // Prefer company-specific composition when the company has customized this product
+  if (companyId) {
+    const { data: companyProduct } = await supabase
+      .from('company_products')
+      .select('id')
+      .eq('company_id', companyId)
+      .eq('product_template_id', productTemplateId)
+      .maybeSingle();
+
+    if (companyProduct?.id) {
+      const { data: companyItems, error: ciError } = await supabase
+        .from('company_product_items')
+        .select(`
+          id,
+          item_template_id,
+          quantity_formula,
+          width_formula,
+          height_formula,
+          cut_angle,
+          pieces_quantity,
+          pieces_formula,
+          is_optional,
+          section,
+          side,
+          item_template:item_templates!inner(
+            id,
+            name,
+            type,
+            unit,
+            image_url,
+            bar_length_mm
+          )
+        `)
+        .eq('company_product_id', companyProduct.id);
+
+      if (ciError) throw ciError;
+      if (companyItems && companyItems.length > 0) {
+        return companyItems as unknown as ProductCompositionItem[];
+      }
+    }
+  }
+
   const { data, error } = await supabase
     .from('product_template_items')
     .select(`
@@ -81,6 +126,7 @@ async function getProductComposition(productTemplateId: string): Promise<Product
       height_formula,
       cut_angle,
       pieces_quantity,
+      pieces_formula,
       is_optional,
       section,
       side,
@@ -97,8 +143,9 @@ async function getProductComposition(productTemplateId: string): Promise<Product
     .is('company_id', null);
 
   if (error) throw error;
-  return (data || []) as ProductCompositionItem[];
+  return (data || []) as unknown as ProductCompositionItem[];
 }
+
 
 /**
  * Fetch glass formulas for a product
