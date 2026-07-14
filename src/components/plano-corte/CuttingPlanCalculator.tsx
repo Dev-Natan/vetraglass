@@ -185,6 +185,7 @@ export function CuttingPlanCalculator() {
         
         return {
           id: item.id,
+          itemTemplateId: item.item_templates?.id || item.id,
           profileName: item.item_templates?.name || 'Perfil',
           imageUrl: item.item_templates?.image_url || null,
           widthFormula: displayWidthFormula,
@@ -199,6 +200,7 @@ export function CuttingPlanCalculator() {
           position,
           isCompleted: completedItems.has(item.id),
         };
+
       });
   }, [productItems, width, height, quantity, completedItems]);
 
