@@ -97,9 +97,17 @@ interface AddProductPanelProps {
   mode?: 'quote' | 'cutting';
   submitLabel?: string;
   submitIcon?: React.ReactNode;
+  onLiveChange?: (payload: {
+    product_template_id: string | null;
+    name: string;
+    image_url: string | null;
+    width: number;
+    height: number;
+    quantity: number;
+  }) => void;
 }
 
-export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, submitIcon }: AddProductPanelProps) {
+export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, submitIcon, onLiveChange }: AddProductPanelProps) {
   const { currentCompany } = useAuth();
   const { labels: categoryLabels } = useProductCategoryLabels();
   const { data: adminCategories } = useProductCategories();
@@ -287,6 +295,20 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
 
   const selectedProduct = filteredProducts?.find(p => p.id === selectedProductId);
   const companyProduct = selectedProduct?.company_product;
+
+  // Live change: emite mudanças em tempo real (usado pelo Simulador de Plano de Corte)
+  useEffect(() => {
+    if (!onLiveChange) return;
+    onLiveChange({
+      product_template_id: selectedProduct?.is_custom ? null : (selectedProduct?.product_template_id || null),
+      name: selectedProduct?.name || '',
+      image_url: selectedProduct?.image_url || null,
+      width,
+      height,
+      quantity,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedProductId, selectedProduct?.name, selectedProduct?.image_url, selectedProduct?.product_template_id, width, height, quantity]);
 
   // Fetch glass prices for selected product
   const { data: productGlassPrices } = useQuery({
@@ -1267,19 +1289,21 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
           </div>
 
           {mode === 'cutting' ? (
-            /* Rodapé limpo — modo Plano de Corte */
-            <div className="shrink-0 mt-4 flex items-center justify-end gap-2">
-              <Button
-                type="button"
-                onClick={handleAdd}
-                disabled={!canAdd}
-                size="lg"
-                className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 gap-2"
-              >
-                {submitIcon}
-                {submitLabel || 'Gerar Plano de Corte'}
-              </Button>
-            </div>
+            /* Rodapé limpo — modo Plano de Corte (omitido se onLiveChange estiver ativo) */
+            onLiveChange ? null : (
+              <div className="shrink-0 mt-4 flex items-center justify-end gap-2">
+                <Button
+                  type="button"
+                  onClick={handleAdd}
+                  disabled={!canAdd}
+                  size="lg"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 gap-2"
+                >
+                  {submitIcon}
+                  {submitLabel || 'Gerar Plano de Corte'}
+                </Button>
+              </div>
+            )
           ) : (
             /* Barra azul fixa de total + ações (Orçamento) */
             <div className="shrink-0 mt-4 overflow-hidden rounded-xl border shadow-sm">

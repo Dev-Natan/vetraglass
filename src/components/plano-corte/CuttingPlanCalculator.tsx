@@ -36,22 +36,24 @@ export function CuttingPlanCalculator() {
   const [activeTab, setActiveTab] = useState<'cortes' | 'otimizacao'>('cortes');
   const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
   const [hoveredProfileId, setHoveredProfileId] = useState<string | null>(null);
-  const [showConfigurator, setShowConfigurator] = useState<boolean>(true);
 
-  const handleProductConfigured = (payload: Parameters<React.ComponentProps<typeof AddProductPanel>['onAdd']>[0]) => {
+  const handleLiveChange = (payload: {
+    product_template_id: string | null;
+    name: string;
+    image_url: string | null;
+    width: number;
+    height: number;
+    quantity: number;
+  }) => {
     setSelectedProduct(payload.product_template_id || '');
     setProductName(payload.name);
     setProductImage(payload.image_url || null);
     setWidth(Number(payload.width) || 0);
     setHeight(Number(payload.height) || 0);
     setQuantity(Number(payload.quantity) || 1);
-    setCompletedItems(new Set());
-    setShowConfigurator(false);
-    toast.success('Plano de corte gerado');
   };
 
   const handleReset = () => {
-    setShowConfigurator(true);
     setSelectedProduct('');
     setProductName('');
     setProductImage(null);
@@ -545,69 +547,33 @@ export function CuttingPlanCalculator() {
       </div>
 
       <div className="no-print rounded-lg border bg-card">
-        {showConfigurator ? (
-          <div className="p-4 md:p-6">
-            <div className="mb-4 flex items-center justify-between gap-2">
-              <div>
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <Settings2 className="w-5 h-5 text-primary" />
-                  Especificações Técnicas do Vão
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Informe produto, dimensões e acabamentos. Nenhum registro é criado.
-                </p>
-              </div>
-              {selectedProduct && (
-                <Button variant="ghost" size="sm" onClick={() => setShowConfigurator(false)}>
-                  Ver plano atual
-                </Button>
-              )}
+        <div className="p-4 md:p-6">
+          <div className="mb-4 flex items-center justify-between gap-2">
+            <div>
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Settings2 className="w-5 h-5 text-primary" />
+                Especificações Técnicas do Vão
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                O plano de corte é recalculado em tempo real conforme você digita.
+              </p>
             </div>
-            <AddProductPanel
-              mode="cutting"
-              submitLabel="Gerar Plano de Corte"
-              submitIcon={<Scissors className="w-4 h-4" />}
-              onAdd={handleProductConfigured}
-              onCancel={() => setShowConfigurator(false)}
-            />
-
-          </div>
-        ) : (
-          <div className="flex items-center justify-between gap-4 p-4">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center overflow-hidden shrink-0">
-                {selectedProductData?.image_url ? (
-                  <img
-                    src={getStorageUrl(selectedProductData.image_url) || ''}
-                    alt={selectedProductData.name}
-                    className="w-full h-full object-contain"
-                  />
-                ) : (
-                  <span className="text-2xl">🪟</span>
-                )}
-              </div>
-              <div className="min-w-0">
-                <div className="font-semibold truncate uppercase text-sm">
-                  {selectedProductData?.name || 'Produto'}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {width} × {height} mm • Qtd: {quantity}
-                </div>
-              </div>
-            </div>
-            <div className="flex gap-2 shrink-0">
-              <Button variant="outline" size="sm" onClick={() => setShowConfigurator(true)}>
-                <Settings2 className="w-4 h-4 mr-2" />
-                Alterar
-              </Button>
+            {selectedProduct && (
               <Button variant="ghost" size="sm" onClick={handleReset}>
                 <RotateCcw className="w-4 h-4 mr-2" />
                 Novo
               </Button>
-            </div>
+            )}
           </div>
-        )}
+          <AddProductPanel
+            mode="cutting"
+            onLiveChange={handleLiveChange}
+            onAdd={() => {}}
+            onCancel={() => {}}
+          />
+        </div>
       </div>
+
 
 
       <div className="print-area">
