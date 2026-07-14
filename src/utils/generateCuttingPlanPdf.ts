@@ -116,7 +116,98 @@ export function generateCuttingPlanPdf(
   }
   
   y += 10;
-  
+
+  // ========== CONSOLIDATED BAR OPTIMIZATION (whole OS) ==========
+  const aggregatedCuts: CutPiece[] = [];
+  plans.forEach((plan) => {
+    const planQty = plan.quantity || 1;
+    (plan.cuts_data || []).forEach((cut) => {
+      if (!cut?.calculatedLength || !cut?.quantity) return;
+      aggregatedCuts.push({
+        itemTemplateId: cut.itemTemplateId || cut.profileName,
+        itemName: cut.profileName,
+        cutLength: Math.round(cut.calculatedLength),
+        quantity: cut.quantity * planQty,
+        barLengthMm: 6000,
+        unit: 'mm',
+      });
+    });
+  });
+
+  if (aggregatedCuts.length > 0) {
+    const summary = optimizeProfiles(aggregatedCuts);
+
+    if (y > pageHeight - 50) { doc.addPage(); y = margin; }
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...primaryBlue);
+    doc.text('OTIMIZAÇÃO DE BARRAS (CONSOLIDADO DA OS)', margin, y + 4);
+    y += 8;
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...mutedText);
+    doc.text(
+      `Total: ${summary.totalProfileBars} barra(s) · Desperdício: ${formatMm(summary.totalProfileWasteMm)} (${summary.avgWastePercent}%) · Serra 4mm · Barra 6000mm`,
+      margin,
+      y + 4,
+    );
+    y += 8;
+
+    summary.profiles.forEach((profile) => {
+      if (y > pageHeight - 40) { doc.addPage(); y = margin; }
+      const bars = distributeAcrossBars(profile.cuts, profile.barLengthMm);
+
+      // Profile header row
+      doc.setFillColor(...lightGray);
+      doc.rect(margin, y, contentWidth, 8, 'F');
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...darkText);
+      doc.text(profile.itemName, margin + 3, y + 5.5);
+      doc.setFont('helvetica', 'normal');
+      doc.text(
+        `${profile.barsNeeded} barra(s) · ${profile.wastePercent}% sobra`,
+        pageWidth - margin - 3,
+        y + 5.5,
+        { align: 'right' },
+      );
+      y += 10;
+
+      const rows = bars.map((bar) => {
+        const cutSummary = bar.cuts
+          .map((c) => `${c.qty}× ${c.length}mm`)
+          .join('  +  ');
+        return [
+          `Barra ${bar.barIndex}`,
+          cutSummary,
+          `${formatMm(bar.usedLength)}`,
+          `${formatMm(bar.remainingLength)}`,
+        ];
+      });
+
+      autoTable(doc, {
+        startY: y,
+        head: [['#', 'Cortes na barra', 'Usado', 'Sobra']],
+        body: rows,
+        theme: 'grid',
+        headStyles: { fillColor: primaryBlue, textColor: 255, fontStyle: 'bold', fontSize: 9 },
+        bodyStyles: { fontSize: 9, textColor: darkText, minCellHeight: 8 },
+        columnStyles: {
+          0: { cellWidth: 22, halign: 'center', fontStyle: 'bold' },
+          1: { cellWidth: 'auto' as any, fontStyle: 'bold' },
+          2: { cellWidth: 25, halign: 'center' },
+          3: { cellWidth: 25, halign: 'center' },
+        },
+        margin: { left: margin, right: margin },
+      });
+
+      y = (doc as any).lastAutoTable.finalY + 6;
+    });
+
+    y += 4;
+  }
+
   // ========== CUTTING PLANS ==========
   for (let planIndex = 0; planIndex < plans.length; planIndex++) {
     const plan = plans[planIndex];
