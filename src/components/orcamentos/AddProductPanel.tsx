@@ -1005,7 +1005,8 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
               </div>
             </div>
 
-            {/* Espessura/Cor do vidro e Cor do perfil */}
+            {/* Espessura/Cor do vidro e Cor do perfil — ocultos no modo Plano de Corte */}
+            {mode !== 'cutting' && (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-foreground">Espessura do vidro</label>
@@ -1114,6 +1115,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
                 </div>
               </div>
             </div>
+            )}
 
             {/* Valor R$ / m² — oculto no modo Plano de Corte */}
             {mode !== 'cutting' && (
