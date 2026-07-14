@@ -262,8 +262,20 @@ export async function generateOSDocuments(
           position = getFormulaPosition(formula);
         }
 
-        const piecesQty = comp.pieces_quantity || 1;
+        // Evaluate pieces from formula (with parentheses / division supported),
+        // rounded up per Math.ceil. Falls back to pieces_quantity or 1.
+        const evalCtx = {
+          width, height,
+          widthB: width_b, heightB: height_b,
+          widthC: width_c, heightC: height_c,
+        };
+        let piecesQty = comp.pieces_quantity || 1;
+        if (comp.pieces_formula && comp.pieces_formula.trim() !== '') {
+          const raw = evaluateFormula(comp.pieces_formula, evalCtx, undefined, comp.side as any);
+          if (raw > 0) piecesQty = Math.ceil(raw);
+        }
         const totalPieces = piecesQty * quantity;
+
 
         const sidesToCalculate = [];
         if (!product.has_multiple_sides) {
