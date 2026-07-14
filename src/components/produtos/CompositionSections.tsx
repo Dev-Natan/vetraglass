@@ -85,7 +85,7 @@ function SectionHeader({
   );
 }
 
-function ItemActions({ item, onEdit, onRemove }: { item: CompositionItem; onEdit: () => void; onRemove: () => void }) {
+function ItemActions({ item, onEdit, onRemove, onReset }: { item: CompositionItem; onEdit: () => void; onRemove: () => void; onReset?: () => void }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -95,6 +95,11 @@ function ItemActions({ item, onEdit, onRemove }: { item: CompositionItem; onEdit
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="bg-background border shadow-lg z-50">
         <DropdownMenuItem onClick={onEdit}>Editar</DropdownMenuItem>
+        {onReset && (
+          <DropdownMenuItem onClick={onReset}>
+            <RotateCcw className="w-3.5 h-3.5 mr-2" /> Restaurar padrão
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem className="text-destructive" onClick={onRemove}>Remover</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
