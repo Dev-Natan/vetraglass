@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { validateFormula } from '@/utils/safeFormulaEvaluator';
+import { LENGTH_FORMULA_PRESETS, PIECES_FORMULA_PRESETS } from '@/utils/formulaPresets';
 
 interface FormulaEditorProps {
   value: string;
@@ -28,22 +29,15 @@ interface FormulaEditorProps {
   onPiecesFormulaChange?: (value: string) => void;
 }
 
-// Common glass formulas
-const commonFormulas = [
-  { label: 'Altura', formula: 'Altura', icon: ArrowUpDown, color: 'bg-blue-500' },
-  { label: 'Largura', formula: 'Largura', icon: ArrowLeftRight, color: 'bg-green-500' },
-  { label: 'Lado A + B', formula: 'largura_lado_a + largura_lado_b', icon: null, color: 'bg-orange-500' },
-  { label: 'Lados', formula: 'lados', icon: null, color: 'bg-purple-500' },
-  { label: 'Folhas', formula: 'folhas', icon: null, color: 'bg-emerald-500' },
-  { label: 'Área m²', formula: 'Altura * Largura / 1000000', icon: null, color: 'bg-purple-500' },
-];
+// Common length/cut formulas (centralized)
+const commonFormulas = LENGTH_FORMULA_PRESETS.map(p => ({
+  label: p.label,
+  formula: p.formula,
+  icon: null as any,
+  color: 'bg-primary',
+}));
 
-const commonQuantityFormulas = [
-  { label: 'Fixa 1', formula: '1' },
-  { label: 'Largura / 500', formula: '(Largura / 500) + 1' },
-  { label: 'Altura / 500', formula: '(Altura / 500) + 1' },
-  { label: 'Largura / 1000', formula: 'Largura / 1000' },
-];
+const commonQuantityFormulas = PIECES_FORMULA_PRESETS;
 
 // Operators
 const operators = [
@@ -340,6 +334,7 @@ export const FormulaEditor = forwardRef<HTMLDivElement, FormulaEditorProps>(
                       type="button"
                       variant="outline"
                       size="sm"
+                      title={f.description || f.formula}
                       className={cn(
                         "text-[11px] h-7 px-2",
                         piecesFormula === f.formula && "border-primary bg-primary/5"
