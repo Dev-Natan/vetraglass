@@ -45,6 +45,7 @@ interface CompositionSectionsProps {
   onAddItem: (section: 'profile' | 'accessory' | 'glass' | 'contramarco') => void;
   onEditItem: (item: CompositionItem) => void;
   onRemoveItem: (itemId: string) => void;
+  onResetItem?: (itemId: string) => void;
 }
 
 const getStorageUrl = (path: string | null) => resolveImageUrl(path, 'item-templates');
