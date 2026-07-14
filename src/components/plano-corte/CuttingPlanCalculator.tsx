@@ -109,6 +109,7 @@ export function CuttingPlanCalculator() {
       const selectCols = `
           id,
           quantity_formula,
+          pieces_formula,
           pieces_quantity,
           cut_angle,
           cut_angle_start,
@@ -124,6 +125,7 @@ export function CuttingPlanCalculator() {
             image_url
           )
         `;
+
 
       // 1. Prefer company-specific composition when available
       if (!isSaasAdmin && currentCompany?.id) {
