@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { resolveProductImageUrl } from '@/utils/imageUrl';
-import { Printer, Download, Tags, BarChart3, Settings2, RotateCcw } from 'lucide-react';
+import { Printer, Download, Tags, BarChart3, Settings2, RotateCcw, Scissors } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery } from '@tanstack/react-query';
