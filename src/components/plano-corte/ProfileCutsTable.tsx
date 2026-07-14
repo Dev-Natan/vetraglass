@@ -102,10 +102,9 @@ export function ProfileCutsTable({
                           {cut.profileName}
                         </span>
                       </div>
-
-                      </div>
                     </div>
                   </TableCell>
+
                   <TableCell className="text-center font-bold text-lg text-primary tabular-nums">
                     {cut.calculatedLength}
                   </TableCell>
