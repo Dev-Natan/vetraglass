@@ -14,6 +14,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { regenerateOSDocuments } from '@/utils/generateOSDocuments';
 import { generateCuttingPlanPdf } from '@/utils/generateCuttingPlanPdf';
 import { Loader2, RefreshCw } from 'lucide-react';
+import { BarOptimizationView } from '@/components/plano-corte/BarOptimizationView';
+import { useMemo } from 'react';
 
 
 interface OSCuttingPlanProps {
