@@ -232,32 +232,6 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
     }
   };
 
-  // Aggregated bar-optimization data across ALL plans of this OS.
-  // Groups identical profiles by itemTemplateId (fallback to profileName)
-  // and multiplies each cut by the plan quantity.
-  const aggregatedBarCuts = useMemo(() => {
-    const all: Array<{
-      itemTemplateId: string;
-      itemName: string;
-      cutLength: number;
-      quantity: number;
-      barLengthMm: number;
-    }> = [];
-    (plans || []).forEach((plan: any) => {
-      const planQty = plan.quantity || 1;
-      (plan.cuts_data || []).forEach((cut: CutData) => {
-        if (!cut?.calculatedLength || !cut?.quantity) return;
-        all.push({
-          itemTemplateId: cut.itemTemplateId || cut.profileName,
-          itemName: cut.profileName,
-          cutLength: Math.round(cut.calculatedLength),
-          quantity: cut.quantity * planQty,
-          barLengthMm: 6000,
-        });
-      });
-    });
-    return all;
-  }, [plans]);
 
   return (
     <div className="space-y-6">
