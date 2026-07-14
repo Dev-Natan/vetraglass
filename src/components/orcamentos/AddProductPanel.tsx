@@ -289,7 +289,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     }
 
     return products;
-  }, [companyProducts, selectedLinha, selectedCategory, searchQuery, linhaSlugToName, productLinhas]);
+  }, [companyProducts, selectedLinha, selectedCategory, searchQuery, linhaSlugToName, productLinhas, mode]);
 
 
   // Saldo de perfis por produto listado — para alertar o vendedor sobre falta de estoque.
