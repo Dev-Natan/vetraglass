@@ -57,26 +57,28 @@ export function optimizeProfiles(cuts: CutPiece[]): MaterialSummary {
   }, {} as Record<string, { itemTemplateId: string; itemName: string; cuts: Array<{ length: number; qty: number }>; barLengthMm: number; unit: string }>);
 
   const profiles: OptimizedMaterial[] = Object.values(grouped).map(profile => {
-    // Calculate total length needed
-    const totalLengthMm = profile.cuts.reduce(
+    const sortedCuts = profile.cuts.sort((a, b) => b.length - a.length);
+
+    // Total linear length needed (informational)
+    const totalLengthMm = sortedCuts.reduce(
       (sum, cut) => sum + (cut.length * cut.qty),
       0
     );
 
-    // Calculate bars needed (round up)
-    const barsNeeded = Math.ceil(totalLengthMm / profile.barLengthMm);
+    // Use FFD packing to compute the ACTUAL bars needed (respecting kerf)
+    const distribution = distributeAcrossBars(sortedCuts, profile.barLengthMm);
+    const barsNeeded = Math.max(1, distribution.length);
 
-    // Calculate waste
     const totalBarLengthMm = barsNeeded * profile.barLengthMm;
-    const wasteMm = totalBarLengthMm - totalLengthMm;
-    const wastePercent = totalBarLengthMm > 0 
-      ? Math.round((wasteMm / totalBarLengthMm) * 1000) / 10 
+    const wasteMm = Math.max(0, totalBarLengthMm - totalLengthMm);
+    const wastePercent = totalBarLengthMm > 0
+      ? Math.round((wasteMm / totalBarLengthMm) * 1000) / 10
       : 0;
 
     return {
       itemTemplateId: profile.itemTemplateId,
       itemName: profile.itemName,
-      cuts: profile.cuts.sort((a, b) => b.length - a.length), // Sort by length desc
+      cuts: sortedCuts,
       totalLengthMm,
       barLengthMm: profile.barLengthMm,
       barsNeeded,
@@ -85,6 +87,7 @@ export function optimizeProfiles(cuts: CutPiece[]): MaterialSummary {
       unit: profile.unit,
     };
   });
+
 
   // Calculate totals
   const totalProfileBars = profiles.reduce((sum, p) => sum + p.barsNeeded, 0);
