@@ -265,9 +265,15 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
         uses_glass: cp.uses_glass ?? true,
         company_product: cp,
         product_template_id: cp.product_template_id,
-        has_multiple_sides: (template as any)?.has_multiple_sides ?? false
+        has_multiple_sides: (template as any)?.has_multiple_sides ?? false,
+        has_cutting_plan: (template as any)?.has_cutting_plan ?? true,
       };
     });
+
+    if (mode === 'cutting') {
+      products = products.filter(p => p.has_cutting_plan !== false);
+    }
+
 
     products = products.filter(p => productMatchesLinha(p.linha, selectedLinha));
 
