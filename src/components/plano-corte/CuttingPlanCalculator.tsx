@@ -36,22 +36,24 @@ export function CuttingPlanCalculator() {
   const [activeTab, setActiveTab] = useState<'cortes' | 'otimizacao'>('cortes');
   const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
   const [hoveredProfileId, setHoveredProfileId] = useState<string | null>(null);
-  const [showConfigurator, setShowConfigurator] = useState<boolean>(true);
 
-  const handleProductConfigured = (payload: Parameters<React.ComponentProps<typeof AddProductPanel>['onAdd']>[0]) => {
+  const handleLiveChange = (payload: {
+    product_template_id: string | null;
+    name: string;
+    image_url: string | null;
+    width: number;
+    height: number;
+    quantity: number;
+  }) => {
     setSelectedProduct(payload.product_template_id || '');
     setProductName(payload.name);
     setProductImage(payload.image_url || null);
     setWidth(Number(payload.width) || 0);
     setHeight(Number(payload.height) || 0);
     setQuantity(Number(payload.quantity) || 1);
-    setCompletedItems(new Set());
-    setShowConfigurator(false);
-    toast.success('Plano de corte gerado');
   };
 
   const handleReset = () => {
-    setShowConfigurator(true);
     setSelectedProduct('');
     setProductName('');
     setProductImage(null);
