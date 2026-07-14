@@ -21,7 +21,6 @@ import {
   Lightbulb,
   Tag,
   CalendarDays,
-  Scissors as ScissorsIcon,
   LucideIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
