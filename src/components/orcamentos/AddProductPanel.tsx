@@ -1005,7 +1005,8 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
               </div>
             </div>
 
-            {/* Espessura/Cor do vidro e Cor do perfil */}
+            {/* Espessura/Cor do vidro e Cor do perfil — ocultos no modo Plano de Corte */}
+            {mode !== 'cutting' && (
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-foreground">Espessura do vidro</label>
@@ -1114,6 +1115,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
                 </div>
               </div>
             </div>
+            )}
 
             {/* Valor R$ / m² — oculto no modo Plano de Corte */}
             {mode !== 'cutting' && (
@@ -1133,7 +1135,8 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
               </div>
             )}
 
-            {/* Componentes / Acessórios */}
+            {/* Componentes / Acessórios — ocultos no modo Plano de Corte */}
+            {mode !== 'cutting' && (
             <div className="space-y-3 pt-2">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
@@ -1243,8 +1246,10 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
                 </DialogContent>
               </Dialog>
             </div>
+            )}
 
-            {/* Observações */}
+            {/* Observações — oculto no modo Plano de Corte */}
+            {mode !== 'cutting' && (
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
                 <FileText className="w-3.5 h-3.5" />
@@ -1258,6 +1263,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
                 className="bg-background resize-none"
               />
             </div>
+            )}
           </div>
 
           {mode === 'cutting' ? (
