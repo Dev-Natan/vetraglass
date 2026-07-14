@@ -1600,7 +1600,7 @@ export default function ProductTemplates() {
             <Tabs value={dialogTab} onValueChange={(v) => setDialogTab(v as "dados" | "composicao" | "variaveis")} className="space-y-4">
               <TabsList className="grid grid-cols-3 w-full">
                 <TabsTrigger value="dados">Dados</TabsTrigger>
-                <TabsTrigger value="composicao" disabled={!editingTemplate}>
+                <TabsTrigger value="composicao" disabled={!editingTemplate || !formData.has_cutting_plan}>
                   <Settings2 className="w-4 h-4 mr-2" /> Composição
                 </TabsTrigger>
                 <TabsTrigger value="variaveis" disabled={!editingTemplate}>
