@@ -613,7 +613,13 @@ export function CuttingPlanCalculator() {
           </TabsList>
 
           <TabsContent value="cortes" className="mt-4 space-y-6">
-            {calculatedGlassCuts.length === 0 && calculatedCuts.length === 0 ? (
+            {selectedProduct && !hasCuttingPlan ? (
+              <div className="text-center py-12 border border-dashed rounded-lg bg-muted/30">
+                <Scissors className="w-10 h-10 mx-auto mb-3 text-muted-foreground/60" />
+                <p className="text-sm font-medium">Este produto não possui plano de corte configurado.</p>
+                <p className="text-xs text-muted-foreground mt-1">Ative a opção "Este produto possui plano de corte?" no cadastro do produto para habilitá-lo aqui.</p>
+              </div>
+            ) : calculatedGlassCuts.length === 0 && calculatedCuts.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 {selectedProduct
                   ? 'Nenhuma composição encontrada para este produto.'
