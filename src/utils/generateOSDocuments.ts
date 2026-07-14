@@ -605,7 +605,12 @@ export async function generateOSDocuments(
         const formulaContext = { width, height, widthB: width_b, heightB: height_b, widthC: width_c, heightC: height_c };
 
         for (const comp of accessories) {
-          const piecesQty = comp.pieces_quantity || 1;
+          let piecesQty = comp.pieces_quantity || 1;
+          if (comp.pieces_formula && comp.pieces_formula.trim() !== '') {
+            const raw = evaluateFormula(comp.pieces_formula, formulaContext, undefined, comp.side as any, 'ceil');
+            if (raw > 0) piecesQty = raw;
+          }
+
           const qty = item.quantity || 1;
           
           let calculatedQty = piecesQty * qty;
