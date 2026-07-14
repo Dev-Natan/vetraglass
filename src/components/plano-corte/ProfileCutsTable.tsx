@@ -1,5 +1,7 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
+import { CutAngleIcon } from './CutAngleIcon';
+import { cn } from '@/lib/utils';
 
 export interface ProfileCutItem {
   id: string;
@@ -23,13 +25,17 @@ interface ProfileCutsTableProps {
   showCheckboxes?: boolean;
   onToggleComplete?: (id: string, completed: boolean) => void;
   getStorageUrl: (path: string | null) => string | null;
+  hoveredId?: string | null;
+  onHoverChange?: (id: string | null) => void;
 }
 
 export function ProfileCutsTable({ 
   cuts, 
   showCheckboxes = false,
   onToggleComplete,
-  getStorageUrl 
+  getStorageUrl,
+  hoveredId,
+  onHoverChange,
 }: ProfileCutsTableProps) {
   if (cuts.length === 0) return null;
 
