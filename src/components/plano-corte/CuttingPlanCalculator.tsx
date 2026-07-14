@@ -272,7 +272,9 @@ export function CuttingPlanCalculator() {
     }));
   }, [calculatedCuts]);
 
-  const selectedProductData = productTemplates?.find(p => p.id === selectedProduct);
+  const selectedProductData = selectedProduct
+    ? { id: selectedProduct, name: productName, image_url: productImage }
+    : null;
 
   const handleToggleComplete = (id: string, completed: boolean) => {
     setCompletedItems(prev => {
