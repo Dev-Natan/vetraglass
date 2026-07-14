@@ -211,7 +211,14 @@ export function CuttingPlanCalculator() {
           }
         }
         
-        const totalPieces = piecesPerProduct * quantity;
+        const piecesFormula = (item as any).pieces_formula as string | null;
+        let piecesFromFormula = piecesPerProduct;
+        if (piecesFormula && piecesFormula.trim() !== '') {
+          const evaluated = evaluateFormula(piecesFormula, width, height, null, 'ceil');
+          if (evaluated > 0) piecesFromFormula = evaluated;
+        }
+        const totalPieces = piecesFromFormula * quantity;
+
         
         return {
           id: item.id,
