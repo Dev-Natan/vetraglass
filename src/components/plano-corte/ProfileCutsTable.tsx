@@ -118,10 +118,11 @@ export function ProfileCutsTable({
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-center font-bold text-lg">
+                  <TableCell className="text-center font-bold text-lg text-primary tabular-nums">
                     {cut.calculatedLength}
                   </TableCell>
-                  <TableCell className="text-center">{cut.quantity}</TableCell>
+                  <TableCell className="text-center font-bold text-lg tabular-nums">{cut.quantity}</TableCell>
+
                   <TableCell className="text-center">
                     <div className="inline-flex items-center gap-2">
                       <span className="inline-flex items-center gap-1 rounded bg-foreground text-background px-2 py-1 text-xs font-medium">
