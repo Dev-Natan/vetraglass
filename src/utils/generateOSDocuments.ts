@@ -586,8 +586,9 @@ export async function generateOSDocuments(
       if (!item.product_id) continue;
       
       const [allComposition] = await Promise.all([
-        getProductComposition(item.product_id)
+        getProductComposition(item.product_id, companyId)
       ]);
+
 
       const accessories = allComposition.filter(comp => 
         comp.item_template.type !== 'profile' && comp.item_template.type !== 'glass'
