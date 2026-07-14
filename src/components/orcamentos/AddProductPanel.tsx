@@ -94,9 +94,12 @@ interface AddProductPanelProps {
     }>;
   }) => void;
   onCancel: () => void;
+  mode?: 'quote' | 'cutting';
+  submitLabel?: string;
+  submitIcon?: React.ReactNode;
 }
 
-export function AddProductPanel({ onAdd, onCancel }: AddProductPanelProps) {
+export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, submitIcon }: AddProductPanelProps) {
   const { currentCompany } = useAuth();
   const { labels: categoryLabels } = useProductCategoryLabels();
   const { data: adminCategories } = useProductCategories();
