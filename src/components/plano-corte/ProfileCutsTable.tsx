@@ -1,5 +1,7 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
+import { CutAngleIcon } from './CutAngleIcon';
+import { cn } from '@/lib/utils';
 
 export interface ProfileCutItem {
   id: string;
@@ -23,13 +25,17 @@ interface ProfileCutsTableProps {
   showCheckboxes?: boolean;
   onToggleComplete?: (id: string, completed: boolean) => void;
   getStorageUrl: (path: string | null) => string | null;
+  hoveredId?: string | null;
+  onHoverChange?: (id: string | null) => void;
 }
 
 export function ProfileCutsTable({ 
   cuts, 
   showCheckboxes = false,
   onToggleComplete,
-  getStorageUrl 
+  getStorageUrl,
+  hoveredId,
+  onHoverChange,
 }: ProfileCutsTableProps) {
   if (cuts.length === 0) return null;
 
@@ -54,79 +60,96 @@ export function ProfileCutsTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {cuts.map((cut) => (
-              <TableRow 
-                key={cut.id} 
-                className={`hover:bg-muted/50 ${cut.isCompleted ? 'bg-green-50 dark:bg-green-900/20' : ''}`}
-              >
-                {showCheckboxes && (
+            {cuts.map((cut) => {
+              const isHovered = hoveredId === cut.id;
+              const angleStart = cut.cutAngleStart ?? cut.cutAngle;
+              const angleEnd = cut.cutAngleEnd ?? cut.cutAngle;
+              const isAltura = cut.position === 'Altura';
+              return (
+                <TableRow
+                  key={cut.id}
+                  onMouseEnter={() => onHoverChange?.(cut.id)}
+                  onMouseLeave={() => onHoverChange?.(null)}
+                  className={cn(
+                    'transition-colors',
+                    cut.isCompleted && 'bg-green-50 dark:bg-green-900/20',
+                    isHovered ? 'bg-destructive/10 ring-1 ring-destructive/40' : 'hover:bg-muted/50'
+                  )}
+                >
+                  {showCheckboxes && (
+                    <TableCell>
+                      <Checkbox
+                        checked={cut.isCompleted}
+                        onCheckedChange={(checked) => onToggleComplete?.(cut.id, !!checked)}
+                      />
+                    </TableCell>
+                  )}
                   <TableCell>
-                    <Checkbox 
-                      checked={cut.isCompleted}
-                      onCheckedChange={(checked) => onToggleComplete?.(cut.id, !!checked)}
-                    />
+                    <div className="flex items-center gap-3">
+                      <div className="w-16 h-12 bg-white rounded border flex items-center justify-center overflow-hidden">
+                        {cut.imageUrl ? (
+                          <img
+                            src={getStorageUrl(cut.imageUrl) || ''}
+                            alt={cut.profileName}
+                            className="w-full h-full object-contain"
+                          />
+                        ) : (
+                          <span className="text-muted-foreground text-xs">📦</span>
+                        )}
+                      </div>
+                      <div>
+                        <span className={`font-medium ${cut.isCompleted ? 'line-through text-muted-foreground' : ''}`}>
+                          {cut.profileName}
+                        </span>
+                        {(cut.widthFormula || cut.heightFormula) && (
+                          <div className="flex gap-2 mt-1">
+                            {cut.widthFormula && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                                L: {cut.widthFormula}
+                              </span>
+                            )}
+                            {cut.heightFormula && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                                A: {cut.heightFormula}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </TableCell>
-                )}
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <div className="w-16 h-12 bg-white rounded border flex items-center justify-center overflow-hidden">
-                      {cut.imageUrl ? (
-                        <img 
-                          src={getStorageUrl(cut.imageUrl) || ''} 
-                          alt={cut.profileName}
-                          className="w-full h-full object-contain"
-                        />
-                      ) : (
-                        <span className="text-muted-foreground text-xs">📦</span>
-                      )}
-                    </div>
-                    <div>
-                      <span className={`font-medium ${cut.isCompleted ? 'line-through text-muted-foreground' : ''}`}>
-                        {cut.profileName}
+                  <TableCell className="text-center font-bold text-lg">
+                    {cut.calculatedLength}
+                  </TableCell>
+                  <TableCell className="text-center">{cut.quantity}</TableCell>
+                  <TableCell className="text-center">
+                    <div className="inline-flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1 rounded bg-foreground text-background px-2 py-1 text-xs font-medium">
+                        <CutAngleIcon angle={angleStart} side="start" className="text-background" />
+                        {angleStart}°
                       </span>
-                      {(cut.widthFormula || cut.heightFormula) && (
-                        <div className="flex gap-2 mt-1">
-                          {cut.widthFormula && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
-                              L: {cut.widthFormula}
-                            </span>
-                          )}
-                          {cut.heightFormula && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                              A: {cut.heightFormula}
-                            </span>
-                          )}
-                        </div>
-                      )}
+                      <span className="inline-flex items-center gap-1 rounded bg-foreground text-background px-2 py-1 text-xs font-medium">
+                        <CutAngleIcon angle={angleEnd} side="end" className="text-background" />
+                        {angleEnd}°
+                      </span>
                     </div>
-                  </div>
-                </TableCell>
-                <TableCell className="text-center font-bold text-lg">
-                  {cut.calculatedLength}
-                </TableCell>
-                <TableCell className="text-center">
-                  {cut.quantity}
-                </TableCell>
-                <TableCell className="text-center">
-                  <div className="inline-flex gap-1">
-                    <span className="bg-foreground text-background px-3 py-1 text-sm font-medium">
-                      {cut.cutAngleStart ?? cut.cutAngle}°
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <span
+                      className={cn(
+                        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium border',
+                        isAltura
+                          ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30'
+                          : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30'
+                      )}
+                    >
+                      <span className={cn('w-2 h-2 rounded-full', isAltura ? 'bg-blue-500' : 'bg-amber-500')} />
+                      {cut.position}
                     </span>
-                    <span className="bg-foreground text-background px-3 py-1 text-sm font-medium">
-                      {cut.cutAngleEnd ?? cut.cutAngle}°
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-center">
-                  <div className="inline-flex items-center gap-2">
-                    <span className={`w-2.5 h-2.5 rounded-full ${
-                      cut.position === 'Altura' ? 'bg-blue-500' : 'bg-amber-500'
-                    }`} />
-                    {cut.position}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>

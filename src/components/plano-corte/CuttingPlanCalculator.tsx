@@ -12,6 +12,8 @@ import { CuttingPlanFilters } from '@/components/plano-corte/CuttingPlanFilters'
 import { ProfileCutsTable, type ProfileCutItem } from '@/components/plano-corte/ProfileCutsTable';
 import { GlassCutsTable, type GlassCutItem } from '@/components/plano-corte/GlassCutsTable';
 import { BarOptimizationView } from '@/components/plano-corte/BarOptimizationView';
+import { FramePreviewSVG } from '@/components/plano-corte/FramePreviewSVG';
+import { CuttingSummaryCards } from '@/components/plano-corte/CuttingSummaryCards';
 import { generateCuttingLabels, expandCutsToLabels } from '@/utils/generateCuttingLabels';
 import { exportCuttingPlanToCSV, type CuttingPlanExport } from '@/utils/exportCuttingToExcel';
 import {
@@ -35,6 +37,8 @@ export function CuttingPlanCalculator() {
   const [quantity, setQuantity] = useState<number>(1);
   const [activeTab, setActiveTab] = useState<'cortes' | 'otimizacao'>('cortes');
   const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
+  const [hoveredProfileId, setHoveredProfileId] = useState<string | null>(null);
+
 
   const { data: productTemplates } = useQuery({
     queryKey: ['product-templates-for-cutting'],
@@ -696,20 +700,42 @@ export function CuttingPlanCalculator() {
               </div>
             ) : (
               <>
-                <GlassCutsTable
-                  glassCuts={calculatedGlassCuts}
-                  showCheckboxes
-                  onToggleComplete={handleToggleComplete}
+                <CuttingSummaryCards
+                  totalProfilePieces={calculatedCuts.reduce((sum, c) => sum + (c.quantity || 0), 0)}
+                  distinctProfiles={new Set(calculatedCuts.map(c => c.profileName)).size}
+                  totalAccessories={calculatedGlassCuts.reduce((sum, g) => sum + (g.quantity || 0), 0)}
                 />
-                <ProfileCutsTable
-                  cuts={calculatedCuts}
-                  showCheckboxes
-                  onToggleComplete={handleToggleComplete}
-                  getStorageUrl={getStorageUrl}
-                />
+
+                <div className="grid grid-cols-1 lg:grid-cols-[35%_1fr] gap-6">
+                  <div className="no-print">
+                    <FramePreviewSVG
+                      width={width}
+                      height={height}
+                      profileCuts={calculatedCuts}
+                      hoveredId={hoveredProfileId}
+                    />
+                  </div>
+
+                  <div className="space-y-6 min-w-0">
+                    <GlassCutsTable
+                      glassCuts={calculatedGlassCuts}
+                      showCheckboxes
+                      onToggleComplete={handleToggleComplete}
+                    />
+                    <ProfileCutsTable
+                      cuts={calculatedCuts}
+                      showCheckboxes
+                      onToggleComplete={handleToggleComplete}
+                      getStorageUrl={getStorageUrl}
+                      hoveredId={hoveredProfileId}
+                      onHoverChange={setHoveredProfileId}
+                    />
+                  </div>
+                </div>
               </>
             )}
           </TabsContent>
+
 
           <TabsContent value="otimizacao" className="mt-4 no-print">
             {barOptimizationData.length > 0 ? (
