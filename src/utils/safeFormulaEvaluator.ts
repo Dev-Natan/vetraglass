@@ -101,8 +101,11 @@ export function evaluateFormula(
   widthOrContext: number | FormulaContext, 
   height?: number,
   /** Which side this component belongs to: null/A uses main width, B uses widthB */
-  side?: string | null
+  side?: string | null,
+  /** Rounding strategy applied to the final result. Defaults to 'round'. */
+  rounding: 'round' | 'ceil' | 'floor' | 'none' = 'round'
 ): number {
+
   try {
     if (!formula || formula.trim() === '') return 0;
     
