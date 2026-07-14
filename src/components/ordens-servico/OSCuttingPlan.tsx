@@ -602,6 +602,18 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
           </Card>
         );
       })}
+      </div>
+
+      {/* Print-only report (visible exclusively via @media print) */}
+      <div className="print-area">
+        <PrintableCuttingReport
+          companyName={currentCompany?.name || 'Urbano Vidros'}
+          documentSubtitle={plans[0]?.os_number ? `OS ${plans[0].os_number}` : undefined}
+          products={printProducts}
+          profileCuts={printProfileCuts}
+        />
+      </div>
     </div>
   );
 }
+
