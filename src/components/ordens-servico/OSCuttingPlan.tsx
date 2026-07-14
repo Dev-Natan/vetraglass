@@ -30,6 +30,7 @@ interface CutData {
   cutAngle: number;
   position: string;
   side?: string;
+  itemTemplateId?: string;
 }
 
 interface GlassCutData {
