@@ -75,7 +75,7 @@ export default function AdminInsumosLinha() {
       <div className="p-6 space-y-6 max-w-6xl mx-auto">
         <div className="flex items-center gap-3">
           <Button asChild variant="ghost" size="sm">
-            <Link to="/admin/insumos"><ArrowLeft className="w-4 h-4 mr-1" />Voltar</Link>
+            <Link to="/admin/linhas"><ArrowLeft className="w-4 h-4 mr-1" />Voltar</Link>
           </Button>
           <div className="flex items-center gap-3">
             <Layers className="w-6 h-6 text-primary" />
