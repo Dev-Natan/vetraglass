@@ -1030,7 +1030,24 @@ export default function ItemTemplates() {
                               </div>
                             </div>
                             <div className="space-y-1">
-                              <Label className="text-[11px]">Fórmula do comprimento</Label>
+                              <div className="flex items-center justify-between gap-2">
+                                <Label className="text-[11px]">Fórmula do comprimento</Label>
+                                <Select value="" onValueChange={(v) => updateEntry({ formula: v })}>
+                                  <SelectTrigger className="h-6 w-auto min-w-[140px] text-[10px] gap-1 px-2">
+                                    <SelectValue placeholder="💡 Sugestões" />
+                                  </SelectTrigger>
+                                  <SelectContent className="max-h-72">
+                                    {LENGTH_FORMULA_PRESETS.map((p) => (
+                                      <SelectItem key={p.formula} value={p.formula} className="text-xs">
+                                        <div className="flex flex-col">
+                                          <span className="font-medium">{p.label}</span>
+                                          <code className="text-[10px] text-muted-foreground font-mono">{p.formula}</code>
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
                               <Input
                                 value={f.formula}
                                 onChange={(e) => updateEntry({ formula: e.target.value })}
@@ -1041,7 +1058,24 @@ export default function ItemTemplates() {
                             {formData.type === 'profile' && (
                               <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                                 <div className="space-y-1">
-                                  <Label className="text-[11px]">Peças</Label>
+                                  <div className="flex items-center justify-between gap-1">
+                                    <Label className="text-[11px]">Peças</Label>
+                                    <Select value="" onValueChange={(v) => updateEntry({ pieces: v })}>
+                                      <SelectTrigger className="h-6 w-auto min-w-[90px] text-[10px] gap-1 px-2">
+                                        <SelectValue placeholder="💡" />
+                                      </SelectTrigger>
+                                      <SelectContent className="max-h-72">
+                                        {PIECES_FORMULA_PRESETS.map((p) => (
+                                          <SelectItem key={p.formula} value={p.formula} className="text-xs">
+                                            <div className="flex flex-col">
+                                              <span className="font-medium">{p.label}</span>
+                                              <code className="text-[10px] text-muted-foreground font-mono">{p.formula}</code>
+                                            </div>
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
                                   <Input
                                     value={f.pieces || ''}
                                     onChange={(e) => updateEntry({ pieces: e.target.value || null })}
