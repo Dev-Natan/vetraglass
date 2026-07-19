@@ -51,11 +51,14 @@ export function EntityCardGrid<T extends EntityCardItem>({
   onOpenDialog,
   onToggleActive,
   onDelete,
+  preferDetailOnCardClick = false,
 }: EntityCardGridProps<T>) {
+  const navigate = useNavigate();
   const sp = useSearchPagination({
     data,
     getSearchableFields: (i: T) => [i.name, i.slug],
   });
+
 
   return (
     <Card>
