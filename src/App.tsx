@@ -73,6 +73,7 @@ const AdminSupport = lazy(() => import("./pages/admin/AdminSupport"));
 const AdminAnnouncements = lazy(() => import("./pages/admin/AdminAnnouncements"));
 
 const AdminCategories = lazy(() => import("./pages/admin/AdminCategories"));
+const AdminCategoryDetail = lazy(() => import("./pages/admin/AdminCategoryDetail"));
 const AdminCompanyDetail = lazy(() => import("./pages/admin/AdminCompanyDetail"));
 const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
 const AdminFeedbacks = lazy(() => import("./pages/admin/AdminFeedbacks"));
@@ -331,6 +332,9 @@ function AppRoutes() {
       } />
       <Route path="/admin/categories" element={
         <AdminRoute><LazyRoute><AdminCategories /></LazyRoute></AdminRoute>
+      } />
+      <Route path="/admin/categories/:slug" element={
+        <AdminRoute><LazyRoute><AdminCategoryDetail /></LazyRoute></AdminRoute>
       } />
       {/* Audit logs migrated into /admin/companies/:id (Auditoria tab) */}
       <Route path="/admin/audit-logs" element={<Navigate to="/admin/companies" replace />} />
