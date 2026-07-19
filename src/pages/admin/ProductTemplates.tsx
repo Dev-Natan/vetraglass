@@ -254,6 +254,7 @@ export default function ProductTemplates() {
   const [compositionActiveTab, setCompositionActiveTab] = useState("glass");
   const [dialogTab, setDialogTab] = useState<"dados" | "composicao" | "variaveis">("dados");
   const [selectedItemToAdd, setSelectedItemToAdd] = useState("");
+  const [selectedFormulaIndex, setSelectedFormulaIndex] = useState<number>(0);
   const [linhaFilter, setLinhaFilter] = useState<string>("__all__");
   const [quantityFormula, setQuantityFormula] = useState("1");
   const [piecesQuantity, setPiecesQuantity] = useState(1);
