@@ -37,6 +37,7 @@ type DisplayProduct = {
   companyProductId?: string;
   productTemplateId?: string;
   composition_finished?: boolean;
+  has_cutting_plan?: boolean;
 };
 
 export default function ProdutosLinha() {
