@@ -1445,13 +1445,21 @@ export default function ProductTemplates() {
                   const linhaMeta = (slug: string) =>
                     productLinhas?.find(l => l.slug === slug || l.name === slug);
 
-                  // Garante que TODAS as linhas cadastradas em /admin/categories apareçam,
-                  // mesmo sem produtos ainda.
-                  const mergedEntries: Array<[string, ProductTemplate[]]> = [...entries];
+                  // Apenas linhas ATIVAS aparecem aqui. Ativar/desativar em /admin/categories
+                  // reflete imediatamente esta lista.
+                  const activeLinhas = (productLinhas || []).filter(l => l.is_active);
+                  const activeKeys = new Set(activeLinhas.map(l => l.slug.toLowerCase()));
+
+                  const filteredEntries = entries.filter(([k]) => {
+                    const slug = (linhaMeta(k)?.slug || k).toLowerCase();
+                    return activeKeys.has(slug);
+                  });
+
+                  const mergedEntries: Array<[string, ProductTemplate[]]> = [...filteredEntries];
                   const existingKeys = new Set(
-                    entries.map(([k]) => (linhaMeta(k)?.slug || k).toLowerCase())
+                    filteredEntries.map(([k]) => (linhaMeta(k)?.slug || k).toLowerCase())
                   );
-                  (productLinhas || []).forEach((l) => {
+                  activeLinhas.forEach((l) => {
                     if (!existingKeys.has(l.slug.toLowerCase())) {
                       mergedEntries.push([l.slug, []]);
                     }
@@ -1461,6 +1469,7 @@ export default function ProductTemplates() {
                     const lb = linhaMeta(b)?.name || b;
                     return la.localeCompare(lb);
                   });
+
 
                   // ===== Visão 1: GRID de cards das linhas (estilo /produtos) =====
                   if (!linhaView) {
