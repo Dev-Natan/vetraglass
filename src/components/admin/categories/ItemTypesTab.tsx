@@ -28,7 +28,7 @@ export function ItemTypesTab({
   return (
     <EntityCardGrid
       title="Tipos de Itens"
-      description="Vidro, Perfil, Acessório, Serviço, etc. Clique em um card para editar."
+      description="Vidro, Perfil, Acessório, Serviço, etc. Clique em um card para abrir a edição completa."
       addLabel="Novo Tipo"
       itemLabelSingular="tipo"
       itemLabelPlural="tipos"
@@ -38,6 +38,8 @@ export function ItemTypesTab({
       onOpenDialog={(item) => onOpenDialog(item as ItemType | undefined)}
       onToggleActive={(item) => onToggleActive(item as ItemType)}
       onDelete={(item) => onDelete(item as ItemType)}
+      preferDetailOnCardClick
     />
   );
 }
+

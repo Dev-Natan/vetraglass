@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Trash2, Loader2, ArrowRight } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { SearchInput, PaginationFooter } from "@/components/common/SearchPaginationControls";
 import { useSearchPagination } from "@/hooks/useSearchPagination";
 import { cn } from "@/lib/utils";
+
 
 export interface EntityCardItem {
   id: string;
@@ -33,7 +34,10 @@ interface EntityCardGridProps<T extends EntityCardItem> {
   onOpenDialog: (item?: T) => void;
   onToggleActive: (item: T) => void;
   onDelete: (item: T) => void;
+  /** When true, clicking the card body navigates to `detailHref` instead of opening the quick-edit dialog. */
+  preferDetailOnCardClick?: boolean;
 }
+
 
 export function EntityCardGrid<T extends EntityCardItem>({
   title,
@@ -47,11 +51,14 @@ export function EntityCardGrid<T extends EntityCardItem>({
   onOpenDialog,
   onToggleActive,
   onDelete,
+  preferDetailOnCardClick = false,
 }: EntityCardGridProps<T>) {
+  const navigate = useNavigate();
   const sp = useSearchPagination({
     data,
     getSearchableFields: (i: T) => [i.name, i.slug],
   });
+
 
   return (
     <Card>
@@ -82,7 +89,14 @@ export function EntityCardGrid<T extends EntityCardItem>({
               <button
                 key={item.id}
                 type="button"
-                onClick={() => onOpenDialog(item)}
+                onClick={() => {
+                  if (preferDetailOnCardClick && item.detailHref) {
+                    navigate(item.detailHref);
+                  } else {
+                    onOpenDialog(item);
+                  }
+                }}
+
                 className={cn(
                   "text-left rounded-lg border bg-card p-4 transition-all",
                   "hover:border-primary/60 hover:shadow-md hover:-translate-y-0.5",
