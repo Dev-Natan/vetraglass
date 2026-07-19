@@ -46,9 +46,9 @@ export default function AdminCategoryDetail() {
 
   const renderContent = () => {
     const key = slug.toLowerCase();
-    if (["perfis", "perfil", "aluminio", "aluminium"].includes(key)) return <PerfisDetail />;
-    if (["vidros", "vidro", "glass"].includes(key)) return <VidrosDetail />;
-    if (["acessorios", "acessorio", "acessórios", "acessório", "accessories"].includes(key)) return <AcessoriosDetail />;
+    if (["perfis", "perfil", "profile", "profiles", "aluminio", "aluminium"].includes(key)) return <PerfisDetail />;
+    if (["vidros", "vidro", "glass", "glasses"].includes(key)) return <VidrosDetail />;
+    if (["acessorios", "acessorio", "acessórios", "acessório", "accessory", "accessories"].includes(key)) return <AcessoriosDetail />;
     if (isItemType) return null; // basic editor is enough for generic item types
     return <GenericCategoryDetail name={match?.name ?? slug} slug={slug} description={match?.description ?? null} />;
   };
