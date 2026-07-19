@@ -442,56 +442,67 @@ export default function ProductTemplates() {
     cutAngleEnd,
   ]);
 
+  // Lista de fórmulas pré-cadastradas do item selecionado
+  const selectedItemFormulas = useMemo(() => {
+    if (!selectedItemToAdd || !itemTemplates) return [] as any[];
+    const it = itemTemplates.find((i) => i.id === selectedItemToAdd);
+    const raw = Array.isArray((it as any)?.default_formulas) ? (it as any).default_formulas : [];
+    return raw.filter((f: any) => f && typeof f === 'object' && String(f.formula || '').trim());
+  }, [selectedItemToAdd, itemTemplates]);
+
+  /** Aplica uma entrada de fórmula pré-cadastrada aos campos do form. */
+  const applyFormulaEntry = (entry: any) => {
+    if (!entry) return;
+    const posRaw = String(entry.position ?? '').toLowerCase();
+    const isHeight = posRaw === 'height' || posRaw === 'altura';
+    const formulaStr = String(entry.formula || '').trim();
+
+    if (compositionActiveTab === 'profile') {
+      setProfilePosition(isHeight ? 'Altura' : 'Largura');
+      if (formulaStr) setQuantityFormula(formulaStr);
+      if (entry.pieces != null && String(entry.pieces).trim()) {
+        setPiecesFormula(String(entry.pieces).trim());
+      }
+      if (typeof entry.cutAngleStart === 'number') setCutAngleStart(entry.cutAngleStart);
+      if (typeof entry.cutAngleEnd === 'number') setCutAngleEnd(entry.cutAngleEnd);
+    } else {
+      if (isHeight) {
+        if (formulaStr) setHeightFormula(formulaStr);
+      } else if (formulaStr) {
+        setWidthFormula(formulaStr);
+      }
+    }
+  };
+
   const lastAutoFilledItemRef = useRef<string | null>(null);
   useEffect(() => {
     if (!selectedItemToAdd) {
       lastAutoFilledItemRef.current = null;
+      setSelectedFormulaIndex(0);
       return;
     }
     // Só auto-preenche quando o usuário TROCA de item selecionado
     if (lastAutoFilledItemRef.current === selectedItemToAdd) return;
 
-    const selectedItem = itemTemplates?.find((it) => it.id === selectedItemToAdd);
-    if (!selectedItem) return;
+    setSelectedFormulaIndex(0);
 
-    const df = Array.isArray(selectedItem.default_formulas) ? selectedItem.default_formulas : [];
-    const pick = (keys: string[]) =>
-      df.find((f: any) => keys.includes(String(f?.position ?? '').toLowerCase()));
-    const widthEntry: any = pick(['width', 'largura']);
-    const heightEntry: any = pick(['height', 'altura']);
-
-    if (compositionActiveTab === 'profile') {
-      // Perfil: a fórmula do comprimento é gravada em quantityFormula (não width/height)
-      const profileEntry: any = widthEntry || heightEntry;
-      if (profileEntry) {
-        const isHeight = ['height', 'altura'].includes(String(profileEntry.position ?? '').toLowerCase());
-        setProfilePosition(isHeight ? 'Altura' : 'Largura');
-        if (typeof profileEntry.formula === 'string' && profileEntry.formula.trim()) {
-          setQuantityFormula(profileEntry.formula.trim());
-        }
-        if (typeof profileEntry.pieces === 'string' && profileEntry.pieces.trim()) {
-          setPiecesFormula(profileEntry.pieces.trim());
-        }
-        if (typeof profileEntry.cutAngleStart === 'number') {
-          setCutAngleStart(profileEntry.cutAngleStart);
-        }
-        if (typeof profileEntry.cutAngleEnd === 'number') {
-          setCutAngleEnd(profileEntry.cutAngleEnd);
-        }
-      }
-    } else {
-      if (widthEntry?.formula) {
-        setWidthFormula(widthEntry.formula);
-      } else if (compositionActiveTab === 'glass' && !widthFormula) {
-        setWidthFormula('Largura');
-      }
-      if (heightEntry?.formula) {
-        setHeightFormula(heightEntry.formula);
-      } else if (compositionActiveTab === 'glass' && !heightFormula) {
-        setHeightFormula('Altura');
+    if (selectedItemFormulas.length > 0) {
+      // Para vidros/acessórios: aplica todas as entradas (largura + altura, quando existirem)
+      if (compositionActiveTab !== 'profile') {
+        const widthEntry = selectedItemFormulas.find(
+          (f: any) => !['height', 'altura'].includes(String(f.position ?? '').toLowerCase())
+        );
+        const heightEntry = selectedItemFormulas.find((f: any) =>
+          ['height', 'altura'].includes(String(f.position ?? '').toLowerCase())
+        );
+        if (widthEntry) applyFormulaEntry(widthEntry);
+        else if (compositionActiveTab === 'glass' && !widthFormula) setWidthFormula('Largura');
+        if (heightEntry) applyFormulaEntry(heightEntry);
+        else if (compositionActiveTab === 'glass' && !heightFormula) setHeightFormula('Altura');
+      } else {
+        applyFormulaEntry(selectedItemFormulas[0]);
       }
     }
-
 
     lastAutoFilledItemRef.current = selectedItemToAdd;
     // eslint-disable-next-line react-hooks/exhaustive-deps
