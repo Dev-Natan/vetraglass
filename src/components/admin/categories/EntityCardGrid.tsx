@@ -89,7 +89,14 @@ export function EntityCardGrid<T extends EntityCardItem>({
               <button
                 key={item.id}
                 type="button"
-                onClick={() => onOpenDialog(item)}
+                onClick={() => {
+                  if (preferDetailOnCardClick && item.detailHref) {
+                    navigate(item.detailHref);
+                  } else {
+                    onOpenDialog(item);
+                  }
+                }}
+
                 className={cn(
                   "text-left rounded-lg border bg-card p-4 transition-all",
                   "hover:border-primary/60 hover:shadow-md hover:-translate-y-0.5",
