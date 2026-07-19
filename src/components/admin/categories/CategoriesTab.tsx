@@ -10,7 +10,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
 import { SortableTableBody } from "@/components/common/SortableTable";
 import { SearchInput, PaginationFooter } from "@/components/common/SearchPaginationControls";
 import { useSearchPagination } from "@/hooks/useSearchPagination";
@@ -43,7 +44,15 @@ export function CategoriesTab({
 
   const renderCategoryCells = (category: ProductCategory) => (
     <>
-      <TableCell className="font-medium">{category.name}</TableCell>
+      <TableCell className="font-medium">
+        <Link
+          to={`/admin/categories/${category.slug}`}
+          className="inline-flex items-center gap-1.5 hover:text-primary hover:underline"
+        >
+          {category.name}
+          <ArrowRight className="h-3.5 w-3.5 opacity-60" />
+        </Link>
+      </TableCell>
       <TableCell className="text-muted-foreground font-mono text-sm">{category.slug}</TableCell>
       <TableCell>
         <div className="flex items-center gap-2">
