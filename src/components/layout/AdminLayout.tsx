@@ -48,11 +48,6 @@ const adminMenuItems = [
     icon: Package,
   },
   {
-    title: "Linhas",
-    path: "/admin/linhas",
-    icon: Droplet,
-  },
-  {
     title: "Categorias",
     path: "/admin/categories",
     icon: Tags,
