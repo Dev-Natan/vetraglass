@@ -341,6 +341,15 @@ export default function ProdutosLinha() {
                     <div className="flex flex-wrap gap-1">
                       {product.is_custom && <Badge variant="secondary" className="text-[10px] bg-purple-100 text-purple-700">Personalizado</Badge>}
                       {!product.is_active && <Badge variant="outline" className="text-[10px]">Inativo</Badge>}
+                      {product.has_cutting_plan ? (
+                        <Badge variant="secondary" className="text-[10px] bg-emerald-100 text-emerald-700 gap-1">
+                          <Scissors className="w-3 h-3" /> Plano de Corte
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px] gap-1 text-muted-foreground">
+                          <Ban className="w-3 h-3" /> Sem Corte
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </button>
