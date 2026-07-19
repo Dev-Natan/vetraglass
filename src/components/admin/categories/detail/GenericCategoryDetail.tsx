@@ -26,8 +26,9 @@ export function GenericCategoryDetail({ name, slug, description }: GenericCatego
         </div>
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline">
-            <Link to="/admin/linhas"><ArrowRight className="h-4 w-4 mr-2" />Linhas de Produtos</Link>
+            <Link to="/admin/categories"><ArrowRight className="h-4 w-4 mr-2" />Categorias</Link>
           </Button>
+
           <Button asChild variant="outline">
             <Link to="/admin/item-templates"><ArrowRight className="h-4 w-4 mr-2" />Item Templates</Link>
           </Button>
