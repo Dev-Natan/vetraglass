@@ -15,11 +15,6 @@ import {
   type ItemType 
 } from "@/hooks/useItemTypes";
 import { 
-  useAllGlassTypes, 
-  useGlassTypeMutations,
-  type GlassType 
-} from "@/hooks/useGlassTypes";
-import { 
   useProductLinhas, 
   useProductLinhaMutations,
   type ProductLinha 
@@ -27,13 +22,11 @@ import {
 import { LinhasTab } from "@/components/admin/categories/LinhasTab";
 import { CategoriesTab } from "@/components/admin/categories/CategoriesTab";
 import { ItemTypesTab } from "@/components/admin/categories/ItemTypesTab";
-import { GlassTypesTab } from "@/components/admin/categories/GlassTypesTab";
 
 import {
   LinhaDialog,
   CategoryDialog,
   ItemTypeDialog,
-  GlassTypeDialog,
   getColorClass,
   generateSlug,
 } from "@/components/admin/categories/CategoryDialogs";
@@ -62,13 +55,6 @@ export default function AdminCategories() {
   const [itemTypeDialogOpen, setItemTypeDialogOpen] = useState(false);
   const [editingItemType, setEditingItemType] = useState<ItemType | null>(null);
   const [itemTypeForm, setItemTypeForm] = useState({ name: "", color: "gray", unit_default: "un", sort_order: 0 });
-  
-  // Glass types state
-  const { data: glassTypes, isLoading: loadingGlassTypes } = useAllGlassTypes();
-  const { createMutation: createGlassType, updateMutation: updateGlassType, deleteMutation: deleteGlassType } = useGlassTypeMutations();
-  const [glassTypeDialogOpen, setGlassTypeDialogOpen] = useState(false);
-  const [editingGlassType, setEditingGlassType] = useState<GlassType | null>(null);
-  const [glassTypeForm, setGlassTypeForm] = useState({ name: "", description: "", sort_order: 0 });
 
   if (!isSaasAdmin) {
     return (
@@ -340,84 +326,7 @@ export default function AdminCategories() {
     }
   };
 
-  // Glass type handlers
-  const handleOpenGlassTypeDialog = (glassType?: GlassType) => {
-    if (glassType) {
-      setEditingGlassType(glassType);
-      setGlassTypeForm({ name: glassType.name, description: glassType.description || "", sort_order: glassType.sort_order });
-    } else {
-      setEditingGlassType(null);
-      const nextOrder = (glassTypes?.length ?? 0) + 1;
-      setGlassTypeForm({ name: "", description: "", sort_order: nextOrder });
-    }
-    setGlassTypeDialogOpen(true);
-  };
 
-  const handleSaveGlassType = async () => {
-    if (!glassTypeForm.name.trim()) {
-      toast.error("Nome é obrigatório");
-      return;
-    }
-    
-    try {
-      if (editingGlassType) {
-        await updateGlassType.mutateAsync({
-          id: editingGlassType.id,
-          name: glassTypeForm.name,
-          description: glassTypeForm.description || null,
-          sort_order: glassTypeForm.sort_order,
-        });
-        toast.success("Tipo de vidro atualizado");
-      } else {
-        await createGlassType.mutateAsync({
-          slug: generateSlug(glassTypeForm.name),
-          name: glassTypeForm.name,
-          description: glassTypeForm.description || undefined,
-          sort_order: glassTypeForm.sort_order,
-        });
-        toast.success("Tipo de vidro criado");
-      }
-      setGlassTypeDialogOpen(false);
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Erro ao salvar tipo de vidro";
-      toast.error(message);
-    }
-  };
-
-  const handleToggleGlassTypeActive = async (glassType: GlassType) => {
-    try {
-      await updateGlassType.mutateAsync({ id: glassType.id, is_active: !glassType.is_active });
-      toast.success(glassType.is_active ? "Tipo desativado" : "Tipo ativado");
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Erro ao atualizar tipo";
-      toast.error(message);
-    }
-  };
-
-  const handleDeleteGlassType = async (glassType: GlassType) => {
-    if (!confirm(`Deseja excluir o tipo "${glassType.name}"?`)) return;
-    try {
-      await deleteGlassType.mutateAsync(glassType.id);
-      toast.success("Tipo de vidro excluído");
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Erro ao excluir tipo de vidro";
-      toast.error(message);
-    }
-  };
-
-  const handleReorderGlassTypes = async (reorderedGlassTypes: GlassType[]) => {
-    try {
-      await Promise.all(
-        reorderedGlassTypes.map((type) =>
-          updateGlassType.mutateAsync({ id: type.id, sort_order: type.sort_order })
-        )
-      );
-      toast.success("Ordem atualizada");
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Erro ao reordenar";
-      toast.error(message);
-    }
-  };
 
   return (
     <AdminLayout>
@@ -506,16 +415,6 @@ export default function AdminCategories() {
           setForm={setItemTypeForm}
           onSave={handleSaveItemType}
           isPending={createItemType.isPending || updateItemType.isPending}
-        />
-
-        <GlassTypeDialog
-          open={glassTypeDialogOpen}
-          onOpenChange={setGlassTypeDialogOpen}
-          isEditing={!!editingGlassType}
-          form={glassTypeForm}
-          setForm={setGlassTypeForm}
-          onSave={handleSaveGlassType}
-          isPending={createGlassType.isPending || updateGlassType.isPending}
         />
       </div>
     </AdminLayout>
