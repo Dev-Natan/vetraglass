@@ -21,7 +21,7 @@ import {
   
   Tags,
   Image as ImageIcon,
-  Droplet,
+  
 } from "lucide-react";
 import {
   Tooltip,
