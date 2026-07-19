@@ -220,6 +220,7 @@ export default function ProdutosLinha() {
           is_active: false,
           is_custom: false,
           productTemplateId: p.id,
+          has_cutting_plan: (p as any).has_cutting_plan ?? true,
         }));
       
       return [...companyFiltered, ...missingTemplates];
