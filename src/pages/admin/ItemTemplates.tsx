@@ -332,28 +332,17 @@ export default function ItemTemplates() {
         imageUrl = urlData.publicUrl;
       }
       const specsBase = JSON.parse(data.specifications || '{}');
-      const df: DefaultFormulaEntry[] = [];
-      if (data.type === 'profile') {
-        const pf = (data.default_profile_formula || '').trim();
-        if (pf) {
-          const pos = data.default_profile_position === 'Altura' ? 'height' : 'width';
-          const pieces = (data.default_profile_pieces || '').trim();
-          const as = parseInt(data.default_profile_angle_start);
-          const ae = parseInt(data.default_profile_angle_end);
-          df.push({
-            position: pos,
-            formula: pf,
-            pieces: pieces || null,
-            cutAngleStart: Number.isFinite(as) ? as : 90,
-            cutAngleEnd: Number.isFinite(ae) ? ae : 90,
-          });
-        }
-      } else {
-        const wf = (data.default_width_formula || '').trim();
-        const hf = (data.default_height_formula || '').trim();
-        if (wf) df.push({ position: 'width', formula: wf });
-        if (hf) df.push({ position: 'height', formula: hf });
-      }
+      // Sanitiza a lista de fórmulas cadastradas (rótulo + posição + fórmula + peças + ângulos)
+      const df: DefaultFormulaEntry[] = (data.formulas || [])
+        .map((f) => ({
+          label: f.label && String(f.label).trim() ? String(f.label).trim() : null,
+          position: normalizePosition(f.position),
+          formula: String(f.formula || '').trim(),
+          pieces: f.pieces && String(f.pieces).trim() ? String(f.pieces).trim() : null,
+          cutAngleStart: typeof f.cutAngleStart === 'number' ? f.cutAngleStart : 90,
+          cutAngleEnd: typeof f.cutAngleEnd === 'number' ? f.cutAngleEnd : 90,
+        }))
+        .filter((f) => f.formula.length > 0);
       const itemData: any = {
         name: data.name,
         description: data.description || null,
