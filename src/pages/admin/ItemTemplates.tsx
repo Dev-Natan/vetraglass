@@ -531,7 +531,6 @@ export default function ItemTemplates() {
 
   const handleEdit = (item: ItemTemplate) => {
     setEditingItem(item);
-    const parsed = readDefaultFormulas(item.default_formulas as unknown);
     setFormData({
       name: item.name,
       description: item.description || '',
@@ -546,13 +545,7 @@ export default function ItemTemplates() {
       bar_length_mm: item.bar_length_mm?.toString() || '6000',
       specifications: JSON.stringify(item.specifications, null, 2),
       is_active: item.is_active,
-      default_width_formula: parsed.width,
-      default_height_formula: parsed.height,
-      default_profile_position: parsed.profilePosition,
-      default_profile_formula: parsed.profileFormula,
-      default_profile_pieces: parsed.profilePieces,
-      default_profile_angle_start: String(parsed.profileAngleStart),
-      default_profile_angle_end: String(parsed.profileAngleEnd),
+      formulas: readFormulasArray(item.default_formulas),
     });
     setImagePreview(item.image_url);
     setDialogOpen(true);
