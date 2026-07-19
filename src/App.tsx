@@ -65,7 +65,7 @@ const ConfiguracoesDados = lazy(() => import("./pages/ConfiguracoesDados"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const ItemTemplates = lazy(() => import("./pages/admin/ItemTemplates"));
 const ProductTemplates = lazy(() => import("./pages/admin/ProductTemplates"));
-const AdminLinhas = lazy(() => import("./pages/admin/AdminLinhas"));
+
 const AdminCompanies = lazy(() => import("./pages/admin/AdminCompanies"));
 const ImportProducts = lazy(() => import("./pages/admin/ImportProducts"));
 const ImportExcelProducts = lazy(() => import("./pages/admin/ImportExcelProducts"));
@@ -306,12 +306,11 @@ function AppRoutes() {
       <Route path="/admin/product-templates" element={
         <AdminRoute><LazyRoute><ProductTemplates /></LazyRoute></AdminRoute>
       } />
-      <Route path="/admin/linhas" element={
-        <AdminRoute><LazyRoute><AdminLinhas /></LazyRoute></AdminRoute>
-      } />
+      <Route path="/admin/linhas" element={<Navigate to="/admin/categories" replace />} />
       <Route path="/admin/linhas/:linha" element={
         <AdminRoute><LazyRoute><ProductTemplates /></LazyRoute></AdminRoute>
       } />
+
       <Route path="/admin/companies" element={
         <AdminRoute><LazyRoute><AdminCompanies /></LazyRoute></AdminRoute>
       } />
@@ -347,7 +346,7 @@ function AppRoutes() {
       <Route path="/admin/formula-tester" element={
         <AdminRoute><LazyRoute><FormulaTester /></LazyRoute></AdminRoute>
       } />
-      <Route path="/admin/insumos" element={<Navigate to="/admin/linhas" replace />} />
+      <Route path="/admin/insumos" element={<Navigate to="/admin/categories" replace />} />
       <Route path="/admin/insumos/linha/:linha" element={
         <AdminRoute><LazyRoute><AdminInsumosLinha /></LazyRoute></AdminRoute>
       } />

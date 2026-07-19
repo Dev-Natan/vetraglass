@@ -49,9 +49,6 @@ export function PerfisDetail() {
                 )}
               </div>
             )}
-            <div className="mt-4">
-              <Button asChild variant="outline"><Link to="/admin/linhas">Gerenciar todas as linhas</Link></Button>
-            </div>
           </CardContent>
         </Card>
       </TabsContent>
