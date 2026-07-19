@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowRight, Loader2, Plus, Pencil, Trash2 } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Plus, Pencil, Trash2, Loader2, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { AluminumColorsEditor } from "./AluminumColorsEditor";
 import { useProductLinhas, useProductLinhaMutations, type ProductLinha } from "@/hooks/useProductLinhas";
@@ -16,33 +18,35 @@ function slugify(s: string) {
   return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
-export function PerfisDetail() {
-  const { data: linhas, isLoading } = useProductLinhas(true);
+function LinhasEditor() {
+  const { data, isLoading } = useProductLinhas(true);
   const { createMutation, updateMutation, deleteMutation } = useProductLinhaMutations();
-
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<ProductLinha | null>(null);
-  const [form, setForm] = useState({ name: "", description: "", color: "gray", sort_order: 0, is_active: true });
+  const [form, setForm] = useState({ name: "", description: "", sort_order: 0 });
 
-  const openDialog = (l?: ProductLinha) => {
-    if (l) {
-      setEditing(l);
-      setForm({ name: l.name, description: l.description ?? "", color: l.color, sort_order: l.sort_order, is_active: l.is_active });
+  const openDialog = (item?: ProductLinha) => {
+    if (item) {
+      setEditing(item);
+      setForm({ name: item.name, description: item.description ?? "", sort_order: item.sort_order });
     } else {
       setEditing(null);
-      setForm({ name: "", description: "", color: "gray", sort_order: (linhas?.length ?? 0) + 1, is_active: true });
+      setForm({ name: "", description: "", sort_order: (data?.length ?? 0) + 1 });
     }
     setOpen(true);
   };
 
   const save = async () => {
-    if (!form.name.trim()) {
-      toast.error("Nome é obrigatório");
-      return;
-    }
+    if (!form.name.trim()) { toast.error("Nome obrigatório"); return; }
     try {
       if (editing) {
-        await updateMutation.mutateAsync({ id: editing.id, ...form, slug: slugify(form.name) });
+        await updateMutation.mutateAsync({
+          id: editing.id,
+          name: form.name,
+          slug: slugify(form.name),
+          description: form.description || null,
+          sort_order: form.sort_order,
+        });
         toast.success("Linha atualizada");
       } else {
         await createMutation.mutateAsync({
@@ -50,117 +54,81 @@ export function PerfisDetail() {
           slug: slugify(form.name),
           description: form.description || null,
           image_url: null,
-          color: form.color,
+          color: "gray",
           sort_order: form.sort_order,
-          is_active: form.is_active,
+          is_active: true,
         });
         toast.success("Linha criada");
       }
       setOpen(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro ao salvar");
+      toast.error(e instanceof Error ? e.message : "Erro");
     }
   };
 
-  const toggleActive = (l: ProductLinha) => {
-    updateMutation.mutate({ id: l.id, is_active: !l.is_active });
-  };
-
-  const remove = (l: ProductLinha) => {
-    if (!confirm(`Excluir a linha "${l.name}"?`)) return;
-    deleteMutation.mutate(l.id, {
-      onSuccess: () => toast.success("Linha removida"),
-      onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao excluir"),
-    });
-  };
-
   return (
-    <Tabs defaultValue="colors">
-      <TabsList className="mb-6">
-        <TabsTrigger value="colors">Cores de Alumínio</TabsTrigger>
-        <TabsTrigger value="linhas">Linhas Vinculadas</TabsTrigger>
-      </TabsList>
-
-      <TabsContent value="colors">
-        <AluminumColorsEditor />
-      </TabsContent>
-
-      <TabsContent value="linhas">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-4">
-            <div>
-              <CardTitle>Linhas de Perfis</CardTitle>
-              <CardDescription>Crie, edite e ative linhas. Abra uma linha para gerenciar perfis, preços e estoque.</CardDescription>
-            </div>
-            <Button onClick={() => openDialog()}><Plus className="h-4 w-4 mr-2" />Nova Linha</Button>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {(linhas ?? []).map((l) => (
-                  <Card key={l.id} className={`transition ${!l.is_active ? "opacity-60" : ""}`}>
-                    <CardContent className="p-4 space-y-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <Link to={`/admin/insumos/linha/${l.slug}`} className="flex-1 min-w-0 group">
-                          <div className="font-medium truncate group-hover:text-primary flex items-center gap-1">
-                            {l.name}
-                            <ArrowRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition" />
-                          </div>
-                          {l.description && <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{l.description}</div>}
-                          <div className="text-[10px] font-mono text-muted-foreground mt-1">{l.slug}</div>
-                        </Link>
-                        <div className="flex flex-col items-end gap-1">
-                          <Switch checked={l.is_active} onCheckedChange={() => toggleActive(l)} />
-                          <div className="flex">
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openDialog(l)}>
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => remove(l)}>
-                              <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-                {(linhas ?? []).length === 0 && (
-                  <div className="col-span-full text-center text-muted-foreground py-8">Nenhuma linha cadastrada</div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </TabsContent>
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between gap-4">
+        <div>
+          <CardTitle>Linhas de Perfis</CardTitle>
+          <CardDescription>Linha 25, Suprema, Gold, etc. Abra uma linha para gerenciar perfis, preços e estoque.</CardDescription>
+        </div>
+        <Button onClick={() => openDialog()}><Plus className="h-4 w-4 mr-2" />Nova Linha</Button>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-20">Ordem</TableHead>
+                <TableHead>Nome</TableHead>
+                <TableHead>Descrição</TableHead>
+                <TableHead>Ativo</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {(data ?? []).map((t) => (
+                <TableRow key={t.id} className={!t.is_active ? "opacity-50" : ""}>
+                  <TableCell className="text-muted-foreground">{t.sort_order}</TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex flex-col">
+                      <span>{t.name}</span>
+                      <span className="text-[10px] font-mono text-muted-foreground">{t.slug}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{t.description}</TableCell>
+                  <TableCell>
+                    <Switch checked={t.is_active} onCheckedChange={(v) => updateMutation.mutate({ id: t.id, is_active: v })} />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button asChild variant="ghost" size="icon" title="Abrir linha">
+                      <Link to={`/admin/insumos/linha/${t.slug}`}><ExternalLink className="h-4 w-4" /></Link>
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => openDialog(t)}><Pencil className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => { if (confirm(`Excluir "${t.name}"?`)) deleteMutation.mutate(t.id); }}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {(data ?? []).length === 0 && (
+                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhuma linha cadastrada</TableCell></TableRow>
+              )}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>{editing ? "Editar Linha" : "Nova Linha"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label>Nome</Label>
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex.: Linha Suprema" />
-            </div>
-            <div>
-              <Label>Descrição</Label>
-              <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Ordem</Label>
-                <Input
-                  type="number"
-                  value={form.sort_order}
-                  onChange={(e) => setForm({ ...form, sort_order: parseInt(e.target.value) || 0 })}
-                />
-              </div>
-              <div className="flex items-end gap-2">
-                <Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} />
-                <Label>{form.is_active ? "Ativa" : "Inativa"}</Label>
-              </div>
-            </div>
+            <div><Label>Nome</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex.: Linha Suprema" /></div>
+            <div><Label>Descrição</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
+            <div><Label>Ordem</Label><Input type="number" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: parseInt(e.target.value) || 0 })} /></div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
@@ -171,6 +139,19 @@ export function PerfisDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </Card>
+  );
+}
+
+export function PerfisDetail() {
+  return (
+    <Tabs defaultValue="linhas">
+      <TabsList className="mb-6">
+        <TabsTrigger value="linhas">Linhas de Perfis</TabsTrigger>
+        <TabsTrigger value="colors">Cores de Alumínio</TabsTrigger>
+      </TabsList>
+      <TabsContent value="linhas"><LinhasEditor /></TabsContent>
+      <TabsContent value="colors"><AluminumColorsEditor /></TabsContent>
     </Tabs>
   );
 }
