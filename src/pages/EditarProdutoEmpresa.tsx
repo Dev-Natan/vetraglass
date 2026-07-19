@@ -163,6 +163,7 @@ export default function EditarProdutoEmpresa() {
   
   const [editingItem, setEditingItem] = useState<CompanyProductItem | null>(null);
   const [selectedItemToAdd, setSelectedItemToAdd] = useState('');
+  const [selectedFormulaIndex, setSelectedFormulaIndex] = useState<number>(0);
   const [quantityFormula, setQuantityFormula] = useState('1');
   const [piecesQuantity, setPiecesQuantity] = useState(1);
   const [cutAngle, setCutAngle] = useState(90);
