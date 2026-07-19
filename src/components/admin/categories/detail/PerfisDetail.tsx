@@ -32,7 +32,7 @@ export function PerfisDetail() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {(linhas ?? []).map((l) => (
-                  <Link key={l.id} to={`/admin/insumos/${l.slug}`}>
+                  <Link key={l.id} to={`/admin/insumos/linha/${l.slug}`}>
                     <Card className="hover:border-primary hover:shadow-md transition cursor-pointer">
                       <CardContent className="p-4 flex items-center justify-between">
                         <div>
