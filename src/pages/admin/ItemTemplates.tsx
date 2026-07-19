@@ -263,7 +263,23 @@ export default function ItemTemplates() {
       .join(' ');
   };
 
-  const filteredItems = items;
+  // Slugs/names de linhas DESATIVADAS em /admin/categories → esconder itens vinculados
+  const inactiveLinhaKeys = useMemo(() => {
+    return new Set(
+      (allProductLinhas || [])
+        .filter(l => !l.is_active)
+        .flatMap(l => [l.slug.toLowerCase(), l.name.toLowerCase()])
+    );
+  }, [allProductLinhas]);
+
+  const filteredItems = useMemo(() => {
+    if (!items) return items;
+    return items.filter(it => {
+      const key = (it.linha || '').trim().toLowerCase();
+      if (!key) return true;
+      return !inactiveLinhaKeys.has(key);
+    });
+  }, [items, inactiveLinhaKeys]);
 
   // Group items by linha (current page)
   const groupedItems = useMemo(() => {
