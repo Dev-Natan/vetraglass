@@ -577,6 +577,7 @@ export default function EditarProdutoEmpresa() {
 
   const resetItemForm = () => {
     setSelectedItemToAdd('');
+    setSelectedFormulaIndex(0);
     setQuantityFormula('1');
     setPiecesQuantity(1);
     setPiecesFormula(null);
@@ -588,19 +589,47 @@ export default function EditarProdutoEmpresa() {
     setItemSearchQuery('');
   };
 
+  const normalizePos = (raw: unknown): 'Largura' | 'Altura' => {
+    const s = String(raw ?? '').toLowerCase();
+    return s === 'height' || s === 'altura' ? 'Altura' : 'Largura';
+  };
+
+  /** Lista de fórmulas pré-cadastradas válidas do item atualmente selecionado. */
+  const selectedItemFormulas = useMemo(() => {
+    const item = availableItems?.find(i => i.id === selectedItemToAdd);
+    const arr = Array.isArray(item?.default_formulas) ? (item!.default_formulas as any[]) : [];
+    return arr.filter((f) => f && String(f.formula || '').trim());
+  }, [availableItems, selectedItemToAdd]);
+
+  /** Aplica uma entrada de fórmula ao formulário. */
+  const applyFormulaEntry = (entry: any) => {
+    if (!entry) return;
+    const formulaStr = String(entry.formula || '').trim();
+    const isHeight = normalizePos(entry.position) === 'Altura';
+    if (addItemSection === 'glass') {
+      if (isHeight) setHeightFormula(formulaStr);
+      else setWidthFormula(formulaStr);
+    } else {
+      if (formulaStr) setQuantityFormula(formulaStr);
+      if (entry.pieces != null && String(entry.pieces).trim()) {
+        setPiecesFormula(String(entry.pieces).trim());
+      }
+    }
+  };
+
   const handleSelectItem = (itemId: string) => {
     setSelectedItemToAdd(itemId);
+    setSelectedFormulaIndex(0);
     const item = availableItems?.find(i => i.id === itemId);
-    if (item?.default_formulas && item.default_formulas.length > 0) {
-      const firstFormula = item.default_formulas[0];
-      if (addItemSection === 'glass') {
-        const wf = item.default_formulas.find(f => f.position === 'Largura');
-        const hf = item.default_formulas.find(f => f.position === 'Altura');
-        if (wf) setWidthFormula(wf.formula);
-        if (hf) setHeightFormula(hf.formula);
-      } else {
-        setQuantityFormula(firstFormula.formula);
-      }
+    const formulas = Array.isArray(item?.default_formulas) ? (item!.default_formulas as any[]) : [];
+    if (formulas.length === 0) return;
+    if (addItemSection === 'glass') {
+      const wf = formulas.find((f) => normalizePos(f.position) === 'Largura');
+      const hf = formulas.find((f) => normalizePos(f.position) === 'Altura');
+      if (wf) applyFormulaEntry(wf);
+      if (hf) applyFormulaEntry(hf);
+    } else {
+      applyFormulaEntry(formulas[0]);
     }
   };
 
