@@ -432,6 +432,7 @@ export default function AdminCategories() {
             <TabsTrigger value="categories">Categorias</TabsTrigger>
             <TabsTrigger value="item-types">Tipos de Itens</TabsTrigger>
             <TabsTrigger value="glass-types">Tipos de Vidro</TabsTrigger>
+            <TabsTrigger value="colors">Cores & Espessuras</TabsTrigger>
           </TabsList>
 
           <TabsContent value="linhas">
@@ -479,6 +480,10 @@ export default function AdminCategories() {
               onDelete={handleDeleteGlassType}
               onReorder={handleReorderGlassTypes}
             />
+          </TabsContent>
+
+          <TabsContent value="colors">
+            <ColorsThicknessesTab />
           </TabsContent>
         </Tabs>
 
