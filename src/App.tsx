@@ -346,7 +346,7 @@ function AppRoutes() {
       <Route path="/admin/formula-tester" element={
         <AdminRoute><LazyRoute><FormulaTester /></LazyRoute></AdminRoute>
       } />
-      <Route path="/admin/insumos" element={<Navigate to="/admin/linhas" replace />} />
+      <Route path="/admin/insumos" element={<Navigate to="/admin/categories" replace />} />
       <Route path="/admin/insumos/linha/:linha" element={
         <AdminRoute><LazyRoute><AdminInsumosLinha /></LazyRoute></AdminRoute>
       } />
