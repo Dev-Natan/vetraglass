@@ -34,11 +34,12 @@ import { LinhaCardSimple } from '@/components/produtos/LinhaCardSimple';
 import { ProfileColorPricesSection } from '@/components/admin/product-templates/ProfileColorPricesSection';
 
 interface DefaultFormulaEntry {
-  position: string;              // 'width' | 'height' | 'largura' | 'altura'
-  formula: string;               // fórmula do comprimento
-  pieces?: string | null;        // qtd de peças (ex: "2", "N", "N*2")
-  cutAngleStart?: number | null; // ângulo início (°)
-  cutAngleEnd?: number | null;   // ângulo fim (°)
+  label?: string | null;           // Rótulo livre (ex: "Vertical externo", "Travessa superior")
+  position: string;                // 'Largura' | 'Altura' (normalizado)
+  formula: string;                 // fórmula do comprimento
+  pieces?: string | null;          // qtd de peças (ex: "2", "N", "N*2")
+  cutAngleStart?: number | null;   // ângulo início (°)
+  cutAngleEnd?: number | null;     // ângulo fim (°)
 }
 
 interface ItemTemplate {
@@ -61,32 +62,25 @@ interface ItemTemplate {
   created_at: string;
 }
 
-/** Lê as fórmulas padrão com suporte a formatos novo/legado e campos ricos (peças, ângulos). */
-function readDefaultFormulas(raw: unknown): {
-  width: string;
-  height: string;
-  profilePosition: 'Largura' | 'Altura';
-  profileFormula: string;
-  profilePieces: string;
-  profileAngleStart: number;
-  profileAngleEnd: number;
-} {
+/** Normaliza a posição para 'Largura' | 'Altura'. */
+function normalizePosition(raw: unknown): 'Largura' | 'Altura' {
+  const s = String(raw ?? '').toLowerCase();
+  return s === 'height' || s === 'altura' ? 'Altura' : 'Largura';
+}
+
+/** Lê o array bruto de default_formulas normalizando os campos. */
+function readFormulasArray(raw: unknown): DefaultFormulaEntry[] {
   const arr = Array.isArray(raw) ? (raw as any[]) : [];
-  const findPos = (keys: string[]) =>
-    arr.find((f) => keys.includes(String(f?.position ?? '').toLowerCase()));
-  const widthEntry = findPos(['width', 'largura']);
-  const heightEntry = findPos(['height', 'altura']);
-  const profileEntry = widthEntry || heightEntry || arr[0];
-  const isHeight = profileEntry && ['height', 'altura'].includes(String(profileEntry.position ?? '').toLowerCase());
-  return {
-    width: typeof widthEntry?.formula === 'string' ? widthEntry.formula : '',
-    height: typeof heightEntry?.formula === 'string' ? heightEntry.formula : '',
-    profilePosition: isHeight ? 'Altura' : 'Largura',
-    profileFormula: typeof profileEntry?.formula === 'string' ? profileEntry.formula : '',
-    profilePieces: profileEntry?.pieces != null ? String(profileEntry.pieces) : '',
-    profileAngleStart: typeof profileEntry?.cutAngleStart === 'number' ? profileEntry.cutAngleStart : 90,
-    profileAngleEnd: typeof profileEntry?.cutAngleEnd === 'number' ? profileEntry.cutAngleEnd : 90,
-  };
+  return arr
+    .filter((f) => f && typeof f === 'object')
+    .map((f) => ({
+      label: typeof f.label === 'string' && f.label.trim() ? f.label : null,
+      position: normalizePosition(f.position),
+      formula: typeof f.formula === 'string' ? f.formula : '',
+      pieces: f.pieces != null && String(f.pieces).trim() !== '' ? String(f.pieces) : null,
+      cutAngleStart: typeof f.cutAngleStart === 'number' ? f.cutAngleStart : 90,
+      cutAngleEnd: typeof f.cutAngleEnd === 'number' ? f.cutAngleEnd : 90,
+    }));
 }
 
 const unitLabels: Record<string, string> = {
