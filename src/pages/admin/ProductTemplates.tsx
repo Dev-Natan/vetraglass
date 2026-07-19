@@ -1445,12 +1445,29 @@ export default function ProductTemplates() {
                   const linhaMeta = (slug: string) =>
                     productLinhas?.find(l => l.slug === slug || l.name === slug);
 
+                  // Garante que TODAS as linhas cadastradas em /admin/categories apareçam,
+                  // mesmo sem produtos ainda.
+                  const mergedEntries: Array<[string, ProductTemplate[]]> = [...entries];
+                  const existingKeys = new Set(
+                    entries.map(([k]) => (linhaMeta(k)?.slug || k).toLowerCase())
+                  );
+                  (productLinhas || []).forEach((l) => {
+                    if (!existingKeys.has(l.slug.toLowerCase())) {
+                      mergedEntries.push([l.slug, []]);
+                    }
+                  });
+                  mergedEntries.sort(([a], [b]) => {
+                    const la = linhaMeta(a)?.name || a;
+                    const lb = linhaMeta(b)?.name || b;
+                    return la.localeCompare(lb);
+                  });
+
                   // ===== Visão 1: GRID de cards das linhas (estilo /produtos) =====
                   if (!linhaView) {
                     return (
                       <div className="section-card p-3 sm:p-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                          {entries.map(([linha, templates]) => {
+                          {mergedEntries.map(([linha, templates]) => {
                             const meta = linhaMeta(linha);
                             const cats = Array.from(new Set(templates.map(t => t.category).filter(Boolean))) as string[];
                             return (
@@ -1469,6 +1486,7 @@ export default function ProductTemplates() {
                       </div>
                     );
                   }
+
 
 
                   // ===== Visão 2: produtos da linha selecionada =====
