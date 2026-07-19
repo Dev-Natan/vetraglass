@@ -432,7 +432,7 @@ export default function AdminCategories() {
             <TabsTrigger value="linhas">Linhas de Produtos</TabsTrigger>
             <TabsTrigger value="categories">Categorias</TabsTrigger>
             <TabsTrigger value="item-types">Tipos de Itens</TabsTrigger>
-            <TabsTrigger value="glass-types">Tipos de Vidro</TabsTrigger>
+            
             
           </TabsList>
 
