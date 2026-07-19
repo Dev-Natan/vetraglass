@@ -197,6 +197,7 @@ export default function ProdutosLinha() {
           base_price: cp.base_price,
           companyProductId: cp.id,
           productTemplateId: cp.product_template_id || undefined,
+          has_cutting_plan: (template as any)?.has_cutting_plan ?? true,
         };
       });
 
