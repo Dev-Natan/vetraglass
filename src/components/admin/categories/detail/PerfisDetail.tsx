@@ -144,14 +144,5 @@ function LinhasEditor() {
 }
 
 export function PerfisDetail() {
-  return (
-    <Tabs defaultValue="linhas">
-      <TabsList className="mb-6">
-        <TabsTrigger value="linhas">Linhas de Perfis</TabsTrigger>
-        <TabsTrigger value="colors">Cores de Alumínio</TabsTrigger>
-      </TabsList>
-      <TabsContent value="linhas"><LinhasEditor /></TabsContent>
-      <TabsContent value="colors"><AluminumColorsEditor /></TabsContent>
-    </Tabs>
-  );
+  return <AluminumColorsEditor />;
 }
