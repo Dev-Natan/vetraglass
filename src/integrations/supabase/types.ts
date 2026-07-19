@@ -8537,6 +8537,26 @@ export type Database = {
           unique_clients: number
         }[]
       }
+      get_cutting_plan_items: {
+        Args: { _company_id?: string; _template_id: string }
+        Returns: {
+          cut_angle: string
+          cut_angle_end: string
+          cut_angle_start: string
+          height_formula: string
+          id: string
+          is_optional: boolean
+          item_template_id: string
+          item_template_image_url: string
+          item_template_name: string
+          item_template_type: string
+          notes: string
+          pieces_formula: string
+          pieces_quantity: number
+          quantity_formula: string
+          width_formula: string
+        }[]
+      }
       get_dre_report: {
         Args: { p_company_id: string; p_end: string; p_start: string }
         Returns: {
@@ -8639,6 +8659,16 @@ export type Database = {
       }
       is_module_enabled: { Args: { _module_key: string }; Returns: boolean }
       is_saas_admin: { Args: { _user_id: string }; Returns: boolean }
+      list_cutting_plan_templates: {
+        Args: { _category?: string; _linha?: string }
+        Returns: {
+          category: string
+          id: string
+          image_url: string
+          linha: string
+          name: string
+        }[]
+      }
       list_saas_admins: {
         Args: never
         Returns: {
