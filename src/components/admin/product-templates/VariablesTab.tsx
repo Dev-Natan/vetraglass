@@ -29,7 +29,7 @@ export function VariablesTab() {
         <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />
         <div className="text-sm text-muted-foreground">
           O custo final é resolvido em tempo real no orçamento. As opções abaixo
-          vêm de <strong>Admin → Tabela de Insumos</strong>. Cada empresa cadastra
+          vêm de <strong>Admin → Linhas</strong>. Cada empresa cadastra
           o próprio preço por combinação em <strong>Preços do Produto</strong>
           (com fallback para o preço sugerido).
         </div>
