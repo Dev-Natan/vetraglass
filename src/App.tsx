@@ -77,7 +77,6 @@ const AdminCompanyDetail = lazy(() => import("./pages/admin/AdminCompanyDetail")
 const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
 const AdminFeedbacks = lazy(() => import("./pages/admin/AdminFeedbacks"));
 const FormulaTester = lazy(() => import("./pages/admin/FormulaTester"));
-const AdminInsumos = lazy(() => import("./pages/admin/AdminInsumos"));
 const AdminInsumosLinha = lazy(() => import("./pages/admin/AdminInsumosLinha"));
 
 
@@ -344,9 +343,7 @@ function AppRoutes() {
       <Route path="/admin/formula-tester" element={
         <AdminRoute><LazyRoute><FormulaTester /></LazyRoute></AdminRoute>
       } />
-      <Route path="/admin/insumos" element={
-        <AdminRoute><LazyRoute><AdminInsumos /></LazyRoute></AdminRoute>
-      } />
+      <Route path="/admin/insumos" element={<Navigate to="/admin/linhas" replace />} />
       <Route path="/admin/insumos/linha/:linha" element={
         <AdminRoute><LazyRoute><AdminInsumosLinha /></LazyRoute></AdminRoute>
       } />
