@@ -200,11 +200,15 @@ export default function ItemTemplates() {
   const totalItems = itemsData?.total || 0;
   const totalPages = Math.ceil(totalItems / pageSize);
 
-  const { data: productLinhas } = useProductLinhas();
+  const { data: allProductLinhas } = useProductLinhas(true);
+  const productLinhas = useMemo(
+    () => (allProductLinhas || []).filter(l => l.is_active),
+    [allProductLinhas]
+  );
 
   // Busca TODOS os itens (linha + type + image_url) para cálculo de stats globais e tipos por linha
   const { data: allItemsMeta } = useQuery({
-    queryKey: ['item-templates-all-meta'],
+    queryKey: ['item-templates-meta-all'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('item_templates')
@@ -212,24 +216,29 @@ export default function ItemTemplates() {
       if (error) throw error;
       return data || [];
     },
-    enabled: isSaasAdmin,
   });
 
-  // Linhas: fonte oficial = product_linhas (gerenciada em /admin/categories).
-  // Inclui também slugs órfãos que existam em item_templates mas ainda não estejam cadastrados.
+  // Linhas: fonte oficial = product_linhas ATIVAS (gerenciada em /admin/categories).
+  // Inclui slugs órfãos apenas se não corresponderem a uma linha DESATIVADA.
   const availableLines = useMemo(() => {
+    const inactiveSlugs = new Set(
+      (allProductLinhas || [])
+        .filter(l => !l.is_active)
+        .flatMap(l => [l.slug.toLowerCase(), l.name.toLowerCase()])
+    );
     const map = new Map<string, string>();
-    (productLinhas || []).forEach(l => {
-      if (l.is_active) map.set(l.slug.toLowerCase(), l.slug);
+    productLinhas.forEach(l => {
+      map.set(l.slug.toLowerCase(), l.slug);
     });
     (allItemsMeta || []).forEach((r: any) => {
       const n = (r.linha || '').trim();
       if (!n) return;
       const k = n.toLowerCase();
+      if (inactiveSlugs.has(k)) return;
       if (!map.has(k)) map.set(k, n);
     });
     return Array.from(map.values()).sort((a, b) => a.localeCompare(b));
-  }, [productLinhas, allItemsMeta]);
+  }, [productLinhas, allProductLinhas, allItemsMeta]);
 
   // Mapa global: linha (lowercase) -> Set de tipos
   const linhaTypesMap = useMemo(() => {
