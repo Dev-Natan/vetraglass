@@ -33,7 +33,10 @@ interface EntityCardGridProps<T extends EntityCardItem> {
   onOpenDialog: (item?: T) => void;
   onToggleActive: (item: T) => void;
   onDelete: (item: T) => void;
+  /** When true, clicking the card body navigates to `detailHref` instead of opening the quick-edit dialog. */
+  preferDetailOnCardClick?: boolean;
 }
+
 
 export function EntityCardGrid<T extends EntityCardItem>({
   title,
