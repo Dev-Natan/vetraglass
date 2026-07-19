@@ -15,11 +15,6 @@ import {
   type ItemType 
 } from "@/hooks/useItemTypes";
 import { 
-  useAllGlassTypes, 
-  useGlassTypeMutations,
-  type GlassType 
-} from "@/hooks/useGlassTypes";
-import { 
   useProductLinhas, 
   useProductLinhaMutations,
   type ProductLinha 
@@ -27,13 +22,11 @@ import {
 import { LinhasTab } from "@/components/admin/categories/LinhasTab";
 import { CategoriesTab } from "@/components/admin/categories/CategoriesTab";
 import { ItemTypesTab } from "@/components/admin/categories/ItemTypesTab";
-import { GlassTypesTab } from "@/components/admin/categories/GlassTypesTab";
 
 import {
   LinhaDialog,
   CategoryDialog,
   ItemTypeDialog,
-  GlassTypeDialog,
   getColorClass,
   generateSlug,
 } from "@/components/admin/categories/CategoryDialogs";
