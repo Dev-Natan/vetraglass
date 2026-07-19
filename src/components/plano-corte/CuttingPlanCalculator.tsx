@@ -88,51 +88,40 @@ export function CuttingPlanCalculator() {
     queryFn: async () => {
       if (!selectedProduct) return [];
 
-      const selectCols = `
-          id,
-          quantity_formula,
-          pieces_formula,
-          pieces_quantity,
-          cut_angle,
-          cut_angle_start,
-          cut_angle_end,
-          is_optional,
-          notes,
-          width_formula,
-          height_formula,
-          item_templates (
-            id,
-            name,
-            type,
-            image_url
-          )
-        `;
-
-
-      // 1. Prefer company-specific composition when available
-      if (!isSaasAdmin && currentCompany?.id) {
-        const { data: companyItems, error: companyErr } = await supabase
-          .from('product_template_items')
-          .select(selectCols)
-          .eq('product_template_id', selectedProduct)
-          .eq('company_id', currentCompany.id);
-
-        if (companyErr) throw companyErr;
-        if (companyItems && companyItems.length > 0) return companyItems;
-      }
-
-      // 2. Fallback to the global template composition
-      const { data, error } = await supabase
-        .from('product_template_items')
-        .select(selectCols)
-        .eq('product_template_id', selectedProduct)
-        .is('company_id', null);
+      // Backend-protected RPC: only returns items when has_cutting_plan = true
+      const { data, error } = await supabase.rpc('get_cutting_plan_items', {
+        _template_id: selectedProduct,
+        _company_id: !isSaasAdmin && currentCompany?.id ? currentCompany.id : null,
+      });
 
       if (error) throw error;
-      return data || [];
+
+      // Reshape flat RPC rows into the nested structure the calculator expects
+      return (data || []).map((row: any) => ({
+        id: row.id,
+        quantity_formula: row.quantity_formula,
+        pieces_formula: row.pieces_formula,
+        pieces_quantity: row.pieces_quantity,
+        cut_angle: row.cut_angle,
+        cut_angle_start: row.cut_angle_start,
+        cut_angle_end: row.cut_angle_end,
+        is_optional: row.is_optional,
+        notes: row.notes,
+        width_formula: row.width_formula,
+        height_formula: row.height_formula,
+        item_templates: row.item_template_id
+          ? {
+              id: row.item_template_id,
+              name: row.item_template_name,
+              type: row.item_template_type,
+              image_url: row.item_template_image_url,
+            }
+          : null,
+      }));
     },
-    enabled: !!selectedProduct
+    enabled: !!selectedProduct && hasCuttingPlan,
   });
+
 
 
   const { data: glassFormulas } = useQuery({
