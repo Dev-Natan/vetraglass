@@ -416,16 +416,6 @@ export default function AdminCategories() {
           onSave={handleSaveItemType}
           isPending={createItemType.isPending || updateItemType.isPending}
         />
-
-        <GlassTypeDialog
-          open={glassTypeDialogOpen}
-          onOpenChange={setGlassTypeDialogOpen}
-          isEditing={!!editingGlassType}
-          form={glassTypeForm}
-          setForm={setGlassTypeForm}
-          onSave={handleSaveGlassType}
-          isPending={createGlassType.isPending || updateGlassType.isPending}
-        />
       </div>
     </AdminLayout>
   );
