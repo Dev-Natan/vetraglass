@@ -950,146 +950,127 @@ export default function ItemTemplates() {
                   <Textarea id="description" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={2} placeholder="Descrição do item..." />
                 </div>
                 <div className="space-y-3 p-4 rounded-lg border border-primary/20 bg-primary/5">
-                  <div>
-                    <h4 className="text-sm font-semibold text-foreground">Fórmulas padrão (opcional)</h4>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Sugeridas automaticamente ao adicionar este insumo na composição de um produto. Variáveis disponíveis:{' '}
-                      <code>L</code> (largura), <code>A</code> (altura), <code>FL</code>/<code>FA</code> (folgas), <code>N</code> (nº de folhas).
-                    </p>
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {['L', 'A', 'L/2', 'A/2', 'L-FL', 'A-FA', 'L-40', 'A-40'].map((hint) => (
-                        <button
-                          key={hint}
-                          type="button"
-                          onClick={() => {
-                            if (formData.type === 'profile') {
-                              setFormData({ ...formData, default_profile_formula: (formData.default_profile_formula || '') + hint });
-                            }
-                          }}
-                          className="px-2 py-0.5 text-[10px] font-mono rounded border border-border bg-background hover:bg-accent"
-                        >
-                          {hint}
-                        </button>
-                      ))}
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h4 className="text-sm font-semibold text-foreground">Fórmulas padrão (opcional)</h4>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Cadastre uma ou mais fórmulas. Ao adicionar este insumo na composição de um produto, você poderá escolher qual usar. Variáveis:{' '}
+                        <code>L</code> (largura), <code>A</code> (altura), <code>FL</code>/<code>FA</code> (folgas), <code>N</code> (nº de folhas).
+                      </p>
                     </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        setFormData({
+                          ...formData,
+                          formulas: [
+                            ...formData.formulas,
+                            { label: '', position: 'Largura', formula: '', pieces: null, cutAngleStart: 90, cutAngleEnd: 90 },
+                          ],
+                        })
+                      }
+                    >
+                      <Plus className="h-4 w-4 mr-1" /> Adicionar fórmula
+                    </Button>
                   </div>
 
-                  {formData.type === 'profile' ? (
-                    <>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-2">
-                          <Label>Posição padrão</Label>
-                          <div className="flex gap-2">
-                            {(['Largura', 'Altura'] as const).map((pos) => (
-                              <Button
-                                key={pos}
-                                type="button"
-                                size="sm"
-                                variant={formData.default_profile_position === pos ? 'default' : 'outline'}
-                                onClick={() => setFormData({ ...formData, default_profile_position: pos })}
-                                className="flex-1"
-                              >
-                                {pos}
-                              </Button>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="default_profile_pieces">Peças (quantidade)</Label>
-                          <Input
-                            id="default_profile_pieces"
-                            value={formData.default_profile_pieces}
-                            onChange={(e) => setFormData({ ...formData, default_profile_pieces: e.target.value })}
-                            placeholder="Ex: 2 ou N"
-                            className="font-mono text-sm"
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="default_profile_formula">
-                          Fórmula Padrão de {formData.default_profile_position}
-                        </Label>
-                        <Input
-                          id="default_profile_formula"
-                          value={formData.default_profile_formula}
-                          onChange={(e) => setFormData({ ...formData, default_profile_formula: e.target.value })}
-                          placeholder={formData.default_profile_position === 'Largura' ? 'Ex: L - 40' : 'Ex: A - 40'}
-                          className="font-mono text-sm"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-2">
-                          <Label htmlFor="default_profile_angle_start">Ângulo Início (°)</Label>
-                          <div className="flex gap-1">
-                            {[45, 90, 135].map((ang) => (
-                              <Button
-                                key={ang}
-                                type="button"
-                                size="sm"
-                                variant={parseInt(formData.default_profile_angle_start) === ang ? 'default' : 'outline'}
-                                onClick={() => setFormData({ ...formData, default_profile_angle_start: String(ang) })}
-                                className="flex-1"
-                              >
-                                {ang}°
-                              </Button>
-                            ))}
-                            <Input
-                              id="default_profile_angle_start"
-                              type="number"
-                              value={formData.default_profile_angle_start}
-                              onChange={(e) => setFormData({ ...formData, default_profile_angle_start: e.target.value })}
-                              className="w-16 text-sm"
-                            />
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="default_profile_angle_end">Ângulo Fim (°)</Label>
-                          <div className="flex gap-1">
-                            {[45, 90, 135].map((ang) => (
-                              <Button
-                                key={ang}
-                                type="button"
-                                size="sm"
-                                variant={parseInt(formData.default_profile_angle_end) === ang ? 'default' : 'outline'}
-                                onClick={() => setFormData({ ...formData, default_profile_angle_end: String(ang) })}
-                                className="flex-1"
-                              >
-                                {ang}°
-                              </Button>
-                            ))}
-                            <Input
-                              id="default_profile_angle_end"
-                              type="number"
-                              value={formData.default_profile_angle_end}
-                              onChange={(e) => setFormData({ ...formData, default_profile_angle_end: e.target.value })}
-                              className="w-16 text-sm"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </>
+                  {formData.formulas.length === 0 ? (
+                    <div className="text-xs text-muted-foreground italic py-3 text-center border border-dashed border-border rounded">
+                      Nenhuma fórmula cadastrada. Clique em "Adicionar fórmula" para cadastrar posições e cortes deste item.
+                    </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div className="space-y-2">
-                        <Label htmlFor="default_width_formula">Fórmula Padrão de Largura</Label>
-                        <Input
-                          id="default_width_formula"
-                          value={formData.default_width_formula}
-                          onChange={(e) => setFormData({ ...formData, default_width_formula: e.target.value })}
-                          placeholder="Ex: L - 40"
-                          className="font-mono text-sm"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="default_height_formula">Fórmula Padrão de Altura</Label>
-                        <Input
-                          id="default_height_formula"
-                          value={formData.default_height_formula}
-                          onChange={(e) => setFormData({ ...formData, default_height_formula: e.target.value })}
-                          placeholder="Ex: A - 40"
-                          className="font-mono text-sm"
-                        />
-                      </div>
+                    <div className="space-y-3">
+                      {formData.formulas.map((f, idx) => {
+                        const updateEntry = (patch: Partial<DefaultFormulaEntry>) => {
+                          const next = [...formData.formulas];
+                          next[idx] = { ...next[idx], ...patch };
+                          setFormData({ ...formData, formulas: next });
+                        };
+                        const removeEntry = () => {
+                          const next = formData.formulas.filter((_, i) => i !== idx);
+                          setFormData({ ...formData, formulas: next });
+                        };
+                        return (
+                          <div key={idx} className="space-y-2 p-3 rounded-md border border-border bg-background">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-xs font-medium text-muted-foreground">Fórmula #{idx + 1}</span>
+                              <Button type="button" size="icon" variant="ghost" onClick={removeEntry} className="h-7 w-7">
+                                <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                              </Button>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                              <div className="space-y-1">
+                                <Label className="text-[11px]">Rótulo (opcional)</Label>
+                                <Input
+                                  value={f.label || ''}
+                                  onChange={(e) => updateEntry({ label: e.target.value })}
+                                  placeholder="Ex: Vertical externo, Travessa superior"
+                                  className="h-8 text-sm"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-[11px]">Posição</Label>
+                                <div className="flex gap-1">
+                                  {(['Largura', 'Altura'] as const).map((pos) => (
+                                    <Button
+                                      key={pos}
+                                      type="button"
+                                      size="sm"
+                                      variant={f.position === pos ? 'default' : 'outline'}
+                                      onClick={() => updateEntry({ position: pos })}
+                                      className="flex-1 h-8"
+                                    >
+                                      {pos}
+                                    </Button>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-[11px]">Fórmula do comprimento</Label>
+                              <Input
+                                value={f.formula}
+                                onChange={(e) => updateEntry({ formula: e.target.value })}
+                                placeholder={f.position === 'Largura' ? 'Ex: L - 40' : 'Ex: A - 40'}
+                                className="h-8 font-mono text-sm"
+                              />
+                            </div>
+                            {formData.type === 'profile' && (
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                                <div className="space-y-1">
+                                  <Label className="text-[11px]">Peças</Label>
+                                  <Input
+                                    value={f.pieces || ''}
+                                    onChange={(e) => updateEntry({ pieces: e.target.value || null })}
+                                    placeholder="Ex: 2 ou N"
+                                    className="h-8 font-mono text-sm"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-[11px]">Ângulo início (°)</Label>
+                                  <Input
+                                    type="number"
+                                    value={f.cutAngleStart ?? 90}
+                                    onChange={(e) => updateEntry({ cutAngleStart: parseInt(e.target.value) || 90 })}
+                                    className="h-8 text-sm"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-[11px]">Ângulo fim (°)</Label>
+                                  <Input
+                                    type="number"
+                                    value={f.cutAngleEnd ?? 90}
+                                    onChange={(e) => updateEntry({ cutAngleEnd: parseInt(e.target.value) || 90 })}
+                                    className="h-8 text-sm"
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
