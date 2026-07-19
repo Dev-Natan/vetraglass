@@ -42,11 +42,14 @@ export default function AdminCategoryDetail() {
     );
   }
 
+  const isItemType = !!itemTypes?.find((x) => x.slug === slug);
+
   const renderContent = () => {
     const key = slug.toLowerCase();
     if (["perfis", "perfil", "aluminio", "aluminium"].includes(key)) return <PerfisDetail />;
     if (["vidros", "vidro", "glass"].includes(key)) return <VidrosDetail />;
     if (["acessorios", "acessorio", "acessórios", "acessório", "accessories"].includes(key)) return <AcessoriosDetail />;
+    if (isItemType) return null; // basic editor is enough for generic item types
     return <GenericCategoryDetail name={match?.name ?? slug} slug={slug} description={match?.description ?? null} />;
   };
 
@@ -64,8 +67,10 @@ export default function AdminCategoryDetail() {
           </h1>
           <p className="text-muted-foreground font-mono text-sm">{slug}</p>
         </div>
+        {isItemType && <ItemTypeBasicEditor slug={slug} />}
         {renderContent()}
       </div>
     </AdminLayout>
   );
+
 }
