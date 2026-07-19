@@ -483,9 +483,6 @@ export default function AdminCategories() {
             />
           </TabsContent>
 
-          <TabsContent value="colors">
-            <ColorsThicknessesTab />
-          </TabsContent>
         </Tabs>
 
         {/* Dialogs */}
