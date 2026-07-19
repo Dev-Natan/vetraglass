@@ -107,7 +107,7 @@ export default function ItemTemplates() {
   const [filterType, setFilterType] = useState<string>('all');
   const [filterLinha, setFilterLinha] = useState<string>('all');
   const [showInactive, setShowInactive] = useState(true);
-  const [viewMode, setViewMode] = useState<'grid' | 'table' | 'grouped'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'table' | 'grouped'>('grouped');
   const [expandedLinhas, setExpandedLinhas] = useState<Set<string>>(new Set());
   
   const [page, setPage] = useState(1);
