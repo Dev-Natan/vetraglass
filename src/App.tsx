@@ -306,12 +306,11 @@ function AppRoutes() {
       <Route path="/admin/product-templates" element={
         <AdminRoute><LazyRoute><ProductTemplates /></LazyRoute></AdminRoute>
       } />
-      <Route path="/admin/linhas" element={
-        <AdminRoute><LazyRoute><AdminLinhas /></LazyRoute></AdminRoute>
-      } />
+      <Route path="/admin/linhas" element={<Navigate to="/admin/categories" replace />} />
       <Route path="/admin/linhas/:linha" element={
         <AdminRoute><LazyRoute><ProductTemplates /></LazyRoute></AdminRoute>
       } />
+
       <Route path="/admin/companies" element={
         <AdminRoute><LazyRoute><AdminCompanies /></LazyRoute></AdminRoute>
       } />
