@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { ArrowLeft, Search, Trash2, Plus, Check, ShoppingCart, DollarSign, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Search, Trash2, Plus, Check, ShoppingCart, DollarSign, AlertTriangle, Scissors, Ban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -37,6 +37,7 @@ type DisplayProduct = {
   companyProductId?: string;
   productTemplateId?: string;
   composition_finished?: boolean;
+  has_cutting_plan?: boolean;
 };
 
 export default function ProdutosLinha() {
@@ -196,6 +197,7 @@ export default function ProdutosLinha() {
           base_price: cp.base_price,
           companyProductId: cp.id,
           productTemplateId: cp.product_template_id || undefined,
+          has_cutting_plan: (template as any)?.has_cutting_plan ?? true,
         };
       });
 
@@ -218,6 +220,7 @@ export default function ProdutosLinha() {
           is_active: false,
           is_custom: false,
           productTemplateId: p.id,
+          has_cutting_plan: (p as any).has_cutting_plan ?? true,
         }));
       
       return [...companyFiltered, ...missingTemplates];
@@ -338,6 +341,15 @@ export default function ProdutosLinha() {
                     <div className="flex flex-wrap gap-1">
                       {product.is_custom && <Badge variant="secondary" className="text-[10px] bg-purple-100 text-purple-700">Personalizado</Badge>}
                       {!product.is_active && <Badge variant="outline" className="text-[10px]">Inativo</Badge>}
+                      {product.has_cutting_plan ? (
+                        <Badge variant="secondary" className="text-[10px] bg-emerald-100 text-emerald-700 gap-1">
+                          <Scissors className="w-3 h-3" /> Plano de Corte
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px] gap-1 text-muted-foreground">
+                          <Ban className="w-3 h-3" /> Sem Corte
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </button>
