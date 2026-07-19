@@ -28,7 +28,7 @@ import { LinhasTab } from "@/components/admin/categories/LinhasTab";
 import { CategoriesTab } from "@/components/admin/categories/CategoriesTab";
 import { ItemTypesTab } from "@/components/admin/categories/ItemTypesTab";
 import { GlassTypesTab } from "@/components/admin/categories/GlassTypesTab";
-import { ColorsThicknessesTab } from "@/components/admin/categories/ColorsThicknessesTab";
+
 import {
   LinhaDialog,
   CategoryDialog,
@@ -433,7 +433,7 @@ export default function AdminCategories() {
             <TabsTrigger value="categories">Categorias</TabsTrigger>
             <TabsTrigger value="item-types">Tipos de Itens</TabsTrigger>
             <TabsTrigger value="glass-types">Tipos de Vidro</TabsTrigger>
-            <TabsTrigger value="colors">Cores & Espessuras</TabsTrigger>
+            
           </TabsList>
 
           <TabsContent value="linhas">
@@ -483,9 +483,6 @@ export default function AdminCategories() {
             />
           </TabsContent>
 
-          <TabsContent value="colors">
-            <ColorsThicknessesTab />
-          </TabsContent>
         </Tabs>
 
         {/* Dialogs */}

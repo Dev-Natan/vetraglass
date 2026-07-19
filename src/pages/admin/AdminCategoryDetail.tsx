@@ -9,6 +9,7 @@ import { useProductCategories } from "@/hooks/useProductCategories";
 import { useItemTypes } from "@/hooks/useItemTypes";
 import { PerfisDetail } from "@/components/admin/categories/detail/PerfisDetail";
 import { VidrosDetail } from "@/components/admin/categories/detail/VidrosDetail";
+import { AcessoriosDetail } from "@/components/admin/categories/detail/AcessoriosDetail";
 import { GenericCategoryDetail } from "@/components/admin/categories/detail/GenericCategoryDetail";
 
 export default function AdminCategoryDetail() {
@@ -42,6 +43,7 @@ export default function AdminCategoryDetail() {
     const key = slug.toLowerCase();
     if (["perfis", "perfil", "aluminio", "aluminium"].includes(key)) return <PerfisDetail />;
     if (["vidros", "vidro", "glass"].includes(key)) return <VidrosDetail />;
+    if (["acessorios", "acessorio", "acessórios", "acessório", "accessories"].includes(key)) return <AcessoriosDetail />;
     return <GenericCategoryDetail name={match?.name ?? slug} slug={slug} description={match?.description ?? null} />;
   };
 
