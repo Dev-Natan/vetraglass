@@ -28,6 +28,7 @@ import { LinhasTab } from "@/components/admin/categories/LinhasTab";
 import { CategoriesTab } from "@/components/admin/categories/CategoriesTab";
 import { ItemTypesTab } from "@/components/admin/categories/ItemTypesTab";
 import { GlassTypesTab } from "@/components/admin/categories/GlassTypesTab";
+import { ColorsThicknessesTab } from "@/components/admin/categories/ColorsThicknessesTab";
 import {
   LinhaDialog,
   CategoryDialog,
