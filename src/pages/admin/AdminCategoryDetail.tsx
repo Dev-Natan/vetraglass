@@ -11,6 +11,9 @@ import { PerfisDetail } from "@/components/admin/categories/detail/PerfisDetail"
 import { VidrosDetail } from "@/components/admin/categories/detail/VidrosDetail";
 import { AcessoriosDetail } from "@/components/admin/categories/detail/AcessoriosDetail";
 import { GenericCategoryDetail } from "@/components/admin/categories/detail/GenericCategoryDetail";
+import { ItemTypeBasicEditor } from "@/components/admin/categories/detail/ItemTypeBasicEditor";
+
+
 
 export default function AdminCategoryDetail() {
   const { isSaasAdmin } = useAuth();
