@@ -1900,6 +1900,42 @@ export default function ProductTemplates() {
                   </Select>
                 </div>
 
+                {selectedItemToAdd && selectedItemFormulas.length > 0 && compositionActiveTab === 'profile' && (
+                  <div className="space-y-2 p-3 rounded-md border border-primary/30 bg-primary/5">
+                    <Label className="text-xs font-medium">
+                      Fórmula pré-cadastrada ({selectedItemFormulas.length} disponíveis)
+                    </Label>
+                    <Select
+                      value={String(selectedFormulaIndex)}
+                      onValueChange={(v) => {
+                        const idx = parseInt(v);
+                        setSelectedFormulaIndex(idx);
+                        applyFormulaEntry(selectedItemFormulas[idx]);
+                      }}
+                    >
+                      <SelectTrigger className="h-10">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {selectedItemFormulas.map((f: any, idx: number) => {
+                          const posRaw = String(f.position ?? '').toLowerCase();
+                          const pos = posRaw === 'height' || posRaw === 'altura' ? 'Altura' : 'Largura';
+                          const label = f.label && String(f.label).trim() ? String(f.label).trim() : pos;
+                          return (
+                            <SelectItem key={idx} value={String(idx)}>
+                              <span className="text-sm">
+                                <span className="font-medium">{label}</span>
+                                <span className="text-muted-foreground"> · {pos}</span>
+                                <code className="ml-2 text-[11px] font-mono">{f.formula}</code>
+                              </span>
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
                 {compositionActiveTab === 'glass' ? (
                   <>
                     <div className="space-y-2">
