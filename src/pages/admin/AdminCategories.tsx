@@ -55,13 +55,6 @@ export default function AdminCategories() {
   const [itemTypeDialogOpen, setItemTypeDialogOpen] = useState(false);
   const [editingItemType, setEditingItemType] = useState<ItemType | null>(null);
   const [itemTypeForm, setItemTypeForm] = useState({ name: "", color: "gray", unit_default: "un", sort_order: 0 });
-  
-  // Glass types state
-  const { data: glassTypes, isLoading: loadingGlassTypes } = useAllGlassTypes();
-  const { createMutation: createGlassType, updateMutation: updateGlassType, deleteMutation: deleteGlassType } = useGlassTypeMutations();
-  const [glassTypeDialogOpen, setGlassTypeDialogOpen] = useState(false);
-  const [editingGlassType, setEditingGlassType] = useState<GlassType | null>(null);
-  const [glassTypeForm, setGlassTypeForm] = useState({ name: "", description: "", sort_order: 0 });
 
   if (!isSaasAdmin) {
     return (
