@@ -472,16 +472,8 @@ export default function AdminCategories() {
             />
           </TabsContent>
 
-          <TabsContent value="glass-types">
-            <GlassTypesTab
-              glassTypes={glassTypes}
-              isLoading={loadingGlassTypes}
-              onOpenDialog={handleOpenGlassTypeDialog}
-              onToggleActive={handleToggleGlassTypeActive}
-              onDelete={handleDeleteGlassType}
-              onReorder={handleReorderGlassTypes}
-            />
-          </TabsContent>
+
+
 
         </Tabs>
 
