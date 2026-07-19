@@ -32,6 +32,7 @@ import { useItemTypeLabels } from '@/hooks/useItemTypes';
 import { useProductLinhas } from '@/hooks/useProductLinhas';
 import { LinhaCardSimple } from '@/components/produtos/LinhaCardSimple';
 import { ProfileColorPricesSection } from '@/components/admin/product-templates/ProfileColorPricesSection';
+import { LENGTH_FORMULA_PRESETS, PIECES_FORMULA_PRESETS } from '@/utils/formulaPresets';
 
 interface DefaultFormulaEntry {
   label?: string | null;           // Rótulo livre (ex: "Vertical externo", "Travessa superior")
