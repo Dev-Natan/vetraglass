@@ -49,6 +49,21 @@ interface ProductGlassPrice {
   cost_per_sqm: number;
 }
 
+interface ProductTemplateRef {
+  id?: string | null;
+  name?: string | null;
+  description?: string | null;
+  category?: string | null;
+  linha?: string | null;
+  image_url?: string | null;
+  has_multiple_sides?: boolean | null;
+  has_cutting_plan?: boolean | null;
+  default_leaves_count?: number | null;
+  default_glasses_count?: number | null;
+  default_panels_count?: number | null;
+  default_sides_count?: number | null;
+}
+
 interface AddProductPanelProps {
   onAdd: (product: {
     product_template_id: string | null;
@@ -189,6 +204,40 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     enabled: !!currentCompany?.id
   });
 
+  // No simulador de plano de corte, o catálogo precisa funcionar mesmo sem
+  // produtos ativados para a empresa. Nesse modo, os templates globais entram
+  // como fallback apenas para geração técnica do plano.
+  const { data: globalCuttingTemplates, isLoading: isLoadingGlobalCuttingTemplates } = useQuery({
+    queryKey: ['global-cutting-product-templates'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('product_templates')
+        .select(`
+          id,
+          name,
+          description,
+          category,
+          linha,
+          image_url,
+          has_multiple_sides,
+          has_cutting_plan,
+          default_leaves_count,
+          default_glasses_count,
+          default_panels_count,
+          default_sides_count
+        `)
+        .eq('is_active', true)
+        .eq('has_cutting_plan', true)
+        .order('name');
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: mode === 'cutting',
+  });
+
+  const isCatalogLoading = isLoading || (mode === 'cutting' && isLoadingGlobalCuttingTemplates);
+
   // Mapa slug -> nome oficial (fonte: product_linhas). Também aceita nome como chave para dados legados.
   const linhaSlugToName = useMemo(() => {
     const map = new Map<string, string>();
@@ -199,12 +248,67 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     return map;
   }, [productLinhas]);
 
+  const catalogProducts = useMemo(() => {
+    const companyCatalog = (companyProducts || []).map(cp => {
+      const template = cp.product_template as ProductTemplateRef | null;
+      return {
+        id: cp.id,
+        name: cp.commercial_name || template?.name || 'Produto',
+        description: cp.description || template?.description,
+        category: cp.category || template?.category || 'other',
+        linha: cp.linha || template?.linha || 'Personalizado',
+        image_url: cp.image_url || template?.image_url || null,
+        is_custom: cp.is_custom ?? false,
+        uses_glass: cp.uses_glass ?? true,
+        company_product: cp,
+        product_template_id: cp.product_template_id,
+        has_multiple_sides: template?.has_multiple_sides ?? false,
+        has_cutting_plan: template?.has_cutting_plan ?? true,
+        leaves_count: cp.leaves_count || template?.default_leaves_count || 1,
+        glasses_count: cp.glasses_count || template?.default_glasses_count || 1,
+        panels_count: cp.panels_count || template?.default_panels_count || 1,
+        sides_count: cp.sides_count || template?.default_sides_count || 1,
+      };
+    });
+
+    if (mode !== 'cutting') return companyCatalog;
+
+    const companyTemplateIds = new Set(
+      companyCatalog
+        .map(product => product.product_template_id)
+        .filter((id): id is string => Boolean(id))
+    );
+
+    const templateCatalog = (globalCuttingTemplates || [])
+      .filter(template => !companyTemplateIds.has(template.id))
+      .map(template => ({
+        id: `template:${template.id}`,
+        name: template.name || 'Produto',
+        description: template.description,
+        category: template.category || 'other',
+        linha: template.linha || 'Universal',
+        image_url: template.image_url || null,
+        is_custom: false,
+        uses_glass: true,
+        company_product: null,
+        product_template_id: template.id,
+        has_multiple_sides: template.has_multiple_sides ?? false,
+        has_cutting_plan: template.has_cutting_plan ?? true,
+        leaves_count: template.default_leaves_count || 1,
+        glasses_count: template.default_glasses_count || 1,
+        panels_count: template.default_panels_count || 1,
+        sides_count: template.default_sides_count || 1,
+      }));
+
+    return [...companyCatalog, ...templateCatalog].filter(product => product.has_cutting_plan !== false);
+  }, [companyProducts, globalCuttingTemplates, mode]);
+
   // Dedupe por slug oficial: qualquer variação textual (com/sem acento, com/sem underscore)
   // colapsa no mesmo card. Só linhas ativas em product_linhas aparecem (+ Personalizado).
   const linhas = useMemo(() => {
     const bySlug = new Map<string, string>(); // slug -> display name
-    companyProducts?.forEach(p => {
-      const raw = p.linha || (p.product_template as any)?.linha;
+    catalogProducts.forEach(p => {
+      const raw = p.linha;
       if (!raw) return;
       const key = String(raw).toLowerCase();
       if (key === 'personalizado') {
@@ -219,7 +323,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     return Array.from(bySlug.entries())
       .map(([slug, name]) => ({ slug, name }))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [companyProducts, linhaSlugToName]);
+  }, [catalogProducts, linhaSlugToName]);
 
   // Helper: compara se um produto pertence à linha selecionada (por slug oficial)
   const productMatchesLinha = (rawLinha: string | null | undefined, slug: string) => {
@@ -237,38 +341,22 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
   const categories = useMemo(() => {
     if (!selectedLinha) return [];
     const catMap = new Map<string, string>();
-    companyProducts
-      ?.filter(p => productMatchesLinha(p.linha || (p.product_template as any)?.linha, selectedLinha))
+    catalogProducts
+      .filter(p => productMatchesLinha(p.linha, selectedLinha))
       .forEach(p => {
-        const raw = p.category || (p.product_template as any)?.category;
+        const raw = p.category;
         const key = categoryNormalizer.key(raw);
         const label = categoryNormalizer.normalize(raw);
         if (label && !catMap.has(key)) catMap.set(key, label);
       });
     return Array.from(catMap.values()).sort();
-  }, [companyProducts, selectedLinha, categoryNormalizer, linhaSlugToName, productLinhas]);
+  }, [catalogProducts, selectedLinha, categoryNormalizer, linhaSlugToName, productLinhas]);
 
   // Get filtered products from active company products
   const filteredProducts = useMemo(() => {
     if (!selectedLinha) return [];
 
-    let products = (companyProducts || []).map(cp => {
-      const template = cp.product_template as any;
-      return {
-        id: cp.id,
-        name: cp.commercial_name || template?.name || 'Produto',
-        description: cp.description || template?.description,
-        category: cp.category || template?.category || 'other',
-        linha: cp.linha || template?.linha || 'Personalizado',
-        image_url: cp.image_url || template?.image_url || null,
-        is_custom: cp.is_custom ?? false,
-        uses_glass: cp.uses_glass ?? true,
-        company_product: cp,
-        product_template_id: cp.product_template_id,
-        has_multiple_sides: (template as any)?.has_multiple_sides ?? false,
-        has_cutting_plan: (template as any)?.has_cutting_plan ?? true,
-      };
-    });
+    let products = [...catalogProducts];
 
     if (mode === 'cutting') {
       products = products.filter(p => p.has_cutting_plan !== false);
@@ -289,12 +377,15 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     }
 
     return products;
-  }, [companyProducts, selectedLinha, selectedCategory, searchQuery, linhaSlugToName, productLinhas, mode]);
+  }, [catalogProducts, selectedLinha, selectedCategory, searchQuery, linhaSlugToName, productLinhas, mode]);
 
 
   // Saldo de perfis por produto listado — para alertar o vendedor sobre falta de estoque.
   const filteredProductIds = useMemo(
-    () => filteredProducts.map(p => p.id).filter(Boolean),
+    () => filteredProducts
+      .filter(p => Boolean(p.company_product?.id))
+      .map(p => p.id)
+      .filter(Boolean),
     [filteredProducts],
   );
   const { data: productsProfileStock } = useProductsProfileStock(filteredProductIds);
@@ -479,10 +570,10 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     height: height || 1000,
     widthB: widthB || 0,
     heightB: heightB || 0,
-    leaves_count: companyProduct?.leaves_count || 1,
-    glasses_count: companyProduct?.glasses_count || 1,
-    panels_count: companyProduct?.panels_count || 1,
-    sides_count: companyProduct?.sides_count || 1,
+    leaves_count: selectedProduct?.leaves_count || companyProduct?.leaves_count || 1,
+    glasses_count: selectedProduct?.glasses_count || companyProduct?.glasses_count || 1,
+    panels_count: selectedProduct?.panels_count || companyProduct?.panels_count || 1,
+    sides_count: selectedProduct?.sides_count || companyProduct?.sides_count || 1,
     quantity: quantity || 1,
     enabled: !!companyProduct?.id && width > 0 && height > 0,
     excludeOptionalIds: excludedOptionalIds,
@@ -574,10 +665,10 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
       vao_width_b: (useVao && selectedProduct.has_multiple_sides) ? vaoWidthB : undefined,
       vao_height_b: (useVao && selectedProduct.has_multiple_sides) ? vaoHeightB : undefined,
       quantity,
-      leaves_count: companyProduct?.leaves_count || 1,
-      glasses_count: companyProduct?.glasses_count || 1,
-      panels_count: companyProduct?.panels_count || 1,
-      sides_count: companyProduct?.sides_count || 1,
+      leaves_count: selectedProduct.leaves_count || companyProduct?.leaves_count || 1,
+      glasses_count: selectedProduct.glasses_count || companyProduct?.glasses_count || 1,
+      panels_count: selectedProduct.panels_count || companyProduct?.panels_count || 1,
+      sides_count: selectedProduct.sides_count || companyProduct?.sides_count || 1,
       unit_price: effectiveUnitPrice,
       total_price: totalPrice,
       has_glass: hasGlass && (!!selectedGlassThickness || !!selectedGlassColor || productUsesGlass),
@@ -691,7 +782,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
             {/* Conteúdo do passo */}
             <div className="flex-1 min-h-0">
               <ScrollArea className="h-full rounded-xl">
-                {isLoading ? (
+                {isCatalogLoading ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 p-1">
                     {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
                       <div key={i} className="rounded-2xl bg-muted animate-pulse h-44" />
@@ -710,9 +801,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 p-1 pb-3">
                       {linhas.map(({ slug, name }) => {
-                        const count = (companyProducts || []).filter(p =>
-                          productMatchesLinha(p.linha || (p.product_template as any)?.linha, slug)
-                        ).length;
+                        const count = catalogProducts.filter(p => productMatchesLinha(p.linha, slug)).length;
                         return (
                           <button
                             key={slug}
@@ -768,12 +857,10 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
                           <p className="text-xs text-muted-foreground/70 mt-1">Ver todos os produtos</p>
                         </div>
                       </button>
-                      {categories.map((cat) => {
-                        const count = (companyProducts || []).filter(p => {
-                          const linha = p.linha || (p.product_template as any)?.linha;
-                          const c = p.category || (p.product_template as any)?.category;
-                          return productMatchesLinha(linha, selectedLinha) && categoryNormalizer.match(c, cat);
-                        }).length;
+                        {categories.map((cat) => {
+                        const count = catalogProducts.filter(p => (
+                          productMatchesLinha(p.linha, selectedLinha) && categoryNormalizer.match(p.category, cat)
+                        )).length;
                         const CategoryIcon = getCategoryIcon(cat);
                         const displayName = (cat || '').replace(/^#/, '');
                         return (
