@@ -27,6 +27,18 @@ import { useAuth } from '@/contexts/AuthContext';
 
 const getStorageUrl = (path: string | null) => resolveProductImageUrl(path);
 
+type ProfileOverride = {
+  widthFormula?: string;
+  heightFormula?: string;
+  piecesFormula?: string;
+  cutAngleStart?: number;
+  cutAngleEnd?: number;
+};
+type GlassOverride = {
+  widthFormula?: string;
+  heightFormula?: string;
+};
+
 export function CuttingPlanCalculator() {
   const { currentCompany, isSaasAdmin } = useAuth();
   const [selectedProduct, setSelectedProduct] = useState<string>('');
@@ -38,6 +50,8 @@ export function CuttingPlanCalculator() {
   const [activeTab, setActiveTab] = useState<'cortes' | 'otimizacao'>('cortes');
   const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
   const [hoveredProfileId, setHoveredProfileId] = useState<string | null>(null);
+  const [profileOverrides, setProfileOverrides] = useState<Record<string, ProfileOverride>>({});
+  const [glassOverrides, setGlassOverrides] = useState<Record<string, GlassOverride>>({});
 
   const handleLiveChange = (payload: {
     product_template_id: string | null;
@@ -47,7 +61,14 @@ export function CuttingPlanCalculator() {
     height: number;
     quantity: number;
   }) => {
-    setSelectedProduct(payload.product_template_id || '');
+    const nextId = payload.product_template_id || '';
+    setSelectedProduct((prev) => {
+      if (prev !== nextId) {
+        setProfileOverrides({});
+        setGlassOverrides({});
+      }
+      return nextId;
+    });
     setProductName(payload.name);
     setProductImage(payload.image_url || null);
     setWidth(Number(payload.width) || 0);
@@ -63,6 +84,28 @@ export function CuttingPlanCalculator() {
     setHeight(0);
     setQuantity(1);
     setCompletedItems(new Set());
+    setProfileOverrides({});
+    setGlassOverrides({});
+  };
+
+  const handleProfileFieldChange = (id: string, field: string, value: string) => {
+    setProfileOverrides((prev) => {
+      const current = { ...(prev[id] || {}) };
+      if (field === 'cutAngleStart' || field === 'cutAngleEnd') {
+        const num = Number(value);
+        (current as any)[field] = Number.isFinite(num) ? num : undefined;
+      } else {
+        (current as any)[field] = value;
+      }
+      return { ...prev, [id]: current };
+    });
+  };
+
+  const handleGlassFieldChange = (id: string, field: string, value: string) => {
+    setGlassOverrides((prev) => ({
+      ...prev,
+      [id]: { ...(prev[id] || {}), [field]: value },
+    }));
   };
 
 
