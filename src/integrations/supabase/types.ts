@@ -8540,9 +8540,9 @@ export type Database = {
       get_cutting_plan_items: {
         Args: { _company_id?: string; _template_id: string }
         Returns: {
-          cut_angle: string
-          cut_angle_end: string
-          cut_angle_start: string
+          cut_angle: number
+          cut_angle_end: number
+          cut_angle_start: number
           height_formula: string
           id: string
           is_optional: boolean
