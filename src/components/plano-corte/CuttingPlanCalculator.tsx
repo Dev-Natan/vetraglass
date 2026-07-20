@@ -27,6 +27,18 @@ import { useAuth } from '@/contexts/AuthContext';
 
 const getStorageUrl = (path: string | null) => resolveProductImageUrl(path);
 
+type ProfileOverride = {
+  widthFormula?: string;
+  heightFormula?: string;
+  piecesFormula?: string;
+  cutAngleStart?: number;
+  cutAngleEnd?: number;
+};
+type GlassOverride = {
+  widthFormula?: string;
+  heightFormula?: string;
+};
+
 export function CuttingPlanCalculator() {
   const { currentCompany, isSaasAdmin } = useAuth();
   const [selectedProduct, setSelectedProduct] = useState<string>('');
@@ -38,6 +50,8 @@ export function CuttingPlanCalculator() {
   const [activeTab, setActiveTab] = useState<'cortes' | 'otimizacao'>('cortes');
   const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
   const [hoveredProfileId, setHoveredProfileId] = useState<string | null>(null);
+  const [profileOverrides, setProfileOverrides] = useState<Record<string, ProfileOverride>>({});
+  const [glassOverrides, setGlassOverrides] = useState<Record<string, GlassOverride>>({});
 
   const handleLiveChange = (payload: {
     product_template_id: string | null;
@@ -47,7 +61,14 @@ export function CuttingPlanCalculator() {
     height: number;
     quantity: number;
   }) => {
-    setSelectedProduct(payload.product_template_id || '');
+    const nextId = payload.product_template_id || '';
+    setSelectedProduct((prev) => {
+      if (prev !== nextId) {
+        setProfileOverrides({});
+        setGlassOverrides({});
+      }
+      return nextId;
+    });
     setProductName(payload.name);
     setProductImage(payload.image_url || null);
     setWidth(Number(payload.width) || 0);
@@ -63,6 +84,28 @@ export function CuttingPlanCalculator() {
     setHeight(0);
     setQuantity(1);
     setCompletedItems(new Set());
+    setProfileOverrides({});
+    setGlassOverrides({});
+  };
+
+  const handleProfileFieldChange = (id: string, field: string, value: string) => {
+    setProfileOverrides((prev) => {
+      const current = { ...(prev[id] || {}) };
+      if (field === 'cutAngleStart' || field === 'cutAngleEnd') {
+        const num = Number(value);
+        (current as any)[field] = Number.isFinite(num) ? num : undefined;
+      } else {
+        (current as any)[field] = value;
+      }
+      return { ...prev, [id]: current };
+    });
+  };
+
+  const handleGlassFieldChange = (id: string, field: string, value: string) => {
+    setGlassOverrides((prev) => ({
+      ...prev,
+      [id]: { ...(prev[id] || {}), [field]: value },
+    }));
   };
 
 
@@ -149,19 +192,20 @@ export function CuttingPlanCalculator() {
     return productItems
       .filter(item => item.item_templates?.type === 'profile')
       .map(item => {
+        const override = profileOverrides[item.id] || {};
         const piecesPerProduct = (item as any).pieces_quantity || 1;
-        const widthF = (item as any).width_formula || null;
-        const heightF = (item as any).height_formula || null;
+        const baseWidthF = (item as any).width_formula || null;
+        const baseHeightF = (item as any).height_formula || null;
+        const widthF = override.widthFormula !== undefined ? override.widthFormula : baseWidthF;
+        const heightF = override.heightFormula !== undefined ? override.heightFormula : baseHeightF;
         const quantityF = item.quantity_formula || '1';
-        
+
         let calculatedLength = 0;
         let position: 'Altura' | 'Largura' = 'Largura';
         let displayWidthFormula: string | null = widthF;
         let displayHeightFormula: string | null = heightF;
-        
+
         if (heightF && widthF) {
-          // If both exist, we try to determine by the content of the formulas
-          // usually this is a fallback case
           calculatedLength = evaluateFormula(heightF || widthF, width, height);
           position = heightF ? 'Altura' : 'Largura';
           displayHeightFormula = heightF;
@@ -181,8 +225,10 @@ export function CuttingPlanCalculator() {
             displayWidthFormula = quantityF;
           }
         }
-        
-        const piecesFormula = (item as any).pieces_formula as string | null;
+
+        const basePiecesFormula = (item as any).pieces_formula as string | null;
+        const piecesFormula =
+          override.piecesFormula !== undefined ? override.piecesFormula : basePiecesFormula;
         let piecesFromFormula = piecesPerProduct;
         if (piecesFormula && piecesFormula.trim() !== '') {
           const evaluated = evaluateFormula(piecesFormula, width, height, null, 'ceil');
@@ -190,7 +236,11 @@ export function CuttingPlanCalculator() {
         }
         const totalPieces = piecesFromFormula * quantity;
 
-        
+        const baseAngleStart = (item as any).cut_angle_start ?? item.cut_angle;
+        const baseAngleEnd = (item as any).cut_angle_end ?? item.cut_angle;
+        const cutAngleStart = override.cutAngleStart ?? baseAngleStart;
+        const cutAngleEnd = override.cutAngleEnd ?? baseAngleEnd;
+
         return {
           id: item.id,
           itemTemplateId: item.item_templates?.id || item.id,
@@ -199,41 +249,43 @@ export function CuttingPlanCalculator() {
           widthFormula: displayWidthFormula,
           heightFormula: displayHeightFormula,
           quantityFormula: quantityF,
+          piecesFormula: piecesFormula ?? null,
           calculatedLength,
           quantity: totalPieces,
           piecesPerProduct,
           cutAngle: item.cut_angle,
-          cutAngleStart: (item as any).cut_angle_start,
-          cutAngleEnd: (item as any).cut_angle_end,
+          cutAngleStart,
+          cutAngleEnd,
           position,
           isCompleted: completedItems.has(item.id),
         };
-
       });
-  }, [productItems, width, height, quantity, completedItems]);
+  }, [productItems, width, height, quantity, completedItems, profileOverrides]);
+
 
   const calculatedGlassCuts = useMemo((): GlassCutItem[] => {
     const glassItems: GlassCutItem[] = [];
-    
+
     if (productItems && productItems.length > 0) {
       const itemGlasses = productItems
         .filter(item => item.item_templates?.type === 'glass')
         .map(item => {
+          const override = glassOverrides[item.id] || {};
           const piecesQty = (item as any).pieces_quantity || 1;
-          const widthF = (item as any).width_formula || 'Largura';
-          const heightF = (item as any).height_formula || 'Altura';
+          const widthF = override.widthFormula ?? ((item as any).width_formula || 'Largura');
+          const heightF = override.heightFormula ?? ((item as any).height_formula || 'Altura');
           const calcWidth = evaluateFormula(widthF, width, height);
           const calcHeight = evaluateFormula(heightF, width, height);
           const areaM2 = (calcWidth * calcHeight) / 1000000;
           const customName = (item as any).notes || null;
-          
+
           return {
             id: item.id,
             glassName: item.item_templates?.name || 'Vidro',
             customName: customName,
             imageUrl: item.item_templates?.image_url || null,
-            widthFormula: (item as any).width_formula,
-            heightFormula: (item as any).height_formula,
+            widthFormula: widthF,
+            heightFormula: heightF,
             calculatedWidth: calcWidth,
             calculatedHeight: calcHeight,
             areaM2: areaM2,
@@ -241,38 +293,41 @@ export function CuttingPlanCalculator() {
             isCompleted: completedItems.has(item.id),
           };
         });
-      
+
       glassItems.push(...itemGlasses);
     }
-    
+
     if (glassItems.length === 0 && glassFormulas && glassFormulas.length > 0) {
       const formulaGlasses = glassFormulas.map((formula, idx) => {
-        const widthF = formula.width_formula || 'Largura';
-        const heightF = formula.height_formula || 'Altura';
+        const id = `formula-${idx}`;
+        const override = glassOverrides[id] || {};
+        const widthF = override.widthFormula ?? (formula.width_formula || 'Largura');
+        const heightF = override.heightFormula ?? (formula.height_formula || 'Altura');
         const calcWidth = evaluateFormula(widthF, width, height);
         const calcHeight = evaluateFormula(heightF, width, height);
         const areaM2 = (calcWidth * calcHeight) / 1000000;
-        
+
         return {
-          id: `formula-${idx}`,
+          id,
           glassName: 'Vidro',
           customName: formula.formula_name,
           imageUrl: null,
-          widthFormula: formula.width_formula,
-          heightFormula: formula.height_formula,
+          widthFormula: widthF,
+          heightFormula: heightF,
           calculatedWidth: calcWidth,
           calculatedHeight: calcHeight,
           areaM2: areaM2,
           quantity: quantity,
-          isCompleted: completedItems.has(`formula-${idx}`),
+          isCompleted: completedItems.has(id),
         };
       });
-      
+
       glassItems.push(...formulaGlasses);
     }
-    
+
     return glassItems;
-  }, [productItems, glassFormulas, width, height, quantity, completedItems]);
+  }, [productItems, glassFormulas, width, height, quantity, completedItems, glassOverrides]);
+
 
   const barOptimizationData = useMemo(() => {
     return calculatedCuts.map(cut => ({
@@ -623,10 +678,27 @@ export function CuttingPlanCalculator() {
                 />
 
                 <div className="space-y-6 w-full min-w-0">
+                  {(Object.keys(profileOverrides).length > 0 || Object.keys(glassOverrides).length > 0) && (
+                    <div className="flex justify-end">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setProfileOverrides({});
+                          setGlassOverrides({});
+                        }}
+                      >
+                        <RotateCcw className="w-4 h-4 mr-2" />
+                        Restaurar fórmulas originais
+                      </Button>
+                    </div>
+                  )}
                   <GlassCutsTable
                     glassCuts={calculatedGlassCuts}
                     showCheckboxes
                     onToggleComplete={handleToggleComplete}
+                    editable
+                    onFieldChange={handleGlassFieldChange}
                   />
                   <ProfileCutsTable
                     cuts={calculatedCuts}
@@ -635,8 +707,11 @@ export function CuttingPlanCalculator() {
                     getStorageUrl={getStorageUrl}
                     hoveredId={hoveredProfileId}
                     onHoverChange={setHoveredProfileId}
+                    editable
+                    onFieldChange={handleProfileFieldChange}
                   />
                 </div>
+
               </>
             )}
           </TabsContent>
