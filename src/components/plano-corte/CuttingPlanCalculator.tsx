@@ -678,10 +678,27 @@ export function CuttingPlanCalculator() {
                 />
 
                 <div className="space-y-6 w-full min-w-0">
+                  {(Object.keys(profileOverrides).length > 0 || Object.keys(glassOverrides).length > 0) && (
+                    <div className="flex justify-end">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setProfileOverrides({});
+                          setGlassOverrides({});
+                        }}
+                      >
+                        <RotateCcw className="w-4 h-4 mr-2" />
+                        Restaurar fórmulas originais
+                      </Button>
+                    </div>
+                  )}
                   <GlassCutsTable
                     glassCuts={calculatedGlassCuts}
                     showCheckboxes
                     onToggleComplete={handleToggleComplete}
+                    editable
+                    onFieldChange={handleGlassFieldChange}
                   />
                   <ProfileCutsTable
                     cuts={calculatedCuts}
@@ -690,8 +707,11 @@ export function CuttingPlanCalculator() {
                     getStorageUrl={getStorageUrl}
                     hoveredId={hoveredProfileId}
                     onHoverChange={setHoveredProfileId}
+                    editable
+                    onFieldChange={handleProfileFieldChange}
                   />
                 </div>
+
               </>
             )}
           </TabsContent>
