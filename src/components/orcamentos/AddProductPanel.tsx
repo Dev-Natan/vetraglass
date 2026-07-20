@@ -382,7 +382,10 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
 
   // Saldo de perfis por produto listado — para alertar o vendedor sobre falta de estoque.
   const filteredProductIds = useMemo(
-    () => filteredProducts.map(p => p.id).filter(Boolean),
+    () => filteredProducts
+      .filter(p => Boolean(p.company_product?.id))
+      .map(p => p.id)
+      .filter(Boolean),
     [filteredProducts],
   );
   const { data: productsProfileStock } = useProductsProfileStock(filteredProductIds);
@@ -567,10 +570,10 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     height: height || 1000,
     widthB: widthB || 0,
     heightB: heightB || 0,
-    leaves_count: companyProduct?.leaves_count || 1,
-    glasses_count: companyProduct?.glasses_count || 1,
-    panels_count: companyProduct?.panels_count || 1,
-    sides_count: companyProduct?.sides_count || 1,
+    leaves_count: selectedProduct?.leaves_count || companyProduct?.leaves_count || 1,
+    glasses_count: selectedProduct?.glasses_count || companyProduct?.glasses_count || 1,
+    panels_count: selectedProduct?.panels_count || companyProduct?.panels_count || 1,
+    sides_count: selectedProduct?.sides_count || companyProduct?.sides_count || 1,
     quantity: quantity || 1,
     enabled: !!companyProduct?.id && width > 0 && height > 0,
     excludeOptionalIds: excludedOptionalIds,
@@ -662,10 +665,10 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
       vao_width_b: (useVao && selectedProduct.has_multiple_sides) ? vaoWidthB : undefined,
       vao_height_b: (useVao && selectedProduct.has_multiple_sides) ? vaoHeightB : undefined,
       quantity,
-      leaves_count: companyProduct?.leaves_count || 1,
-      glasses_count: companyProduct?.glasses_count || 1,
-      panels_count: companyProduct?.panels_count || 1,
-      sides_count: companyProduct?.sides_count || 1,
+      leaves_count: selectedProduct.leaves_count || companyProduct?.leaves_count || 1,
+      glasses_count: selectedProduct.glasses_count || companyProduct?.glasses_count || 1,
+      panels_count: selectedProduct.panels_count || companyProduct?.panels_count || 1,
+      sides_count: selectedProduct.sides_count || companyProduct?.sides_count || 1,
       unit_price: effectiveUnitPrice,
       total_price: totalPrice,
       has_glass: hasGlass && (!!selectedGlassThickness || !!selectedGlassColor || productUsesGlass),
