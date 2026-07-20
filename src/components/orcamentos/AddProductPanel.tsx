@@ -49,6 +49,21 @@ interface ProductGlassPrice {
   cost_per_sqm: number;
 }
 
+interface ProductTemplateRef {
+  id?: string | null;
+  name?: string | null;
+  description?: string | null;
+  category?: string | null;
+  linha?: string | null;
+  image_url?: string | null;
+  has_multiple_sides?: boolean | null;
+  has_cutting_plan?: boolean | null;
+  default_leaves_count?: number | null;
+  default_glasses_count?: number | null;
+  default_panels_count?: number | null;
+  default_sides_count?: number | null;
+}
+
 interface AddProductPanelProps {
   onAdd: (product: {
     product_template_id: string | null;
@@ -189,6 +204,38 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     enabled: !!currentCompany?.id
   });
 
+  // No simulador de plano de corte, o catálogo precisa funcionar mesmo sem
+  // produtos ativados para a empresa. Nesse modo, os templates globais entram
+  // como fallback apenas para geração técnica do plano.
+  const { data: globalCuttingTemplates, isLoading: isLoadingGlobalCuttingTemplates } = useQuery({
+    queryKey: ['global-cutting-product-templates'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('product_templates')
+        .select(`
+          id,
+          name,
+          description,
+          category,
+          linha,
+          image_url,
+          has_multiple_sides,
+          has_cutting_plan,
+          default_leaves_count,
+          default_glasses_count,
+          default_panels_count,
+          default_sides_count
+        `)
+        .eq('is_active', true)
+        .eq('has_cutting_plan', true)
+        .order('name');
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: mode === 'cutting',
+  });
+
   // Mapa slug -> nome oficial (fonte: product_linhas). Também aceita nome como chave para dados legados.
   const linhaSlugToName = useMemo(() => {
     const map = new Map<string, string>();
@@ -199,12 +246,67 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     return map;
   }, [productLinhas]);
 
+  const catalogProducts = useMemo(() => {
+    const companyCatalog = (companyProducts || []).map(cp => {
+      const template = cp.product_template as ProductTemplateRef | null;
+      return {
+        id: cp.id,
+        name: cp.commercial_name || template?.name || 'Produto',
+        description: cp.description || template?.description,
+        category: cp.category || template?.category || 'other',
+        linha: cp.linha || template?.linha || 'Personalizado',
+        image_url: cp.image_url || template?.image_url || null,
+        is_custom: cp.is_custom ?? false,
+        uses_glass: cp.uses_glass ?? true,
+        company_product: cp,
+        product_template_id: cp.product_template_id,
+        has_multiple_sides: template?.has_multiple_sides ?? false,
+        has_cutting_plan: template?.has_cutting_plan ?? true,
+        leaves_count: cp.leaves_count || template?.default_leaves_count || 1,
+        glasses_count: cp.glasses_count || template?.default_glasses_count || 1,
+        panels_count: cp.panels_count || template?.default_panels_count || 1,
+        sides_count: cp.sides_count || template?.default_sides_count || 1,
+      };
+    });
+
+    if (mode !== 'cutting') return companyCatalog;
+
+    const companyTemplateIds = new Set(
+      companyCatalog
+        .map(product => product.product_template_id)
+        .filter((id): id is string => Boolean(id))
+    );
+
+    const templateCatalog = (globalCuttingTemplates || [])
+      .filter(template => !companyTemplateIds.has(template.id))
+      .map(template => ({
+        id: `template:${template.id}`,
+        name: template.name || 'Produto',
+        description: template.description,
+        category: template.category || 'other',
+        linha: template.linha || 'Universal',
+        image_url: template.image_url || null,
+        is_custom: false,
+        uses_glass: true,
+        company_product: null,
+        product_template_id: template.id,
+        has_multiple_sides: template.has_multiple_sides ?? false,
+        has_cutting_plan: template.has_cutting_plan ?? true,
+        leaves_count: template.default_leaves_count || 1,
+        glasses_count: template.default_glasses_count || 1,
+        panels_count: template.default_panels_count || 1,
+        sides_count: template.default_sides_count || 1,
+      }));
+
+    return [...companyCatalog, ...templateCatalog].filter(product => product.has_cutting_plan !== false);
+  }, [companyProducts, globalCuttingTemplates, mode]);
+
   // Dedupe por slug oficial: qualquer variação textual (com/sem acento, com/sem underscore)
   // colapsa no mesmo card. Só linhas ativas em product_linhas aparecem (+ Personalizado).
   const linhas = useMemo(() => {
     const bySlug = new Map<string, string>(); // slug -> display name
-    companyProducts?.forEach(p => {
-      const raw = p.linha || (p.product_template as any)?.linha;
+    catalogProducts.forEach(p => {
+      const raw = p.linha;
       if (!raw) return;
       const key = String(raw).toLowerCase();
       if (key === 'personalizado') {
@@ -219,7 +321,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     return Array.from(bySlug.entries())
       .map(([slug, name]) => ({ slug, name }))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [companyProducts, linhaSlugToName]);
+  }, [catalogProducts, linhaSlugToName]);
 
   // Helper: compara se um produto pertence à linha selecionada (por slug oficial)
   const productMatchesLinha = (rawLinha: string | null | undefined, slug: string) => {
@@ -237,38 +339,22 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
   const categories = useMemo(() => {
     if (!selectedLinha) return [];
     const catMap = new Map<string, string>();
-    companyProducts
-      ?.filter(p => productMatchesLinha(p.linha || (p.product_template as any)?.linha, selectedLinha))
+    catalogProducts
+      .filter(p => productMatchesLinha(p.linha, selectedLinha))
       .forEach(p => {
-        const raw = p.category || (p.product_template as any)?.category;
+        const raw = p.category;
         const key = categoryNormalizer.key(raw);
         const label = categoryNormalizer.normalize(raw);
         if (label && !catMap.has(key)) catMap.set(key, label);
       });
     return Array.from(catMap.values()).sort();
-  }, [companyProducts, selectedLinha, categoryNormalizer, linhaSlugToName, productLinhas]);
+  }, [catalogProducts, selectedLinha, categoryNormalizer, linhaSlugToName, productLinhas]);
 
   // Get filtered products from active company products
   const filteredProducts = useMemo(() => {
     if (!selectedLinha) return [];
 
-    let products = (companyProducts || []).map(cp => {
-      const template = cp.product_template as any;
-      return {
-        id: cp.id,
-        name: cp.commercial_name || template?.name || 'Produto',
-        description: cp.description || template?.description,
-        category: cp.category || template?.category || 'other',
-        linha: cp.linha || template?.linha || 'Personalizado',
-        image_url: cp.image_url || template?.image_url || null,
-        is_custom: cp.is_custom ?? false,
-        uses_glass: cp.uses_glass ?? true,
-        company_product: cp,
-        product_template_id: cp.product_template_id,
-        has_multiple_sides: (template as any)?.has_multiple_sides ?? false,
-        has_cutting_plan: (template as any)?.has_cutting_plan ?? true,
-      };
-    });
+    let products = [...catalogProducts];
 
     if (mode === 'cutting') {
       products = products.filter(p => p.has_cutting_plan !== false);
@@ -289,7 +375,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     }
 
     return products;
-  }, [companyProducts, selectedLinha, selectedCategory, searchQuery, linhaSlugToName, productLinhas, mode]);
+  }, [catalogProducts, selectedLinha, selectedCategory, searchQuery, linhaSlugToName, productLinhas, mode]);
 
 
   // Saldo de perfis por produto listado — para alertar o vendedor sobre falta de estoque.
