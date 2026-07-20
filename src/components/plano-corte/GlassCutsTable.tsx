@@ -1,5 +1,6 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import { GlassPreview } from './GlassPreview';
 
 export interface GlassCutItem {
@@ -16,16 +17,22 @@ export interface GlassCutItem {
   isCompleted?: boolean;
 }
 
+export type GlassEditableField = 'widthFormula' | 'heightFormula';
+
 interface GlassCutsTableProps {
   glassCuts: GlassCutItem[];
   showCheckboxes?: boolean;
   onToggleComplete?: (id: string, completed: boolean) => void;
+  editable?: boolean;
+  onFieldChange?: (id: string, field: GlassEditableField, value: string) => void;
 }
 
-export function GlassCutsTable({ 
-  glassCuts, 
+export function GlassCutsTable({
+  glassCuts,
   showCheckboxes = false,
-  onToggleComplete 
+  onToggleComplete,
+  editable = false,
+  onFieldChange,
 }: GlassCutsTableProps) {
   if (glassCuts.length === 0) return null;
 
@@ -50,6 +57,9 @@ export function GlassCutsTable({
                 <TableHead className="text-white font-bold w-12">✓</TableHead>
               )}
               <TableHead className="text-white font-bold">VIDRO</TableHead>
+              {editable && (
+                <TableHead className="text-white font-bold text-center min-w-[220px]">FÓRMULAS</TableHead>
+              )}
               <TableHead className="text-white font-bold text-center">LARGURA (mm)</TableHead>
               <TableHead className="text-white font-bold text-center">ALTURA (mm)</TableHead>
               <TableHead className="text-white font-bold text-center">ÁREA (m²)</TableHead>
@@ -58,13 +68,13 @@ export function GlassCutsTable({
           </TableHeader>
           <TableBody>
             {glassCuts.map((glass) => (
-              <TableRow 
-                key={glass.id} 
+              <TableRow
+                key={glass.id}
                 className={`hover:bg-muted/50 ${glass.isCompleted ? 'bg-green-50 dark:bg-green-900/20' : ''}`}
               >
                 {showCheckboxes && (
                   <TableCell>
-                    <Checkbox 
+                    <Checkbox
                       checked={glass.isCompleted}
                       onCheckedChange={(checked) => onToggleComplete?.(glass.id, !!checked)}
                     />
@@ -72,8 +82,8 @@ export function GlassCutsTable({
                 )}
                 <TableCell>
                   <div className="flex items-center gap-3">
-                    <GlassPreview 
-                      width={glass.calculatedWidth} 
+                    <GlassPreview
+                      width={glass.calculatedWidth}
                       height={glass.calculatedHeight}
                       name={glass.customName || glass.glassName}
                     />
@@ -84,7 +94,7 @@ export function GlassCutsTable({
                       {glass.customName && (
                         <div className="text-xs text-muted-foreground uppercase tracking-wide">{glass.glassName}</div>
                       )}
-                      {(glass.widthFormula || glass.heightFormula) && (
+                      {!editable && (glass.widthFormula || glass.heightFormula) && (
                         <div className="flex flex-wrap gap-1.5 mt-1.5">
                           {glass.widthFormula && (
                             <span className="inline-flex items-center text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 font-medium">
@@ -101,6 +111,26 @@ export function GlassCutsTable({
                     </div>
                   </div>
                 </TableCell>
+                {editable && (
+                  <TableCell className="align-top">
+                    <div className="flex flex-col gap-1.5 min-w-[220px]">
+                      <label className="text-[10px] uppercase text-muted-foreground font-medium">Largura</label>
+                      <Input
+                        className="h-7 text-xs font-mono"
+                        value={glass.widthFormula ?? ''}
+                        onChange={(e) => onFieldChange?.(glass.id, 'widthFormula', e.target.value)}
+                        placeholder="Largura"
+                      />
+                      <label className="text-[10px] uppercase text-muted-foreground font-medium mt-1">Altura</label>
+                      <Input
+                        className="h-7 text-xs font-mono"
+                        value={glass.heightFormula ?? ''}
+                        onChange={(e) => onFieldChange?.(glass.id, 'heightFormula', e.target.value)}
+                        placeholder="Altura"
+                      />
+                    </div>
+                  </TableCell>
+                )}
                 <TableCell className="text-center">
                   <span className="font-bold text-lg text-emerald-600 dark:text-emerald-400">{glass.calculatedWidth}</span>
                 </TableCell>
