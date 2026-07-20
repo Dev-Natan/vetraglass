@@ -192,19 +192,20 @@ export function CuttingPlanCalculator() {
     return productItems
       .filter(item => item.item_templates?.type === 'profile')
       .map(item => {
+        const override = profileOverrides[item.id] || {};
         const piecesPerProduct = (item as any).pieces_quantity || 1;
-        const widthF = (item as any).width_formula || null;
-        const heightF = (item as any).height_formula || null;
+        const baseWidthF = (item as any).width_formula || null;
+        const baseHeightF = (item as any).height_formula || null;
+        const widthF = override.widthFormula !== undefined ? override.widthFormula : baseWidthF;
+        const heightF = override.heightFormula !== undefined ? override.heightFormula : baseHeightF;
         const quantityF = item.quantity_formula || '1';
-        
+
         let calculatedLength = 0;
         let position: 'Altura' | 'Largura' = 'Largura';
         let displayWidthFormula: string | null = widthF;
         let displayHeightFormula: string | null = heightF;
-        
+
         if (heightF && widthF) {
-          // If both exist, we try to determine by the content of the formulas
-          // usually this is a fallback case
           calculatedLength = evaluateFormula(heightF || widthF, width, height);
           position = heightF ? 'Altura' : 'Largura';
           displayHeightFormula = heightF;
@@ -224,8 +225,10 @@ export function CuttingPlanCalculator() {
             displayWidthFormula = quantityF;
           }
         }
-        
-        const piecesFormula = (item as any).pieces_formula as string | null;
+
+        const basePiecesFormula = (item as any).pieces_formula as string | null;
+        const piecesFormula =
+          override.piecesFormula !== undefined ? override.piecesFormula : basePiecesFormula;
         let piecesFromFormula = piecesPerProduct;
         if (piecesFormula && piecesFormula.trim() !== '') {
           const evaluated = evaluateFormula(piecesFormula, width, height, null, 'ceil');
@@ -233,7 +236,11 @@ export function CuttingPlanCalculator() {
         }
         const totalPieces = piecesFromFormula * quantity;
 
-        
+        const baseAngleStart = (item as any).cut_angle_start ?? item.cut_angle;
+        const baseAngleEnd = (item as any).cut_angle_end ?? item.cut_angle;
+        const cutAngleStart = override.cutAngleStart ?? baseAngleStart;
+        const cutAngleEnd = override.cutAngleEnd ?? baseAngleEnd;
+
         return {
           id: item.id,
           itemTemplateId: item.item_templates?.id || item.id,
@@ -242,18 +249,19 @@ export function CuttingPlanCalculator() {
           widthFormula: displayWidthFormula,
           heightFormula: displayHeightFormula,
           quantityFormula: quantityF,
+          piecesFormula: piecesFormula ?? null,
           calculatedLength,
           quantity: totalPieces,
           piecesPerProduct,
           cutAngle: item.cut_angle,
-          cutAngleStart: (item as any).cut_angle_start,
-          cutAngleEnd: (item as any).cut_angle_end,
+          cutAngleStart,
+          cutAngleEnd,
           position,
           isCompleted: completedItems.has(item.id),
         };
-
       });
-  }, [productItems, width, height, quantity, completedItems]);
+  }, [productItems, width, height, quantity, completedItems, profileOverrides]);
+
 
   const calculatedGlassCuts = useMemo((): GlassCutItem[] => {
     const glassItems: GlassCutItem[] = [];
