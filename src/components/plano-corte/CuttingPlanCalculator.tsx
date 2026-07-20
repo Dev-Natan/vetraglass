@@ -265,26 +265,27 @@ export function CuttingPlanCalculator() {
 
   const calculatedGlassCuts = useMemo((): GlassCutItem[] => {
     const glassItems: GlassCutItem[] = [];
-    
+
     if (productItems && productItems.length > 0) {
       const itemGlasses = productItems
         .filter(item => item.item_templates?.type === 'glass')
         .map(item => {
+          const override = glassOverrides[item.id] || {};
           const piecesQty = (item as any).pieces_quantity || 1;
-          const widthF = (item as any).width_formula || 'Largura';
-          const heightF = (item as any).height_formula || 'Altura';
+          const widthF = override.widthFormula ?? ((item as any).width_formula || 'Largura');
+          const heightF = override.heightFormula ?? ((item as any).height_formula || 'Altura');
           const calcWidth = evaluateFormula(widthF, width, height);
           const calcHeight = evaluateFormula(heightF, width, height);
           const areaM2 = (calcWidth * calcHeight) / 1000000;
           const customName = (item as any).notes || null;
-          
+
           return {
             id: item.id,
             glassName: item.item_templates?.name || 'Vidro',
             customName: customName,
             imageUrl: item.item_templates?.image_url || null,
-            widthFormula: (item as any).width_formula,
-            heightFormula: (item as any).height_formula,
+            widthFormula: widthF,
+            heightFormula: heightF,
             calculatedWidth: calcWidth,
             calculatedHeight: calcHeight,
             areaM2: areaM2,
@@ -292,38 +293,41 @@ export function CuttingPlanCalculator() {
             isCompleted: completedItems.has(item.id),
           };
         });
-      
+
       glassItems.push(...itemGlasses);
     }
-    
+
     if (glassItems.length === 0 && glassFormulas && glassFormulas.length > 0) {
       const formulaGlasses = glassFormulas.map((formula, idx) => {
-        const widthF = formula.width_formula || 'Largura';
-        const heightF = formula.height_formula || 'Altura';
+        const id = `formula-${idx}`;
+        const override = glassOverrides[id] || {};
+        const widthF = override.widthFormula ?? (formula.width_formula || 'Largura');
+        const heightF = override.heightFormula ?? (formula.height_formula || 'Altura');
         const calcWidth = evaluateFormula(widthF, width, height);
         const calcHeight = evaluateFormula(heightF, width, height);
         const areaM2 = (calcWidth * calcHeight) / 1000000;
-        
+
         return {
-          id: `formula-${idx}`,
+          id,
           glassName: 'Vidro',
           customName: formula.formula_name,
           imageUrl: null,
-          widthFormula: formula.width_formula,
-          heightFormula: formula.height_formula,
+          widthFormula: widthF,
+          heightFormula: heightF,
           calculatedWidth: calcWidth,
           calculatedHeight: calcHeight,
           areaM2: areaM2,
           quantity: quantity,
-          isCompleted: completedItems.has(`formula-${idx}`),
+          isCompleted: completedItems.has(id),
         };
       });
-      
+
       glassItems.push(...formulaGlasses);
     }
-    
+
     return glassItems;
-  }, [productItems, glassFormulas, width, height, quantity, completedItems]);
+  }, [productItems, glassFormulas, width, height, quantity, completedItems, glassOverrides]);
+
 
   const barOptimizationData = useMemo(() => {
     return calculatedCuts.map(cut => ({
