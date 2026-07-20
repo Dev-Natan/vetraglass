@@ -204,8 +204,6 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     enabled: !!currentCompany?.id
   });
 
-  const isCatalogLoading = isLoading || (mode === 'cutting' && isLoadingGlobalCuttingTemplates);
-
   // No simulador de plano de corte, o catálogo precisa funcionar mesmo sem
   // produtos ativados para a empresa. Nesse modo, os templates globais entram
   // como fallback apenas para geração técnica do plano.
@@ -237,6 +235,8 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     },
     enabled: mode === 'cutting',
   });
+
+  const isCatalogLoading = isLoading || (mode === 'cutting' && isLoadingGlobalCuttingTemplates);
 
   // Mapa slug -> nome oficial (fonte: product_linhas). Também aceita nome como chave para dados legados.
   const linhaSlugToName = useMemo(() => {
