@@ -204,6 +204,8 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     enabled: !!currentCompany?.id
   });
 
+  const isCatalogLoading = isLoading || (mode === 'cutting' && isLoadingGlobalCuttingTemplates);
+
   // No simulador de plano de corte, o catálogo precisa funcionar mesmo sem
   // produtos ativados para a empresa. Nesse modo, os templates globais entram
   // como fallback apenas para geração técnica do plano.
@@ -777,7 +779,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
             {/* Conteúdo do passo */}
             <div className="flex-1 min-h-0">
               <ScrollArea className="h-full rounded-xl">
-                {isLoading ? (
+                {isCatalogLoading ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 p-1">
                     {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
                       <div key={i} className="rounded-2xl bg-muted animate-pulse h-44" />
@@ -796,9 +798,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 p-1 pb-3">
                       {linhas.map(({ slug, name }) => {
-                        const count = (companyProducts || []).filter(p =>
-                          productMatchesLinha(p.linha || (p.product_template as any)?.linha, slug)
-                        ).length;
+                        const count = catalogProducts.filter(p => productMatchesLinha(p.linha, slug)).length;
                         return (
                           <button
                             key={slug}
@@ -854,12 +854,10 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
                           <p className="text-xs text-muted-foreground/70 mt-1">Ver todos os produtos</p>
                         </div>
                       </button>
-                      {categories.map((cat) => {
-                        const count = (companyProducts || []).filter(p => {
-                          const linha = p.linha || (p.product_template as any)?.linha;
-                          const c = p.category || (p.product_template as any)?.category;
-                          return productMatchesLinha(linha, selectedLinha) && categoryNormalizer.match(c, cat);
-                        }).length;
+                        {categories.map((cat) => {
+                        const count = catalogProducts.filter(p => (
+                          productMatchesLinha(p.linha, selectedLinha) && categoryNormalizer.match(p.category, cat)
+                        )).length;
                         const CategoryIcon = getCategoryIcon(cat);
                         const displayName = (cat || '').replace(/^#/, '');
                         return (
