@@ -1,5 +1,6 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import { CutAngleIcon } from './CutAngleIcon';
 import { cn } from '@/lib/utils';
 
@@ -10,6 +11,7 @@ export interface ProfileCutItem {
   widthFormula: string | null;
   heightFormula: string | null;
   quantityFormula: string;
+  piecesFormula?: string | null;
   calculatedLength: number;
   quantity: number;
   piecesPerProduct: number;
@@ -20,6 +22,13 @@ export interface ProfileCutItem {
   isCompleted?: boolean;
 }
 
+export type ProfileEditableField =
+  | 'widthFormula'
+  | 'heightFormula'
+  | 'piecesFormula'
+  | 'cutAngleStart'
+  | 'cutAngleEnd';
+
 interface ProfileCutsTableProps {
   cuts: ProfileCutItem[];
   showCheckboxes?: boolean;
@@ -27,15 +36,19 @@ interface ProfileCutsTableProps {
   getStorageUrl: (path: string | null) => string | null;
   hoveredId?: string | null;
   onHoverChange?: (id: string | null) => void;
+  editable?: boolean;
+  onFieldChange?: (id: string, field: ProfileEditableField, value: string) => void;
 }
 
-export function ProfileCutsTable({ 
-  cuts, 
+export function ProfileCutsTable({
+  cuts,
   showCheckboxes = false,
   onToggleComplete,
   getStorageUrl,
   hoveredId,
   onHoverChange,
+  editable = false,
+  onFieldChange,
 }: ProfileCutsTableProps) {
   if (cuts.length === 0) return null;
 
@@ -53,6 +66,9 @@ export function ProfileCutsTable({
                 <TableHead className="text-primary-foreground font-bold w-12">✓</TableHead>
               )}
               <TableHead className="text-primary-foreground font-bold">PERFIL</TableHead>
+              {editable && (
+                <TableHead className="text-primary-foreground font-bold text-center min-w-[220px]">FÓRMULAS</TableHead>
+              )}
               <TableHead className="text-primary-foreground font-bold text-center">MEDIDA (mm)</TableHead>
               <TableHead className="text-primary-foreground font-bold text-center">QUANTIDADE</TableHead>
               <TableHead className="text-primary-foreground font-bold text-center">ÂNGULO DE CORTE</TableHead>
@@ -105,22 +121,86 @@ export function ProfileCutsTable({
                     </div>
                   </TableCell>
 
+                  {editable && (
+                    <TableCell className="align-top">
+                      <div className="flex flex-col gap-1.5 min-w-[220px]">
+                        <label className="text-[10px] uppercase text-muted-foreground font-medium">
+                          {isAltura ? 'Fórmula Altura' : 'Fórmula Largura'}
+                        </label>
+                        <Input
+                          className="h-7 text-xs font-mono"
+                          value={(isAltura ? cut.heightFormula : cut.widthFormula) ?? ''}
+                          onChange={(e) =>
+                            onFieldChange?.(
+                              cut.id,
+                              isAltura ? 'heightFormula' : 'widthFormula',
+                              e.target.value
+                            )
+                          }
+                          placeholder={isAltura ? 'Altura - 50' : 'Largura - 50'}
+                        />
+                        <label className="text-[10px] uppercase text-muted-foreground font-medium mt-1">
+                          Fórmula Peças
+                        </label>
+                        <Input
+                          className="h-7 text-xs font-mono"
+                          value={cut.piecesFormula ?? ''}
+                          onChange={(e) => onFieldChange?.(cut.id, 'piecesFormula', e.target.value)}
+                          placeholder="ex: (Altura-94)/130"
+                        />
+                      </div>
+                    </TableCell>
+                  )}
+
                   <TableCell className="text-center font-bold text-lg text-primary tabular-nums">
                     {cut.calculatedLength}
                   </TableCell>
                   <TableCell className="text-center font-bold text-lg tabular-nums">{cut.quantity}</TableCell>
 
                   <TableCell className="text-center">
-                    <div className="inline-flex items-center gap-2">
-                      <span className="inline-flex items-center gap-1 rounded bg-foreground text-background px-2 py-1 text-xs font-medium">
-                        <CutAngleIcon angle={angleStart} side="start" className="text-background" />
-                        {angleStart}°
-                      </span>
-                      <span className="inline-flex items-center gap-1 rounded bg-foreground text-background px-2 py-1 text-xs font-medium">
-                        <CutAngleIcon angle={angleEnd} side="end" className="text-background" />
-                        {angleEnd}°
-                      </span>
-                    </div>
+                    {editable ? (
+                      <div className="inline-flex items-center gap-3">
+                        <div className="flex flex-col items-center gap-1">
+                          <span className="text-[10px] uppercase text-muted-foreground">Início</span>
+                          <div className="inline-flex items-center gap-1">
+                            <CutAngleIcon angle={angleStart} side="start" />
+                            <Input
+                              type="number"
+                              min={0}
+                              max={180}
+                              className="h-7 w-16 text-xs text-center"
+                              value={angleStart}
+                              onChange={(e) => onFieldChange?.(cut.id, 'cutAngleStart', e.target.value)}
+                            />
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-center gap-1">
+                          <span className="text-[10px] uppercase text-muted-foreground">Fim</span>
+                          <div className="inline-flex items-center gap-1">
+                            <CutAngleIcon angle={angleEnd} side="end" />
+                            <Input
+                              type="number"
+                              min={0}
+                              max={180}
+                              className="h-7 w-16 text-xs text-center"
+                              value={angleEnd}
+                              onChange={(e) => onFieldChange?.(cut.id, 'cutAngleEnd', e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="inline-flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1 rounded bg-foreground text-background px-2 py-1 text-xs font-medium">
+                          <CutAngleIcon angle={angleStart} side="start" className="text-background" />
+                          {angleStart}°
+                        </span>
+                        <span className="inline-flex items-center gap-1 rounded bg-foreground text-background px-2 py-1 text-xs font-medium">
+                          <CutAngleIcon angle={angleEnd} side="end" className="text-background" />
+                          {angleEnd}°
+                        </span>
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell className="text-center">
                     <span
