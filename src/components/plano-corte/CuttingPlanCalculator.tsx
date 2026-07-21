@@ -267,6 +267,11 @@ export function CuttingPlanCalculator() {
           position,
           isCompleted: completedItems.has(item.id),
         };
+      })
+      .sort((a, b) => {
+        const nameCmp = a.profileName.localeCompare(b.profileName, 'pt-BR', { sensitivity: 'base' });
+        if (nameCmp !== 0) return nameCmp;
+        return b.calculatedLength - a.calculatedLength;
       });
   }, [productItems, width, height, quantity, completedItems, profileOverrides]);
 
