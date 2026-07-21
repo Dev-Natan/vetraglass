@@ -62,13 +62,14 @@ export function CuttingPlanCalculator() {
     quantity: number;
   }) => {
     const nextId = payload.product_template_id || '';
-    setSelectedProduct((prev) => {
-      if (prev !== nextId) {
-        setProfileOverrides({});
-        setGlassOverrides({});
-      }
-      return nextId;
-    });
+    // NÃO chamar outros setStates dentro do updater de setState (anti-pattern
+    // que em StrictMode roda duas vezes e pode "sumir" com overrides digitados).
+    if (nextId !== selectedProduct) {
+      setProfileOverrides({});
+      setGlassOverrides({});
+      setCompletedItems(new Set());
+    }
+    setSelectedProduct(nextId);
     setProductName(payload.name);
     setProductImage(payload.image_url || null);
     setWidth(Number(payload.width) || 0);
@@ -126,7 +127,7 @@ export function CuttingPlanCalculator() {
 
   const hasCuttingPlan = selectedTemplateInfo ? (selectedTemplateInfo as any).has_cutting_plan !== false : true;
 
-  const { data: productItems } = useQuery({
+  const { data: productItems, error: productItemsError, isLoading: isLoadingItems } = useQuery({
     queryKey: ['product-template-items-cutting', selectedProduct, currentCompany?.id, isSaasAdmin],
     queryFn: async () => {
       if (!selectedProduct) return [];
@@ -137,7 +138,10 @@ export function CuttingPlanCalculator() {
         _company_id: !isSaasAdmin && currentCompany?.id ? currentCompany.id : null,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[PlanoDeCorte] Erro ao carregar itens do plano:', error);
+        throw error;
+      }
 
       // Reshape flat RPC rows into the nested structure the calculator expects
       return (data || []).map((row: any) => ({
@@ -163,6 +167,7 @@ export function CuttingPlanCalculator() {
       }));
     },
     enabled: !!selectedProduct && hasCuttingPlan,
+    retry: false,
   });
 
 
@@ -662,6 +667,15 @@ export function CuttingPlanCalculator() {
                 <Scissors className="w-10 h-10 mx-auto mb-3 text-muted-foreground/60" />
                 <p className="text-sm font-medium">Este produto não possui plano de corte configurado.</p>
                 <p className="text-xs text-muted-foreground mt-1">Ative a opção "Este produto possui plano de corte?" no cadastro do produto para habilitá-lo aqui.</p>
+              </div>
+            ) : productItemsError ? (
+              <div className="text-center py-12 border border-dashed border-destructive/40 rounded-lg bg-destructive/5">
+                <p className="text-sm font-semibold text-destructive">Falha ao carregar a composição do produto.</p>
+                <p className="text-xs text-muted-foreground mt-1">{(productItemsError as Error).message}</p>
+              </div>
+            ) : selectedProduct && isLoadingItems ? (
+              <div className="text-center py-12 text-muted-foreground text-sm">
+                Carregando composição…
               </div>
             ) : calculatedGlassCuts.length === 0 && calculatedCuts.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
