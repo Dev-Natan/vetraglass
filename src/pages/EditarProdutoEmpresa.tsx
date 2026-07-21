@@ -17,7 +17,7 @@ import { FormulaEditor } from '@/components/produtos/FormulaEditor';
 import { GlassFormulaEditor } from '@/components/produtos/GlassFormulaEditor';
 import { ProductConfigPanel, ProductConfigData } from '@/components/produtos/ProductConfigPanel';
 import { ProductCompositionPricing } from '@/components/produtos/ProductCompositionPricing';
-import { CompositionSections } from '@/components/produtos/CompositionSections';
+
 import { validateFormula } from '@/utils/safeFormulaEvaluator';
 import {
   Select,
