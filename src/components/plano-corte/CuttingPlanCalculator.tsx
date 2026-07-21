@@ -668,6 +668,15 @@ export function CuttingPlanCalculator() {
                 <p className="text-sm font-medium">Este produto não possui plano de corte configurado.</p>
                 <p className="text-xs text-muted-foreground mt-1">Ative a opção "Este produto possui plano de corte?" no cadastro do produto para habilitá-lo aqui.</p>
               </div>
+            ) : productItemsError ? (
+              <div className="text-center py-12 border border-dashed border-destructive/40 rounded-lg bg-destructive/5">
+                <p className="text-sm font-semibold text-destructive">Falha ao carregar a composição do produto.</p>
+                <p className="text-xs text-muted-foreground mt-1">{(productItemsError as Error).message}</p>
+              </div>
+            ) : selectedProduct && isLoadingItems ? (
+              <div className="text-center py-12 text-muted-foreground text-sm">
+                Carregando composição…
+              </div>
             ) : calculatedGlassCuts.length === 0 && calculatedCuts.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 {selectedProduct
