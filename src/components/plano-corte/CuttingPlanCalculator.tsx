@@ -129,12 +129,13 @@ export function CuttingPlanCalculator() {
       });
 
       if (error) {
-        console.error('[PlanoDeCorte] Erro ao carregar itens do plano:', error);
+        console.error('[PlanoDeCorte] Erro RPC get_cutting_plan_items:', error, { selectedProduct, company: currentCompany?.id, isSaasAdmin });
         throw error;
       }
 
-      // Reshape flat RPC rows into the nested structure the calculator expects
-      return (data || []).map((row: any) => ({
+      console.info('[PlanoDeCorte] RPC retornou', (data || []).length, 'linhas para template', selectedProduct, 'company', currentCompany?.id, 'isSaasAdmin', isSaasAdmin);
+
+      const reshaped = (data || []).map((row: any) => ({
         id: row.id,
         quantity_formula: row.quantity_formula,
         pieces_formula: row.pieces_formula,
@@ -155,6 +156,11 @@ export function CuttingPlanCalculator() {
             }
           : null,
       }));
+
+      const profileCount = reshaped.filter((r: any) => r.item_templates?.type === 'profile').length;
+      const glassCount = reshaped.filter((r: any) => r.item_templates?.type === 'glass').length;
+      console.info('[PlanoDeCorte] Tipos:', { profileCount, glassCount, total: reshaped.length });
+      return reshaped;
     },
     enabled: Boolean(selectedProduct),
     retry: false,
