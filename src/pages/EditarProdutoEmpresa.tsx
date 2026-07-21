@@ -17,7 +17,7 @@ import { FormulaEditor } from '@/components/produtos/FormulaEditor';
 import { GlassFormulaEditor } from '@/components/produtos/GlassFormulaEditor';
 import { ProductConfigPanel, ProductConfigData } from '@/components/produtos/ProductConfigPanel';
 import { ProductCompositionPricing } from '@/components/produtos/ProductCompositionPricing';
-import { CompositionSections } from '@/components/produtos/CompositionSections';
+
 import { validateFormula } from '@/utils/safeFormulaEvaluator';
 import {
   Select,
@@ -946,14 +946,235 @@ export default function EditarProdutoEmpresa() {
           </CardContent>
         </Card>
 
-        {/* Composition Sections */}
-        <CompositionSections
-          items={productItems || []}
-          onAddItem={(section) => { setAddItemSection(section); setIsAddItemDialogOpen(true); }}
-          onEditItem={handleEditItem}
-          onRemoveItem={(itemId) => removeItemMutation.mutate(itemId)}
-          onResetItem={product?.product_template_id ? (itemId) => resetItemMutation.mutate(itemId) : undefined}
-        />
+        {/* Composição do Produto — layout igual ao admin (abas + grid de cards) */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold text-lg">Composição do Produto</h2>
+            <p className="text-sm text-muted-foreground">
+              {productItems?.length || 0} itens configurados
+            </p>
+          </div>
+
+          <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setAddItemSection(v as any); }} className="w-full">
+            <div className="bg-muted/50 rounded-xl p-1.5">
+              <TabsList className="w-full h-auto bg-transparent gap-1">
+                {itemTypeTabs.map((tab) => {
+                  const itemCount = getItemsByType(tab.value).length;
+                  const isActive = activeTab === tab.value;
+                  const hasItems = itemCount > 0;
+                  return (
+                    <TabsTrigger
+                      key={tab.value}
+                      value={tab.value}
+                      className={cn(
+                        'flex-1 py-3 text-xs sm:text-sm font-medium rounded-lg transition-all data-[state=active]:shadow-sm',
+                        hasItems && !isActive
+                          ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground'
+                          : 'data-[state=active]:bg-primary data-[state=active]:text-primary-foreground'
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        {hasItems ? (
+                          <CheckCircle2 className={cn('w-4 h-4', isActive ? '' : 'text-green-600 dark:text-green-400')} />
+                        ) : isActive ? (
+                          <CircleDot className="w-4 h-4" />
+                        ) : (
+                          <Circle className="w-4 h-4" />
+                        )}
+                        <span className="hidden sm:inline">{tab.label}</span>
+                        <span className="sm:hidden">{tab.label.split(' ')[0]}</span>
+                        <span className={cn(
+                          'text-[10px] px-1.5 py-0.5 rounded-full',
+                          isActive
+                            ? 'bg-primary-foreground/20'
+                            : hasItems
+                              ? 'bg-green-600/20 text-green-700 dark:bg-green-400/20 dark:text-green-300'
+                              : 'bg-muted'
+                        )}>
+                          {itemCount}
+                        </span>
+                      </div>
+                    </TabsTrigger>
+                  );
+                })}
+              </TabsList>
+            </div>
+
+            {itemTypeTabs.map((tab) => {
+              const items = getItemsByType(tab.value);
+              const canReset = !!product?.product_template_id;
+              return (
+                <TabsContent key={tab.value} value={tab.value} className="mt-4">
+                  <div className="flex justify-between items-center gap-2 mb-4">
+                    <p className="text-sm text-muted-foreground">
+                      {items.length === 0
+                        ? `Adicione ${tab.label.toLowerCase()} à composição`
+                        : `${items.length} ${tab.label.toLowerCase()} configurados`}
+                    </p>
+                    <Button
+                      size="sm"
+                      className="gap-2"
+                      onClick={() => { setAddItemSection(tab.value as any); setIsAddItemDialogOpen(true); }}
+                    >
+                      <Plus className="w-4 h-4" />
+                      Adicionar item
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    {items.map((item) => {
+                      const template = item.item_template || item.company_item;
+                      const isGlass = tab.value === 'glass';
+                      const isProfile = tab.value === 'profile';
+                      const formulaType = (() => {
+                        const lower = String(item.quantity_formula || '').toLowerCase();
+                        if (lower.includes('altura')) return 'Altura';
+                        if (lower.includes('largura')) return 'Largura';
+                        return null;
+                      })();
+
+                      return (
+                        <div
+                          key={item.id}
+                          onClick={() => handleEditItem(item)}
+                          className="bg-card border rounded-lg p-4 relative group hover:shadow-md hover:border-primary/50 transition-all cursor-pointer"
+                        >
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="absolute top-2 right-2 w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="bg-background border shadow-lg z-50">
+                              <DropdownMenuItem
+                                className="cursor-pointer"
+                                onClick={(e) => { e.stopPropagation(); handleEditItem(item); }}
+                              >
+                                Editar
+                              </DropdownMenuItem>
+                              {canReset && (
+                                <DropdownMenuItem
+                                  className="cursor-pointer"
+                                  onClick={(e) => { e.stopPropagation(); resetItemMutation.mutate(item.id); }}
+                                >
+                                  <RotateCcw className="w-3.5 h-3.5 mr-2" />
+                                  Restaurar padrão
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem
+                                className="text-destructive cursor-pointer"
+                                onClick={(e) => { e.stopPropagation(); removeItemMutation.mutate(item.id); }}
+                              >
+                                Remover
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+
+                          <div className="aspect-square rounded-lg mb-3 flex items-center justify-center overflow-hidden">
+                            {template?.image_url ? (
+                              <img
+                                src={getStorageUrl(template.image_url)}
+                                alt={template.name}
+                                className="w-full h-full object-contain"
+                              />
+                            ) : (
+                              <div className="text-3xl text-muted-foreground/30 bg-muted w-full h-full flex items-center justify-center">📦</div>
+                            )}
+                          </div>
+
+                          {isGlass && item.notes && (
+                            <h4 className="font-bold text-sm text-foreground truncate text-center mb-1">
+                              {item.notes}
+                            </h4>
+                          )}
+                          <h4 className={cn(
+                            'font-medium text-xs truncate text-center',
+                            isGlass && item.notes ? 'text-muted-foreground' : 'text-primary'
+                          )}>
+                            {template?.name}
+                          </h4>
+
+                          {isGlass && (item.width_formula || item.height_formula) && (
+                            <div className="mt-2 space-y-1">
+                              {item.width_formula && (
+                                <div className="flex items-center justify-center gap-1">
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                                    L: {item.width_formula}
+                                  </span>
+                                </div>
+                              )}
+                              {item.height_formula && (
+                                <div className="flex items-center justify-center gap-1">
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                                    A: {item.height_formula}
+                                  </span>
+                                </div>
+                              )}
+                              {item.side && (
+                                <div className="flex items-center justify-center gap-1">
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                                    Lado: {item.side}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {!isGlass && formulaType && (
+                            <div className="flex justify-center mt-1 gap-1">
+                              <span className={cn(
+                                'text-[10px] px-2 py-0.5 rounded-full font-medium',
+                                formulaType === 'Altura'
+                                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                                  : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                              )}>
+                                {formulaType}
+                              </span>
+                              {item.side && (
+                                <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                                  Lado: {item.side}
+                                </span>
+                              )}
+                            </div>
+                          )}
+
+                          {!isGlass && (
+                            <p className="text-xs text-muted-foreground text-center mt-1 truncate">
+                              {item.quantity_formula}
+                            </p>
+                          )}
+
+                          {isProfile && (
+                            <div className="flex justify-center gap-2 mt-3">
+                              <span className="text-xs font-medium text-foreground bg-primary/10 px-2 py-1 rounded">
+                                {item.pieces_quantity || 1}x peças
+                              </span>
+                              <span className="text-xs font-medium text-foreground bg-muted px-2 py-1 rounded">
+                                {item.cut_angle || 90}°
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {items.length === 0 && (
+                      <div className="col-span-full text-center py-12 text-muted-foreground">
+                        Nenhum item vinculado. Clique em "Adicionar item" para vincular.
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+              );
+            })}
+          </Tabs>
+        </div>
+
 
         {/* Composition-Based Pricing (Visible if composition selected) */}
         {pricingType === 'composition' && (
