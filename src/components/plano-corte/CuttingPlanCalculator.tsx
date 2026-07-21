@@ -127,7 +127,7 @@ export function CuttingPlanCalculator() {
 
   const hasCuttingPlan = selectedTemplateInfo ? (selectedTemplateInfo as any).has_cutting_plan !== false : true;
 
-  const { data: productItems } = useQuery({
+  const { data: productItems, error: productItemsError, isLoading: isLoadingItems } = useQuery({
     queryKey: ['product-template-items-cutting', selectedProduct, currentCompany?.id, isSaasAdmin],
     queryFn: async () => {
       if (!selectedProduct) return [];
@@ -138,7 +138,10 @@ export function CuttingPlanCalculator() {
         _company_id: !isSaasAdmin && currentCompany?.id ? currentCompany.id : null,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[PlanoDeCorte] Erro ao carregar itens do plano:', error);
+        throw error;
+      }
 
       // Reshape flat RPC rows into the nested structure the calculator expects
       return (data || []).map((row: any) => ({
@@ -164,6 +167,7 @@ export function CuttingPlanCalculator() {
       }));
     },
     enabled: !!selectedProduct && hasCuttingPlan,
+    retry: false,
   });
 
 
