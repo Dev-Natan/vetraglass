@@ -391,13 +391,15 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
   const { data: productsProfileStock } = useProductsProfileStock(filteredProductIds);
 
   const selectedProduct = filteredProducts?.find(p => p.id === selectedProductId);
+  const selectedProductTemplateId = selectedProduct?.product_template_id
+    || (selectedProductId.startsWith('template:') ? selectedProductId.replace('template:', '') : null);
   const companyProduct = selectedProduct?.company_product;
 
   // Live change: emite mudanças em tempo real (usado pelo Simulador de Plano de Corte)
   useEffect(() => {
     if (!onLiveChange) return;
     onLiveChange({
-      product_template_id: selectedProduct?.is_custom ? null : (selectedProduct?.product_template_id || null),
+      product_template_id: selectedProduct?.is_custom ? null : selectedProductTemplateId,
       name: selectedProduct?.name || '',
       image_url: selectedProduct?.image_url || null,
       width,
@@ -405,7 +407,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
       quantity,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedProductId, selectedProduct?.name, selectedProduct?.image_url, selectedProduct?.product_template_id, width, height, quantity]);
+  }, [selectedProductId, selectedProductTemplateId, selectedProduct?.name, selectedProduct?.image_url, width, height, quantity]);
 
   // Fetch glass prices for selected product
   const { data: productGlassPrices } = useQuery({
