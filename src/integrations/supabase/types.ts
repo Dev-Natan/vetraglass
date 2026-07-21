@@ -5598,6 +5598,7 @@ export type Database = {
           item_template_id: string
           loss_percent: number | null
           notes: string | null
+          parent_item_id: string | null
           pieces_formula: string | null
           pieces_quantity: number
           product_template_id: string
@@ -5620,6 +5621,7 @@ export type Database = {
           item_template_id: string
           loss_percent?: number | null
           notes?: string | null
+          parent_item_id?: string | null
           pieces_formula?: string | null
           pieces_quantity?: number
           product_template_id: string
@@ -5642,6 +5644,7 @@ export type Database = {
           item_template_id?: string
           loss_percent?: number | null
           notes?: string | null
+          parent_item_id?: string | null
           pieces_formula?: string | null
           pieces_quantity?: number
           product_template_id?: string
@@ -5673,6 +5676,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "product_template_items_parent_item_id_fkey"
+            columns: ["parent_item_id"]
+            isOneToOne: false
+            referencedRelation: "product_template_items"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "product_template_items_product_template_id_fkey"
             columns: ["product_template_id"]
             isOneToOne: false
@@ -5692,6 +5702,7 @@ export type Database = {
           cfop_venda: string | null
           cfop_venda_interestadual: string | null
           codigo_servico: string | null
+          company_id: string | null
           contramarco: string | null
           cor_componentes: string | null
           corte_contramarco: string | null
@@ -5714,6 +5725,7 @@ export type Database = {
           name: string
           ncm: string | null
           origem: string | null
+          parent_template_id: string | null
           reforco: string | null
           updated_at: string
         }
@@ -5727,6 +5739,7 @@ export type Database = {
           cfop_venda?: string | null
           cfop_venda_interestadual?: string | null
           codigo_servico?: string | null
+          company_id?: string | null
           contramarco?: string | null
           cor_componentes?: string | null
           corte_contramarco?: string | null
@@ -5749,6 +5762,7 @@ export type Database = {
           name: string
           ncm?: string | null
           origem?: string | null
+          parent_template_id?: string | null
           reforco?: string | null
           updated_at?: string
         }
@@ -5762,6 +5776,7 @@ export type Database = {
           cfop_venda?: string | null
           cfop_venda_interestadual?: string | null
           codigo_servico?: string | null
+          company_id?: string | null
           contramarco?: string | null
           cor_componentes?: string | null
           corte_contramarco?: string | null
@@ -5784,6 +5799,7 @@ export type Database = {
           name?: string
           ncm?: string | null
           origem?: string | null
+          parent_template_id?: string | null
           reforco?: string | null
           updated_at?: string
         }
@@ -5794,6 +5810,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "product_categories"
             referencedColumns: ["slug"]
+          },
+          {
+            foreignKeyName: "product_templates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_templates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_templates_parent_template_id_fkey"
+            columns: ["parent_template_id"]
+            isOneToOne: false
+            referencedRelation: "product_templates"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -8669,6 +8706,52 @@ export type Database = {
           name: string
         }[]
       }
+      list_effective_product_templates: {
+        Args: { _company_id: string }
+        Returns: {
+          acabamento: string | null
+          aliquota_iss: number | null
+          arremate: string | null
+          base_price: number | null
+          category: string
+          cest: string | null
+          cfop_venda: string | null
+          cfop_venda_interestadual: string | null
+          codigo_servico: string | null
+          company_id: string | null
+          contramarco: string | null
+          cor_componentes: string | null
+          corte_contramarco: string | null
+          created_at: string
+          default_glasses_count: number | null
+          default_leaves_count: number | null
+          default_panels_count: number | null
+          default_sides_count: number | null
+          description: string | null
+          has_cutting_plan: boolean
+          has_multiple_sides: boolean | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          linha: string | null
+          max_height: number | null
+          max_width: number | null
+          min_height: number | null
+          min_width: number | null
+          name: string
+          ncm: string | null
+          origem: string | null
+          parent_template_id: string | null
+          reforco: string | null
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "product_templates"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       list_saas_admins: {
         Args: never
         Returns: {
@@ -8800,8 +8883,13 @@ export type Database = {
         Args: { p_company_product_id: string; p_user_id: string }
         Returns: Json
       }
+      reset_composition_item: { Args: { _item_id: string }; Returns: undefined }
       resolve_product_linha_slug: { Args: { _input: string }; Returns: string }
       revoke_saas_admin: { Args: { _user_id: string }; Returns: undefined }
+      save_composition_item: {
+        Args: { _company_id: string; _item_id: string; _patch: Json }
+        Returns: string
+      }
       seed_default_financial_categories: {
         Args: { _company_id: string }
         Returns: undefined
