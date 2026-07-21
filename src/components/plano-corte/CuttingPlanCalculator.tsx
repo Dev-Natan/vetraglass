@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { resolveProductImageUrl } from '@/utils/imageUrl';
 import { Printer, Download, Tags, BarChart3, Settings2, RotateCcw, Scissors } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -110,29 +110,19 @@ export function CuttingPlanCalculator() {
   };
 
 
-  const { data: selectedTemplateInfo } = useQuery({
-    queryKey: ['product-template-has-cutting', selectedProduct],
-    queryFn: async () => {
-      if (!selectedProduct) return null;
-      const { data, error } = await supabase
-        .from('product_templates')
-        .select('has_cutting_plan')
-        .eq('id', selectedProduct)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!selectedProduct,
-  });
-
-  const hasCuttingPlan = selectedTemplateInfo ? (selectedTemplateInfo as any).has_cutting_plan !== false : true;
-
-  const { data: productItems, error: productItemsError, isLoading: isLoadingItems } = useQuery({
+  const {
+    data: productItems,
+    error: productItemsError,
+    isLoading: isLoadingItems,
+    isFetching: isFetchingItems,
+    refetch: refetchProductItems,
+  } = useQuery({
     queryKey: ['product-template-items-cutting', selectedProduct, currentCompany?.id, isSaasAdmin],
     queryFn: async () => {
       if (!selectedProduct) return [];
 
-      // Backend-protected RPC: only returns items when has_cutting_plan = true
+      // The sandbox must always ask the backend for the selected product composition.
+      // Product flags and company catalog activation must not block plan rendering here.
       const { data, error } = await supabase.rpc('get_cutting_plan_items', {
         _template_id: selectedProduct,
         _company_id: !isSaasAdmin && currentCompany?.id ? currentCompany.id : null,
@@ -166,9 +156,16 @@ export function CuttingPlanCalculator() {
           : null,
       }));
     },
-    enabled: !!selectedProduct && hasCuttingPlan,
+    enabled: Boolean(selectedProduct),
     retry: false,
   });
+
+  useEffect(() => {
+    if (!selectedProduct) return;
+
+    setActiveTab('cortes');
+    refetchProductItems();
+  }, [selectedProduct, refetchProductItems]);
 
 
 
@@ -662,18 +659,12 @@ export function CuttingPlanCalculator() {
           </TabsList>
 
           <TabsContent value="cortes" className="mt-4 space-y-6">
-            {selectedProduct && !hasCuttingPlan ? (
-              <div className="text-center py-12 border border-dashed rounded-lg bg-muted/30">
-                <Scissors className="w-10 h-10 mx-auto mb-3 text-muted-foreground/60" />
-                <p className="text-sm font-medium">Este produto não possui plano de corte configurado.</p>
-                <p className="text-xs text-muted-foreground mt-1">Ative a opção "Este produto possui plano de corte?" no cadastro do produto para habilitá-lo aqui.</p>
-              </div>
-            ) : productItemsError ? (
+            {productItemsError ? (
               <div className="text-center py-12 border border-dashed border-destructive/40 rounded-lg bg-destructive/5">
                 <p className="text-sm font-semibold text-destructive">Falha ao carregar a composição do produto.</p>
                 <p className="text-xs text-muted-foreground mt-1">{(productItemsError as Error).message}</p>
               </div>
-            ) : selectedProduct && isLoadingItems ? (
+            ) : selectedProduct && (isLoadingItems || isFetchingItems) ? (
               <div className="text-center py-12 text-muted-foreground text-sm">
                 Carregando composição…
               </div>
