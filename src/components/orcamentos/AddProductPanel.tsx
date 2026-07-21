@@ -227,7 +227,6 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
           default_sides_count
         `)
         .eq('is_active', true)
-        .eq('has_cutting_plan', true)
         .order('name');
 
       if (error) throw error;
@@ -300,7 +299,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
         sides_count: template.default_sides_count || 1,
       }));
 
-    return [...companyCatalog, ...templateCatalog].filter(product => product.has_cutting_plan !== false);
+    return [...companyCatalog, ...templateCatalog];
   }, [companyProducts, globalCuttingTemplates, mode]);
 
   // Dedupe por slug oficial: qualquer variação textual (com/sem acento, com/sem underscore)
@@ -357,11 +356,6 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     if (!selectedLinha) return [];
 
     let products = [...catalogProducts];
-
-    if (mode === 'cutting') {
-      products = products.filter(p => p.has_cutting_plan !== false);
-    }
-
 
     products = products.filter(p => productMatchesLinha(p.linha, selectedLinha));
 
