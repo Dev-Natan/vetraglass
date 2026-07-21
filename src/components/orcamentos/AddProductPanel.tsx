@@ -393,7 +393,9 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
   useEffect(() => {
     if (!onLiveChange) return;
     onLiveChange({
-      product_template_id: selectedProduct?.is_custom ? null : selectedProductTemplateId,
+      product_template_id: mode === 'cutting'
+        ? selectedProductTemplateId
+        : selectedProduct?.is_custom ? null : selectedProductTemplateId,
       name: selectedProduct?.name || '',
       image_url: selectedProduct?.image_url || null,
       width,
