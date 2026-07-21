@@ -62,13 +62,14 @@ export function CuttingPlanCalculator() {
     quantity: number;
   }) => {
     const nextId = payload.product_template_id || '';
-    setSelectedProduct((prev) => {
-      if (prev !== nextId) {
-        setProfileOverrides({});
-        setGlassOverrides({});
-      }
-      return nextId;
-    });
+    // NÃO chamar outros setStates dentro do updater de setState (anti-pattern
+    // que em StrictMode roda duas vezes e pode "sumir" com overrides digitados).
+    if (nextId !== selectedProduct) {
+      setProfileOverrides({});
+      setGlassOverrides({});
+      setCompletedItems(new Set());
+    }
+    setSelectedProduct(nextId);
     setProductName(payload.name);
     setProductImage(payload.image_url || null);
     setWidth(Number(payload.width) || 0);
