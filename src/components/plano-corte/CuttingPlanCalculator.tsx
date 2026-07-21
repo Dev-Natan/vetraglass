@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { resolveProductImageUrl } from '@/utils/imageUrl';
-import { Printer, Download, Tags, BarChart3, Settings2, RotateCcw, Scissors } from 'lucide-react';
+import { Printer, Download, Tags, BarChart3, Settings2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery } from '@tanstack/react-query';
@@ -664,7 +664,7 @@ export function CuttingPlanCalculator() {
                 <p className="text-sm font-semibold text-destructive">Falha ao carregar a composição do produto.</p>
                 <p className="text-xs text-muted-foreground mt-1">{(productItemsError as Error).message}</p>
               </div>
-            ) : selectedProduct && (isLoadingItems || isFetchingItems) ? (
+            ) : selectedProduct && (isLoadingItems || (isFetchingItems && !productItems)) ? (
               <div className="text-center py-12 text-muted-foreground text-sm">
                 Carregando composição…
               </div>
