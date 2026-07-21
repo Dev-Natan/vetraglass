@@ -393,7 +393,9 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
   useEffect(() => {
     if (!onLiveChange) return;
     onLiveChange({
-      product_template_id: selectedProduct?.is_custom ? null : selectedProductTemplateId,
+      product_template_id: mode === 'cutting'
+        ? selectedProductTemplateId
+        : selectedProduct?.is_custom ? null : selectedProductTemplateId,
       name: selectedProduct?.name || '',
       image_url: selectedProduct?.image_url || null,
       width,
@@ -643,7 +645,9 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
       : (selectedAluminumColor === 'Outros' ? customAluminumColor : selectedAluminumColor);
 
     onAdd({
-      product_template_id: selectedProduct.is_custom ? null : selectedProduct.product_template_id,
+      product_template_id: mode === 'cutting'
+        ? selectedProductTemplateId
+        : selectedProduct.is_custom ? null : selectedProduct.product_template_id,
       company_product_id: companyProduct?.id,
       name: useVao ? `${selectedProduct.name} [Vão: ${vaoWidth}x${vaoHeight}mm]` : selectedProduct.name,
       base_price: (productUsesComposition && compositionPricing.isReady) ? compositionPricing.compositionCostPerSqm : basePrice,
