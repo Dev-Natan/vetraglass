@@ -41,3 +41,6 @@ verify_jwt = true
 [functions.admin-delete-company]
 verify_jwt = false
 
+
+[functions.migrate-helper]
+verify_jwt = false
