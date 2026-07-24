@@ -761,6 +761,8 @@ export type Database = {
           email: string | null
           enable_presentation_page: boolean
           id: string
+          inscricao_estadual: string | null
+          inscricao_municipal: string | null
           login_token: string | null
           logo_size: number | null
           logo_url: string | null
@@ -772,6 +774,7 @@ export type Database = {
           presentation_data: Json | null
           presentation_enabled: boolean
           presentation_template: string | null
+          regime_tributario: string | null
           settings: Json
           state: string | null
           street: string | null
@@ -799,6 +802,8 @@ export type Database = {
           email?: string | null
           enable_presentation_page?: boolean
           id?: string
+          inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
           login_token?: string | null
           logo_size?: number | null
           logo_url?: string | null
@@ -810,6 +815,7 @@ export type Database = {
           presentation_data?: Json | null
           presentation_enabled?: boolean
           presentation_template?: string | null
+          regime_tributario?: string | null
           settings?: Json
           state?: string | null
           street?: string | null
@@ -837,6 +843,8 @@ export type Database = {
           email?: string | null
           enable_presentation_page?: boolean
           id?: string
+          inscricao_estadual?: string | null
+          inscricao_municipal?: string | null
           login_token?: string | null
           logo_size?: number | null
           logo_url?: string | null
@@ -848,6 +856,7 @@ export type Database = {
           presentation_data?: Json | null
           presentation_enabled?: boolean
           presentation_template?: string | null
+          regime_tributario?: string | null
           settings?: Json
           state?: string | null
           street?: string | null
