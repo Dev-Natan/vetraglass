@@ -21,6 +21,7 @@ import {
   
   Tags,
   Image as ImageIcon,
+  Database,
   
 } from "lucide-react";
 import {
