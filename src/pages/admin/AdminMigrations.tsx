@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Database, Search, CheckCircle2, Clock, FileCode, Copy } from "lucide-react";
+import { Database, Search, CheckCircle2, Clock, FileCode, Copy, Download } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface MigrationRow {
@@ -75,6 +75,23 @@ export default function AdminMigrations() {
     if (!m.preview) return;
     await navigator.clipboard.writeText(m.preview);
     toast({ title: "SQL copiado", description: `Migração ${m.version}` });
+  };
+
+  const downloadSql = (m: MigrationRow) => {
+    if (!m.preview) return;
+    const safeName = (m.name ?? "migration").replace(/[^a-z0-9_-]+/gi, "_");
+    const filename = `${m.version}_${safeName}.sql`;
+    const header = `-- Migração: ${m.name ?? ""}\n-- Versão: ${m.version}\n-- Aplicada em: ${m.applied_at ?? "—"}\n-- Comandos: ${m.statements_count}\n\n`;
+    const blob = new Blob([header + m.preview], { type: "text/sql;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast({ title: "Download iniciado", description: filename });
   };
 
   return (
@@ -232,10 +249,16 @@ export default function AdminMigrations() {
                   <p className="text-xs text-muted-foreground">
                     SQL ({selected.statements_count} comando{selected.statements_count === 1 ? "" : "s"})
                   </p>
-                  <Button size="sm" variant="outline" onClick={() => copyPreview(selected)}>
-                    <Copy className="w-3 h-3 mr-1" />
-                    Copiar
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" variant="outline" onClick={() => copyPreview(selected)} disabled={!selected.preview}>
+                      <Copy className="w-3 h-3 mr-1" />
+                      Copiar
+                    </Button>
+                    <Button size="sm" onClick={() => downloadSql(selected)} disabled={!selected.preview}>
+                      <Download className="w-3 h-3 mr-1" />
+                      Baixar .sql
+                    </Button>
+                  </div>
                 </div>
                 <pre className="bg-muted border border-border p-4 rounded-lg text-xs overflow-x-auto font-mono leading-relaxed whitespace-pre-wrap">
                   {selected.preview || "(vazio)"}
