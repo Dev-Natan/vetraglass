@@ -21,6 +21,7 @@ import {
   
   Tags,
   Image as ImageIcon,
+  Database,
   
 } from "lucide-react";
 import {
@@ -72,6 +73,22 @@ const adminMenuItems = [
     title: "Feedbacks",
     path: "/admin/feedbacks",
     icon: Megaphone,
+  },
+  {
+    title: "Suporte",
+    path: "/admin/support",
+    icon: Headphones,
+    showBadge: true,
+  },
+  {
+    title: "Feedbacks",
+    path: "/admin/feedbacks",
+    icon: Megaphone,
+  },
+  {
+    title: "Migrações",
+    path: "/admin/migrations",
+    icon: Database,
   },
   {
     title: "Configurações",
