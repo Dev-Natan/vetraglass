@@ -327,6 +327,11 @@ export type Database = {
           entity_type: string | null
           id: string
           ip_address: string | null
+          metadata: Json | null
+          new_data: Json | null
+          old_data: Json | null
+          record_id: string | null
+          table_name: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -339,6 +344,11 @@ export type Database = {
           entity_type?: string | null
           id?: string
           ip_address?: string | null
+          metadata?: Json | null
+          new_data?: Json | null
+          old_data?: Json | null
+          record_id?: string | null
+          table_name?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -351,6 +361,11 @@ export type Database = {
           entity_type?: string | null
           id?: string
           ip_address?: string | null
+          metadata?: Json | null
+          new_data?: Json | null
+          old_data?: Json | null
+          record_id?: string | null
+          table_name?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -711,9 +726,12 @@ export type Database = {
           address_number: string | null
           address_state: string | null
           address_street: string | null
+          city: string | null
           cnpj: string | null
           created_at: string
+          default_presentation_text: string | null
           email: string | null
+          enable_presentation_page: boolean
           id: string
           login_token: string | null
           logo_size: string | null
@@ -725,11 +743,13 @@ export type Database = {
           presentation_enabled: boolean
           presentation_template: string | null
           settings: Json
+          state: string | null
           stripe_customer_id: string | null
           subscription_plan: string | null
           subscription_status: string | null
           trial_ends_at: string | null
           updated_at: string
+          zip_code: string | null
         }
         Insert: {
           address?: string | null
@@ -740,9 +760,12 @@ export type Database = {
           address_number?: string | null
           address_state?: string | null
           address_street?: string | null
+          city?: string | null
           cnpj?: string | null
           created_at?: string
+          default_presentation_text?: string | null
           email?: string | null
+          enable_presentation_page?: boolean
           id?: string
           login_token?: string | null
           logo_size?: string | null
@@ -754,11 +777,13 @@ export type Database = {
           presentation_enabled?: boolean
           presentation_template?: string | null
           settings?: Json
+          state?: string | null
           stripe_customer_id?: string | null
           subscription_plan?: string | null
           subscription_status?: string | null
           trial_ends_at?: string | null
           updated_at?: string
+          zip_code?: string | null
         }
         Update: {
           address?: string | null
@@ -769,9 +794,12 @@ export type Database = {
           address_number?: string | null
           address_state?: string | null
           address_street?: string | null
+          city?: string | null
           cnpj?: string | null
           created_at?: string
+          default_presentation_text?: string | null
           email?: string | null
+          enable_presentation_page?: boolean
           id?: string
           login_token?: string | null
           logo_size?: string | null
@@ -783,11 +811,13 @@ export type Database = {
           presentation_enabled?: boolean
           presentation_template?: string | null
           settings?: Json
+          state?: string | null
           stripe_customer_id?: string | null
           subscription_plan?: string | null
           subscription_status?: string | null
           trial_ends_at?: string | null
           updated_at?: string
+          zip_code?: string | null
         }
         Relationships: []
       }
@@ -1231,6 +1261,13 @@ export type Database = {
           channel_inapp: boolean
           company_id: string
           created_at: string
+          daily_digest: boolean
+          email_expense_due: boolean
+          email_low_stock: boolean
+          email_new_quote: boolean
+          email_order_status: boolean
+          email_payment_received: boolean
+          email_quote_approved: boolean
           id: string
           quiet_hours_end: string | null
           quiet_hours_start: string | null
@@ -1240,12 +1277,20 @@ export type Database = {
           reminder_receivables: boolean
           settings: Json | null
           updated_at: string
+          weekly_report: boolean
         }
         Insert: {
           channel_email?: boolean
           channel_inapp?: boolean
           company_id: string
           created_at?: string
+          daily_digest?: boolean
+          email_expense_due?: boolean
+          email_low_stock?: boolean
+          email_new_quote?: boolean
+          email_order_status?: boolean
+          email_payment_received?: boolean
+          email_quote_approved?: boolean
           id?: string
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
@@ -1255,12 +1300,20 @@ export type Database = {
           reminder_receivables?: boolean
           settings?: Json | null
           updated_at?: string
+          weekly_report?: boolean
         }
         Update: {
           channel_email?: boolean
           channel_inapp?: boolean
           company_id?: string
           created_at?: string
+          daily_digest?: boolean
+          email_expense_due?: boolean
+          email_low_stock?: boolean
+          email_new_quote?: boolean
+          email_order_status?: boolean
+          email_payment_received?: boolean
+          email_quote_approved?: boolean
           id?: string
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
@@ -1270,6 +1323,7 @@ export type Database = {
           reminder_receivables?: boolean
           settings?: Json | null
           updated_at?: string
+          weekly_report?: boolean
         }
         Relationships: [
           {
@@ -1283,10 +1337,15 @@ export type Database = {
       }
       company_notifications: {
         Row: {
+          action_at: string | null
+          action_by: string | null
+          action_taken: boolean
           action_url: string | null
           company_id: string
           created_at: string
+          from_user_id: string | null
           id: string
+          is_read: boolean
           message: string | null
           metadata: Json | null
           read_at: string | null
@@ -1294,14 +1353,21 @@ export type Database = {
           reference_type: string | null
           severity: string
           title: string
+          to_role: string | null
           type: string
+          updated_at: string
           user_id: string | null
         }
         Insert: {
+          action_at?: string | null
+          action_by?: string | null
+          action_taken?: boolean
           action_url?: string | null
           company_id: string
           created_at?: string
+          from_user_id?: string | null
           id?: string
+          is_read?: boolean
           message?: string | null
           metadata?: Json | null
           read_at?: string | null
@@ -1309,14 +1375,21 @@ export type Database = {
           reference_type?: string | null
           severity?: string
           title: string
+          to_role?: string | null
           type: string
+          updated_at?: string
           user_id?: string | null
         }
         Update: {
+          action_at?: string | null
+          action_by?: string | null
+          action_taken?: boolean
           action_url?: string | null
           company_id?: string
           created_at?: string
+          from_user_id?: string | null
           id?: string
+          is_read?: boolean
           message?: string | null
           metadata?: Json | null
           read_at?: string | null
@@ -1324,7 +1397,9 @@ export type Database = {
           reference_type?: string | null
           severity?: string
           title?: string
+          to_role?: string | null
           type?: string
+          updated_at?: string
           user_id?: string | null
         }
         Relationships: [
@@ -1708,12 +1783,16 @@ export type Database = {
           company_id: string
           created_at: string
           id: string
+          lockout_duration_minutes: number
           lockout_minutes: number
           max_login_attempts: number
+          password_expiry_days: number
           password_min_length: number
           require_2fa: boolean
+          require_strong_password: boolean
           session_timeout_minutes: number
           settings: Json | null
+          two_factor_enabled: boolean
           updated_at: string
         }
         Insert: {
@@ -1721,12 +1800,16 @@ export type Database = {
           company_id: string
           created_at?: string
           id?: string
+          lockout_duration_minutes?: number
           lockout_minutes?: number
           max_login_attempts?: number
+          password_expiry_days?: number
           password_min_length?: number
           require_2fa?: boolean
+          require_strong_password?: boolean
           session_timeout_minutes?: number
           settings?: Json | null
+          two_factor_enabled?: boolean
           updated_at?: string
         }
         Update: {
@@ -1734,12 +1817,16 @@ export type Database = {
           company_id?: string
           created_at?: string
           id?: string
+          lockout_duration_minutes?: number
           lockout_minutes?: number
           max_login_attempts?: number
+          password_expiry_days?: number
           password_min_length?: number
           require_2fa?: boolean
+          require_strong_password?: boolean
           session_timeout_minutes?: number
           settings?: Json | null
+          two_factor_enabled?: boolean
           updated_at?: string
         }
         Relationships: [
@@ -2076,6 +2163,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_commissions_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
             referencedColumns: ["id"]
           },
           {
@@ -2893,14 +2987,20 @@ export type Database = {
           consumed_at: string
           cost: number | null
           created_at: string
+          formula_used: string | null
           id: string
+          input_height: number | null
+          input_quantity: number | null
+          input_width: number | null
           item_name: string | null
           item_template_id: string | null
           item_type: string | null
           name: string | null
           ordem_servico_id: string | null
+          os_item_id: string | null
           quantity: number | null
           quantity_calculated: number | null
+          quote_item_id: string | null
           status: string | null
           stock_movement_id: string | null
           stock_reservation_id: string | null
@@ -2912,14 +3012,20 @@ export type Database = {
           consumed_at?: string
           cost?: number | null
           created_at?: string
+          formula_used?: string | null
           id?: string
+          input_height?: number | null
+          input_quantity?: number | null
+          input_width?: number | null
           item_name?: string | null
           item_template_id?: string | null
           item_type?: string | null
           name?: string | null
           ordem_servico_id?: string | null
+          os_item_id?: string | null
           quantity?: number | null
           quantity_calculated?: number | null
+          quote_item_id?: string | null
           status?: string | null
           stock_movement_id?: string | null
           stock_reservation_id?: string | null
@@ -2931,14 +3037,20 @@ export type Database = {
           consumed_at?: string
           cost?: number | null
           created_at?: string
+          formula_used?: string | null
           id?: string
+          input_height?: number | null
+          input_quantity?: number | null
+          input_width?: number | null
           item_name?: string | null
           item_template_id?: string | null
           item_type?: string | null
           name?: string | null
           ordem_servico_id?: string | null
+          os_item_id?: string | null
           quantity?: number | null
           quantity_calculated?: number | null
+          quote_item_id?: string | null
           status?: string | null
           stock_movement_id?: string | null
           stock_reservation_id?: string | null
@@ -3251,12 +3363,14 @@ export type Database = {
           company_id: string
           created_at: string
           created_by: string | null
+          current_stage: string | null
           customer_address: string | null
           customer_document: string | null
           customer_email: string | null
           customer_name: string
           customer_phone: string | null
           delivery_date: string | null
+          estimated_end: string | null
           id: string
           installation_date: string | null
           installation_status: string | null
@@ -3265,9 +3379,11 @@ export type Database = {
           paid_amount: number
           payment_status: string | null
           pending_amount: number
+          priority: string | null
           production_status: string | null
           quote_id: string | null
           sale_id: string | null
+          stages: Json | null
           status: string
           technical_notes: string | null
           total_amount: number
@@ -3281,12 +3397,14 @@ export type Database = {
           company_id: string
           created_at?: string
           created_by?: string | null
+          current_stage?: string | null
           customer_address?: string | null
           customer_document?: string | null
           customer_email?: string | null
           customer_name: string
           customer_phone?: string | null
           delivery_date?: string | null
+          estimated_end?: string | null
           id?: string
           installation_date?: string | null
           installation_status?: string | null
@@ -3295,9 +3413,11 @@ export type Database = {
           paid_amount?: number
           payment_status?: string | null
           pending_amount?: number
+          priority?: string | null
           production_status?: string | null
           quote_id?: string | null
           sale_id?: string | null
+          stages?: Json | null
           status?: string
           technical_notes?: string | null
           total_amount?: number
@@ -3311,12 +3431,14 @@ export type Database = {
           company_id?: string
           created_at?: string
           created_by?: string | null
+          current_stage?: string | null
           customer_address?: string | null
           customer_document?: string | null
           customer_email?: string | null
           customer_name?: string
           customer_phone?: string | null
           delivery_date?: string | null
+          estimated_end?: string | null
           id?: string
           installation_date?: string | null
           installation_status?: string | null
@@ -3325,9 +3447,11 @@ export type Database = {
           paid_amount?: number
           payment_status?: string | null
           pending_amount?: number
+          priority?: string | null
           production_status?: string | null
           quote_id?: string | null
           sale_id?: string | null
+          stages?: Json | null
           status?: string
           technical_notes?: string | null
           total_amount?: number
@@ -3380,14 +3504,22 @@ export type Database = {
           company_id: string
           created_at: string
           cuts: Json | null
+          cuts_data: Json | null
+          glass_cuts_data: Json | null
           id: string
           item_name: string
+          item_status: Json | null
           item_template_id: string | null
+          metadata: Json | null
           ordem_servico_id: string
           os_item_id: string | null
+          product_name: string | null
+          profile_name: string | null
           progress: Json | null
+          quantity: number | null
           status: string | null
           waste_mm: number | null
+          waste_percent: number | null
         }
         Insert: {
           bar_length_mm?: number | null
@@ -3397,14 +3529,22 @@ export type Database = {
           company_id: string
           created_at?: string
           cuts?: Json | null
+          cuts_data?: Json | null
+          glass_cuts_data?: Json | null
           id?: string
           item_name: string
+          item_status?: Json | null
           item_template_id?: string | null
+          metadata?: Json | null
           ordem_servico_id: string
           os_item_id?: string | null
+          product_name?: string | null
+          profile_name?: string | null
           progress?: Json | null
+          quantity?: number | null
           status?: string | null
           waste_mm?: number | null
+          waste_percent?: number | null
         }
         Update: {
           bar_length_mm?: number | null
@@ -3414,14 +3554,22 @@ export type Database = {
           company_id?: string
           created_at?: string
           cuts?: Json | null
+          cuts_data?: Json | null
+          glass_cuts_data?: Json | null
           id?: string
           item_name?: string
+          item_status?: Json | null
           item_template_id?: string | null
+          metadata?: Json | null
           ordem_servico_id?: string
           os_item_id?: string | null
+          product_name?: string | null
+          profile_name?: string | null
           progress?: Json | null
+          quantity?: number | null
           status?: string | null
           waste_mm?: number | null
+          waste_percent?: number | null
         }
         Relationships: [
           {
@@ -3588,6 +3736,10 @@ export type Database = {
           created_at: string
           glass_color: string | null
           glass_thickness: number | null
+          height_production: number | null
+          height_production_b: number | null
+          height_sold: number | null
+          height_sold_b: number | null
           id: string
           item_status: Json | null
           largura_producao: number
@@ -3598,12 +3750,17 @@ export type Database = {
           largura_venda_c: number | null
           last_recalculated_at: string | null
           os_id: string
+          product_id: string | null
           product_name: string
           product_template_id: string | null
           quantity: number
           quote_item_id: string | null
           recalculation_required: boolean | null
           technical_notes: string | null
+          width_production: number | null
+          width_production_b: number | null
+          width_sold: number | null
+          width_sold_b: number | null
         }
         Insert: {
           altura_producao?: number
@@ -3617,6 +3774,10 @@ export type Database = {
           created_at?: string
           glass_color?: string | null
           glass_thickness?: number | null
+          height_production?: number | null
+          height_production_b?: number | null
+          height_sold?: number | null
+          height_sold_b?: number | null
           id?: string
           item_status?: Json | null
           largura_producao?: number
@@ -3627,12 +3788,17 @@ export type Database = {
           largura_venda_c?: number | null
           last_recalculated_at?: string | null
           os_id: string
+          product_id?: string | null
           product_name: string
           product_template_id?: string | null
           quantity?: number
           quote_item_id?: string | null
           recalculation_required?: boolean | null
           technical_notes?: string | null
+          width_production?: number | null
+          width_production_b?: number | null
+          width_sold?: number | null
+          width_sold_b?: number | null
         }
         Update: {
           altura_producao?: number
@@ -3646,6 +3812,10 @@ export type Database = {
           created_at?: string
           glass_color?: string | null
           glass_thickness?: number | null
+          height_production?: number | null
+          height_production_b?: number | null
+          height_sold?: number | null
+          height_sold_b?: number | null
           id?: string
           item_status?: Json | null
           largura_producao?: number
@@ -3656,12 +3826,17 @@ export type Database = {
           largura_venda_c?: number | null
           last_recalculated_at?: string | null
           os_id?: string
+          product_id?: string | null
           product_name?: string
           product_template_id?: string | null
           quantity?: number
           quote_item_id?: string | null
           recalculation_required?: boolean | null
           technical_notes?: string | null
+          width_production?: number | null
+          width_production_b?: number | null
+          width_sold?: number | null
+          width_sold_b?: number | null
         }
         Relationships: [
           {
@@ -3696,6 +3871,7 @@ export type Database = {
       }
       os_materials: {
         Row: {
+          bar_length_mm: number | null
           bars_needed: number | null
           color: string | null
           company_id: string
@@ -3706,16 +3882,20 @@ export type Database = {
           item_template_id: string | null
           item_type: string | null
           metadata: Json | null
+          notes: string | null
           ordem_servico_id: string
           os_item_id: string | null
           pieces_count: number | null
+          profile_name: string | null
           quantity: number | null
           total_cost: number | null
           total_length_mm: number | null
           unit: string | null
           unit_cost: number | null
+          waste_mm: number | null
         }
         Insert: {
+          bar_length_mm?: number | null
           bars_needed?: number | null
           color?: string | null
           company_id: string
@@ -3726,16 +3906,20 @@ export type Database = {
           item_template_id?: string | null
           item_type?: string | null
           metadata?: Json | null
+          notes?: string | null
           ordem_servico_id: string
           os_item_id?: string | null
           pieces_count?: number | null
+          profile_name?: string | null
           quantity?: number | null
           total_cost?: number | null
           total_length_mm?: number | null
           unit?: string | null
           unit_cost?: number | null
+          waste_mm?: number | null
         }
         Update: {
+          bar_length_mm?: number | null
           bars_needed?: number | null
           color?: string | null
           company_id?: string
@@ -3746,14 +3930,17 @@ export type Database = {
           item_template_id?: string | null
           item_type?: string | null
           metadata?: Json | null
+          notes?: string | null
           ordem_servico_id?: string
           os_item_id?: string | null
           pieces_count?: number | null
+          profile_name?: string | null
           quantity?: number | null
           total_cost?: number | null
           total_length_mm?: number | null
           unit?: string | null
           unit_cost?: number | null
+          waste_mm?: number | null
         }
         Relationships: [
           {
@@ -3843,33 +4030,57 @@ export type Database = {
       }
       permission_profiles: {
         Row: {
+          can_approve_discounts: boolean
+          can_cancel_sales: boolean
+          can_manage_stock: boolean
+          can_operate_cash: boolean
+          can_view_reports: boolean
           company_id: string
           created_at: string
           description: string | null
+          hide_costs: boolean
+          hide_prices: boolean
           id: string
           is_default: boolean
           name: string
           permissions: Json
+          profile_type: string | null
           updated_at: string
         }
         Insert: {
+          can_approve_discounts?: boolean
+          can_cancel_sales?: boolean
+          can_manage_stock?: boolean
+          can_operate_cash?: boolean
+          can_view_reports?: boolean
           company_id: string
           created_at?: string
           description?: string | null
+          hide_costs?: boolean
+          hide_prices?: boolean
           id?: string
           is_default?: boolean
           name: string
           permissions?: Json
+          profile_type?: string | null
           updated_at?: string
         }
         Update: {
+          can_approve_discounts?: boolean
+          can_cancel_sales?: boolean
+          can_manage_stock?: boolean
+          can_operate_cash?: boolean
+          can_view_reports?: boolean
           company_id?: string
           created_at?: string
           description?: string | null
+          hide_costs?: boolean
+          hide_prices?: boolean
           id?: string
           is_default?: boolean
           name?: string
           permissions?: Json
+          profile_type?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -4244,10 +4455,15 @@ export type Database = {
           actual_cost: number | null
           company_item_id: string | null
           created_at: string
+          description: string | null
+          estimated_cost: number | null
+          height_mm: number | null
           id: string
           item_template_id: string | null
           name: string | null
+          notes: string | null
           os_glass_project_id: string | null
+          os_material_id: string | null
           procurement_status: string | null
           purchase_order_id: string
           quantity: number | null
@@ -4258,15 +4474,21 @@ export type Database = {
           unit: string | null
           unit_cost: number | null
           updated_at: string
+          width_mm: number | null
         }
         Insert: {
           actual_cost?: number | null
           company_item_id?: string | null
           created_at?: string
+          description?: string | null
+          estimated_cost?: number | null
+          height_mm?: number | null
           id?: string
           item_template_id?: string | null
           name?: string | null
+          notes?: string | null
           os_glass_project_id?: string | null
+          os_material_id?: string | null
           procurement_status?: string | null
           purchase_order_id: string
           quantity?: number | null
@@ -4277,15 +4499,21 @@ export type Database = {
           unit?: string | null
           unit_cost?: number | null
           updated_at?: string
+          width_mm?: number | null
         }
         Update: {
           actual_cost?: number | null
           company_item_id?: string | null
           created_at?: string
+          description?: string | null
+          estimated_cost?: number | null
+          height_mm?: number | null
           id?: string
           item_template_id?: string | null
           name?: string | null
+          notes?: string | null
           os_glass_project_id?: string | null
+          os_material_id?: string | null
           procurement_status?: string | null
           purchase_order_id?: string
           quantity?: number | null
@@ -4296,6 +4524,7 @@ export type Database = {
           unit?: string | null
           unit_cost?: number | null
           updated_at?: string
+          width_mm?: number | null
         }
         Relationships: [
           {
@@ -4406,6 +4635,13 @@ export type Database = {
             referencedRelation: "item_templates"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "purchase_orders_ordem_servico_id_fkey"
+            columns: ["ordem_servico_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
         ]
       }
       quote_deposits: {
@@ -4505,23 +4741,33 @@ export type Database = {
           composition: Json | null
           created_at: string
           description: string | null
+          excluded_optional_ids: Json | null
           glass_color: string | null
           glass_thickness: string | null
+          glasses_count: number | null
           has_glass: boolean | null
           height: number | null
           height_b: number | null
+          height_c: number | null
           id: string
+          include_contramarco: boolean | null
           item_notes: string | null
           item_template_id: string | null
+          item_type: string | null
+          leaves_count: number | null
+          notes: string | null
+          panels_count: number | null
           position: number | null
           product_template_id: string | null
           quantity: number
           quote_id: string
+          sides_count: number | null
           total_price: number
           unit: string | null
           unit_price: number
           width: number | null
           width_b: number | null
+          width_c: number | null
         }
         Insert: {
           aluminum_color?: string | null
@@ -4530,23 +4776,33 @@ export type Database = {
           composition?: Json | null
           created_at?: string
           description?: string | null
+          excluded_optional_ids?: Json | null
           glass_color?: string | null
           glass_thickness?: string | null
+          glasses_count?: number | null
           has_glass?: boolean | null
           height?: number | null
           height_b?: number | null
+          height_c?: number | null
           id?: string
+          include_contramarco?: boolean | null
           item_notes?: string | null
           item_template_id?: string | null
+          item_type?: string | null
+          leaves_count?: number | null
+          notes?: string | null
+          panels_count?: number | null
           position?: number | null
           product_template_id?: string | null
           quantity?: number
           quote_id: string
+          sides_count?: number | null
           total_price?: number
           unit?: string | null
           unit_price?: number
           width?: number | null
           width_b?: number | null
+          width_c?: number | null
         }
         Update: {
           aluminum_color?: string | null
@@ -4555,23 +4811,33 @@ export type Database = {
           composition?: Json | null
           created_at?: string
           description?: string | null
+          excluded_optional_ids?: Json | null
           glass_color?: string | null
           glass_thickness?: string | null
+          glasses_count?: number | null
           has_glass?: boolean | null
           height?: number | null
           height_b?: number | null
+          height_c?: number | null
           id?: string
+          include_contramarco?: boolean | null
           item_notes?: string | null
           item_template_id?: string | null
+          item_type?: string | null
+          leaves_count?: number | null
+          notes?: string | null
+          panels_count?: number | null
           position?: number | null
           product_template_id?: string | null
           quantity?: number
           quote_id?: string
+          sides_count?: number | null
           total_price?: number
           unit?: string | null
           unit_price?: number
           width?: number | null
           width_b?: number | null
+          width_c?: number | null
         }
         Relationships: [
           {
@@ -4624,6 +4890,7 @@ export type Database = {
           approved_by: string | null
           client_id: string | null
           company_id: string
+          condicao_pagamento_id: string | null
           converted_at: string | null
           cover_html: string | null
           created_at: string
@@ -4636,10 +4903,12 @@ export type Database = {
           customer_name: string
           customer_phone: string | null
           customer_profession: string | null
+          deposit_amount: number | null
           deposit_status: string | null
           discount_amount: number | null
           discount_percent: number | null
           final_amount: number
+          forma_pagamento_id: string | null
           id: string
           notes: string | null
           payment_terms: string | null
@@ -4653,12 +4922,15 @@ export type Database = {
           total_amount: number
           updated_at: string
           valid_until: string | null
+          valor_final_aprovado: number | null
+          valor_original: number | null
         }
         Insert: {
           approved_at?: string | null
           approved_by?: string | null
           client_id?: string | null
           company_id: string
+          condicao_pagamento_id?: string | null
           converted_at?: string | null
           cover_html?: string | null
           created_at?: string
@@ -4671,10 +4943,12 @@ export type Database = {
           customer_name: string
           customer_phone?: string | null
           customer_profession?: string | null
+          deposit_amount?: number | null
           deposit_status?: string | null
           discount_amount?: number | null
           discount_percent?: number | null
           final_amount?: number
+          forma_pagamento_id?: string | null
           id?: string
           notes?: string | null
           payment_terms?: string | null
@@ -4688,12 +4962,15 @@ export type Database = {
           total_amount?: number
           updated_at?: string
           valid_until?: string | null
+          valor_final_aprovado?: number | null
+          valor_original?: number | null
         }
         Update: {
           approved_at?: string | null
           approved_by?: string | null
           client_id?: string | null
           company_id?: string
+          condicao_pagamento_id?: string | null
           converted_at?: string | null
           cover_html?: string | null
           created_at?: string
@@ -4706,10 +4983,12 @@ export type Database = {
           customer_name?: string
           customer_phone?: string | null
           customer_profession?: string | null
+          deposit_amount?: number | null
           deposit_status?: string | null
           discount_amount?: number | null
           discount_percent?: number | null
           final_amount?: number
+          forma_pagamento_id?: string | null
           id?: string
           notes?: string | null
           payment_terms?: string | null
@@ -4723,6 +5002,8 @@ export type Database = {
           total_amount?: number
           updated_at?: string
           valid_until?: string | null
+          valor_final_aprovado?: number | null
+          valor_original?: number | null
         }
         Relationships: [
           {
@@ -5081,12 +5362,15 @@ export type Database = {
           all_day: boolean
           appointment_type: string
           assigned_to: string | null
+          assigned_to_name: string | null
           client_id: string | null
+          color: string | null
           company_id: string
           created_at: string
           created_by: string | null
           customer_address: string | null
           customer_name: string | null
+          customer_phone: string | null
           description: string | null
           duration_minutes: number | null
           ends_at: string | null
@@ -5095,7 +5379,7 @@ export type Database = {
           notes: string | null
           ordem_servico_id: string | null
           quote_id: string | null
-          scheduled_at: string
+          scheduled_at: string | null
           scheduled_date: string | null
           scheduled_time_end: string | null
           scheduled_time_start: string | null
@@ -5108,12 +5392,15 @@ export type Database = {
           all_day?: boolean
           appointment_type?: string
           assigned_to?: string | null
+          assigned_to_name?: string | null
           client_id?: string | null
+          color?: string | null
           company_id: string
           created_at?: string
           created_by?: string | null
           customer_address?: string | null
           customer_name?: string | null
+          customer_phone?: string | null
           description?: string | null
           duration_minutes?: number | null
           ends_at?: string | null
@@ -5122,7 +5409,7 @@ export type Database = {
           notes?: string | null
           ordem_servico_id?: string | null
           quote_id?: string | null
-          scheduled_at: string
+          scheduled_at?: string | null
           scheduled_date?: string | null
           scheduled_time_end?: string | null
           scheduled_time_start?: string | null
@@ -5135,12 +5422,15 @@ export type Database = {
           all_day?: boolean
           appointment_type?: string
           assigned_to?: string | null
+          assigned_to_name?: string | null
           client_id?: string | null
+          color?: string | null
           company_id?: string
           created_at?: string
           created_by?: string | null
           customer_address?: string | null
           customer_name?: string | null
+          customer_phone?: string | null
           description?: string | null
           duration_minutes?: number | null
           ends_at?: string | null
@@ -5149,7 +5439,7 @@ export type Database = {
           notes?: string | null
           ordem_servico_id?: string | null
           quote_id?: string | null
-          scheduled_at?: string
+          scheduled_at?: string | null
           scheduled_date?: string | null
           scheduled_time_end?: string | null
           scheduled_time_start?: string | null
@@ -5812,7 +6102,7 @@ export type Database = {
         Returns: Json
       }
       activate_product_template_for_company: {
-        Args: { _company_id: string; _template_id: string }
+        Args: { _company_id: string; _product_template_id: string }
         Returns: string
       }
       bulk_adjust_item_cost: {
@@ -5871,10 +6161,13 @@ export type Database = {
       }
       create_custom_product: {
         Args: {
-          p_category?: string
-          p_company_id: string
-          p_linha?: string
-          p_name: string
+          _base_price?: number
+          _category?: string
+          _company_id: string
+          _description?: string
+          _image_url?: string
+          _linha?: string
+          _name: string
         }
         Returns: string
       }
@@ -6071,12 +6364,12 @@ export type Database = {
         Returns: Json
       }
       reset_company_product_item: {
-        Args: { _item_id: string }
-        Returns: undefined
+        Args: { p_company_product_item_id: string }
+        Returns: Json
       }
       reset_company_product_to_template: {
-        Args: { _company_product_id: string }
-        Returns: undefined
+        Args: { p_company_product_id: string; p_user_id?: string }
+        Returns: Json
       }
       reset_composition_item: { Args: { _item_id: string }; Returns: undefined }
       revoke_saas_admin: { Args: { _user_id: string }; Returns: Json }
