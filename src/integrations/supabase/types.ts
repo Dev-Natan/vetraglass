@@ -8760,6 +8760,16 @@ export type Database = {
           user_id: string
         }[]
       }
+      list_schema_migrations: {
+        Args: never
+        Returns: {
+          applied_at: string
+          name: string
+          preview: string
+          statements_count: number
+          version: string
+        }[]
+      }
       log_audit_event: {
         Args: {
           _action: string
