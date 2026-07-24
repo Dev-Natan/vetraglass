@@ -4463,6 +4463,7 @@ export type Database = {
       }
       product_templates: {
         Row: {
+          base_price: number | null
           category: string | null
           company_id: string | null
           created_at: string
@@ -4478,6 +4479,10 @@ export type Database = {
           image_url: string | null
           is_active: boolean
           linha: string | null
+          max_height: number | null
+          max_width: number | null
+          min_height: number | null
+          min_width: number | null
           name: string
           pieces_formula: string | null
           pieces_quantity: number | null
@@ -4490,6 +4495,7 @@ export type Database = {
           width_formula: string | null
         }
         Insert: {
+          base_price?: number | null
           category?: string | null
           company_id?: string | null
           created_at?: string
@@ -4505,6 +4511,10 @@ export type Database = {
           image_url?: string | null
           is_active?: boolean
           linha?: string | null
+          max_height?: number | null
+          max_width?: number | null
+          min_height?: number | null
+          min_width?: number | null
           name: string
           pieces_formula?: string | null
           pieces_quantity?: number | null
@@ -4517,6 +4527,7 @@ export type Database = {
           width_formula?: string | null
         }
         Update: {
+          base_price?: number | null
           category?: string | null
           company_id?: string | null
           created_at?: string
@@ -4532,6 +4543,10 @@ export type Database = {
           image_url?: string | null
           is_active?: boolean
           linha?: string | null
+          max_height?: number | null
+          max_width?: number | null
+          min_height?: number | null
+          min_width?: number | null
           name?: string
           pieces_formula?: string | null
           pieces_quantity?: number | null
@@ -6472,6 +6487,7 @@ export type Database = {
       list_effective_product_templates: {
         Args: { _company_id: string }
         Returns: {
+          base_price: number | null
           category: string | null
           company_id: string | null
           created_at: string
@@ -6487,6 +6503,10 @@ export type Database = {
           image_url: string | null
           is_active: boolean
           linha: string | null
+          max_height: number | null
+          max_width: number | null
+          min_height: number | null
+          min_width: number | null
           name: string
           pieces_formula: string | null
           pieces_quantity: number | null
