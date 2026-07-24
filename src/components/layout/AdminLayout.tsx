@@ -75,6 +75,22 @@ const adminMenuItems = [
     icon: Megaphone,
   },
   {
+    title: "Suporte",
+    path: "/admin/support",
+    icon: Headphones,
+    showBadge: true,
+  },
+  {
+    title: "Feedbacks",
+    path: "/admin/feedbacks",
+    icon: Megaphone,
+  },
+  {
+    title: "Migrações",
+    path: "/admin/migrations",
+    icon: Database,
+  },
+  {
     title: "Configurações",
     path: "/admin/settings",
     icon: Settings,
