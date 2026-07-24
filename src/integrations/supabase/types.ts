@@ -962,8 +962,16 @@ export type Database = {
       }
       company_items: {
         Row: {
+          aliquota_cbs: number | null
+          aliquota_ibs: number | null
+          aliquota_is: number | null
+          aliquota_iss: number | null
           altura_mm: number | null
           bar_length_mm: number | null
+          cest: string | null
+          cfop_venda: string | null
+          cfop_venda_interestadual: string | null
+          codigo_servico: string | null
           company_id: string
           comprimento_linear_mm: number | null
           cost: number | null
@@ -983,6 +991,8 @@ export type Database = {
           largura_mm: number | null
           linha: string | null
           name: string
+          ncm: string | null
+          origem: string | null
           preco_unitario: number | null
           price: number | null
           quantity: number | null
@@ -998,11 +1008,20 @@ export type Database = {
           unit: string | null
           updated_at: string
           weight_kg: number | null
+          weight_per_bar: number | null
           weight_per_meter: number | null
         }
         Insert: {
+          aliquota_cbs?: number | null
+          aliquota_ibs?: number | null
+          aliquota_is?: number | null
+          aliquota_iss?: number | null
           altura_mm?: number | null
           bar_length_mm?: number | null
+          cest?: string | null
+          cfop_venda?: string | null
+          cfop_venda_interestadual?: string | null
+          codigo_servico?: string | null
           company_id: string
           comprimento_linear_mm?: number | null
           cost?: number | null
@@ -1022,6 +1041,8 @@ export type Database = {
           largura_mm?: number | null
           linha?: string | null
           name: string
+          ncm?: string | null
+          origem?: string | null
           preco_unitario?: number | null
           price?: number | null
           quantity?: number | null
@@ -1037,11 +1058,20 @@ export type Database = {
           unit?: string | null
           updated_at?: string
           weight_kg?: number | null
+          weight_per_bar?: number | null
           weight_per_meter?: number | null
         }
         Update: {
+          aliquota_cbs?: number | null
+          aliquota_ibs?: number | null
+          aliquota_is?: number | null
+          aliquota_iss?: number | null
           altura_mm?: number | null
           bar_length_mm?: number | null
+          cest?: string | null
+          cfop_venda?: string | null
+          cfop_venda_interestadual?: string | null
+          codigo_servico?: string | null
           company_id?: string
           comprimento_linear_mm?: number | null
           cost?: number | null
@@ -1061,6 +1091,8 @@ export type Database = {
           largura_mm?: number | null
           linha?: string | null
           name?: string
+          ncm?: string | null
+          origem?: string | null
           preco_unitario?: number | null
           price?: number | null
           quantity?: number | null
@@ -1076,6 +1108,7 @@ export type Database = {
           unit?: string | null
           updated_at?: string
           weight_kg?: number | null
+          weight_per_bar?: number | null
           weight_per_meter?: number | null
         }
         Relationships: [
@@ -4311,6 +4344,8 @@ export type Database = {
           company_id: string
           created_at: string
           created_by: string | null
+          customer_name: string | null
+          deposit_status: string | null
           due_date: string | null
           id: string
           notes: string | null
@@ -4327,6 +4362,8 @@ export type Database = {
           company_id: string
           created_at?: string
           created_by?: string | null
+          customer_name?: string | null
+          deposit_status?: string | null
           due_date?: string | null
           id?: string
           notes?: string | null
@@ -4343,6 +4380,8 @@ export type Database = {
           company_id?: string
           created_at?: string
           created_by?: string | null
+          customer_name?: string | null
+          deposit_status?: string | null
           due_date?: string | null
           id?: string
           notes?: string | null
@@ -4523,6 +4562,7 @@ export type Database = {
           customer_name: string
           customer_phone: string | null
           customer_profession: string | null
+          deposit_status: string | null
           discount_amount: number | null
           discount_percent: number | null
           final_amount: number
@@ -4557,6 +4597,7 @@ export type Database = {
           customer_name: string
           customer_phone?: string | null
           customer_profession?: string | null
+          deposit_status?: string | null
           discount_amount?: number | null
           discount_percent?: number | null
           final_amount?: number
@@ -4591,6 +4632,7 @@ export type Database = {
           customer_name?: string
           customer_phone?: string | null
           customer_profession?: string | null
+          deposit_status?: string | null
           discount_amount?: number | null
           discount_percent?: number | null
           final_amount?: number
@@ -4763,6 +4805,7 @@ export type Database = {
           item_template_id: string | null
           item_unit: string | null
           metadata: Json | null
+          notes: string | null
           quantity: number
           sale_id: string
           total_price: number
@@ -4779,6 +4822,7 @@ export type Database = {
           item_template_id?: string | null
           item_unit?: string | null
           metadata?: Json | null
+          notes?: string | null
           quantity?: number
           sale_id: string
           total_price?: number
@@ -4795,6 +4839,7 @@ export type Database = {
           item_template_id?: string | null
           item_unit?: string | null
           metadata?: Json | null
+          notes?: string | null
           quantity?: number
           sale_id?: string
           total_price?: number
@@ -4959,12 +5004,15 @@ export type Database = {
       service_appointments: {
         Row: {
           address: string | null
+          all_day: boolean
           appointment_type: string
           assigned_to: string | null
           client_id: string | null
           company_id: string
           created_at: string
           created_by: string | null
+          customer_address: string | null
+          customer_name: string | null
           description: string | null
           duration_minutes: number | null
           ends_at: string | null
@@ -4973,18 +5021,24 @@ export type Database = {
           notes: string | null
           ordem_servico_id: string | null
           scheduled_at: string
+          scheduled_date: string | null
+          scheduled_time_end: string | null
+          scheduled_time_start: string | null
           status: string
           title: string
           updated_at: string
         }
         Insert: {
           address?: string | null
+          all_day?: boolean
           appointment_type?: string
           assigned_to?: string | null
           client_id?: string | null
           company_id: string
           created_at?: string
           created_by?: string | null
+          customer_address?: string | null
+          customer_name?: string | null
           description?: string | null
           duration_minutes?: number | null
           ends_at?: string | null
@@ -4993,18 +5047,24 @@ export type Database = {
           notes?: string | null
           ordem_servico_id?: string | null
           scheduled_at: string
+          scheduled_date?: string | null
+          scheduled_time_end?: string | null
+          scheduled_time_start?: string | null
           status?: string
           title: string
           updated_at?: string
         }
         Update: {
           address?: string | null
+          all_day?: boolean
           appointment_type?: string
           assigned_to?: string | null
           client_id?: string | null
           company_id?: string
           created_at?: string
           created_by?: string | null
+          customer_address?: string | null
+          customer_name?: string | null
           description?: string | null
           duration_minutes?: number | null
           ends_at?: string | null
@@ -5013,6 +5073,9 @@ export type Database = {
           notes?: string | null
           ordem_servico_id?: string | null
           scheduled_at?: string
+          scheduled_date?: string | null
+          scheduled_time_end?: string | null
+          scheduled_time_start?: string | null
           status?: string
           title?: string
           updated_at?: string
@@ -5458,6 +5521,10 @@ export type Database = {
       }
       tax_categories: {
         Row: {
+          aliquota_cbs: number | null
+          aliquota_ibs: number | null
+          aliquota_is: number | null
+          aliquota_iss: number | null
           cest: string | null
           cfop: string | null
           cofins_percent: number | null
@@ -5469,11 +5536,16 @@ export type Database = {
           is_active: boolean
           name: string
           ncm: string | null
+          ncm_code: string | null
           origem: string | null
           pis_percent: number | null
           updated_at: string
         }
         Insert: {
+          aliquota_cbs?: number | null
+          aliquota_ibs?: number | null
+          aliquota_is?: number | null
+          aliquota_iss?: number | null
           cest?: string | null
           cfop?: string | null
           cofins_percent?: number | null
@@ -5485,11 +5557,16 @@ export type Database = {
           is_active?: boolean
           name: string
           ncm?: string | null
+          ncm_code?: string | null
           origem?: string | null
           pis_percent?: number | null
           updated_at?: string
         }
         Update: {
+          aliquota_cbs?: number | null
+          aliquota_ibs?: number | null
+          aliquota_is?: number | null
+          aliquota_iss?: number | null
           cest?: string | null
           cfop?: string | null
           cofins_percent?: number | null
@@ -5501,6 +5578,7 @@ export type Database = {
           is_active?: boolean
           name?: string
           ncm?: string | null
+          ncm_code?: string | null
           origem?: string | null
           pis_percent?: number | null
           updated_at?: string
@@ -5638,6 +5716,10 @@ export type Database = {
       }
     }
     Functions: {
+      accept_employee_invite: {
+        Args: { _token: string; _user_id: string }
+        Returns: Json
+      }
       activate_product_template_for_company: {
         Args: { _company_id: string; _template_id: string }
         Returns: string
@@ -5656,7 +5738,46 @@ export type Database = {
         Returns: string
       }
       cancel_approved_quote: { Args: { _quote_id: string }; Returns: Json }
+      cancel_os_materials: {
+        Args: { _ordem_servico_id: string }
+        Returns: Json
+      }
+      cancel_sale: {
+        Args: {
+          p_company_id: string
+          p_reason?: string
+          p_sale_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      change_company_member_role: {
+        Args: {
+          _company_id: string
+          _new_role: string
+          _target_user_id: string
+        }
+        Returns: Json
+      }
+      check_login_rate_limit: {
+        Args: {
+          _email: string
+          _max_attempts?: number
+          _window_minutes?: number
+        }
+        Returns: Json
+      }
       convert_quote_to_os: { Args: { _quote_id: string }; Returns: string }
+      create_company_and_assign_admin: {
+        Args: {
+          _address?: string
+          _cnpj?: string
+          _email?: string
+          _name: string
+          _phone?: string
+        }
+        Returns: Json
+      }
       create_custom_product: {
         Args: {
           p_category?: string
@@ -5665,6 +5786,39 @@ export type Database = {
           p_name: string
         }
         Returns: string
+      }
+      create_default_payment_options: {
+        Args: { _company_id: string }
+        Returns: undefined
+      }
+      deactivate_company_member: {
+        Args: { _company_id: string; _target_user_id: string }
+        Returns: Json
+      }
+      get_cash_flow_projection: {
+        Args: { p_company_id: string; p_end: string; p_start: string }
+        Returns: {
+          day: string
+          net: number
+          payables: number
+          receivables: number
+        }[]
+      }
+      get_cutting_plan_items: {
+        Args: { _company_id?: string; _template_id: string }
+        Returns: {
+          bar_length_mm: number
+          height_formula: string
+          id: string
+          is_optional: boolean
+          name: string
+          pieces_quantity: number
+          quantity_formula: string
+          section: string
+          side: string
+          type: string
+          width_formula: string
+        }[]
       }
       get_dre_report: {
         Args: { p_company_id: string; p_end: string; p_start: string }
@@ -5678,6 +5832,22 @@ export type Database = {
           kind: string
         }[]
       }
+      get_employee_login_email: {
+        Args: { p_username: string }
+        Returns: string
+      }
+      get_operator_pending_discrepancies: {
+        Args: { _company_id: string }
+        Returns: {
+          created_at: string
+          description: string
+          id: string
+        }[]
+      }
+      get_pending_advances_summary: {
+        Args: { _company_id: string }
+        Returns: Json
+      }
       get_user_company_id: { Args: { _user_id: string }; Returns: string }
       get_user_open_cash_register: {
         Args: { _company_id: string }
@@ -5687,12 +5857,32 @@ export type Database = {
           opening_amount: number
         }[]
       }
+      get_user_permission_profile: {
+        Args: { _company_id: string; _user_id: string }
+        Returns: {
+          can_operate_cash: boolean
+          hide_costs: boolean
+          hide_prices: boolean
+          permissions: Json
+          profile_id: string
+          profile_type: string
+        }[]
+      }
+      grant_saas_admin: { Args: { _email: string }; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      initialize_company_cash: {
+        Args: {
+          _company_id: string
+          _fixed_fund?: number
+          _initial_balance?: number
+        }
+        Returns: Json
       }
       is_saas_admin: { Args: { _user_id: string }; Returns: boolean }
       list_effective_product_templates: {
@@ -5731,8 +5921,62 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      list_saas_admins: {
+        Args: never
+        Returns: {
+          created_at: string
+          email: string
+          full_name: string
+          user_id: string
+        }[]
+      }
+      list_schema_migrations: {
+        Args: never
+        Returns: {
+          name: string
+          statements: string[]
+          version: string
+        }[]
+      }
       open_daily_cash: {
         Args: { _company_id: string; _opening_amount: number; _user_id: string }
+        Returns: Json
+      }
+      reactivate_company_member: {
+        Args: { _company_id: string; _target_user_id: string }
+        Returns: Json
+      }
+      record_login_attempt: {
+        Args: {
+          _email: string
+          _ip_address?: string
+          _success: boolean
+          _user_agent?: string
+        }
+        Returns: undefined
+      }
+      register_cash_exit_with_reinforcement: {
+        Args: {
+          _amount: number
+          _cash_register_id: string
+          _category: string
+          _description: string
+          _payment_method?: string
+        }
+        Returns: Json
+      }
+      register_company_cash_movement: {
+        Args: {
+          _amount: number
+          _category: string
+          _company_id: string
+          _description?: string
+          _type: string
+        }
+        Returns: Json
+      }
+      release_materials_for_production: {
+        Args: { _ordem_servico_id: string }
         Returns: Json
       }
       reset_company_product_item: {
@@ -5744,7 +5988,16 @@ export type Database = {
         Returns: undefined
       }
       reset_composition_item: { Args: { _item_id: string }; Returns: undefined }
+      revoke_saas_admin: { Args: { _user_id: string }; Returns: Json }
       save_composition_item: { Args: { _data: Json }; Returns: string }
+      seed_default_financial_categories: {
+        Args: { _company_id: string }
+        Returns: undefined
+      }
+      transfer_company_ownership: {
+        Args: { _company_id: string; _new_admin_user_id: string }
+        Returns: Json
+      }
       user_belongs_to_company: {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean
@@ -5753,6 +6006,7 @@ export type Database = {
         Args: { _company_id: string; _user_id: string }
         Returns: Database["public"]["Enums"]["company_role"]
       }
+      validate_invite_token: { Args: { _token: string }; Returns: Json }
     }
     Enums: {
       app_role: "saas_admin" | "admin" | "manager" | "employee"
