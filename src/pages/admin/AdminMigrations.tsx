@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import JSZip from "jszip";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Database, Search, CheckCircle2, Clock, FileCode, Copy, Download } from "lucide-react";
+import { Database, Search, CheckCircle2, Clock, FileCode, Copy, Download, Archive } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface MigrationRow {
@@ -42,6 +43,7 @@ function formatDate(iso: string | null) {
 export default function AdminMigrations() {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<MigrationRow | null>(null);
+  const [zipping, setZipping] = useState(false);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["admin", "schema-migrations"],
@@ -92,6 +94,45 @@ export default function AdminMigrations() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     toast({ title: "Download iniciado", description: filename });
+  };
+
+  const downloadZip = async (rows: MigrationRow[]) => {
+    const withSql = rows.filter((m) => m.preview);
+    if (withSql.length === 0) {
+      toast({ title: "Nada para exportar", description: "Nenhuma migração com SQL disponível.", variant: "destructive" });
+      return;
+    }
+    setZipping(true);
+    try {
+      const zip = new JSZip();
+      const indexLines = ["version,name,applied_at,statements_count,file"];
+      for (const m of withSql) {
+        const safeName = (m.name ?? "migration").replace(/[^a-z0-9_-]+/gi, "_");
+        const filename = `${m.version}_${safeName}.sql`;
+        const header = `-- Migração: ${m.name ?? ""}\n-- Versão: ${m.version}\n-- Aplicada em: ${m.applied_at ?? "—"}\n-- Comandos: ${m.statements_count}\n\n`;
+        zip.file(filename, header + (m.preview ?? ""));
+        indexLines.push(
+          [m.version, JSON.stringify(m.name ?? ""), m.applied_at ?? "", m.statements_count, filename].join(","),
+        );
+      }
+      zip.file("index.csv", indexLines.join("\n"));
+      const blob = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(blob);
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+      const zipName = `migracoes_${withSql.length}_${stamp}.zip`;
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = zipName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast({ title: "ZIP gerado", description: `${withSql.length} migrações em ${zipName}` });
+    } catch (e) {
+      toast({ title: "Erro ao gerar ZIP", description: (e as Error).message, variant: "destructive" });
+    } finally {
+      setZipping(false);
+    }
   };
 
   return (
@@ -170,8 +211,29 @@ export default function AdminMigrations() {
 
         {/* List */}
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
             <CardTitle className="text-base">Histórico</CardTitle>
+            <div className="flex items-center gap-2">
+              {search.trim() && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => downloadZip(filtered)}
+                  disabled={zipping || filtered.length === 0}
+                >
+                  <Archive className="w-3 h-3 mr-1" />
+                  Exportar filtradas ({filtered.length})
+                </Button>
+              )}
+              <Button
+                size="sm"
+                onClick={() => downloadZip(data ?? [])}
+                disabled={zipping || !data || data.length === 0}
+              >
+                <Archive className="w-3 h-3 mr-1" />
+                {zipping ? "Gerando..." : `Exportar todas (${data?.length ?? 0})`}
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             {error ? (
