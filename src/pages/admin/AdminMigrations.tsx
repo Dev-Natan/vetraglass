@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import JSZip from "jszip";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Database, Search, CheckCircle2, Clock, FileCode, Copy, Download } from "lucide-react";
+import { Database, Search, CheckCircle2, Clock, FileCode, Copy, Download, Archive } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface MigrationRow {
