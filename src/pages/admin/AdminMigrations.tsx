@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Database, Search, CheckCircle2, Clock, FileCode, Copy } from "lucide-react";
+import { Database, Search, CheckCircle2, Clock, FileCode, Copy, Download } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface MigrationRow {
