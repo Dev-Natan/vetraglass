@@ -438,6 +438,7 @@ export type Database = {
       cash_movements: {
         Row: {
           amount: number
+          balance_after: number | null
           cash_register_id: string
           category: string | null
           company_id: string
@@ -457,6 +458,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          balance_after?: number | null
           cash_register_id: string
           category?: string | null
           company_id: string
@@ -476,6 +478,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          balance_after?: number | null
           cash_register_id?: string
           category?: string | null
           company_id?: string
@@ -572,7 +575,9 @@ export type Database = {
           closing_amount: number | null
           company_id: string
           created_at: string
+          difference: number | null
           difference_amount: number | null
+          excess_collected: number
           expected_amount: number | null
           id: string
           notes: string | null
@@ -587,7 +592,9 @@ export type Database = {
           closing_amount?: number | null
           company_id: string
           created_at?: string
+          difference?: number | null
           difference_amount?: number | null
+          excess_collected?: number
           expected_amount?: number | null
           id?: string
           notes?: string | null
@@ -602,7 +609,9 @@ export type Database = {
           closing_amount?: number | null
           company_id?: string
           created_at?: string
+          difference?: number | null
           difference_amount?: number | null
+          excess_collected?: number
           expected_amount?: number | null
           id?: string
           notes?: string | null
@@ -783,18 +792,21 @@ export type Database = {
         Row: {
           company_id: string
           current_balance: number
+          fixed_fund: number
           id: string
           updated_at: string
         }
         Insert: {
           company_id: string
           current_balance?: number
+          fixed_fund?: number
           id?: string
           updated_at?: string
         }
         Update: {
           company_id?: string
           current_balance?: number
+          fixed_fund?: number
           id?: string
           updated_at?: string
         }
@@ -811,6 +823,7 @@ export type Database = {
       company_cash_movements: {
         Row: {
           amount: number
+          balance_after: number | null
           bank_account_id: string | null
           category: string | null
           company_id: string
@@ -824,6 +837,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          balance_after?: number | null
           bank_account_id?: string | null
           category?: string | null
           company_id: string
@@ -837,6 +851,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          balance_after?: number | null
           bank_account_id?: string | null
           category?: string | null
           company_id?: string
@@ -1539,6 +1554,7 @@ export type Database = {
           cost_per_sqm: number | null
           created_at: string
           description: string | null
+          glasses_count: number | null
           has_multiple_sides: boolean
           height_formula: string | null
           id: string
@@ -1546,9 +1562,11 @@ export type Database = {
           is_active: boolean
           is_custom: boolean
           item_template_id: string | null
+          leaves_count: number | null
           linha: string | null
           margin_percent: number | null
           name: string
+          panels_count: number | null
           pending_amount: number | null
           pieces_formula: string | null
           pieces_quantity: number | null
@@ -1557,6 +1575,7 @@ export type Database = {
           product_template_id: string | null
           quantity_formula: string | null
           side: string | null
+          sides_count: number | null
           type: string | null
           unit: string | null
           updated_at: string
@@ -1572,6 +1591,7 @@ export type Database = {
           cost_per_sqm?: number | null
           created_at?: string
           description?: string | null
+          glasses_count?: number | null
           has_multiple_sides?: boolean
           height_formula?: string | null
           id?: string
@@ -1579,9 +1599,11 @@ export type Database = {
           is_active?: boolean
           is_custom?: boolean
           item_template_id?: string | null
+          leaves_count?: number | null
           linha?: string | null
           margin_percent?: number | null
           name: string
+          panels_count?: number | null
           pending_amount?: number | null
           pieces_formula?: string | null
           pieces_quantity?: number | null
@@ -1590,6 +1612,7 @@ export type Database = {
           product_template_id?: string | null
           quantity_formula?: string | null
           side?: string | null
+          sides_count?: number | null
           type?: string | null
           unit?: string | null
           updated_at?: string
@@ -1605,6 +1628,7 @@ export type Database = {
           cost_per_sqm?: number | null
           created_at?: string
           description?: string | null
+          glasses_count?: number | null
           has_multiple_sides?: boolean
           height_formula?: string | null
           id?: string
@@ -1612,9 +1636,11 @@ export type Database = {
           is_active?: boolean
           is_custom?: boolean
           item_template_id?: string | null
+          leaves_count?: number | null
           linha?: string | null
           margin_percent?: number | null
           name?: string
+          panels_count?: number | null
           pending_amount?: number | null
           pieces_formula?: string | null
           pieces_quantity?: number | null
@@ -1623,6 +1649,7 @@ export type Database = {
           product_template_id?: string | null
           quantity_formula?: string | null
           side?: string | null
+          sides_count?: number | null
           type?: string | null
           unit?: string | null
           updated_at?: string
@@ -1986,6 +2013,7 @@ export type Database = {
           ordem_servico_id: string | null
           paid_at: string | null
           reference_month: string | null
+          sale_amount: number | null
           sale_id: string | null
           status: string
           updated_at: string
@@ -2003,6 +2031,7 @@ export type Database = {
           ordem_servico_id?: string | null
           paid_at?: string | null
           reference_month?: string | null
+          sale_amount?: number | null
           sale_id?: string | null
           status?: string
           updated_at?: string
@@ -2020,6 +2049,7 @@ export type Database = {
           ordem_servico_id?: string | null
           paid_at?: string | null
           reference_month?: string | null
+          sale_amount?: number | null
           sale_id?: string | null
           status?: string
           updated_at?: string
@@ -2201,6 +2231,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string
+          document_number: string | null
           due_date: string
           employee_id: string | null
           id: string
@@ -2208,9 +2239,11 @@ export type Database = {
           is_auto_generated: boolean
           is_recurring: boolean | null
           notes: string | null
+          paid_amount: number | null
           paid_at: string | null
           paid_date: string | null
           parent_expense_id: string | null
+          parent_payable_id: string | null
           payment_method: string | null
           recurrence: Json | null
           recurrence_day: number | null
@@ -2232,6 +2265,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description: string
+          document_number?: string | null
           due_date: string
           employee_id?: string | null
           id?: string
@@ -2239,9 +2273,11 @@ export type Database = {
           is_auto_generated?: boolean
           is_recurring?: boolean | null
           notes?: string | null
+          paid_amount?: number | null
           paid_at?: string | null
           paid_date?: string | null
           parent_expense_id?: string | null
+          parent_payable_id?: string | null
           payment_method?: string | null
           recurrence?: Json | null
           recurrence_day?: number | null
@@ -2263,6 +2299,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string
+          document_number?: string | null
           due_date?: string
           employee_id?: string | null
           id?: string
@@ -2270,9 +2307,11 @@ export type Database = {
           is_auto_generated?: boolean
           is_recurring?: boolean | null
           notes?: string | null
+          paid_amount?: number | null
           paid_at?: string | null
           paid_date?: string | null
           parent_expense_id?: string | null
+          parent_payable_id?: string | null
           payment_method?: string | null
           recurrence?: Json | null
           recurrence_day?: number | null
@@ -2304,6 +2343,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_parent_payable_id_fkey"
+            columns: ["parent_payable_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
             referencedColumns: ["id"]
           },
         ]
@@ -4345,6 +4391,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           customer_name: string | null
+          customer_phone: string | null
           deposit_status: string | null
           due_date: string | null
           id: string
@@ -4363,6 +4410,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           customer_name?: string | null
+          customer_phone?: string | null
           deposit_status?: string | null
           due_date?: string | null
           id?: string
@@ -4381,6 +4429,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           customer_name?: string | null
+          customer_phone?: string | null
           deposit_status?: string | null
           due_date?: string | null
           id?: string
