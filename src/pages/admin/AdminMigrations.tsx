@@ -96,6 +96,45 @@ export default function AdminMigrations() {
     toast({ title: "Download iniciado", description: filename });
   };
 
+  const downloadZip = async (rows: MigrationRow[]) => {
+    const withSql = rows.filter((m) => m.preview);
+    if (withSql.length === 0) {
+      toast({ title: "Nada para exportar", description: "Nenhuma migração com SQL disponível.", variant: "destructive" });
+      return;
+    }
+    setZipping(true);
+    try {
+      const zip = new JSZip();
+      const indexLines = ["version,name,applied_at,statements_count,file"];
+      for (const m of withSql) {
+        const safeName = (m.name ?? "migration").replace(/[^a-z0-9_-]+/gi, "_");
+        const filename = `${m.version}_${safeName}.sql`;
+        const header = `-- Migração: ${m.name ?? ""}\n-- Versão: ${m.version}\n-- Aplicada em: ${m.applied_at ?? "—"}\n-- Comandos: ${m.statements_count}\n\n`;
+        zip.file(filename, header + (m.preview ?? ""));
+        indexLines.push(
+          [m.version, JSON.stringify(m.name ?? ""), m.applied_at ?? "", m.statements_count, filename].join(","),
+        );
+      }
+      zip.file("index.csv", indexLines.join("\n"));
+      const blob = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(blob);
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+      const zipName = `migracoes_${withSql.length}_${stamp}.zip`;
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = zipName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast({ title: "ZIP gerado", description: `${withSql.length} migrações em ${zipName}` });
+    } catch (e) {
+      toast({ title: "Erro ao gerar ZIP", description: (e as Error).message, variant: "destructive" });
+    } finally {
+      setZipping(false);
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="p-6 space-y-6">
