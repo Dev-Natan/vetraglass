@@ -4463,99 +4463,204 @@ export type Database = {
       }
       product_templates: {
         Row: {
+          aliquota_cbs: number | null
+          aliquota_cofins: number | null
+          aliquota_ibs: number | null
+          aliquota_icms: number | null
+          aliquota_ipi: number | null
+          aliquota_is: number | null
+          aliquota_iss: number | null
+          aliquota_pis: number | null
+          altura_mm: number | null
+          bar_length_mm: number | null
           base_price: number | null
           category: string | null
+          cest: string | null
+          cfop_venda: string | null
+          cfop_venda_interestadual: string | null
+          codigo_barras: string | null
+          codigo_beneficio_fiscal: string | null
+          codigo_interno: string | null
           company_id: string | null
           created_at: string
+          cst_cofins: string | null
+          cst_icms: string | null
+          cst_ipi: string | null
+          cst_pis: string | null
           default_glasses_count: number | null
           default_leaves_count: number | null
           default_panels_count: number | null
           default_sides_count: number | null
           description: string | null
+          ex_tipi: string | null
+          fabricante: string | null
           has_cutting_plan: boolean
           has_multiple_sides: boolean
           height_formula: string | null
           id: string
           image_url: string | null
           is_active: boolean
+          largura_mm: number | null
           linha: string | null
+          marca: string | null
           max_height: number | null
           max_width: number | null
           min_height: number | null
           min_width: number | null
+          modelo: string | null
           name: string
+          ncm: string | null
+          observacoes_fiscais: string | null
+          origem: string | null
+          peso: number | null
+          peso_bruto: number | null
+          peso_liquido: number | null
           pieces_formula: string | null
           pieces_quantity: number | null
           product_template_id: string | null
+          profundidade_mm: number | null
           quantity_formula: string | null
           side: string | null
           type: string | null
+          unidade_tributavel: string | null
           unit: string | null
           updated_at: string
+          uses_glass: boolean | null
+          weight_per_meter: number | null
           width_formula: string | null
         }
         Insert: {
+          aliquota_cbs?: number | null
+          aliquota_cofins?: number | null
+          aliquota_ibs?: number | null
+          aliquota_icms?: number | null
+          aliquota_ipi?: number | null
+          aliquota_is?: number | null
+          aliquota_iss?: number | null
+          aliquota_pis?: number | null
+          altura_mm?: number | null
+          bar_length_mm?: number | null
           base_price?: number | null
           category?: string | null
+          cest?: string | null
+          cfop_venda?: string | null
+          cfop_venda_interestadual?: string | null
+          codigo_barras?: string | null
+          codigo_beneficio_fiscal?: string | null
+          codigo_interno?: string | null
           company_id?: string | null
           created_at?: string
+          cst_cofins?: string | null
+          cst_icms?: string | null
+          cst_ipi?: string | null
+          cst_pis?: string | null
           default_glasses_count?: number | null
           default_leaves_count?: number | null
           default_panels_count?: number | null
           default_sides_count?: number | null
           description?: string | null
+          ex_tipi?: string | null
+          fabricante?: string | null
           has_cutting_plan?: boolean
           has_multiple_sides?: boolean
           height_formula?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean
+          largura_mm?: number | null
           linha?: string | null
+          marca?: string | null
           max_height?: number | null
           max_width?: number | null
           min_height?: number | null
           min_width?: number | null
+          modelo?: string | null
           name: string
+          ncm?: string | null
+          observacoes_fiscais?: string | null
+          origem?: string | null
+          peso?: number | null
+          peso_bruto?: number | null
+          peso_liquido?: number | null
           pieces_formula?: string | null
           pieces_quantity?: number | null
           product_template_id?: string | null
+          profundidade_mm?: number | null
           quantity_formula?: string | null
           side?: string | null
           type?: string | null
+          unidade_tributavel?: string | null
           unit?: string | null
           updated_at?: string
+          uses_glass?: boolean | null
+          weight_per_meter?: number | null
           width_formula?: string | null
         }
         Update: {
+          aliquota_cbs?: number | null
+          aliquota_cofins?: number | null
+          aliquota_ibs?: number | null
+          aliquota_icms?: number | null
+          aliquota_ipi?: number | null
+          aliquota_is?: number | null
+          aliquota_iss?: number | null
+          aliquota_pis?: number | null
+          altura_mm?: number | null
+          bar_length_mm?: number | null
           base_price?: number | null
           category?: string | null
+          cest?: string | null
+          cfop_venda?: string | null
+          cfop_venda_interestadual?: string | null
+          codigo_barras?: string | null
+          codigo_beneficio_fiscal?: string | null
+          codigo_interno?: string | null
           company_id?: string | null
           created_at?: string
+          cst_cofins?: string | null
+          cst_icms?: string | null
+          cst_ipi?: string | null
+          cst_pis?: string | null
           default_glasses_count?: number | null
           default_leaves_count?: number | null
           default_panels_count?: number | null
           default_sides_count?: number | null
           description?: string | null
+          ex_tipi?: string | null
+          fabricante?: string | null
           has_cutting_plan?: boolean
           has_multiple_sides?: boolean
           height_formula?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean
+          largura_mm?: number | null
           linha?: string | null
+          marca?: string | null
           max_height?: number | null
           max_width?: number | null
           min_height?: number | null
           min_width?: number | null
+          modelo?: string | null
           name?: string
+          ncm?: string | null
+          observacoes_fiscais?: string | null
+          origem?: string | null
+          peso?: number | null
+          peso_bruto?: number | null
+          peso_liquido?: number | null
           pieces_formula?: string | null
           pieces_quantity?: number | null
           product_template_id?: string | null
+          profundidade_mm?: number | null
           quantity_formula?: string | null
           side?: string | null
           type?: string | null
+          unidade_tributavel?: string | null
           unit?: string | null
           updated_at?: string
+          uses_glass?: boolean | null
+          weight_per_meter?: number | null
           width_formula?: string | null
         }
         Relationships: [
@@ -6487,35 +6592,70 @@ export type Database = {
       list_effective_product_templates: {
         Args: { _company_id: string }
         Returns: {
+          aliquota_cbs: number | null
+          aliquota_cofins: number | null
+          aliquota_ibs: number | null
+          aliquota_icms: number | null
+          aliquota_ipi: number | null
+          aliquota_is: number | null
+          aliquota_iss: number | null
+          aliquota_pis: number | null
+          altura_mm: number | null
+          bar_length_mm: number | null
           base_price: number | null
           category: string | null
+          cest: string | null
+          cfop_venda: string | null
+          cfop_venda_interestadual: string | null
+          codigo_barras: string | null
+          codigo_beneficio_fiscal: string | null
+          codigo_interno: string | null
           company_id: string | null
           created_at: string
+          cst_cofins: string | null
+          cst_icms: string | null
+          cst_ipi: string | null
+          cst_pis: string | null
           default_glasses_count: number | null
           default_leaves_count: number | null
           default_panels_count: number | null
           default_sides_count: number | null
           description: string | null
+          ex_tipi: string | null
+          fabricante: string | null
           has_cutting_plan: boolean
           has_multiple_sides: boolean
           height_formula: string | null
           id: string
           image_url: string | null
           is_active: boolean
+          largura_mm: number | null
           linha: string | null
+          marca: string | null
           max_height: number | null
           max_width: number | null
           min_height: number | null
           min_width: number | null
+          modelo: string | null
           name: string
+          ncm: string | null
+          observacoes_fiscais: string | null
+          origem: string | null
+          peso: number | null
+          peso_bruto: number | null
+          peso_liquido: number | null
           pieces_formula: string | null
           pieces_quantity: number | null
           product_template_id: string | null
+          profundidade_mm: number | null
           quantity_formula: string | null
           side: string | null
           type: string | null
+          unidade_tributavel: string | null
           unit: string | null
           updated_at: string
+          uses_glass: boolean | null
+          weight_per_meter: number | null
           width_formula: string | null
         }[]
         SetofOptions: {
