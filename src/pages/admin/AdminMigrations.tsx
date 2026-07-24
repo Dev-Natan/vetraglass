@@ -249,10 +249,16 @@ export default function AdminMigrations() {
                   <p className="text-xs text-muted-foreground">
                     SQL ({selected.statements_count} comando{selected.statements_count === 1 ? "" : "s"})
                   </p>
-                  <Button size="sm" variant="outline" onClick={() => copyPreview(selected)}>
-                    <Copy className="w-3 h-3 mr-1" />
-                    Copiar
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" variant="outline" onClick={() => copyPreview(selected)} disabled={!selected.preview}>
+                      <Copy className="w-3 h-3 mr-1" />
+                      Copiar
+                    </Button>
+                    <Button size="sm" onClick={() => downloadSql(selected)} disabled={!selected.preview}>
+                      <Download className="w-3 h-3 mr-1" />
+                      Baixar .sql
+                    </Button>
+                  </div>
                 </div>
                 <pre className="bg-muted border border-border p-4 rounded-lg text-xs overflow-x-auto font-mono leading-relaxed whitespace-pre-wrap">
                   {selected.preview || "(vazio)"}
