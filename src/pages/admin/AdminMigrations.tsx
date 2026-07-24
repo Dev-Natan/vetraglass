@@ -211,8 +211,29 @@ export default function AdminMigrations() {
 
         {/* List */}
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
             <CardTitle className="text-base">Histórico</CardTitle>
+            <div className="flex items-center gap-2">
+              {search.trim() && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => downloadZip(filtered)}
+                  disabled={zipping || filtered.length === 0}
+                >
+                  <Archive className="w-3 h-3 mr-1" />
+                  Exportar filtradas ({filtered.length})
+                </Button>
+              )}
+              <Button
+                size="sm"
+                onClick={() => downloadZip(data ?? [])}
+                disabled={zipping || !data || data.length === 0}
+              >
+                <Archive className="w-3 h-3 mr-1" />
+                {zipping ? "Gerando..." : `Exportar todas (${data?.length ?? 0})`}
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             {error ? (
