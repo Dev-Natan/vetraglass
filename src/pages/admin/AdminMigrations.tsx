@@ -77,6 +77,23 @@ export default function AdminMigrations() {
     toast({ title: "SQL copiado", description: `Migração ${m.version}` });
   };
 
+  const downloadSql = (m: MigrationRow) => {
+    if (!m.preview) return;
+    const safeName = (m.name ?? "migration").replace(/[^a-z0-9_-]+/gi, "_");
+    const filename = `${m.version}_${safeName}.sql`;
+    const header = `-- Migração: ${m.name ?? ""}\n-- Versão: ${m.version}\n-- Aplicada em: ${m.applied_at ?? "—"}\n-- Comandos: ${m.statements_count}\n\n`;
+    const blob = new Blob([header + m.preview], { type: "text/sql;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast({ title: "Download iniciado", description: filename });
+  };
+
   return (
     <AdminLayout>
       <div className="p-6 space-y-6">
