@@ -716,6 +716,7 @@ export type Database = {
           email: string | null
           id: string
           login_token: string | null
+          logo_size: string | null
           logo_url: string | null
           modo_fiscal_ativo: boolean
           name: string
@@ -744,6 +745,7 @@ export type Database = {
           email?: string | null
           id?: string
           login_token?: string | null
+          logo_size?: string | null
           logo_url?: string | null
           modo_fiscal_ativo?: boolean
           name: string
@@ -772,6 +774,7 @@ export type Database = {
           email?: string | null
           id?: string
           login_token?: string | null
+          logo_size?: string | null
           logo_url?: string | null
           modo_fiscal_ativo?: boolean
           name?: string
@@ -1341,10 +1344,14 @@ export type Database = {
           accepts_pix: boolean
           company_id: string
           created_at: string
+          custom_conditions: Json
           default_condicao_id: string | null
           default_forma_id: string | null
+          display_mode: string
           id: string
+          payment_methods: Json
           settings: Json | null
+          show_fees_to_customer: boolean
           updated_at: string
         }
         Insert: {
@@ -1353,10 +1360,14 @@ export type Database = {
           accepts_pix?: boolean
           company_id: string
           created_at?: string
+          custom_conditions?: Json
           default_condicao_id?: string | null
           default_forma_id?: string | null
+          display_mode?: string
           id?: string
+          payment_methods?: Json
           settings?: Json | null
+          show_fees_to_customer?: boolean
           updated_at?: string
         }
         Update: {
@@ -1365,10 +1376,14 @@ export type Database = {
           accepts_pix?: boolean
           company_id?: string
           created_at?: string
+          custom_conditions?: Json
           default_condicao_id?: string | null
           default_forma_id?: string | null
+          display_mode?: string
           id?: string
+          payment_methods?: Json
           settings?: Json | null
+          show_fees_to_customer?: boolean
           updated_at?: string
         }
         Relationships: [
@@ -3252,6 +3267,7 @@ export type Database = {
           pending_amount: number
           production_status: string | null
           quote_id: string | null
+          sale_id: string | null
           status: string
           technical_notes: string | null
           total_amount: number
@@ -3281,6 +3297,7 @@ export type Database = {
           pending_amount?: number
           production_status?: string | null
           quote_id?: string | null
+          sale_id?: string | null
           status?: string
           technical_notes?: string | null
           total_amount?: number
@@ -3310,6 +3327,7 @@ export type Database = {
           pending_amount?: number
           production_status?: string | null
           quote_id?: string | null
+          sale_id?: string | null
           status?: string
           technical_notes?: string | null
           total_amount?: number
@@ -3342,6 +3360,13 @@ export type Database = {
             columns: ["quote_id"]
             isOneToOne: false
             referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordens_servico_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
             referencedColumns: ["id"]
           },
         ]
@@ -4481,7 +4506,7 @@ export type Database = {
           created_at: string
           description: string | null
           glass_color: string | null
-          glass_thickness: number | null
+          glass_thickness: string | null
           has_glass: boolean | null
           height: number | null
           height_b: number | null
@@ -4506,7 +4531,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           glass_color?: string | null
-          glass_thickness?: number | null
+          glass_thickness?: string | null
           has_glass?: boolean | null
           height?: number | null
           height_b?: number | null
@@ -4531,7 +4556,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           glass_color?: string | null
-          glass_thickness?: number | null
+          glass_thickness?: string | null
           has_glass?: boolean | null
           height?: number | null
           height_b?: number | null
@@ -5069,6 +5094,7 @@ export type Database = {
           metadata: Json | null
           notes: string | null
           ordem_servico_id: string | null
+          quote_id: string | null
           scheduled_at: string
           scheduled_date: string | null
           scheduled_time_end: string | null
@@ -5095,6 +5121,7 @@ export type Database = {
           metadata?: Json | null
           notes?: string | null
           ordem_servico_id?: string | null
+          quote_id?: string | null
           scheduled_at: string
           scheduled_date?: string | null
           scheduled_time_end?: string | null
@@ -5121,6 +5148,7 @@ export type Database = {
           metadata?: Json | null
           notes?: string | null
           ordem_servico_id?: string | null
+          quote_id?: string | null
           scheduled_at?: string
           scheduled_date?: string | null
           scheduled_time_end?: string | null
@@ -5149,6 +5177,20 @@ export type Database = {
             columns: ["ordem_servico_id"]
             isOneToOne: false
             referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_appointments_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quote_financial_status"
+            referencedColumns: ["quote_id"]
+          },
+          {
+            foreignKeyName: "service_appointments_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
             referencedColumns: ["id"]
           },
         ]
