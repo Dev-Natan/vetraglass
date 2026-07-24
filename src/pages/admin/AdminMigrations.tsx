@@ -43,6 +43,7 @@ function formatDate(iso: string | null) {
 export default function AdminMigrations() {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<MigrationRow | null>(null);
+  const [zipping, setZipping] = useState(false);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["admin", "schema-migrations"],
