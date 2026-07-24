@@ -275,7 +275,7 @@ export function useSupportTickets() {
     if (!user) return;
 
     const ticketsChannel = supabase
-      .channel('support-tickets-changes')
+      .channel(`support-tickets-changes-${user.id}`)
       .on(
         'postgres_changes',
         {
@@ -291,7 +291,7 @@ export function useSupportTickets() {
       .subscribe();
 
     const messagesChannel = supabase
-      .channel('support-messages-changes')
+      .channel(`support-messages-changes-${user.id}`)
       .on(
         'postgres_changes',
         {
