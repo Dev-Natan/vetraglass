@@ -1308,6 +1308,12 @@ export type Database = {
           email_payment_received: boolean
           email_quote_approved: boolean
           id: string
+          notify_expense_alerts: boolean
+          notify_low_stock: boolean
+          notify_overdue_orders: boolean
+          notify_overdue_receivables: boolean
+          notify_pending_quotes: boolean
+          notify_quote_expiring: boolean
           quiet_hours_end: string | null
           quiet_hours_start: string | null
           reminder_appointments: boolean
@@ -1331,6 +1337,12 @@ export type Database = {
           email_payment_received?: boolean
           email_quote_approved?: boolean
           id?: string
+          notify_expense_alerts?: boolean
+          notify_low_stock?: boolean
+          notify_overdue_orders?: boolean
+          notify_overdue_receivables?: boolean
+          notify_pending_quotes?: boolean
+          notify_quote_expiring?: boolean
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
           reminder_appointments?: boolean
@@ -1354,6 +1366,12 @@ export type Database = {
           email_payment_received?: boolean
           email_quote_approved?: boolean
           id?: string
+          notify_expense_alerts?: boolean
+          notify_low_stock?: boolean
+          notify_overdue_orders?: boolean
+          notify_overdue_receivables?: boolean
+          notify_pending_quotes?: boolean
+          notify_quote_expiring?: boolean
           quiet_hours_end?: string | null
           quiet_hours_start?: string | null
           reminder_appointments?: boolean
@@ -4688,7 +4706,7 @@ export type Database = {
           item_template_id: string | null
           notes: string | null
           ordem_servico_id: string | null
-          order_number: string | null
+          order_number: number | null
           os_number: string | null
           procurement_status: string | null
           quantity: number | null
@@ -4712,7 +4730,7 @@ export type Database = {
           item_template_id?: string | null
           notes?: string | null
           ordem_servico_id?: string | null
-          order_number?: string | null
+          order_number?: number | null
           os_number?: string | null
           procurement_status?: string | null
           quantity?: number | null
@@ -4736,7 +4754,7 @@ export type Database = {
           item_template_id?: string | null
           notes?: string | null
           ordem_servico_id?: string | null
-          order_number?: string | null
+          order_number?: number | null
           os_number?: string | null
           procurement_status?: string | null
           quantity?: number | null
@@ -5162,6 +5180,10 @@ export type Database = {
       }
       role_permissions: {
         Row: {
+          can_create: boolean
+          can_delete: boolean
+          can_edit: boolean
+          can_view: boolean
           company_id: string
           created_at: string
           id: string
@@ -5171,6 +5193,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          can_create?: boolean
+          can_delete?: boolean
+          can_edit?: boolean
+          can_view?: boolean
           company_id: string
           created_at?: string
           id?: string
@@ -5180,6 +5206,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          can_create?: boolean
+          can_delete?: boolean
+          can_edit?: boolean
+          can_view?: boolean
           company_id?: string
           created_at?: string
           id?: string
