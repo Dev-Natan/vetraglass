@@ -6,7 +6,7 @@
 import { auth, defineMcp } from "npm:@lovable.dev/mcp-js@0.20.0";
 
 // src/lib/mcp/tools/list-clients.ts
-import { createClient } from "npm:@supabase/supabase-js@2.89.0";
+import { createClient } from "npm:@supabase/supabase-js@^2.110.8";
 import { defineTool } from "npm:@lovable.dev/mcp-js@0.20.0";
 import { z } from "npm:zod@^3.25.76";
 function sb(ctx) {
@@ -47,7 +47,7 @@ var list_clients_default = defineTool({
 });
 
 // src/lib/mcp/tools/list-quotes.ts
-import { createClient as createClient2 } from "npm:@supabase/supabase-js@2.89.0";
+import { createClient as createClient2 } from "npm:@supabase/supabase-js@^2.110.8";
 import { defineTool as defineTool2 } from "npm:@lovable.dev/mcp-js@0.20.0";
 import { z as z2 } from "npm:zod@^3.25.76";
 function sb2(ctx) {
@@ -85,7 +85,7 @@ var list_quotes_default = defineTool2({
 });
 
 // src/lib/mcp/tools/list-stock.ts
-import { createClient as createClient3 } from "npm:@supabase/supabase-js@2.89.0";
+import { createClient as createClient3 } from "npm:@supabase/supabase-js@^2.110.8";
 import { defineTool as defineTool3 } from "npm:@lovable.dev/mcp-js@0.20.0";
 import { z as z3 } from "npm:zod@^3.25.76";
 function sb3(ctx) {
@@ -123,7 +123,7 @@ var list_stock_default = defineTool3({
 });
 
 // src/lib/mcp/index.ts
-var projectRef = "ozghdguhibqssyfbgomh";
+var projectRef = "vyfwsjhcnczvgbixlfqj";
 var mcp_default = defineMcp({
   name: "vetra-mcp",
   title: "Vetra Glass",
