@@ -755,6 +755,7 @@ export type Database = {
           address_street: string | null
           city: string | null
           cnpj: string | null
+          complement: string | null
           created_at: string
           default_presentation_text: string | null
           email: string | null
@@ -765,12 +766,15 @@ export type Database = {
           logo_url: string | null
           modo_fiscal_ativo: boolean
           name: string
+          neighborhood: string | null
+          number: string | null
           phone: string | null
           presentation_data: Json | null
           presentation_enabled: boolean
           presentation_template: string | null
           settings: Json
           state: string | null
+          street: string | null
           stripe_customer_id: string | null
           subscription_plan: string | null
           subscription_status: string | null
@@ -789,6 +793,7 @@ export type Database = {
           address_street?: string | null
           city?: string | null
           cnpj?: string | null
+          complement?: string | null
           created_at?: string
           default_presentation_text?: string | null
           email?: string | null
@@ -799,12 +804,15 @@ export type Database = {
           logo_url?: string | null
           modo_fiscal_ativo?: boolean
           name: string
+          neighborhood?: string | null
+          number?: string | null
           phone?: string | null
           presentation_data?: Json | null
           presentation_enabled?: boolean
           presentation_template?: string | null
           settings?: Json
           state?: string | null
+          street?: string | null
           stripe_customer_id?: string | null
           subscription_plan?: string | null
           subscription_status?: string | null
@@ -823,6 +831,7 @@ export type Database = {
           address_street?: string | null
           city?: string | null
           cnpj?: string | null
+          complement?: string | null
           created_at?: string
           default_presentation_text?: string | null
           email?: string | null
@@ -833,12 +842,15 @@ export type Database = {
           logo_url?: string | null
           modo_fiscal_ativo?: boolean
           name?: string
+          neighborhood?: string | null
+          number?: string | null
           phone?: string | null
           presentation_data?: Json | null
           presentation_enabled?: boolean
           presentation_template?: string | null
           settings?: Json
           state?: string | null
+          street?: string | null
           stripe_customer_id?: string | null
           subscription_plan?: string | null
           subscription_status?: string | null
@@ -3731,6 +3743,7 @@ export type Database = {
           ordem_servico_id: string
           os_item_id: string | null
           panels: Json | null
+          procurement_status: string | null
           quantity: number | null
           status: string | null
           width_mm: number | null
@@ -3748,6 +3761,7 @@ export type Database = {
           ordem_servico_id: string
           os_item_id?: string | null
           panels?: Json | null
+          procurement_status?: string | null
           quantity?: number | null
           status?: string | null
           width_mm?: number | null
@@ -3765,6 +3779,7 @@ export type Database = {
           ordem_servico_id?: string
           os_item_id?: string | null
           panels?: Json | null
+          procurement_status?: string | null
           quantity?: number | null
           status?: string | null
           width_mm?: number | null
@@ -4132,6 +4147,7 @@ export type Database = {
       permission_profiles: {
         Row: {
           can_approve_discounts: boolean
+          can_approve_refunds: boolean
           can_cancel_sales: boolean
           can_manage_stock: boolean
           can_operate_cash: boolean
@@ -4143,13 +4159,16 @@ export type Database = {
           hide_prices: boolean
           id: string
           is_default: boolean
+          is_system: boolean
           name: string
           permissions: Json
+          profile_name: string | null
           profile_type: string | null
           updated_at: string
         }
         Insert: {
           can_approve_discounts?: boolean
+          can_approve_refunds?: boolean
           can_cancel_sales?: boolean
           can_manage_stock?: boolean
           can_operate_cash?: boolean
@@ -4161,13 +4180,16 @@ export type Database = {
           hide_prices?: boolean
           id?: string
           is_default?: boolean
+          is_system?: boolean
           name: string
           permissions?: Json
+          profile_name?: string | null
           profile_type?: string | null
           updated_at?: string
         }
         Update: {
           can_approve_discounts?: boolean
+          can_approve_refunds?: boolean
           can_cancel_sales?: boolean
           can_manage_stock?: boolean
           can_operate_cash?: boolean
@@ -4179,8 +4201,10 @@ export type Database = {
           hide_prices?: boolean
           id?: string
           is_default?: boolean
+          is_system?: boolean
           name?: string
           permissions?: Json
+          profile_name?: string | null
           profile_type?: string | null
           updated_at?: string
         }
@@ -4752,6 +4776,7 @@ export type Database = {
         Row: {
           amount: number
           cash_movement_id: string | null
+          cash_register_id: string | null
           company_id: string
           created_at: string
           created_by: string | null
@@ -4771,6 +4796,7 @@ export type Database = {
         Insert: {
           amount: number
           cash_movement_id?: string | null
+          cash_register_id?: string | null
           company_id: string
           created_at?: string
           created_by?: string | null
@@ -4790,6 +4816,7 @@ export type Database = {
         Update: {
           amount?: number
           cash_movement_id?: string | null
+          cash_register_id?: string | null
           company_id?: string
           created_at?: string
           created_by?: string | null
@@ -4807,6 +4834,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "quote_deposits_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "quote_deposits_company_id_fkey"
             columns: ["company_id"]
@@ -5352,6 +5386,7 @@ export type Database = {
           notes: string | null
           ordem_servico_id: string | null
           paid_amount: number
+          parent_sale_id: string | null
           payment_method: string | null
           payment_status: string
           pending_amount: number
@@ -5378,6 +5413,7 @@ export type Database = {
           notes?: string | null
           ordem_servico_id?: string | null
           paid_amount?: number
+          parent_sale_id?: string | null
           payment_method?: string | null
           payment_status?: string
           pending_amount?: number
@@ -5404,6 +5440,7 @@ export type Database = {
           notes?: string | null
           ordem_servico_id?: string | null
           paid_amount?: number
+          parent_sale_id?: string | null
           payment_method?: string | null
           payment_status?: string
           pending_amount?: number
@@ -5442,6 +5479,13 @@ export type Database = {
             columns: ["ordem_servico_id"]
             isOneToOne: false
             referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_parent_sale_id_fkey"
+            columns: ["parent_sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
             referencedColumns: ["id"]
           },
           {
@@ -5674,6 +5718,7 @@ export type Database = {
           reference_type: string | null
           type: string
           unit_cost: number | null
+          valor_financeiro: number | null
         }
         Insert: {
           category?: string | null
@@ -5690,6 +5735,7 @@ export type Database = {
           reference_type?: string | null
           type: string
           unit_cost?: number | null
+          valor_financeiro?: number | null
         }
         Update: {
           category?: string | null
@@ -5706,6 +5752,7 @@ export type Database = {
           reference_type?: string | null
           type?: string
           unit_cost?: number | null
+          valor_financeiro?: number | null
         }
         Relationships: [
           {
@@ -5808,6 +5855,7 @@ export type Database = {
         Row: {
           created_at: string
           file_name: string
+          file_path: string | null
           file_size: number | null
           file_type: string | null
           file_url: string
@@ -5817,6 +5865,7 @@ export type Database = {
         Insert: {
           created_at?: string
           file_name: string
+          file_path?: string | null
           file_size?: number | null
           file_type?: string | null
           file_url: string
@@ -5826,6 +5875,7 @@ export type Database = {
         Update: {
           created_at?: string
           file_name?: string
+          file_path?: string | null
           file_size?: number | null
           file_type?: string | null
           file_url?: string
@@ -6358,11 +6408,17 @@ export type Database = {
       get_user_permission_profile: {
         Args: { _company_id: string; _user_id: string }
         Returns: {
+          can_approve_discounts: boolean
+          can_approve_refunds: boolean
+          can_cancel_sales: boolean
+          can_manage_stock: boolean
           can_operate_cash: boolean
+          can_view_reports: boolean
           hide_costs: boolean
           hide_prices: boolean
           permissions: Json
           profile_id: string
+          profile_name: string
           profile_type: string
         }[]
       }
