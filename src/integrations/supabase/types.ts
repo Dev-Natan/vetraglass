@@ -1799,6 +1799,50 @@ export type Database = {
           },
         ]
       }
+      company_subscriptions: {
+        Row: {
+          company_id: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          notes: string | null
+          plan_name: string
+          plan_price: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          plan_name?: string
+          plan_price?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          plan_name?: string
+          plan_price?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_subscriptions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_suggested_prices: {
         Row: {
           company_id: string
@@ -1972,6 +2016,147 @@ export type Database = {
           },
         ]
       }
+      employee_invites: {
+        Row: {
+          accepted_at: string | null
+          company_id: string
+          created_at: string
+          email: string
+          employee_id: string | null
+          expires_at: string
+          id: string
+          invited_by: string | null
+          role: string
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          company_id: string
+          created_at?: string
+          email: string
+          employee_id?: string | null
+          expires_at?: string
+          id?: string
+          invited_by?: string | null
+          role?: string
+          token?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          company_id?: string
+          created_at?: string
+          email?: string
+          employee_id?: string | null
+          expires_at?: string
+          id?: string
+          invited_by?: string | null
+          role?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_invites_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_invites_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employees: {
+        Row: {
+          admission_date: string | null
+          commission_enabled: boolean
+          commission_percent: number
+          commission_type: string
+          company_id: string
+          created_at: string
+          email: string | null
+          hourly_rate: number
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          permission_profile_id: string | null
+          phone: string | null
+          photo_url: string | null
+          role: string
+          salary_payment_day: number | null
+          specialty: string | null
+          updated_at: string
+          user_id: string | null
+          username: string | null
+        }
+        Insert: {
+          admission_date?: string | null
+          commission_enabled?: boolean
+          commission_percent?: number
+          commission_type?: string
+          company_id: string
+          created_at?: string
+          email?: string | null
+          hourly_rate?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          permission_profile_id?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          role?: string
+          salary_payment_day?: number | null
+          specialty?: string | null
+          updated_at?: string
+          user_id?: string | null
+          username?: string | null
+        }
+        Update: {
+          admission_date?: string | null
+          commission_enabled?: boolean
+          commission_percent?: number
+          commission_type?: string
+          company_id?: string
+          created_at?: string
+          email?: string | null
+          hourly_rate?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          permission_profile_id?: string | null
+          phone?: string | null
+          photo_url?: string | null
+          role?: string
+          salary_payment_day?: number | null
+          specialty?: string | null
+          updated_at?: string
+          user_id?: string | null
+          username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employees_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employees_permission_profile_id_fkey"
+            columns: ["permission_profile_id"]
+            isOneToOne: false
+            referencedRelation: "permission_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expenses: {
         Row: {
           amount: number
@@ -1987,6 +2172,7 @@ export type Database = {
           employee_id: string | null
           id: string
           installment_number: number | null
+          is_auto_generated: boolean
           is_recurring: boolean | null
           notes: string | null
           paid_at: string | null
@@ -1994,6 +2180,7 @@ export type Database = {
           parent_expense_id: string | null
           payment_method: string | null
           recurrence: Json | null
+          recurrence_day: number | null
           reference_id: string | null
           reference_type: string | null
           status: string
@@ -2016,6 +2203,7 @@ export type Database = {
           employee_id?: string | null
           id?: string
           installment_number?: number | null
+          is_auto_generated?: boolean
           is_recurring?: boolean | null
           notes?: string | null
           paid_at?: string | null
@@ -2023,6 +2211,7 @@ export type Database = {
           parent_expense_id?: string | null
           payment_method?: string | null
           recurrence?: Json | null
+          recurrence_day?: number | null
           reference_id?: string | null
           reference_type?: string | null
           status?: string
@@ -2045,6 +2234,7 @@ export type Database = {
           employee_id?: string | null
           id?: string
           installment_number?: number | null
+          is_auto_generated?: boolean
           is_recurring?: boolean | null
           notes?: string | null
           paid_at?: string | null
@@ -2052,6 +2242,7 @@ export type Database = {
           parent_expense_id?: string | null
           payment_method?: string | null
           recurrence?: Json | null
+          recurrence_day?: number | null
           reference_id?: string | null
           reference_type?: string | null
           status?: string
@@ -2077,6 +2268,88 @@ export type Database = {
           },
           {
             foreignKeyName: "expenses_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feedback_votes: {
+        Row: {
+          created_at: string
+          feedback_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          feedback_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          feedback_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_votes_feedback_id_fkey"
+            columns: ["feedback_id"]
+            isOneToOne: false
+            referencedRelation: "feedbacks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feedbacks: {
+        Row: {
+          admin_response: string | null
+          category: string
+          company_id: string
+          created_at: string
+          description: string
+          id: string
+          is_public: boolean
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+          votes_count: number
+        }
+        Insert: {
+          admin_response?: string | null
+          category: string
+          company_id: string
+          created_at?: string
+          description: string
+          id?: string
+          is_public?: boolean
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+          votes_count?: number
+        }
+        Update: {
+          admin_response?: string | null
+          category?: string
+          company_id?: string
+          created_at?: string
+          description?: string
+          id?: string
+          is_public?: boolean
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+          votes_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedbacks_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -2614,6 +2887,139 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      measurement_checklist: {
+        Row: {
+          created_at: string
+          id: string
+          is_checked: boolean
+          item_label: string
+          measurement_id: string
+          notes: string | null
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_checked?: boolean
+          item_label: string
+          measurement_id: string
+          notes?: string | null
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_checked?: boolean
+          item_label?: string
+          measurement_id?: string
+          notes?: string | null
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "measurement_checklist_measurement_id_fkey"
+            columns: ["measurement_id"]
+            isOneToOne: false
+            referencedRelation: "site_measurements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      measurement_items: {
+        Row: {
+          created_at: string
+          depth: number | null
+          height: number | null
+          id: string
+          item_name: string
+          item_type: string | null
+          measurement_id: string
+          notes: string | null
+          peitoril: number | null
+          position: string | null
+          quantity: number
+          room: string | null
+          sort_order: number
+          suggested_product: string | null
+          updated_at: string
+          vao_altura: number | null
+          vao_largura: number | null
+          width: number | null
+        }
+        Insert: {
+          created_at?: string
+          depth?: number | null
+          height?: number | null
+          id?: string
+          item_name: string
+          item_type?: string | null
+          measurement_id: string
+          notes?: string | null
+          peitoril?: number | null
+          position?: string | null
+          quantity?: number
+          room?: string | null
+          sort_order?: number
+          suggested_product?: string | null
+          updated_at?: string
+          vao_altura?: number | null
+          vao_largura?: number | null
+          width?: number | null
+        }
+        Update: {
+          created_at?: string
+          depth?: number | null
+          height?: number | null
+          id?: string
+          item_name?: string
+          item_type?: string | null
+          measurement_id?: string
+          notes?: string | null
+          peitoril?: number | null
+          position?: string | null
+          quantity?: number
+          room?: string | null
+          sort_order?: number
+          suggested_product?: string | null
+          updated_at?: string
+          vao_altura?: number | null
+          vao_largura?: number | null
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "measurement_items_measurement_id_fkey"
+            columns: ["measurement_id"]
+            isOneToOne: false
+            referencedRelation: "site_measurements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      municipios_ibge: {
+        Row: {
+          codigo_ibge: string
+          created_at: string
+          nome_municipio: string
+          uf_codigo: string
+          uf_nome: string | null
+        }
+        Insert: {
+          codigo_ibge: string
+          created_at?: string
+          nome_municipio: string
+          uf_codigo: string
+          uf_nome?: string | null
+        }
+        Update: {
+          codigo_ibge?: string
+          created_at?: string
+          nome_municipio?: string
+          uf_codigo?: string
+          uf_nome?: string | null
+        }
+        Relationships: []
       }
       notas_fiscais: {
         Row: {
@@ -4635,6 +5041,75 @@ export type Database = {
           },
         ]
       }
+      site_measurements: {
+        Row: {
+          client_id: string | null
+          company_id: string
+          created_at: string
+          id: string
+          location_address: string | null
+          location_name: string | null
+          measured_at: string | null
+          measured_by: string | null
+          measured_by_name: string | null
+          measurement_number: number
+          notes: string | null
+          observations: string | null
+          room_name: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          client_id?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          location_address?: string | null
+          location_name?: string | null
+          measured_at?: string | null
+          measured_by?: string | null
+          measured_by_name?: string | null
+          measurement_number?: number
+          notes?: string | null
+          observations?: string | null
+          room_name?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          location_address?: string | null
+          location_name?: string | null
+          measured_at?: string | null
+          measured_by?: string | null
+          measured_by_name?: string | null
+          measurement_number?: number
+          notes?: string | null
+          observations?: string | null
+          room_name?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_measurements_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_measurements_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_movements: {
         Row: {
           category: string | null
@@ -4777,6 +5252,126 @@ export type Database = {
             columns: ["item_template_id"]
             isOneToOne: false
             referencedRelation: "item_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_attachments: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_size: number | null
+          file_type: string | null
+          file_url: string
+          id: string
+          message_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url: string
+          id?: string
+          message_id: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          message_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_attachments_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "support_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_admin: boolean
+          ticket_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_admin?: boolean
+          ticket_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_admin?: boolean
+          ticket_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_tickets: {
+        Row: {
+          category: string
+          company_id: string
+          created_at: string
+          id: string
+          priority: string
+          status: string
+          subject: string
+          ticket_number: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          company_id: string
+          created_at?: string
+          id?: string
+          priority?: string
+          status?: string
+          subject: string
+          ticket_number?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          priority?: string
+          status?: string
+          subject?: string
+          ticket_number?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -5055,6 +5650,10 @@ export type Database = {
           p_type?: string
         }
         Returns: number
+      }
+      calculate_sale_commission: {
+        Args: { _employee_id: string; _sale_id: string }
+        Returns: string
       }
       cancel_approved_quote: { Args: { _quote_id: string }; Returns: Json }
       convert_quote_to_os: { Args: { _quote_id: string }; Returns: string }
