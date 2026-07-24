@@ -463,8 +463,10 @@ export type Database = {
           expense_id: string | null
           id: string
           metadata: Json | null
+          ordem_servico_id: string | null
           origem: string | null
           payment_method: string | null
+          quote_id: string | null
           receivable_id: string | null
           reference_id: string | null
           reference_type: string | null
@@ -483,8 +485,10 @@ export type Database = {
           expense_id?: string | null
           id?: string
           metadata?: Json | null
+          ordem_servico_id?: string | null
           origem?: string | null
           payment_method?: string | null
+          quote_id?: string | null
           receivable_id?: string | null
           reference_id?: string | null
           reference_type?: string | null
@@ -503,8 +507,10 @@ export type Database = {
           expense_id?: string | null
           id?: string
           metadata?: Json | null
+          ordem_servico_id?: string | null
           origem?: string | null
           payment_method?: string | null
+          quote_id?: string | null
           receivable_id?: string | null
           reference_id?: string | null
           reference_type?: string | null
@@ -524,6 +530,27 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_movements_ordem_servico_id_fkey"
+            columns: ["ordem_servico_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_movements_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quote_financial_status"
+            referencedColumns: ["quote_id"]
+          },
+          {
+            foreignKeyName: "cash_movements_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
             referencedColumns: ["id"]
           },
           {
@@ -734,7 +761,7 @@ export type Database = {
           enable_presentation_page: boolean
           id: string
           login_token: string | null
-          logo_size: string | null
+          logo_size: number | null
           logo_url: string | null
           modo_fiscal_ativo: boolean
           name: string
@@ -768,7 +795,7 @@ export type Database = {
           enable_presentation_page?: boolean
           id?: string
           login_token?: string | null
-          logo_size?: string | null
+          logo_size?: number | null
           logo_url?: string | null
           modo_fiscal_ativo?: boolean
           name: string
@@ -802,7 +829,7 @@ export type Database = {
           enable_presentation_page?: boolean
           id?: string
           login_token?: string | null
-          logo_size?: string | null
+          logo_size?: number | null
           logo_url?: string | null
           modo_fiscal_ativo?: boolean
           name?: string
@@ -2056,40 +2083,61 @@ export type Database = {
         Row: {
           company_id: string
           created_at: string
+          desconto_percent: number
           descricao: string | null
+          dias_entre_parcelas: number
           entrada_percent: number | null
+          forma_pagamento_id: string | null
           id: string
           installments: number
           interval_days: number
           is_active: boolean
           is_default: boolean | null
+          juros_percent: number
           name: string
+          nome: string | null
+          parcelas: number | null
+          sort_order: number
           updated_at: string
         }
         Insert: {
           company_id: string
           created_at?: string
+          desconto_percent?: number
           descricao?: string | null
+          dias_entre_parcelas?: number
           entrada_percent?: number | null
+          forma_pagamento_id?: string | null
           id?: string
           installments?: number
           interval_days?: number
           is_active?: boolean
           is_default?: boolean | null
+          juros_percent?: number
           name: string
+          nome?: string | null
+          parcelas?: number | null
+          sort_order?: number
           updated_at?: string
         }
         Update: {
           company_id?: string
           created_at?: string
+          desconto_percent?: number
           descricao?: string | null
+          dias_entre_parcelas?: number
           entrada_percent?: number | null
+          forma_pagamento_id?: string | null
           id?: string
           installments?: number
           interval_days?: number
           is_active?: boolean
           is_default?: boolean | null
+          juros_percent?: number
           name?: string
+          nome?: string | null
+          parcelas?: number | null
+          sort_order?: number
           updated_at?: string
         }
         Relationships: [
@@ -2098,6 +2146,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "condicoes_pagamento_forma_pagamento_id_fkey"
+            columns: ["forma_pagamento_id"]
+            isOneToOne: false
+            referencedRelation: "formas_pagamento"
             referencedColumns: ["id"]
           },
         ]
@@ -2547,6 +2602,7 @@ export type Database = {
       }
       financial_categories: {
         Row: {
+          active: boolean
           color: string | null
           company_id: string
           created_at: string
@@ -2557,9 +2613,12 @@ export type Database = {
           is_system: boolean
           kind: string
           name: string
+          parent_id: string | null
+          sort_order: number
           updated_at: string
         }
         Insert: {
+          active?: boolean
           color?: string | null
           company_id: string
           created_at?: string
@@ -2570,9 +2629,12 @@ export type Database = {
           is_system?: boolean
           kind: string
           name: string
+          parent_id?: string | null
+          sort_order?: number
           updated_at?: string
         }
         Update: {
+          active?: boolean
           color?: string | null
           company_id?: string
           created_at?: string
@@ -2583,6 +2645,8 @@ export type Database = {
           is_system?: boolean
           kind?: string
           name?: string
+          parent_id?: string | null
+          sort_order?: number
           updated_at?: string
         }
         Relationships: [
@@ -2591,6 +2655,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "financial_categories"
             referencedColumns: ["id"]
           },
         ]
@@ -2603,7 +2674,9 @@ export type Database = {
           is_active: boolean
           is_default: boolean | null
           name: string
+          nome: string | null
           prazo_recebimento_dias: number | null
+          sort_order: number
           taxa_fixa: number | null
           taxa_percent: number | null
           tipo: string | null
@@ -2616,7 +2689,9 @@ export type Database = {
           is_active?: boolean
           is_default?: boolean | null
           name: string
+          nome?: string | null
           prazo_recebimento_dias?: number | null
+          sort_order?: number
           taxa_fixa?: number | null
           taxa_percent?: number | null
           tipo?: string | null
@@ -2629,7 +2704,9 @@ export type Database = {
           is_active?: boolean
           is_default?: boolean | null
           name?: string
+          nome?: string | null
           prazo_recebimento_dias?: number | null
+          sort_order?: number
           taxa_fixa?: number | null
           taxa_percent?: number | null
           tipo?: string | null
@@ -3877,6 +3954,7 @@ export type Database = {
           company_id: string
           company_item_id: string | null
           created_at: string
+          created_by: string | null
           id: string
           item_name: string
           item_template_id: string | null
@@ -3893,6 +3971,7 @@ export type Database = {
           unit: string | null
           unit_cost: number | null
           waste_mm: number | null
+          waste_percent: number | null
         }
         Insert: {
           bar_length_mm?: number | null
@@ -3901,6 +3980,7 @@ export type Database = {
           company_id: string
           company_item_id?: string | null
           created_at?: string
+          created_by?: string | null
           id?: string
           item_name: string
           item_template_id?: string | null
@@ -3917,6 +3997,7 @@ export type Database = {
           unit?: string | null
           unit_cost?: number | null
           waste_mm?: number | null
+          waste_percent?: number | null
         }
         Update: {
           bar_length_mm?: number | null
@@ -3925,6 +4006,7 @@ export type Database = {
           company_id?: string
           company_item_id?: string | null
           created_at?: string
+          created_by?: string | null
           id?: string
           item_name?: string
           item_template_id?: string | null
@@ -3941,6 +4023,7 @@ export type Database = {
           unit?: string | null
           unit_cost?: number | null
           waste_mm?: number | null
+          waste_percent?: number | null
         }
         Relationships: [
           {
@@ -3985,30 +4068,48 @@ export type Database = {
           caption: string | null
           company_id: string
           created_at: string
+          description: string | null
+          file_name: string | null
+          file_path: string | null
+          file_size: number | null
           id: string
           ordem_servico_id: string
-          photo_url: string
+          photo_type: string | null
+          photo_url: string | null
           stage: string | null
+          uploaded_at: string | null
           uploaded_by: string | null
         }
         Insert: {
           caption?: string | null
           company_id: string
           created_at?: string
+          description?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
           id?: string
           ordem_servico_id: string
-          photo_url: string
+          photo_type?: string | null
+          photo_url?: string | null
           stage?: string | null
+          uploaded_at?: string | null
           uploaded_by?: string | null
         }
         Update: {
           caption?: string | null
           company_id?: string
           created_at?: string
+          description?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
           id?: string
           ordem_servico_id?: string
-          photo_url?: string
+          photo_type?: string | null
+          photo_url?: string | null
           stage?: string | null
+          uploaded_at?: string | null
           uploaded_by?: string | null
         }
         Relationships: [
@@ -4565,6 +4666,7 @@ export type Database = {
           ordem_servico_id: string | null
           order_number: string | null
           os_number: string | null
+          procurement_status: string | null
           quantity: number | null
           received_at: string | null
           status: string
@@ -4588,6 +4690,7 @@ export type Database = {
           ordem_servico_id?: string | null
           order_number?: string | null
           os_number?: string | null
+          procurement_status?: string | null
           quantity?: number | null
           received_at?: string | null
           status?: string
@@ -4611,6 +4714,7 @@ export type Database = {
           ordem_servico_id?: string | null
           order_number?: string | null
           os_number?: string | null
+          procurement_status?: string | null
           quantity?: number | null
           received_at?: string | null
           status?: string
@@ -5823,25 +5927,34 @@ export type Database = {
       system_module_settings: {
         Row: {
           created_at: string
+          description: string | null
+          icon: string | null
           id: string
           is_enabled: boolean
           module_key: string
+          module_name: string | null
           sort_order: number
           updated_at: string
         }
         Insert: {
           created_at?: string
+          description?: string | null
+          icon?: string | null
           id?: string
           is_enabled?: boolean
           module_key: string
+          module_name?: string | null
           sort_order?: number
           updated_at?: string
         }
         Update: {
           created_at?: string
+          description?: string | null
+          icon?: string | null
           id?: string
           is_enabled?: boolean
           module_key?: string
+          module_name?: string | null
           sort_order?: number
           updated_at?: string
         }
@@ -6182,10 +6295,11 @@ export type Database = {
       get_cash_flow_projection: {
         Args: { p_company_id: string; p_end: string; p_start: string }
         Returns: {
-          day: string
-          net: number
-          payables: number
-          receivables: number
+          date: string
+          projected_in: number
+          projected_out: number
+          realized_in: number
+          realized_out: number
         }[]
       }
       get_cutting_plan_items: {
@@ -6373,7 +6487,10 @@ export type Database = {
       }
       reset_composition_item: { Args: { _item_id: string }; Returns: undefined }
       revoke_saas_admin: { Args: { _user_id: string }; Returns: Json }
-      save_composition_item: { Args: { _data: Json }; Returns: string }
+      save_composition_item: {
+        Args: { _company_id: string; _item_id: string; _patch: Json }
+        Returns: string
+      }
       seed_default_financial_categories: {
         Args: { _company_id: string }
         Returns: undefined
