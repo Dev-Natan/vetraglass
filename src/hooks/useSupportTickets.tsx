@@ -274,46 +274,40 @@ export function useSupportTickets() {
   useEffect(() => {
     if (!user) return;
 
-    const ticketsChannel = supabase
-      .channel(`support-tickets-changes-${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'support_tickets',
-        },
-        () => {
-          refetchTickets();
-          if (isSaasAdmin) refetchAdminTickets();
-        }
-      )
-      .subscribe();
+    const uniqueId = `${user.id}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-    const messagesChannel = supabase
-      .channel(`support-messages-changes-${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'support_messages',
-        },
-        (payload) => {
-          const message = payload.new as SupportMessage;
-          queryClient.invalidateQueries({ queryKey: ['support-messages', message.ticket_id] });
-          
-          // Show notification if it's a new message from the other party
-          if (message.is_admin && !isSaasAdmin) {
-            toast.info('Nova resposta do suporte!');
-          } else if (!message.is_admin && isSaasAdmin) {
-            toast.info('Nova mensagem de cliente!');
-          }
+    // Register ALL .on() handlers BEFORE calling .subscribe()
+    const ticketsChannel = supabase.channel(`support-tickets-${uniqueId}`);
+    ticketsChannel.on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'support_tickets' },
+      () => {
+        refetchTickets();
+        if (isSaasAdmin) refetchAdminTickets();
+      }
+    );
+    ticketsChannel.subscribe();
+
+    const messagesChannel = supabase.channel(`support-messages-${uniqueId}`);
+    messagesChannel.on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'support_messages' },
+      (payload) => {
+        const message = payload.new as SupportMessage;
+        queryClient.invalidateQueries({ queryKey: ['support-messages', message.ticket_id] });
+
+        if (message.is_admin && !isSaasAdmin) {
+          toast.info('Nova resposta do suporte!');
+        } else if (!message.is_admin && isSaasAdmin) {
+          toast.info('Nova mensagem de cliente!');
         }
-      )
-      .subscribe();
+      }
+    );
+    messagesChannel.subscribe();
 
     return () => {
+      ticketsChannel.unsubscribe();
+      messagesChannel.unsubscribe();
       supabase.removeChannel(ticketsChannel);
       supabase.removeChannel(messagesChannel);
     };
