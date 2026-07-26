@@ -2351,15 +2351,44 @@ export default function ProductTemplates() {
                 </>
               ) : (
                 <>
-                  <FormulaEditor
-                    value={editQuantityFormula}
-                    onChange={setEditQuantityFormula}
-                    showPiecesQuantity={editingItem?.item_template?.type === 'profile'}
-                    piecesQuantity={editPiecesQuantity}
-                    onPiecesChange={setEditPiecesQuantity}
-                    piecesFormula={editPiecesFormula}
-                    onPiecesFormulaChange={setEditPiecesFormula}
-                  />
+                  <div className="flex items-center justify-between p-3 rounded-md border bg-muted/30">
+                    <div>
+                      <Label className="text-sm font-medium">Quantidade fixa</Label>
+                      <p className="text-xs text-muted-foreground">Ative para digitar um número em vez de fórmula</p>
+                    </div>
+                    <Switch
+                      checked={useFixedQtyEdit}
+                      onCheckedChange={(checked) => {
+                        setUseFixedQtyEdit(checked);
+                        if (checked && !/^\d+(?:[.,]\d+)?$/.test(editQuantityFormula.trim())) {
+                          setEditQuantityFormula("1");
+                        }
+                      }}
+                    />
+                  </div>
+                  {useFixedQtyEdit ? (
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Quantidade</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="any"
+                        value={editQuantityFormula}
+                        onChange={(e) => setEditQuantityFormula(e.target.value || "0")}
+                        placeholder="Ex: 5"
+                      />
+                    </div>
+                  ) : (
+                    <FormulaEditor
+                      value={editQuantityFormula}
+                      onChange={setEditQuantityFormula}
+                      showPiecesQuantity={editingItem?.item_template?.type === 'profile'}
+                      piecesQuantity={editPiecesQuantity}
+                      onPiecesChange={setEditPiecesQuantity}
+                      piecesFormula={editPiecesFormula}
+                      onPiecesFormulaChange={setEditPiecesFormula}
+                    />
+                  )}
                   
               {editingItem?.item_template?.type === 'profile' && (
                 <>
