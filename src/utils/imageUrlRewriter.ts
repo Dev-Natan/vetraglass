@@ -52,6 +52,7 @@ async function resolve(src: string): Promise<string | null> {
 }
 
 const REWRITTEN_IMG = new WeakSet<HTMLImageElement>();
+const REWRITTEN_SVG = new WeakSet<Element>();
 // Track processed (element, propertyName) pairs so we don't rewrite in a loop.
 const REWRITTEN_STYLE = new WeakMap<Element, Set<string>>();
 
@@ -66,6 +67,33 @@ function tryRewriteImg(img: HTMLImageElement) {
     }
   });
 }
+
+const SVG_HREF_TAGS = new Set(['image', 'use', 'feImage', 'pattern', 'textPath', 'mpath', 'linearGradient', 'radialGradient']);
+
+function isSvgHrefElement(el: Element): boolean {
+  return el.namespaceURI === 'http://www.w3.org/2000/svg' && SVG_HREF_TAGS.has(el.localName);
+}
+
+function tryRewriteSvgHref(el: Element) {
+  if (!isSvgHrefElement(el)) return;
+  if (REWRITTEN_SVG.has(el)) return;
+  // Prefer `href`, fall back to legacy `xlink:href`.
+  const attr = el.hasAttribute('href') ? 'href' : el.hasAttribute('xlink:href') ? 'xlink:href' : null;
+  if (!attr) return;
+  const current = el.getAttribute(attr);
+  if (!current || !PUBLIC_RE.test(current)) return;
+  REWRITTEN_SVG.add(el);
+  resolve(current).then((signed) => {
+    if (signed && el.getAttribute(attr) === current) {
+      if (attr === 'xlink:href') {
+        el.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', signed);
+      } else {
+        el.setAttribute(attr, signed);
+      }
+    }
+  });
+}
+
 
 /**
  * Rewrite url(...) refs inside a CSS value string. Returns the (possibly
