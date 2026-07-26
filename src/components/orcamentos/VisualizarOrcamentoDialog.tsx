@@ -803,8 +803,21 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
       items={items || []}
       onSuccess={() => {
         queryClient.invalidateQueries({ queryKey: ['quotes'] });
+        queryClient.invalidateQueries({ queryKey: ['ordem-servico-for-quote', quote.id] });
         setAprovarDialogOpen(false);
-        onOpenChange(false);
+        // Shortcut: after approval, immediately trigger OS creation if none exists
+        setTimeout(async () => {
+          const { data: existing } = await supabase
+            .from('ordens_servico')
+            .select('id')
+            .eq('quote_id', quote.id)
+            .maybeSingle();
+          if (!existing) {
+            createOSMutation.mutate();
+          } else {
+            refetchOS();
+          }
+        }, 300);
       }}
     />
 
