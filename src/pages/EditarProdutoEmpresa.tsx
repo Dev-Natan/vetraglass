@@ -561,10 +561,21 @@ export default function EditarProdutoEmpresa() {
   // Remove item mutation
   const removeItemMutation = useMutation({
     mutationFn: async (itemId: string) => {
+      let targetId = itemId;
+      // If we're removing an inherited (virtual) item, materialize the
+      // template into company scope first, then delete the equivalent row.
+      if (itemId.startsWith('virt_')) {
+        const templateItemId = itemId.slice(5);
+        const source = (templateItems || []).find((t: any) => t.id === templateItemId);
+        const rows = await ensureMaterialized();
+        const match = rows.find(r => r.item_template_id === source?.item_template_id);
+        if (!match) throw new Error('Item herdado não encontrado após materialização');
+        targetId = match.id;
+      }
       const { error } = await supabase
         .from('company_product_items')
         .delete()
-        .eq('id', itemId);
+        .eq('id', targetId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -576,6 +587,8 @@ export default function EditarProdutoEmpresa() {
       toast.error('Erro ao remover: ' + error.message);
     },
   });
+
+
 
   // Reset item to template default
   const resetItemMutation = useMutation({
