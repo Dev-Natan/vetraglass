@@ -298,6 +298,8 @@ export default function ProductTemplates() {
   const [cutAngleEnd, setCutAngleEnd] = useState(90);
   const [compositionSide, setCompositionSide] = useState<string>("");
   const [profilePosition, setProfilePosition] = useState<'Largura' | 'Altura'>('Largura');
+  const [useFixedQty, setUseFixedQty] = useState(false);
+  const [useFixedQtyEdit, setUseFixedQtyEdit] = useState(false);
 
   
   const [editingItem, setEditingItem] = useState<ProductTemplateItem | null>(null);
@@ -657,6 +659,7 @@ export default function ProductTemplates() {
     setCutAngleEnd(90);
     setCompositionSide("");
     setProfilePosition("Largura");
+    setUseFixedQty(false);
   };
 
   const handleCloseDialog = () => {
@@ -1094,7 +1097,14 @@ export default function ProductTemplates() {
 
   const handleEditItem = (item: ProductTemplateItem) => {
     setEditingItem(item);
-    setEditQuantityFormula(item.quantity_formula || "1");
+    const itemType = item.item_template?.type || (item as any).company_item?.type;
+    let effectiveQty = item.quantity_formula || "1";
+    if (itemType === 'profile') {
+      if (item.width_formula?.trim()) effectiveQty = item.width_formula;
+      else if (item.height_formula?.trim()) effectiveQty = item.height_formula;
+    }
+    setEditQuantityFormula(effectiveQty);
+    setUseFixedQtyEdit(/^\d+(?:[.,]\d+)?$/.test(String(effectiveQty).trim()));
     setEditPiecesQuantity(item.pieces_quantity || 1);
     setEditPiecesFormula(item.pieces_formula || null);
     setEditWidthFormula(item.width_formula || "");
@@ -1990,15 +2000,46 @@ export default function ProductTemplates() {
                     />
                   </>
                 ) : (
-                  <FormulaEditor
-                    value={quantityFormula}
-                    onChange={setQuantityFormula}
-                    showPiecesQuantity={compositionActiveTab === 'profile'}
-                    piecesQuantity={piecesQuantity}
-                    onPiecesChange={setPiecesQuantity}
-                    piecesFormula={piecesFormula}
-                    onPiecesFormulaChange={setPiecesFormula}
-                  />
+                  <>
+                    <div className="flex items-center justify-between p-3 rounded-md border bg-muted/30">
+                      <div>
+                        <Label className="text-sm font-medium">Quantidade fixa</Label>
+                        <p className="text-xs text-muted-foreground">Ative para digitar um número em vez de fórmula</p>
+                      </div>
+                      <Switch
+                        checked={useFixedQty}
+                        onCheckedChange={(checked) => {
+                          setUseFixedQty(checked);
+                          if (checked && !/^\d+(?:[.,]\d+)?$/.test(quantityFormula.trim())) {
+                            setQuantityFormula("1");
+                          }
+                        }}
+                      />
+                    </div>
+                    {useFixedQty ? (
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium">Quantidade</Label>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={quantityFormula}
+                          onChange={(e) => setQuantityFormula(e.target.value || "0")}
+                          placeholder="Ex: 5"
+                        />
+                      </div>
+                    ) : (
+                      <FormulaEditor
+                        value={quantityFormula}
+                        onChange={setQuantityFormula}
+                        showPiecesQuantity={compositionActiveTab === 'profile'}
+                        piecesQuantity={piecesQuantity}
+                        onPiecesChange={setPiecesQuantity}
+                        piecesFormula={piecesFormula}
+                        onPiecesFormulaChange={setPiecesFormula}
+                      />
+                    )}
+                  </>
                 )}
 
                 {compositionActiveTab === 'profile' && (
@@ -2310,15 +2351,44 @@ export default function ProductTemplates() {
                 </>
               ) : (
                 <>
-                  <FormulaEditor
-                    value={editQuantityFormula}
-                    onChange={setEditQuantityFormula}
-                    showPiecesQuantity={editingItem?.item_template?.type === 'profile'}
-                    piecesQuantity={editPiecesQuantity}
-                    onPiecesChange={setEditPiecesQuantity}
-                    piecesFormula={editPiecesFormula}
-                    onPiecesFormulaChange={setEditPiecesFormula}
-                  />
+                  <div className="flex items-center justify-between p-3 rounded-md border bg-muted/30">
+                    <div>
+                      <Label className="text-sm font-medium">Quantidade fixa</Label>
+                      <p className="text-xs text-muted-foreground">Ative para digitar um número em vez de fórmula</p>
+                    </div>
+                    <Switch
+                      checked={useFixedQtyEdit}
+                      onCheckedChange={(checked) => {
+                        setUseFixedQtyEdit(checked);
+                        if (checked && !/^\d+(?:[.,]\d+)?$/.test(editQuantityFormula.trim())) {
+                          setEditQuantityFormula("1");
+                        }
+                      }}
+                    />
+                  </div>
+                  {useFixedQtyEdit ? (
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium">Quantidade</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="any"
+                        value={editQuantityFormula}
+                        onChange={(e) => setEditQuantityFormula(e.target.value || "0")}
+                        placeholder="Ex: 5"
+                      />
+                    </div>
+                  ) : (
+                    <FormulaEditor
+                      value={editQuantityFormula}
+                      onChange={setEditQuantityFormula}
+                      showPiecesQuantity={editingItem?.item_template?.type === 'profile'}
+                      piecesQuantity={editPiecesQuantity}
+                      onPiecesChange={setEditPiecesQuantity}
+                      piecesFormula={editPiecesFormula}
+                      onPiecesFormulaChange={setEditPiecesFormula}
+                    />
+                  )}
                   
               {editingItem?.item_template?.type === 'profile' && (
                 <>
