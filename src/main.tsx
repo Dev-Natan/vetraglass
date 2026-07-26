@@ -2,6 +2,9 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { installImageUrlRewriter } from "./utils/imageUrlRewriter";
+
+installImageUrlRewriter();
 
 // Recupera de chunks órfãos após novo deploy (HTML antigo em cache
 // referencia hashes de JS que já não existem). Guard via sessionStorage
