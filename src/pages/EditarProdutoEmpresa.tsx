@@ -234,7 +234,7 @@ export default function EditarProdutoEmpresa() {
     enabled: !!id,
   });
 
-  // Fetch product items
+  // Fetch product items (company-specific overrides)
   const { data: productItems, isLoading: itemsLoading } = useQuery({
     queryKey: ['company-product-items', id],
     queryFn: async () => {
@@ -252,6 +252,86 @@ export default function EditarProdutoEmpresa() {
     },
     enabled: !!id,
   });
+
+  // Fetch inherited default composition (admin template) — used when the company
+  // hasn't customized this product yet. Copy-on-write: any edit materializes these.
+  const inheritanceEnabled = !!product?.product_template_id && (productItems?.length ?? 0) === 0;
+  const { data: templateItems } = useQuery({
+    queryKey: ['product-template-items-inherit', product?.product_template_id],
+    enabled: inheritanceEnabled,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('product_template_items')
+        .select(`
+          *,
+          item_template:item_templates(id, name, type, unit, image_url, linha)
+        `)
+        .eq('product_template_id', product!.product_template_id!)
+        .order('sort_order', { ascending: true });
+      if (error) throw error;
+      return data as any[];
+    },
+  });
+
+  const isInherited = inheritanceEnabled && (templateItems?.length ?? 0) > 0;
+
+  // Virtual items projected from the admin template so the UI renders the
+  // default composition until the company makes its first change.
+  const displayItems: CompanyProductItem[] = useMemo(() => {
+    if (!isInherited) return productItems || [];
+    return (templateItems || []).map((ti: any) => ({
+      id: `virt_${ti.id}`,
+      company_product_id: id!,
+      item_template_id: ti.item_template_id,
+      company_item_id: null,
+      quantity_formula: ti.quantity_formula ?? '1',
+      pieces_formula: ti.pieces_formula ?? null,
+      width_formula: ti.width_formula ?? null,
+      height_formula: ti.height_formula ?? null,
+      is_optional: ti.is_optional ?? false,
+      notes: ti.notes ?? null,
+      sort_order: ti.sort_order ?? 0,
+      cut_angle: ti.cut_angle ?? 90,
+      pieces_quantity: ti.pieces_quantity ?? 1,
+      side: ti.side ?? null,
+      item_template: ti.item_template ?? null,
+      company_item: null,
+      _inherited: true,
+    } as CompanyProductItem & { _inherited: boolean }));
+  }, [isInherited, templateItems, productItems, id]);
+
+  // Copy-on-write: on first modification, snapshot admin template into
+  // company_product_items so the company owns its composition from then on.
+  const ensureMaterialized = async (): Promise<Array<{ id: string; item_template_id: string | null }>> => {
+    if (!isInherited || !templateItems || !id) {
+      return (productItems || []).map(p => ({ id: p.id, item_template_id: p.item_template_id }));
+    }
+    const rows = templateItems.map((ti: any, idx: number) => ({
+      company_product_id: id,
+      item_template_id: ti.item_template_id,
+      name: ti.name,
+      type: ti.type,
+      unit: ti.unit,
+      image_url: ti.image_url,
+      section: ti.section,
+      side: ti.side,
+      is_optional: ti.is_optional,
+      bar_length_mm: ti.bar_length_mm,
+      cut_angle: ti.cut_angle,
+      pieces_quantity: ti.pieces_quantity,
+      width_formula: ti.width_formula,
+      height_formula: ti.height_formula,
+      quantity_formula: ti.quantity_formula ?? '1',
+      sort_order: ti.sort_order ?? idx,
+    }));
+    const { data, error } = await supabase
+      .from('company_product_items')
+      .insert(rows as never)
+      .select('id, item_template_id');
+    if (error) throw error;
+    await queryClient.invalidateQueries({ queryKey: ['company-product-items', id] });
+    return (data || []) as Array<{ id: string; item_template_id: string | null }>;
+  };
 
   // Fetch available item templates for adding
   const { data: availableItems } = useQuery({
@@ -439,6 +519,10 @@ export default function EditarProdutoEmpresa() {
         }
       }
 
+      // COPY-ON-WRITE: if this product is still inheriting from the admin
+      // template, snapshot the template into the company scope before adding.
+      const materialized = await ensureMaterialized();
+
       const isContramarco = addItemSection === 'contramarco';
       const insertData = {
         company_product_id: id,
@@ -453,7 +537,7 @@ export default function EditarProdutoEmpresa() {
         width_formula: addItemSection === 'glass' ? (widthFormula || null) : null,
         height_formula: addItemSection === 'glass' ? (heightFormula || null) : null,
         notes: addItemSection === 'glass' ? (glassName || null) : null,
-        sort_order: (productItems?.length || 0) + 1,
+        sort_order: (materialized.length || productItems?.length || 0) + 1,
         section: isContramarco ? 'contramarco' : null,
       };
 
@@ -477,10 +561,21 @@ export default function EditarProdutoEmpresa() {
   // Remove item mutation
   const removeItemMutation = useMutation({
     mutationFn: async (itemId: string) => {
+      let targetId = itemId;
+      // If we're removing an inherited (virtual) item, materialize the
+      // template into company scope first, then delete the equivalent row.
+      if (itemId.startsWith('virt_')) {
+        const templateItemId = itemId.slice(5);
+        const source = (templateItems || []).find((t: any) => t.id === templateItemId);
+        const rows = await ensureMaterialized();
+        const match = rows.find(r => r.item_template_id === source?.item_template_id);
+        if (!match) throw new Error('Item herdado não encontrado após materialização');
+        targetId = match.id;
+      }
       const { error } = await supabase
         .from('company_product_items')
         .delete()
-        .eq('id', itemId);
+        .eq('id', targetId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -492,6 +587,8 @@ export default function EditarProdutoEmpresa() {
       toast.error('Erro ao remover: ' + error.message);
     },
   });
+
+
 
   // Reset item to template default
   const resetItemMutation = useMutation({
@@ -536,10 +633,19 @@ export default function EditarProdutoEmpresa() {
         updateData.cut_angle = cutAngle;
         updateData.side = side;
       }
+      // Copy-on-write: if editing an inherited item, materialize first and
+      // redirect the update to the newly-created company row.
+      let targetId = editingItem.id;
+      if (targetId.startsWith('virt_')) {
+        const rows = await ensureMaterialized();
+        const match = rows.find(r => r.item_template_id === editingItem.item_template_id);
+        if (!match) throw new Error('Item herdado não encontrado após materialização');
+        targetId = match.id;
+      }
       const { error } = await supabase
         .from('company_product_items')
         .update(updateData as never)
-        .eq('id', editingItem.id);
+        .eq('id', targetId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -752,7 +858,7 @@ export default function EditarProdutoEmpresa() {
   const getItemsByType = (tabValue: string) => {
     const currentTab = itemTypeTabs.find(t => t.value === tabValue);
     const dbType = currentTab?.dbType;
-    return productItems?.filter((item) => {
+    return displayItems?.filter((item) => {
       const type = item.item_template?.type || item.company_item?.type;
       return type === dbType;
     }) || [];
@@ -1269,7 +1375,7 @@ export default function EditarProdutoEmpresa() {
               setCostPerSqm(cost);
               setPricePerSqm(price);
             }}
-            productItems={productItems || []}
+            productItems={displayItems || []}
             currentCostPerSqm={product.cost_per_sqm}
             currentPricePerSqm={product.price_per_sqm}
             currentMargin={product.margin_percent}
