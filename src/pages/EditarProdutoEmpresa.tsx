@@ -160,6 +160,8 @@ export default function EditarProdutoEmpresa() {
   const [linhaFilter, setLinhaFilter] = useState<string>('__all__');
   const [isEditItemDialogOpen, setIsEditItemDialogOpen] = useState(false);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [isCopyCompositionOpen, setIsCopyCompositionOpen] = useState(false);
+  const [copySourceProductId, setCopySourceProductId] = useState<string>('');
   
   const [editingItem, setEditingItem] = useState<CompanyProductItem | null>(null);
   const [selectedItemToAdd, setSelectedItemToAdd] = useState('');
@@ -332,6 +334,74 @@ export default function EditarProdutoEmpresa() {
     await queryClient.invalidateQueries({ queryKey: ['company-product-items', id] });
     return (data || []) as Array<{ id: string; item_template_id: string | null }>;
   };
+
+  // Other company products that already have a customized composition,
+  // used as source options in the "Copiar composição" dialog.
+  const { data: copySourceProducts } = useQuery({
+    queryKey: ['copy-source-products', currentCompany?.id, id],
+    enabled: !!currentCompany?.id && isCopyCompositionOpen,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('company_products')
+        .select('id, commercial_name, linha, product_template:product_templates(name), company_product_items(id)')
+        .eq('company_id', currentCompany!.id)
+        .neq('id', id!)
+        .eq('is_active', true)
+        .order('commercial_name');
+      if (error) throw error;
+      return (data as any[])
+        .filter(p => (p.company_product_items?.length ?? 0) > 0)
+        .map(p => ({
+          id: p.id as string,
+          name: (p.commercial_name || p.product_template?.name || 'Sem nome') as string,
+          linha: (p.linha || '') as string,
+          itemCount: p.company_product_items.length as number,
+        }));
+    },
+  });
+
+  // Clone all composition items from another company product into this one.
+  const copyCompositionMutation = useMutation({
+    mutationFn: async (sourceProductId: string) => {
+      if (!id) throw new Error('Produto inválido');
+      const { data: sourceItems, error: srcErr } = await supabase
+        .from('company_product_items')
+        .select('*')
+        .eq('company_product_id', sourceProductId)
+        .order('sort_order', { ascending: true });
+      if (srcErr) throw srcErr;
+      if (!sourceItems || sourceItems.length === 0) throw new Error('Produto de origem sem itens');
+
+      // If this product is still inheriting from admin template, drop the
+      // virtual inheritance by materializing nothing — we replace with the copy.
+      // We do NOT delete existing real items — clone is additive to allow merge.
+      const baseSort = (productItems?.length || 0);
+      const rows = sourceItems.map((it: any, idx: number) => {
+        const { id: _oldId, company_product_id: _oldPid, created_at, updated_at, ...rest } = it;
+        return {
+          ...rest,
+          company_product_id: id,
+          sort_order: baseSort + idx + 1,
+        };
+      });
+
+      const { error: insErr } = await supabase
+        .from('company_product_items')
+        .insert(rows as never);
+      if (insErr) throw insErr;
+      return rows.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ['company-product-items', id] });
+      if (id) recalculateProductPrice(id);
+      toast.success(`${count} itens copiados para a composição!`);
+      setIsCopyCompositionOpen(false);
+      setCopySourceProductId('');
+    },
+    onError: (error: any) => {
+      toast.error('Erro ao copiar composição: ' + (error?.message || 'desconhecido'));
+    },
+  });
 
   // Fetch available item templates for adding
   const { data: availableItems } = useQuery({
@@ -1072,6 +1142,17 @@ export default function EditarProdutoEmpresa() {
                 <h3 className="font-semibold text-sm">Adicionar {addItemSection === 'glass' ? 'Vidro' : addItemSection === 'profile' ? 'Perfil' : addItemSection === 'contramarco' ? 'Contramarco' : 'Componente'}</h3>
               </div>
 
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full gap-2 h-8 text-xs"
+                onClick={() => setIsCopyCompositionOpen(true)}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                Copiar de outro produto
+              </Button>
+
               {availableLinhas.length > 0 && (addItemSection === 'profile' || addItemSection === 'contramarco') && (
                 <div className="space-y-1.5">
                   <Label className="text-xs">Filtrar por Linha</Label>
@@ -1487,6 +1568,54 @@ export default function EditarProdutoEmpresa() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={isCopyCompositionOpen} onOpenChange={(v) => { setIsCopyCompositionOpen(v); if (!v) setCopySourceProductId(''); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Layers className="w-5 h-5 text-primary" /> Copiar composição</DialogTitle>
+            <DialogDescription>
+              Selecione um produto de origem. Todos os itens da composição dele (perfis, vidros, componentes, contramarco) serão clonados para este produto, com fórmulas e quantidades preservadas.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label className="text-xs">Produto de origem</Label>
+            {(!copySourceProducts || copySourceProducts.length === 0) ? (
+              <p className="text-sm text-muted-foreground py-6 text-center">
+                Nenhum outro produto desta empresa possui composição configurada.
+              </p>
+            ) : (
+              <div className="max-h-[320px] overflow-y-auto rounded-md border bg-muted/20 p-1.5 space-y-0.5">
+                {copySourceProducts.map(p => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setCopySourceProductId(p.id)}
+                    className={cn(
+                      "w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between gap-2",
+                      copySourceProductId === p.id ? "bg-primary/10 border border-primary/40" : "hover:bg-muted"
+                    )}
+                  >
+                    <div className="min-w-0">
+                      <div className="font-medium truncate">{p.name}</div>
+                      {p.linha && <div className="text-xs text-muted-foreground truncate">{p.linha}</div>}
+                    </div>
+                    <span className="text-xs text-muted-foreground shrink-0">{p.itemCount} itens</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCopyCompositionOpen(false)}>Cancelar</Button>
+            <Button
+              onClick={() => copySourceProductId && copyCompositionMutation.mutate(copySourceProductId)}
+              disabled={!copySourceProductId || copyCompositionMutation.isPending}
+            >
+              {copyCompositionMutation.isPending ? 'Copiando...' : 'Copiar composição'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Sticky bottom save bar */}
       <div className="fixed bottom-0 left-0 lg:left-60 right-0 z-40 bg-background/95 backdrop-blur-sm border-t shadow-[0_-2px_10px_rgba(0,0,0,0.1)]">
