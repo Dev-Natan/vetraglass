@@ -119,7 +119,7 @@ export default function AdminCompanyDetail() {
   const [revertTarget, setRevertTarget] = useState<AuditLog | null>(null);
   const [subForm, setSubForm] = useState({
     plan_name: "basico",
-    plan_price: 98.99,
+    plan_price: 149.90,
     status: "active",
     expires_at: "",
     notes: "",
@@ -241,7 +241,7 @@ export default function AdminCompanyDetail() {
         const { error } = await supabase.from("company_subscriptions").insert({
           company_id: id!,
           plan_name: "basico",
-          plan_price: 98.99,
+          plan_price: 149.90,
           status: newStatus,
           expires_at: format(addMonths(new Date(), 1), "yyyy-MM-dd"),
         });
