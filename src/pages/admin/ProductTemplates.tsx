@@ -2032,7 +2032,7 @@ export default function ProductTemplates() {
                       <FormulaEditor
                         value={quantityFormula}
                         onChange={setQuantityFormula}
-                        showPiecesQuantity={compositionActiveTab === 'profile'}
+                        showPiecesQuantity={compositionActiveTab === 'profile' || compositionActiveTab === 'accessory'}
                         piecesQuantity={piecesQuantity}
                         onPiecesChange={setPiecesQuantity}
                         piecesFormula={piecesFormula}
