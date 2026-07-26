@@ -250,7 +250,7 @@ export default function AdminCompanies() {
     setSubCompany(company);
     setSubForm({
       plan_name: existing?.plan_name || 'basico',
-      plan_price: existing?.plan_price || 98.99,
+      plan_price: existing?.plan_price || 149.90,
       status: existing?.status || 'active',
       expires_at: existing?.expires_at ? existing.expires_at.split('T')[0] : format(addMonths(new Date(), 1), 'yyyy-MM-dd'),
       notes: existing?.notes || '',

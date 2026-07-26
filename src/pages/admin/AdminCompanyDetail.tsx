@@ -291,7 +291,7 @@ export default function AdminCompanyDetail() {
   const openSubDialog = () => {
     setSubForm({
       plan_name: subscription?.plan_name || "basico",
-      plan_price: subscription?.plan_price ?? 98.99,
+      plan_price: subscription?.plan_price ?? 149.90,
       status: subscription?.status || "active",
       expires_at: subscription?.expires_at
         ? subscription.expires_at.split("T")[0]
