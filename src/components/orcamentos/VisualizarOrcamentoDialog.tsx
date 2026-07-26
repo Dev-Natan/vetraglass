@@ -638,7 +638,8 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
                       <td className="p-3 text-right">{formatCurrency(item.unit_price)}</td>
                       <td className="p-3 text-right font-medium">{formatCurrency(item.total_price)}</td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
