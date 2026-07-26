@@ -138,6 +138,7 @@ export default function Auth() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (SIGNUP_DISABLED) return;
     setErrors({});
     
     const validation = signupSchema.safeParse({
