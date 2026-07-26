@@ -39,6 +39,11 @@ export interface CalculatedPayment {
   valorParcela: number;
 }
 
+const FALLBACK_FORMAS: FormaPagamento[] = [
+  { id: 'fallback-avista', company_id: '', nome: 'À vista (PIX / Dinheiro)', tipo: 'avista', is_active: true, sort_order: 1, created_at: '', updated_at: '' },
+  { id: 'fallback-parcelado', company_id: '', nome: 'Cartão de Crédito (Parcelado)', tipo: 'parcelado', is_active: true, sort_order: 2, created_at: '', updated_at: '' },
+];
+
 export function usePaymentOptions() {
   const { currentCompany } = useAuth();
   const { toast } = useToast();
@@ -55,8 +60,10 @@ export function usePaymentOptions() {
   // Fetch formas de pagamento
   const { data: formasPagamento = [], isLoading: isLoadingFormas } = useQuery({
     queryKey: ['formas-pagamento', currentCompany?.id],
+    staleTime: 0,
+    gcTime: 0,
     queryFn: async () => {
-      if (!currentCompany?.id) return [];
+      if (!currentCompany?.id) return FALLBACK_FORMAS;
 
       const fetchList = async () => {
         const { data, error } = await supabase
@@ -69,7 +76,12 @@ export function usePaymentOptions() {
         return (data ?? []) as FormaPagamento[];
       };
 
-      let list = await fetchList();
+      let list: FormaPagamento[] = [];
+      try {
+        list = await fetchList();
+      } catch (e) {
+        console.warn('[usePaymentOptions] fetch formas falhou', e);
+      }
       if (list.length === 0) {
         try {
           await ensureDefaults(currentCompany.id);
@@ -78,6 +90,10 @@ export function usePaymentOptions() {
         } catch (e) {
           console.warn('[usePaymentOptions] auto-seed falhou', e);
         }
+      }
+      if (list.length === 0) {
+        console.warn('[usePaymentOptions] usando fallback local de formas de pagamento');
+        return FALLBACK_FORMAS;
       }
       return list;
     },

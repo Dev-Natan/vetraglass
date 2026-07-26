@@ -47,7 +47,8 @@ export function PaymentStep({
   const formasFiltradas = formasPagamento
     .filter(f => f.tipo === 'avista' || f.tipo === 'parcelado')
     .filter((f, idx, arr) => arr.findIndex(x => x.tipo === f.tipo) === idx);
-  const labelForma = (tipo: string) => tipo === 'avista' ? 'À vista' : 'Cartão (parcelado)';
+  const labelForma = (forma: FormaPagamento) =>
+    forma.nome || (forma.tipo === 'avista' ? 'À vista' : 'Cartão (parcelado)');
 
   return (
     <div className="space-y-6 px-1">
@@ -86,7 +87,7 @@ export function PaymentStep({
                 {formasFiltradas.map(forma => (
                   <SelectItem key={forma.id} value={forma.id}>
                     <div className="flex items-center gap-2">
-                      <span>{labelForma(forma.tipo)}</span>
+                      <span>{labelForma(forma)}</span>
                     </div>
                   </SelectItem>
                 ))}
