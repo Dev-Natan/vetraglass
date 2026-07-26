@@ -659,6 +659,7 @@ export default function ProductTemplates() {
     setCutAngleEnd(90);
     setCompositionSide("");
     setProfilePosition("Largura");
+    setUseFixedQty(false);
   };
 
   const handleCloseDialog = () => {
