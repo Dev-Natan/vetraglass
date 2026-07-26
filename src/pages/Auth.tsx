@@ -278,7 +278,7 @@ export default function Auth() {
                 </form>
               </TabsContent>
               
-              <TabsContent value="signup" className="mt-0">
+              {!SIGNUP_DISABLED && <TabsContent value="signup" className="mt-0">
                 <form onSubmit={handleSignup} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="signup-fullname">Nome Completo</Label>
