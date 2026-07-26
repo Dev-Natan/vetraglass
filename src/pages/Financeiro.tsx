@@ -248,9 +248,6 @@ export default function Financeiro() {
             <TabsTrigger value="relatorios" className="gap-2 py-2 flex-1 min-w-[120px]">
               <HistoryIcon className="w-4 h-4" /> Auditoria
             </TabsTrigger>
-            <TabsTrigger value="auditoria-vendas" className="gap-2 py-2 flex-1 min-w-[120px]">
-              <Receipt className="w-4 h-4" /> Vendas
-            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard" className="mt-6 space-y-6">
