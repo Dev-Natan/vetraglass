@@ -87,7 +87,7 @@ export function PaymentStep({
                 {formasFiltradas.map(forma => (
                   <SelectItem key={forma.id} value={forma.id}>
                     <div className="flex items-center gap-2">
-                      <span>{labelForma(forma.tipo)}</span>
+                      <span>{labelForma(forma)}</span>
                     </div>
                   </SelectItem>
                 ))}
