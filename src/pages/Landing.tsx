@@ -421,8 +421,7 @@ export default function Landing() {
             Pronto para transformar sua vidraçaria?
           </h2>
           <p className="text-primary-foreground/80 max-w-2xl mx-auto mb-8">
-            Junte-se a centenas de vidraçarias que já otimizaram sua gestão. 
-            Comece hoje com 14 dias grátis, sem compromisso.
+            Junte-se a centenas de vidraçarias que já otimizaram sua gestão.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button 
@@ -432,7 +431,7 @@ export default function Landing() {
               className="w-full sm:w-auto"
             >
               <Link to="/auth?tab=signup">
-                Criar conta gratuita
+                Criar conta
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Link>
             </Button>
