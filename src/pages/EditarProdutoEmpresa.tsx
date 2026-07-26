@@ -1375,7 +1375,7 @@ export default function EditarProdutoEmpresa() {
               setCostPerSqm(cost);
               setPricePerSqm(price);
             }}
-            productItems={productItems || []}
+            productItems={displayItems || []}
             currentCostPerSqm={product.cost_per_sqm}
             currentPricePerSqm={product.price_per_sqm}
             currentMargin={product.margin_percent}
