@@ -633,10 +633,19 @@ export default function EditarProdutoEmpresa() {
         updateData.cut_angle = cutAngle;
         updateData.side = side;
       }
+      // Copy-on-write: if editing an inherited item, materialize first and
+      // redirect the update to the newly-created company row.
+      let targetId = editingItem.id;
+      if (targetId.startsWith('virt_')) {
+        const rows = await ensureMaterialized();
+        const match = rows.find(r => r.item_template_id === editingItem.item_template_id);
+        if (!match) throw new Error('Item herdado não encontrado após materialização');
+        targetId = match.id;
+      }
       const { error } = await supabase
         .from('company_product_items')
         .update(updateData as never)
-        .eq('id', editingItem.id);
+        .eq('id', targetId);
       if (error) throw error;
     },
     onSuccess: () => {
