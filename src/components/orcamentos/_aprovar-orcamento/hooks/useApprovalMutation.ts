@@ -35,6 +35,7 @@ export function useApprovalMutation({
         selectedFormaId, entryAmount, entryPaymentMethod, cardActualReceived,
         balanceDueDate, receiveOnCompletion, estimatedEnd, priority, notes,
       } = formState;
+      const formaPagamentoId = selectedFormaId?.startsWith('fallback-') ? null : selectedFormaId;
 
       const entryValue = parseAmount(entryAmount);
       const hasEntry = entryValue > 0;
@@ -79,7 +80,7 @@ export function useApprovalMutation({
         .from('quotes')
         .update({
           status: 'approved',
-          forma_pagamento_id: selectedFormaId,
+          forma_pagamento_id: formaPagamentoId,
           condicao_pagamento_id: null,
           valor_original: totalOriginal,
           valor_final_aprovado: valorFinal,
