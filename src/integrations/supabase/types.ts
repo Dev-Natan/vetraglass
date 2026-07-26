@@ -1494,6 +1494,7 @@ export type Database = {
           settings: Json | null
           show_fees_to_customer: boolean
           show_installments: boolean
+          show_other_methods: boolean
           updated_at: string
         }
         Insert: {
@@ -1511,6 +1512,7 @@ export type Database = {
           settings?: Json | null
           show_fees_to_customer?: boolean
           show_installments?: boolean
+          show_other_methods?: boolean
           updated_at?: string
         }
         Update: {
@@ -1528,6 +1530,7 @@ export type Database = {
           settings?: Json | null
           show_fees_to_customer?: boolean
           show_installments?: boolean
+          show_other_methods?: boolean
           updated_at?: string
         }
         Relationships: [
