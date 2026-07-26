@@ -15,6 +15,11 @@ import { PasswordStrengthIndicator } from '@/components/auth/PasswordStrengthInd
 import { strongPasswordSchema } from '@/utils/passwordValidation';
 import { supabase } from '@/integrations/supabase/client';
 
+// 🚧 FLAG TEMPORÁRIA: cadastros suspensos para manutenção.
+// Para reabrir cadastros, defina como `false` (ou remova o bloco de bloqueio abaixo).
+const SIGNUP_DISABLED = true;
+const SIGNUP_DISABLED_MESSAGE = 'Cadastros temporariamente suspensos para manutenção do sistema. Voltaremos em breve!';
+
 const loginSchema = z.object({
   username: z.string().min(1, 'Usuário é obrigatório'),
   password: z.string().min(1, 'Senha é obrigatória'),
