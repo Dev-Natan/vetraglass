@@ -321,7 +321,7 @@ export default function AdminCompanies() {
 
   const getPlanLabel = (planName: string) => {
     const plans: Record<string, string> = {
-      basico: 'Básico',
+      basico: 'Start',
       fiscal: 'Fiscal',
       trial: 'Trial',
     };
@@ -771,7 +771,7 @@ export default function AdminCompanies() {
               <div className="space-y-2">
                 <Label>Plano</Label>
                 <Select value={subForm.plan_name} onValueChange={(v) => {
-                  const prices: Record<string, number> = { basico: 98.99, fiscal: 245.00, trial: 0 };
+                  const prices: Record<string, number> = { basico: 149.90, fiscal: 249.90, trial: 0 };
                   setSubForm(f => ({ ...f, plan_name: v, plan_price: prices[v] ?? f.plan_price }));
                 }}>
                   <SelectTrigger>
@@ -779,8 +779,8 @@ export default function AdminCompanies() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="trial">Trial (Gratuito)</SelectItem>
-                    <SelectItem value="basico">Básico - R$ 98,99</SelectItem>
-                    <SelectItem value="fiscal">Fiscal - R$ 245,00</SelectItem>
+                    <SelectItem value="basico">Start - R$ 149,90</SelectItem>
+                    <SelectItem value="fiscal">Fiscal - R$ 249,90</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
