@@ -44,21 +44,42 @@ export function usePaymentOptions() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Auto-seed default payment options when empty
+  const ensureDefaults = async (companyId: string) => {
+    const { error } = await supabase.rpc('create_default_payment_options', {
+      _company_id: companyId,
+    });
+    if (error) throw error;
+  };
+
   // Fetch formas de pagamento
   const { data: formasPagamento = [], isLoading: isLoadingFormas } = useQuery({
     queryKey: ['formas-pagamento', currentCompany?.id],
     queryFn: async () => {
       if (!currentCompany?.id) return [];
-      
-      const { data, error } = await supabase
-        .from('formas_pagamento')
-        .select('*')
-        .eq('company_id', currentCompany.id)
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true });
-      
-      if (error) throw error;
-      return data as FormaPagamento[];
+
+      const fetchList = async () => {
+        const { data, error } = await supabase
+          .from('formas_pagamento')
+          .select('*')
+          .eq('company_id', currentCompany.id)
+          .eq('is_active', true)
+          .order('sort_order', { ascending: true });
+        if (error) throw error;
+        return (data ?? []) as FormaPagamento[];
+      };
+
+      let list = await fetchList();
+      if (list.length === 0) {
+        try {
+          await ensureDefaults(currentCompany.id);
+          list = await fetchList();
+          queryClient.invalidateQueries({ queryKey: ['condicoes-pagamento'] });
+        } catch (e) {
+          console.warn('[usePaymentOptions] auto-seed falhou', e);
+        }
+      }
+      return list;
     },
     enabled: !!currentCompany?.id,
   });
@@ -68,19 +89,33 @@ export function usePaymentOptions() {
     queryKey: ['condicoes-pagamento', currentCompany?.id],
     queryFn: async () => {
       if (!currentCompany?.id) return [];
-      
-      const { data, error } = await supabase
-        .from('condicoes_pagamento')
-        .select('*, forma_pagamento:formas_pagamento(*)')
-        .eq('company_id', currentCompany.id)
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true });
-      
-      if (error) throw error;
-      return data as CondicaoPagamento[];
+
+      const fetchList = async () => {
+        const { data, error } = await supabase
+          .from('condicoes_pagamento')
+          .select('*, forma_pagamento:formas_pagamento(*)')
+          .eq('company_id', currentCompany.id)
+          .eq('is_active', true)
+          .order('sort_order', { ascending: true });
+        if (error) throw error;
+        return (data ?? []) as CondicaoPagamento[];
+      };
+
+      let list = await fetchList();
+      if (list.length === 0) {
+        try {
+          await ensureDefaults(currentCompany.id);
+          list = await fetchList();
+          queryClient.invalidateQueries({ queryKey: ['formas-pagamento'] });
+        } catch (e) {
+          console.warn('[usePaymentOptions] auto-seed condições falhou', e);
+        }
+      }
+      return list;
     },
     enabled: !!currentCompany?.id,
   });
+
 
   // Initialize default payment options for company
   const initializeDefaults = useMutation({
