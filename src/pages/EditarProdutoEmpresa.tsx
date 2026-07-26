@@ -255,7 +255,8 @@ export default function EditarProdutoEmpresa() {
 
   // Fetch available item templates for adding
   const { data: availableItems } = useQuery({
-    queryKey: ['item-templates-by-type', addItemSection, product?.linha],
+    queryKey: ['item-templates-by-type', addItemSection, product?.linha, currentCompany?.id],
+    enabled: !!currentCompany?.id,
     queryFn: async () => {
       const dbType = addItemSection === 'contramarco' ? 'profile' : addItemSection === 'rubber' ? 'accessory' : addItemSection;
       
@@ -264,9 +265,11 @@ export default function EditarProdutoEmpresa() {
         .select('*')
         .eq('type', dbType as "accessory" | "glass" | "profile" | "service")
         .eq('is_active', true)
+        .or(`company_id.is.null,company_id.eq.${currentCompany!.id}`)
         .order('linha')
         .order('name');
       if (error) throw error;
+
       
       const items = data as unknown as ItemTemplate[];
       const productLinha = product?.linha || product?.product_template?.linha;
