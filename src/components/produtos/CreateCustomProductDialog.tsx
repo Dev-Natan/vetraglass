@@ -25,6 +25,7 @@ interface CreateCustomProductDialogProps {
 export function CreateCustomProductDialog({ open, onOpenChange, defaultLinha }: CreateCustomProductDialogProps) {
   const { currentCompany } = useAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   
   // Use dynamic categories and linhas from database
   const { data: productCategories } = useProductCategories();
@@ -97,12 +98,13 @@ export function CreateCustomProductDialog({ open, onOpenChange, defaultLinha }: 
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (newId) => {
       queryClient.invalidateQueries({ queryKey: ['company-products'] });
       queryClient.invalidateQueries({ queryKey: ['custom-products'] });
-      toast.success('Produto personalizado criado com sucesso!');
+      toast.success('Produto criado! Configure a composição.');
       resetForm();
       onOpenChange(false);
+      if (newId) navigate(`/produtos/empresa/editar/${newId}`);
     },
     onError: (error) => {
       toast.error('Erro ao criar produto: ' + error.message);
