@@ -221,9 +221,6 @@ export default function Financeiro() {
             <TabsTrigger value="dashboard" className="gap-2 py-2 flex-1 min-w-[120px]">
               <PieChart className="w-4 h-4" /> Dashboard
             </TabsTrigger>
-            <TabsTrigger value="caixa" className="gap-2 py-2 flex-1 min-w-[120px]">
-              <ShoppingCart className="w-4 h-4" /> Caixa Diário
-            </TabsTrigger>
             <TabsTrigger value="caixa-empresa" className="gap-2 py-2 flex-1 min-w-[120px]">
               <Wallet className="w-4 h-4" /> Fluxo Empresa
             </TabsTrigger>
@@ -251,18 +248,12 @@ export default function Financeiro() {
             <TabsTrigger value="relatorios" className="gap-2 py-2 flex-1 min-w-[120px]">
               <HistoryIcon className="w-4 h-4" /> Auditoria
             </TabsTrigger>
-            <TabsTrigger value="auditoria-vendas" className="gap-2 py-2 flex-1 min-w-[120px]">
-              <Receipt className="w-4 h-4" /> Vendas
-            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard" className="mt-6 space-y-6">
             <FinancialDashboard />
           </TabsContent>
 
-          <TabsContent value="caixa" className="mt-6">
-            <CaixaOperacionalTab />
-          </TabsContent>
 
           <TabsContent value="caixa-empresa" className="mt-6">
             <CaixaEmpresaTab selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
@@ -285,125 +276,6 @@ export default function Financeiro() {
             <CaixaReportTab selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
           </TabsContent>
 
-          <TabsContent value="auditoria-vendas" className="mt-6 space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Card>
-                <CardContent className="pt-6">
-                  <span className="text-sm text-muted-foreground block mb-1">Receita Líquida (Filtro)</span>
-                  <p className="text-2xl font-bold text-green-600">{formatCurrency(summary.totalReceitas)}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{summary.countActive} vendas processadas</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <span className="text-sm text-muted-foreground block mb-1">Estornos / Cancelados</span>
-                  <p className="text-2xl font-bold text-destructive">{formatCurrency(summary.totalCancelado)}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{summary.countCancelled} registros</p>
-                </CardContent>
-              </Card>
-              <Card className="bg-muted/30">
-                <CardContent className="pt-6 flex flex-col justify-center h-full">
-                  <p className="text-xs text-muted-foreground italic">
-                    Visualização exclusiva para auditoria. Operações de venda e cancelamento devem ser realizadas no Caixa.
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Card>
-              <CardHeader className="pb-4">
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Filter className="w-5 h-5" />
-                    Filtros de Auditoria
-                  </CardTitle>
-                  <MonthSelector selectedDate={selectedMonth} onMonthChange={setSelectedMonth} />
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex flex-wrap gap-3">
-                  <div className="flex-1 min-w-[200px] relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Buscar venda ou cliente..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                  <Select value={paymentFilter} onValueChange={(v) => setPaymentFilter(v as PaymentFilter)}>
-                    <SelectTrigger className="w-[140px]"><SelectValue placeholder="Pagamento" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos Métodos</SelectItem>
-                      <SelectItem value="dinheiro">Dinheiro</SelectItem>
-                      <SelectItem value="cartao">Cartão</SelectItem>
-                      <SelectItem value="pix">PIX</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
-                    <SelectTrigger className="w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos Status</SelectItem>
-                      <SelectItem value="paid">Pagos</SelectItem>
-                      <SelectItem value="pending">Pendentes</SelectItem>
-                      <SelectItem value="cancelled">Cancelados</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="overflow-x-auto border rounded-md">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Venda</TableHead>
-                        <TableHead>Data/Hora</TableHead>
-                        <TableHead>Cliente</TableHead>
-                        <TableHead>Valor</TableHead>
-                        <TableHead>Pagamento</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {isLoading ? (
-                        <TableRow><TableCell colSpan={7} className="text-center py-10">Carregando auditoria...</TableCell></TableRow>
-                      ) : filteredSales.length === 0 ? (
-                        <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">Nenhum registro encontrado.</TableCell></TableRow>
-                      ) : filteredSales.map((sale) => {
-                        const status = statusConfig[sale.payment_status as keyof typeof statusConfig] || statusConfig.paid;
-                        const isCancelled = sale.payment_status === 'cancelled';
-                        return (
-                          <TableRow key={sale.id} className={isCancelled ? 'opacity-50' : ''}>
-                            <TableCell className="font-mono text-xs">#{String(sale.sale_number).padStart(4, '0')}</TableCell>
-                            <TableCell className="text-xs">{format(new Date(sale.created_at), "dd/MM HH:mm", { locale: ptBR })}</TableCell>
-                            <TableCell className="text-sm font-medium">{sale.customer_name || 'Consumidor'}</TableCell>
-                            <TableCell className={isCancelled ? 'line-through text-muted-foreground' : 'font-semibold'}>{formatCurrency(sale.total_amount)}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className={paymentMethodConfig[sale.payment_method as keyof typeof paymentMethodConfig]?.color}>
-                                {paymentMethodConfig[sale.payment_method as keyof typeof paymentMethodConfig]?.label || sale.payment_method}
-                              </Badge>
-                            </TableCell>
-                            <TableCell><Badge variant="secondary" className={status.color}>{status.label}</Badge></TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-1">
-                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleViewDetails(sale)}><Eye className="h-3.5 w-3.5" /></Button>
-                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handlePrintReceipt(sale)}><Printer className="h-3.5 w-3.5" /></Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
-                {totalSalesCount > pageSize && (
-                  <div className="pt-4 border-t">
-                    <PaginationControls currentPage={currentPage} totalPages={Math.ceil(totalSalesCount / pageSize)} totalItems={totalSalesCount} pageSize={pageSize} onPageChange={setCurrentPage} onPageSizeChange={setPageSize} />
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
 
           <TabsContent value="receber" className="mt-6">
             <ContasReceberTab />
