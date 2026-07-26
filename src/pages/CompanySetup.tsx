@@ -290,24 +290,22 @@ export default function CompanySetup() {
         throw companyError;
       }
 
-      // Define trial de 7 dias a partir do momento atual
-      const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      // Nenhum trial concedido — conta inicia como pendente de pagamento
       const newCompanyId = typeof companyData === 'string' ? companyData : (companyData as any)?.id ?? (companyData as any)?.company_id;
       if (newCompanyId) {
         await supabase
           .from('companies')
-          .update({ subscription_status: 'trialing', trial_ends_at: trialEndsAt })
+          .update({ subscription_status: 'pending_payment', trial_ends_at: null } as never)
           .eq('id', newCompanyId);
       }
 
       toast({
         title: "Empresa cadastrada!",
-        description: "Seu teste grátis de 7 dias começou. Faça login para continuar.",
+        description: "Escolha um plano para ativar o acesso ao sistema.",
       });
-      
-      // Sign out and redirect to login so user can login with the new company
-      await supabase.auth.signOut();
-      navigate('/auth');
+
+      // Redireciona obrigatoriamente para a seleção de planos / checkout
+      navigate('/planos', { replace: true });
     } catch (error: any) {
       console.error('Error creating company:', error);
       toast({
