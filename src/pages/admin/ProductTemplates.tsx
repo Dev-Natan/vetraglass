@@ -912,7 +912,7 @@ export default function ProductTemplates() {
       const { error } = await supabase.from("product_template_items").insert({
         product_template_id: selectedTemplate.id,
         item_template_id: data.item_template_id,
-        quantity_formula: data.quantity_formula,
+        quantity_formula: (data.quantity_formula && data.quantity_formula.trim() !== "") ? data.quantity_formula : "1",
         pieces_quantity: data.pieces_quantity,
         pieces_formula: data.pieces_formula,
         cut_angle: data.cut_angle,
