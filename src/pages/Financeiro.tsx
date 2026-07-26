@@ -254,9 +254,6 @@ export default function Financeiro() {
             <FinancialDashboard />
           </TabsContent>
 
-          <TabsContent value="caixa" className="mt-6">
-            <CaixaOperacionalTab />
-          </TabsContent>
 
           <TabsContent value="caixa-empresa" className="mt-6">
             <CaixaEmpresaTab selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
