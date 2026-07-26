@@ -2382,7 +2382,7 @@ export default function ProductTemplates() {
                     <FormulaEditor
                       value={editQuantityFormula}
                       onChange={setEditQuantityFormula}
-                      showPiecesQuantity={editingItem?.item_template?.type === 'profile'}
+                      showPiecesQuantity={editingItem?.item_template?.type === 'profile' || editingItem?.item_template?.type === 'accessory'}
                       piecesQuantity={editPiecesQuantity}
                       onPiecesChange={setEditPiecesQuantity}
                       piecesFormula={editPiecesFormula}
