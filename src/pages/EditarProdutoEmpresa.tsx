@@ -335,6 +335,74 @@ export default function EditarProdutoEmpresa() {
     return (data || []) as Array<{ id: string; item_template_id: string | null }>;
   };
 
+  // Other company products that already have a customized composition,
+  // used as source options in the "Copiar composição" dialog.
+  const { data: copySourceProducts } = useQuery({
+    queryKey: ['copy-source-products', currentCompany?.id, id],
+    enabled: !!currentCompany?.id && isCopyCompositionOpen,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('company_products')
+        .select('id, commercial_name, linha, product_template:product_templates(name), company_product_items(id)')
+        .eq('company_id', currentCompany!.id)
+        .neq('id', id!)
+        .eq('is_active', true)
+        .order('commercial_name');
+      if (error) throw error;
+      return (data as any[])
+        .filter(p => (p.company_product_items?.length ?? 0) > 0)
+        .map(p => ({
+          id: p.id as string,
+          name: (p.commercial_name || p.product_template?.name || 'Sem nome') as string,
+          linha: (p.linha || '') as string,
+          itemCount: p.company_product_items.length as number,
+        }));
+    },
+  });
+
+  // Clone all composition items from another company product into this one.
+  const copyCompositionMutation = useMutation({
+    mutationFn: async (sourceProductId: string) => {
+      if (!id) throw new Error('Produto inválido');
+      const { data: sourceItems, error: srcErr } = await supabase
+        .from('company_product_items')
+        .select('*')
+        .eq('company_product_id', sourceProductId)
+        .order('sort_order', { ascending: true });
+      if (srcErr) throw srcErr;
+      if (!sourceItems || sourceItems.length === 0) throw new Error('Produto de origem sem itens');
+
+      // If this product is still inheriting from admin template, drop the
+      // virtual inheritance by materializing nothing — we replace with the copy.
+      // We do NOT delete existing real items — clone is additive to allow merge.
+      const baseSort = (productItems?.length || 0);
+      const rows = sourceItems.map((it: any, idx: number) => {
+        const { id: _oldId, company_product_id: _oldPid, created_at, updated_at, ...rest } = it;
+        return {
+          ...rest,
+          company_product_id: id,
+          sort_order: baseSort + idx + 1,
+        };
+      });
+
+      const { error: insErr } = await supabase
+        .from('company_product_items')
+        .insert(rows as never);
+      if (insErr) throw insErr;
+      return rows.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ['company-product-items', id] });
+      if (id) recalculateProductPrice(id);
+      toast.success(`${count} itens copiados para a composição!`);
+      setIsCopyCompositionOpen(false);
+      setCopySourceProductId('');
+    },
+    onError: (error: any) => {
+      toast.error('Erro ao copiar composição: ' + (error?.message || 'desconhecido'));
+    },
+  });
+
   // Fetch available item templates for adding
   const { data: availableItems } = useQuery({
     queryKey: ['item-templates-by-type', addItemSection, product?.linha, currentCompany?.id],
