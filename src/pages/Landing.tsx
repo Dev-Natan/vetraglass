@@ -368,6 +368,13 @@ export default function Landing() {
                       Começar agora
                     </Link>
                   </Button>
+                </CardContent>
+                    asChild
+                  >
+                    <Link to="/auth?tab=signup">
+                      Começar agora
+                    </Link>
+                  </Button>
                   <p className="text-xs text-muted-foreground text-center mt-3">
                     14 dias grátis • Sem compromisso
                   </p>
