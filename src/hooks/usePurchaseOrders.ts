@@ -178,7 +178,7 @@ export function useUpdatePurchaseOrderStatus() {
       
       const { error } = await supabase
         .from('purchase_orders')
-        .update(updateData)
+        .update(updateData as never)
         .eq('id', id);
       
       if (error) throw error;

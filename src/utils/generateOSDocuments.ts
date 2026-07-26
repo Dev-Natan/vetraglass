@@ -159,7 +159,7 @@ async function getGlassFormulas(productTemplateId: string, linha: string): Promi
     .order('panel_index', { ascending: true });
 
   if (error) throw error;
-  return (data || []) as GlassFormula[];
+  return (data || []) as unknown as GlassFormula[];
 }
 
 /**
@@ -460,7 +460,7 @@ export async function generateOSDocuments(
         quantity,
         cuts_data: profileCuts,
         glass_cuts_data: glassCuts,
-      });
+      } as never);
 
       // Insert glass project
       if (glassCuts.length > 0) {
@@ -514,7 +514,7 @@ export async function generateOSDocuments(
           stock_quantity_used: stockCheck?.useFromStock || 0,
           stock_unit_cost: stockCheck?.unitCost || 0,
           purchase_quantity_needed: stockCheck?.needToPurchase || totalArea,
-        }).select().single();
+        } as never).select().single();
 
         if (glassProject) {
           if (stockCheck && stockCheck.useFromStock > 0 && stockCheck.stockItemId && companyId) {
@@ -578,7 +578,7 @@ export async function generateOSDocuments(
         };
       });
 
-      await supabase.from('os_materials').insert(materialsToInsert);
+      await supabase.from('os_materials').insert(materialsToInsert as never);
     }
 
     // Now handle accessories (non-profile items)

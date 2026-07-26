@@ -296,7 +296,7 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
     
     return {
       methods,
-      customConditions: paymentSettingsData.custom_conditions || '',
+      customConditions: (paymentSettingsData.custom_conditions as string) || '',
       showFeesToCustomer: paymentSettingsData.show_fees_to_customer || false,
       displayMode: (paymentSettingsData.display_mode as 'simple' | 'detailed') || 'simple',
       showOtherMethods: (paymentSettingsData as { show_other_methods?: boolean }).show_other_methods ?? true,

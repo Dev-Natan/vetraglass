@@ -729,7 +729,7 @@ export default function ProductTemplates() {
       if (data.id) {
         const { error } = await supabase
           .from("product_templates")
-          .update(payload)
+          .update(payload as never)
           .eq("id", data.id);
         if (error) throw error;
       } else {

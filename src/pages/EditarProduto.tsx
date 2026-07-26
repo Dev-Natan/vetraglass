@@ -389,7 +389,7 @@ export default function EditarProduto() {
 
       const { error } = await supabase
         .from('product_templates')
-        .update(updateData)
+        .update(updateData as never)
         .eq('id', id);
       if (error) throw error;
     },
@@ -505,7 +505,7 @@ export default function EditarProduto() {
       
       const { error } = await supabase
         .from('product_template_items')
-        .update(updateData)
+        .update(updateData as never)
         .eq('id', editingItem.id);
         
       if (error) throw error;

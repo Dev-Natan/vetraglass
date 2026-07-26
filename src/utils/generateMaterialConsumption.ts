@@ -110,7 +110,7 @@ export async function generateMaterialConsumption(
       if (tempError) continue;
 
       const composition = (templateComposition || []).map(t => ({
-        ...t,
+        ...(t as object),
         company_item_id: null,
         company_items: null,
       })) as unknown as ProductCompositionItem[];
@@ -218,7 +218,7 @@ export async function releaseMaterialsForProduction(ordemServicoId: string): Pro
   try {
     const { data, error } = await supabase.rpc('release_materials_for_production', { _ordem_servico_id: ordemServicoId });
     if (error) return { success: false, released: 0 };
-    return { success: true, released: data || 0 };
+    return { success: true, released: Number(data) || 0 };
   } catch (error) {
     return { success: false, released: 0 };
   }
@@ -228,7 +228,7 @@ export async function cancelMaterialConsumption(ordemServicoId: string): Promise
   try {
     const { data, error } = await supabase.rpc('cancel_os_materials', { _ordem_servico_id: ordemServicoId });
     if (error) return { success: false, cancelled: 0 };
-    return { success: true, cancelled: data || 0 };
+    return { success: true, cancelled: Number(data) || 0 };
   } catch (error) {
     return { success: false, cancelled: 0 };
   }

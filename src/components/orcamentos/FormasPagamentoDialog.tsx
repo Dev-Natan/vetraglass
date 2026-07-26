@@ -149,7 +149,7 @@ export function FormasPagamentoDialog({ open, onOpenChange }: FormasPagamentoDia
       if (methods && Array.isArray(methods)) {
         setPaymentMethods(methods);
       }
-      setCustomConditions(savedSettings.custom_conditions || '');
+      setCustomConditions((savedSettings.custom_conditions as string) || '');
       setShowFeesToCustomer(savedSettings.show_fees_to_customer || false);
       setShowOtherMethods((savedSettings as { show_other_methods?: boolean }).show_other_methods ?? true);
       setShowInstallments((savedSettings as { show_installments?: boolean }).show_installments ?? true);
