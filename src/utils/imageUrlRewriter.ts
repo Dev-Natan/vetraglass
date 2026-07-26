@@ -175,6 +175,10 @@ export function installImageUrlRewriter() {
     // Any element carrying an inline style may contain a url(...) reference.
     root.querySelectorAll?.('[style*="url("]').forEach((el) => tryRewriteStyle(el));
     if (root instanceof Element && root.hasAttribute?.('style')) tryRewriteStyle(root);
+    // SVG <image>, <use>, <feImage>, gradients etc. referencing storage URLs.
+    root.querySelectorAll?.('image, use, feImage, pattern, textPath, mpath, linearGradient, radialGradient')
+      .forEach((el) => tryRewriteSvgHref(el));
+    if (root instanceof Element) tryRewriteSvgHref(root);
   };
   scan(document);
 
@@ -185,6 +189,12 @@ export function installImageUrlRewriter() {
           tryRewriteImg(m.target);
         } else if (m.target instanceof Element && m.attributeName === 'style') {
           tryRewriteStyle(m.target);
+        } else if (
+          m.target instanceof Element &&
+          (m.attributeName === 'href' || m.attributeName === 'xlink:href')
+        ) {
+          REWRITTEN_SVG.delete(m.target);
+          tryRewriteSvgHref(m.target);
         }
       } else if (m.type === 'childList') {
         m.addedNodes.forEach((node) => {
@@ -198,6 +208,7 @@ export function installImageUrlRewriter() {
     childList: true,
     subtree: true,
     attributes: true,
-    attributeFilter: ['src', 'style'],
+    attributeFilter: ['src', 'style', 'href', 'xlink:href'],
   });
 }
+
