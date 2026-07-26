@@ -46,37 +46,21 @@ interface MenuItem {
 
 // Menu organizado por fluxo de trabalho
 const menuItems: MenuItem[] = [
-  // Visão Geral
   { icon: LayoutDashboard, label: 'Dashboard', path: '/', module: 'dashboard', tutorialId: 'menu-dashboard' },
-  
-  // Comercial
+  { icon: ShoppingCart, label: 'Caixa & Vendas', path: '/caixa-vendas', module: 'caixa-vendas' },
   { icon: Users, label: 'Clientes', path: '/clientes', module: 'clientes', tutorialId: 'menu-clientes' },
+  { icon: FileText, label: 'Orçamentos', path: '/orcamentos', module: 'orcamentos', tutorialId: 'menu-orcamentos' },
   { icon: Package, label: 'Produtos', path: '/produtos', module: 'produtos', tutorialId: 'menu-produtos' },
   { icon: Boxes, label: 'Estoque', path: '/estoque', module: 'estoque', tutorialId: 'menu-estoque' },
+
   { icon: Tag, label: 'Meus Preços', path: '/meus-precos', module: 'produtos' },
-  
-  { icon: FileText, label: 'Orçamentos', path: '/orcamentos', module: 'orcamentos', tutorialId: 'menu-orcamentos' },
   { icon: ClipboardList, label: 'Ordens de Serviço', path: '/ordens-servico', module: 'ordens-servico', tutorialId: 'menu-ordens-servico' },
   { icon: Scissors, label: 'Plano de Corte', path: '/plano-de-corte' },
   { icon: CalendarDays, label: 'Agenda', path: '/agenda', module: 'agenda', tutorialId: 'menu-agenda' },
-  
-  // Operacional
   { icon: Ruler, label: 'Medições', path: '/medicoes', module: 'medicoes', tutorialId: 'menu-medicoes' },
-  
-  
-  
-  // Financeiro
-  { icon: ShoppingCart, label: 'Caixa & Vendas', path: '/caixa-vendas', module: 'caixa-vendas' },
   { icon: DollarSign, label: 'Financeiro', path: '/financeiro', module: 'financeiro', tutorialId: 'menu-financeiro' },
-  
-  
-  
-  
-  // Administração
   { icon: UserCog, label: 'Funcionários', path: '/funcionarios', module: 'funcionarios', tutorialId: 'menu-funcionarios' },
   { icon: Settings, label: 'Configurações', path: '/configuracoes', module: 'configuracoes', tutorialId: 'menu-configuracoes' },
-  
-  // Feedback
   { icon: Lightbulb, label: 'Sugestões', path: '/feedbacks', tutorialId: 'menu-feedbacks' },
 ];
 
