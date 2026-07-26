@@ -34,6 +34,7 @@ const EditarProdutoEmpresa = lazy(() => import("./pages/EditarProdutoEmpresa"));
 
 const OrdemServicoDetalhes = lazy(() => import("./pages/OrdemServicoDetalhes"));
 const Financeiro = lazy(() => import("./pages/Financeiro"));
+const CaixaVendas = lazy(() => import("./pages/CaixaVendas"));
 const Funcionarios = lazy(() => import("./pages/Funcionarios"));
 
 
