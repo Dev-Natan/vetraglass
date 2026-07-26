@@ -519,6 +519,10 @@ export default function EditarProdutoEmpresa() {
         }
       }
 
+      // COPY-ON-WRITE: if this product is still inheriting from the admin
+      // template, snapshot the template into the company scope before adding.
+      const materialized = await ensureMaterialized();
+
       const isContramarco = addItemSection === 'contramarco';
       const insertData = {
         company_product_id: id,
@@ -533,7 +537,7 @@ export default function EditarProdutoEmpresa() {
         width_formula: addItemSection === 'glass' ? (widthFormula || null) : null,
         height_formula: addItemSection === 'glass' ? (heightFormula || null) : null,
         notes: addItemSection === 'glass' ? (glassName || null) : null,
-        sort_order: (productItems?.length || 0) + 1,
+        sort_order: (materialized.length || productItems?.length || 0) + 1,
         section: isContramarco ? 'contramarco' : null,
       };
 
