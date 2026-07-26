@@ -681,6 +681,22 @@ export async function generateQuotePdf(
     doc.text(`Pagamento à Vista: ${formatCurrency(cashValue)}`, marginRight, y, { align: 'right' });
   }
 
+  // ===== Vetra Branding Footer (todas as páginas) =====
+  const totalPages = (doc as any).internal.getNumberOfPages();
+  for (let p = 1; p <= totalPages; p++) {
+    doc.setPage(p);
+    const brandY = pageHeight - 4;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6.5);
+    doc.setTextColor(160, 160, 168);
+    doc.text(
+      `Gerado por VETRA  |  Sistema de Gestão Inteligente  ·  Página ${p} de ${totalPages}`,
+      pageWidth / 2,
+      brandY,
+      { align: 'center' }
+    );
+  }
+
   const customerSlug = quote.customer_name
     .toLowerCase()
     .normalize('NFD')
