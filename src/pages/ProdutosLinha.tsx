@@ -317,8 +317,7 @@ export default function ProdutosLinha() {
                   key={product.id + (product.productTemplateId || '')}
                   onClick={() => {
                     if (product.companyProductId) {
-                      setSelectedCompanyProductId(product.companyProductId);
-                      setEditSheetOpen(true);
+                      navigate(`/produtos/empresa/editar/${product.companyProductId}`);
                     } else if (product.productTemplateId) {
                       quickActivateMutation.mutate(product.productTemplateId);
                     }
