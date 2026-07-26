@@ -58,8 +58,13 @@ async function loadSingleImage(url: string, compress: boolean = true): Promise<s
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout for slower connections
 
+      // Resolve to a signed URL when the source points at a private Supabase storage bucket.
+      // Public-style URLs (…/object/public/…) fail with 400 when the bucket is private,
+      // so we mint a short-lived signed URL first.
+      const fetchUrl = (await resolveSignedUrl(normalizedUrl)) || normalizedUrl;
+
       // Use normalized URL for fetch (without cache buster)
-      const response = await fetch(normalizedUrl, { 
+      const response = await fetch(fetchUrl, {
         signal: controller.signal,
         cache: 'no-store', // Always fetch fresh from storage
         mode: 'cors',
