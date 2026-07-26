@@ -1097,7 +1097,14 @@ export default function ProductTemplates() {
 
   const handleEditItem = (item: ProductTemplateItem) => {
     setEditingItem(item);
-    setEditQuantityFormula(item.quantity_formula || "1");
+    const itemType = item.item_template?.type || item.company_item?.type;
+    let effectiveQty = item.quantity_formula || "1";
+    if (itemType === 'profile') {
+      if (item.width_formula?.trim()) effectiveQty = item.width_formula;
+      else if (item.height_formula?.trim()) effectiveQty = item.height_formula;
+    }
+    setEditQuantityFormula(effectiveQty);
+    setUseFixedQtyEdit(/^\d+(?:[.,]\d+)?$/.test(String(effectiveQty).trim()));
     setEditPiecesQuantity(item.pieces_quantity || 1);
     setEditPiecesFormula(item.pieces_formula || null);
     setEditWidthFormula(item.width_formula || "");
