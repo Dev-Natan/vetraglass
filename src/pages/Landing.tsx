@@ -174,7 +174,7 @@ export default function Landing() {
             </Button>
             <Button asChild>
               <Link to="/auth?tab=signup">
-                Começar Grátis
+                Criar Conta
                 <ArrowRight className="ml-2 w-4 h-4" />
               </Link>
             </Button>
@@ -203,7 +203,7 @@ export default function Landing() {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button size="lg" asChild className="w-full sm:w-auto">
                 <Link to="/auth?tab=signup">
-                  Teste 14 dias grátis
+                  Criar Conta
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Link>
               </Button>
@@ -212,21 +212,6 @@ export default function Landing() {
                   Ver funcionalidades
                 </a>
               </Button>
-            </div>
-            
-            <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0" />
-                <span>Sem cartão de crédito</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0" />
-                <span>Suporte incluso</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0" />
-                <span>Cancele quando quiser</span>
-              </div>
             </div>
           </div>
         </div>
@@ -333,8 +318,7 @@ export default function Landing() {
               Escolha o plano ideal
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Planos flexíveis que crescem junto com seu negócio. 
-              Comece grátis e faça upgrade quando quiser.
+              Planos flexíveis que crescem junto com seu negócio.
             </p>
           </div>
           
@@ -383,9 +367,6 @@ export default function Landing() {
                       Começar agora
                     </Link>
                   </Button>
-                  <p className="text-xs text-muted-foreground text-center mt-3">
-                    14 dias grátis • Sem compromisso
-                  </p>
                 </CardContent>
               </Card>
             ))}
@@ -440,8 +421,7 @@ export default function Landing() {
             Pronto para transformar sua vidraçaria?
           </h2>
           <p className="text-primary-foreground/80 max-w-2xl mx-auto mb-8">
-            Junte-se a centenas de vidraçarias que já otimizaram sua gestão. 
-            Comece hoje com 14 dias grátis, sem compromisso.
+            Junte-se a centenas de vidraçarias que já otimizaram sua gestão.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button 
@@ -451,7 +431,7 @@ export default function Landing() {
               className="w-full sm:w-auto"
             >
               <Link to="/auth?tab=signup">
-                Criar conta gratuita
+                Criar conta
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Link>
             </Button>
