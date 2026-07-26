@@ -5,6 +5,7 @@
 
 import { compressImage, CompressionOptions, getCompressionOptions } from './imageCompression';
 import { resolveProductImageUrl } from './imageUrl';
+import { resolveSignedUrl } from '@/components/common/SignedImage';
 
 // In-memory cache for loaded images (session-based)
 const imageCache = new Map<string, string>();
