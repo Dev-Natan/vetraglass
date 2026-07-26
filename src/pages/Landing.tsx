@@ -203,7 +203,7 @@ export default function Landing() {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button size="lg" asChild className="w-full sm:w-auto">
                 <Link to="/auth?tab=signup">
-                  Teste 14 dias grátis
+                  Criar Conta
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Link>
               </Button>
@@ -212,21 +212,6 @@ export default function Landing() {
                   Ver funcionalidades
                 </a>
               </Button>
-            </div>
-            
-            <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0" />
-                <span>Sem cartão de crédito</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0" />
-                <span>Suporte incluso</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0" />
-                <span>Cancele quando quiser</span>
-              </div>
             </div>
           </div>
         </div>
