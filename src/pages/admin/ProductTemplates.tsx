@@ -298,6 +298,8 @@ export default function ProductTemplates() {
   const [cutAngleEnd, setCutAngleEnd] = useState(90);
   const [compositionSide, setCompositionSide] = useState<string>("");
   const [profilePosition, setProfilePosition] = useState<'Largura' | 'Altura'>('Largura');
+  const [useFixedQty, setUseFixedQty] = useState(false);
+  const [useFixedQtyEdit, setUseFixedQtyEdit] = useState(false);
 
   
   const [editingItem, setEditingItem] = useState<ProductTemplateItem | null>(null);
