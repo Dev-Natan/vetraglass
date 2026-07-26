@@ -66,7 +66,10 @@ const menuItems: MenuItem[] = [
   
   
   // Financeiro
+  { icon: ShoppingCart, label: 'Caixa & Vendas', path: '/caixa-vendas', module: 'caixa-vendas' },
   { icon: DollarSign, label: 'Financeiro', path: '/financeiro', module: 'financeiro', tutorialId: 'menu-financeiro' },
+  
+  
   
   
   // Administração
