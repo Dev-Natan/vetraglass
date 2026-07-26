@@ -105,12 +105,14 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/empresa/nova" replace />;
   }
 
-  // Bloqueio de trial expirado — força ir para /planos
+  // Bloqueio de acesso: só libera dashboard com assinatura ativa.
+  // Empresas legadas em 'trialing' com trial válido continuam permitidas até expirar.
   if (!isSaasAdmin && currentCompany) {
-    const status = currentCompany.subscription_status ?? 'trialing';
+    const status = currentCompany.subscription_status ?? 'pending_payment';
     const trialEndsAt = currentCompany.trial_ends_at ? new Date(currentCompany.trial_ends_at) : null;
-    const expired = trialEndsAt ? trialEndsAt.getTime() < Date.now() : false;
-    if (status !== 'active' && expired) {
+    const trialValid = trialEndsAt ? trialEndsAt.getTime() > Date.now() : false;
+    const allowed = status === 'active' || (status === 'trialing' && trialValid);
+    if (!allowed) {
       return <Navigate to="/planos" replace />;
     }
   }
