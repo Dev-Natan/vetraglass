@@ -3,16 +3,15 @@ import { resolveImageUrl, resolveProductImageUrl } from '@/utils/imageUrl';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { ArrowLeft, Upload, MoreHorizontal, Plus, ChevronRight, Home, Package, CheckCircle2, Circle, CircleDot, RotateCcw, Search, DollarSign, Calculator, Info } from 'lucide-react';
+import { ArrowLeft, Upload, Trash2, Plus, ChevronRight, Home, Package, CheckCircle2, Circle, RotateCcw, DollarSign, Calculator, Info, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { processFileWithWhiteBackground } from '@/utils/imageBackgroundProcessor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
 import { FormulaEditor } from '@/components/produtos/FormulaEditor';
 import { GlassFormulaEditor } from '@/components/produtos/GlassFormulaEditor';
 import { ProductConfigPanel, ProductConfigData } from '@/components/produtos/ProductConfigPanel';
@@ -947,7 +946,7 @@ export default function EditarProdutoEmpresa() {
           </CardContent>
         </Card>
 
-        {/* Composição do Produto — layout igual ao admin (abas + grid de cards) */}
+        {/* Composição do Produto — split view idêntico ao admin */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-lg">Composição do Produto</h2>
@@ -956,224 +955,306 @@ export default function EditarProdutoEmpresa() {
             </p>
           </div>
 
-          <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setAddItemSection(v as any); }} className="w-full">
-            <div className="bg-muted/50 rounded-xl p-1.5">
-              <TabsList className="w-full h-auto bg-transparent gap-1">
-                {itemTypeTabs.map((tab) => {
-                  const itemCount = getItemsByType(tab.value).length;
-                  const isActive = activeTab === tab.value;
-                  const hasItems = itemCount > 0;
-                  return (
-                    <TabsTrigger
-                      key={tab.value}
-                      value={tab.value}
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,32%)_1fr] gap-4">
+            {/* LEFT — Aside: adicionar item */}
+            <aside className="lg:sticky lg:top-0 self-start bg-card border rounded-xl p-4 space-y-4">
+              <div className="flex items-center gap-2 pb-2 border-b">
+                <Plus className="w-4 h-4 text-primary" />
+                <h3 className="font-semibold text-sm">Adicionar {addItemSection === 'glass' ? 'Vidro' : addItemSection === 'profile' ? 'Perfil' : addItemSection === 'contramarco' ? 'Contramarco' : 'Componente'}</h3>
+              </div>
+
+              {availableLinhas.length > 0 && (addItemSection === 'profile' || addItemSection === 'contramarco') && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Filtrar por Linha</Label>
+                  <Select value={linhaFilter} onValueChange={setLinhaFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Todas as linhas" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background z-50 max-h-[260px]">
+                      <SelectItem value="__all__">Todas as linhas</SelectItem>
+                      {availableLinhas.map(l => (
+                        <SelectItem key={l} value={l}>{l}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">Buscar item</Label>
+                <Input
+                  placeholder="Pesquisar..."
+                  value={itemSearchQuery}
+                  onChange={(e) => setItemSearchQuery(e.target.value)}
+                  className="h-9"
+                />
+                <div className="max-h-[220px] overflow-y-auto rounded-md border bg-muted/20 p-1.5 space-y-0.5">
+                  {filteredAvailableItems.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-4">Nenhum item</p>
+                  ) : filteredAvailableItems.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => handleSelectItem(item.id)}
                       className={cn(
-                        'flex-1 py-3 text-xs sm:text-sm font-medium rounded-lg transition-all data-[state=active]:shadow-sm',
-                        hasItems && !isActive
-                          ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground'
-                          : 'data-[state=active]:bg-primary data-[state=active]:text-primary-foreground'
+                        'w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left transition-colors',
+                        selectedItemToAdd === item.id ? 'bg-primary/10 border border-primary/30' : 'hover:bg-muted'
                       )}
                     >
-                      <div className="flex items-center gap-2">
-                        {hasItems ? (
-                          <CheckCircle2 className={cn('w-4 h-4', isActive ? '' : 'text-green-600 dark:text-green-400')} />
-                        ) : isActive ? (
-                          <CircleDot className="w-4 h-4" />
-                        ) : (
-                          <Circle className="w-4 h-4" />
-                        )}
-                        <span className="hidden sm:inline">{tab.label}</span>
-                        <span className="sm:hidden">{tab.label.split(' ')[0]}</span>
-                        <span className={cn(
-                          'text-[10px] px-1.5 py-0.5 rounded-full',
-                          isActive
-                            ? 'bg-primary-foreground/20'
-                            : hasItems
-                              ? 'bg-green-600/20 text-green-700 dark:bg-green-400/20 dark:text-green-300'
-                              : 'bg-muted'
-                        )}>
-                          {itemCount}
-                        </span>
+                      <div className="w-7 h-7 rounded border bg-muted flex-shrink-0 flex items-center justify-center overflow-hidden">
+                        {item.image_url ? (
+                          <img src={getStorageUrl(item.image_url)} alt={item.name} className="w-full h-full object-contain" />
+                        ) : <span className="text-[10px]">📦</span>}
                       </div>
-                    </TabsTrigger>
-                  );
-                })}
-              </TabsList>
-            </div>
+                      <span className="text-xs truncate flex-1">{item.name}</span>
+                      {item.linha && (
+                        <span className="text-[9px] px-1 py-0.5 rounded bg-primary/10 text-primary flex-shrink-0">{item.linha}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-            {itemTypeTabs.map((tab) => {
-              const items = getItemsByType(tab.value);
-              const canReset = !!product?.product_template_id;
-              return (
-                <TabsContent key={tab.value} value={tab.value} className="mt-4">
-                  <div className="flex justify-between items-center gap-2 mb-4">
-                    <p className="text-sm text-muted-foreground">
-                      {items.length === 0
-                        ? `Adicione ${tab.label.toLowerCase()} à composição`
-                        : `${items.length} ${tab.label.toLowerCase()} configurados`}
-                    </p>
-                    <Button
-                      size="sm"
-                      className="gap-2"
-                      onClick={() => { setAddItemSection(tab.value as any); setIsAddItemDialogOpen(true); }}
-                    >
-                      <Plus className="w-4 h-4" />
-                      Adicionar item
-                    </Button>
+              {selectedItemToAdd && selectedItemFormulas.length > 0 && addItemSection !== 'glass' && (
+                <div className="space-y-1.5 p-2 rounded-md border border-primary/30 bg-primary/5">
+                  <Label className="text-xs font-medium">Fórmula pré-cadastrada ({selectedItemFormulas.length})</Label>
+                  <Select
+                    value={String(selectedFormulaIndex)}
+                    onValueChange={(v) => {
+                      const idx = parseInt(v);
+                      setSelectedFormulaIndex(idx);
+                      applyFormulaEntry(selectedItemFormulas[idx]);
+                    }}
+                  >
+                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {selectedItemFormulas.map((f: any, idx: number) => {
+                        const pos = normalizePos(f.position);
+                        const label = f.label && String(f.label).trim() ? String(f.label).trim() : pos;
+                        return (
+                          <SelectItem key={idx} value={String(idx)}>
+                            <span className="text-xs">
+                              <span className="font-medium">{label}</span>
+                              <span className="text-muted-foreground"> · {pos}</span>
+                              <code className="ml-1 text-[10px] font-mono">{f.formula}</code>
+                            </span>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {selectedItemToAdd && (
+                <>
+                  {addItemSection === 'glass' ? (
+                    <>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Nome do vidro (opcional)</Label>
+                        <Input value={glassName} onChange={(e) => setGlassName(e.target.value)} placeholder="Ex: Vidro fixo" className="h-9" />
+                      </div>
+                      <GlassFormulaEditor
+                        widthFormula={widthFormula}
+                        heightFormula={heightFormula}
+                        onWidthFormulaChange={setWidthFormula}
+                        onHeightFormulaChange={setHeightFormula}
+                        showPiecesQuantity={true}
+                        piecesQuantity={piecesQuantity}
+                        onPiecesChange={setPiecesQuantity}
+                        piecesFormula={piecesFormula}
+                        onPiecesFormulaChange={setPiecesFormula}
+                      />
+                    </>
+                  ) : (
+                    <FormulaEditor
+                      value={quantityFormula}
+                      onChange={setQuantityFormula}
+                      showPiecesQuantity={addItemSection === 'profile' || addItemSection === 'accessory' || addItemSection === 'rubber' || addItemSection === 'contramarco'}
+                      piecesQuantity={piecesQuantity}
+                      onPiecesChange={setPiecesQuantity}
+                      piecesFormula={piecesFormula}
+                      onPiecesFormulaChange={setPiecesFormula}
+                    />
+                  )}
+
+                  {(addItemSection === 'profile' || addItemSection === 'contramarco') && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Ângulo de corte</Label>
+                      <div className="flex gap-2">
+                        {[45, 90].map(angle => (
+                          <Button
+                            key={angle}
+                            type="button"
+                            variant={cutAngle === angle ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setCutAngle(angle)}
+                            className="flex-1 h-8"
+                          >
+                            {angle}°
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Lado / Posição</Label>
+                    <div className="flex gap-1 flex-wrap">
+                      {[
+                        { value: null, label: 'Ambos' },
+                        { value: 'A', label: 'A' },
+                        { value: 'B', label: 'B' },
+                        { value: 'C', label: 'C' },
+                      ].map(option => (
+                        <Button
+                          key={String(option.value)}
+                          type="button"
+                          variant={side === option.value ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setSide(option.value)}
+                          className="flex-1 min-w-[50px] h-8"
+                        >
+                          {option.label}
+                        </Button>
+                      ))}
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    {items.map((item) => {
-                      const template = item.item_template || item.company_item;
-                      const isGlass = tab.value === 'glass';
-                      const isProfile = tab.value === 'profile';
-                      const formulaType = (() => {
-                        const lower = String(item.quantity_formula || '').toLowerCase();
-                        if (lower.includes('altura')) return 'Altura';
-                        if (lower.includes('largura')) return 'Largura';
-                        return null;
-                      })();
+                  <Button
+                    onClick={handleAddItem}
+                    disabled={!selectedItemToAdd || addItemMutation.isPending}
+                    className="w-full gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    {addItemMutation.isPending ? 'Adicionando...' : 'Adicionar à composição'}
+                  </Button>
+                </>
+              )}
+            </aside>
 
-                      return (
-                        <div
-                          key={item.id}
-                          onClick={() => handleEditItem(item)}
-                          className="bg-card border rounded-lg p-4 relative group hover:shadow-md hover:border-primary/50 transition-all cursor-pointer"
-                        >
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="absolute top-2 right-2 w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <MoreHorizontal className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="bg-background border shadow-lg z-50">
-                              <DropdownMenuItem
-                                className="cursor-pointer"
-                                onClick={(e) => { e.stopPropagation(); handleEditItem(item); }}
-                              >
-                                Editar
-                              </DropdownMenuItem>
-                              {canReset && (
-                                <DropdownMenuItem
-                                  className="cursor-pointer"
-                                  onClick={(e) => { e.stopPropagation(); resetItemMutation.mutate(item.id); }}
-                                >
-                                  <RotateCcw className="w-3.5 h-3.5 mr-2" />
-                                  Restaurar padrão
-                                </DropdownMenuItem>
-                              )}
-                              <DropdownMenuItem
-                                className="text-destructive cursor-pointer"
-                                onClick={(e) => { e.stopPropagation(); removeItemMutation.mutate(item.id); }}
-                              >
-                                Remover
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+            {/* RIGHT — Category pills + grid */}
+            <section className="space-y-4">
+              <div className="bg-muted/50 rounded-xl p-1.5">
+                <div className="flex flex-wrap gap-1">
+                  {itemTypeTabs.map((tab) => {
+                    const itemCount = getItemsByType(tab.value).length;
+                    const isActive = activeTab === tab.value;
+                    const hasItems = itemCount > 0;
+                    return (
+                      <button
+                        key={tab.value}
+                        type="button"
+                        onClick={() => { setActiveTab(tab.value); setAddItemSection(tab.value as any); resetItemForm(); }}
+                        className={cn(
+                          'flex-1 min-w-[110px] py-2.5 px-3 text-xs sm:text-sm font-medium rounded-lg transition-all',
+                          isActive
+                            ? 'bg-primary text-primary-foreground shadow-sm'
+                            : hasItems
+                              ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400 hover:bg-green-100'
+                              : 'text-muted-foreground hover:bg-background'
+                        )}
+                      >
+                        <div className="flex items-center justify-center gap-2">
+                          {hasItems ? <CheckCircle2 className="w-4 h-4" /> : <Circle className="w-4 h-4" />}
+                          <span className="hidden sm:inline">{tab.label}</span>
+                          <span className="sm:hidden">{tab.label.split(' ')[0]}</span>
+                          <span className={cn(
+                            'text-[10px] px-1.5 py-0.5 rounded-full',
+                            isActive ? 'bg-primary-foreground/20' : hasItems ? 'bg-green-600/20' : 'bg-muted'
+                          )}>{itemCount}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
-                          <div className="aspect-square rounded-lg mb-3 flex items-center justify-center overflow-hidden">
-                            {template?.image_url ? (
-                              <img
-                                src={getStorageUrl(template.image_url)}
-                                alt={template.name}
-                                className="w-full h-full object-contain"
-                              />
-                            ) : (
-                              <div className="text-3xl text-muted-foreground/30 bg-muted w-full h-full flex items-center justify-center">📦</div>
-                            )}
-                          </div>
-
-                          {isGlass && item.notes && (
-                            <h4 className="font-bold text-sm text-foreground truncate text-center mb-1">
-                              {item.notes}
-                            </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                {(() => {
+                  const items = getItemsByType(activeTab);
+                  if (items.length === 0) {
+                    return (
+                      <div className="col-span-full text-center py-12 text-muted-foreground border-2 border-dashed rounded-xl">
+                        <Layers className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                        <p className="text-sm">Nenhum item nesta categoria. Use o painel à esquerda para adicionar.</p>
+                      </div>
+                    );
+                  }
+                  return items.map((item) => {
+                    const template = item.item_template || item.company_item;
+                    const isGlass = activeTab === 'glass';
+                    const isProfile = activeTab === 'profile';
+                    return (
+                      <div
+                        key={item.id}
+                        onClick={() => handleEditItem(item)}
+                        className="bg-card border rounded-lg p-3 relative group hover:shadow-md hover:border-primary/50 transition-all cursor-pointer"
+                      >
+                        <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                          {canReset && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="w-6 h-6"
+                              onClick={(e) => { e.stopPropagation(); resetItemMutation.mutate(item.id); }}
+                              title="Restaurar padrão"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                            </Button>
                           )}
-                          <h4 className={cn(
-                            'font-medium text-xs truncate text-center',
-                            isGlass && item.notes ? 'text-muted-foreground' : 'text-primary'
-                          )}>
-                            {template?.name}
-                          </h4>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="w-6 h-6 text-destructive"
+                            onClick={(e) => { e.stopPropagation(); removeItemMutation.mutate(item.id); }}
+                            title="Remover"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
 
-                          {isGlass && (item.width_formula || item.height_formula) && (
-                            <div className="mt-2 space-y-1">
-                              {item.width_formula && (
-                                <div className="flex items-center justify-center gap-1">
-                                  <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
-                                    L: {item.width_formula}
-                                  </span>
-                                </div>
-                              )}
-                              {item.height_formula && (
-                                <div className="flex items-center justify-center gap-1">
-                                  <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                                    A: {item.height_formula}
-                                  </span>
-                                </div>
-                              )}
-                              {item.side && (
-                                <div className="flex items-center justify-center gap-1">
-                                  <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
-                                    Lado: {item.side}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
+                        <div className="aspect-square rounded-lg mb-2 flex items-center justify-center overflow-hidden bg-muted/30">
+                          {template?.image_url ? (
+                            <img src={getStorageUrl(template.image_url)} alt={template.name} className="w-full h-full object-contain" />
+                          ) : <span className="text-2xl opacity-30">📦</span>}
+                        </div>
+
+                        {isGlass && item.notes && (
+                          <h4 className="font-bold text-sm text-foreground truncate text-center mb-0.5">{item.notes}</h4>
+                        )}
+                        <h4 className={cn(
+                          'font-medium text-xs truncate text-center',
+                          isGlass && item.notes ? 'text-muted-foreground' : 'text-primary'
+                        )}>{template?.name}</h4>
+
+                        <div className="flex flex-wrap justify-center gap-1 mt-2">
+                          {isGlass && item.width_formula && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">L: {item.width_formula}</span>
                           )}
-
-                          {!isGlass && formulaType && (
-                            <div className="flex justify-center mt-1 gap-1">
-                              <span className={cn(
-                                'text-[10px] px-2 py-0.5 rounded-full font-medium',
-                                formulaType === 'Altura'
-                                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                                  : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-                              )}>
-                                {formulaType}
-                              </span>
-                              {item.side && (
-                                <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
-                                  Lado: {item.side}
-                                </span>
-                              )}
-                            </div>
+                          {isGlass && item.height_formula && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">A: {item.height_formula}</span>
                           )}
-
-                          {!isGlass && (
-                            <p className="text-xs text-muted-foreground text-center mt-1 truncate">
-                              {item.quantity_formula}
-                            </p>
+                          {!isGlass && item.quantity_formula && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground truncate max-w-full">{item.quantity_formula}</span>
                           )}
-
+                          {item.side && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">Lado {item.side}</span>
+                          )}
                           {isProfile && (
-                            <div className="flex justify-center gap-2 mt-3">
-                              <span className="text-xs font-medium text-foreground bg-primary/10 px-2 py-1 rounded">
-                                {item.pieces_quantity || 1}x peças
-                              </span>
-                              <span className="text-xs font-medium text-foreground bg-muted px-2 py-1 rounded">
-                                {item.cut_angle || 90}°
-                              </span>
-                            </div>
+                            <>
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">{item.pieces_quantity || 1}x</span>
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted">{item.cut_angle || 90}°</span>
+                            </>
                           )}
                         </div>
-                      );
-                    })}
-
-                    {items.length === 0 && (
-                      <div className="col-span-full text-center py-12 text-muted-foreground">
-                        Nenhum item vinculado. Clique em "Adicionar item" para vincular.
                       </div>
-                    )}
-                  </div>
-                </TabsContent>
-              );
-            })}
-          </Tabs>
+                    );
+                  });
+                })()}
+              </div>
+            </section>
+          </div>
         </div>
 
 
@@ -1193,100 +1274,6 @@ export default function EditarProdutoEmpresa() {
         )}
       </div>
 
-      {/* Add Item Dialog */}
-      <Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Adicionar {addItemSection === 'profile' ? 'Perfil' : addItemSection === 'glass' ? 'Vidro' : addItemSection === 'contramarco' ? 'Contramarco' : 'Componente'}</DialogTitle>
-            <DialogDescription>Selecione um item e configure sua fórmula</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            {availableLinhas.length > 0 && (
-              <div className="space-y-2">
-                <Label>Filtrar por Linha</Label>
-                <Select value={linhaFilter} onValueChange={setLinhaFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todas as linhas" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background z-50 max-h-[260px]">
-                    <SelectItem value="__all__">Todas as linhas</SelectItem>
-                    {availableLinhas.map(l => (
-                      <SelectItem key={l} value={l}>{l}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {linhaFilter !== '__all__' && (
-                  <p className="text-[11px] text-muted-foreground">
-                    Mostrando apenas itens da linha <strong>{linhaFilter}</strong>.
-                  </p>
-                )}
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label>Item:</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input placeholder="Pesquisar..." value={itemSearchQuery} onChange={(e) => setItemSearchQuery(e.target.value)} className="pl-9" />
-              </div>
-              <ScrollArea className="h-[220px] rounded-lg border bg-muted/20 p-2">
-                <div className="space-y-1">
-                  {filteredAvailableItems.length === 0 ? <p className="text-sm text-muted-foreground text-center py-6">Vazio</p> : filteredAvailableItems.map((item) => (
-                    <button key={item.id} type="button" onClick={() => handleSelectItem(item.id)} className={cn("w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-colors", selectedItemToAdd === item.id ? "bg-primary/10 border border-primary/30" : "hover:bg-muted")}>
-                      <div className="w-8 h-8 rounded border bg-muted flex-shrink-0 flex items-center justify-center overflow-hidden">
-                        {item.image_url ? <img src={getStorageUrl(item.image_url)} alt={item.name} className="w-full h-full object-contain" /> : <span className="text-xs text-muted-foreground/50">📦</span>}
-                      </div>
-                      <span className="text-sm truncate flex-1">
-                        {item.name}
-                        {item.linha && <span className="text-muted-foreground"> — Linha {item.linha}</span>}
-                      </span>
-                      {item.linha && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-medium flex-shrink-0">{item.linha}</span>}
-                    </button>
-                  ))}
-                </div>
-              </ScrollArea>
-            </div>
-            {selectedItemToAdd && selectedItemFormulas.length > 0 && addItemSection !== 'glass' && (
-              <div className="space-y-2 p-3 rounded-md border border-primary/30 bg-primary/5">
-                <Label className="text-xs font-medium">
-                  Fórmula pré-cadastrada ({selectedItemFormulas.length} disponíveis)
-                </Label>
-                <Select
-                  value={String(selectedFormulaIndex)}
-                  onValueChange={(v) => {
-                    const idx = parseInt(v);
-                    setSelectedFormulaIndex(idx);
-                    applyFormulaEntry(selectedItemFormulas[idx]);
-                  }}
-                >
-                  <SelectTrigger className="h-10">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {selectedItemFormulas.map((f: any, idx: number) => {
-                      const pos = normalizePos(f.position);
-                      const label = f.label && String(f.label).trim() ? String(f.label).trim() : pos;
-                      return (
-                        <SelectItem key={idx} value={String(idx)}>
-                          <span className="text-sm">
-                            <span className="font-medium">{label}</span>
-                            <span className="text-muted-foreground"> · {pos}</span>
-                            <code className="ml-2 text-[11px] font-mono">{f.formula}</code>
-                          </span>
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            {addItemSection === 'glass' ? <GlassFormulaEditor widthFormula={widthFormula} heightFormula={heightFormula} onWidthFormulaChange={setWidthFormula} onHeightFormulaChange={setHeightFormula} showPiecesQuantity={true} piecesQuantity={piecesQuantity} onPiecesChange={setPiecesQuantity} piecesFormula={piecesFormula} onPiecesFormulaChange={setPiecesFormula} /> : <FormulaEditor value={quantityFormula} onChange={setQuantityFormula} showPiecesQuantity={true} piecesQuantity={piecesQuantity} onPiecesChange={setPiecesQuantity} piecesFormula={piecesFormula} onPiecesFormulaChange={setPiecesFormula} />}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddItemDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleAddItem} disabled={!selectedItemToAdd || addItemMutation.isPending}>{addItemMutation.isPending ? 'Adicionando...' : 'Adicionar'}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Edit Item Dialog */}
       <Dialog open={isEditItemDialogOpen} onOpenChange={setIsEditItemDialogOpen}>
