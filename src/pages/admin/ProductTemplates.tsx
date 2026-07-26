@@ -204,6 +204,30 @@ type CompositionDraft = {
 
 const COMPOSITION_DRAFT_STORAGE_KEY = "admin-product-template-composition-draft";
 
+const ITEM_TYPE_ALIASES: Record<string, string> = {
+  vidro: 'glass',
+  glass: 'glass',
+  perfil: 'profile',
+  profile: 'profile',
+  acessorio: 'accessory',
+  acessorios: 'accessory',
+  accessory: 'accessory',
+  guarnicao: 'accessory',
+  guarnição: 'accessory',
+  borracha: 'accessory',
+  borrachas: 'accessory',
+  servico: 'service',
+  serviço: 'service',
+  service: 'service',
+  chaparia: 'sheet',
+  sheet: 'sheet',
+};
+
+const normalizeItemTypeForComposition = (value: string | undefined) => {
+  const key = String(value || '').trim().toLowerCase();
+  return ITEM_TYPE_ALIASES[key] || key;
+};
+
 const getItemTypeTabs = (itemTypes: { slug: string; name: string }[] | undefined) => {
   const defaultTabs = [
     { value: 'glass', label: 'VIDROS', dbType: 'glass' },
@@ -212,12 +236,19 @@ const getItemTypeTabs = (itemTypes: { slug: string; name: string }[] | undefined
   ];
   
   if (!itemTypes?.length) return defaultTabs;
-  
-  return itemTypes.map(type => ({
-    value: type.slug,
-    label: type.name.toUpperCase(),
-    dbType: type.slug,
-  }));
+
+  const tabs = itemTypes.reduce<typeof defaultTabs>((acc, type) => {
+    const dbType = normalizeItemTypeForComposition(type.slug);
+    if (!dbType || acc.some((tab) => tab.dbType === dbType)) return acc;
+    acc.push({
+      value: dbType,
+      label: type.name.toUpperCase(),
+      dbType,
+    });
+    return acc;
+  }, []);
+
+  return tabs.length ? tabs : defaultTabs;
 };
 
 export default function ProductTemplates() {
@@ -590,7 +621,7 @@ export default function ProductTemplates() {
 
   const getItemsByTypeForAdd = (tabValue: string) => {
     const currentTab = itemTypeTabs.find(t => t.value === tabValue);
-    const dbType = currentTab?.dbType;
+    const dbType = currentTab?.dbType || normalizeItemTypeForComposition(tabValue);
     const base = sortedItemTemplates?.filter((item) => item.type === dbType) || [];
     if (!linhaFilter || linhaFilter === "__all__") return base;
     return base.filter((item) => item.linha === linhaFilter);
@@ -598,7 +629,7 @@ export default function ProductTemplates() {
 
   const getLinhasForAddTab = (tabValue: string) => {
     const currentTab = itemTypeTabs.find(t => t.value === tabValue);
-    const dbType = currentTab?.dbType;
+    const dbType = currentTab?.dbType || normalizeItemTypeForComposition(tabValue);
     const base = sortedItemTemplates?.filter((item) => item.type === dbType) || [];
     const set = new Set<string>();
     base.forEach((i: any) => { if (i.linha) set.add(i.linha); });
@@ -607,7 +638,7 @@ export default function ProductTemplates() {
 
   const getCompositionItemsByType = (tabValue: string) => {
     const currentTab = itemTypeTabs.find(t => t.value === tabValue);
-    const dbType = currentTab?.dbType;
+    const dbType = currentTab?.dbType || normalizeItemTypeForComposition(tabValue);
     return compositionItems?.filter((item) => item.item_template?.type === dbType) || [];
   };
 
