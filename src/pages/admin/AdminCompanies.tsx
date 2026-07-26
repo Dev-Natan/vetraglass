@@ -111,7 +111,7 @@ export default function AdminCompanies() {
         .from('company_subscriptions')
         .select('*');
       if (error) throw error;
-      return (data || []) as Subscription[];
+      return (data || []) as unknown as Subscription[];
     },
     enabled: isSaasAdmin,
   });

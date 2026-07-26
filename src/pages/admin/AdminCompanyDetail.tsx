@@ -149,7 +149,7 @@ export default function AdminCompanyDetail() {
         .eq("company_id", id!)
         .maybeSingle();
       if (error) throw error;
-      return data as Subscription | null;
+      return data as unknown as Subscription | null;
     },
   });
 

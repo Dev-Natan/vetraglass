@@ -123,7 +123,7 @@ export default function ConfiguracoesUsuarios() {
       if (existingPerm) {
         const { error } = await supabase
           .from("role_permissions")
-          .update({ [field]: value, updated_at: new Date().toISOString() })
+          .update({ [field]: value, updated_at: new Date().toISOString() } as never)
           .eq("id", existingPerm.id);
         if (error) throw error;
       } else {

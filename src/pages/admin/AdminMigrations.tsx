@@ -50,7 +50,7 @@ export default function AdminMigrations() {
     queryFn: async () => {
       const { data, error } = await supabase.rpc("list_schema_migrations");
       if (error) throw error;
-      return (data ?? []) as MigrationRow[];
+      return (data ?? []) as unknown as MigrationRow[];
     },
     staleTime: 30_000,
   });

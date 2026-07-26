@@ -248,7 +248,7 @@ export default function EditarProdutoEmpresa() {
         .eq('company_product_id', id)
         .order('sort_order', { ascending: true });
       if (error) throw error;
-      return data as CompanyProductItem[];
+      return data as unknown as CompanyProductItem[];
     },
     enabled: !!id,
   });
@@ -456,7 +456,7 @@ export default function EditarProdutoEmpresa() {
 
       const { error } = await supabase
         .from('company_product_items')
-        .insert(insertData);
+        .insert(insertData as never);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -535,7 +535,7 @@ export default function EditarProdutoEmpresa() {
       }
       const { error } = await supabase
         .from('company_product_items')
-        .update(updateData)
+        .update(updateData as never)
         .eq('id', editingItem.id);
       if (error) throw error;
     },

@@ -159,7 +159,7 @@ async function getGlassFormulas(productTemplateId: string, linha: string): Promi
     .order('panel_index', { ascending: true });
 
   if (error) throw error;
-  return (data || []) as GlassFormula[];
+  return (data || []) as unknown as GlassFormula[];
 }
 
 /**

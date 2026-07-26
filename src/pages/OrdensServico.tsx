@@ -192,7 +192,7 @@ export default function OrdensServico() {
       
       const { error } = await supabase
         .from('ordens_servico')
-        .update(updates)
+        .update(updates as never)
         .eq('id', id);
       if (error) throw error;
     },

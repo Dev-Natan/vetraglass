@@ -80,8 +80,8 @@ export async function checkGlassStockAvailability(
     for (const item of glassItems) {
       // Check exact field match first
       if (glassThickness && glassColor) {
-        const thicknessMatch = item.glass_thickness?.toLowerCase() === glassThickness.toLowerCase() ||
-                               item.glass_thickness?.includes(glassThickness.replace('mm', ''));
+        const thicknessMatch = String(item.glass_thickness ?? '').toLowerCase() === glassThickness.toLowerCase() ||
+                               String(item.glass_thickness ?? '').includes(glassThickness.replace('mm', ''));
         const colorMatch = item.glass_color?.toLowerCase() === glassColor.toLowerCase() ||
                            item.name.toLowerCase().includes(glassColor.toLowerCase());
         

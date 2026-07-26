@@ -86,7 +86,7 @@ export default function ConfiguracoesNotificacoes() {
       
       const { error } = await supabase
         .from('company_notification_settings')
-        .update({ [field]: value, updated_at: new Date().toISOString() })
+        .update({ [field]: value, updated_at: new Date().toISOString() } as never)
         .eq('id', settings.id);
       
       if (error) throw error;

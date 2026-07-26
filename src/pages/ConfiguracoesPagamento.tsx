@@ -131,6 +131,7 @@ export default function ConfiguracoesPagamento() {
           .from('formas_pagamento')
           .insert({
             company_id: currentCompany.id,
+            name: data.nome,
             nome: data.nome,
             tipo: data.tipo,
             sort_order: formas.length,
@@ -179,6 +180,7 @@ export default function ConfiguracoesPagamento() {
           .from('condicoes_pagamento')
           .insert({
             company_id: currentCompany.id,
+            name: data.nome,
             nome: data.nome,
             parcelas: data.parcelas,
             dias_entre_parcelas: data.dias_entre_parcelas,

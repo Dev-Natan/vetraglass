@@ -243,7 +243,7 @@ export function ProductCompositionPricing({
     mutationFn: async ({ companyItemId, payload }: { companyItemId: string; payload: Record<string, number> }) => {
       const { error } = await supabase
         .from('company_items')
-        .update(payload)
+        .update(payload as never)
         .eq('id', companyItemId);
       if (error) throw error;
     },

@@ -160,7 +160,7 @@ export function usePermissionProfiles() {
 
       const { error } = await supabase
         .from('permission_profiles')
-        .update(updateData)
+        .update(updateData as never)
         .eq('id', id);
 
       if (error) throw error;
