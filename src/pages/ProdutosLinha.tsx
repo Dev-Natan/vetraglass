@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 import { ProductEditSheet } from '@/components/produtos/ProductEditSheet';
+import { CreateCustomProductDialog } from '@/components/produtos/CreateCustomProductDialog';
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
 
 
@@ -51,6 +52,7 @@ export default function ProdutosLinha() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [editSheetOpen, setEditSheetOpen] = useState(false);
   const [selectedCompanyProductId, setSelectedCompanyProductId] = useState<string | null>(null);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   const currentLinha = linhaParam ? decodeURIComponent(linhaParam) : '';
   
@@ -292,7 +294,7 @@ export default function ProdutosLinha() {
           </button>
         </div>
 
-        {/* Search */}
+        {/* Search + Create */}
         <div className="flex gap-2 w-full">
           <Input
             placeholder="Buscar produto..."
@@ -302,6 +304,13 @@ export default function ProdutosLinha() {
           />
           <Button variant="default" size="sm" className="bg-sky-500 hover:bg-sky-600 shrink-0 h-10 px-4">
             <Search className="w-4 h-4" />
+          </Button>
+          <Button
+            onClick={() => setCreateDialogOpen(true)}
+            size="sm"
+            className="shrink-0 h-10 px-4 gap-1"
+          >
+            <Plus className="w-4 h-4" /> Novo Produto
           </Button>
         </div>
 
@@ -367,6 +376,12 @@ export default function ProdutosLinha() {
         open={editSheetOpen}
         onOpenChange={setEditSheetOpen}
         companyProductId={selectedCompanyProductId}
+      />
+
+      <CreateCustomProductDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        defaultLinha={currentLinha}
       />
 
     </MainLayout>
