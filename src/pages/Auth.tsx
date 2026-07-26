@@ -44,7 +44,7 @@ export default function Auth() {
   const { rateLimitStatus, checkRateLimit, recordLoginAttempt, formatRemainingTime } = useRateLimiting();
   
   // Get initial tab from URL parameter
-  const initialTab = searchParams.get('tab') === 'signup' ? 'signup' : 'login';
+  const initialTab = !SIGNUP_DISABLED && searchParams.get('tab') === 'signup' ? 'signup' : 'login';
   const [activeTab, setActiveTab] = useState(initialTab);
   
   // Login form - now uses username
