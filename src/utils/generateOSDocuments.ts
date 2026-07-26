@@ -460,7 +460,7 @@ export async function generateOSDocuments(
         quantity,
         cuts_data: profileCuts,
         glass_cuts_data: glassCuts,
-      });
+      } as never);
 
       // Insert glass project
       if (glassCuts.length > 0) {
