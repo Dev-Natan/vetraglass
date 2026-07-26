@@ -37,13 +37,8 @@ import {
   Wallet,
   Loader2
 } from 'lucide-react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { ImageIcon, ChevronRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { AprovarOrcamentoDialog } from './AprovarOrcamentoDialog';
 import { EditarContratoDialog } from './EditarContratoDialog';
 
@@ -489,35 +484,77 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
             )}
           </div>
 
-          {/* Status Selector - Visible Area */}
-          <div className="flex items-center justify-between p-3 bg-primary/5 rounded-lg border">
-            <div className="flex items-center gap-2">
-              <StatusIcon className="w-4 h-4" />
-              <span className="font-medium">Alterar Status:</span>
-            </div>
-            <Select
-              value={quote.status}
-              onValueChange={(value) => updateStatusMutation.mutate(value as QuoteStatus)}
-              disabled={quote.status === 'approved'}
-            >
-              <SelectTrigger className="w-44">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(statusConfig).map(([key, config]) => {
-                  const ConfigIcon = config.icon;
+          {/* Status Stepper */}
+          {(() => {
+            const steps: { key: QuoteStatus; label: string }[] = [
+              { key: 'pending', label: 'Pendente' },
+              { key: 'approved', label: 'Aprovado' },
+              { key: 'converted', label: 'Convertido' },
+            ];
+            const currentIdx = steps.findIndex(s => s.key === quote.status);
+            const isRejected = quote.status === 'rejected' || quote.status === 'expired';
+            const handleStepClick = (key: QuoteStatus) => {
+              if (isRejected) return;
+              if (key === quote.status) return;
+              if (key === 'approved' && quote.status === 'pending') {
+                setAprovarDialogOpen(true);
+                return;
+              }
+              if (key === 'converted' && quote.status === 'approved') {
+                if (!existingOS) createOSMutation.mutate();
+                return;
+              }
+            };
+            return (
+              <div className="flex items-center gap-1 p-3 bg-muted/40 rounded-lg border">
+                {steps.map((step, idx) => {
+                  const done = !isRejected && idx <= currentIdx;
+                  const active = !isRejected && idx === currentIdx;
+                  const clickable = !isRejected && (
+                    (step.key === 'approved' && quote.status === 'pending') ||
+                    (step.key === 'converted' && quote.status === 'approved')
+                  );
                   return (
-                    <SelectItem key={key} value={key}>
-                      <span className="flex items-center gap-2">
-                        <ConfigIcon className="w-4 h-4" />
-                        {config.label}
-                      </span>
-                    </SelectItem>
+                    <div key={step.key} className="flex items-center flex-1">
+                      <button
+                        type="button"
+                        onClick={() => handleStepClick(step.key)}
+                        disabled={!clickable}
+                        className={cn(
+                          "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all flex-1 justify-center",
+                          done && !active && "bg-primary/10 text-primary",
+                          active && "bg-primary text-primary-foreground shadow-sm ring-2 ring-primary/30",
+                          !done && "bg-background text-muted-foreground border",
+                          clickable && "hover:bg-primary/90 hover:text-primary-foreground cursor-pointer",
+                          !clickable && "cursor-default"
+                        )}
+                      >
+                        <span className={cn(
+                          "flex items-center justify-center w-5 h-5 rounded-full text-xs border",
+                          done ? "bg-background/20 border-current" : "border-current"
+                        )}>
+                          {done ? <CheckCircle className="w-3.5 h-3.5" /> : idx + 1}
+                        </span>
+                        {step.label}
+                      </button>
+                      {idx < steps.length - 1 && (
+                        <ChevronRight className={cn(
+                          "w-4 h-4 shrink-0 mx-0.5",
+                          idx < currentIdx ? "text-primary" : "text-muted-foreground/40"
+                        )} />
+                      )}
+                    </div>
                   );
                 })}
-              </SelectContent>
-            </Select>
-          </div>
+                {isRejected && (
+                  <Badge variant="destructive" className="ml-2 gap-1">
+                    <XCircle className="w-3 h-3" />
+                    {status.label}
+                  </Badge>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Items */}
           <div>
@@ -526,6 +563,7 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
               <table className="w-full text-sm">
                 <thead className="bg-muted">
                   <tr>
+                    <th className="p-3 w-14"></th>
                     <th className="text-left p-3">Descrição</th>
                     <th className="text-center p-3">Medidas</th>
                     <th className="text-center p-3">Qtd</th>
@@ -534,8 +572,19 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
                   </tr>
                 </thead>
                 <tbody>
-                  {items?.map((item) => (
+                  {items?.map((item) => {
+                    const thumb = item.company_products?.image_url || item.product_templates?.image_url || item.company_items?.image_url || null;
+                    return (
                     <tr key={item.id} className="border-t">
+                      <td className="p-2">
+                        <div className="w-10 h-10 rounded-md border bg-muted/40 overflow-hidden flex items-center justify-center shrink-0">
+                          {thumb ? (
+                            <img src={thumb} alt={item.description} className="w-full h-full object-cover" loading="lazy" />
+                          ) : (
+                            <ImageIcon className="w-4 h-4 text-muted-foreground/60" />
+                          )}
+                        </div>
+                      </td>
                       <td className="p-3">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span>{item.description}</span>
@@ -589,7 +638,8 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
                       <td className="p-3 text-right">{formatCurrency(item.unit_price)}</td>
                       <td className="p-3 text-right font-medium">{formatCurrency(item.total_price)}</td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -753,8 +803,21 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
       items={items || []}
       onSuccess={() => {
         queryClient.invalidateQueries({ queryKey: ['quotes'] });
+        queryClient.invalidateQueries({ queryKey: ['ordem-servico-for-quote', quote.id] });
         setAprovarDialogOpen(false);
-        onOpenChange(false);
+        // Shortcut: after approval, immediately trigger OS creation if none exists
+        setTimeout(async () => {
+          const { data: existing } = await supabase
+            .from('ordens_servico')
+            .select('id')
+            .eq('quote_id', quote.id)
+            .maybeSingle();
+          if (!existing) {
+            createOSMutation.mutate();
+          } else {
+            refetchOS();
+          }
+        }, 300);
       }}
     />
 
