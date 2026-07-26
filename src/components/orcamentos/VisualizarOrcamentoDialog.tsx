@@ -563,6 +563,7 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
               <table className="w-full text-sm">
                 <thead className="bg-muted">
                   <tr>
+                    <th className="p-3 w-14"></th>
                     <th className="text-left p-3">Descrição</th>
                     <th className="text-center p-3">Medidas</th>
                     <th className="text-center p-3">Qtd</th>
@@ -571,8 +572,19 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
                   </tr>
                 </thead>
                 <tbody>
-                  {items?.map((item) => (
+                  {items?.map((item) => {
+                    const thumb = item.company_products?.image_url || item.product_templates?.image_url || item.company_items?.image_url || null;
+                    return (
                     <tr key={item.id} className="border-t">
+                      <td className="p-2">
+                        <div className="w-10 h-10 rounded-md border bg-muted/40 overflow-hidden flex items-center justify-center shrink-0">
+                          {thumb ? (
+                            <img src={thumb} alt={item.description} className="w-full h-full object-cover" loading="lazy" />
+                          ) : (
+                            <ImageIcon className="w-4 h-4 text-muted-foreground/60" />
+                          )}
+                        </div>
+                      </td>
                       <td className="p-3">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span>{item.description}</span>
