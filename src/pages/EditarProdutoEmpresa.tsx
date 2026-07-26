@@ -160,6 +160,8 @@ export default function EditarProdutoEmpresa() {
   const [linhaFilter, setLinhaFilter] = useState<string>('__all__');
   const [isEditItemDialogOpen, setIsEditItemDialogOpen] = useState(false);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [isCopyCompositionOpen, setIsCopyCompositionOpen] = useState(false);
+  const [copySourceProductId, setCopySourceProductId] = useState<string>('');
   
   const [editingItem, setEditingItem] = useState<CompanyProductItem | null>(null);
   const [selectedItemToAdd, setSelectedItemToAdd] = useState('');
