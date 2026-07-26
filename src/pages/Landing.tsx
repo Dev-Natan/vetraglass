@@ -174,7 +174,7 @@ export default function Landing() {
             </Button>
             <Button asChild>
               <Link to="/auth?tab=signup">
-                Começar Grátis
+                Criar Conta
                 <ArrowRight className="ml-2 w-4 h-4" />
               </Link>
             </Button>
