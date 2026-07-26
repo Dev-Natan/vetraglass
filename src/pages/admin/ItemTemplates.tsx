@@ -354,7 +354,7 @@ export default function ItemTemplates() {
         specifications: specsBase,
         image_url: imageUrl,
         is_active: data.is_active,
-        default_formulas: df.length ? df : null,
+        default_formulas: df.length ? df : [],
       };
       if (data.type === 'profile') {
         itemData.weight_per_meter = parseFloat(data.weight_per_meter) || null;
