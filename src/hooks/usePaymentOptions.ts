@@ -7,7 +7,7 @@ export interface FormaPagamento {
   id: string;
   company_id: string;
   nome: string;
-  tipo: 'avista' | 'parcelado' | 'misto';
+  tipo: 'avista' | 'parcelado' | 'misto' | 'pix' | 'dinheiro' | 'cartao' | 'credito' | 'debito' | 'boleto' | 'transferencia';
   is_active: boolean;
   sort_order: number;
   created_at: string;
@@ -40,9 +40,26 @@ export interface CalculatedPayment {
 }
 
 const FALLBACK_FORMAS: FormaPagamento[] = [
-  { id: 'fallback-avista', company_id: '', nome: 'À vista (PIX / Dinheiro)', tipo: 'avista', is_active: true, sort_order: 1, created_at: '', updated_at: '' },
-  { id: 'fallback-parcelado', company_id: '', nome: 'Cartão de Crédito (Parcelado)', tipo: 'parcelado', is_active: true, sort_order: 2, created_at: '', updated_at: '' },
+  { id: 'fallback-pix', company_id: '', nome: 'PIX', tipo: 'pix', is_active: true, sort_order: 1, created_at: '', updated_at: '' },
+  { id: 'fallback-dinheiro', company_id: '', nome: 'Dinheiro', tipo: 'dinheiro', is_active: true, sort_order: 2, created_at: '', updated_at: '' },
+  { id: 'fallback-cartao', company_id: '', nome: 'Cartão de Crédito/Débito', tipo: 'cartao', is_active: true, sort_order: 3, created_at: '', updated_at: '' },
+  { id: 'fallback-boleto', company_id: '', nome: 'Boleto', tipo: 'boleto', is_active: true, sort_order: 4, created_at: '', updated_at: '' },
 ];
+
+const normalizeFormaPagamento = (forma: Partial<FormaPagamento> & { id: string }): FormaPagamento => {
+  const tipo = String(forma.tipo || forma.nome || forma.id).toLowerCase();
+
+  return {
+    id: forma.id,
+    company_id: forma.company_id || '',
+    nome: forma.nome || 'Forma de pagamento',
+    tipo: tipo as FormaPagamento['tipo'],
+    is_active: forma.is_active ?? true,
+    sort_order: forma.sort_order ?? 99,
+    created_at: forma.created_at || '',
+    updated_at: forma.updated_at || '',
+  };
+};
 
 export function usePaymentOptions() {
   const { currentCompany } = useAuth();
@@ -73,7 +90,7 @@ export function usePaymentOptions() {
           .eq('is_active', true)
           .order('sort_order', { ascending: true });
         if (error) throw error;
-        return (data ?? []) as FormaPagamento[];
+        return (data ?? []).map((forma) => normalizeFormaPagamento(forma as Partial<FormaPagamento> & { id: string }));
       };
 
       let list: FormaPagamento[] = [];

@@ -24,6 +24,13 @@ interface FormaPagamento {
   tipo: string;
 }
 
+const FALLBACK_FORMAS_PAGAMENTO: FormaPagamento[] = [
+  { id: 'fallback-pix', nome: 'PIX', tipo: 'pix' },
+  { id: 'fallback-dinheiro', nome: 'Dinheiro', tipo: 'dinheiro' },
+  { id: 'fallback-cartao', nome: 'Cartão de Crédito/Débito', tipo: 'cartao' },
+  { id: 'fallback-boleto', nome: 'Boleto', tipo: 'boleto' },
+];
+
 interface Props {
   state: ApprovalFormState;
   onChange: <K extends keyof ApprovalFormState>(key: K, value: ApprovalFormState[K]) => void;
@@ -44,11 +51,10 @@ export function PaymentStep({
   const entryValue = parseAmount(state.entryAmount);
   const hasEntry = entryValue > 0;
   const pendingAmount = valorFinal - entryValue;
-  const formasFiltradas = formasPagamento
-    .filter(f => f.tipo === 'avista' || f.tipo === 'parcelado')
-    .filter((f, idx, arr) => arr.findIndex(x => x.tipo === f.tipo) === idx);
+  const formasFiltradas = (formasPagamento.length > 0 ? formasPagamento : FALLBACK_FORMAS_PAGAMENTO)
+    .filter((f, idx, arr) => arr.findIndex(x => x.id === f.id) === idx);
   const labelForma = (forma: FormaPagamento) =>
-    forma.nome || (forma.tipo === 'avista' ? 'À vista' : 'Cartão (parcelado)');
+    forma.nome || forma.tipo || 'Forma de pagamento';
 
   return (
     <div className="space-y-6 px-1">
@@ -229,7 +235,9 @@ export function PaymentStep({
                 </div>
                 <div className="text-right">
                   <span className="text-xs font-medium px-2 py-1 bg-primary/10 text-primary rounded-full uppercase">
-                    {formasPagamento.find(f => f.id === state.selectedFormaId)?.tipo === 'avista' ? 'À Vista (c/ Desconto)' : 'Parcelado (s/ Desconto)'}
+                    {['avista', 'pix', 'dinheiro', 'debito', 'boleto', 'transferencia'].includes(
+                      formasFiltradas.find(f => f.id === state.selectedFormaId)?.tipo || ''
+                    ) ? 'À Vista (c/ Desconto)' : 'Parcelado (s/ Desconto)'}
                   </span>
                 </div>
               </div>

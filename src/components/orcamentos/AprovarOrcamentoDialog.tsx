@@ -63,9 +63,10 @@ export function AprovarOrcamentoDialog({
   const valorFinal = useMemo(() => {
     if (!quote) return totalOriginal;
     
-    // Se for à vista, usa o valor com desconto (final_amount)
-    // Se for parcelado ou outro, usa o valor cheio (total_amount)
-    if (selectedForma?.tipo === 'avista') {
+    // Se for pagamento à vista, usa o valor com desconto (final_amount).
+    // Fallbacks locais como PIX/Dinheiro também contam como à vista.
+    const tipoPagamento = selectedForma?.tipo;
+    if (tipoPagamento && ['avista', 'pix', 'dinheiro', 'debito', 'boleto', 'transferencia'].includes(tipoPagamento)) {
       return quote.final_amount;
     }
     
@@ -98,8 +99,7 @@ export function AprovarOrcamentoDialog({
   // Auto-select first valid payment option (avista or parcelado only)
   useEffect(() => {
     if (formasPagamento.length > 0 && !formState.selectedFormaId) {
-      const firstValid = formasPagamento.find(f => f.tipo === 'avista' || f.tipo === 'parcelado');
-      if (firstValid) setFormState(prev => ({ ...prev, selectedFormaId: firstValid.id }));
+      setFormState(prev => ({ ...prev, selectedFormaId: formasPagamento[0].id }));
     }
   }, [formasPagamento, formState.selectedFormaId]);
 
