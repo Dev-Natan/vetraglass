@@ -141,9 +141,10 @@ type ItemTemplate = {
 };
 
 const itemTypeTabs = [
-  { value: 'profile', label: 'PERFIS DE ALUMÍNIO', dbType: 'profile' },
-  { value: 'accessory', label: 'COMPONENTES', dbType: 'accessory' },
   { value: 'glass', label: 'VIDROS', dbType: 'glass' },
+  { value: 'profile', label: 'PERFIS DE ALUMÍNIO', dbType: 'profile' },
+  { value: 'rubber', label: 'BORRACHAS E OUTROS', dbType: 'accessory' },
+  { value: 'accessory', label: 'ACESSÓRIOS E FERRAGENS', dbType: 'accessory' },
 ];
 
 export default function EditarProdutoEmpresa() {
@@ -153,8 +154,8 @@ export default function EditarProdutoEmpresa() {
   const { currentCompany, user } = useAuth();
   const { isAdmin } = usePermissions();
   
-  const [activeTab, setActiveTab] = useState('profile');
-  const [addItemSection, setAddItemSection] = useState<'profile' | 'accessory' | 'glass' | 'contramarco'>('profile');
+  const [activeTab, setActiveTab] = useState('glass');
+  const [addItemSection, setAddItemSection] = useState<'profile' | 'accessory' | 'glass' | 'rubber' | 'contramarco'>('glass');
   const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
   const [itemSearchQuery, setItemSearchQuery] = useState('');
   const [linhaFilter, setLinhaFilter] = useState<string>('__all__');
