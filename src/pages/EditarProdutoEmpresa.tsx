@@ -858,7 +858,7 @@ export default function EditarProdutoEmpresa() {
   const getItemsByType = (tabValue: string) => {
     const currentTab = itemTypeTabs.find(t => t.value === tabValue);
     const dbType = currentTab?.dbType;
-    return productItems?.filter((item) => {
+    return displayItems?.filter((item) => {
       const type = item.item_template?.type || item.company_item?.type;
       return type === dbType;
     }) || [];
