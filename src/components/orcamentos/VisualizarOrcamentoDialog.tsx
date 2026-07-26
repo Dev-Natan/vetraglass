@@ -37,13 +37,8 @@ import {
   Wallet,
   Loader2
 } from 'lucide-react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { ImageIcon, ChevronRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { AprovarOrcamentoDialog } from './AprovarOrcamentoDialog';
 import { EditarContratoDialog } from './EditarContratoDialog';
 
