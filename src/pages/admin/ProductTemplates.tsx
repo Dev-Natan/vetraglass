@@ -1097,7 +1097,7 @@ export default function ProductTemplates() {
 
   const handleEditItem = (item: ProductTemplateItem) => {
     setEditingItem(item);
-    const itemType = item.item_template?.type || item.company_item?.type;
+    const itemType = item.item_template?.type || (item as any).company_item?.type;
     let effectiveQty = item.quantity_formula || "1";
     if (itemType === 'profile') {
       if (item.width_formula?.trim()) effectiveQty = item.width_formula;
