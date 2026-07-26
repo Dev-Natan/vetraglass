@@ -757,15 +757,15 @@ export default function AdminCompanyDetail() {
                 <Select
                   value={subForm.plan_name}
                   onValueChange={(v) => {
-                    const prices: Record<string, number> = { basico: 98.99, fiscal: 245.0, trial: 0 };
+                    const prices: Record<string, number> = { basico: 149.9, fiscal: 249.9, trial: 0 };
                     setSubForm((f) => ({ ...f, plan_name: v, plan_price: prices[v] ?? f.plan_price }));
                   }}
                 >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="trial">Trial (Gratuito)</SelectItem>
-                    <SelectItem value="basico">Básico — R$ 98,99</SelectItem>
-                    <SelectItem value="fiscal">Fiscal — R$ 245,00</SelectItem>
+                    <SelectItem value="basico">Start — R$ 149,90</SelectItem>
+                    <SelectItem value="fiscal">Fiscal — R$ 249,90</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
