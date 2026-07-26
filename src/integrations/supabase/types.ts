@@ -6521,15 +6521,23 @@ export type Database = {
         Args: { _company_id?: string; _template_id: string }
         Returns: {
           bar_length_mm: number
+          cut_angle: number
+          cut_angle_end: number
+          cut_angle_start: number
           height_formula: string
           id: string
           is_optional: boolean
-          name: string
+          item_template_id: string
+          item_template_image_url: string
+          item_template_name: string
+          item_template_type: string
+          notes: string
+          pieces_formula: string
           pieces_quantity: number
           quantity_formula: string
           section: string
           side: string
-          type: string
+          source: string
           width_formula: string
         }[]
       }
