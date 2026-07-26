@@ -318,8 +318,7 @@ export default function Landing() {
               Escolha o plano ideal
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Planos flexíveis que crescem junto com seu negócio. 
-              Comece grátis e faça upgrade quando quiser.
+              Planos flexíveis que crescem junto com seu negócio.
             </p>
           </div>
           
