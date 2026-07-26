@@ -514,7 +514,7 @@ export async function generateOSDocuments(
           stock_quantity_used: stockCheck?.useFromStock || 0,
           stock_unit_cost: stockCheck?.unitCost || 0,
           purchase_quantity_needed: stockCheck?.needToPurchase || totalArea,
-        }).select().single();
+        } as never).select().single();
 
         if (glassProject) {
           if (stockCheck && stockCheck.useFromStock > 0 && stockCheck.stockItemId && companyId) {
@@ -578,7 +578,7 @@ export async function generateOSDocuments(
         };
       });
 
-      await supabase.from('os_materials').insert(materialsToInsert);
+      await supabase.from('os_materials').insert(materialsToInsert as never);
     }
 
     // Now handle accessories (non-profile items)
