@@ -213,7 +213,16 @@ export default function Auth() {
                   </AlertDescription>
                 </Alert>
               )}
-              
+
+              {SIGNUP_DISABLED && (
+                <Alert className="mb-4 border-amber-300 bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-100 dark:border-amber-800">
+                  <ShieldAlert className="h-4 w-4 !text-amber-600" />
+                  <AlertDescription className="font-medium">
+                    {SIGNUP_DISABLED_MESSAGE}
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <TabsContent value="login" className="mt-0">
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
