@@ -1142,6 +1142,17 @@ export default function EditarProdutoEmpresa() {
                 <h3 className="font-semibold text-sm">Adicionar {addItemSection === 'glass' ? 'Vidro' : addItemSection === 'profile' ? 'Perfil' : addItemSection === 'contramarco' ? 'Contramarco' : 'Componente'}</h3>
               </div>
 
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full gap-2 h-8 text-xs"
+                onClick={() => setIsCopyCompositionOpen(true)}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                Copiar de outro produto
+              </Button>
+
               {availableLinhas.length > 0 && (addItemSection === 'profile' || addItemSection === 'contramarco') && (
                 <div className="space-y-1.5">
                   <Label className="text-xs">Filtrar por Linha</Label>
