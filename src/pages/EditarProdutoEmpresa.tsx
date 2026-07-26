@@ -1569,6 +1569,54 @@ export default function EditarProdutoEmpresa() {
         </AlertDialogContent>
       </AlertDialog>
 
+      <Dialog open={isCopyCompositionOpen} onOpenChange={(v) => { setIsCopyCompositionOpen(v); if (!v) setCopySourceProductId(''); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Layers className="w-5 h-5 text-primary" /> Copiar composição</DialogTitle>
+            <DialogDescription>
+              Selecione um produto de origem. Todos os itens da composição dele (perfis, vidros, componentes, contramarco) serão clonados para este produto, com fórmulas e quantidades preservadas.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label className="text-xs">Produto de origem</Label>
+            {(!copySourceProducts || copySourceProducts.length === 0) ? (
+              <p className="text-sm text-muted-foreground py-6 text-center">
+                Nenhum outro produto desta empresa possui composição configurada.
+              </p>
+            ) : (
+              <div className="max-h-[320px] overflow-y-auto rounded-md border bg-muted/20 p-1.5 space-y-0.5">
+                {copySourceProducts.map(p => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setCopySourceProductId(p.id)}
+                    className={cn(
+                      "w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between gap-2",
+                      copySourceProductId === p.id ? "bg-primary/10 border border-primary/40" : "hover:bg-muted"
+                    )}
+                  >
+                    <div className="min-w-0">
+                      <div className="font-medium truncate">{p.name}</div>
+                      {p.linha && <div className="text-xs text-muted-foreground truncate">{p.linha}</div>}
+                    </div>
+                    <span className="text-xs text-muted-foreground shrink-0">{p.itemCount} itens</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCopyCompositionOpen(false)}>Cancelar</Button>
+            <Button
+              onClick={() => copySourceProductId && copyCompositionMutation.mutate(copySourceProductId)}
+              disabled={!copySourceProductId || copyCompositionMutation.isPending}
+            >
+              {copyCompositionMutation.isPending ? 'Copiando...' : 'Copiar composição'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Sticky bottom save bar */}
       <div className="fixed bottom-0 left-0 lg:left-60 right-0 z-40 bg-background/95 backdrop-blur-sm border-t shadow-[0_-2px_10px_rgba(0,0,0,0.1)]">
         <div className="px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
