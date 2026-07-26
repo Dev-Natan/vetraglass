@@ -98,7 +98,7 @@ const tableLabels: Record<string, string> = {
 };
 
 const planLabel = (p: string) =>
-  ({ basico: "Básico", fiscal: "Fiscal", trial: "Trial" } as Record<string, string>)[p] || p;
+  ({ basico: "Start", fiscal: "Fiscal", trial: "Trial" } as Record<string, string>)[p] || p;
 
 const quoteStatusLabel: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   pendente: { label: "Pendente", variant: "secondary" },
@@ -119,7 +119,7 @@ export default function AdminCompanyDetail() {
   const [revertTarget, setRevertTarget] = useState<AuditLog | null>(null);
   const [subForm, setSubForm] = useState({
     plan_name: "basico",
-    plan_price: 98.99,
+    plan_price: 149.90,
     status: "active",
     expires_at: "",
     notes: "",
@@ -241,7 +241,7 @@ export default function AdminCompanyDetail() {
         const { error } = await supabase.from("company_subscriptions").insert({
           company_id: id!,
           plan_name: "basico",
-          plan_price: 98.99,
+          plan_price: 149.90,
           status: newStatus,
           expires_at: format(addMonths(new Date(), 1), "yyyy-MM-dd"),
         });
@@ -291,7 +291,7 @@ export default function AdminCompanyDetail() {
   const openSubDialog = () => {
     setSubForm({
       plan_name: subscription?.plan_name || "basico",
-      plan_price: subscription?.plan_price ?? 98.99,
+      plan_price: subscription?.plan_price ?? 149.90,
       status: subscription?.status || "active",
       expires_at: subscription?.expires_at
         ? subscription.expires_at.split("T")[0]
@@ -757,15 +757,15 @@ export default function AdminCompanyDetail() {
                 <Select
                   value={subForm.plan_name}
                   onValueChange={(v) => {
-                    const prices: Record<string, number> = { basico: 98.99, fiscal: 245.0, trial: 0 };
+                    const prices: Record<string, number> = { basico: 149.9, fiscal: 249.9, trial: 0 };
                     setSubForm((f) => ({ ...f, plan_name: v, plan_price: prices[v] ?? f.plan_price }));
                   }}
                 >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="trial">Trial (Gratuito)</SelectItem>
-                    <SelectItem value="basico">Básico — R$ 98,99</SelectItem>
-                    <SelectItem value="fiscal">Fiscal — R$ 245,00</SelectItem>
+                    <SelectItem value="basico">Start — R$ 149,90</SelectItem>
+                    <SelectItem value="fiscal">Fiscal — R$ 249,90</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -17,8 +17,8 @@ interface Plan {
 const plans: Plan[] = [
   {
     id: 'basico',
-    name: 'Básico',
-    price: 'R$ 98,99',
+    name: 'Start',
+    price: 'R$ 149,90',
     period: '/mês',
     description: 'Para vidraçarias começando a digitalizar.',
     features: [
@@ -30,13 +30,13 @@ const plans: Plan[] = [
     ],
   },
   {
-    id: 'pro',
-    name: 'Pro',
-    price: 'R$ 245,00',
+    id: 'fiscal',
+    name: 'Fiscal',
+    price: 'R$ 249,90',
     period: '/mês',
     description: 'Para vidraçarias que precisam de gestão fiscal completa.',
     features: [
-      'Tudo do plano Básico',
+      'Tudo do plano Start',
       'Emissão de NF-e e NFC-e',
       'Financeiro completo + Caixa',
       'Relatórios avançados',

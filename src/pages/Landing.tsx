@@ -54,8 +54,8 @@ const features = [
 
 const plans = [
   {
-    name: 'Básico',
-    price: 'R$ 98,99',
+    name: 'Start',
+    price: 'R$ 149,90',
     period: '/mês',
     description: 'Gestão completa para sua vidraçaria',
     features: [
@@ -74,11 +74,11 @@ const plans = [
   },
   {
     name: 'Fiscal',
-    price: 'R$ 245,00',
+    price: 'R$ 249,90',
     period: '/mês',
-    description: 'Tudo do Básico + funcionalidades fiscais',
+    description: 'Tudo do Start + funcionalidades fiscais',
     features: [
-      'Tudo do plano Básico +',
+      'Tudo do plano Start +',
       'Emissão de NF-e e NFS-e',
       'Certificado digital integrado',
       'Configuração de regime tributário',
@@ -122,13 +122,13 @@ export default function Landing() {
     "offers": [
       {
         "@type": "Offer",
-        "price": "98.99",
+        "price": "149.90",
         "priceCurrency": "BRL",
-        "description": "Plano Básico - Gestão completa"
+        "description": "Plano Start - Gestão completa"
       },
       {
         "@type": "Offer",
-        "price": "245.00",
+        "price": "249.90",
         "priceCurrency": "BRL",
         "description": "Plano Fiscal - Gestão + NF-e/NFS-e"
       }
