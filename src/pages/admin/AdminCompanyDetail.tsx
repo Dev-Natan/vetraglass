@@ -98,7 +98,7 @@ const tableLabels: Record<string, string> = {
 };
 
 const planLabel = (p: string) =>
-  ({ basico: "Básico", fiscal: "Fiscal", trial: "Trial" } as Record<string, string>)[p] || p;
+  ({ basico: "Start", fiscal: "Fiscal", trial: "Trial" } as Record<string, string>)[p] || p;
 
 const quoteStatusLabel: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   pendente: { label: "Pendente", variant: "secondary" },
