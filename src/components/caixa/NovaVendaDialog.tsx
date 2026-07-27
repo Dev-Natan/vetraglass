@@ -198,9 +198,9 @@ export function NovaVendaDialog({
           .eq('status', 'received'),
         supabase
           .from('sales')
-          .select('paid_amount, total_amount, created_at, status')
+          .select('paid_amount, total_amount, created_at, cancelled_at')
           .eq('quote_id', selectedQuote.id)
-          .neq('status', 'cancelled'),
+          .is('cancelled_at', null),
       ]);
       const deposits = (depRes.data || []).map(d => ({
         amount: Number(d.amount) || 0,
