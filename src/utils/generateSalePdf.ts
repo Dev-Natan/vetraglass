@@ -93,11 +93,11 @@ async function loadQuoteSummary(sale: Sale, items: SaleItem[]): Promise<QuoteFin
         .maybeSingle(),
       supabase
         .from('quote_deposits')
-        .select('amount, status')
+        .select('amount, status, received_at, created_at')
         .eq('quote_id', sale.quote_id),
       supabase
         .from('sales')
-        .select('id, total_amount, paid_amount, payment_status')
+        .select('id, total_amount, paid_amount, payment_status, created_at')
         .eq('quote_id', sale.quote_id)
         .neq('id', sale.id),
     ]);
