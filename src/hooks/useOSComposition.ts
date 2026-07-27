@@ -51,6 +51,7 @@ export interface OSComposedItem {
   aluminumColor?: string | null;
   glassColor?: string | null;
   glassThickness?: number | null;
+  productImageUrl?: string | null;
   rows: OSComposedRow[];
 }
 
