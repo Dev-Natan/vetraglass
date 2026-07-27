@@ -106,10 +106,13 @@ export function FecharCaixaDialog({
   }, []);
 
   const fixedFund = companyCash?.fixed_fund || summary.openingAmount;
-  // Dinheiro esperado NÃO inclui PIX/Cartão (esses vão em suas próprias linhas).
-  // totalEntradas/totalSaidas são movimentações genéricas de caixa físico (reforços/sangrias).
-  const expectedCash = summary.openingAmount + summary.totalDinheiro + (summary.totalEntradas || 0) - (summary.totalSaidas || 0);
-  const difference = totalCounted - (expectedCash + summary.totalCartao + summary.totalPix);
+  // Movimentação em espécie do dia (SEM o fundo de abertura)
+  const movDinheiro = summary.totalDinheiro + (summary.totalEntradas || 0) - (summary.totalSaidas || 0);
+  // Para a contagem física o operador conta fundo + dinheiro movimentado
+  const expectedCashForCount = summary.openingAmount + movDinheiro;
+  const totalMovimentado = movDinheiro + summary.totalCartao + summary.totalPix;
+  const totalGeralEsperado = summary.openingAmount + totalMovimentado;
+  const difference = totalCounted - totalGeralEsperado;
   const profit = totalCounted - fixedFund; // Pode ser negativo
   const pendingAdvances = advancesSummary?.total_pending || 0;
   
@@ -169,7 +172,7 @@ export function FecharCaixaDialog({
           {/* Coluna Esquerda: Contagem */}
           <div className="space-y-4">
             <CashCountForm
-              expectedCash={expectedCash}
+              expectedCash={expectedCashForCount}
               expectedPix={summary.totalPix}
               expectedCardDebit={summary.totalCartao * 0.5}
               expectedCardCredit={summary.totalCartao * 0.5}
@@ -201,17 +204,27 @@ export function FecharCaixaDialog({
                 Valores Esperados
               </h4>
               <div className="grid grid-cols-2 gap-1 pl-4">
+                <span className="text-muted-foreground">Fundo de Abertura:</span>
+                <span className="text-right text-muted-foreground">{formatCurrency(summary.openingAmount)}</span>
+              </div>
+              <Separator />
+              <p className="text-xs text-muted-foreground font-medium pt-1">Movimentações do dia</p>
+              <div className="grid grid-cols-2 gap-1 pl-4">
                 <span className="text-muted-foreground">Dinheiro:</span>
-                <span className="text-right">{formatCurrency(expectedCash)}</span>
+                <span className="text-right">{formatCurrency(movDinheiro)}</span>
                 <span className="text-muted-foreground">Cartão:</span>
                 <span className="text-right">{formatCurrency(summary.totalCartao)}</span>
                 <span className="text-muted-foreground">PIX:</span>
                 <span className="text-right">{formatCurrency(summary.totalPix)}</span>
               </div>
+              <div className="flex justify-between text-sm pl-4">
+                <span className="text-muted-foreground">Total movimentado:</span>
+                <span>{formatCurrency(totalMovimentado)}</span>
+              </div>
               <Separator />
               <div className="flex justify-between font-medium">
-                <span>Total Esperado:</span>
-                <span className="text-primary">{formatCurrency(expectedCash + summary.totalCartao + summary.totalPix)}</span>
+                <span>Total Geral Esperado:</span>
+                <span className="text-primary">{formatCurrency(totalGeralEsperado)}</span>
               </div>
             </div>
 
