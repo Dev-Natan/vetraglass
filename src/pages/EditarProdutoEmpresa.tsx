@@ -595,6 +595,7 @@ export default function EditarProdutoEmpresa() {
 
       const isContramarco = addItemSection === 'contramarco';
       const insertData = {
+        company_id: currentCompany.id,
         company_product_id: id,
         item_template_id: selectedItemToAdd,
         company_item_id: companyItemId,
