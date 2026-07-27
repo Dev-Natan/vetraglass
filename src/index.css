@@ -346,3 +346,7 @@ a[href*="lovable.dev"][target="_blank"] {
 .print-only,
 .printable-report { display: none; }
 
+/* When rendering to PDF via html2canvas, force the report visible. */
+.printable-report.force-visible-for-pdf { display: block !important; }
+
+
