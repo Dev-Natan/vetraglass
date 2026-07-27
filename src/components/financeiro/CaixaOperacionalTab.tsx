@@ -139,8 +139,27 @@ export function CaixaOperacionalTab() {
     const totalCartaoSales = activeSales.filter((s) => s.payment_method === 'cartao').reduce((sum, s) => sum + (s.total_amount || 0), 0);
     const totalPixSales = activeSales.filter((s) => s.payment_method === 'pix').reduce((sum, s) => sum + (s.total_amount || 0), 0);
 
-    // Entradas de orçamento (depósitos) — separar por forma de pagamento
-    const depositMovs = cashMovements.filter((m: any) => m.type === 'entrada' && m.category === 'entrada_orcamento');
+    // Entradas de orçamento (depósitos) — deduplicar contra vendas geradas na conversão
+    // (mesmo quote_id + mesmo valor + timestamp dentro de ±5s = mesma transação)
+    const TOL = 5000;
+    const salesRefs = activeSales.map((s: any) => ({
+      quote_id: s.quote_id || null,
+      method: s.payment_method,
+      amount: Number(s.total_amount) || 0,
+      ts: new Date(s.created_at || Date.now()).getTime(),
+      used: false,
+    }));
+    const depositMovsRaw = cashMovements.filter((m: any) => m.type === 'entrada' && m.category === 'entrada_orcamento');
+    const depositMovs = depositMovsRaw.filter((m: any) => {
+      const amt = Number(m.amount) || 0;
+      const ts = new Date(m.created_at || Date.now()).getTime();
+      const qid = (m as any).quote_id || null;
+      const hit = salesRefs.findIndex(
+        (s) => !s.used && s.amount === amt && Math.abs(s.ts - ts) <= TOL && (!qid || !s.quote_id || s.quote_id === qid)
+      );
+      if (hit >= 0) { salesRefs[hit].used = true; return false; }
+      return true;
+    });
     const sumByMethod = (method: string) => depositMovs
       .filter((m: any) => (m.payment_method || 'dinheiro') === method)
       .reduce((sum: number, m: any) => sum + (m.amount || 0), 0);
@@ -152,13 +171,14 @@ export function CaixaOperacionalTab() {
 
     const isSaleLinked = (m: any) =>
       m.sale_id || m.quote_id || m.ordem_servico_id ||
-      m.category === 'entrada_orcamento' || m.category === 'venda' || m.category === 'venda_dinheiro';
+      m.category === 'entrada_orcamento' || m.category === 'venda' || m.category === 'venda_dinheiro' ||
+      m.category === 'abertura' || m.category === 'abertura_caixa';
 
     // Movimentações manuais (reforço/sangria) que afetam somente o dinheiro físico
     const totalEntradas = cashMovements
       .filter(m => m.type === 'entrada' && !isSaleLinked(m))
       .reduce((sum, m) => sum + (m.amount || 0), 0);
-    const totalSaidas = cashMovements.filter(m => m.type === 'saida').reduce((sum, m) => sum + (m.amount || 0), 0);
+    const totalSaidas = cashMovements.filter(m => m.type === 'saida' && (m as any).category !== 'abertura' && (m as any).category !== 'abertura_caixa').reduce((sum, m) => sum + (m.amount || 0), 0);
 
     // Dinheiro esperado no caixa físico = abertura + vendas em dinheiro + entradas manuais - saídas
     const expectedAmount = openingAmount + totalDinheiro + totalEntradas - totalSaidas;
