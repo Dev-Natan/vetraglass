@@ -1583,6 +1583,7 @@ export type Database = {
           linha: string | null
           name: string | null
           notes: string | null
+          pieces_formula: string | null
           pieces_quantity: number | null
           preco_unitario: number | null
           quantity_formula: string | null
@@ -1623,6 +1624,7 @@ export type Database = {
           linha?: string | null
           name?: string | null
           notes?: string | null
+          pieces_formula?: string | null
           pieces_quantity?: number | null
           preco_unitario?: number | null
           quantity_formula?: string | null
@@ -1663,6 +1665,7 @@ export type Database = {
           linha?: string | null
           name?: string | null
           notes?: string | null
+          pieces_formula?: string | null
           pieces_quantity?: number | null
           preco_unitario?: number | null
           quantity_formula?: string | null
