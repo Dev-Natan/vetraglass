@@ -9,7 +9,7 @@ const corsHeaders = {
 
 interface ToggleEmployeeAccessRequest {
   employeeId: string;
-  userId: string;
+  userId?: string; // ignored — resolved server-side from employees.user_id
   isActive: boolean;
 }
 
