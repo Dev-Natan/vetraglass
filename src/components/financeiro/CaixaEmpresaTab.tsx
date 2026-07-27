@@ -28,10 +28,7 @@ import { ptBR } from 'date-fns/locale';
 import { MovimentoCaixaEmpresaDialog } from '@/components/caixa/MovimentoCaixaEmpresaDialog';
 import { CaixaAdiantamentosCard } from '@/components/caixa/CaixaAdiantamentosCard';
 import { FecharCaixaDialog } from '@/components/caixa/FecharCaixaDialog';
-
-import { AjustarSaldoDialog } from '@/components/caixa/AjustarSaldoDialog';
 import { MonthSelector } from '@/components/common/MonthSelector';
-import { Edit2 } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -59,7 +56,6 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
   
   const [dialogType, setDialogType] = useState<'entrada' | 'saida' | 'config' | null>(null);
   const [fecharCaixaOpen, setFecharCaixaOpen] = useState(false);
-  const [ajustarSaldoOpen, setAjustarSaldoOpen] = useState(false);
 
   // Fetch company cash
   const { data: companyCash, isLoading: loadingCash } = useQuery({
@@ -219,26 +215,6 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
     onError: (error: Error) => toast.error(`Erro: ${error.message}`),
   });
 
-  // Adjust balance directly (no movement)
-  const adjustBalanceMutation = useMutation({
-    mutationFn: async (newBalance: number) => {
-      if (!currentCompany?.id) throw new Error('Empresa não encontrada');
-      const { error } = await supabase
-        .from('company_cash')
-        .update({ 
-          current_balance: newBalance,
-          updated_at: new Date().toISOString()
-        })
-        .eq('company_id', currentCompany.id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success('Saldo ajustado com sucesso!');
-      queryClient.invalidateQueries({ queryKey: ['company-cash'] });
-      setAjustarSaldoOpen(false);
-    },
-    onError: (error: Error) => toast.error(`Erro: ${error.message}`),
-  });
   // Close cash register (direct, no audit/manager approval)
   const closeCashMutation = useMutation({
     mutationFn: async ({ counts, notes }: { counts: { payment_method: string; amount: number }[]; notes: string }) => {
@@ -416,16 +392,6 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">💰 Saldo Real da Empresa</CardTitle>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-8 gap-1 text-xs"
-              onClick={() => setAjustarSaldoOpen(true)}
-              title="Ajustar saldo da empresa"
-            >
-              <Edit2 className="h-3.5 w-3.5" />
-              Ajustar
-            </Button>
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${companyCash.current_balance < 0 ? 'text-destructive' : 'text-green-600'}`}>
@@ -591,16 +557,6 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
         companyCash={companyCash}
         cashRegisterId={openCashRegister?.id}
         isLoading={closeCashMutation.isPending}
-      />
-
-      <AjustarSaldoDialog
-        open={ajustarSaldoOpen}
-        onOpenChange={setAjustarSaldoOpen}
-        currentBalance={companyCash.current_balance}
-        onConfirm={async (newBalance) => {
-          await adjustBalanceMutation.mutateAsync(newBalance);
-        }}
-        isLoading={adjustBalanceMutation.isPending}
       />
     </div>
   );
