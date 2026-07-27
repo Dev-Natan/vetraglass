@@ -448,7 +448,7 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'space-between',
     alignItems: 'baseline',
     marginBottom: '6px',
-    borderBottom: '1px dashed #000',
+    borderBottom: '1px solid #000',
     paddingBottom: '4px',
   },
   profileMeta: { fontSize: '9pt' },
@@ -482,8 +482,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   barWaste: {
     height: '100%',
-    background:
-      'repeating-linear-gradient(45deg, #fff, #fff 3px, #bbb 3px, #bbb 5px)',
+    background: '#f5f5f5',
     color: '#000',
     fontSize: '8pt',
     display: 'flex',
@@ -492,6 +491,7 @@ const styles: Record<string, React.CSSProperties> = {
     WebkitPrintColorAdjust: 'exact',
     printColorAdjust: 'exact',
   },
+
   barUsed: { width: '44px', textAlign: 'right', fontSize: '9pt', fontWeight: 600 },
   totalsBox: {
     marginTop: '8px',
