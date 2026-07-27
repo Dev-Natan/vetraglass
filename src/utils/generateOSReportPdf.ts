@@ -70,23 +70,22 @@ export async function generateOSReportPdf(
 
   let cursorY = 46;
 
-  // Resumo do Vão
+  // Resumo do Vão — preload product thumbnails (data URLs)
   const productImages: Record<string, string | null> = {};
-  const productImgUrls = new Map<string, string>();
-  items.forEach((it) => {
-    const url = (it.rows.find((r) => r.imageUrl && r.itemType === 'profile')?.imageUrl) || '';
-    // Prefer any image on the product itself; fallback to first row image
-    const any = it.rows.find((r) => r.imageUrl)?.imageUrl || url;
-    if (any) productImgUrls.set(it.productName, any);
-  });
-  for (const [k, u] of productImgUrls) {
-    productImages[k] = await urlToDataUrl(u);
-  }
+  await Promise.all(
+    items.map(async (it) => {
+      const raw = it.productImageUrl || it.rows.find((r) => r.imageUrl)?.imageUrl || null;
+      const resolved = raw ? resolveProductImageUrl(raw) || raw : null;
+      productImages[it.osItemId] = resolved ? await urlToDataUrl(resolved) : null;
+    }),
+  );
 
+  const IMG_MM = 14;
   autoTable(doc, {
     startY: cursorY,
-    head: [['Produto', 'Qtd', 'Larg (mm)', 'Alt (mm)', 'Cor Alu.', 'Vidro']],
+    head: [['Img', 'Produto', 'Qtd', 'Larg (mm)', 'Alt (mm)', 'Cor Alu.', 'Vidro']],
     body: items.map((it) => [
+      '',
       it.productName,
       String(it.productQty),
       String(it.width),
@@ -96,9 +95,27 @@ export async function generateOSReportPdf(
         .filter(Boolean)
         .join(' ') || '-',
     ]),
-    styles: { fontSize: 9, cellPadding: 2 },
+    styles: { fontSize: 9, cellPadding: 2, minCellHeight: IMG_MM + 2, valign: 'middle' },
     headStyles: { fillColor: [30, 30, 30] },
+    columnStyles: { 0: { cellWidth: IMG_MM + 4, halign: 'center' } },
     theme: 'grid',
+    didDrawCell: (data) => {
+      if (data.section !== 'body' || data.column.index !== 0) return;
+      const it = items[data.row.index];
+      const img = it && productImages[it.osItemId];
+      if (!img) return;
+      const x = data.cell.x + (data.cell.width - IMG_MM) / 2;
+      const y = data.cell.y + (data.cell.height - IMG_MM) / 2;
+      try {
+        doc.addImage(img, 'PNG', x, y, IMG_MM, IMG_MM, undefined, 'FAST');
+      } catch {
+        try {
+          doc.addImage(img, 'JPEG', x, y, IMG_MM, IMG_MM, undefined, 'FAST');
+        } catch {
+          /* ignore unsupported formats */
+        }
+      }
+    },
   });
   cursorY = (doc as any).lastAutoTable.finalY + 6;
 
