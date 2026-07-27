@@ -77,6 +77,7 @@ export function useSales() {
       const isPartialQuoteSale = !!quoteId && total < subtotal;
 
       // 2. Create Sale
+      const paidNow = paymentConfig.method === 'dinheiro' ? total : (paymentConfig.paidAmount ?? 0);
       const { data: sale, error: saleError } = await supabase
         .from('sales')
         .insert({
@@ -87,6 +88,8 @@ export function useSales() {
           discount_percent: discountPercent,
           discount_amount: discountAmount,
           total_amount: total,
+          paid_amount: paidNow,
+          pending_amount: Math.max(0, total - paidNow),
           payment_method: paymentConfig.method,
           payment_status: paymentConfig.method === 'dinheiro' ? 'paid' : 'pending',
           sold_by: userId,
