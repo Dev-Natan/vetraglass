@@ -215,26 +215,6 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
     onError: (error: Error) => toast.error(`Erro: ${error.message}`),
   });
 
-  // Adjust balance directly (no movement)
-  const adjustBalanceMutation = useMutation({
-    mutationFn: async (newBalance: number) => {
-      if (!currentCompany?.id) throw new Error('Empresa não encontrada');
-      const { error } = await supabase
-        .from('company_cash')
-        .update({ 
-          current_balance: newBalance,
-          updated_at: new Date().toISOString()
-        })
-        .eq('company_id', currentCompany.id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success('Saldo ajustado com sucesso!');
-      queryClient.invalidateQueries({ queryKey: ['company-cash'] });
-      setAjustarSaldoOpen(false);
-    },
-    onError: (error: Error) => toast.error(`Erro: ${error.message}`),
-  });
   // Close cash register (direct, no audit/manager approval)
   const closeCashMutation = useMutation({
     mutationFn: async ({ counts, notes }: { counts: { payment_method: string; amount: number }[]; notes: string }) => {
