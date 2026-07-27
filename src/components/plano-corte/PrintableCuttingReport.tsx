@@ -200,6 +200,9 @@ export function PrintableCuttingReport({
                   c.cutAngleStart != null && c.cutAngleEnd != null && c.cutAngleStart !== c.cutAngleEnd;
                 return (
                   <tr key={idx} style={{ pageBreakInside: 'avoid' }}>
+                    <td style={{ ...styles.td, ...styles.thumbCell }}>
+                      <Thumb src={c.imageUrl} alt={c.profileName} />
+                    </td>
                     <td style={styles.td}>{c.profileName}</td>
                     <td style={{ ...styles.td, ...styles.numCell, fontWeight: 700 }}>
                       {c.calculatedLength}
