@@ -1582,6 +1582,7 @@ export type Database = {
           largura_mm: number | null
           linha: string | null
           name: string | null
+          notes: string | null
           pieces_quantity: number | null
           preco_unitario: number | null
           quantity_formula: string | null
@@ -1621,6 +1622,7 @@ export type Database = {
           largura_mm?: number | null
           linha?: string | null
           name?: string | null
+          notes?: string | null
           pieces_quantity?: number | null
           preco_unitario?: number | null
           quantity_formula?: string | null
@@ -1660,6 +1662,7 @@ export type Database = {
           largura_mm?: number | null
           linha?: string | null
           name?: string | null
+          notes?: string | null
           pieces_quantity?: number | null
           preco_unitario?: number | null
           quantity_formula?: string | null
