@@ -448,8 +448,10 @@ export function CaixaOperacionalTab() {
         onOpenChange={setAbrirCaixaOpen} 
         onConfirm={handleOpenCash} 
         companyCash={companyCash} 
+        suggestedAmount={lastClosingAmount}
         isLoading={isOpening} 
       />
+
       <FecharCaixaDialog open={fecharCaixaOpen} onOpenChange={setFecharCaixaOpen} onConfirm={handleSubmitForAudit} summary={cashSummary} companyCash={companyCash} cashRegisterId={openCashRegister?.id} isLoading={isSubmittingForAudit} />
       <NovaVendaDialog 
         open={novaVendaOpen} 
