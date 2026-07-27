@@ -67,7 +67,7 @@ interface Receivable {
 }
 
 type StatusFilter = 'all' | 'pending' | 'overdue' | 'paid';
-type PeriodFilter = 'all' | 'today' | 'week' | 'month' | 'overdue';
+type PeriodFilter = 'all' | 'today' | 'week' | 'month' | 'next60' | 'next90' | 'overdue';
 
 const statusConfig = {
   pending: { label: 'Pendente', color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300', icon: Clock },
@@ -82,7 +82,7 @@ export function ContasReceberTab() {
   const queryClient = useQueryClient();
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('pending');
-  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('all');
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('month');
   const [searchTerm, setSearchTerm] = useState('');
   
   const [receiveDialogOpen, setReceiveDialogOpen] = useState(false);
@@ -148,6 +148,10 @@ export function ContasReceberTab() {
             return dueDate >= today && dueDate <= addDays(today, 7);
           case 'month':
             return dueDate >= today && dueDate <= addDays(today, 30);
+          case 'next60':
+            return dueDate >= today && dueDate <= addDays(today, 60);
+          case 'next90':
+            return dueDate >= today && dueDate <= addDays(today, 90);
           case 'overdue':
             return isPast(dueDate) && !isToday(dueDate) && r.status !== 'paid';
           default:
@@ -291,6 +295,8 @@ export function ContasReceberTab() {
             <SelectItem value="today">Hoje</SelectItem>
             <SelectItem value="week">Próx. 7 dias</SelectItem>
             <SelectItem value="month">Próx. 30 dias</SelectItem>
+            <SelectItem value="next60">Próx. 60 dias</SelectItem>
+            <SelectItem value="next90">Próx. 90 dias</SelectItem>
             <SelectItem value="overdue">Atrasados</SelectItem>
           </SelectContent>
         </Select>

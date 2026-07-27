@@ -36,10 +36,12 @@ import {
   Plus, Search, CheckCircle, Clock, AlertCircle, Trash2, Pencil,
   FileText, Banknote, Layers, Calendar, Receipt,
 } from 'lucide-react';
-import { format, addMonths, parseISO, isBefore } from 'date-fns';
+import { format, addMonths, addDays, parseISO, isBefore, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { MonthSelector, getMonthDateRange } from '@/components/common/MonthSelector';
+
+type PeriodScope = 'month' | 'next30' | 'next60' | 'next90' | 'all';
 
 interface Payable {
   id: string;
@@ -112,7 +114,17 @@ export function ContasPagarTab() {
       : '';
 
   const [month, setMonth] = useState(new Date());
-  const range = getMonthDateRange(month);
+  const [scope, setScope] = useState<PeriodScope>('next30');
+  const monthRange = getMonthDateRange(month);
+  const range = useMemo(() => {
+    const today = startOfDay(new Date());
+    if (scope === 'month') return { start: monthRange.start, end: monthRange.end };
+    if (scope === 'next30') return { start: today, end: addDays(today, 30) };
+    if (scope === 'next60') return { start: today, end: addDays(today, 60) };
+    if (scope === 'next90') return { start: today, end: addDays(today, 90) };
+    return null; // all
+  }, [scope, monthRange.start, monthRange.end]);
+
   const [search, setSearch] = useState(initialSearch);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -124,16 +136,20 @@ export function ContasPagarTab() {
   const [payDate, setPayDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
   const { data: payables = [], isLoading } = useQuery({
-    queryKey: ['payables', currentCompany?.id, month.getMonth(), month.getFullYear()],
+    queryKey: ['payables', currentCompany?.id, scope, month.getMonth(), month.getFullYear()],
     queryFn: async () => {
       if (!currentCompany?.id) return [];
-      const { data, error } = await supabase
+      let q = supabase
         .from('expenses')
         .select('*')
         .eq('company_id', currentCompany.id)
-        .gte('due_date', format(range.start, 'yyyy-MM-dd'))
-        .lte('due_date', format(range.end, 'yyyy-MM-dd'))
         .order('due_date', { ascending: true });
+      if (range) {
+        q = q
+          .gte('due_date', format(range.start, 'yyyy-MM-dd'))
+          .lte('due_date', format(range.end, 'yyyy-MM-dd'));
+      }
+      const { data, error } = await q;
       if (error) throw error;
       return (data as Payable[]) || [];
     },
@@ -334,16 +350,28 @@ export function ContasPagarTab() {
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
         <SumCard label="A pagar" value={summary.totalPending} icon={Clock} color="text-yellow-600" />
         <SumCard label="Atrasado" value={summary.totalOverdue} icon={AlertCircle} color="text-red-600" />
-        <SumCard label="Pago no mês" value={summary.totalPaid} icon={CheckCircle} color="text-green-600" />
-        <SumCard label="Total no mês" value={summary.totalPending + summary.totalPaid + summary.totalOverdue} icon={Banknote} color="text-foreground" />
+        <SumCard label="Pago no período" value={summary.totalPaid} icon={CheckCircle} color="text-green-600" />
+        <SumCard label="Total no período" value={summary.totalPending + summary.totalPaid + summary.totalOverdue} icon={Banknote} color="text-foreground" />
       </div>
 
       <Card>
         <CardHeader className="pb-3">
           <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
             <CardTitle className="text-lg">Contas a Pagar</CardTitle>
-            <div className="flex gap-2">
-              <MonthSelector selectedDate={month} onMonthChange={setMonth} />
+            <div className="flex flex-wrap gap-2">
+              <Select value={scope} onValueChange={(v) => setScope(v as PeriodScope)}>
+                <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="next30">Próximos 30 dias</SelectItem>
+                  <SelectItem value="next60">Próximos 60 dias</SelectItem>
+                  <SelectItem value="next90">Próximos 90 dias</SelectItem>
+                  <SelectItem value="month">Mês específico</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
+                </SelectContent>
+              </Select>
+              {scope === 'month' && (
+                <MonthSelector selectedDate={month} onMonthChange={setMonth} />
+              )}
               <Button onClick={openNew} size="sm"><Plus className="w-4 h-4 mr-1" /> Nova conta</Button>
             </div>
           </div>
