@@ -204,17 +204,27 @@ export function FecharCaixaDialog({
                 Valores Esperados
               </h4>
               <div className="grid grid-cols-2 gap-1 pl-4">
+                <span className="text-muted-foreground">Fundo de Abertura:</span>
+                <span className="text-right text-muted-foreground">{formatCurrency(summary.openingAmount)}</span>
+              </div>
+              <Separator />
+              <p className="text-xs text-muted-foreground font-medium pt-1">Movimentações do dia</p>
+              <div className="grid grid-cols-2 gap-1 pl-4">
                 <span className="text-muted-foreground">Dinheiro:</span>
-                <span className="text-right">{formatCurrency(expectedCash)}</span>
+                <span className="text-right">{formatCurrency(movDinheiro)}</span>
                 <span className="text-muted-foreground">Cartão:</span>
                 <span className="text-right">{formatCurrency(summary.totalCartao)}</span>
                 <span className="text-muted-foreground">PIX:</span>
                 <span className="text-right">{formatCurrency(summary.totalPix)}</span>
               </div>
+              <div className="flex justify-between text-sm pl-4">
+                <span className="text-muted-foreground">Total movimentado:</span>
+                <span>{formatCurrency(totalMovimentado)}</span>
+              </div>
               <Separator />
               <div className="flex justify-between font-medium">
-                <span>Total Esperado:</span>
-                <span className="text-primary">{formatCurrency(expectedCash + summary.totalCartao + summary.totalPix)}</span>
+                <span>Total Geral Esperado:</span>
+                <span className="text-primary">{formatCurrency(totalGeralEsperado)}</span>
               </div>
             </div>
 
