@@ -172,7 +172,7 @@ export function FecharCaixaDialog({
           {/* Coluna Esquerda: Contagem */}
           <div className="space-y-4">
             <CashCountForm
-              expectedCash={expectedCash}
+              expectedCash={expectedCashForCount}
               expectedPix={summary.totalPix}
               expectedCardDebit={summary.totalCartao * 0.5}
               expectedCardCredit={summary.totalCartao * 0.5}
