@@ -558,16 +558,6 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
         cashRegisterId={openCashRegister?.id}
         isLoading={closeCashMutation.isPending}
       />
-
-      <AjustarSaldoDialog
-        open={ajustarSaldoOpen}
-        onOpenChange={setAjustarSaldoOpen}
-        currentBalance={companyCash.current_balance}
-        onConfirm={async (newBalance) => {
-          await adjustBalanceMutation.mutateAsync(newBalance);
-        }}
-        isLoading={adjustBalanceMutation.isPending}
-      />
     </div>
   );
 }
