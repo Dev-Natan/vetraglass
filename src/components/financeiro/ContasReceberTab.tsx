@@ -67,7 +67,7 @@ interface Receivable {
 }
 
 type StatusFilter = 'all' | 'pending' | 'overdue' | 'paid';
-type PeriodFilter = 'all' | 'today' | 'week' | 'month' | 'overdue';
+type PeriodFilter = 'all' | 'today' | 'week' | 'month' | 'next60' | 'next90' | 'overdue';
 
 const statusConfig = {
   pending: { label: 'Pendente', color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300', icon: Clock },
