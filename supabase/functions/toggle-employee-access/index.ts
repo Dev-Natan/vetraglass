@@ -27,11 +27,11 @@ serve(async (req: Request): Promise<Response> => {
       });
     }
 
-    const { employeeId, userId, isActive }: ToggleEmployeeAccessRequest = await req.json();
+    const { employeeId, isActive }: ToggleEmployeeAccessRequest = await req.json();
 
-    if (!employeeId || !userId) {
+    if (!employeeId) {
       return new Response(
-        JSON.stringify({ error: "Campos obrigatórios: employeeId, userId" }),
+        JSON.stringify({ error: "Campo obrigatório: employeeId" }),
         {
           status: 400,
           headers: { "Content-Type": "application/json", ...corsHeaders },
