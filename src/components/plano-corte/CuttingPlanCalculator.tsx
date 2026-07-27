@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { resolveProductImageUrl } from '@/utils/imageUrl';
-import { Printer, Download, Tags, BarChart3, Settings2, RotateCcw } from 'lucide-react';
+import { Printer, Download, Tags, BarChart3, Settings2, RotateCcw, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery } from '@tanstack/react-query';
@@ -10,6 +10,7 @@ import { ProfileCutsTable, type ProfileCutItem } from '@/components/plano-corte/
 import { GlassCutsTable, type GlassCutItem } from '@/components/plano-corte/GlassCutsTable';
 import { BarOptimizationView } from '@/components/plano-corte/BarOptimizationView';
 import { PrintableCuttingReport } from '@/components/plano-corte/PrintableCuttingReport';
+import { AccessoriesCutsTable, type AccessoryCutItem } from '@/components/plano-corte/AccessoriesCutsTable';
 
 
 import { CuttingSummaryCards } from '@/components/plano-corte/CuttingSummaryCards';
