@@ -19,12 +19,29 @@ export interface PrintableProductSummary {
   quantity: number;
 }
 
+export interface PrintableGlassCut {
+  glassName: string;
+  width: number;
+  height: number;
+  areaM2: number;
+  quantity: number;
+}
+
+export interface PrintableAccessoryItem {
+  itemName: string;
+  type: string;
+  quantity: number;
+  unit?: string;
+}
+
 interface PrintableCuttingReportProps {
   companyName: string;
   documentTitle?: string;
   documentSubtitle?: string;
   products: PrintableProductSummary[];
   profileCuts: PrintableProfileCut[];
+  glassCuts?: PrintableGlassCut[];
+  accessories?: PrintableAccessoryItem[];
   /** Bar length in mm; defaults to 6000 */
   barLengthMm?: number;
 }
