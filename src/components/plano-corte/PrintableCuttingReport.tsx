@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { distributeAcrossBars, optimizeProfiles, type CutPiece } from '@/utils/profileOptimization';
+import { resolveItemImageUrl } from '@/utils/imageUrl';
 
 export interface PrintableProfileCut {
   profileName: string;
@@ -10,6 +11,7 @@ export interface PrintableProfileCut {
   cutAngleEnd?: number;
   position: string;
   itemTemplateId?: string;
+  imageUrl?: string | null;
 }
 
 export interface PrintableProductSummary {
@@ -25,6 +27,7 @@ export interface PrintableGlassCut {
   height: number;
   areaM2: number;
   quantity: number;
+  imageUrl?: string | null;
 }
 
 export interface PrintableAccessoryItem {
@@ -32,6 +35,7 @@ export interface PrintableAccessoryItem {
   type: string;
   quantity: number;
   unit?: string;
+  imageUrl?: string | null;
 }
 
 interface PrintableCuttingReportProps {
@@ -45,6 +49,12 @@ interface PrintableCuttingReportProps {
   /** Bar length in mm; defaults to 6000 */
   barLengthMm?: number;
 }
+
+const Thumb = ({ src, alt }: { src?: string | null; alt: string }) => {
+  const resolved = resolveItemImageUrl(src ?? null);
+  if (!resolved) return <div style={styles.thumbEmpty} aria-hidden />;
+  return <img src={resolved} alt={alt} style={styles.thumb} crossOrigin="anonymous" />;
+};
 
 const fmtAngle = (a?: number) => {
   if (a == null) return '—';
