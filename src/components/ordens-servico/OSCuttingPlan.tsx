@@ -16,7 +16,9 @@ import { generateCuttingPlanPdf } from '@/utils/generateCuttingPlanPdf';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { BarOptimizationView } from '@/components/plano-corte/BarOptimizationView';
 import { PrintableCuttingReport, type PrintableProfileCut, type PrintableProductSummary } from '@/components/plano-corte/PrintableCuttingReport';
+import { useOSComposition } from '@/hooks/useOSComposition';
 import { useMemo } from 'react';
+
 
 
 
@@ -213,16 +215,9 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
   }
 
   if (!plans || plans.length === 0) {
-    return (
-      <Card>
-        <CardContent className="py-8 text-center text-muted-foreground">
-          <Scissors className="w-12 h-12 mx-auto mb-4 opacity-50" />
-          <p>Nenhum plano de corte gerado para esta OS.</p>
-          <p className="text-sm mt-2">Os planos são gerados automaticamente ao aprovar orçamentos com produtos configurados.</p>
-        </CardContent>
-      </Card>
-    );
+    return <FallbackDynamicCuttingPlan ordemServicoId={ordemServicoId} />;
   }
+
 
   // Calculate totals for summary
   const totalGlassArea = plans.reduce((sum, plan) => {
@@ -616,4 +611,108 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
     </div>
   );
 }
+
+/**
+ * Fallback view rendered when no os_cutting_plan snapshot exists.
+ * Derives cuts dynamically from the effective composition of each OS product
+ * (company override > admin default) and pipes them into BarOptimizationView
+ * plus a lightweight glass panels list.
+ */
+function FallbackDynamicCuttingPlan({ ordemServicoId }: { ordemServicoId: string }) {
+  const { items, profiles, glasses, isLoading } = useOSComposition(ordemServicoId);
+
+  const cuts = useMemo(() => {
+    return profiles
+      .filter((p) => (p.calculatedLengthMm || 0) > 0)
+      .map((p) => ({
+        itemTemplateId: p.itemTemplateId || `${p.itemName}-${p.calculatedLengthMm}`,
+        itemName: p.itemName,
+        cutLength: p.calculatedLengthMm || 0,
+        quantity: p.calculatedQty,
+        barLengthMm: p.barLengthMm || 6000,
+        unit: 'mm',
+      }));
+  }, [profiles]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!items.length || (!cuts.length && !glasses.length)) {
+    return (
+      <Card>
+        <CardContent className="py-8 text-center text-muted-foreground">
+          <Scissors className="w-12 h-12 mx-auto mb-4 opacity-50" />
+          <p>Nenhum plano de corte disponível.</p>
+          <p className="text-sm mt-2">
+            Verifique se os produtos desta OS têm composição (perfis e vidros) configurada.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const totalGlassPanels = glasses.reduce((s, g) => s + g.calculatedQty, 0);
+  const totalGlassArea = glasses.reduce(
+    (s, g) => s + (g.calculatedWidth / 1000) * (g.calculatedHeight / 1000) * g.calculatedQty,
+    0,
+  );
+
+  return (
+    <div className="space-y-6">
+      <Card className="bg-muted/30">
+        <CardContent className="py-3 text-xs text-muted-foreground">
+          Plano de corte calculado dinamicamente a partir da composição efetiva de cada produto
+          (herança: empresa &gt; padrão do administrador).
+        </CardContent>
+      </Card>
+
+      {cuts.length > 0 && <BarOptimizationView cuts={cuts} />}
+
+      {glasses.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Layers className="w-5 h-5" />
+              Vidros ({totalGlassPanels} painéis · {totalGlassArea.toFixed(2)} m²)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Produto</TableHead>
+                  <TableHead>Vidro</TableHead>
+                  <TableHead>Lado</TableHead>
+                  <TableHead className="text-right">Largura</TableHead>
+                  <TableHead className="text-right">Altura</TableHead>
+                  <TableHead className="text-right">Qtd</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {glasses.map((g, idx) => (
+                  <TableRow key={idx}>
+                    <TableCell className="font-medium">{g.productName}</TableCell>
+                    <TableCell>{g.itemName}</TableCell>
+                    <TableCell>
+                      {g.side ? <Badge variant="outline">Lado {g.side}</Badge> : '-'}
+                    </TableCell>
+                    <TableCell className="text-right font-mono">{g.calculatedWidth}mm</TableCell>
+                    <TableCell className="text-right font-mono">{g.calculatedHeight}mm</TableCell>
+                    <TableCell className="text-right">{g.calculatedQty}x</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
 
