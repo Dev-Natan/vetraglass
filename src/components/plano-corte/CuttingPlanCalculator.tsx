@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { resolveProductImageUrl } from '@/utils/imageUrl';
-import { Printer, Download, Tags, BarChart3, Settings2, RotateCcw } from 'lucide-react';
+import { Printer, Download, Tags, BarChart3, Settings2, RotateCcw, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery } from '@tanstack/react-query';
@@ -10,6 +10,7 @@ import { ProfileCutsTable, type ProfileCutItem } from '@/components/plano-corte/
 import { GlassCutsTable, type GlassCutItem } from '@/components/plano-corte/GlassCutsTable';
 import { BarOptimizationView } from '@/components/plano-corte/BarOptimizationView';
 import { PrintableCuttingReport } from '@/components/plano-corte/PrintableCuttingReport';
+import { AccessoriesCutsTable, type AccessoryCutItem } from '@/components/plano-corte/AccessoriesCutsTable';
 
 
 import { CuttingSummaryCards } from '@/components/plano-corte/CuttingSummaryCards';
@@ -47,7 +48,7 @@ export function CuttingPlanCalculator() {
   const [width, setWidth] = useState<number>(0);
   const [height, setHeight] = useState<number>(0);
   const [quantity, setQuantity] = useState<number>(1);
-  const [activeTab, setActiveTab] = useState<'cortes' | 'otimizacao'>('cortes');
+  const [activeTab, setActiveTab] = useState<'cortes' | 'acessorios' | 'otimizacao'>('cortes');
   const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
   const [hoveredProfileId, setHoveredProfileId] = useState<string | null>(null);
   const [profileOverrides, setProfileOverrides] = useState<Record<string, ProfileOverride>>({});
@@ -193,6 +194,32 @@ export function CuttingPlanCalculator() {
     },
     enabled: !!selectedProduct
   });
+
+  const itemTemplateIds = useMemo(() => {
+    if (!productItems) return [] as string[];
+    return Array.from(new Set(
+      productItems
+        .filter((it: any) => it.item_templates?.id && !['profile', 'glass'].includes(it.item_templates.type))
+        .map((it: any) => it.item_templates.id as string)
+    ));
+  }, [productItems]);
+
+  const { data: itemTemplateUnits } = useQuery({
+    queryKey: ['item-template-units', itemTemplateIds],
+    queryFn: async () => {
+      if (itemTemplateIds.length === 0) return {} as Record<string, string>;
+      const { data, error } = await supabase
+        .from('item_templates')
+        .select('id, unit')
+        .in('id', itemTemplateIds);
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      (data || []).forEach((r: any) => { map[r.id] = r.unit || 'un'; });
+      return map;
+    },
+    enabled: itemTemplateIds.length > 0,
+  });
+
 
   const calculatedCuts = useMemo((): ProfileCutItem[] => {
     if (!productItems || productItems.length === 0) return [];
@@ -340,6 +367,55 @@ export function CuttingPlanCalculator() {
 
     return glassItems;
   }, [productItems, glassFormulas, width, height, quantity, completedItems, glassOverrides]);
+
+
+  const accessoryItems = useMemo((): AccessoryCutItem[] => {
+    if (!productItems || productItems.length === 0) return [];
+    const units = itemTemplateUnits || {};
+    return productItems
+      .filter((it: any) => it.item_templates && !['profile', 'glass'].includes(it.item_templates.type))
+      .map((it: any) => {
+        const tpl = it.item_templates;
+        const unit = units[tpl.id] || 'un';
+        const piecesQty = Number(it.pieces_quantity || 1);
+        const qf: string | null = it.quantity_formula;
+        let total = piecesQty * quantity;
+        let isFixed = true;
+        if (qf && qf.trim() !== '' && qf.trim() !== '1') {
+          const r = evaluateFormula(qf, width, height);
+          if (r > 0) {
+            isFixed = false;
+            if (unit === 'm' || unit === 'metros') total = (r / 1000) * piecesQty * quantity;
+            else if (unit === 'm²' || unit === 'm2') total = (r / 1000000) * piecesQty * quantity;
+            else total = r * piecesQty * quantity;
+          }
+        }
+        return {
+          id: it.id,
+          itemName: tpl.name,
+          type: tpl.type,
+          unit,
+          quantity: Math.round(total * 1000) / 1000,
+          formula: qf,
+          isFixed,
+          imageUrl: tpl.image_url,
+        };
+      })
+      .sort((a, b) => a.itemName.localeCompare(b.itemName, 'pt-BR'));
+  }, [productItems, itemTemplateUnits, width, height, quantity]);
+
+  const accessoryBuckets = useMemo(() => {
+    const acessorios: AccessoryCutItem[] = [];
+    const componentes: AccessoryCutItem[] = [];
+    const insumos: AccessoryCutItem[] = [];
+    for (const it of accessoryItems) {
+      const t = (it.type || '').toLowerCase();
+      if (['accessory', 'acessorio', 'hardware', 'ferragem'].includes(t)) acessorios.push(it);
+      else if (['component', 'componente', 'fixed', 'fixo'].includes(t)) componentes.push(it);
+      else insumos.push(it);
+    }
+    return { acessorios, componentes, insumos };
+  }, [accessoryItems]);
 
 
   const barOptimizationData = useMemo(() => {
@@ -657,11 +733,20 @@ export function CuttingPlanCalculator() {
 
       {/* On-screen content (hidden on print) */}
       <div className="no-print">
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'cortes' | 'otimizacao')}>
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
           <TabsList className="w-auto">
             <TabsTrigger value="cortes" className="px-6 gap-2">
               <Printer className="w-4 h-4" />
               Plano de Corte
+            </TabsTrigger>
+            <TabsTrigger value="acessorios" className="px-6 gap-2">
+              <Package className="w-4 h-4" />
+              Acessórios & Insumos
+              {accessoryItems.length > 0 && (
+                <span className="ml-1 rounded-full bg-primary/10 text-primary text-xs px-2 py-0.5">
+                  {accessoryItems.length}
+                </span>
+              )}
             </TabsTrigger>
             <TabsTrigger value="otimizacao" className="px-6 gap-2">
               <BarChart3 className="w-4 h-4" />
@@ -729,6 +814,41 @@ export function CuttingPlanCalculator() {
                 </div>
 
               </>
+            )}
+          </TabsContent>
+
+
+
+          <TabsContent value="acessorios" className="mt-4 space-y-6">
+            {!selectedProduct ? (
+              <div className="text-center py-12 text-muted-foreground">
+                Selecione um produto para listar acessórios, componentes e insumos.
+              </div>
+            ) : accessoryItems.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                Nenhum acessório, componente ou insumo configurado na composição deste produto.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <AccessoriesCutsTable
+                  title="Acessórios"
+                  icon="accessory"
+                  items={accessoryBuckets.acessorios}
+                  emptyMessage="Nenhum acessório (ferragens, roldanas, puxadores) nesta composição."
+                />
+                <AccessoriesCutsTable
+                  title="Componentes Fixos"
+                  icon="component"
+                  items={accessoryBuckets.componentes}
+                  emptyMessage="Nenhum componente fixo cadastrado."
+                />
+                <AccessoriesCutsTable
+                  title="Insumos"
+                  icon="input"
+                  items={accessoryBuckets.insumos}
+                  emptyMessage="Nenhum insumo (silicone, escovinha, borracha) cadastrado."
+                />
+              </div>
             )}
           </TabsContent>
 
