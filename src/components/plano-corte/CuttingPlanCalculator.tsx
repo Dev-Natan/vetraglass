@@ -536,14 +536,19 @@ export function CuttingPlanCalculator() {
             .section-dot-glass { background: #9333ea; }
             .section-dot-profile { background: #1e3a5f; }
             table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+            thead { display: table-header-group; }
+            tr { page-break-inside: avoid; }
             th { padding: 12px; text-align: left; font-size: 12px; text-transform: uppercase; color: white; }
             th.glass { background: #9333ea; }
             th.profile { background: #1e3a5f; }
+            th.acc { background: #f59e0b; }
             td { padding: 12px; border-bottom: 1px solid #eee; vertical-align: middle; }
             .value-green { color: #16a34a; font-weight: bold; font-size: 16px; }
             .value-blue { color: #2563eb; font-weight: bold; font-size: 16px; }
             .value-purple { color: #9333ea; font-weight: bold; font-size: 16px; }
-            @media print { body { padding: 10px; } }
+            .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; background: #f3f4f6; color: #374151; text-transform: uppercase; }
+            .section-dot-acc { background: #f59e0b; }
+            @media print { body { padding: 10px; } thead { display: table-header-group; } tr { page-break-inside: avoid; } }
           </style>
         </head>
         <body>
