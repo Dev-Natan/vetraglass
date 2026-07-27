@@ -56,7 +56,6 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
   
   const [dialogType, setDialogType] = useState<'entrada' | 'saida' | 'config' | null>(null);
   const [fecharCaixaOpen, setFecharCaixaOpen] = useState(false);
-  const [ajustarSaldoOpen, setAjustarSaldoOpen] = useState(false);
 
   // Fetch company cash
   const { data: companyCash, isLoading: loadingCash } = useQuery({
