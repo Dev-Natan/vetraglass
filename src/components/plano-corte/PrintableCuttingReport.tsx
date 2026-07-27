@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { distributeAcrossBars, optimizeProfiles, type CutPiece } from '@/utils/profileOptimization';
+import { resolveItemImageUrl } from '@/utils/imageUrl';
 
 export interface PrintableProfileCut {
   profileName: string;
@@ -10,6 +11,7 @@ export interface PrintableProfileCut {
   cutAngleEnd?: number;
   position: string;
   itemTemplateId?: string;
+  imageUrl?: string | null;
 }
 
 export interface PrintableProductSummary {
@@ -25,6 +27,7 @@ export interface PrintableGlassCut {
   height: number;
   areaM2: number;
   quantity: number;
+  imageUrl?: string | null;
 }
 
 export interface PrintableAccessoryItem {
@@ -32,6 +35,7 @@ export interface PrintableAccessoryItem {
   type: string;
   quantity: number;
   unit?: string;
+  imageUrl?: string | null;
 }
 
 interface PrintableCuttingReportProps {
@@ -45,6 +49,12 @@ interface PrintableCuttingReportProps {
   /** Bar length in mm; defaults to 6000 */
   barLengthMm?: number;
 }
+
+const Thumb = ({ src, alt }: { src?: string | null; alt: string }) => {
+  const resolved = resolveItemImageUrl(src ?? null);
+  if (!resolved) return <div style={styles.thumbEmpty} aria-hidden />;
+  return <img src={resolved} alt={alt} style={styles.thumb} crossOrigin="anonymous" />;
+};
 
 const fmtAngle = (a?: number) => {
   if (a == null) return '—';
@@ -141,6 +151,7 @@ export function PrintableCuttingReport({
           <table style={styles.cutsTable}>
             <thead>
               <tr>
+                <th style={{ ...styles.th, ...styles.thumbCell }}>Img</th>
                 <th style={styles.th}>Vidro</th>
                 <th style={{ ...styles.th, ...styles.numCell }}>Largura (mm)</th>
                 <th style={{ ...styles.th, ...styles.numCell }}>Altura (mm)</th>
@@ -151,6 +162,9 @@ export function PrintableCuttingReport({
             <tbody>
               {glassCuts.map((g, idx) => (
                 <tr key={idx} style={{ pageBreakInside: 'avoid' }}>
+                  <td style={{ ...styles.td, ...styles.thumbCell }}>
+                    <Thumb src={g.imageUrl} alt={g.glassName} />
+                  </td>
                   <td style={styles.td}>{g.glassName}</td>
                   <td style={{ ...styles.td, ...styles.numCell, fontWeight: 700 }}>{g.width}</td>
                   <td style={{ ...styles.td, ...styles.numCell, fontWeight: 700 }}>{g.height}</td>
@@ -170,6 +184,7 @@ export function PrintableCuttingReport({
           <table style={styles.cutsTable}>
             <thead>
               <tr>
+                <th style={{ ...styles.th, ...styles.thumbCell }}>Img</th>
                 <th style={styles.th}>Perfil</th>
                 <th style={{ ...styles.th, ...styles.numCell }}>Medida (mm)</th>
                 <th style={{ ...styles.th, ...styles.numCell }}>Qtd.</th>
@@ -185,6 +200,9 @@ export function PrintableCuttingReport({
                   c.cutAngleStart != null && c.cutAngleEnd != null && c.cutAngleStart !== c.cutAngleEnd;
                 return (
                   <tr key={idx} style={{ pageBreakInside: 'avoid' }}>
+                    <td style={{ ...styles.td, ...styles.thumbCell }}>
+                      <Thumb src={c.imageUrl} alt={c.profileName} />
+                    </td>
                     <td style={styles.td}>{c.profileName}</td>
                     <td style={{ ...styles.td, ...styles.numCell, fontWeight: 700 }}>
                       {c.calculatedLength}
@@ -291,6 +309,7 @@ export function PrintableCuttingReport({
           <table style={styles.cutsTable}>
             <thead>
               <tr>
+                <th style={{ ...styles.th, ...styles.thumbCell }}>Img</th>
                 <th style={styles.th}>Item</th>
                 <th style={styles.th}>Tipo</th>
                 <th style={{ ...styles.th, ...styles.numCell }}>Quantidade</th>
@@ -300,6 +319,9 @@ export function PrintableCuttingReport({
             <tbody>
               {accessories.map((a, idx) => (
                 <tr key={idx} style={{ pageBreakInside: 'avoid' }}>
+                  <td style={{ ...styles.td, ...styles.thumbCell }}>
+                    <Thumb src={a.imageUrl} alt={a.itemName} />
+                  </td>
                   <td style={styles.td}>{a.itemName}</td>
                   <td style={styles.td}>{a.type}</td>
                   <td style={{ ...styles.td, ...styles.numCell, fontWeight: 700 }}>{a.quantity}</td>
@@ -393,6 +415,29 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '10pt',
   },
   numCell: { textAlign: 'center', fontVariantNumeric: 'tabular-nums' },
+  thumbCell: { width: '48px', textAlign: 'center', padding: '3px' },
+  thumb: {
+    width: '40px',
+    height: '40px',
+    objectFit: 'cover',
+    borderRadius: '4px',
+    border: '1px solid #000',
+    display: 'block',
+    margin: '0 auto',
+    WebkitPrintColorAdjust: 'exact',
+    printColorAdjust: 'exact',
+  },
+  thumbEmpty: {
+    width: '40px',
+    height: '40px',
+    borderRadius: '4px',
+    border: '1px dashed #999',
+    display: 'block',
+    margin: '0 auto',
+    background: '#fafafa',
+    WebkitPrintColorAdjust: 'exact',
+    printColorAdjust: 'exact',
+  },
   profileBlock: {
     border: '1px solid #000',
     padding: '8px',

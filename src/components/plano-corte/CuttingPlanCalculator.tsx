@@ -753,6 +753,7 @@ export function CuttingPlanCalculator() {
             cutAngleEnd: c.cutAngleEnd,
             position: c.position,
             itemTemplateId: (c as any).itemTemplateId,
+            imageUrl: (c as any).imageUrl ?? null,
           }))}
           glassCuts={calculatedGlassCuts.map((g) => ({
             glassName: g.customName || g.glassName,
@@ -760,11 +761,12 @@ export function CuttingPlanCalculator() {
             height: g.calculatedHeight,
             areaM2: g.areaM2,
             quantity: g.quantity,
+            imageUrl: (g as any).imageUrl ?? null,
           }))}
           accessories={[
-            ...accessoryBuckets.acessorios.map((i) => ({ itemName: i.itemName, type: 'Acessório', quantity: i.quantity, unit: i.unit })),
-            ...accessoryBuckets.componentes.map((i) => ({ itemName: i.itemName, type: 'Componente Fixo', quantity: i.quantity, unit: i.unit })),
-            ...accessoryBuckets.insumos.map((i) => ({ itemName: i.itemName, type: 'Insumo', quantity: i.quantity, unit: i.unit })),
+            ...accessoryBuckets.acessorios.map((i) => ({ itemName: i.itemName, type: 'Acessório', quantity: i.quantity, unit: i.unit, imageUrl: i.imageUrl ?? null })),
+            ...accessoryBuckets.componentes.map((i) => ({ itemName: i.itemName, type: 'Componente Fixo', quantity: i.quantity, unit: i.unit, imageUrl: i.imageUrl ?? null })),
+            ...accessoryBuckets.insumos.map((i) => ({ itemName: i.itemName, type: 'Insumo', quantity: i.quantity, unit: i.unit, imageUrl: i.imageUrl ?? null })),
           ]}
         />
       </div>
