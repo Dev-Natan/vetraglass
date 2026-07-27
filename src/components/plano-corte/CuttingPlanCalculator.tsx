@@ -658,7 +658,7 @@ export function CuttingPlanCalculator() {
 
       {/* On-screen content (hidden on print) */}
       <div className="no-print">
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'cortes' | 'otimizacao')}>
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
           <TabsList className="w-auto">
             <TabsTrigger value="cortes" className="px-6 gap-2">
               <Printer className="w-4 h-4" />
