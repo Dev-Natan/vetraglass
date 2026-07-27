@@ -19,6 +19,7 @@ export interface PrintableProductSummary {
   width: number;
   height: number;
   quantity: number;
+  imageUrl?: string | null;
 }
 
 export interface PrintableGlassCut {
@@ -124,6 +125,7 @@ export function PrintableCuttingReport({
           <table style={styles.summaryTable}>
             <thead>
               <tr>
+                <th style={{ ...styles.summaryTh, ...styles.thumbCell }}>Img</th>
                 <th style={styles.summaryTh}>Produto</th>
                 <th style={styles.summaryTh}>Largura (mm)</th>
                 <th style={styles.summaryTh}>Altura (mm)</th>
@@ -133,6 +135,9 @@ export function PrintableCuttingReport({
             <tbody>
               {products.map((p, i) => (
                 <tr key={i}>
+                  <td style={{ ...styles.summaryTd, ...styles.thumbCell }}>
+                    <Thumb src={p.imageUrl} alt={p.productName} />
+                  </td>
                   <td style={styles.summaryTd}>{p.productName || '—'}</td>
                   <td style={{ ...styles.summaryTd, ...styles.numCell }}>{p.width}</td>
                   <td style={{ ...styles.summaryTd, ...styles.numCell }}>{p.height}</td>
