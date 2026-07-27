@@ -392,16 +392,6 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">💰 Saldo Real da Empresa</CardTitle>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-8 gap-1 text-xs"
-              onClick={() => setAjustarSaldoOpen(true)}
-              title="Ajustar saldo da empresa"
-            >
-              <Edit2 className="h-3.5 w-3.5" />
-              Ajustar
-            </Button>
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${companyCash.current_balance < 0 ? 'text-destructive' : 'text-green-600'}`}>
