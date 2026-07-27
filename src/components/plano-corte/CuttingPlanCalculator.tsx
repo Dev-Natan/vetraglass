@@ -195,6 +195,32 @@ export function CuttingPlanCalculator() {
     enabled: !!selectedProduct
   });
 
+  const itemTemplateIds = useMemo(() => {
+    if (!productItems) return [] as string[];
+    return Array.from(new Set(
+      productItems
+        .filter((it: any) => it.item_templates?.id && !['profile', 'glass'].includes(it.item_templates.type))
+        .map((it: any) => it.item_templates.id as string)
+    ));
+  }, [productItems]);
+
+  const { data: itemTemplateUnits } = useQuery({
+    queryKey: ['item-template-units', itemTemplateIds],
+    queryFn: async () => {
+      if (itemTemplateIds.length === 0) return {} as Record<string, string>;
+      const { data, error } = await supabase
+        .from('item_templates')
+        .select('id, unit')
+        .in('id', itemTemplateIds);
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      (data || []).forEach((r: any) => { map[r.id] = r.unit || 'un'; });
+      return map;
+    },
+    enabled: itemTemplateIds.length > 0,
+  });
+
+
   const calculatedCuts = useMemo((): ProfileCutItem[] => {
     if (!productItems || productItems.length === 0) return [];
 
