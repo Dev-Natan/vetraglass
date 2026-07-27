@@ -349,4 +349,33 @@ a[href*="lovable.dev"][target="_blank"] {
 /* When rendering to PDF via html2canvas, force the report visible. */
 .printable-report.force-visible-for-pdf { display: block !important; }
 
+/* Isolated PDF rendering host: neutralize any inherited layout from the app
+   (Tailwind flex/grid, absolute positioning, transforms) so html2canvas sees
+   a clean, deterministic A4 document. */
+.pdf-render-root,
+.pdf-render-root * {
+  animation: none !important;
+  transition: none !important;
+  float: none !important;
+  transform: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+.pdf-render-root {
+  color: #000 !important;
+  background: #fff !important;
+  font-family: Arial, Helvetica, sans-serif !important;
+}
+.pdf-render-root .printable-report {
+  display: block !important;
+  position: static !important;
+  width: 794px !important;
+  max-width: 794px !important;
+  margin: 0 !important;
+  background: #fff !important;
+  color: #000 !important;
+}
+
+
 

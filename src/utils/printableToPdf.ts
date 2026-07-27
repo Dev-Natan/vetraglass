@@ -3,44 +3,82 @@ import jsPDF from 'jspdf';
 
 /**
  * Render a live DOM node to a multi-page A4 PDF and trigger download.
- * The element is temporarily moved off-screen and forced to A4 width so
- * html2canvas can capture it at full resolution (including images).
+ *
+ * Strategy: clone the source node into an ISOLATED off-screen container
+ * (`.pdf-render-root`) so the live app's Tailwind/flex/absolute layout
+ * cannot interfere with html2canvas. The container is fixed at A4 width
+ * (794px @ 96dpi), pure white background, and strips interactive chrome
+ * via `data-html2canvas-ignore`.
  */
 export async function downloadElementAsPdf(
   element: HTMLElement,
   filename: string,
 ): Promise<void> {
-  // A4 @ 96 DPI ≈ 794 × 1123 px. Use 794 for width.
   const A4_WIDTH_PX = 794;
 
-  // Snapshot original inline styles so we can restore them.
-  const original = {
-    position: element.style.position,
-    left: element.style.left,
-    top: element.style.top,
-    width: element.style.width,
-    display: element.style.display,
-    visibility: element.style.visibility,
-    background: element.style.background,
-    zIndex: element.style.zIndex,
-    className: element.className,
-  };
+  // 1. Build an isolated host so nothing in the app tree affects layout.
+  const host = document.createElement('div');
+  host.className = 'pdf-render-root';
+  Object.assign(host.style, {
+    position: 'fixed',
+    top: '0',
+    left: '0',
+    width: `${A4_WIDTH_PX}px`,
+    minHeight: '0',
+    padding: '0',
+    margin: '0',
+    background: '#ffffff',
+    color: '#000000',
+    zIndex: '-2147483648',
+    // Off-screen but still laid out and painted.
+    transform: 'translateX(-10000px)',
+    pointerEvents: 'none',
+    overflow: 'visible',
+    boxSizing: 'border-box',
+  } as CSSStyleDeclaration);
 
-  // Make it laid out (off-screen) but visible for html2canvas.
-  element.style.position = 'fixed';
-  element.style.left = '0';
-  element.style.top = '0';
-  element.style.width = `${A4_WIDTH_PX}px`;
-  element.style.display = 'block';
-  element.style.visibility = 'visible';
-  element.style.background = '#ffffff';
-  element.style.zIndex = '-1';
-  // Neutralize the global `.printable-report { display: none }` screen rule.
-  element.classList.add('force-visible-for-pdf');
+  // 2. Deep clone the report so we never mutate the on-screen DOM.
+  const clone = element.cloneNode(true) as HTMLElement;
+  clone.classList.add('force-visible-for-pdf');
+  Object.assign(clone.style, {
+    position: 'static',
+    left: 'auto',
+    top: 'auto',
+    width: `${A4_WIDTH_PX}px`,
+    maxWidth: `${A4_WIDTH_PX}px`,
+    margin: '0',
+    padding: '16px',
+    display: 'block',
+    visibility: 'visible',
+    background: '#ffffff',
+    color: '#000000',
+    boxSizing: 'border-box',
+    transform: 'none',
+    float: 'none',
+  } as CSSStyleDeclaration);
+
+  // 3. Strip ghost/interactive elements from the clone so html2canvas
+  //    doesn't try to render hidden inputs, checkboxes, or action buttons.
+  const strip = clone.querySelectorAll<HTMLElement>(
+    'button, input, select, textarea, [role="button"], [data-no-pdf], .no-print',
+  );
+  strip.forEach((n) => {
+    n.setAttribute('data-html2canvas-ignore', 'true');
+    n.remove();
+  });
+
+  // Ensure remaining images load with CORS enabled so they aren't tainted.
+  clone.querySelectorAll<HTMLImageElement>('img').forEach((img) => {
+    img.crossOrigin = 'anonymous';
+    img.setAttribute('crossorigin', 'anonymous');
+  });
+
+  host.appendChild(clone);
+  document.body.appendChild(host);
 
   try {
-    // Wait for images inside to fully load (browsers cache them).
-    const imgs = Array.from(element.querySelectorAll('img'));
+    // 4. Wait for all images inside the clone to finish loading.
+    const imgs = Array.from(clone.querySelectorAll('img'));
     await Promise.all(
       imgs.map((img) => {
         if (img.complete && img.naturalWidth > 0) return Promise.resolve();
@@ -51,20 +89,24 @@ export async function downloadElementAsPdf(
       }),
     );
 
-    const canvas = await html2canvas(element, {
+    // 5. Rasterize with high DPI. Fixed windowWidth prevents responsive reflow.
+    const canvas = await html2canvas(clone, {
       scale: 2,
       useCORS: true,
       allowTaint: false,
       backgroundColor: '#ffffff',
       logging: false,
       windowWidth: A4_WIDTH_PX,
+      width: A4_WIDTH_PX,
+      scrollX: 0,
+      scrollY: 0,
+      ignoreElements: (el) => el.hasAttribute('data-html2canvas-ignore'),
     });
 
     const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
     const pageWidthMm = pdf.internal.pageSize.getWidth();
     const pageHeightMm = pdf.internal.pageSize.getHeight();
 
-    // Full canvas mapped to page width; slice vertically per page.
     const imgWidthMm = pageWidthMm;
     const imgHeightMm = (canvas.height * imgWidthMm) / canvas.width;
 
@@ -72,7 +114,6 @@ export async function downloadElementAsPdf(
       const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
       pdf.addImage(dataUrl, 'JPEG', 0, 0, imgWidthMm, imgHeightMm);
     } else {
-      // Slice canvas into page-sized chunks to preserve fidelity.
       const pxPerMm = canvas.width / pageWidthMm;
       const pageHeightPx = Math.floor(pageHeightMm * pxPerMm);
       let renderedPx = 0;
@@ -105,15 +146,6 @@ export async function downloadElementAsPdf(
 
     pdf.save(filename);
   } finally {
-    // Restore original inline styles / class.
-    element.style.position = original.position;
-    element.style.left = original.left;
-    element.style.top = original.top;
-    element.style.width = original.width;
-    element.style.display = original.display;
-    element.style.visibility = original.visibility;
-    element.style.background = original.background;
-    element.style.zIndex = original.zIndex;
-    element.className = original.className;
+    host.remove();
   }
 }
