@@ -215,16 +215,9 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
   }
 
   if (!plans || plans.length === 0) {
-    return (
-      <Card>
-        <CardContent className="py-8 text-center text-muted-foreground">
-          <Scissors className="w-12 h-12 mx-auto mb-4 opacity-50" />
-          <p>Nenhum plano de corte gerado para esta OS.</p>
-          <p className="text-sm mt-2">Os planos são gerados automaticamente ao aprovar orçamentos com produtos configurados.</p>
-        </CardContent>
-      </Card>
-    );
+    return <FallbackDynamicCuttingPlan ordemServicoId={ordemServicoId} />;
   }
+
 
   // Calculate totals for summary
   const totalGlassArea = plans.reduce((sum, plan) => {
