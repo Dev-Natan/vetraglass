@@ -48,7 +48,7 @@ export function CuttingPlanCalculator() {
   const [width, setWidth] = useState<number>(0);
   const [height, setHeight] = useState<number>(0);
   const [quantity, setQuantity] = useState<number>(1);
-  const [activeTab, setActiveTab] = useState<'cortes' | 'otimizacao'>('cortes');
+  const [activeTab, setActiveTab] = useState<'cortes' | 'acessorios' | 'otimizacao'>('cortes');
   const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
   const [hoveredProfileId, setHoveredProfileId] = useState<string | null>(null);
   const [profileOverrides, setProfileOverrides] = useState<Record<string, ProfileOverride>>({});
