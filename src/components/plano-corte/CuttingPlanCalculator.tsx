@@ -763,6 +763,7 @@ export function CuttingPlanCalculator() {
                   width,
                   height,
                   quantity,
+                  imageUrl: productImage ?? (selectedProductData as any).image_url ?? null,
                 }]
               : []
           }
