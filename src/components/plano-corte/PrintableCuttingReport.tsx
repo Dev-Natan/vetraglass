@@ -66,6 +66,8 @@ export function PrintableCuttingReport({
   documentSubtitle,
   products,
   profileCuts,
+  glassCuts = [],
+  accessories = [],
   barLengthMm = 6000,
 }: PrintableCuttingReportProps) {
   const now = useMemo(() => new Date(), []);
