@@ -106,6 +106,8 @@ export function FecharCaixaDialog({
   }, []);
 
   const fixedFund = companyCash?.fixed_fund || summary.openingAmount;
+  // Dinheiro esperado NÃO inclui PIX/Cartão (esses vão em suas próprias linhas).
+  // totalEntradas/totalSaidas são movimentações genéricas de caixa físico (reforços/sangrias).
   const expectedCash = summary.openingAmount + summary.totalDinheiro + (summary.totalEntradas || 0) - (summary.totalSaidas || 0);
   const difference = totalCounted - (expectedCash + summary.totalCartao + summary.totalPix);
   const profit = totalCounted - fixedFund; // Pode ser negativo
