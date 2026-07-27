@@ -817,14 +817,7 @@ export function CuttingPlanCalculator() {
             )}
           </TabsContent>
 
-          <TabsContent value="otimizacao" className="mt-4">
-            {barOptimizationData.length > 0 ? (
-              <BarOptimizationView cuts={barOptimizationData} />
-            ) : (
-              <div className="text-center py-12 text-muted-foreground">
-                Selecione um produto para ver a otimização de barras
-              </div>
-          </TabsContent>
+
 
           <TabsContent value="acessorios" className="mt-4 space-y-6">
             {!selectedProduct ? (
