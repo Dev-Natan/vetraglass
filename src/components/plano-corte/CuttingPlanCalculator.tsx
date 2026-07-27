@@ -739,6 +739,15 @@ export function CuttingPlanCalculator() {
               <Printer className="w-4 h-4" />
               Plano de Corte
             </TabsTrigger>
+            <TabsTrigger value="acessorios" className="px-6 gap-2">
+              <Package className="w-4 h-4" />
+              Acessórios & Insumos
+              {accessoryItems.length > 0 && (
+                <span className="ml-1 rounded-full bg-primary/10 text-primary text-xs px-2 py-0.5">
+                  {accessoryItems.length}
+                </span>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="otimizacao" className="px-6 gap-2">
               <BarChart3 className="w-4 h-4" />
               Otimização de Barras
