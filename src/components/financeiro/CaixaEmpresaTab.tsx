@@ -308,7 +308,7 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
     );
   }
 
-  const isBalanceLow = companyCash.current_balance < companyCash.fixed_fund;
+  
 
   return (
     <div className="space-y-6">
