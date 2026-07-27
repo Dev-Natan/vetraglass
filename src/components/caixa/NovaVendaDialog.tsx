@@ -179,7 +179,16 @@ export function NovaVendaDialog({
     return (subtotal * percent) / 100;
   }, [subtotal, discountPercent]);
 
-  const total = subtotal - discountValue;
+  // Créditos já recebidos no orçamento (entradas + faturamentos anteriores).
+  // Aplicamos como abatimento implícito para que o "Total" desta venda
+  // já represente APENAS o saldo restante a cobrar.
+  const previouslyPaid = useMemo(() => {
+    if (!selectedQuote) return 0;
+    return Math.max(0, (selectedQuote.total_deposits ?? 0) + (selectedQuote.total_sold ?? 0));
+  }, [selectedQuote]);
+
+  const grossTotal = subtotal - discountValue;
+  const total = Math.max(0, grossTotal - previouslyPaid);
 
   // Select material for dimensions input
   const selectMaterialForDimensions = (template: ItemTemplate) => {
