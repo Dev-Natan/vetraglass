@@ -12,7 +12,7 @@ import {
   TrendingUp, 
   TrendingDown, 
   Settings, 
-  AlertTriangle,
+
   ArrowDownCircle,
   ArrowUpCircle,
   History,
