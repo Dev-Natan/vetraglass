@@ -110,8 +110,18 @@ async function loadQuoteSummary(sale: Sale, items: SaleItem[]): Promise<QuoteFin
         0,
     );
 
+    const saleCreatedAt = new Date(sale.created_at).getTime();
+    // Small tolerance window (5s) — deposits created as part of THIS sale
+    // sometimes land within the same second and must not be double-counted.
+    const TOLERANCE_MS = 5000;
+
     const depositsPaid = (deposits || [])
-      .filter((d: any) => d.status === 'received')
+      .filter((d: any) => {
+        if (d.status !== 'received') return false;
+        const ts = new Date(d.received_at || d.created_at || 0).getTime();
+        if (!ts) return true;
+        return ts < saleCreatedAt - TOLERANCE_MS;
+      })
       .reduce((sum: number, d: any) => sum + Number(d.amount || 0), 0);
 
     const otherSalesPaid = (otherSales || [])
