@@ -19,12 +19,29 @@ export interface PrintableProductSummary {
   quantity: number;
 }
 
+export interface PrintableGlassCut {
+  glassName: string;
+  width: number;
+  height: number;
+  areaM2: number;
+  quantity: number;
+}
+
+export interface PrintableAccessoryItem {
+  itemName: string;
+  type: string;
+  quantity: number;
+  unit?: string;
+}
+
 interface PrintableCuttingReportProps {
   companyName: string;
   documentTitle?: string;
   documentSubtitle?: string;
   products: PrintableProductSummary[];
   profileCuts: PrintableProfileCut[];
+  glassCuts?: PrintableGlassCut[];
+  accessories?: PrintableAccessoryItem[];
   /** Bar length in mm; defaults to 6000 */
   barLengthMm?: number;
 }
@@ -49,6 +66,8 @@ export function PrintableCuttingReport({
   documentSubtitle,
   products,
   profileCuts,
+  glassCuts = [],
+  accessories = [],
   barLengthMm = 6000,
 }: PrintableCuttingReportProps) {
   const now = useMemo(() => new Date(), []);
@@ -108,6 +127,35 @@ export function PrintableCuttingReport({
                   <td style={{ ...styles.summaryTd, ...styles.numCell }}>{p.width}</td>
                   <td style={{ ...styles.summaryTd, ...styles.numCell }}>{p.height}</td>
                   <td style={{ ...styles.summaryTd, ...styles.numCell }}>{p.quantity}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+
+      {/* 2b. Glass cuts */}
+      {glassCuts.length > 0 && (
+        <section style={styles.section}>
+          <h2 style={styles.sectionTitle}>Cortes de Vidro</h2>
+          <table style={styles.cutsTable}>
+            <thead>
+              <tr>
+                <th style={styles.th}>Vidro</th>
+                <th style={{ ...styles.th, ...styles.numCell }}>Largura (mm)</th>
+                <th style={{ ...styles.th, ...styles.numCell }}>Altura (mm)</th>
+                <th style={{ ...styles.th, ...styles.numCell }}>Área (m²)</th>
+                <th style={{ ...styles.th, ...styles.numCell }}>Qtd.</th>
+              </tr>
+            </thead>
+            <tbody>
+              {glassCuts.map((g, idx) => (
+                <tr key={idx} style={{ pageBreakInside: 'avoid' }}>
+                  <td style={styles.td}>{g.glassName}</td>
+                  <td style={{ ...styles.td, ...styles.numCell, fontWeight: 700 }}>{g.width}</td>
+                  <td style={{ ...styles.td, ...styles.numCell, fontWeight: 700 }}>{g.height}</td>
+                  <td style={{ ...styles.td, ...styles.numCell }}>{g.areaM2.toFixed(3)}</td>
+                  <td style={{ ...styles.td, ...styles.numCell, fontWeight: 700 }}>{g.quantity}</td>
                 </tr>
               ))}
             </tbody>
@@ -233,6 +281,33 @@ export function PrintableCuttingReport({
               <strong>Desperdício médio:</strong> {optimization.avgWastePercent}%
             </span>
           </div>
+        </section>
+      )}
+
+      {/* 5. Accessories & inputs */}
+      {accessories.length > 0 && (
+        <section style={styles.section}>
+          <h2 style={styles.sectionTitle}>Acessórios & Insumos</h2>
+          <table style={styles.cutsTable}>
+            <thead>
+              <tr>
+                <th style={styles.th}>Item</th>
+                <th style={styles.th}>Tipo</th>
+                <th style={{ ...styles.th, ...styles.numCell }}>Quantidade</th>
+                <th style={styles.th}>Unidade</th>
+              </tr>
+            </thead>
+            <tbody>
+              {accessories.map((a, idx) => (
+                <tr key={idx} style={{ pageBreakInside: 'avoid' }}>
+                  <td style={styles.td}>{a.itemName}</td>
+                  <td style={styles.td}>{a.type}</td>
+                  <td style={{ ...styles.td, ...styles.numCell, fontWeight: 700 }}>{a.quantity}</td>
+                  <td style={styles.td}>{a.unit || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </section>
       )}
 

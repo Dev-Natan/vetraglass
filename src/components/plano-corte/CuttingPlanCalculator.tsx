@@ -512,183 +512,10 @@ export function CuttingPlanCalculator() {
   };
 
   const handlePrint = () => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Plano de Corte - ${selectedProductData?.name || 'Produto'}</title>
-          <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { font-family: Arial, sans-serif; padding: 20px; color: #1a1a1a; }
-            .header { display: flex; gap: 30px; margin-bottom: 30px; align-items: flex-start; }
-            .product-image { width: 150px; height: 150px; background: #f0f0f0; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; }
-            .product-image img { max-width: 100%; max-height: 100%; }
-            .product-info h1 { font-size: 20px; margin-bottom: 15px; text-transform: uppercase; }
-            .dimensions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
-            .dim-box { background: #f5f5f5; padding: 8px 15px; border-radius: 4px; }
-            .dim-label { font-size: 11px; color: #666; }
-            .dim-value { font-size: 16px; font-weight: bold; }
-            .section-title { font-size: 14px; font-weight: bold; margin: 25px 0 10px 0; display: flex; align-items: center; gap: 8px; }
-            .section-dot { width: 12px; height: 12px; border-radius: 3px; }
-            .section-dot-glass { background: #9333ea; }
-            .section-dot-profile { background: #1e3a5f; }
-            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-            thead { display: table-header-group; }
-            tr { page-break-inside: avoid; }
-            th { padding: 12px; text-align: left; font-size: 12px; text-transform: uppercase; color: white; }
-            th.glass { background: #9333ea; }
-            th.profile { background: #1e3a5f; }
-            th.acc { background: #f59e0b; }
-            td { padding: 12px; border-bottom: 1px solid #eee; vertical-align: middle; }
-            .value-green { color: #16a34a; font-weight: bold; font-size: 16px; }
-            .value-blue { color: #2563eb; font-weight: bold; font-size: 16px; }
-            .value-purple { color: #9333ea; font-weight: bold; font-size: 16px; }
-            .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; background: #f3f4f6; color: #374151; text-transform: uppercase; }
-            .section-dot-acc { background: #f59e0b; }
-            @media print { body { padding: 10px; } thead { display: table-header-group; } tr { page-break-inside: avoid; } }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div class="product-image">
-              ${selectedProductData?.image_url ? `<img src="${getStorageUrl(selectedProductData.image_url)}" alt="${selectedProductData.name}" />` : '<span style="color:#999">🪟</span>'}
-            </div>
-            <div class="product-info">
-              <h1>${selectedProductData?.name || '-'}</h1>
-              <div class="dimensions">
-                <div>
-                  <div class="dim-label">Largura do Vão</div>
-                  <div class="dim-box"><span class="dim-value">${width}</span></div>
-                </div>
-                <div>
-                  <div class="dim-label">Altura do Vão</div>
-                  <div class="dim-box"><span class="dim-value">${height}</span></div>
-                </div>
-              </div>
-              <div>
-                <div class="dim-label">Quantidade</div>
-                <div class="dim-box"><span class="dim-value">${quantity}</span></div>
-              </div>
-            </div>
-          </div>
-
-          ${calculatedGlassCuts.length > 0 ? `
-            <div class="section-title">
-              <span class="section-dot section-dot-glass"></span>
-              Vidros
-            </div>
-            <table>
-              <thead>
-                <tr>
-                  <th class="glass">VIDRO</th>
-                  <th class="glass">LARGURA (mm)</th>
-                  <th class="glass">ALTURA (mm)</th>
-                  <th class="glass">ÁREA (m²)</th>
-                  <th class="glass">QUANTIDADE</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${calculatedGlassCuts.map(glass => `
-                  <tr>
-                    <td><strong>${glass.customName || glass.glassName}</strong></td>
-                    <td class="value-green">${glass.calculatedWidth}</td>
-                    <td class="value-blue">${glass.calculatedHeight}</td>
-                    <td class="value-purple">${glass.areaM2.toFixed(3)}</td>
-                    <td>${glass.quantity}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          ` : ''}
-
-          ${calculatedCuts.length > 0 ? `
-            <div class="section-title">
-              <span class="section-dot section-dot-profile"></span>
-              Perfis de Alumínio
-            </div>
-            <table>
-              <thead>
-                <tr>
-                  <th class="profile">PERFIL</th>
-                  <th class="profile">MEDIDA (mm)</th>
-                  <th class="profile">QUANTIDADE</th>
-                  <th class="profile">ÂNGULO INÍCIO</th>
-                  <th class="profile">ÂNGULO FIM</th>
-                  <th class="profile">POSIÇÃO</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${calculatedCuts.map(cut => `
-                  <tr>
-                    <td><strong>${cut.profileName}</strong></td>
-                    <td style="font-size: 18px; font-weight: bold;">${cut.calculatedLength}</td>
-                    <td>${cut.quantity}</td>
-                    <td>${cut.cutAngleStart ?? cut.cutAngle}°</td>
-                    <td>${cut.cutAngleEnd ?? cut.cutAngle}°</td>
-                    <td>${cut.position}</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          ` : ''}
-
-          ${accessoryItems.length > 0 ? `
-            <div class="section-title">
-              <span class="section-dot section-dot-acc"></span>
-              Acessórios &amp; Insumos
-            </div>
-            <table>
-              <thead>
-                <tr>
-                  <th class="acc">ITEM</th>
-                  <th class="acc">TIPO</th>
-                  <th class="acc">QUANTIDADE</th>
-                  <th class="acc">UNIDADE</th>
-                  <th class="acc">ORIGEM</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${[
-                  ...accessoryBuckets.acessorios.map(i => ({ i, tipo: 'Acessório' })),
-                  ...accessoryBuckets.componentes.map(i => ({ i, tipo: 'Componente Fixo' })),
-                  ...accessoryBuckets.insumos.map(i => ({ i, tipo: 'Insumo' })),
-                ].map(({ i, tipo }) => `
-                  <tr>
-                    <td><strong>${i.itemName}</strong></td>
-                    <td>${tipo}</td>
-                    <td style="font-size: 16px; font-weight: bold;">${i.quantity}</td>
-                    <td>${i.unit || '-'}</td>
-                    <td><span class="badge">${i.isFixed ? 'Fixo' : 'Fórmula'}</span></td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          ` : ''}
-          
-          
-          <p style="margin-top: 30px; text-align: center; font-size: 11px; color: #999;">
-            Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}
-          </p>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    
-    printWindow.onload = () => {
-      setTimeout(() => {
-        printWindow.focus();
-        printWindow.print();
-      }, 100);
-    };
-    
-    setTimeout(() => {
-      printWindow.focus();
-      printWindow.print();
-    }, 500);
+    // Renderiza via .print-area (PrintableCuttingReport) — layout preto/branco A4.
+    window.print();
   };
+
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -927,6 +754,18 @@ export function CuttingPlanCalculator() {
             position: c.position,
             itemTemplateId: (c as any).itemTemplateId,
           }))}
+          glassCuts={calculatedGlassCuts.map((g) => ({
+            glassName: g.customName || g.glassName,
+            width: g.calculatedWidth,
+            height: g.calculatedHeight,
+            areaM2: g.areaM2,
+            quantity: g.quantity,
+          }))}
+          accessories={[
+            ...accessoryBuckets.acessorios.map((i) => ({ itemName: i.itemName, type: 'Acessório', quantity: i.quantity, unit: i.unit })),
+            ...accessoryBuckets.componentes.map((i) => ({ itemName: i.itemName, type: 'Componente Fixo', quantity: i.quantity, unit: i.unit })),
+            ...accessoryBuckets.insumos.map((i) => ({ itemName: i.itemName, type: 'Insumo', quantity: i.quantity, unit: i.unit })),
+          ]}
         />
       </div>
     </div>
