@@ -68,7 +68,7 @@ export const saleService = {
     const { data: quotesWithItems, error: itemsError } = await supabase
       .from('quotes')
       .select(`
-        id, quote_number, customer_name, total_amount, final_amount, status, created_at,
+        id, quote_number, customer_name, total_amount, final_amount, valor_final_aprovado, status, created_at,
         quote_items (id, description, quantity, unit_price, total_price, width, height, company_product_id, product_template_id)
       `)
       .in('id', quoteIds);
@@ -77,11 +77,16 @@ export const saleService = {
 
     return (quotesWithItems || []).map(quote => {
       const financial = financialData.find(f => f.quote_id === quote.id);
+      // Valor fechado no ato da aprovação (com desconto aplicado conforme forma de pagamento).
+      // Se ausente (aprovações antigas), cai no final_amount original.
+      const lockedAmount = (quote as any).valor_final_aprovado ?? quote.final_amount;
       return {
         ...quote,
+        final_amount: lockedAmount,
+        original_final_amount: quote.final_amount,
         total_deposits: financial?.total_deposits || 0,
         total_sold: financial?.total_sold || 0,
-        pending_amount: financial?.pending_amount || quote.final_amount,
+        pending_amount: financial?.pending_amount || lockedAmount,
         financial_status: financial?.financial_status || 'pending',
       };
     });
