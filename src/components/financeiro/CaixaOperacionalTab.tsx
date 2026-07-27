@@ -75,10 +75,12 @@ export function CaixaOperacionalTab() {
   const { 
     companyCash, 
     openCashRegister, 
+    lastClosingAmount,
     isLoading: loadingCashRegister,
     openCash,
     isOpening
   } = useCaixa();
+
 
   const { createSale, cancelSale, isCreating, isCancelling } = useSales();
 
