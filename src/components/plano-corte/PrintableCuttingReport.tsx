@@ -134,6 +134,35 @@ export function PrintableCuttingReport({
         </section>
       )}
 
+      {/* 2b. Glass cuts */}
+      {glassCuts.length > 0 && (
+        <section style={styles.section}>
+          <h2 style={styles.sectionTitle}>Cortes de Vidro</h2>
+          <table style={styles.cutsTable}>
+            <thead>
+              <tr>
+                <th style={styles.th}>Vidro</th>
+                <th style={{ ...styles.th, ...styles.numCell }}>Largura (mm)</th>
+                <th style={{ ...styles.th, ...styles.numCell }}>Altura (mm)</th>
+                <th style={{ ...styles.th, ...styles.numCell }}>Área (m²)</th>
+                <th style={{ ...styles.th, ...styles.numCell }}>Qtd.</th>
+              </tr>
+            </thead>
+            <tbody>
+              {glassCuts.map((g, idx) => (
+                <tr key={idx} style={{ pageBreakInside: 'avoid' }}>
+                  <td style={styles.td}>{g.glassName}</td>
+                  <td style={{ ...styles.td, ...styles.numCell, fontWeight: 700 }}>{g.width}</td>
+                  <td style={{ ...styles.td, ...styles.numCell, fontWeight: 700 }}>{g.height}</td>
+                  <td style={{ ...styles.td, ...styles.numCell }}>{g.areaM2.toFixed(3)}</td>
+                  <td style={{ ...styles.td, ...styles.numCell, fontWeight: 700 }}>{g.quantity}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+
       {/* 3. Profile cuts table (no formulas) */}
       {profileCuts.length > 0 && (
         <section style={styles.section}>
