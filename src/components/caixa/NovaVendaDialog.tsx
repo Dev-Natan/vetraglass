@@ -923,14 +923,14 @@ export function NovaVendaDialog({
                         <ScrollArea className="h-[200px]">
                           <div className="space-y-2 pr-4">
                             {approvedQuotes.map((quote) => {
-                              const totalDeposits = quote.total_deposits ?? 0;
-                              const totalSold = quote.total_sold ?? 0;
-                              const pendingAmount = quote.pending_amount ?? quote.final_amount;
-                              const hasPayments = totalDeposits > 0 || totalSold > 0;
-                              
+                              const totalPaid = paidByQuote[quote.id] ?? 0;
+                              const quoteTotal = Number(quote.final_amount) || 0;
+                              const remaining = Math.max(0, quoteTotal - totalPaid);
+                              const hasPayments = totalPaid > 0;
+
                               return (
-                                <div 
-                                  key={quote.id} 
+                                <div
+                                  key={quote.id}
                                   className={`p-4 rounded-lg border cursor-pointer hover:border-primary transition-colors ${
                                     hasPayments ? 'border-amber-400 bg-amber-50/50 dark:bg-amber-950/20' : ''
                                   }`}
@@ -949,39 +949,34 @@ export function NovaVendaDialog({
                                       {hasPayments ? (
                                         <>
                                           <p className="text-xs text-muted-foreground line-through">
-                                            {formatCurrency(quote.final_amount)}
+                                            {formatCurrency(quoteTotal)}
                                           </p>
                                           <p className="font-semibold text-primary">
-                                            {formatCurrency(pendingAmount)}
+                                            {formatCurrency(remaining)}
                                           </p>
                                         </>
                                       ) : (
                                         <p className="font-semibold text-primary">
-                                          {formatCurrency(quote.final_amount)}
+                                          {formatCurrency(quoteTotal)}
                                         </p>
                                       )}
                                       <Badge variant="secondary">{quote.quote_items?.length || 0} itens</Badge>
                                     </div>
                                   </div>
-                                  
-                                  {/* Alerta visual para orçamentos com pagamentos */}
+
                                   {hasPayments && (
                                     <div className="mt-3 p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-700 space-y-1">
-                                      {totalDeposits > 0 && (
-                                        <div className="flex items-center justify-between text-xs">
-                                          <span className="text-amber-800 dark:text-amber-200">🟡 Entrada recebida</span>
-                                          <span className="font-medium text-amber-900 dark:text-amber-100">{formatCurrency(totalDeposits)}</span>
-                                        </div>
-                                      )}
-                                      {totalSold > 0 && (
-                                        <div className="flex items-center justify-between text-xs">
-                                          <span className="text-blue-800 dark:text-blue-200">🔵 Já faturado</span>
-                                          <span className="font-medium text-blue-900 dark:text-blue-100">{formatCurrency(totalSold)}</span>
-                                        </div>
-                                      )}
+                                      <div className="flex items-center justify-between text-xs">
+                                        <span className="text-amber-800 dark:text-amber-200">🟡 Valor Total do Orçamento</span>
+                                        <span className="font-medium text-amber-900 dark:text-amber-100">{formatCurrency(quoteTotal)}</span>
+                                      </div>
+                                      <div className="flex items-center justify-between text-xs">
+                                        <span className="text-blue-800 dark:text-blue-200">🔵 Total Já Pago / Recebido</span>
+                                        <span className="font-medium text-blue-900 dark:text-blue-100">{formatCurrency(totalPaid)}</span>
+                                      </div>
                                       <div className="flex items-center justify-between text-xs pt-1 border-t border-amber-300/50">
-                                        <span className="text-green-800 dark:text-green-200 font-medium">🟢 Saldo disponível</span>
-                                        <span className="font-bold text-green-900 dark:text-green-100">{formatCurrency(pendingAmount)}</span>
+                                        <span className="text-green-800 dark:text-green-200 font-medium">🟢 Saldo Restante a Faturar</span>
+                                        <span className="font-bold text-green-900 dark:text-green-100">{formatCurrency(remaining)}</span>
                                       </div>
                                     </div>
                                   )}
