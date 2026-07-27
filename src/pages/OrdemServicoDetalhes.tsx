@@ -24,6 +24,8 @@ import { ptBR } from 'date-fns/locale';
 import { regenerateOSDocuments } from '@/utils/generateOSDocuments';
 import { generateCuttingPlanPdf } from '@/utils/generateCuttingPlanPdf';
 import { generateMaterialsListPdf } from '@/utils/generateMaterialsListPdf';
+import { generateOSReportPdf } from '@/utils/generateOSReportPdf';
+import { useOSComposition } from '@/hooks/useOSComposition';
 
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
