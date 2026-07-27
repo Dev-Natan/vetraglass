@@ -151,6 +151,7 @@ export function PrintableCuttingReport({
           <table style={styles.cutsTable}>
             <thead>
               <tr>
+                <th style={{ ...styles.th, ...styles.thumbCell }}>Img</th>
                 <th style={styles.th}>Vidro</th>
                 <th style={{ ...styles.th, ...styles.numCell }}>Largura (mm)</th>
                 <th style={{ ...styles.th, ...styles.numCell }}>Altura (mm)</th>
@@ -161,6 +162,9 @@ export function PrintableCuttingReport({
             <tbody>
               {glassCuts.map((g, idx) => (
                 <tr key={idx} style={{ pageBreakInside: 'avoid' }}>
+                  <td style={{ ...styles.td, ...styles.thumbCell }}>
+                    <Thumb src={g.imageUrl} alt={g.glassName} />
+                  </td>
                   <td style={styles.td}>{g.glassName}</td>
                   <td style={{ ...styles.td, ...styles.numCell, fontWeight: 700 }}>{g.width}</td>
                   <td style={{ ...styles.td, ...styles.numCell, fontWeight: 700 }}>{g.height}</td>
@@ -180,6 +184,7 @@ export function PrintableCuttingReport({
           <table style={styles.cutsTable}>
             <thead>
               <tr>
+                <th style={{ ...styles.th, ...styles.thumbCell }}>Img</th>
                 <th style={styles.th}>Perfil</th>
                 <th style={{ ...styles.th, ...styles.numCell }}>Medida (mm)</th>
                 <th style={{ ...styles.th, ...styles.numCell }}>Qtd.</th>
