@@ -501,21 +501,32 @@ export function NovaVendaDialog({
       );
     }
     
-    // CORREÇÃO: Manter preços originais dos itens — entradas são tratadas no pagamento
-    const vendaItems: VendaItem[] = (quote.quote_items || []).map(qi => ({
-      id: crypto.randomUUID(),
-      companyProductId: qi.company_product_id || undefined,
-      productTemplateId: qi.product_template_id || undefined,
-      name: qi.description,
-      unit: 'm²',
-      quantity: qi.quantity,
-      unitPrice: qi.unit_price,
-      totalPrice: qi.total_price,
-      width: qi.width || undefined,
-      height: qi.height || undefined,
-      isProduct: !!(qi.company_product_id || qi.product_template_id),
-    }));
-    
+    // Valor fechado no ato da aprovação (já com desconto da forma escolhida).
+    // Escalamos proporcionalmente os preços dos itens para que a soma bata
+    // exatamente com esse valor — assim Subtotal/Total do rodapé refletem
+    // o valor líquido combinado, não o bruto de tabela.
+    const rawItems = quote.quote_items || [];
+    const rawSum = rawItems.reduce((s, qi) => s + (Number(qi.total_price) || 0), 0);
+    const lockedTotal = Number(quote.final_amount) || rawSum;
+    const scale = rawSum > 0 ? lockedTotal / rawSum : 1;
+    const vendaItems: VendaItem[] = rawItems.map(qi => {
+      const scaledTotal = Number(((qi.total_price || 0) * scale).toFixed(2));
+      const qty = qi.quantity || 1;
+      return {
+        id: crypto.randomUUID(),
+        companyProductId: qi.company_product_id || undefined,
+        productTemplateId: qi.product_template_id || undefined,
+        name: qi.description,
+        unit: 'm²',
+        quantity: qty,
+        unitPrice: Number((scaledTotal / qty).toFixed(2)),
+        totalPrice: scaledTotal,
+        width: qi.width || undefined,
+        height: qi.height || undefined,
+        isProduct: !!(qi.company_product_id || qi.product_template_id),
+      };
+    });
+
     setItems(vendaItems);
   };
 
