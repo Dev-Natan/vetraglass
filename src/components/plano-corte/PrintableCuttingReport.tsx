@@ -19,6 +19,7 @@ export interface PrintableProductSummary {
   width: number;
   height: number;
   quantity: number;
+  imageUrl?: string | null;
 }
 
 export interface PrintableGlassCut {
