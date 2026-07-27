@@ -6503,6 +6503,10 @@ export type Database = {
         }
         Returns: Json
       }
+      close_cash_register_direct: {
+        Args: { _cash_register_id: string; _counts: Json; _notes?: string }
+        Returns: Json
+      }
       convert_quote_to_os: { Args: { _quote_id: string }; Returns: string }
       create_company_and_assign_admin: {
         Args: {

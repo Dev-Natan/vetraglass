@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -7,7 +8,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Loader2, DollarSign, Wallet, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Loader2, DollarSign, AlertCircle, History } from 'lucide-react';
 
 interface CompanyCash {
   current_balance: number;
@@ -19,6 +22,7 @@ interface AbrirCaixaDialogProps {
   onOpenChange: (open: boolean) => void;
   onConfirm: (openingAmount: number) => Promise<unknown>;
   companyCash?: CompanyCash | null;
+  suggestedAmount?: number | null;
   isLoading?: boolean;
 }
 
@@ -27,30 +31,32 @@ export function AbrirCaixaDialog({
   onOpenChange,
   onConfirm,
   companyCash,
+  suggestedAmount,
   isLoading = false,
 }: AbrirCaixaDialogProps) {
+  const fallback = suggestedAmount ?? companyCash?.fixed_fund ?? 0;
+  const [amountStr, setAmountStr] = useState<string>(fallback.toString());
+
+  useEffect(() => {
+    if (open) {
+      setAmountStr(fallback.toFixed(2).replace('.', ','));
+    }
+  }, [open, fallback]);
+
+  const parsedAmount = parseFloat(amountStr.replace(',', '.')) || 0;
+
   const handleConfirm = async () => {
-    const amount = companyCash?.fixed_fund || 0;
-    await onConfirm(amount);
+    await onConfirm(parsedAmount);
   };
 
   const handleClose = () => {
-    if (!isLoading) {
-      onOpenChange(false);
-    }
+    if (!isLoading) onOpenChange(false);
   };
 
-  const formatCurrency = (value: number) => {
-    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  };
+  const formatCurrency = (value: number) =>
+    value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-  const fixedFund = companyCash?.fixed_fund || 0;
-  const hasCompanyCash = !!companyCash;
-  const companyBalance = companyCash?.current_balance || 0;
-  const hasEnoughBalance = hasCompanyCash ? companyBalance >= fixedFund : false;
-  const isValidAmount = fixedFund > 0;
-
-  const balanceAfterOpening = companyBalance - fixedFund;
+  const hasSuggestion = (suggestedAmount ?? 0) > 0;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -61,73 +67,53 @@ export function AbrirCaixaDialog({
             Abrir Caixa do Dia
           </DialogTitle>
           <DialogDescription>
-            O caixa será aberto utilizando o fundo fixo da empresa.
+            Informe o valor inicial em caixa para começar o dia.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          {!hasCompanyCash ? (
-            <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-4">
-              <div className="flex items-start gap-2">
-                <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5" />
-                <div className="text-sm">
-                  <p className="font-medium text-amber-700 dark:text-amber-400">
-                    Caixa da empresa não configurado
+        <div className="space-y-4 py-2">
+          {hasSuggestion && (
+            <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 p-3">
+              <div className="flex items-start gap-2 text-sm">
+                <History className="h-4 w-4 text-blue-600 mt-0.5" />
+                <div>
+                  <p className="font-medium text-blue-700 dark:text-blue-400">
+                    Sugestão baseada no fechamento anterior
                   </p>
-                  <p className="text-amber-600 dark:text-amber-500 text-xs mt-1">
-                    Um administrador precisa configurar o caixa da empresa antes de abrir o caixa do dia.
+                  <p className="text-blue-600 dark:text-blue-500 text-xs mt-0.5">
+                    O valor final do último fechamento foi {formatCurrency(suggestedAmount!)}.
                   </p>
                 </div>
               </div>
             </div>
-          ) : (
-            <>
-              {/* Valor Fixo de Abertura */}
-              <div className="rounded-lg border bg-primary/5 p-4 text-center">
-                <p className="text-sm text-muted-foreground mb-2">💵 Fundo Fixo para Abertura</p>
-                <p className="text-3xl font-bold text-primary">
-                  {formatCurrency(fixedFund)}
-                </p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Este valor será disponibilizado para operações do dia (troco, saídas, etc.)
-                </p>
-              </div>
+          )}
 
-              {/* Explicação simples */}
-              <div className="rounded-lg border bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 p-3">
-                <p className="text-xs text-blue-700 dark:text-blue-400 flex items-start gap-2">
-                  <Wallet className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                  <span>
-                    O caixa será aberto com o valor do fundo fixo configurado.
-                  </span>
-                </p>
-              </div>
+          <div className="space-y-2">
+            <Label htmlFor="opening-amount">Fundo de Abertura</Label>
+            <Input
+              id="opening-amount"
+              type="text"
+              inputMode="decimal"
+              placeholder="0,00"
+              value={amountStr}
+              onChange={(e) => setAmountStr(e.target.value)}
+              className="text-lg font-semibold h-11"
+              autoFocus
+            />
+            <p className="text-xs text-muted-foreground">
+              {hasSuggestion
+                ? 'Você pode ajustar se recolheu ou reforçou algo entre o fechamento e agora.'
+                : 'Digite quanto está entrando no caixa para iniciar o dia.'}
+            </p>
+          </div>
 
-              {/* Validação de saldo */}
-              <div className={`rounded-lg border p-3 ${
-                hasEnoughBalance 
-                  ? 'bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800' 
-                  : 'bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800'
-              }`}>
-                <div className="flex items-center gap-2 text-sm">
-                  {hasEnoughBalance ? (
-                    <>
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      <span className="text-green-700 dark:text-green-400">
-                        Saldo suficiente para abertura
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <AlertCircle className="h-4 w-4 text-red-600" />
-                      <span className="text-red-700 dark:text-red-400">
-                        Saldo real insuficiente. Disponível: {formatCurrency(companyBalance)}
-                      </span>
-                    </>
-                  )}
-                </div>
-              </div>
-            </>
+          {parsedAmount <= 0 && (
+            <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-3 flex items-start gap-2 text-xs">
+              <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5" />
+              <span className="text-amber-700 dark:text-amber-400">
+                Informe um valor maior que zero para abrir o caixa.
+              </span>
+            </div>
           )}
         </div>
 
@@ -135,15 +121,9 @@ export function AbrirCaixaDialog({
           <Button variant="outline" onClick={handleClose} disabled={isLoading}>
             Cancelar
           </Button>
-          <Button 
-            onClick={handleConfirm} 
-            disabled={isLoading || !isValidAmount || !hasEnoughBalance}
-          >
+          <Button onClick={handleConfirm} disabled={isLoading || parsedAmount <= 0}>
             {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Abrindo...
-              </>
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Abrindo...</>
             ) : (
               'Confirmar Abertura'
             )}
