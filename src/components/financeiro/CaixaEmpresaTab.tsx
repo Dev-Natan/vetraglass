@@ -387,7 +387,7 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
       </Card>
 
       {/* Cards de resumo da empresa */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2">
         {/* Saldo Real da Empresa */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -399,37 +399,6 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Valor que a empresa possui em caixa/banco
-            </p>
-            {isBalanceLow && (
-              <div className="flex items-center gap-1 mt-2 text-amber-600 text-sm">
-                <AlertTriangle className="h-4 w-4" />
-                <span>Abaixo do fundo fixo</span>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Fundo Fixo para Abertura */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">💵 Fundo Fixo para Abertura</CardTitle>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-8 w-8"
-              onClick={() => setDialogType('config')}
-              title="Configurar fundo fixo"
-            >
-              <Settings className="h-4 w-4 text-muted-foreground" />
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(companyCash.fixed_fund)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Valor para abertura dos caixas do dia
-              Valor padrão para abertura do caixa do dia
             </p>
           </CardContent>
         </Card>
