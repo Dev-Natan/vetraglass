@@ -127,27 +127,15 @@ export function ProfileCutsTable({
                         <label className="text-[10px] uppercase text-muted-foreground font-medium">
                           {isAltura ? 'Fórmula Altura' : 'Fórmula Largura'}
                         </label>
-                        <Input
-                          className="h-7 text-xs font-mono"
-                          value={(isAltura ? cut.heightFormula : cut.widthFormula) ?? ''}
-                          onChange={(e) =>
-                            onFieldChange?.(
-                              cut.id,
-                              isAltura ? 'heightFormula' : 'widthFormula',
-                              e.target.value
-                            )
-                          }
-                          placeholder={isAltura ? 'Altura - 50' : 'Largura - 50'}
-                        />
+                        <span className="inline-flex items-center h-7 px-2 rounded border border-dashed border-primary/40 bg-primary/5 text-xs font-mono text-primary select-all">
+                          {(isAltura ? cut.heightFormula : cut.widthFormula) || '—'}
+                        </span>
                         <label className="text-[10px] uppercase text-muted-foreground font-medium mt-1">
                           Fórmula Peças
                         </label>
-                        <Input
-                          className="h-7 text-xs font-mono"
-                          value={cut.piecesFormula ?? ''}
-                          onChange={(e) => onFieldChange?.(cut.id, 'piecesFormula', e.target.value)}
-                          placeholder="ex: (Altura-94)/130"
-                        />
+                        <span className="inline-flex items-center h-7 px-2 rounded border border-dashed border-muted-foreground/30 bg-muted/40 text-xs font-mono text-foreground select-all">
+                          {cut.piecesFormula || '—'}
+                        </span>
                       </div>
                     </TableCell>
                   )}
@@ -158,49 +146,16 @@ export function ProfileCutsTable({
                   <TableCell className="text-center font-bold text-lg tabular-nums">{cut.quantity}</TableCell>
 
                   <TableCell className="text-center">
-                    {editable ? (
-                      <div className="inline-flex items-center gap-3">
-                        <div className="flex flex-col items-center gap-1">
-                          <span className="text-[10px] uppercase text-muted-foreground">Início</span>
-                          <div className="inline-flex items-center gap-1">
-                            <CutAngleIcon angle={angleStart} side="start" />
-                            <Input
-                              type="number"
-                              min={0}
-                              max={180}
-                              className="h-7 w-16 text-xs text-center"
-                              value={angleStart}
-                              onChange={(e) => onFieldChange?.(cut.id, 'cutAngleStart', e.target.value)}
-                            />
-                          </div>
-                        </div>
-                        <div className="flex flex-col items-center gap-1">
-                          <span className="text-[10px] uppercase text-muted-foreground">Fim</span>
-                          <div className="inline-flex items-center gap-1">
-                            <CutAngleIcon angle={angleEnd} side="end" />
-                            <Input
-                              type="number"
-                              min={0}
-                              max={180}
-                              className="h-7 w-16 text-xs text-center"
-                              value={angleEnd}
-                              onChange={(e) => onFieldChange?.(cut.id, 'cutAngleEnd', e.target.value)}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="inline-flex items-center gap-2">
-                        <span className="inline-flex items-center gap-1 rounded bg-foreground text-background px-2 py-1 text-xs font-medium">
-                          <CutAngleIcon angle={angleStart} side="start" className="text-background" />
-                          {angleStart}°
+                    <div className="inline-flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1 rounded bg-foreground text-background px-2 py-1 text-xs font-medium">
+                        <CutAngleIcon angle={angleStart} side="start" className="text-background" />
+                        {angleStart}°
+                      </span>
+                      <span className="inline-flex items-center gap-1 rounded bg-foreground text-background px-2 py-1 text-xs font-medium">
+                        <CutAngleIcon angle={angleEnd} side="end" className="text-background" />
+                        {angleEnd}°
                         </span>
-                        <span className="inline-flex items-center gap-1 rounded bg-foreground text-background px-2 py-1 text-xs font-medium">
-                          <CutAngleIcon angle={angleEnd} side="end" className="text-background" />
-                          {angleEnd}°
-                        </span>
-                      </div>
-                    )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-center">
                     <span

@@ -115,19 +115,13 @@ export function GlassCutsTable({
                   <TableCell className="align-top">
                     <div className="flex flex-col gap-1.5 min-w-[220px]">
                       <label className="text-[10px] uppercase text-muted-foreground font-medium">Largura</label>
-                      <Input
-                        className="h-7 text-xs font-mono"
-                        value={glass.widthFormula ?? ''}
-                        onChange={(e) => onFieldChange?.(glass.id, 'widthFormula', e.target.value)}
-                        placeholder="Largura"
-                      />
+                      <span className="inline-flex items-center h-7 px-2 rounded border border-dashed border-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 text-xs font-mono text-emerald-700 dark:text-emerald-300 select-all">
+                        {glass.widthFormula || '—'}
+                      </span>
                       <label className="text-[10px] uppercase text-muted-foreground font-medium mt-1">Altura</label>
-                      <Input
-                        className="h-7 text-xs font-mono"
-                        value={glass.heightFormula ?? ''}
-                        onChange={(e) => onFieldChange?.(glass.id, 'heightFormula', e.target.value)}
-                        placeholder="Altura"
-                      />
+                      <span className="inline-flex items-center h-7 px-2 rounded border border-dashed border-blue-300 bg-blue-50 dark:bg-blue-900/20 text-xs font-mono text-blue-700 dark:text-blue-300 select-all">
+                        {glass.heightFormula || '—'}
+                      </span>
                     </div>
                   </TableCell>
                 )}
