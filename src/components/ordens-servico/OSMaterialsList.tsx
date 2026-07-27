@@ -5,13 +5,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Package, Ruler, AlertTriangle, CheckCircle, List, Boxes } from 'lucide-react';
 import { formatMm, distributeAcrossBars } from '@/utils/profileOptimization';
 import { osService } from '@/services/osService';
+import { useOSComposition } from '@/hooks/useOSComposition';
 
 interface OSMaterialsListProps {
   ordemServicoId: string;
 }
+
 
 export function OSMaterialsList({ ordemServicoId }: OSMaterialsListProps) {
   const [viewMode, setViewMode] = useState<'individual' | 'consolidated'>('individual');
