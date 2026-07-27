@@ -535,24 +535,12 @@ export function NovaVendaDialog({
     setSelectedQuote(quote);
     setCustomerName(quote.customer_name);
     
-    // Calcular saldo pendente real
-    const totalDeposits = quote.total_deposits ?? 0;
-    const totalSold = quote.total_sold ?? 0;
-    
-    // Alertar se já tem entrada/vendas anteriores
-    if (totalDeposits > 0 || totalSold > 0) {
-      const messages = [];
-      if (totalDeposits > 0) {
-        messages.push(`Entrada já recebida: ${formatCurrency(totalDeposits)}`);
-      }
-      if (totalSold > 0) {
-        messages.push(`Já faturado: ${formatCurrency(totalSold)}`);
-      }
-      const pendingAmount = Math.max(0, quote.final_amount - totalDeposits - totalSold);
-      messages.push(`Saldo restante a cobrar: ${formatCurrency(pendingAmount)}`);
-      
+    // Usar mesmo cálculo deduplicado do card/rodapé
+    const alreadyPaid = paidByQuote[quote.id] ?? 0;
+    if (alreadyPaid > 0) {
+      const pendingAmount = Math.max(0, (Number(quote.final_amount) || 0) - alreadyPaid);
       toast.info(
-        `Este orçamento possui entradas anteriores.\n${messages.join('\n')}`,
+        `Este orçamento possui uma entrada anterior já recebida de ${formatCurrency(alreadyPaid)}. Saldo restante a faturar: ${formatCurrency(pendingAmount)}`,
         { duration: 6000 }
       );
     }
