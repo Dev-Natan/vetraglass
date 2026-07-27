@@ -66,10 +66,10 @@ serve(async (req: Request): Promise<Response> => {
       },
     });
 
-    // 2. Get company for this employee to check requester's permission
+    // 2. Get employee row (company + linked user) to check permission and resolve userId
     const { data: employeeData, error: employeeError } = await supabaseAdmin
       .from("employees")
-      .select("company_id")
+      .select("company_id, user_id")
       .eq("id", employeeId)
       .maybeSingle();
 
@@ -79,6 +79,16 @@ serve(async (req: Request): Promise<Response> => {
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
+
+    if (!employeeData.user_id) {
+      return new Response(JSON.stringify({ error: "Funcionário não possui login vinculado." }), {
+        status: 400,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    // Resolve userId strictly from the employee row (prevents cross-tenant ban/unban)
+    const userId = employeeData.user_id as string;
 
     // 3. Check if requester has admin/manager permissions in that company
     const { data: userCompany, error: checkError } = await supabaseAdmin
