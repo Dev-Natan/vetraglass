@@ -127,7 +127,28 @@ serve(async (req: Request): Promise<Response> => {
       },
     });
 
-    // 3. Check if requester has admin/manager permissions in the target company
+    // 3. Verify the employee belongs to the target company (prevents cross-tenant hijack)
+    const { data: employeeRow, error: employeeLookupError } = await supabaseAdmin
+      .from("employees")
+      .select("id, company_id")
+      .eq("id", employeeId)
+      .maybeSingle();
+
+    if (employeeLookupError || !employeeRow) {
+      return new Response(JSON.stringify({ error: "Funcionário não encontrado." }), {
+        status: 404,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    if (employeeRow.company_id !== companyId) {
+      return new Response(
+        JSON.stringify({ error: "Funcionário não pertence à empresa informada." }),
+        { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // 4. Check if requester has admin/manager permissions in the target company
     const { data: userCompany, error: checkError } = await supabaseAdmin
       .from("user_companies")
       .select("role")
