@@ -309,6 +309,7 @@ export function PrintableCuttingReport({
           <table style={styles.cutsTable}>
             <thead>
               <tr>
+                <th style={{ ...styles.th, ...styles.thumbCell }}>Img</th>
                 <th style={styles.th}>Item</th>
                 <th style={styles.th}>Tipo</th>
                 <th style={{ ...styles.th, ...styles.numCell }}>Quantidade</th>
@@ -318,6 +319,9 @@ export function PrintableCuttingReport({
             <tbody>
               {accessories.map((a, idx) => (
                 <tr key={idx} style={{ pageBreakInside: 'avoid' }}>
+                  <td style={{ ...styles.td, ...styles.thumbCell }}>
+                    <Thumb src={a.imageUrl} alt={a.itemName} />
+                  </td>
                   <td style={styles.td}>{a.itemName}</td>
                   <td style={styles.td}>{a.type}</td>
                   <td style={{ ...styles.td, ...styles.numCell, fontWeight: 700 }}>{a.quantity}</td>
