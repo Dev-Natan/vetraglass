@@ -927,6 +927,18 @@ export function CuttingPlanCalculator() {
             position: c.position,
             itemTemplateId: (c as any).itemTemplateId,
           }))}
+          glassCuts={calculatedGlassCuts.map((g) => ({
+            glassName: g.customName || g.glassName,
+            width: g.calculatedWidth,
+            height: g.calculatedHeight,
+            areaM2: g.areaM2,
+            quantity: g.quantity,
+          }))}
+          accessories={[
+            ...accessoryBuckets.acessorios.map((i) => ({ itemName: i.itemName, type: 'Acessório', quantity: i.quantity, unit: i.unit })),
+            ...accessoryBuckets.componentes.map((i) => ({ itemName: i.itemName, type: 'Componente Fixo', quantity: i.quantity, unit: i.unit })),
+            ...accessoryBuckets.insumos.map((i) => ({ itemName: i.itemName, type: 'Insumo', quantity: i.quantity, unit: i.unit })),
+          ]}
         />
       </div>
     </div>
