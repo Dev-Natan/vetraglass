@@ -1,103 +1,25 @@
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Layers, Maximize2 } from 'lucide-react';
-import { evaluateFormula } from '@/utils/safeFormulaEvaluator';
+import { useOSComposition } from '@/hooks/useOSComposition';
 
 interface Props {
   ordemServicoId: string;
 }
 
-interface GlassRow {
-  productName: string;
-  glassName: string;
-  width: number;
-  height: number;
-  areaM2: number;
-  quantity: number;
-  side?: string;
-  glassType?: string | null;
-  glassColor?: string | null;
-}
-
 export function OSCompositionGlasses({ ordemServicoId }: Props) {
-  const { data: rows = [], isLoading } = useQuery({
-    queryKey: ['os-composition-glasses', ordemServicoId],
-    queryFn: async (): Promise<GlassRow[]> => {
-      // Get OS items with product info
-      const { data: osItems } = await supabase
-        .from('os_items')
-        .select('*, quote_items(glass_thickness, glass_color)')
-        .eq('os_id', ordemServicoId);
-
-      if (!osItems?.length) return [];
-
-      const result: GlassRow[] = [];
-
-      for (const item of osItems as any[]) {
-        if (!item.product_id) continue;
-
-        const { data: product } = await supabase
-          .from('product_templates')
-          .select('id, name, linha, has_multiple_sides')
-          .eq('id', item.product_id)
-          .maybeSingle();
-
-        if (!product) continue;
-
-        const { data: formulas } = await supabase
-          .from('glass_line_formulas')
-          .select('*')
-          .eq('is_active', true)
-          .or(`product_template_id.eq.${item.product_id},and(linha.eq.${product.linha || ''},product_template_id.is.null)`)
-          .order('panel_index');
-
-        if (!formulas?.length) continue;
-
-        const w = Number(item.largura_producao || 0);
-        const h = Number(item.altura_producao || 0);
-        const wb = Number(item.largura_producao_b || w);
-        const hb = Number(item.altura_producao_b || h);
-
-        for (const f of formulas as any[]) {
-          const sides: Array<{ label?: string; s: string | null }> = [];
-          if (!product.has_multiple_sides) {
-            sides.push({ s: null });
-          } else if (f.side === 'A') sides.push({ label: 'A', s: 'A' });
-          else if (f.side === 'B') sides.push({ label: 'B', s: 'B' });
-          else { sides.push({ label: 'A', s: 'A' }); sides.push({ label: 'B', s: 'B' }); }
-
-          for (const sd of sides) {
-            const cw = evaluateFormula(f.width_formula, { width: w, height: h, widthB: wb, heightB: hb }, undefined, sd.s as any);
-            const ch = evaluateFormula(f.height_formula, { width: w, height: h, widthB: wb, heightB: hb }, undefined, sd.s as any);
-            if (cw <= 0 || ch <= 0) continue;
-            const area = (cw / 1000) * (ch / 1000);
-            result.push({
-              productName: item.product_name,
-              glassName: f.formula_name,
-              width: cw,
-              height: ch,
-              areaM2: area * item.quantity,
-              quantity: item.quantity,
-              side: sd.label,
-              glassType: item.quote_items?.glass_thickness,
-              glassColor: item.quote_items?.glass_color,
-            });
-          }
-        }
-      }
-
-      return result;
-    },
-  });
+  const { items, glasses, isLoading } = useOSComposition(ordemServicoId);
 
   if (isLoading) {
-    return <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
+    return (
+      <div className="flex justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
   }
 
-  if (!rows.length) {
+  if (!glasses.length) {
     return (
       <Card>
         <CardContent className="py-8 text-center text-muted-foreground">
@@ -108,15 +30,25 @@ export function OSCompositionGlasses({ ordemServicoId }: Props) {
     );
   }
 
-  const totalArea = rows.reduce((s, r) => s + r.areaM2, 0);
-  const totalPanels = rows.reduce((s, r) => s + r.quantity, 0);
+  // Enrich rows with area (m²) and side context per OS item
+  const enriched = glasses
+    .map((r) => {
+      const areaEach = (r.calculatedWidth / 1000) * (r.calculatedHeight / 1000);
+      return { ...r, areaEachM2: areaEach, areaTotalM2: areaEach * r.calculatedQty };
+    })
+    .filter((r) => r.calculatedWidth > 0 && r.calculatedHeight > 0);
+
+  const totalPanels = enriched.reduce((s, r) => s + r.calculatedQty, 0);
+  const totalArea = enriched.reduce((s, r) => s + r.areaTotalM2, 0);
 
   // Group by product
-  const byProduct = rows.reduce((acc, r) => {
+  const byProduct = enriched.reduce((acc, r) => {
     if (!acc[r.productName]) acc[r.productName] = [];
     acc[r.productName].push(r);
     return acc;
-  }, {} as Record<string, GlassRow[]>);
+  }, {} as Record<string, typeof enriched>);
+
+  const itemMeta = (name: string) => items.find((i) => i.productName === name);
 
   return (
     <div className="space-y-6">
@@ -130,7 +62,7 @@ export function OSCompositionGlasses({ ordemServicoId }: Props) {
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div className="text-center p-3 bg-muted/50 rounded-lg">
-              <div className="text-2xl font-bold text-primary">{rows.length}</div>
+              <div className="text-2xl font-bold text-primary">{enriched.length}</div>
               <div className="text-sm text-muted-foreground">Tipos de Vidro</div>
             </div>
             <div className="text-center p-3 bg-muted/50 rounded-lg">
@@ -145,44 +77,49 @@ export function OSCompositionGlasses({ ordemServicoId }: Props) {
         </CardContent>
       </Card>
 
-      {Object.entries(byProduct).map(([productName, items]) => (
-        <Card key={productName}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Maximize2 className="w-4 h-4" />
-              {productName}
-              {items[0].glassType && <Badge variant="secondary">{items[0].glassType}</Badge>}
-              {items[0].glassColor && <Badge variant="outline">{items[0].glassColor}</Badge>}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Vidro</TableHead>
-                  <TableHead>Lado</TableHead>
-                  <TableHead className="text-right">Largura</TableHead>
-                  <TableHead className="text-right">Altura</TableHead>
-                  <TableHead className="text-right">Qtd</TableHead>
-                  <TableHead className="text-right">Área (m²)</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.map((r, idx) => (
-                  <TableRow key={idx}>
-                    <TableCell className="font-medium">{r.glassName}</TableCell>
-                    <TableCell>{r.side ? <Badge variant="outline">Lado {r.side}</Badge> : '-'}</TableCell>
-                    <TableCell className="text-right font-mono">{r.width} mm</TableCell>
-                    <TableCell className="text-right font-mono">{r.height} mm</TableCell>
-                    <TableCell className="text-right">{r.quantity}x</TableCell>
-                    <TableCell className="text-right font-mono">{r.areaM2.toFixed(3)}</TableCell>
+      {Object.entries(byProduct).map(([productName, rows]) => {
+        const meta = itemMeta(productName);
+        return (
+          <Card key={productName}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Maximize2 className="w-4 h-4" />
+                {productName}
+                {meta?.glassThickness && <Badge variant="secondary">{meta.glassThickness}mm</Badge>}
+                {meta?.glassColor && <Badge variant="outline">{meta.glassColor}</Badge>}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Vidro</TableHead>
+                    <TableHead>Lado</TableHead>
+                    <TableHead className="text-right">Largura</TableHead>
+                    <TableHead className="text-right">Altura</TableHead>
+                    <TableHead className="text-right">Qtd</TableHead>
+                    <TableHead className="text-right">Área (m²)</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      ))}
+                </TableHeader>
+                <TableBody>
+                  {rows.map((r, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell className="font-medium">{r.itemName}</TableCell>
+                      <TableCell>
+                        {r.side ? <Badge variant="outline">Lado {r.side}</Badge> : '-'}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">{r.calculatedWidth} mm</TableCell>
+                      <TableCell className="text-right font-mono">{r.calculatedHeight} mm</TableCell>
+                      <TableCell className="text-right">{r.calculatedQty}x</TableCell>
+                      <TableCell className="text-right font-mono">{r.areaTotalM2.toFixed(3)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 }
