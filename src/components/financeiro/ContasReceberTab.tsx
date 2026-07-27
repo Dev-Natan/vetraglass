@@ -295,6 +295,8 @@ export function ContasReceberTab() {
             <SelectItem value="today">Hoje</SelectItem>
             <SelectItem value="week">Próx. 7 dias</SelectItem>
             <SelectItem value="month">Próx. 30 dias</SelectItem>
+            <SelectItem value="next60">Próx. 60 dias</SelectItem>
+            <SelectItem value="next90">Próx. 90 dias</SelectItem>
             <SelectItem value="overdue">Atrasados</SelectItem>
           </SelectContent>
         </Select>
