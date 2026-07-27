@@ -1708,11 +1708,17 @@ export type Database = {
       }
       company_products: {
         Row: {
+          acabamento: string | null
+          arremate: string | null
           base_price: number | null
           category: string | null
           commercial_name: string | null
           company_id: string
           company_item_id: string | null
+          composition_finished: boolean
+          contramarco: string | null
+          cor_componentes: string | null
+          corte_contramarco: string | null
           cost_per_sqm: number | null
           created_at: string
           description: string | null
@@ -1736,6 +1742,7 @@ export type Database = {
           pricing_type: string | null
           product_template_id: string | null
           quantity_formula: string | null
+          reforco: string | null
           side: string | null
           sides_count: number | null
           type: string | null
@@ -1745,11 +1752,17 @@ export type Database = {
           width_formula: string | null
         }
         Insert: {
+          acabamento?: string | null
+          arremate?: string | null
           base_price?: number | null
           category?: string | null
           commercial_name?: string | null
           company_id: string
           company_item_id?: string | null
+          composition_finished?: boolean
+          contramarco?: string | null
+          cor_componentes?: string | null
+          corte_contramarco?: string | null
           cost_per_sqm?: number | null
           created_at?: string
           description?: string | null
@@ -1773,6 +1786,7 @@ export type Database = {
           pricing_type?: string | null
           product_template_id?: string | null
           quantity_formula?: string | null
+          reforco?: string | null
           side?: string | null
           sides_count?: number | null
           type?: string | null
@@ -1782,11 +1796,17 @@ export type Database = {
           width_formula?: string | null
         }
         Update: {
+          acabamento?: string | null
+          arremate?: string | null
           base_price?: number | null
           category?: string | null
           commercial_name?: string | null
           company_id?: string
           company_item_id?: string | null
+          composition_finished?: boolean
+          contramarco?: string | null
+          cor_componentes?: string | null
+          corte_contramarco?: string | null
           cost_per_sqm?: number | null
           created_at?: string
           description?: string | null
@@ -1810,6 +1830,7 @@ export type Database = {
           pricing_type?: string | null
           product_template_id?: string | null
           quantity_formula?: string | null
+          reforco?: string | null
           side?: string | null
           sides_count?: number | null
           type?: string | null
