@@ -210,57 +210,20 @@ export default function OrdemServicoDetalhes() {
     }
   };
 
+  const { items: composedItems, isLoading: composingPdf } = useOSComposition(id || '');
+
   const handleDownloadCuttingPlanPdf = async () => {
-    if (!cuttingPlans || cuttingPlans.length === 0) {
-      toast.error('Nenhum plano de corte disponível para gerar PDF');
+    if (!composedItems || composedItems.length === 0) {
+      toast.error('Nenhum item encontrado na OS para gerar PDF');
       return;
     }
     toast.info('Gerando PDF...');
-
-    // Collect accessories per os_item
-    const accessoriesByOsItem = new Map<string, any[]>();
-    (materials || []).forEach((m: any) => {
-      if (m.item_type === 'profile') return;
-      const list = accessoriesByOsItem.get(m.os_item_id) || [];
-      list.push(m);
-      accessoriesByOsItem.set(m.os_item_id, list);
-    });
-
-    const plansForPdf = (cuttingPlans || []).map((p: any) => ({
-      ...p,
-      aluminum_color: p.quote_items?.aluminum_color || null,
-      accessories: accessoriesByOsItem.get(p.id) || accessoriesByOsItem.get(p.os_item_id) || [],
-    }));
-
-    // Build image map by item name (profiles, glasses, accessories)
-    const itemNames = new Set<string>();
-    plansForPdf.forEach((p: any) => {
-      (p.cuts_data || []).forEach((c: any) => itemNames.add(c.profileName));
-      (p.glass_cuts_data || []).forEach((g: any) => itemNames.add(g.glassName));
-      (p.accessories || []).forEach((a: any) => itemNames.add(a.item_name));
-    });
-
-    const images: Record<string, string> = {};
-    if (itemNames.size > 0) {
-      const { data: templates } = await supabase
-        .from('item_templates')
-        .select('name, image_url')
-        .in('name', Array.from(itemNames));
-      const loads = await Promise.all(
-        (templates || [])
-          .filter((t: any) => t.image_url)
-          .map(async (t: any) => {
-            const dataUrl = await fetchImageAsDataUrl(t.image_url);
-            return dataUrl ? [t.name as string, dataUrl] as const : null;
-          })
-      );
-      loads.forEach(entry => {
-        if (entry) images[entry[0]] = entry[1];
-      });
+    try {
+      await generateOSReportPdf(composedItems, getOsInfo(), getCompanyInfo());
+      toast.success('PDF gerado com sucesso!');
+    } catch (e: any) {
+      toast.error('Erro ao gerar PDF: ' + (e?.message || ''));
     }
-
-    generateCuttingPlanPdf(plansForPdf, getOsInfo(), getCompanyInfo(), 'download', false, images);
-    toast.success('PDF gerado com sucesso!');
   };
 
 
