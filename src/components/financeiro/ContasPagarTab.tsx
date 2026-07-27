@@ -36,10 +36,12 @@ import {
   Plus, Search, CheckCircle, Clock, AlertCircle, Trash2, Pencil,
   FileText, Banknote, Layers, Calendar, Receipt,
 } from 'lucide-react';
-import { format, addMonths, parseISO, isBefore } from 'date-fns';
+import { format, addMonths, addDays, parseISO, isBefore, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { MonthSelector, getMonthDateRange } from '@/components/common/MonthSelector';
+
+type PeriodScope = 'month' | 'next30' | 'next60' | 'next90' | 'all';
 
 interface Payable {
   id: string;
