@@ -389,13 +389,18 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     || (selectedProductId.startsWith('template:') ? selectedProductId.replace('template:', '') : null);
   const companyProduct = selectedProduct?.company_product;
 
+  // Para o Plano de Corte: produtos customizados da empresa (sem product_template_id)
+  // devem passar o próprio company_products.id — a RPC get_cutting_plan_items aceita
+  // tanto template_id quanto company_products.id como _template_id.
+  const cuttingPlanProductId = mode === 'cutting'
+    ? (selectedProductTemplateId || companyProduct?.id || null)
+    : (selectedProduct?.is_custom ? null : selectedProductTemplateId);
+
   // Live change: emite mudanças em tempo real (usado pelo Simulador de Plano de Corte)
   useEffect(() => {
     if (!onLiveChange) return;
     onLiveChange({
-      product_template_id: mode === 'cutting'
-        ? selectedProductTemplateId
-        : selectedProduct?.is_custom ? null : selectedProductTemplateId,
+      product_template_id: cuttingPlanProductId,
       name: selectedProduct?.name || '',
       image_url: selectedProduct?.image_url || null,
       width,
@@ -403,7 +408,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
       quantity,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedProductId, selectedProductTemplateId, selectedProduct?.name, selectedProduct?.image_url, width, height, quantity]);
+  }, [selectedProductId, cuttingPlanProductId, selectedProduct?.name, selectedProduct?.image_url, width, height, quantity]);
 
   // Fetch glass prices for selected product
   const { data: productGlassPrices } = useQuery({
@@ -645,9 +650,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
       : (selectedAluminumColor === 'Outros' ? customAluminumColor : selectedAluminumColor);
 
     onAdd({
-      product_template_id: mode === 'cutting'
-        ? selectedProductTemplateId
-        : selectedProduct.is_custom ? null : selectedProduct.product_template_id,
+      product_template_id: cuttingPlanProductId,
       company_product_id: companyProduct?.id,
       name: useVao ? `${selectedProduct.name} [Vão: ${vaoWidth}x${vaoHeight}mm]` : selectedProduct.name,
       base_price: (productUsesComposition && compositionPricing.isReady) ? compositionPricing.compositionCostPerSqm : basePrice,
