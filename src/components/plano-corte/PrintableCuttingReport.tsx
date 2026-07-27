@@ -448,7 +448,6 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'space-between',
     alignItems: 'baseline',
     marginBottom: '6px',
-    borderBottom: '1px solid #000',
     paddingBottom: '4px',
   },
   profileMeta: { fontSize: '9pt' },
@@ -482,8 +481,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   barWaste: {
     height: '100%',
-    background: '#f5f5f5',
-    color: '#000',
+    background: 'transparent',
+    color: '#666',
     fontSize: '8pt',
     display: 'flex',
     alignItems: 'center',
