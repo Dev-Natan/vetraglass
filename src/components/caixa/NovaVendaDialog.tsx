@@ -1048,27 +1048,25 @@ export function NovaVendaDialog({
                         <span>-{formatCurrency(discountValue)}</span>
                       </div>
                     )}
-                    <div className="flex justify-between text-sm font-medium border-t pt-2">
-                      <span className="text-muted-foreground">Total do Orçamento</span>
-                      <span>{formatCurrency(total)}</span>
-                    </div>
-                    {selectedQuote && ((selectedQuote.total_deposits ?? 0) + (selectedQuote.total_sold ?? 0)) > 0 && (
+                    {selectedQuote && previouslyPaid > 0 && (
                       <>
+                        <div className="flex justify-between text-sm font-medium border-t pt-2">
+                          <span className="text-muted-foreground">Total do Orçamento</span>
+                          <span>{formatCurrency(grossTotal)}</span>
+                        </div>
                         <div className="flex justify-between text-sm">
-                          <span className="text-amber-600">Entrada já recebida</span>
+                          <span className="text-amber-600">Já recebido (entradas / vendas anteriores)</span>
                           <span className="font-medium text-amber-600">
-                            -{formatCurrency((selectedQuote.total_deposits ?? 0) + (selectedQuote.total_sold ?? 0))}
+                            -{formatCurrency(previouslyPaid)}
                           </span>
                         </div>
                         <div className="flex justify-between text-xl font-bold border-t pt-3">
-                          <span>A Cobrar</span>
-                          <span className="text-primary">
-                            {formatCurrency(Math.max(0, total - (selectedQuote.total_deposits ?? 0) - (selectedQuote.total_sold ?? 0)))}
-                          </span>
+                          <span>Saldo a Cobrar</span>
+                          <span className="text-primary">{formatCurrency(total)}</span>
                         </div>
                       </>
                     )}
-                    {!(selectedQuote && ((selectedQuote.total_deposits ?? 0) + (selectedQuote.total_sold ?? 0)) > 0) && (
+                    {!(selectedQuote && previouslyPaid > 0) && (
                       <div className="flex justify-between text-xl font-bold border-t pt-3">
                         <span>Total</span>
                         <span className="text-primary">{formatCurrency(total)}</span>
