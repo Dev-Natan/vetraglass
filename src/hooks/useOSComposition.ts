@@ -229,6 +229,7 @@ async function fetchOSComposition(ordemServicoId: string): Promise<{
       aluminumColor: item.quote_items?.aluminum_color ?? item.aluminum_color ?? null,
       glassColor: item.quote_items?.glass_color ?? item.glass_color ?? null,
       glassThickness: item.quote_items?.glass_thickness ?? item.glass_thickness ?? null,
+      productImageUrl,
       rows,
     });
   }
