@@ -358,8 +358,20 @@ export function ContasPagarTab() {
         <CardHeader className="pb-3">
           <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
             <CardTitle className="text-lg">Contas a Pagar</CardTitle>
-            <div className="flex gap-2">
-              <MonthSelector selectedDate={month} onMonthChange={setMonth} />
+            <div className="flex flex-wrap gap-2">
+              <Select value={scope} onValueChange={(v) => setScope(v as PeriodScope)}>
+                <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="next30">Próximos 30 dias</SelectItem>
+                  <SelectItem value="next60">Próximos 60 dias</SelectItem>
+                  <SelectItem value="next90">Próximos 90 dias</SelectItem>
+                  <SelectItem value="month">Mês específico</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
+                </SelectContent>
+              </Select>
+              {scope === 'month' && (
+                <MonthSelector selectedDate={month} onMonthChange={setMonth} />
+              )}
               <Button onClick={openNew} size="sm"><Plus className="w-4 h-4 mr-1" /> Nova conta</Button>
             </div>
           </div>
