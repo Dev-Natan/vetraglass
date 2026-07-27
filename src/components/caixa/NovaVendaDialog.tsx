@@ -179,13 +179,54 @@ export function NovaVendaDialog({
     return (subtotal * percent) / 100;
   }, [subtotal, discountPercent]);
 
-  // Créditos já recebidos no orçamento (entradas + faturamentos anteriores).
-  // Aplicamos como abatimento implícito para que o "Total" desta venda
-  // já represente APENAS o saldo restante a cobrar.
-  const previouslyPaid = useMemo(() => {
-    if (!selectedQuote) return 0;
-    return Math.max(0, (selectedQuote.total_deposits ?? 0) + (selectedQuote.total_sold ?? 0));
-  }, [selectedQuote]);
+  // Créditos já recebidos no orçamento (entradas + faturamentos anteriores),
+  // calculados a partir dos registros reais em quote_deposits + sales com
+  // deduplicação por (amount, timestamp ±5s) para evitar dupla contagem
+  // quando uma venda anterior gerou também um registro de depósito.
+  const { data: previouslyPaid = 0 } = useQuery({
+    queryKey: ['quote-previously-paid', selectedQuote?.id],
+    enabled: !!selectedQuote?.id,
+    staleTime: 0,
+    gcTime: 0,
+    queryFn: async () => {
+      if (!selectedQuote?.id) return 0;
+      const [depRes, salRes] = await Promise.all([
+        supabase
+          .from('quote_deposits')
+          .select('amount, received_at, created_at')
+          .eq('quote_id', selectedQuote.id)
+          .eq('status', 'received'),
+        supabase
+          .from('sales')
+          .select('paid_amount, total_amount, created_at, cancelled_at')
+          .eq('quote_id', selectedQuote.id)
+          .is('cancelled_at', null),
+      ]);
+      const deposits = (depRes.data || []).map(d => ({
+        amount: Number(d.amount) || 0,
+        ts: new Date(d.received_at || d.created_at || Date.now()).getTime(),
+      }));
+      const sales = (salRes.data || []).map(s => ({
+        amount: Number(s.paid_amount ?? s.total_amount) || 0,
+        ts: new Date(s.created_at || Date.now()).getTime(),
+      }));
+      // Dedup: para cada depósito, se existe venda com mesmo valor dentro
+      // de ±5s, considera que ambos representam a mesma transação e conta
+      // apenas uma vez (a venda tem prioridade).
+      const TOL = 5000;
+      const seen = new Set<number>();
+      let recomputed = 0;
+      for (const s of sales) recomputed += s.amount;
+      for (const d of deposits) {
+        const hit = sales.findIndex(
+          (s, i) => !seen.has(i) && s.amount === d.amount && Math.abs(s.ts - d.ts) <= TOL
+        );
+        if (hit >= 0) seen.add(hit);
+        else recomputed += d.amount;
+      }
+      return Math.max(0, recomputed);
+    },
+  });
 
   const grossTotal = subtotal - discountValue;
   const total = Math.max(0, grossTotal - previouslyPaid);
@@ -902,45 +943,30 @@ export function NovaVendaDialog({
                       </div>
                       
                       {/* Resumo financeiro do orçamento selecionado */}
-                      {(() => {
-                        const totalDeposits = selectedQuote.total_deposits ?? 0;
-                        const totalSold = selectedQuote.total_sold ?? 0;
-                        const pendingAmount = selectedQuote.pending_amount ?? selectedQuote.final_amount;
-                        const hasPayments = totalDeposits > 0 || totalSold > 0;
-                        
-                        if (!hasPayments) return null;
-                        
-                        return (
-                          <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 space-y-2">
-                            <p className="text-xs font-medium text-amber-700 dark:text-amber-300 flex items-center gap-1">
-                              <DollarSign className="w-3 h-3" />
-                              Resumo Financeiro
-                            </p>
-                            <div className="grid grid-cols-2 gap-2 text-xs">
-                              <div>
-                                <p className="text-muted-foreground">Valor Original</p>
-                                <p className="font-medium">{formatCurrency(selectedQuote.final_amount)}</p>
-                              </div>
-                              {totalDeposits > 0 && (
-                                <div>
-                                  <p className="text-muted-foreground">Entrada Recebida</p>
-                                  <p className="font-medium text-amber-600">-{formatCurrency(totalDeposits)}</p>
-                                </div>
-                              )}
-                              {totalSold > 0 && (
-                                <div>
-                                  <p className="text-muted-foreground">Já Faturado</p>
-                                  <p className="font-medium text-blue-600">-{formatCurrency(totalSold)}</p>
-                                </div>
-                              )}
-                              <div className="col-span-2 pt-2 border-t border-amber-200 dark:border-amber-700">
-                                <p className="text-muted-foreground">Faturando agora</p>
-                                <p className="font-bold text-lg text-green-600">{formatCurrency(pendingAmount)}</p>
-                              </div>
+                      {previouslyPaid > 0 && (
+                        <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 space-y-2">
+                          <p className="text-xs font-medium text-amber-700 dark:text-amber-300 flex items-center gap-1">
+                            <DollarSign className="w-3 h-3" />
+                            Resumo Financeiro
+                          </p>
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                              <p className="text-muted-foreground">Valor Original</p>
+                              <p className="font-medium">{formatCurrency(selectedQuote.final_amount)}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground">Já Recebido</p>
+                              <p className="font-medium text-amber-600">-{formatCurrency(previouslyPaid)}</p>
+                            </div>
+                            <div className="col-span-2 pt-2 border-t border-amber-200 dark:border-amber-700">
+                              <p className="text-muted-foreground">Saldo a Cobrar</p>
+                              <p className="font-bold text-lg text-green-600">
+                                {formatCurrency(Math.max(0, selectedQuote.final_amount - previouslyPaid))}
+                              </p>
                             </div>
                           </div>
-                        );
-                      })()}
+                        </div>
+                      )}
                       
                       <div className="space-y-2">
                         {items.map((item) => (
@@ -1090,24 +1116,22 @@ export function NovaVendaDialog({
                           Finalizando...
                         </>
                       ) : (
-                        (() => {
-                          const depositAmount = selectedQuote ? (selectedQuote.total_deposits ?? 0) + (selectedQuote.total_sold ?? 0) : 0;
-                          const effectiveAmount = depositAmount > 0 ? Math.max(0, total - depositAmount) : total;
-                          return `Faturar ${formatCurrency(effectiveAmount)}`;
-                        })()
+                        // `total` já representa o Saldo a Cobrar
+                        // (grossTotal - previouslyPaid). Não subtrair novamente.
+                        `Faturar ${formatCurrency(total)}`
                       )}
                     </Button>
                   </div>
                 </>
               )}
 
-              {/* Payment Sheet */}
+              {/* Payment Sheet — total já é o saldo restante, não passar dedução extra */}
               <InstallmentPaymentSheet
                 open={paymentSheetOpen}
                 onOpenChange={setPaymentSheetOpen}
                 totalAmount={total}
                 onConfirm={handlePaymentConfirm}
-                quoteDepositAmount={selectedQuote ? (selectedQuote.total_deposits ?? 0) + (selectedQuote.total_sold ?? 0) : 0}
+                quoteDepositAmount={0}
               />
             </div>
           ) : viewMode === 'add-product' ? (
