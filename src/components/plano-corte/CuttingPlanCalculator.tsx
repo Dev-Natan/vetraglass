@@ -511,10 +511,31 @@ export function CuttingPlanCalculator() {
     exportCuttingPlanToCSV(exportData);
   };
 
-  const handlePrint = () => {
-    // Renderiza via .print-area (PrintableCuttingReport) — layout preto/branco A4.
-    window.print();
+  const handlePrint = async () => {
+    const el = document.querySelector<HTMLElement>('.print-area .printable-report');
+    if (!el) {
+      toast.error('Relatório não encontrado para gerar o PDF.');
+      return;
+    }
+    const productSlug = (selectedProductData?.name || 'plano-de-corte')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+    const filename = `plano-de-corte-${productSlug || 'produto'}.pdf`;
+
+    const t = toast.loading('Gerando PDF do plano de corte…');
+    try {
+      const { downloadElementAsPdf } = await import('@/utils/printableToPdf');
+      await downloadElementAsPdf(el, filename);
+      toast.success('PDF gerado com sucesso!', { id: t });
+    } catch (err) {
+      console.error('Falha ao gerar PDF do plano de corte:', err);
+      toast.error('Não foi possível gerar o PDF.', { id: t });
+    }
   };
+
 
 
   return (
