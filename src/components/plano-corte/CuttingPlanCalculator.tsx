@@ -369,6 +369,55 @@ export function CuttingPlanCalculator() {
   }, [productItems, glassFormulas, width, height, quantity, completedItems, glassOverrides]);
 
 
+  const accessoryItems = useMemo((): AccessoryCutItem[] => {
+    if (!productItems || productItems.length === 0) return [];
+    const units = itemTemplateUnits || {};
+    return productItems
+      .filter((it: any) => it.item_templates && !['profile', 'glass'].includes(it.item_templates.type))
+      .map((it: any) => {
+        const tpl = it.item_templates;
+        const unit = units[tpl.id] || 'un';
+        const piecesQty = Number(it.pieces_quantity || 1);
+        const qf: string | null = it.quantity_formula;
+        let total = piecesQty * quantity;
+        let isFixed = true;
+        if (qf && qf.trim() !== '' && qf.trim() !== '1') {
+          const r = evaluateFormula(qf, width, height);
+          if (r > 0) {
+            isFixed = false;
+            if (unit === 'm' || unit === 'metros') total = (r / 1000) * piecesQty * quantity;
+            else if (unit === 'm²' || unit === 'm2') total = (r / 1000000) * piecesQty * quantity;
+            else total = r * piecesQty * quantity;
+          }
+        }
+        return {
+          id: it.id,
+          itemName: tpl.name,
+          type: tpl.type,
+          unit,
+          quantity: Math.round(total * 1000) / 1000,
+          formula: qf,
+          isFixed,
+          imageUrl: tpl.image_url,
+        };
+      })
+      .sort((a, b) => a.itemName.localeCompare(b.itemName, 'pt-BR'));
+  }, [productItems, itemTemplateUnits, width, height, quantity]);
+
+  const accessoryBuckets = useMemo(() => {
+    const acessorios: AccessoryCutItem[] = [];
+    const componentes: AccessoryCutItem[] = [];
+    const insumos: AccessoryCutItem[] = [];
+    for (const it of accessoryItems) {
+      const t = (it.type || '').toLowerCase();
+      if (['accessory', 'acessorio', 'hardware', 'ferragem'].includes(t)) acessorios.push(it);
+      else if (['component', 'componente', 'fixed', 'fixo'].includes(t)) componentes.push(it);
+      else insumos.push(it);
+    }
+    return { acessorios, componentes, insumos };
+  }, [accessoryItems]);
+
+
   const barOptimizationData = useMemo(() => {
     return calculatedCuts.map(cut => ({
       itemTemplateId: (cut as any).itemTemplateId || cut.profileName,
