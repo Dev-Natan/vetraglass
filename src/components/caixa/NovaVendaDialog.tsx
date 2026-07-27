@@ -211,29 +211,11 @@ export function NovaVendaDialog({
         ts: new Date(s.created_at || Date.now()).getTime(),
       }));
       // Dedup: para cada depósito, se existe venda com mesmo valor dentro
-      // de ±5s, considera que ambos representam a mesma transação e mantém
-      // apenas o registro da venda.
+      // de ±5s, considera que ambos representam a mesma transação e conta
+      // apenas uma vez (a venda tem prioridade).
       const TOL = 5000;
-      const usedSaleIdx = new Set<number>();
-      let total = 0;
-      for (const d of deposits) {
-        const match = sales.findIndex(
-          (s, i) => !usedSaleIdx.has(i) && s.amount === d.amount && Math.abs(s.ts - d.ts) <= TOL
-        );
-        if (match >= 0) {
-          usedSaleIdx.add(match);
-        } else {
-          total += d.amount;
-        }
-      }
-      sales.forEach((s, i) => {
-        if (!usedSaleIdx.has(i)) total += s.amount;
-        else total += s.amount; // sale wins over paired deposit
-      });
-      // Ajuste: no loop acima somamos as sales pareadas uma vez também.
-      // Recompor de forma explícita:
-      let recomputed = 0;
       const seen = new Set<number>();
+      let recomputed = 0;
       for (const s of sales) recomputed += s.amount;
       for (const d of deposits) {
         const hit = sales.findIndex(
