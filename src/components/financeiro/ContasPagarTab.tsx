@@ -114,7 +114,17 @@ export function ContasPagarTab() {
       : '';
 
   const [month, setMonth] = useState(new Date());
-  const range = getMonthDateRange(month);
+  const [scope, setScope] = useState<PeriodScope>('next30');
+  const monthRange = getMonthDateRange(month);
+  const range = useMemo(() => {
+    const today = startOfDay(new Date());
+    if (scope === 'month') return { start: monthRange.start, end: monthRange.end };
+    if (scope === 'next30') return { start: today, end: addDays(today, 30) };
+    if (scope === 'next60') return { start: today, end: addDays(today, 60) };
+    if (scope === 'next90') return { start: today, end: addDays(today, 90) };
+    return null; // all
+  }, [scope, monthRange.start, monthRange.end]);
+
   const [search, setSearch] = useState(initialSearch);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -126,16 +136,20 @@ export function ContasPagarTab() {
   const [payDate, setPayDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
   const { data: payables = [], isLoading } = useQuery({
-    queryKey: ['payables', currentCompany?.id, month.getMonth(), month.getFullYear()],
+    queryKey: ['payables', currentCompany?.id, scope, month.getMonth(), month.getFullYear()],
     queryFn: async () => {
       if (!currentCompany?.id) return [];
-      const { data, error } = await supabase
+      let q = supabase
         .from('expenses')
         .select('*')
         .eq('company_id', currentCompany.id)
-        .gte('due_date', format(range.start, 'yyyy-MM-dd'))
-        .lte('due_date', format(range.end, 'yyyy-MM-dd'))
         .order('due_date', { ascending: true });
+      if (range) {
+        q = q
+          .gte('due_date', format(range.start, 'yyyy-MM-dd'))
+          .lte('due_date', format(range.end, 'yyyy-MM-dd'));
+      }
+      const { data, error } = await q;
       if (error) throw error;
       return (data as Payable[]) || [];
     },
