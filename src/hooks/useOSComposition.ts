@@ -95,26 +95,31 @@ async function fetchOSComposition(ordemServicoId: string): Promise<{
 
     let templateId: string = referenceId;
     let hasMultipleSides = false;
+    let productImageUrl: string | null = null;
 
     // If it's a company_product row, dereference to its underlying template
     if (item.company_product_id) {
       const { data: cp } = await supabase
         .from('company_products')
-        .select('id, product_template_id, has_multiple_sides')
+        .select('id, product_template_id, has_multiple_sides, image_url')
         .eq('id', item.company_product_id)
         .maybeSingle();
       if (cp) {
         templateId = cp.product_template_id || cp.id;
         hasMultipleSides = !!cp.has_multiple_sides;
+        productImageUrl = cp.image_url || null;
       }
     }
-    if (!hasMultipleSides) {
+    {
       const { data: pt } = await supabase
         .from('product_templates')
-        .select('has_multiple_sides')
+        .select('has_multiple_sides, image_url')
         .eq('id', templateId)
         .maybeSingle();
-      hasMultipleSides = !!pt?.has_multiple_sides;
+      if (pt) {
+        if (!hasMultipleSides) hasMultipleSides = !!pt.has_multiple_sides;
+        if (!productImageUrl) productImageUrl = pt.image_url || null;
+      }
     }
 
     // 4. Effective composition via RPC (handles company override + admin fallback)
