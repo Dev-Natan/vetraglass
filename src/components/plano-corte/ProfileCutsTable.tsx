@@ -155,8 +155,7 @@ export function ProfileCutsTable({
                         <CutAngleIcon angle={angleEnd} side="end" className="text-background" />
                         {angleEnd}°
                         </span>
-                      </div>
-                    )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-center">
                     <span
