@@ -16,7 +16,9 @@ import { generateCuttingPlanPdf } from '@/utils/generateCuttingPlanPdf';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { BarOptimizationView } from '@/components/plano-corte/BarOptimizationView';
 import { PrintableCuttingReport, type PrintableProfileCut, type PrintableProductSummary } from '@/components/plano-corte/PrintableCuttingReport';
+import { useOSComposition } from '@/hooks/useOSComposition';
 import { useMemo } from 'react';
+
 
 
 
