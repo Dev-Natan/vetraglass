@@ -1116,24 +1116,22 @@ export function NovaVendaDialog({
                           Finalizando...
                         </>
                       ) : (
-                        (() => {
-                          const depositAmount = selectedQuote ? (selectedQuote.total_deposits ?? 0) + (selectedQuote.total_sold ?? 0) : 0;
-                          const effectiveAmount = depositAmount > 0 ? Math.max(0, total - depositAmount) : total;
-                          return `Faturar ${formatCurrency(effectiveAmount)}`;
-                        })()
+                        // `total` já representa o Saldo a Cobrar
+                        // (grossTotal - previouslyPaid). Não subtrair novamente.
+                        `Faturar ${formatCurrency(total)}`
                       )}
                     </Button>
                   </div>
                 </>
               )}
 
-              {/* Payment Sheet */}
+              {/* Payment Sheet — total já é o saldo restante, não passar dedução extra */}
               <InstallmentPaymentSheet
                 open={paymentSheetOpen}
                 onOpenChange={setPaymentSheetOpen}
                 totalAmount={total}
                 onConfirm={handlePaymentConfirm}
-                quoteDepositAmount={selectedQuote ? (selectedQuote.total_deposits ?? 0) + (selectedQuote.total_sold ?? 0) : 0}
+                quoteDepositAmount={0}
               />
             </div>
           ) : viewMode === 'add-product' ? (
