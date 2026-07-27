@@ -573,7 +573,8 @@ export function CuttingPlanCalculator() {
             <DropdownMenuContent align="end" className="bg-popover border shadow-md">
               <DropdownMenuItem onClick={handlePrint}>
                 <Printer className="w-4 h-4 mr-2" />
-                Imprimir (Nova janela)
+                Baixar PDF
+
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleExportCSV}>
                 <Download className="w-4 h-4 mr-2" />
