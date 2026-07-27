@@ -707,9 +707,9 @@ export function CuttingPlanCalculator() {
           )}
 
           <Button
-            onClick={() => window.print()}
+            onClick={handlePrint}
             className="gap-2"
-            disabled={!selectedProduct || (calculatedCuts.length === 0 && calculatedGlassCuts.length === 0)}
+            disabled={!selectedProduct || (calculatedCuts.length === 0 && calculatedGlassCuts.length === 0 && accessoryItems.length === 0)}
           >
             <Printer className="w-4 h-4" />
             Imprimir Plano (PDF)
