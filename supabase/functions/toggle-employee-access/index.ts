@@ -9,7 +9,7 @@ const corsHeaders = {
 
 interface ToggleEmployeeAccessRequest {
   employeeId: string;
-  userId: string;
+  userId?: string; // ignored — resolved server-side from employees.user_id
   isActive: boolean;
 }
 
@@ -27,11 +27,11 @@ serve(async (req: Request): Promise<Response> => {
       });
     }
 
-    const { employeeId, userId, isActive }: ToggleEmployeeAccessRequest = await req.json();
+    const { employeeId, isActive }: ToggleEmployeeAccessRequest = await req.json();
 
-    if (!employeeId || !userId) {
+    if (!employeeId) {
       return new Response(
-        JSON.stringify({ error: "Campos obrigatórios: employeeId, userId" }),
+        JSON.stringify({ error: "Campo obrigatório: employeeId" }),
         {
           status: 400,
           headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -39,7 +39,7 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`Toggling access for employee ${employeeId}, user ${userId}, isActive: ${isActive}`);
+    console.log(`Toggling access for employee ${employeeId}, isActive: ${isActive}`);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -66,10 +66,10 @@ serve(async (req: Request): Promise<Response> => {
       },
     });
 
-    // 2. Get company for this employee to check requester's permission
+    // 2. Get employee row (company + linked user) to check permission and resolve userId
     const { data: employeeData, error: employeeError } = await supabaseAdmin
       .from("employees")
-      .select("company_id")
+      .select("company_id, user_id")
       .eq("id", employeeId)
       .maybeSingle();
 
@@ -79,6 +79,16 @@ serve(async (req: Request): Promise<Response> => {
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
+
+    if (!employeeData.user_id) {
+      return new Response(JSON.stringify({ error: "Funcionário não possui login vinculado." }), {
+        status: 400,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    // Resolve userId strictly from the employee row (prevents cross-tenant ban/unban)
+    const userId = employeeData.user_id as string;
 
     // 3. Check if requester has admin/manager permissions in that company
     const { data: userCompany, error: checkError } = await supabaseAdmin
@@ -107,11 +117,12 @@ serve(async (req: Request): Promise<Response> => {
       }
     }
 
-    // Update user_companies to reflect active status
+    // Update user_companies to reflect active status — scoped to this company only
     const { error: userCompanyError } = await supabaseAdmin
       .from("user_companies")
       .update({ is_active: isActive })
-      .eq("user_id", userId);
+      .eq("user_id", userId)
+      .eq("company_id", employeeData.company_id);
 
     if (userCompanyError) {
       console.error("Error updating user_companies:", userCompanyError);
