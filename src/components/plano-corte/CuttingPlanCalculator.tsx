@@ -824,6 +824,48 @@ export function CuttingPlanCalculator() {
               <div className="text-center py-12 text-muted-foreground">
                 Selecione um produto para ver a otimização de barras
               </div>
+          </TabsContent>
+
+          <TabsContent value="acessorios" className="mt-4 space-y-6">
+            {!selectedProduct ? (
+              <div className="text-center py-12 text-muted-foreground">
+                Selecione um produto para listar acessórios, componentes e insumos.
+              </div>
+            ) : accessoryItems.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                Nenhum acessório, componente ou insumo configurado na composição deste produto.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <AccessoriesCutsTable
+                  title="Acessórios"
+                  icon="accessory"
+                  items={accessoryBuckets.acessorios}
+                  emptyMessage="Nenhum acessório (ferragens, roldanas, puxadores) nesta composição."
+                />
+                <AccessoriesCutsTable
+                  title="Componentes Fixos"
+                  icon="component"
+                  items={accessoryBuckets.componentes}
+                  emptyMessage="Nenhum componente fixo cadastrado."
+                />
+                <AccessoriesCutsTable
+                  title="Insumos"
+                  icon="input"
+                  items={accessoryBuckets.insumos}
+                  emptyMessage="Nenhum insumo (silicone, escovinha, borracha) cadastrado."
+                />
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="otimizacao" className="mt-4">
+            {barOptimizationData.length > 0 ? (
+              <BarOptimizationView cuts={barOptimizationData} />
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                Selecione um produto para ver a otimização de barras
+              </div>
             )}
           </TabsContent>
         </Tabs>
