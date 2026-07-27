@@ -117,11 +117,12 @@ serve(async (req: Request): Promise<Response> => {
       }
     }
 
-    // Update user_companies to reflect active status
+    // Update user_companies to reflect active status — scoped to this company only
     const { error: userCompanyError } = await supabaseAdmin
       .from("user_companies")
       .update({ is_active: isActive })
-      .eq("user_id", userId);
+      .eq("user_id", userId)
+      .eq("company_id", employeeData.company_id);
 
     if (userCompanyError) {
       console.error("Error updating user_companies:", userCompanyError);
