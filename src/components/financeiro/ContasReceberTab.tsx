@@ -82,7 +82,7 @@ export function ContasReceberTab() {
   const queryClient = useQueryClient();
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('pending');
-  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('all');
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('month');
   const [searchTerm, setSearchTerm] = useState('');
   
   const [receiveDialogOpen, setReceiveDialogOpen] = useState(false);
