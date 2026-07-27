@@ -179,13 +179,72 @@ export function NovaVendaDialog({
     return (subtotal * percent) / 100;
   }, [subtotal, discountPercent]);
 
-  // Créditos já recebidos no orçamento (entradas + faturamentos anteriores).
-  // Aplicamos como abatimento implícito para que o "Total" desta venda
-  // já represente APENAS o saldo restante a cobrar.
-  const previouslyPaid = useMemo(() => {
-    if (!selectedQuote) return 0;
-    return Math.max(0, (selectedQuote.total_deposits ?? 0) + (selectedQuote.total_sold ?? 0));
-  }, [selectedQuote]);
+  // Créditos já recebidos no orçamento (entradas + faturamentos anteriores),
+  // calculados a partir dos registros reais em quote_deposits + sales com
+  // deduplicação por (amount, timestamp ±5s) para evitar dupla contagem
+  // quando uma venda anterior gerou também um registro de depósito.
+  const { data: previouslyPaid = 0 } = useQuery({
+    queryKey: ['quote-previously-paid', selectedQuote?.id],
+    enabled: !!selectedQuote?.id,
+    staleTime: 0,
+    gcTime: 0,
+    queryFn: async () => {
+      if (!selectedQuote?.id) return 0;
+      const [depRes, salRes] = await Promise.all([
+        supabase
+          .from('quote_deposits')
+          .select('amount, received_at, created_at')
+          .eq('quote_id', selectedQuote.id)
+          .eq('status', 'received'),
+        supabase
+          .from('sales')
+          .select('paid_amount, total_amount, created_at, status')
+          .eq('quote_id', selectedQuote.id)
+          .neq('status', 'cancelled'),
+      ]);
+      const deposits = (depRes.data || []).map(d => ({
+        amount: Number(d.amount) || 0,
+        ts: new Date(d.received_at || d.created_at || Date.now()).getTime(),
+      }));
+      const sales = (salRes.data || []).map(s => ({
+        amount: Number(s.paid_amount ?? s.total_amount) || 0,
+        ts: new Date(s.created_at || Date.now()).getTime(),
+      }));
+      // Dedup: para cada depósito, se existe venda com mesmo valor dentro
+      // de ±5s, considera que ambos representam a mesma transação e mantém
+      // apenas o registro da venda.
+      const TOL = 5000;
+      const usedSaleIdx = new Set<number>();
+      let total = 0;
+      for (const d of deposits) {
+        const match = sales.findIndex(
+          (s, i) => !usedSaleIdx.has(i) && s.amount === d.amount && Math.abs(s.ts - d.ts) <= TOL
+        );
+        if (match >= 0) {
+          usedSaleIdx.add(match);
+        } else {
+          total += d.amount;
+        }
+      }
+      sales.forEach((s, i) => {
+        if (!usedSaleIdx.has(i)) total += s.amount;
+        else total += s.amount; // sale wins over paired deposit
+      });
+      // Ajuste: no loop acima somamos as sales pareadas uma vez também.
+      // Recompor de forma explícita:
+      let recomputed = 0;
+      const seen = new Set<number>();
+      for (const s of sales) recomputed += s.amount;
+      for (const d of deposits) {
+        const hit = sales.findIndex(
+          (s, i) => !seen.has(i) && s.amount === d.amount && Math.abs(s.ts - d.ts) <= TOL
+        );
+        if (hit >= 0) seen.add(hit);
+        else recomputed += d.amount;
+      }
+      return Math.max(0, recomputed);
+    },
+  });
 
   const grossTotal = subtotal - discountValue;
   const total = Math.max(0, grossTotal - previouslyPaid);
