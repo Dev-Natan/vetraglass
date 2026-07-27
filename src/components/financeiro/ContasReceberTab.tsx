@@ -148,6 +148,10 @@ export function ContasReceberTab() {
             return dueDate >= today && dueDate <= addDays(today, 7);
           case 'month':
             return dueDate >= today && dueDate <= addDays(today, 30);
+          case 'next60':
+            return dueDate >= today && dueDate <= addDays(today, 60);
+          case 'next90':
+            return dueDate >= today && dueDate <= addDays(today, 90);
           case 'overdue':
             return isPast(dueDate) && !isToday(dueDate) && r.status !== 'paid';
           default:
