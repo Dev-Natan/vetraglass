@@ -536,14 +536,19 @@ export function CuttingPlanCalculator() {
             .section-dot-glass { background: #9333ea; }
             .section-dot-profile { background: #1e3a5f; }
             table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+            thead { display: table-header-group; }
+            tr { page-break-inside: avoid; }
             th { padding: 12px; text-align: left; font-size: 12px; text-transform: uppercase; color: white; }
             th.glass { background: #9333ea; }
             th.profile { background: #1e3a5f; }
+            th.acc { background: #f59e0b; }
             td { padding: 12px; border-bottom: 1px solid #eee; vertical-align: middle; }
             .value-green { color: #16a34a; font-weight: bold; font-size: 16px; }
             .value-blue { color: #2563eb; font-weight: bold; font-size: 16px; }
             .value-purple { color: #9333ea; font-weight: bold; font-size: 16px; }
-            @media print { body { padding: 10px; } }
+            .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; background: #f3f4f6; color: #374151; text-transform: uppercase; }
+            .section-dot-acc { background: #f59e0b; }
+            @media print { body { padding: 10px; } thead { display: table-header-group; } tr { page-break-inside: avoid; } }
           </style>
         </head>
         <body>
@@ -629,6 +634,40 @@ export function CuttingPlanCalculator() {
               </tbody>
             </table>
           ` : ''}
+
+          ${accessoryItems.length > 0 ? `
+            <div class="section-title">
+              <span class="section-dot section-dot-acc"></span>
+              Acessórios &amp; Insumos
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th class="acc">ITEM</th>
+                  <th class="acc">TIPO</th>
+                  <th class="acc">QUANTIDADE</th>
+                  <th class="acc">UNIDADE</th>
+                  <th class="acc">ORIGEM</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${[
+                  ...accessoryBuckets.acessorios.map(i => ({ i, tipo: 'Acessório' })),
+                  ...accessoryBuckets.componentes.map(i => ({ i, tipo: 'Componente Fixo' })),
+                  ...accessoryBuckets.insumos.map(i => ({ i, tipo: 'Insumo' })),
+                ].map(({ i, tipo }) => `
+                  <tr>
+                    <td><strong>${i.itemName}</strong></td>
+                    <td>${tipo}</td>
+                    <td style="font-size: 16px; font-weight: bold;">${i.quantity}</td>
+                    <td>${i.unit || '-'}</td>
+                    <td><span class="badge">${i.isFixed ? 'Fixo' : 'Fórmula'}</span></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          ` : ''}
+          
           
           <p style="margin-top: 30px; text-align: center; font-size: 11px; color: #999;">
             Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}
