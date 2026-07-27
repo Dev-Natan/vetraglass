@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { OSComposedItem, OSComposedRow } from '@/hooks/useOSComposition';
+import { resolveProductImageUrl } from '@/utils/imageUrl';
 
 interface OSInfo {
   os_number: number;
