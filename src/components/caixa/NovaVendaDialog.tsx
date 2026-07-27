@@ -228,6 +228,62 @@ export function NovaVendaDialog({
     },
   });
 
+  // Mapa de "Total Já Pago" (deduplicado) por orçamento aprovado, para
+  // exibição consistente nos cards da listagem. Segue a mesma regra de
+  // deduplicação (amount + timestamp ±5s) usada no rodapé.
+  const approvedQuoteIds = useMemo(
+    () => (approvedQuotes || []).map(q => q.id).filter(Boolean),
+    [approvedQuotes]
+  );
+  const { data: paidByQuote = {} } = useQuery<Record<string, number>>({
+    queryKey: ['approved-quotes-paid-map', approvedQuoteIds],
+    enabled: approvedQuoteIds.length > 0,
+    staleTime: 0,
+    gcTime: 0,
+    queryFn: async () => {
+      const [depRes, salRes] = await Promise.all([
+        supabase
+          .from('quote_deposits')
+          .select('quote_id, amount, received_at, created_at')
+          .in('quote_id', approvedQuoteIds)
+          .eq('status', 'received'),
+        supabase
+          .from('sales')
+          .select('quote_id, paid_amount, total_amount, created_at, cancelled_at')
+          .in('quote_id', approvedQuoteIds)
+          .is('cancelled_at', null),
+      ]);
+      const TOL = 5000;
+      const result: Record<string, number> = {};
+      for (const qid of approvedQuoteIds) {
+        const deposits = (depRes.data || [])
+          .filter(d => d.quote_id === qid)
+          .map(d => ({
+            amount: Number(d.amount) || 0,
+            ts: new Date(d.received_at || d.created_at || Date.now()).getTime(),
+          }));
+        const sales = (salRes.data || [])
+          .filter(s => s.quote_id === qid)
+          .map(s => ({
+            amount: Number(s.paid_amount ?? s.total_amount) || 0,
+            ts: new Date(s.created_at || Date.now()).getTime(),
+          }));
+        const seen = new Set<number>();
+        let paid = 0;
+        for (const s of sales) paid += s.amount;
+        for (const d of deposits) {
+          const hit = sales.findIndex(
+            (s, i) => !seen.has(i) && s.amount === d.amount && Math.abs(s.ts - d.ts) <= TOL
+          );
+          if (hit >= 0) seen.add(hit);
+          else paid += d.amount;
+        }
+        result[qid] = Math.max(0, paid);
+      }
+      return result;
+    },
+  });
+
   const grossTotal = subtotal - discountValue;
   const total = Math.max(0, grossTotal - previouslyPaid);
 
