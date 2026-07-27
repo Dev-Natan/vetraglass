@@ -350,8 +350,8 @@ export function ContasPagarTab() {
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
         <SumCard label="A pagar" value={summary.totalPending} icon={Clock} color="text-yellow-600" />
         <SumCard label="Atrasado" value={summary.totalOverdue} icon={AlertCircle} color="text-red-600" />
-        <SumCard label="Pago no mês" value={summary.totalPaid} icon={CheckCircle} color="text-green-600" />
-        <SumCard label="Total no mês" value={summary.totalPending + summary.totalPaid + summary.totalOverdue} icon={Banknote} color="text-foreground" />
+        <SumCard label="Pago no período" value={summary.totalPaid} icon={CheckCircle} color="text-green-600" />
+        <SumCard label="Total no período" value={summary.totalPending + summary.totalPaid + summary.totalOverdue} icon={Banknote} color="text-foreground" />
       </div>
 
       <Card>
