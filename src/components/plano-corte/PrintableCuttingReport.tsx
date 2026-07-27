@@ -284,6 +284,33 @@ export function PrintableCuttingReport({
         </section>
       )}
 
+      {/* 5. Accessories & inputs */}
+      {accessories.length > 0 && (
+        <section style={styles.section}>
+          <h2 style={styles.sectionTitle}>Acessórios & Insumos</h2>
+          <table style={styles.cutsTable}>
+            <thead>
+              <tr>
+                <th style={styles.th}>Item</th>
+                <th style={styles.th}>Tipo</th>
+                <th style={{ ...styles.th, ...styles.numCell }}>Quantidade</th>
+                <th style={styles.th}>Unidade</th>
+              </tr>
+            </thead>
+            <tbody>
+              {accessories.map((a, idx) => (
+                <tr key={idx} style={{ pageBreakInside: 'avoid' }}>
+                  <td style={styles.td}>{a.itemName}</td>
+                  <td style={styles.td}>{a.type}</td>
+                  <td style={{ ...styles.td, ...styles.numCell, fontWeight: 700 }}>{a.quantity}</td>
+                  <td style={styles.td}>{a.unit || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+
       <footer style={styles.footer}>
         {companyName} — Documento gerado automaticamente pelo sistema. Preto sobre branco para impressão econômica.
       </footer>
