@@ -175,6 +175,13 @@ export default function Estoque() {
               subtitle={`${stats.diversos.items} item(s) · ${stats.diversos.qty.toFixed(2)} em saldo`}
               badge={`${stats.linhasDiversos.length} linha(s)`}
             />
+            <StockCard
+              to="/estoque/historico"
+              icon={<History className="w-6 h-6" />}
+              title="Histórico de Movimentações"
+              subtitle="Todas as entradas e saídas — quem, quando, quanto e por quê."
+              badge="Ver histórico"
+            />
           </div>
         ) : view === 'perfis' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
