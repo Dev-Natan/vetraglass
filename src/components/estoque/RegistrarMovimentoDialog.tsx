@@ -42,6 +42,9 @@ interface StockItem {
     image_url?: string;
     type?: string;
     linha?: string;
+    bar_length_mm?: number | null;
+    default_sheet_width_mm?: number | null;
+    default_sheet_height_mm?: number | null;
   };
 }
 
