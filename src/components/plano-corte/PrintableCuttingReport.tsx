@@ -403,7 +403,7 @@ export function PrintableCuttingReport({
                       <Thumb src={c.imageUrl} alt={c.profileName} />
                     </td>
                     <td style={{ ...styles.td, textTransform: 'uppercase', fontWeight: 500 }}>{c.profileName}</td>
-                    <td style={{ ...styles.td, ...styles.numCell, fontWeight: 700 }}>{c.calculatedLength}</td>
+                    <td style={{ ...styles.td, ...styles.numCell, fontWeight: 800, fontSize: '12pt', color: BLUE }}>{c.calculatedLength}</td>
                     <td style={{ ...styles.td, ...styles.numCell, fontWeight: 700 }}>{c.quantity}</td>
                     <td style={styles.td}><AngleGlyph label={angleLabel} /></td>
                     <td style={styles.td}><PositionGlyph position={c.position} /></td>
@@ -427,7 +427,8 @@ export function PrintableCuttingReport({
               <tr>
                 <th style={styles.th}>PERFIL</th>
                 <th style={{ ...styles.th, ...styles.numCell, width: 60 }}>BARRA</th>
-                <th style={styles.th} colSpan={2}>CORTE (MM) &nbsp; · &nbsp; SOBRA (MM)</th>
+                <th style={{ ...styles.th, width: '38%' }}>CORTE (MM)</th>
+                <th style={{ ...styles.th, width: '30%' }}>SOBRA (MM)</th>
                 <th style={{ ...styles.th, ...styles.numCell, width: 110 }}>APROVEITAMENTO</th>
                 <th style={{ ...styles.th, ...styles.numCell, width: 80 }}>RETALHO</th>
               </tr>
@@ -436,34 +437,29 @@ export function PrintableCuttingReport({
               {barRows.map((row, i) => {
                 const usedPct = (row.usedLength / row.barLengthMm) * 100;
                 const wastePct = 100 - usedPct;
+                const totalCutLen = row.cuts.reduce((s, c) => s + c.length * c.qty, 0);
+                const cutWidthPct = Math.max(6, (totalCutLen / row.barLengthMm) * 100);
+                const wasteWidthPct = Math.max(6, (row.remainingLength / row.barLengthMm) * 100);
+                const cutLabel = row.cuts
+                  .map((c) => (c.qty > 1 ? `${c.qty}× ${c.length}` : `${c.length}`))
+                  .join(' + ');
                 return (
                   <tr key={i} style={{ pageBreakInside: 'avoid' }}>
                     <td style={{ ...styles.td, textTransform: 'uppercase', fontWeight: 500 }}>{row.profileName}</td>
                     <td style={{ ...styles.td, ...styles.numCell }}>{row.barIndex}</td>
-                    <td style={{ ...styles.td, padding: '4px 8px' }} colSpan={2}>
-                      <div style={styles.barTrack}>
-                        {row.cuts.flatMap((cut, ci) =>
-                          Array.from({ length: cut.qty }).map((_, pi) => {
-                            const w = (cut.length / row.barLengthMm) * 100;
-                            return (
-                              <div
-                                key={`${ci}-${pi}`}
-                                style={{ ...styles.barPieceCut, width: `${w}%` }}
-                                title={`${cut.length} mm`}
-                              >
-                                {w > 5 ? cut.length : ''}
-                              </div>
-                            );
-                          })
-                        )}
-                        {row.remainingLength > 0 && (
-                          <div
-                            style={{ ...styles.barPieceWaste, width: `${(row.remainingLength / row.barLengthMm) * 100}%` }}
-                          >
-                            {row.remainingLength > row.barLengthMm * 0.05 ? row.remainingLength : ''}
-                          </div>
-                        )}
+                    <td style={{ ...styles.td, padding: '4px 8px' }}>
+                      <div style={styles.pillTrack}>
+                        <div style={{ ...styles.pillCut, width: `${cutWidthPct}%` }}>{cutLabel}</div>
                       </div>
+                    </td>
+                    <td style={{ ...styles.td, padding: '4px 8px' }}>
+                      {row.remainingLength > 0 ? (
+                        <div style={styles.pillTrack}>
+                          <div style={{ ...styles.pillWaste, width: `${wasteWidthPct}%` }}>{row.remainingLength}</div>
+                        </div>
+                      ) : (
+                        <span style={{ color: MUTED, fontSize: '8.5pt' }}>—</span>
+                      )}
                     </td>
                     <td style={{ ...styles.td, ...styles.numCell, color: BLUE, fontWeight: 700 }}>
                       {usedPct.toFixed(1)}%
@@ -494,8 +490,8 @@ export function PrintableCuttingReport({
             <div style={styles.summaryCell}>
               <span style={styles.summaryIcon}><IcoPie /></span>
               <div>
-                <div style={styles.summaryLabel}>APROVEITAMENTO MÉDIO</div>
-                <div style={styles.summaryValue}>{(100 - optimization.avgWastePercent).toFixed(1)}%</div>
+                <div style={styles.summaryLabel}>DESPERDÍCIO MÉDIO</div>
+                <div style={styles.summaryValue}>{optimization.avgWastePercent.toFixed(1)}%</div>
               </div>
             </div>
           </div>
@@ -693,6 +689,42 @@ const styles: Record<string, React.CSSProperties> = {
     background: '#e2e8f0',
     color: MUTED,
     fontSize: '8pt',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    WebkitPrintColorAdjust: 'exact',
+    printColorAdjust: 'exact',
+  },
+
+  /* Pills for CORTE / SOBRA columns (Vetra reference layout) */
+  pillTrack: {
+    display: 'flex',
+    height: 20,
+    background: '#f1f5f9',
+    borderRadius: 3,
+    overflow: 'hidden',
+    border: `1px solid ${BORDER}`,
+    WebkitPrintColorAdjust: 'exact',
+    printColorAdjust: 'exact',
+  },
+  pillCut: {
+    height: '100%',
+    background: BLUE_SOFT,
+    color: '#fff',
+    fontSize: '8.5pt',
+    fontWeight: 700,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    WebkitPrintColorAdjust: 'exact',
+    printColorAdjust: 'exact',
+  },
+  pillWaste: {
+    height: '100%',
+    background: '#cbd5e1',
+    color: '#475569',
+    fontSize: '8.5pt',
+    fontWeight: 600,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
