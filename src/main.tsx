@@ -11,6 +11,14 @@ installImageUrlRewriter();
 // para evitar loop de reload.
 const RELOAD_KEY = "__vite_chunk_reload__";
 
+// Clear on fresh page load so a future stale-chunk error can trigger a new reload.
+sessionStorage.removeItem(RELOAD_KEY);
+
+const isChunkError = (msg: string) =>
+  msg.includes("Failed to fetch dynamically imported module") ||
+  msg.includes("Importing a module script failed") ||
+  msg.includes("error loading dynamically imported module");
+
 const handleChunkError = () => {
   if (sessionStorage.getItem(RELOAD_KEY)) return;
   sessionStorage.setItem(RELOAD_KEY, "1");
@@ -19,15 +27,13 @@ const handleChunkError = () => {
 
 window.addEventListener("vite:preloadError", handleChunkError);
 window.addEventListener("error", (e) => {
-  const msg = e?.message || "";
-  if (
-    msg.includes("Failed to fetch dynamically imported module") ||
-    msg.includes("Importing a module script failed")
-  ) {
-    handleChunkError();
-  }
+  if (isChunkError(e?.message || "")) handleChunkError();
 });
-window.addEventListener("load", () => sessionStorage.removeItem(RELOAD_KEY));
+window.addEventListener("unhandledrejection", (e: PromiseRejectionEvent) => {
+  const reason: any = e?.reason;
+  const msg = reason?.message || String(reason || "");
+  if (isChunkError(msg)) handleChunkError();
+});
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
