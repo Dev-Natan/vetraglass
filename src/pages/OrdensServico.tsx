@@ -493,8 +493,8 @@ export default function OrdensServico() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {paginatedData.map((os) => {
-                  const status = statusConfig[os.status];
-                  const priority = priorityConfig[os.priority || 'normal'];
+                  const status = statusConfig[os.status] ?? FALLBACK_STATUS;
+                  const priority = priorityConfig[os.priority || 'normal'] ?? FALLBACK_PRIORITY;
                   const StatusIcon = status.icon;
                   const overdue = isOverdue(os);
                   const daysLate = os.estimated_end ? getDaysOverdue(os.estimated_end) : 0;
