@@ -566,6 +566,17 @@ export function CuttingPlanCalculator() {
             Imprimir Plano (PDF)
           </Button>
 
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={() => setOffcutsDialogOpen(true)}
+            disabled={!selectedProduct || barOptimizationData.length === 0}
+            title="Registrar as sobras do otimizador no Banco de Retalhos"
+          >
+            <Scissors className="w-4 h-4" />
+            Registrar Sobras
+          </Button>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="gap-2" disabled={!selectedProduct || calculatedCuts.length === 0}>
@@ -591,6 +602,14 @@ export function CuttingPlanCalculator() {
           </DropdownMenu>
         </div>
       </div>
+
+      <SaveOffcutsDialog
+        open={offcutsDialogOpen}
+        onOpenChange={setOffcutsDialogOpen}
+        companyId={currentCompany?.id}
+        profiles={barOptimizationData}
+        defaultReference={productName ? `PC-${productName}` : null}
+      />
 
       <div className="no-print rounded-lg border bg-card">
         <div className="p-4 md:p-6">
