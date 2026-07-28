@@ -407,6 +407,8 @@ export function useApprovalMutation({
       queryClient.invalidateQueries({ queryKey: ['quote-deposit'] });
       queryClient.invalidateQueries({ queryKey: ['pending-deposits'] });
       queryClient.invalidateQueries({ queryKey: ['material-consumption'] });
+      queryClient.invalidateQueries({ queryKey: ['company-stock'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-reservations'] });
       onClose();
       onSuccess?.();
     },
