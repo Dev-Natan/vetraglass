@@ -240,10 +240,6 @@ export default function Produtos() {
 
       <div className="fixed bottom-0 left-0 lg:left-60 right-0 bg-background/95 backdrop-blur border-t p-3 sm:p-4 z-40">
         <div className="container mx-auto flex justify-center gap-12 sm:gap-16">
-          <button onClick={() => setSearchOpen(!searchOpen)} className={`flex flex-col items-center gap-1 ${searchOpen ? 'text-primary' : 'text-muted-foreground'}`}>
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${searchOpen ? 'bg-primary/10' : 'bg-muted'}`}><Search className="w-5 h-5" /></div>
-            <span className="text-xs">Buscar</span>
-          </button>
           <button onClick={() => setCreateCustomDialogOpen(true)} className="flex flex-col items-center gap-1 text-primary">
             <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center"><Sparkles className="w-5 h-5 text-primary-foreground" /></div>
             <span className="text-xs">Novo</span>
