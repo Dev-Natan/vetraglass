@@ -21,6 +21,7 @@ import {
   Lightbulb,
   Tag,
   CalendarDays,
+  Layers,
   LucideIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
