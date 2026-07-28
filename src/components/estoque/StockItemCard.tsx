@@ -210,6 +210,18 @@ export const StockItemCard = memo(function StockItemCard({
           )}
         </div>
 
+        {onViewHistory && (
+          <Button
+            variant="outline"
+            size="icon"
+            className="shrink-0"
+            onClick={(e) => { e.stopPropagation(); onViewHistory(item); }}
+            title="Ver histórico de movimentações"
+          >
+            <History className="w-4 h-4" />
+          </Button>
+        )}
+
         {showActivateBtn && (
           <Button
             variant={item.is_active !== false ? 'outline' : 'default'}
