@@ -622,6 +622,14 @@ export default function EstoqueLinha() {
           } : undefined,
         }))}
       />
+      <ItemHistoricoDialog
+        open={!!historyItem}
+        onOpenChange={(o) => !o && setHistoryItem(null)}
+        itemTemplateId={historyItem?.item_template_id ?? null}
+        itemName={historyItem?.item_template?.name ?? historyItem?.company_item?.name ?? 'Item'}
+        itemUnit={historyItem?.item_template?.unit ?? historyItem?.company_item?.unit ?? 'un'}
+        itemImageUrl={historyItem?.item_template?.image_url ?? historyItem?.company_item?.image_url ?? null}
+      />
     </MainLayout>
   );
 }
