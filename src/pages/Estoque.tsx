@@ -16,6 +16,7 @@ import { useCompanyLinhas } from '@/hooks/useCompanyLinhas';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 import { useDebounce } from '@/hooks/useDebounce';
 import { RegistrarMovimentoDialog } from '@/components/estoque/RegistrarMovimentoDialog';
+import { UnifiedAddItemDialog } from '@/components/estoque/UnifiedAddItemDialog';
 
 const VIDROS_KEY = '__vidros__';
 const DIVERSOS_KEY = '__diversos__';
@@ -41,6 +42,7 @@ export default function Estoque() {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 200);
   const [movDialog, setMovDialog] = useState<null | { tipo: 'entrada' | 'saida' }>(null);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
 
   const { activeItems, isLoading, kpis } = useStockData({ companyId: currentCompany?.id });
   const { data: productLinhas } = useCompanyLinhas();
@@ -179,17 +181,25 @@ export default function Estoque() {
   return (
     <MainLayout>
       <div className="p-6 space-y-6 max-w-6xl mx-auto">
-        <div className="flex items-center gap-3">
-          {view !== 'root' && (
-            <Button variant="ghost" size="icon" onClick={() => setView('root')}>
-              <ArrowLeft className="w-5 h-5" />
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            {view !== 'root' && (
+              <Button variant="ghost" size="icon" onClick={() => setView('root')}>
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+            )}
+            <Boxes className="w-7 h-7 text-primary" />
+            <div>
+              <h1 className="text-2xl font-bold">{headerTitle}</h1>
+              <p className="text-sm text-muted-foreground">{headerSubtitle}</p>
+            </div>
+          </div>
+          {view === 'perfis' && (
+            <Button className="gap-2 w-full sm:w-auto" onClick={() => setAddDialogOpen(true)}>
+              <Plus className="w-4 h-4" />
+              Nova Linha / Perfil
             </Button>
           )}
-          <Boxes className="w-7 h-7 text-primary" />
-          <div>
-            <h1 className="text-2xl font-bold">{headerTitle}</h1>
-            <p className="text-sm text-muted-foreground">{headerSubtitle}</p>
-          </div>
         </div>
 
         {view === 'root' && (
@@ -363,7 +373,7 @@ export default function Estoque() {
             />
           </div>
         ) : view === 'perfis' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {stats.linhasPerfil.length === 0 ? (
               <Card className="col-span-full">
                 <CardContent className="py-8 text-center text-muted-foreground">
@@ -457,6 +467,12 @@ export default function Estoque() {
           stockItems={activeItems as any}
         />
       )}
+
+      <UnifiedAddItemDialog
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
+        defaultTab="custom"
+      />
     </MainLayout>
   );
 }
