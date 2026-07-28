@@ -74,6 +74,9 @@ export default function Index() {
               <DashboardSkeleton />
             ) : (
               <>
+                {/* Alerta de Reposição de Estoque */}
+                <LowStockAlert />
+
                 {/* Cards de Resumo do Dia */}
                 <section className="animate-fade-in">
                   <DayOverviewCards data={dashboardData?.dayOverview} />
