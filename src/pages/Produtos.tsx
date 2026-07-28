@@ -9,13 +9,14 @@ import { CreateLinhaDialog } from '@/components/produtos/CreateLinhaDialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, Search, Sparkles } from 'lucide-react';
+import { Trash2, Search, Sparkles, SlidersHorizontal } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
 import { useProductLinhas } from '@/hooks/useProductLinhas';
+import { ManageLinhasDialog } from '@/components/produtos/ManageLinhasDialog';
 
 export default function Produtos() {
   const navigate = useNavigate();
@@ -29,6 +30,7 @@ export default function Produtos() {
   const [showActive, setShowActive] = useState(true);
   const [createCustomDialogOpen, setCreateCustomDialogOpen] = useState(false);
   const [createLinhaDialogOpen, setCreateLinhaDialogOpen] = useState(false);
+  const [manageLinhasOpen, setManageLinhasOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const { labels: categoryLabels, categories } = useProductCategoryLabels();
   const { data: productLinhas } = useProductLinhas();
@@ -41,10 +43,34 @@ export default function Produtos() {
     });
     return set;
   }, [productLinhas]);
+
+  // Empresa: linhas explicitamente ativadas. Se vazio → considera todas.
+  const { data: enabledLinhaSlugs = [] } = useQuery({
+    queryKey: ['company-enabled-linhas', currentCompany?.id],
+    queryFn: async () => {
+      if (!currentCompany?.id) return [] as string[];
+      const { data, error } = await supabase
+        .from('company_enabled_linhas')
+        .select('linha_slug')
+        .eq('company_id', currentCompany.id);
+      if (error) throw error;
+      return (data || []).map((r: any) => (r.linha_slug as string).toLowerCase());
+    },
+    enabled: !!currentCompany?.id,
+  });
+  const enabledSet = useMemo(() => new Set(enabledLinhaSlugs), [enabledLinhaSlugs]);
+  const hasEnabledFilter = enabledSet.size > 0;
+
   const isLinhaAllowed = (linhaName: string) => {
     if (linhaName === 'Sem Linha' || linhaName === 'Personalizado') return true;
-    return activeLinhaKeys.has(linhaName.toLowerCase());
+    if (!activeLinhaKeys.has(linhaName.toLowerCase())) return false;
+    if (hasEnabledFilter) {
+      const slug = productLinhas?.find(l => l.name.toLowerCase() === linhaName.toLowerCase() || l.slug.toLowerCase() === linhaName.toLowerCase())?.slug?.toLowerCase();
+      return slug ? enabledSet.has(slug) : false;
+    }
+    return true;
   };
+
 
   // Fetch company activated products
   const { data: companyProducts = [] } = useQuery({
@@ -121,7 +147,7 @@ export default function Produtos() {
     }
 
     return result.sort((a, b) => a.linha.localeCompare(b.linha));
-  }, [companyProducts, allProducts, searchTerm, selectedCategory, showActive, activeLinhaKeys]);
+  }, [companyProducts, allProducts, searchTerm, selectedCategory, showActive, activeLinhaKeys, enabledSet, productLinhas]);
 
   const handleRemoveLinha = async (linha: string) => {
     if (!currentCompany?.id) return;
@@ -143,11 +169,18 @@ export default function Produtos() {
   return (
     <MainLayout>
       <div className="space-y-4 sm:space-y-6 pb-28 sm:pb-24 animate-fade-in">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <div>
             <h1 className="font-display font-bold text-xl sm:text-2xl text-foreground">Produtos</h1>
-            <p className="text-muted-foreground text-xs sm:text-sm">{filteredLinhas.length} linhas {showActive ? 'ativas' : 'inativas'}</p>
+            <p className="text-muted-foreground text-xs sm:text-sm">
+              {filteredLinhas.length} linhas {showActive ? 'ativas' : 'inativas'}
+              {hasEnabledFilter && <span className="ml-1">· {enabledSet.size} linhas habilitadas</span>}
+            </p>
           </div>
+          <Button variant="outline" size="sm" onClick={() => setManageLinhasOpen(true)} className="gap-2 shrink-0">
+            <SlidersHorizontal className="w-4 h-4" />
+            <span className="hidden sm:inline">Gerenciar Linhas</span>
+          </Button>
         </div>
 
         <div className="flex rounded-lg overflow-hidden border w-full sm:w-auto">
@@ -224,6 +257,7 @@ export default function Produtos() {
 
       <CreateCustomProductDialog open={createCustomDialogOpen} onOpenChange={setCreateCustomDialogOpen} />
       <CreateLinhaDialog open={createLinhaDialogOpen} onOpenChange={setCreateLinhaDialogOpen} />
+      <ManageLinhasDialog open={manageLinhasOpen} onOpenChange={setManageLinhasOpen} />
     </MainLayout>
   );
 }
