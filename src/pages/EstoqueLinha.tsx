@@ -247,8 +247,12 @@ export default function EstoqueLinha() {
     let items = activeItems.filter((item) => {
       const linha = item.company_item?.linha ?? item.item_template?.linha;
       const type = item.company_item?.type ?? item.item_template?.type;
-      if (isVidros) return type === 'glass';
-      if (isDiversos) return !linha && type !== 'glass';
+      if (isVidros) {
+        if (type !== 'glass' && type !== 'vidro') return false;
+        if (semLinhaOnly) return !linha;
+        return true;
+      }
+      if (isDiversos) return !linha && type !== 'glass' && type !== 'vidro';
       return (linha || '') === decodedLinha;
     });
     if (searchTerm) {
