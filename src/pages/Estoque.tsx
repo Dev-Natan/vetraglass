@@ -20,7 +20,7 @@ function slug(s: string) {
   return encodeURIComponent(s);
 }
 
-type View = 'root' | 'perfis' | 'diversos';
+type View = 'root' | 'perfis' | 'diversos' | 'vidros';
 
 export default function Estoque() {
   const { currentCompany } = useAuth();
