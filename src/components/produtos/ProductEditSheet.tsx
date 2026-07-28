@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useProductLinhas } from '@/hooks/useProductLinhas';
+import { useCompanyLinhas } from '@/hooks/useCompanyLinhas';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -29,7 +29,7 @@ export function ProductEditSheet({ open, onOpenChange, companyProductId }: Produ
   const { currentCompany } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { data: linhas = [] } = useProductLinhas();
+  const { data: linhas = [] } = useCompanyLinhas();
 
   const [tab, setTab] = useState('geral');
 
