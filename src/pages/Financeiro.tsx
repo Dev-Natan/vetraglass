@@ -64,7 +64,8 @@ import { CaixaOperacionalTab } from '@/components/financeiro/CaixaOperacionalTab
 import { MonthSelector, getMonthDateRange } from '@/components/common/MonthSelector';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 import { PaginationControls } from '@/components/common/PaginationControls';
-import { Landmark, BookOpen } from 'lucide-react';
+import { Landmark, BookOpen, PiggyBank } from 'lucide-react';
+import { InvestimentosTab } from '@/components/financeiro/InvestimentosTab';
 
 const paymentMethodConfig = {
   dinheiro: { label: 'Dinheiro', color: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' },
