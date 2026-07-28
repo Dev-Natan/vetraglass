@@ -43,7 +43,9 @@ export default function Estoque() {
   const stats = useMemo(() => {
     const byLinhaPerfil = new Map<string, { items: number; qty: number }>();
     const byLinhaDiversos = new Map<string, { items: number; qty: number }>();
+    const byLinhaVidros = new Map<string, { items: number; qty: number }>();
     let vidros = { items: 0, qty: 0 };
+    let vidrosSemLinha = { items: 0, qty: 0 };
     let diversos = { items: 0, qty: 0 };
     let diversosSemLinha = { items: 0, qty: 0 };
     let perfis = { items: 0, qty: 0 };
@@ -56,6 +58,15 @@ export default function Estoque() {
       if (type === 'glass' || type === 'vidro') {
         vidros.items++;
         vidros.qty += qty;
+        if (!linha) {
+          vidrosSemLinha.items++;
+          vidrosSemLinha.qty += qty;
+        } else if (activeLinhaKeys.size === 0 || activeLinhaKeys.has(linha.toLowerCase())) {
+          const cur = byLinhaVidros.get(linha) ?? { items: 0, qty: 0 };
+          cur.items++;
+          cur.qty += qty;
+          byLinhaVidros.set(linha, cur);
+        }
         continue;
       }
 
@@ -93,7 +104,11 @@ export default function Estoque() {
       .map(l => ({ name: l.name, ...(byLinhaDiversos.get(l.name) ?? { items: 0, qty: 0 }) }))
       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
 
-    return { vidros, diversos, perfis, linhasPerfil, linhasDiversos, diversosSemLinha };
+    const linhasVidros = (productLinhas || [])
+      .map(l => ({ name: l.name, ...(byLinhaVidros.get(l.name) ?? { items: 0, qty: 0 }) }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+
+    return { vidros, diversos, perfis, linhasPerfil, linhasDiversos, linhasVidros, diversosSemLinha, vidrosSemLinha };
   }, [activeItems, activeLinhaKeys, productLinhas]);
 
   const headerTitle =
