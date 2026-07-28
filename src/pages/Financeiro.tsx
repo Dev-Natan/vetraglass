@@ -246,6 +246,9 @@ export default function Financeiro() {
             <TabsTrigger value="fluxo-caixa" className="gap-2 py-2 flex-1 min-w-[120px]">
               <PieChart className="w-4 h-4" /> Fluxo de Caixa
             </TabsTrigger>
+            <TabsTrigger value="investimentos" className="gap-2 py-2 flex-1 min-w-[120px]">
+              <PiggyBank className="w-4 h-4" /> Investimentos
+            </TabsTrigger>
             <TabsTrigger value="relatorios" className="gap-2 py-2 flex-1 min-w-[120px]">
               <HistoryIcon className="w-4 h-4" /> Auditoria
             </TabsTrigger>
