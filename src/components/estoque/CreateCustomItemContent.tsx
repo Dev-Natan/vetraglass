@@ -25,7 +25,7 @@ import { Loader2, Sparkles, ChevronDown, Info } from 'lucide-react';
 import { FiscalFieldsCard, type FiscalFieldsData } from '@/components/produtos/FiscalFieldsCard';
 import { useItemTypes } from '@/hooks/useItemTypes';
 import { ImageUploadField } from '@/components/common/ImageUploadField';
-import { useProductLinhas } from '@/hooks/useProductLinhas';
+import { useCompanyLinhas } from '@/hooks/useCompanyLinhas';
 import { ItemPricingFields, defaultPricingData, type ItemPricingData } from './ItemPricingFields';
 
 interface CreateCustomItemContentProps {
@@ -69,7 +69,7 @@ export function CreateCustomItemContent({ onClose }: CreateCustomItemContentProp
   });
 
   const { data: itemTypes } = useItemTypes();
-  const { data: productLinhas } = useProductLinhas();
+  const { data: productLinhas } = useCompanyLinhas();
 
   const handleCategoryChange = (newCategory: string) => {
     setCategory(newCategory);
