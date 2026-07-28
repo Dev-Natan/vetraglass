@@ -68,12 +68,18 @@ interface OrdemServico {
   quote_id: string;
 }
 
-const statusConfig: Record<OSStatus, { label: string; icon: typeof Clock; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+const statusConfig: Record<string, { label: string; icon: typeof Clock; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   pending: { label: 'Pendente', icon: AlertCircle, variant: 'secondary' },
+  pendente: { label: 'Pendente', icon: AlertCircle, variant: 'secondary' },
   in_progress: { label: 'Em Andamento', icon: Clock, variant: 'default' },
+  em_producao: { label: 'Em Produção', icon: Clock, variant: 'default' },
   completed: { label: 'Concluída', icon: CheckCircle, variant: 'outline' },
+  concluida: { label: 'Concluída', icon: CheckCircle, variant: 'outline' },
   cancelled: { label: 'Cancelada', icon: XCircle, variant: 'destructive' },
+  cancelada: { label: 'Cancelada', icon: XCircle, variant: 'destructive' },
 };
+const FALLBACK_STATUS = { label: 'Desconhecido', icon: AlertCircle, variant: 'secondary' as const };
+const FALLBACK_PRIORITY = { label: 'Normal', color: 'text-blue-500' };
 
 const priorityConfig: Record<OSPriority, { label: string; color: string }> = {
   low: { label: 'Baixa', color: 'text-muted-foreground' },
@@ -487,8 +493,8 @@ export default function OrdensServico() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {paginatedData.map((os) => {
-                  const status = statusConfig[os.status];
-                  const priority = priorityConfig[os.priority || 'normal'];
+                  const status = statusConfig[os.status] ?? FALLBACK_STATUS;
+                  const priority = priorityConfig[os.priority || 'normal'] ?? FALLBACK_PRIORITY;
                   const StatusIcon = status.icon;
                   const overdue = isOverdue(os);
                   const daysLate = os.estimated_end ? getDaysOverdue(os.estimated_end) : 0;
