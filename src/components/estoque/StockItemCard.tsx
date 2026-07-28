@@ -141,9 +141,9 @@ export const StockItemCard = memo(function StockItemCard({
               </Badge>
             )}
             {isLowStock && (
-              <Badge variant="outline" className="text-xs shrink-0 gap-1 border-amber-500 text-amber-700 dark:text-amber-400">
+              <Badge variant="destructive" className="text-xs shrink-0 gap-1">
                 <AlertTriangle className="w-3 h-3" />
-                Estoque baixo
+                Abaixo do mínimo
               </Badge>
             )}
           </div>
