@@ -237,6 +237,7 @@ function AppRoutes() {
       <Route path="/plano-de-corte" element={<ProtectedRoute><LazyRoute><PlanoDeCorte /></LazyRoute></ProtectedRoute>} />
       <Route path="/estoque" element={<ProtectedRoute><ModuleGuard moduleKey="estoque"><LazyRoute><Estoque /></LazyRoute></ModuleGuard></ProtectedRoute>} />
       <Route path="/estoque/historico" element={<ProtectedRoute><ModuleGuard moduleKey="estoque"><LazyRoute><EstoqueHistorico /></LazyRoute></ModuleGuard></ProtectedRoute>} />
+      <Route path="/estoque/retalhos" element={<ProtectedRoute><ModuleGuard moduleKey="estoque"><LazyRoute><BancoRetalhos /></LazyRoute></ModuleGuard></ProtectedRoute>} />
       <Route path="/estoque/linha/:linha" element={<ProtectedRoute><ModuleGuard moduleKey="estoque"><LazyRoute><EstoqueLinha /></LazyRoute></ModuleGuard></ProtectedRoute>} />
       <Route path="/meus-precos" element={<ProtectedRoute><LazyRoute><MeusPrecos /></LazyRoute></ProtectedRoute>} />
       <Route path="/meus-precos/linha/:linha" element={<Navigate to="/meus-precos" replace />} />
