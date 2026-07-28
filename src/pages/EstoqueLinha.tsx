@@ -418,7 +418,7 @@ export default function EstoqueLinha() {
 
 
             {/* Category Selection Chips */}
-            {itemTypes && itemTypes.length > 0 && (
+            {itemTypes && itemTypes.length > 0 && !lockedTipo && (
               <div className="section-card">
                 <p className="text-xs font-medium text-muted-foreground mb-2">Filtrar por Categoria</p>
                 <div className="flex flex-wrap gap-2">
