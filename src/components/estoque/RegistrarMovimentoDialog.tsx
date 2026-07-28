@@ -565,7 +565,7 @@ export function RegistrarMovimentoDialog({
                                       {items.map((item) => (
                                         <div
                                           key={item.id}
-                                          onClick={() => setSelectedItem(item.id)}
+                                          onClick={() => handleSelectItem(item.id)}
                                           className={cn(
                                             "relative flex flex-col items-center p-3 rounded-lg border cursor-pointer transition-all hover:border-primary/50 hover:bg-accent/50",
                                             selectedItem === item.id 
