@@ -86,6 +86,7 @@ export default function EstoqueLinha() {
     isCustomItem?: boolean;
     stockId?: string;
   } | null>(null);
+  const [historyItem, setHistoryItem] = useState<StockItem | null>(null);
 
   // Filter states
   const [searchParams] = useSearchParams();
