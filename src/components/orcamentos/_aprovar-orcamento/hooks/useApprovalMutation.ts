@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { format, addDays, addMonths } from 'date-fns';
 import { generateOSDocuments } from '@/utils/generateOSDocuments';
-import { generateMaterialConsumption, linkReservationsToConsumption } from '@/utils/generateMaterialConsumption';
+import { generateMaterialConsumption, linkReservationsToConsumption, reserveMaterialsForOS } from '@/utils/generateMaterialConsumption';
 import { parseAmount } from '../utils';
 import type { ApprovalQuote, ApprovalQuoteItem, ApprovalFormState } from '../types';
 
