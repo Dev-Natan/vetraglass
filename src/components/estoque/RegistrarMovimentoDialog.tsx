@@ -787,7 +787,7 @@ export function RegistrarMovimentoDialog({
             </Button>
             <Button 
               type="submit" 
-              disabled={!selectedItem || !quantidade || !motivo || movimentoMutation.isPending}
+              disabled={!selectedItem || !motivo || computed.quantity <= 0 || movimentoMutation.isPending}
               className={isEntrada ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}
             >
               {movimentoMutation.isPending ? 'Processando...' : 'Confirmar'}
