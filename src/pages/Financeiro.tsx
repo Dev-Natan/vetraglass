@@ -308,6 +308,10 @@ export default function Financeiro() {
           <TabsContent value="fluxo-caixa" className="mt-6">
             <CashFlowTab />
           </TabsContent>
+
+          <TabsContent value="investimentos" className="mt-6">
+            <InvestimentosTab />
+          </TabsContent>
         </Tabs>
       </div>
 
