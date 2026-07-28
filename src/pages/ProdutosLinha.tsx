@@ -161,6 +161,27 @@ export default function ProdutosLinha() {
     },
   });
 
+  // Delete custom product permanently
+  const deleteCustomMutation = useMutation({
+    mutationFn: async (companyProductId: string) => {
+      if (!currentCompany?.id) throw new Error('Empresa não selecionada');
+      const { error } = await supabase
+        .from('company_products')
+        .delete()
+        .eq('company_id', currentCompany.id)
+        .eq('id', companyProductId)
+        .eq('is_custom', true);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-products'] });
+      toast.success('Produto excluído');
+    },
+    onError: (error) => {
+      toast.error('Erro ao excluir: ' + error.message);
+    },
+  });
+
   const filteredProducts = useMemo((): DisplayProduct[] => {
     const searchLower = searchTerm.toLowerCase();
     const templateIdsInCompany = new Set(companyProducts.map(cp => cp.product_template_id));
