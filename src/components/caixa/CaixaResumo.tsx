@@ -14,7 +14,6 @@ interface CaixaResumoProps {
   totalSaidas?: number;
   // Caixa da empresa
   companyCashBalance?: number;
-  fixedFund?: number;
 }
 
 export function CaixaResumo({
@@ -26,17 +25,13 @@ export function CaixaResumo({
   totalEntradas = 0,
   totalSaidas = 0,
   companyCashBalance,
-  fixedFund,
 }: CaixaResumoProps) {
-  const formatCurrency = (value: number) => {
-    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const formatCurrency = (value: number | null | undefined) => {
+    return (value ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
   // Cálculo do saldo em dinheiro físico no caixa
   const saldoDinheiro = openingAmount + totalDinheiro + totalEntradas - totalSaidas;
-  
-  // Excedente (o que vai para empresa no fechamento)
-  const excedente = fixedFund ? Math.max(0, saldoDinheiro - fixedFund) : 0;
 
   const hasCompanyCash = companyCashBalance !== undefined;
 
