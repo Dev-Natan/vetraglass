@@ -2,10 +2,11 @@ import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { ArrowLeft, Search, Trash2, Plus, Check, ShoppingCart, DollarSign, AlertTriangle, Scissors, Ban } from 'lucide-react';
+import { ArrowLeft, Search, Trash2, Plus, Check, ShoppingCart, DollarSign, AlertTriangle, Scissors, Ban, MoreVertical, Power, PowerOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -157,6 +158,27 @@ export default function ProdutosLinha() {
     },
     onError: (error) => {
       toast.error('Erro ao reativar: ' + error.message);
+    },
+  });
+
+  // Delete custom product permanently
+  const deleteCustomMutation = useMutation({
+    mutationFn: async (companyProductId: string) => {
+      if (!currentCompany?.id) throw new Error('Empresa não selecionada');
+      const { error } = await supabase
+        .from('company_products')
+        .delete()
+        .eq('company_id', currentCompany.id)
+        .eq('id', companyProductId)
+        .eq('is_custom', true);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-products'] });
+      toast.success('Produto excluído');
+    },
+    onError: (error) => {
+      toast.error('Erro ao excluir: ' + error.message);
     },
   });
 
@@ -321,9 +343,10 @@ export default function ProdutosLinha() {
           ) : filteredProducts.length > 0 ? (
             filteredProducts.map((product) => {
               return (
-                <button
-                  type="button"
+                <div
                   key={product.id + (product.productTemplateId || '')}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => {
                     if (product.companyProductId) {
                       navigate(`/produtos/empresa/editar/${product.companyProductId}`);
@@ -331,7 +354,13 @@ export default function ProdutosLinha() {
                       quickActivateMutation.mutate(product.productTemplateId);
                     }
                   }}
-                  className={`text-left bg-card border rounded-lg p-4 flex items-center gap-4 shadow-sm hover:shadow-md hover:border-primary/40 hover:bg-accent/30 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${!product.is_active ? 'opacity-70' : ''}`}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      (e.currentTarget as HTMLDivElement).click();
+                    }
+                  }}
+                  className={`relative text-left bg-card border rounded-lg p-4 flex items-center gap-4 shadow-sm hover:shadow-md hover:border-primary/40 hover:bg-accent/30 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${!product.is_active ? 'opacity-70' : ''}`}
                 >
                   <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center shrink-0 p-1">
                     {product.image_url ? (
@@ -360,7 +389,52 @@ export default function ProdutosLinha() {
                       )}
                     </div>
                   </div>
-                </button>
+
+                  {(product.companyProductId || product.productTemplateId) && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8" aria-label="Ações do produto">
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                        {product.companyProductId && product.is_active && (
+                          <DropdownMenuItem
+                            onClick={() => deactivateProductMutation.mutate({ id: product.companyProductId!, isCustom: product.is_custom })}
+                          >
+                            <PowerOff className="w-4 h-4 mr-2" /> Desativar
+                          </DropdownMenuItem>
+                        )}
+                        {product.companyProductId && !product.is_active && (
+                          <DropdownMenuItem
+                            onClick={() => reactivateProductMutation.mutate({ id: product.companyProductId!, isCustom: product.is_custom })}
+                          >
+                            <Power className="w-4 h-4 mr-2" /> Ativar
+                          </DropdownMenuItem>
+                        )}
+                        {!product.companyProductId && product.productTemplateId && (
+                          <DropdownMenuItem
+                            onClick={() => quickActivateMutation.mutate(product.productTemplateId!)}
+                          >
+                            <Power className="w-4 h-4 mr-2" /> Ativar
+                          </DropdownMenuItem>
+                        )}
+                        {product.is_custom && product.companyProductId && (
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => {
+                              if (confirm(`Excluir permanentemente "${product.name}"? Esta ação não pode ser desfeita.`)) {
+                                deleteCustomMutation.mutate(product.companyProductId!);
+                              }
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" /> Excluir
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
               );
             })
           ) : (
