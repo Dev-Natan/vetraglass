@@ -79,11 +79,9 @@ export const StockItemCard = memo(function StockItemCard({
   const isZeroStock = item.quantity <= 0;
   const isLowStock = !isZeroStock && minQty > 0 && item.quantity <= minQty;
 
-  const borderClass = isZeroStock
+  const borderClass = (isZeroStock || isLowStock)
     ? 'border-destructive/60 bg-destructive/5'
-    : isLowStock
-      ? 'border-amber-500/60 bg-amber-50/50 dark:bg-amber-950/20'
-      : '';
+    : '';
 
   return (
     <div
@@ -143,9 +141,9 @@ export const StockItemCard = memo(function StockItemCard({
               </Badge>
             )}
             {isLowStock && (
-              <Badge variant="outline" className="text-xs shrink-0 gap-1 border-amber-500 text-amber-700 dark:text-amber-400">
+              <Badge variant="destructive" className="text-xs shrink-0 gap-1">
                 <AlertTriangle className="w-3 h-3" />
-                Estoque baixo
+                Abaixo do mínimo
               </Badge>
             )}
           </div>
@@ -195,7 +193,7 @@ export const StockItemCard = memo(function StockItemCard({
 
       <div className="flex items-center gap-3">
         <div className="text-right">
-          <p className={`font-semibold text-lg whitespace-nowrap ${isZeroStock ? 'text-destructive' : isLowStock ? 'text-amber-600 dark:text-amber-400' : ''}`}>
+          <p className={`font-semibold text-lg whitespace-nowrap ${(isZeroStock || isLowStock) ? 'text-destructive' : ''}`}>
             {qtyDisplay.primary}
           </p>
           {qtyDisplay.detail && (
@@ -204,7 +202,7 @@ export const StockItemCard = memo(function StockItemCard({
             </p>
           )}
           {minQty > 0 && (
-            <p className={`text-xs ${isLowStock || isZeroStock ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-muted-foreground'}`}>
+            <p className={`text-xs ${(isLowStock || isZeroStock) ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
               Mín: {item.min_quantity}
             </p>
           )}
