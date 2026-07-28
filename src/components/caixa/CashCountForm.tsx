@@ -1,3 +1,4 @@
+import { parseCurrencyBRL } from '@/utils/currencyMask';
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -5,7 +6,6 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Banknote, CreditCard, Smartphone, HelpCircle } from 'lucide-react';
-import { parseCurrencyBRL } from '@/utils/currencyMask';
 
 interface CashCount {
   payment_method: string;
