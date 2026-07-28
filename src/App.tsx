@@ -25,6 +25,7 @@ const Clientes = lazy(() => import("./pages/Clientes"));
 const Estoque = lazy(() => import("./pages/Estoque"));
 const EstoqueLinha = lazy(() => import("./pages/EstoqueLinha"));
 const EstoqueHistorico = lazy(() => import("./pages/EstoqueHistorico"));
+const BancoRetalhos = lazy(() => import("./pages/BancoRetalhos"));
 
 
 const RecuperarSenha = lazy(() => import("./pages/RecuperarSenha"));
