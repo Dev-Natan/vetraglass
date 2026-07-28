@@ -43,10 +43,34 @@ export default function Produtos() {
     });
     return set;
   }, [productLinhas]);
+
+  // Empresa: linhas explicitamente ativadas. Se vazio → considera todas.
+  const { data: enabledLinhaSlugs = [] } = useQuery({
+    queryKey: ['company-enabled-linhas', currentCompany?.id],
+    queryFn: async () => {
+      if (!currentCompany?.id) return [] as string[];
+      const { data, error } = await supabase
+        .from('company_enabled_linhas')
+        .select('linha_slug')
+        .eq('company_id', currentCompany.id);
+      if (error) throw error;
+      return (data || []).map((r: any) => (r.linha_slug as string).toLowerCase());
+    },
+    enabled: !!currentCompany?.id,
+  });
+  const enabledSet = useMemo(() => new Set(enabledLinhaSlugs), [enabledLinhaSlugs]);
+  const hasEnabledFilter = enabledSet.size > 0;
+
   const isLinhaAllowed = (linhaName: string) => {
     if (linhaName === 'Sem Linha' || linhaName === 'Personalizado') return true;
-    return activeLinhaKeys.has(linhaName.toLowerCase());
+    if (!activeLinhaKeys.has(linhaName.toLowerCase())) return false;
+    if (hasEnabledFilter) {
+      const slug = productLinhas?.find(l => l.name.toLowerCase() === linhaName.toLowerCase() || l.slug.toLowerCase() === linhaName.toLowerCase())?.slug?.toLowerCase();
+      return slug ? enabledSet.has(slug) : false;
+    }
+    return true;
   };
+
 
   // Fetch company activated products
   const { data: companyProducts = [] } = useQuery({
