@@ -194,12 +194,13 @@ export default function Estoque() {
               <p className="text-sm text-muted-foreground">{headerSubtitle}</p>
             </div>
           </div>
-          {view === 'perfis' && (
+          {(view === 'perfis' || view === 'vidros' || view === 'diversos') && (
             <Button className="gap-2 w-full sm:w-auto" onClick={() => setAddDialogOpen(true)}>
               <Plus className="w-4 h-4" />
-              Nova Linha / Perfil
+              {view === 'perfis' ? 'Nova Linha / Perfil' : view === 'vidros' ? 'Novo Vidro / Linha' : 'Novo Item / Linha'}
             </Button>
           )}
+
         </div>
 
         {view === 'root' && (
