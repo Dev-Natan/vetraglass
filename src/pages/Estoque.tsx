@@ -42,6 +42,7 @@ export default function Estoque() {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 200);
   const [movDialog, setMovDialog] = useState<null | { tipo: 'entrada' | 'saida' }>(null);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
 
   const { activeItems, isLoading, kpis } = useStockData({ companyId: currentCompany?.id });
   const { data: productLinhas } = useCompanyLinhas();
