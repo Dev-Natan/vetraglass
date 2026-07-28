@@ -5,6 +5,7 @@ import { TodaySchedule } from '@/components/dashboard/TodaySchedule';
 import { TodayReceivables } from '@/components/dashboard/TodayReceivables';
 import { TodayExpenses } from '@/components/dashboard/TodayExpenses';
 import { OSAttentionList } from '@/components/dashboard/OSAttentionList';
+import { LowStockAlert } from '@/components/dashboard/LowStockAlert';
 import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTaskReminders } from '@/hooks/useTaskReminders';
