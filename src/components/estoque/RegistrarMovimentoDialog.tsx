@@ -624,33 +624,131 @@ export function RegistrarMovimentoDialog({
               </div>
             </div>
 
-            {/* Campos de Quantidade, Motivo e Observação */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="quantidade">
-                  Quantidade * 
-                  {selectedStockItem?.item_template?.unit && (
-                    <span className="text-muted-foreground ml-1">
-                      ({selectedStockItem.item_template.unit})
-                    </span>
-                  )}
-                </Label>
-                <Input
-                  id="quantidade"
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  value={quantidade}
-                  onChange={(e) => setQuantidade(e.target.value)}
-                  placeholder="Ex: 10"
-                  required
-                />
-                {selectedStockItem && !isEntrada && (
-                  <p className="text-xs text-muted-foreground">
-                    Disponível: {selectedStockItem.quantity} {selectedStockItem.item_template?.unit}
-                  </p>
+            {/* Modo de entrada específico (Vidro / Perfil) */}
+            {selectedStockItem && (isGlass || isProfile) && (
+              <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs text-muted-foreground">Modo de {isEntrada ? 'entrada' : 'saída'}:</Label>
+                  <div className="flex gap-1 flex-wrap">
+                    {isGlass && (
+                      <>
+                        <Button type="button" size="sm" variant={inputMode === 'piece' ? 'default' : 'outline'} onClick={() => setInputMode('piece')}>
+                          Peça cortada (L × A)
+                        </Button>
+                        <Button type="button" size="sm" variant={inputMode === 'sheet' ? 'default' : 'outline'} onClick={() => setInputMode('sheet')}>
+                          Chapa inteira
+                        </Button>
+                      </>
+                    )}
+                    {isProfile && (
+                      <>
+                        <Button type="button" size="sm" variant={inputMode === 'bar' ? 'default' : 'outline'} onClick={() => setInputMode('bar')}>
+                          Por barra{barLengthM > 0 ? ` (${barLengthM} m)` : ''}
+                        </Button>
+                        <Button type="button" size="sm" variant={inputMode === 'linear' ? 'default' : 'outline'} onClick={() => setInputMode('linear')}>
+                          Metro linear (com retalho)
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Peça cortada (vidro) */}
+                {isGlass && inputMode === 'piece' && (
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Largura (mm)</Label>
+                      <Input type="number" min="1" value={pieceWidth} onChange={(e) => setPieceWidth(e.target.value)} placeholder="Ex: 800" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Altura (mm)</Label>
+                      <Input type="number" min="1" value={pieceHeight} onChange={(e) => setPieceHeight(e.target.value)} placeholder="Ex: 1200" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Quantidade</Label>
+                      <Input type="number" min="1" step="1" value={pieceQty} onChange={(e) => setPieceQty(e.target.value)} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Chapa inteira (vidro) */}
+                {isGlass && inputMode === 'sheet' && (
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Largura chapa (mm)</Label>
+                      <Input type="number" min="1" value={sheetWidth} onChange={(e) => setSheetWidth(e.target.value)} placeholder="Ex: 2200" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Altura chapa (mm)</Label>
+                      <Input type="number" min="1" value={sheetHeight} onChange={(e) => setSheetHeight(e.target.value)} placeholder="Ex: 3200" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Nº de chapas</Label>
+                      <Input type="number" min="0.01" step="0.01" value={quantidade} onChange={(e) => setQuantidade(e.target.value)} placeholder="1" />
+                    </div>
+                  </div>
+                )}
+
+                {/* Barra (perfil) */}
+                {isProfile && inputMode === 'bar' && (
+                  <div className="space-y-1">
+                    <Label className="text-xs">Quantidade de barras</Label>
+                    <Input type="number" min="0.01" step="0.01" value={quantidade} onChange={(e) => setQuantidade(e.target.value)} placeholder="Ex: 5" />
+                  </div>
+                )}
+
+                {/* Metro linear (perfil) */}
+                {isProfile && inputMode === 'linear' && (
+                  <div className="space-y-1">
+                    <Label className="text-xs">Total em metros lineares</Label>
+                    <Input type="number" min="0.01" step="0.01" value={linearMeters} onChange={(e) => setLinearMeters(e.target.value)} placeholder="Ex: 12.50" />
+                    {barLengthM > 0 && (
+                      <p className="text-[11px] text-muted-foreground">
+                        Convertido para barras de {barLengthM} m — o resto é registrado como retalho na observação.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Resumo do cálculo */}
+                {computed.summary && (
+                  <div className="rounded-md bg-primary/5 border border-primary/20 px-3 py-2 text-xs">
+                    <span className="text-muted-foreground">Será registrado: </span>
+                    <span className="font-medium text-primary">{computed.summary}</span>
+                  </div>
                 )}
               </div>
+            )}
+
+            {/* Quantidade simples (padrão) + Motivo */}
+            <div className="grid grid-cols-2 gap-4">
+              {(!selectedStockItem || (!isGlass && !isProfile)) && (
+                <div className="space-y-2">
+                  <Label htmlFor="quantidade">
+                    Quantidade *
+                    {selectedStockItem?.item_template?.unit && (
+                      <span className="text-muted-foreground ml-1">
+                        ({selectedStockItem.item_template.unit})
+                      </span>
+                    )}
+                  </Label>
+                  <Input
+                    id="quantidade"
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    value={quantidade}
+                    onChange={(e) => setQuantidade(e.target.value)}
+                    placeholder="Ex: 10"
+                    required
+                  />
+                  {selectedStockItem && !isEntrada && (
+                    <p className="text-xs text-muted-foreground">
+                      Disponível: {selectedStockItem.quantity} {selectedStockItem.item_template?.unit}
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="motivo">Motivo *</Label>
@@ -668,6 +766,7 @@ export function RegistrarMovimentoDialog({
                 </Select>
               </div>
             </div>
+
 
             <div className="space-y-2">
               <Label htmlFor="observacao">Observação</Label>
