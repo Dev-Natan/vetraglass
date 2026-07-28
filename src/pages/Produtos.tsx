@@ -9,7 +9,7 @@ import { CreateLinhaDialog } from '@/components/produtos/CreateLinhaDialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, Search, Sparkles, SlidersHorizontal } from 'lucide-react';
+import { Search, Sparkles, SlidersHorizontal } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -240,10 +240,6 @@ export default function Produtos() {
 
       <div className="fixed bottom-0 left-0 lg:left-60 right-0 bg-background/95 backdrop-blur border-t p-3 sm:p-4 z-40">
         <div className="container mx-auto flex justify-center gap-12 sm:gap-16">
-          <button onClick={() => toast.info('Funcionalidade em desenvolvimento')} className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground">
-            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center"><Trash2 className="w-5 h-5" /></div>
-            <span className="text-xs">Lixeira</span>
-          </button>
           <button onClick={() => setSearchOpen(!searchOpen)} className={`flex flex-col items-center gap-1 ${searchOpen ? 'text-primary' : 'text-muted-foreground'}`}>
             <div className={`w-10 h-10 rounded-full flex items-center justify-center ${searchOpen ? 'bg-primary/10' : 'bg-muted'}`}><Search className="w-5 h-5" /></div>
             <span className="text-xs">Buscar</span>
