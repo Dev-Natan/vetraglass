@@ -20,7 +20,7 @@ function slug(s: string) {
   return encodeURIComponent(s);
 }
 
-type View = 'root' | 'perfis';
+type View = 'root' | 'perfis' | 'diversos';
 
 export default function Estoque() {
   const { currentCompany } = useAuth();
@@ -42,8 +42,10 @@ export default function Estoque() {
 
   const stats = useMemo(() => {
     const byLinhaPerfil = new Map<string, { items: number; qty: number }>();
+    const byLinhaDiversos = new Map<string, { items: number; qty: number }>();
     let vidros = { items: 0, qty: 0 };
     let diversos = { items: 0, qty: 0 };
+    let diversosSemLinha = { items: 0, qty: 0 };
     let perfis = { items: 0, qty: 0 };
 
     for (const it of activeItems) {
@@ -72,34 +74,51 @@ export default function Estoque() {
       // Everything else (acessorios, guarnicao, sem tipo) → diversos
       diversos.items++;
       diversos.qty += qty;
+      if (!linha) {
+        diversosSemLinha.items++;
+        diversosSemLinha.qty += qty;
+      } else if (activeLinhaKeys.size === 0 || activeLinhaKeys.has(linha.toLowerCase())) {
+        const cur = byLinhaDiversos.get(linha) ?? { items: 0, qty: 0 };
+        cur.items++;
+        cur.qty += qty;
+        byLinhaDiversos.set(linha, cur);
+      }
     }
 
     const linhasPerfil = (productLinhas || [])
       .map(l => ({ name: l.name, ...(byLinhaPerfil.get(l.name) ?? { items: 0, qty: 0 }) }))
       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
 
-    return { vidros, diversos, perfis, linhasPerfil };
+    const linhasDiversos = (productLinhas || [])
+      .map(l => ({ name: l.name, ...(byLinhaDiversos.get(l.name) ?? { items: 0, qty: 0 }) }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+
+    return { vidros, diversos, perfis, linhasPerfil, linhasDiversos, diversosSemLinha };
   }, [activeItems, activeLinhaKeys, productLinhas]);
+
+  const headerTitle =
+    view === 'root' ? 'Estoque'
+    : view === 'perfis' ? 'Perfis · Selecione a linha'
+    : 'Acessórios / Diversos · Selecione a linha';
+
+  const headerSubtitle =
+    view === 'root' ? 'Escolha uma categoria para gerenciar entradas, saídas e saldos.'
+    : view === 'perfis' ? 'Selecione a linha do perfil (Suprema, Temperados, etc.).'
+    : 'Selecione a linha dos acessórios/diversos.';
 
   return (
     <MainLayout>
       <div className="p-6 space-y-6 max-w-6xl mx-auto">
         <div className="flex items-center gap-3">
-          {view === 'perfis' && (
+          {view !== 'root' && (
             <Button variant="ghost" size="icon" onClick={() => setView('root')}>
               <ArrowLeft className="w-5 h-5" />
             </Button>
           )}
           <Boxes className="w-7 h-7 text-primary" />
           <div>
-            <h1 className="text-2xl font-bold">
-              {view === 'root' ? 'Estoque' : 'Perfis · Selecione a linha'}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {view === 'root'
-                ? 'Escolha uma categoria para gerenciar entradas, saídas e saldos.'
-                : 'Selecione a linha do perfil (Suprema, Temperados, etc.).'}
-            </p>
+            <h1 className="text-2xl font-bold">{headerTitle}</h1>
+            <p className="text-sm text-muted-foreground">{headerSubtitle}</p>
           </div>
         </div>
 
@@ -133,14 +152,14 @@ export default function Estoque() {
               badge={`${stats.linhasPerfil.length} linha(s)`}
             />
             <StockCard
-              to={`/estoque/linha/${slug(DIVERSOS_KEY)}`}
+              onClick={() => setView('diversos')}
               icon={<Package className="w-6 h-6" />}
               title="Acessórios / Diversos"
-              subtitle={`${stats.diversos.items} item(s)`}
-              badge="Acessórios"
+              subtitle={`${stats.diversos.items} item(s) · ${stats.diversos.qty.toFixed(2)} em saldo`}
+              badge={`${stats.linhasDiversos.length} linha(s)`}
             />
           </div>
-        ) : (
+        ) : view === 'perfis' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {stats.linhasPerfil.length === 0 ? (
               <Card className="col-span-full">
@@ -161,11 +180,39 @@ export default function Estoque() {
               ))
             )}
           </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <StockCard
+              to={`/estoque/linha/${slug(DIVERSOS_KEY)}`}
+              icon={<Package className="w-6 h-6" />}
+              title="Sem linha específica"
+              subtitle={`${stats.diversosSemLinha.items} item(s) · ${stats.diversosSemLinha.qty.toFixed(2)} em saldo`}
+              badge="Genéricos"
+            />
+            {stats.linhasDiversos.map(l => (
+              <StockCard
+                key={l.name}
+                to={`/estoque/linha/${slug(l.name)}?tipo=diversos`}
+                icon={<Layers className="w-6 h-6" />}
+                title={l.name}
+                subtitle={`${l.items} item(s) · ${l.qty.toFixed(2)} em saldo`}
+                badge={`${l.items} itens`}
+              />
+            ))}
+            {stats.linhasDiversos.length === 0 && stats.diversosSemLinha.items === 0 && (
+              <Card className="col-span-full">
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  Nenhum item de acessórios/diversos cadastrado.
+                </CardContent>
+              </Card>
+            )}
+          </div>
         )}
       </div>
     </MainLayout>
   );
 }
+
 
 function StockCard({
   to, onClick, icon, title, subtitle, badge,
