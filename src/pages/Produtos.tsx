@@ -30,6 +30,7 @@ export default function Produtos() {
   const [showActive, setShowActive] = useState(true);
   const [createCustomDialogOpen, setCreateCustomDialogOpen] = useState(false);
   const [createLinhaDialogOpen, setCreateLinhaDialogOpen] = useState(false);
+  const [manageLinhasOpen, setManageLinhasOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const { labels: categoryLabels, categories } = useProductCategoryLabels();
   const { data: productLinhas } = useProductLinhas();
