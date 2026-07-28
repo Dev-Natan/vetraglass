@@ -6032,6 +6032,104 @@ export type Database = {
           },
         ]
       }
+      stock_offcuts: {
+        Row: {
+          color: string | null
+          company_id: string
+          company_item_id: string | null
+          created_at: string
+          created_by: string | null
+          height_mm: number | null
+          id: string
+          item_template_id: string | null
+          kind: string
+          length_mm: number | null
+          name: string
+          notes: string | null
+          quantity: number
+          source: string
+          source_os_id: string | null
+          source_reference: string | null
+          status: string
+          thickness: number | null
+          updated_at: string
+          width_mm: number | null
+        }
+        Insert: {
+          color?: string | null
+          company_id: string
+          company_item_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          height_mm?: number | null
+          id?: string
+          item_template_id?: string | null
+          kind: string
+          length_mm?: number | null
+          name: string
+          notes?: string | null
+          quantity?: number
+          source?: string
+          source_os_id?: string | null
+          source_reference?: string | null
+          status?: string
+          thickness?: number | null
+          updated_at?: string
+          width_mm?: number | null
+        }
+        Update: {
+          color?: string | null
+          company_id?: string
+          company_item_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          height_mm?: number | null
+          id?: string
+          item_template_id?: string | null
+          kind?: string
+          length_mm?: number | null
+          name?: string
+          notes?: string | null
+          quantity?: number
+          source?: string
+          source_os_id?: string | null
+          source_reference?: string | null
+          status?: string
+          thickness?: number | null
+          updated_at?: string
+          width_mm?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_offcuts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_offcuts_company_item_id_fkey"
+            columns: ["company_item_id"]
+            isOneToOne: false
+            referencedRelation: "company_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_offcuts_item_template_id_fkey"
+            columns: ["item_template_id"]
+            isOneToOne: false
+            referencedRelation: "item_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_offcuts_source_os_id_fkey"
+            columns: ["source_os_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_servico"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_reservations: {
         Row: {
           cancelled_at: string | null
