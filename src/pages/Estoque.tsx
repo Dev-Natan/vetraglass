@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Boxes, Layers, ChevronRight, GlassWater, Package, Loader2, Info,
-  Blocks, ArrowLeft,
+  Blocks, ArrowLeft, History,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useStockData } from '@/hooks/useStockData';
@@ -174,6 +174,13 @@ export default function Estoque() {
               title="Acessórios / Diversos"
               subtitle={`${stats.diversos.items} item(s) · ${stats.diversos.qty.toFixed(2)} em saldo`}
               badge={`${stats.linhasDiversos.length} linha(s)`}
+            />
+            <StockCard
+              to="/estoque/historico"
+              icon={<History className="w-6 h-6" />}
+              title="Histórico de Movimentações"
+              subtitle="Todas as entradas e saídas — quem, quando, quanto e por quê."
+              badge="Ver histórico"
             />
           </div>
         ) : view === 'perfis' ? (

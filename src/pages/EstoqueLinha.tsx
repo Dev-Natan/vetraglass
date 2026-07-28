@@ -15,6 +15,7 @@ import { UnifiedAddItemDialog } from '@/components/estoque/UnifiedAddItemDialog'
 import { EditItemPriceDialog } from '@/components/estoque/EditItemPriceDialog';
 import { RegistrarMovimentoDialog } from '@/components/estoque/RegistrarMovimentoDialog';
 import { HistoricoMovimentosTab } from '@/components/estoque/HistoricoMovimentosTab';
+import { ItemHistoricoDialog } from '@/components/estoque/ItemHistoricoDialog';
 import { StockItemCard } from '@/components/estoque/StockItemCard';
 import { StockKPIs } from '@/components/estoque/StockKPIs';
 import {
@@ -85,6 +86,7 @@ export default function EstoqueLinha() {
     isCustomItem?: boolean;
     stockId?: string;
   } | null>(null);
+  const [historyItem, setHistoryItem] = useState<StockItem | null>(null);
 
   // Filter states
   const [searchParams] = useSearchParams();
@@ -520,7 +522,7 @@ export default function EstoqueLinha() {
                   ) : inStockItems.length > 0 ? (
                     <div className="space-y-2">
                       {inStockItems.map((item) => (
-                        <StockItemCard key={item.id} item={item} onEdit={handleOpenPriceDialog} onToggleActive={handleToggleActive} />
+                        <StockItemCard key={item.id} item={item} onEdit={handleOpenPriceDialog} onToggleActive={handleToggleActive} onViewHistory={setHistoryItem} />
                       ))}
                     </div>
                   ) : (
@@ -550,7 +552,7 @@ export default function EstoqueLinha() {
                   ) : outOfStockItems.length > 0 ? (
                     <div className="space-y-2">
                       {outOfStockItems.map((item) => (
-                        <StockItemCard key={item.id} item={item} onEdit={handleOpenPriceDialog} onToggleActive={handleToggleActive} />
+                        <StockItemCard key={item.id} item={item} onEdit={handleOpenPriceDialog} onToggleActive={handleToggleActive} onViewHistory={setHistoryItem} />
                       ))}
                     </div>
                   ) : (
@@ -619,6 +621,14 @@ export default function EstoqueLinha() {
             type: item.item_template.type, linha: item.item_template.linha,
           } : undefined,
         }))}
+      />
+      <ItemHistoricoDialog
+        open={!!historyItem}
+        onOpenChange={(o) => !o && setHistoryItem(null)}
+        itemTemplateId={historyItem?.item_template_id ?? null}
+        itemName={historyItem?.item_template?.name ?? historyItem?.company_item?.name ?? 'Item'}
+        itemUnit={historyItem?.item_template?.unit ?? historyItem?.company_item?.unit ?? 'un'}
+        itemImageUrl={historyItem?.item_template?.image_url ?? historyItem?.company_item?.image_url ?? null}
       />
     </MainLayout>
   );

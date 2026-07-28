@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Package, MapPin, DollarSign, Power, Scissors, Sparkles, Clock, AlertTriangle } from 'lucide-react';
+import { Package, MapPin, DollarSign, Power, Scissors, Sparkles, Clock, AlertTriangle, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
@@ -63,6 +63,7 @@ interface StockItemCardProps {
   item: StockItem;
   onEdit: (item: StockItem) => void;
   onToggleActive: (e: React.MouseEvent, stockId: string, currentActive: boolean) => void;
+  onViewHistory?: (item: StockItem) => void;
   showActivateBtn?: boolean;
 }
 
@@ -70,6 +71,7 @@ export const StockItemCard = memo(function StockItemCard({
   item,
   onEdit,
   onToggleActive,
+  onViewHistory,
   showActivateBtn = true,
 }: StockItemCardProps) {
   const qtyDisplay = formatQuantityDisplay(item);
@@ -207,6 +209,18 @@ export const StockItemCard = memo(function StockItemCard({
             </p>
           )}
         </div>
+
+        {onViewHistory && (
+          <Button
+            variant="outline"
+            size="icon"
+            className="shrink-0"
+            onClick={(e) => { e.stopPropagation(); onViewHistory(item); }}
+            title="Ver histórico de movimentações"
+          >
+            <History className="w-4 h-4" />
+          </Button>
+        )}
 
         {showActivateBtn && (
           <Button
