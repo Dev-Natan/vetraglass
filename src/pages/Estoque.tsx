@@ -467,6 +467,12 @@ export default function Estoque() {
           stockItems={activeItems as any}
         />
       )}
+
+      <UnifiedAddItemDialog
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
+        defaultTab="custom"
+      />
     </MainLayout>
   );
 }
