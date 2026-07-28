@@ -169,11 +169,18 @@ export default function Produtos() {
   return (
     <MainLayout>
       <div className="space-y-4 sm:space-y-6 pb-28 sm:pb-24 animate-fade-in">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <div>
             <h1 className="font-display font-bold text-xl sm:text-2xl text-foreground">Produtos</h1>
-            <p className="text-muted-foreground text-xs sm:text-sm">{filteredLinhas.length} linhas {showActive ? 'ativas' : 'inativas'}</p>
+            <p className="text-muted-foreground text-xs sm:text-sm">
+              {filteredLinhas.length} linhas {showActive ? 'ativas' : 'inativas'}
+              {hasEnabledFilter && <span className="ml-1">· {enabledSet.size} linhas habilitadas</span>}
+            </p>
           </div>
+          <Button variant="outline" size="sm" onClick={() => setManageLinhasOpen(true)} className="gap-2 shrink-0">
+            <SlidersHorizontal className="w-4 h-4" />
+            <span className="hidden sm:inline">Gerenciar Linhas</span>
+          </Button>
         </div>
 
         <div className="flex rounded-lg overflow-hidden border w-full sm:w-auto">
