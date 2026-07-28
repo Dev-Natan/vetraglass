@@ -552,7 +552,7 @@ export default function EstoqueLinha() {
                   ) : outOfStockItems.length > 0 ? (
                     <div className="space-y-2">
                       {outOfStockItems.map((item) => (
-                        <StockItemCard key={item.id} item={item} onEdit={handleOpenPriceDialog} onToggleActive={handleToggleActive} />
+                        <StockItemCard key={item.id} item={item} onEdit={handleOpenPriceDialog} onToggleActive={handleToggleActive} onViewHistory={setHistoryItem} />
                       ))}
                     </div>
                   ) : (
