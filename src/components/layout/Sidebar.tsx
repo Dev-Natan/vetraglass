@@ -29,7 +29,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import { SupportSidebar } from '@/components/support/SupportSidebar';
-import vetraLogo from '@/assets/vetra-logo.png.asset.json';
+import vetraLogo from '@/assets/vetra-mark.png.asset.json';
 import { useSupportTickets } from '@/hooks/useSupportTickets';
 import { usePermissions, Module } from '@/hooks/usePermissions';
 import { useEnabledModulesMap } from '@/hooks/useModuleSettings';
