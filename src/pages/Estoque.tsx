@@ -333,7 +333,7 @@ export default function Estoque() {
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
           </div>
         ) : view === 'root' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <StockCard
               onClick={() => setView('vidros')}
               icon={<GlassWater className="w-6 h-6" />}
