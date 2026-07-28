@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import {
+import { parseCurrencyBRL } from '@/utils/currencyMask';
   Dialog,
   DialogContent,
   DialogDescription,
@@ -60,7 +61,7 @@ export function FecharCaixaDialog({
   const totalEntradasDia = totalVendas + totalEntradasMov;
   const saldoFinalEsperado = summary.openingAmount + totalEntradasDia - totalSaidas;
 
-  const totalCounted = parseFloat(physicalTotalStr.replace(',', '.')) || 0;
+  const totalCounted = parseCurrencyBRL(physicalTotalStr);
   const rawDifference = totalCounted - saldoFinalEsperado;
   // Arredonda para centavos e normaliza -0
   const difference = (Math.round(rawDifference * 100) === 0) ? 0 : Math.round(rawDifference * 100) / 100;

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
+import { parseCurrencyBRL } from '@/utils/currencyMask';
   Dialog,
   DialogContent,
   DialogDescription,
@@ -79,11 +80,11 @@ export function MovimentoCaixaEmpresaDialog({
   const handleConfirm = async () => {
     if (type === 'config') {
       await onConfirm({
-        initialBalance: parseFloat(initialBalance.replace(',', '.')) || 0,
-        fixedFund: parseFloat(newFixedFund.replace(',', '.')) || 500,
+        initialBalance: parseCurrencyBRL(initialBalance),
+        fixedFund: (parseCurrencyBRL(newFixedFund) || 500),
       });
     } else {
-      const parsedAmount = parseFloat(amount.replace(',', '.')) || 0;
+      const parsedAmount = parseCurrencyBRL(amount);
       if (parsedAmount <= 0) return;
       
       await onConfirm({
@@ -115,7 +116,7 @@ export function MovimentoCaixaEmpresaDialog({
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
-  const parsedAmount = parseFloat(amount.replace(',', '.')) || 0;
+  const parsedAmount = parseCurrencyBRL(amount);
   const isValidAmount = parsedAmount > 0;
   const hasEnoughBalance = type === 'saida' ? currentBalance >= parsedAmount : true;
 
