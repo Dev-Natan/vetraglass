@@ -16,6 +16,7 @@ import { useCompanyLinhas } from '@/hooks/useCompanyLinhas';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 import { useDebounce } from '@/hooks/useDebounce';
 import { RegistrarMovimentoDialog } from '@/components/estoque/RegistrarMovimentoDialog';
+import { UnifiedAddItemDialog } from '@/components/estoque/UnifiedAddItemDialog';
 
 const VIDROS_KEY = '__vidros__';
 const DIVERSOS_KEY = '__diversos__';

@@ -14,10 +14,11 @@ import { CreateCustomItemContent } from './CreateCustomItemContent';
 interface UnifiedAddItemDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  defaultTab?: 'system' | 'custom';
 }
 
-export function UnifiedAddItemDialog({ open, onOpenChange }: UnifiedAddItemDialogProps) {
-  const [activeTab, setActiveTab] = useState('system');
+export function UnifiedAddItemDialog({ open, onOpenChange, defaultTab = 'system' }: UnifiedAddItemDialogProps) {
+  const [activeTab, setActiveTab] = useState(defaultTab);
 
   const handleClose = (isOpen: boolean) => {
     if (!isOpen) {
