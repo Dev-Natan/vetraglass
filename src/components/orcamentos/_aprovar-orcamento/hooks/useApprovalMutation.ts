@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { format, addDays, addMonths } from 'date-fns';
 import { generateOSDocuments } from '@/utils/generateOSDocuments';
-import { generateMaterialConsumption, linkReservationsToConsumption } from '@/utils/generateMaterialConsumption';
+import { generateMaterialConsumption, linkReservationsToConsumption, reserveMaterialsForOS } from '@/utils/generateMaterialConsumption';
 import { parseAmount } from '../utils';
 import type { ApprovalQuote, ApprovalQuoteItem, ApprovalFormState } from '../types';
 
@@ -371,6 +371,10 @@ export function useApprovalMutation({
 
       await linkReservationsToConsumption(ordemServico.id);
 
+      // 7.1 Reserva automática de estoque para a OS
+      const reserveResult = await reserveMaterialsForOS(ordemServico.id);
+      if (!reserveResult.success) console.warn('Erro ao reservar materiais:', reserveResult.error);
+
       // 7. Delivery appointment
       if (estimatedEnd) {
         await supabase.from('service_appointments').insert({
@@ -403,6 +407,8 @@ export function useApprovalMutation({
       queryClient.invalidateQueries({ queryKey: ['quote-deposit'] });
       queryClient.invalidateQueries({ queryKey: ['pending-deposits'] });
       queryClient.invalidateQueries({ queryKey: ['material-consumption'] });
+      queryClient.invalidateQueries({ queryKey: ['company-stock'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-reservations'] });
       onClose();
       onSuccess?.();
     },

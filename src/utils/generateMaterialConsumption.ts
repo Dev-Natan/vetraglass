@@ -214,13 +214,29 @@ export async function linkReservationsToConsumption(ordemServicoId: string): Pro
   }
 }
 
-export async function releaseMaterialsForProduction(ordemServicoId: string): Promise<{ success: boolean; released: number }> {
+export async function releaseMaterialsForProduction(ordemServicoId: string): Promise<{ success: boolean; released: number; error?: string }> {
   try {
     const { data, error } = await supabase.rpc('release_materials_for_production', { _ordem_servico_id: ordemServicoId });
-    if (error) return { success: false, released: 0 };
-    return { success: true, released: Number(data) || 0 };
+    if (error) return { success: false, released: 0, error: error.message };
+    const payload = (data ?? {}) as { consumed?: number };
+    return { success: true, released: Number(payload.consumed) || 0 };
   } catch (error) {
-    return { success: false, released: 0 };
+    return { success: false, released: 0, error: error instanceof Error ? error.message : 'Erro desconhecido' };
+  }
+}
+
+/**
+ * Reserva materiais no estoque quando um orçamento vira OS.
+ * Não baixa a quantidade real - apenas incrementa quantity_reserved.
+ */
+export async function reserveMaterialsForOS(ordemServicoId: string): Promise<{ success: boolean; reserved: number; error?: string }> {
+  try {
+    const { data, error } = await supabase.rpc('reserve_os_materials', { _ordem_servico_id: ordemServicoId });
+    if (error) return { success: false, reserved: 0, error: error.message };
+    const payload = (data ?? {}) as { reserved?: number };
+    return { success: true, reserved: Number(payload.reserved) || 0 };
+  } catch (error) {
+    return { success: false, reserved: 0, error: error instanceof Error ? error.message : 'Erro desconhecido' };
   }
 }
 
