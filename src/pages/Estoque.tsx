@@ -237,6 +237,24 @@ export default function Estoque() {
               </Card>
             </div>
 
+            {/* Atalhos fixos próximos aos KPIs */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <StockCard
+                to="/estoque/historico"
+                icon={<History className="w-6 h-6" />}
+                title="Histórico de Movimentações"
+                subtitle="Todas as entradas e saídas — quem, quando, quanto e por quê."
+                badge="Ver histórico"
+              />
+              <StockCard
+                to="/estoque/retalhos"
+                icon={<Boxes className="w-6 h-6" />}
+                title="Banco de Retalhos"
+                subtitle="Sobras úteis de chapas e barras para reaproveitar."
+                badge="Ver retalhos"
+              />
+            </div>
+
             {/* Global search */}
             <div className="relative">
               <div className="relative">
