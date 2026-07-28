@@ -490,8 +490,8 @@ export function PrintableCuttingReport({
             <div style={styles.summaryCell}>
               <span style={styles.summaryIcon}><IcoPie /></span>
               <div>
-                <div style={styles.summaryLabel}>APROVEITAMENTO MÉDIO</div>
-                <div style={styles.summaryValue}>{(100 - optimization.avgWastePercent).toFixed(1)}%</div>
+                <div style={styles.summaryLabel}>DESPERDÍCIO MÉDIO</div>
+                <div style={styles.summaryValue}>{optimization.avgWastePercent.toFixed(1)}%</div>
               </div>
             </div>
           </div>
