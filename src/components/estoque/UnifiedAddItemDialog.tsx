@@ -18,7 +18,7 @@ interface UnifiedAddItemDialogProps {
 }
 
 export function UnifiedAddItemDialog({ open, onOpenChange, defaultTab = 'system' }: UnifiedAddItemDialogProps) {
-  const [activeTab, setActiveTab] = useState(defaultTab);
+  const [activeTab, setActiveTab] = useState<string>(defaultTab);
 
   const handleClose = (isOpen: boolean) => {
     if (!isOpen) {
