@@ -267,6 +267,11 @@ export default function EstoqueLinha() {
         const type = item.company_item?.type ?? item.item_template?.type;
         return type !== 'perfil' && type !== 'vidro' && type !== 'glass';
       });
+    } else if (categoryFilter === 'vidro') {
+      items = items.filter((item) => {
+        const type = item.company_item?.type ?? item.item_template?.type;
+        return type === 'vidro' || type === 'glass';
+      });
     } else if (categoryFilter !== 'all') {
       items = items.filter((item) => {
         const type = item.company_item?.type ?? item.item_template?.type;
