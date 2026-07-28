@@ -79,11 +79,9 @@ export const StockItemCard = memo(function StockItemCard({
   const isZeroStock = item.quantity <= 0;
   const isLowStock = !isZeroStock && minQty > 0 && item.quantity <= minQty;
 
-  const borderClass = isZeroStock
+  const borderClass = (isZeroStock || isLowStock)
     ? 'border-destructive/60 bg-destructive/5'
-    : isLowStock
-      ? 'border-amber-500/60 bg-amber-50/50 dark:bg-amber-950/20'
-      : '';
+    : '';
 
   return (
     <div
