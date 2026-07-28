@@ -362,6 +362,13 @@ export function RegistrarMovimentoDialog({
     setSelectedLinha(ALL_VALUE);
     setSelectedCategoria(ALL_VALUE);
     setExpandedLinhas(new Set());
+    setInputMode('unit');
+    setSheetWidth('');
+    setSheetHeight('');
+    setPieceWidth('');
+    setPieceHeight('');
+    setPieceQty('1');
+    setLinearMeters('');
     onOpenChange(false);
   };
 
