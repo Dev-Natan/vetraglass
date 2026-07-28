@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { resolveProductImageUrl } from '@/utils/imageUrl';
-import { Printer, Download, Tags, BarChart3, Settings2, RotateCcw, Package } from 'lucide-react';
+import { Printer, Download, Tags, BarChart3, Settings2, RotateCcw, Package, Scissors } from 'lucide-react';
+import { SaveOffcutsDialog } from '@/components/plano-corte/SaveOffcutsDialog';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery } from '@tanstack/react-query';
@@ -53,6 +54,8 @@ export function CuttingPlanCalculator() {
   const [hoveredProfileId, setHoveredProfileId] = useState<string | null>(null);
   const [profileOverrides, setProfileOverrides] = useState<Record<string, ProfileOverride>>({});
   const [glassOverrides, setGlassOverrides] = useState<Record<string, GlassOverride>>({});
+  const [offcutsDialogOpen, setOffcutsDialogOpen] = useState(false);
+
 
   const handleLiveChange = (payload: {
     product_template_id: string | null;
@@ -563,6 +566,17 @@ export function CuttingPlanCalculator() {
             Imprimir Plano (PDF)
           </Button>
 
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={() => setOffcutsDialogOpen(true)}
+            disabled={!selectedProduct || barOptimizationData.length === 0}
+            title="Registrar as sobras do otimizador no Banco de Retalhos"
+          >
+            <Scissors className="w-4 h-4" />
+            Registrar Sobras
+          </Button>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="gap-2" disabled={!selectedProduct || calculatedCuts.length === 0}>
@@ -588,6 +602,14 @@ export function CuttingPlanCalculator() {
           </DropdownMenu>
         </div>
       </div>
+
+      <SaveOffcutsDialog
+        open={offcutsDialogOpen}
+        onOpenChange={setOffcutsDialogOpen}
+        companyId={currentCompany?.id}
+        profiles={barOptimizationData}
+        defaultReference={productName ? `PC-${productName}` : null}
+      />
 
       <div className="no-print rounded-lg border bg-card">
         <div className="p-4 md:p-6">
