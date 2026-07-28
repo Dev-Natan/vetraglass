@@ -9,13 +9,14 @@ import { CreateLinhaDialog } from '@/components/produtos/CreateLinhaDialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, Search, Sparkles } from 'lucide-react';
+import { Trash2, Search, Sparkles, SlidersHorizontal } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
 import { useProductLinhas } from '@/hooks/useProductLinhas';
+import { ManageLinhasDialog } from '@/components/produtos/ManageLinhasDialog';
 
 export default function Produtos() {
   const navigate = useNavigate();
