@@ -403,7 +403,7 @@ export function PrintableCuttingReport({
                       <Thumb src={c.imageUrl} alt={c.profileName} />
                     </td>
                     <td style={{ ...styles.td, textTransform: 'uppercase', fontWeight: 500 }}>{c.profileName}</td>
-                    <td style={{ ...styles.td, ...styles.numCell, fontWeight: 700 }}>{c.calculatedLength}</td>
+                    <td style={{ ...styles.td, ...styles.numCell, fontWeight: 800, fontSize: '12pt', color: BLUE }}>{c.calculatedLength}</td>
                     <td style={{ ...styles.td, ...styles.numCell, fontWeight: 700 }}>{c.quantity}</td>
                     <td style={styles.td}><AngleGlyph label={angleLabel} /></td>
                     <td style={styles.td}><PositionGlyph position={c.position} /></td>
