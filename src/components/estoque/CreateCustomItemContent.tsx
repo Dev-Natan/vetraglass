@@ -25,7 +25,7 @@ import { Loader2, Sparkles, ChevronDown, Info } from 'lucide-react';
 import { FiscalFieldsCard, type FiscalFieldsData } from '@/components/produtos/FiscalFieldsCard';
 import { useItemTypes } from '@/hooks/useItemTypes';
 import { ImageUploadField } from '@/components/common/ImageUploadField';
-import { useProductLinhas } from '@/hooks/useCompanyLinhas';
+import { useCompanyLinhas } from '@/hooks/useCompanyLinhas';
 import { ItemPricingFields, defaultPricingData, type ItemPricingData } from './ItemPricingFields';
 
 interface CreateCustomItemContentProps {

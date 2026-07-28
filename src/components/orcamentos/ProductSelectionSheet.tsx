@@ -16,7 +16,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { ArrowLeft, Search, Package, Check, ChevronRight, Home, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
-import { useProductLinhas } from '@/hooks/useCompanyLinhas';
+import { useCompanyLinhas } from '@/hooks/useCompanyLinhas';
 
 interface ProductSelectionSheetProps {
   open: boolean;

@@ -30,7 +30,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { useProductCategoryLabels, useProductCategories } from '@/hooks/useProductCategories';
-import { useProductLinhas } from '@/hooks/useCompanyLinhas';
+import { useCompanyLinhas } from '@/hooks/useCompanyLinhas';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useProductAluminumPriceOptions } from '@/hooks/useProductAluminumPrices';
 import { useGlassStockOptions } from '@/hooks/useGlassStockOptions';

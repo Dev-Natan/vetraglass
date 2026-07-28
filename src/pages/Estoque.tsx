@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Boxes, Layers, ChevronRight, GlassWater, Package, Loader2, Info } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useStockData } from '@/hooks/useStockData';
-import { useProductLinhas } from '@/hooks/useCompanyLinhas';
+import { useCompanyLinhas } from '@/hooks/useCompanyLinhas';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 
 const VIDROS_KEY = '__vidros__';

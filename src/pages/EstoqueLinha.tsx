@@ -34,7 +34,7 @@ import { useStockData } from '@/hooks/useStockData';
 import type { StockItem } from '@/types/estoque';
 
 import { useItemTypes } from '@/hooks/useItemTypes';
-import { useProductLinhas } from '@/hooks/useCompanyLinhas';
+import { useCompanyLinhas } from '@/hooks/useCompanyLinhas';
 import { cn } from '@/lib/utils';
 
 interface RegistrarMovimentoStockItem {

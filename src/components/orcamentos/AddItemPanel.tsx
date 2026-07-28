@@ -12,7 +12,7 @@ import { Search, Package, Check, ArrowLeft, Hash, DollarSign, Layers, Plus, Rule
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { useItemTypes } from '@/hooks/useItemTypes';
-import { useProductLinhas } from '@/hooks/useCompanyLinhas';
+import { useCompanyLinhas } from '@/hooks/useCompanyLinhas';
 import { toast } from 'sonner';
 
 interface UnifiedItem {

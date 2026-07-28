@@ -13,7 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useProductCategories } from '@/hooks/useProductCategories';
-import { useProductLinhas, useProductLinhaLabels } from '@/hooks/useCompanyLinhas';
+import { useCompanyLinhas, useProductLinhaLabels } from '@/hooks/useCompanyLinhas';
 import { ImageUploadField } from '@/components/common/ImageUploadField';
 
 interface CreateCustomProductDialogProps {
