@@ -95,6 +95,15 @@ export function RegistrarMovimentoDialog({
   const [selectedCategoria, setSelectedCategoria] = useState<string>(ALL_VALUE);
   const [expandedLinhas, setExpandedLinhas] = useState<Set<string>>(new Set());
 
+  // Modo de entrada específico por tipo
+  const [inputMode, setInputMode] = useState<'unit' | 'sheet' | 'piece' | 'bar' | 'linear'>('unit');
+  const [sheetWidth, setSheetWidth] = useState<string>('');
+  const [sheetHeight, setSheetHeight] = useState<string>('');
+  const [pieceWidth, setPieceWidth] = useState<string>('');
+  const [pieceHeight, setPieceHeight] = useState<string>('');
+  const [pieceQty, setPieceQty] = useState<string>('1');
+  const [linearMeters, setLinearMeters] = useState<string>('');
+
   const isEntrada = tipo === 'entrada';
   const motivos = isEntrada ? motivosEntrada : motivosSaida;
 
