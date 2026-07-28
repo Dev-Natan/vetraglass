@@ -194,12 +194,13 @@ export default function Estoque() {
               <p className="text-sm text-muted-foreground">{headerSubtitle}</p>
             </div>
           </div>
-          {view === 'perfis' && (
+          {(view === 'perfis' || view === 'vidros' || view === 'diversos') && (
             <Button className="gap-2 w-full sm:w-auto" onClick={() => setAddDialogOpen(true)}>
               <Plus className="w-4 h-4" />
-              Nova Linha / Perfil
+              {view === 'perfis' ? 'Nova Linha / Perfil' : view === 'vidros' ? 'Novo Vidro / Linha' : 'Novo Item / Linha'}
             </Button>
           )}
+
         </div>
 
         {view === 'root' && (
@@ -394,7 +395,8 @@ export default function Estoque() {
             )}
           </div>
         ) : view === 'vidros' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+
             <StockCard
               to={`/estoque/linha/${slug(VIDROS_KEY)}`}
               icon={<GlassWater className="w-6 h-6" />}
@@ -430,7 +432,7 @@ export default function Estoque() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             <StockCard
               to={`/estoque/linha/${slug(DIVERSOS_KEY)}`}
               icon={<Package className="w-6 h-6" />}
