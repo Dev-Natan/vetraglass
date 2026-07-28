@@ -696,6 +696,42 @@ const styles: Record<string, React.CSSProperties> = {
     printColorAdjust: 'exact',
   },
 
+  /* Pills for CORTE / SOBRA columns (Vetra reference layout) */
+  pillTrack: {
+    display: 'flex',
+    height: 20,
+    background: '#f1f5f9',
+    borderRadius: 3,
+    overflow: 'hidden',
+    border: `1px solid ${BORDER}`,
+    WebkitPrintColorAdjust: 'exact',
+    printColorAdjust: 'exact',
+  },
+  pillCut: {
+    height: '100%',
+    background: BLUE_SOFT,
+    color: '#fff',
+    fontSize: '8.5pt',
+    fontWeight: 700,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    WebkitPrintColorAdjust: 'exact',
+    printColorAdjust: 'exact',
+  },
+  pillWaste: {
+    height: '100%',
+    background: '#cbd5e1',
+    color: '#475569',
+    fontSize: '8.5pt',
+    fontWeight: 600,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    WebkitPrintColorAdjust: 'exact',
+    printColorAdjust: 'exact',
+  },
+
   /* Summary strip */
   summaryStrip: {
     marginTop: 8,
