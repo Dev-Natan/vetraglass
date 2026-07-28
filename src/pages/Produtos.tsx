@@ -257,6 +257,7 @@ export default function Produtos() {
 
       <CreateCustomProductDialog open={createCustomDialogOpen} onOpenChange={setCreateCustomDialogOpen} />
       <CreateLinhaDialog open={createLinhaDialogOpen} onOpenChange={setCreateLinhaDialogOpen} />
+      <ManageLinhasDialog open={manageLinhasOpen} onOpenChange={setManageLinhasOpen} />
     </MainLayout>
   );
 }
