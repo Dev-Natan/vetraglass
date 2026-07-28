@@ -954,6 +954,27 @@ export type Database = {
           },
         ]
       }
+      company_enabled_linhas: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          linha_slug: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          linha_slug: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          linha_slug?: string
+        }
+        Relationships: []
+      }
       company_item_color_prices: {
         Row: {
           color_name: string
