@@ -6937,6 +6937,10 @@ export type Database = {
         Args: { _ordem_servico_id: string }
         Returns: Json
       }
+      reserve_os_materials: {
+        Args: { _ordem_servico_id: string }
+        Returns: Json
+      }
       reset_company_product_item: {
         Args: { p_company_product_item_id: string }
         Returns: Json
