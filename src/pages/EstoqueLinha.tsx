@@ -87,8 +87,10 @@ export default function EstoqueLinha() {
   } | null>(null);
 
   // Filter states
+  const [searchParams] = useSearchParams();
+  const initialTipo = searchParams.get('tipo') || 'all';
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState(initialTipo);
   const [linhaFilter, setLinhaFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState<StockStatus>('all');
   const [sortBy, setSortBy] = useState<StockSortBy>('name');
