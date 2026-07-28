@@ -371,6 +371,10 @@ export function useApprovalMutation({
 
       await linkReservationsToConsumption(ordemServico.id);
 
+      // 7.1 Reserva automática de estoque para a OS
+      const reserveResult = await reserveMaterialsForOS(ordemServico.id);
+      if (!reserveResult.success) console.warn('Erro ao reservar materiais:', reserveResult.error);
+
       // 7. Delivery appointment
       if (estimatedEnd) {
         await supabase.from('service_appointments').insert({
