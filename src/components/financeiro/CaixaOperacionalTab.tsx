@@ -354,7 +354,7 @@ export function CaixaOperacionalTab() {
             totalEntradas={cashSummary.totalEntradas}
             totalSaidas={cashSummary.totalSaidas}
             companyCashBalance={companyCash?.current_balance}
-            fixedFund={companyCash?.fixed_fund}
+            
           />
 
           {openCashRegister?.id && (
