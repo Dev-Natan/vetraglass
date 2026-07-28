@@ -147,7 +147,7 @@ export default function Produtos() {
     }
 
     return result.sort((a, b) => a.linha.localeCompare(b.linha));
-  }, [companyProducts, allProducts, searchTerm, selectedCategory, showActive, activeLinhaKeys]);
+  }, [companyProducts, allProducts, searchTerm, selectedCategory, showActive, activeLinhaKeys, enabledSet, productLinhas]);
 
   const handleRemoveLinha = async (linha: string) => {
     if (!currentCompany?.id) return;
