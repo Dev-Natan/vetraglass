@@ -603,6 +603,7 @@ export default function EstoqueLinha() {
             id: item.item_template.id, name: item.item_template.name,
             unit: item.item_template.unit, image_url: item.item_template.image_url || undefined,
             type: item.item_template.type, linha: item.item_template.linha,
+            bar_length_mm: (item.item_template as any).bar_length_mm ?? (item.company_item as any)?.bar_length_mm ?? null,
           } : undefined,
         }))}
       />
@@ -619,6 +620,7 @@ export default function EstoqueLinha() {
             id: item.item_template.id, name: item.item_template.name,
             unit: item.item_template.unit, image_url: item.item_template.image_url || undefined,
             type: item.item_template.type, linha: item.item_template.linha,
+            bar_length_mm: (item.item_template as any).bar_length_mm ?? (item.company_item as any)?.bar_length_mm ?? null,
           } : undefined,
         }))}
       />

@@ -42,6 +42,9 @@ interface StockItem {
     image_url?: string;
     type?: string;
     linha?: string;
+    bar_length_mm?: number | null;
+    default_sheet_width_mm?: number | null;
+    default_sheet_height_mm?: number | null;
   };
 }
 
@@ -92,10 +95,121 @@ export function RegistrarMovimentoDialog({
   const [selectedCategoria, setSelectedCategoria] = useState<string>(ALL_VALUE);
   const [expandedLinhas, setExpandedLinhas] = useState<Set<string>>(new Set());
 
+  // Modo de entrada específico por tipo
+  const [inputMode, setInputMode] = useState<'unit' | 'sheet' | 'piece' | 'bar' | 'linear'>('unit');
+  const [sheetWidth, setSheetWidth] = useState<string>('');
+  const [sheetHeight, setSheetHeight] = useState<string>('');
+  const [pieceWidth, setPieceWidth] = useState<string>('');
+  const [pieceHeight, setPieceHeight] = useState<string>('');
+  const [pieceQty, setPieceQty] = useState<string>('1');
+  const [linearMeters, setLinearMeters] = useState<string>('');
+
   const isEntrada = tipo === 'entrada';
   const motivos = isEntrada ? motivosEntrada : motivosSaida;
 
   const selectedStockItem = stockItems.find(item => item.id === selectedItem);
+
+  // Classificação da unidade
+  const itemType = (selectedStockItem?.item_template?.type || '').toLowerCase();
+  const rawUnit = (selectedStockItem?.item_template?.unit || '').toLowerCase().trim();
+  const barLengthMm = selectedStockItem?.item_template?.bar_length_mm || 0;
+  const barLengthM = barLengthMm > 0 ? barLengthMm / 1000 : 0;
+
+  const isGlass = itemType === 'glass' || itemType === 'vidro' || rawUnit === 'm2' || rawUnit === 'metro quadrado';
+  const isProfile = itemType === 'profile' || itemType === 'perfil' || rawUnit === 'barra' || rawUnit === 'barras' || (barLengthMm > 0);
+
+  // Ao trocar de item, definir modo padrão
+  const handleSelectItem = (id: string) => {
+    setSelectedItem(id);
+    const it = stockItems.find(x => x.id === id);
+    const t = (it?.item_template?.type || '').toLowerCase();
+    const u = (it?.item_template?.unit || '').toLowerCase();
+    const bl = it?.item_template?.bar_length_mm || 0;
+    if (t === 'glass' || t === 'vidro' || u === 'm2') {
+      setInputMode('piece');
+    } else if (t === 'profile' || t === 'perfil' || bl > 0) {
+      setInputMode('bar');
+    } else {
+      setInputMode('unit');
+    }
+    // Reset campos auxiliares
+    setSheetWidth(String(it?.item_template?.default_sheet_width_mm || ''));
+    setSheetHeight(String(it?.item_template?.default_sheet_height_mm || ''));
+    setPieceWidth('');
+    setPieceHeight('');
+    setPieceQty('1');
+    setLinearMeters('');
+    setQuantidade('');
+  };
+
+  // Calcula a quantidade final (na unidade de estoque) e um resumo textual
+  const computed = useMemo(() => {
+    if (!selectedStockItem) return { quantity: 0, storageUnit: '', summary: '', autoNote: '' };
+    const storageUnit = rawUnit || 'un';
+
+    if (isGlass) {
+      if (inputMode === 'piece') {
+        const w = parseFloat(pieceWidth) || 0;
+        const h = parseFloat(pieceHeight) || 0;
+        const q = parseFloat(pieceQty) || 0;
+        const areaM2 = (w / 1000) * (h / 1000) * q;
+        return {
+          quantity: Number(areaM2.toFixed(4)),
+          storageUnit: 'm²',
+          summary: w && h && q ? `${q}× peça(s) de ${w} × ${h} mm = ${areaM2.toFixed(3)} m²` : '',
+          autoNote: w && h && q ? `Peça cortada: ${q}× ${w}×${h} mm` : '',
+        };
+      }
+      if (inputMode === 'sheet') {
+        const sw = parseFloat(sheetWidth) || 0;
+        const sh = parseFloat(sheetHeight) || 0;
+        const sq = parseFloat(quantidade) || 0;
+        const areaPer = (sw / 1000) * (sh / 1000);
+        const total = areaPer * sq;
+        return {
+          quantity: Number(total.toFixed(4)),
+          storageUnit: 'm²',
+          summary: sw && sh && sq ? `${sq}× chapa(s) de ${sw} × ${sh} mm = ${total.toFixed(3)} m²` : '',
+          autoNote: sw && sh && sq ? `Chapa inteira: ${sq}× ${sw}×${sh} mm` : '',
+        };
+      }
+    }
+
+    if (isProfile) {
+      if (inputMode === 'bar') {
+        const q = parseFloat(quantidade) || 0;
+        // Armazenamento em barras
+        const totalM = barLengthM > 0 ? q * barLengthM : 0;
+        return {
+          quantity: q,
+          storageUnit: 'barra(s)',
+          summary: q ? (barLengthM > 0 ? `${q} barra(s) de ${barLengthM} m = ${totalM.toFixed(2)} m` : `${q} barra(s)`) : '',
+          autoNote: '',
+        };
+      }
+      if (inputMode === 'linear') {
+        const meters = parseFloat(linearMeters) || 0;
+        if (barLengthM <= 0) {
+          return { quantity: meters, storageUnit: 'm', summary: meters ? `${meters} m lineares` : '', autoNote: '' };
+        }
+        const bars = meters / barLengthM;
+        const barrasInteiras = Math.floor(bars);
+        const retalhoM = Number((meters - barrasInteiras * barLengthM).toFixed(3));
+        const retalhoTxt = retalhoM > 0 ? ` + retalho de ${retalhoM.toFixed(2)} m` : '';
+        return {
+          quantity: Number(bars.toFixed(4)),
+          storageUnit: 'barra(s) equivalentes',
+          summary: meters ? `${meters} m lineares = ${bars.toFixed(3)} barras (${barrasInteiras} inteira(s)${retalhoTxt})` : '',
+          autoNote: meters ? `Metro linear: ${meters} m${retalhoM > 0 ? ` (retalho ${retalhoM.toFixed(2)} m)` : ''}` : '',
+        };
+      }
+    }
+
+    // Padrão: unidade simples
+    const q = parseFloat(quantidade) || 0;
+    return { quantity: q, storageUnit, summary: q ? `${q} ${storageUnit}` : '', autoNote: '' };
+  }, [selectedStockItem, isGlass, isProfile, inputMode, pieceWidth, pieceHeight, pieceQty, sheetWidth, sheetHeight, quantidade, linearMeters, barLengthM, rawUnit]);
+
 
   // Filtrar itens por busca
   const filteredItems = useMemo(() => {
@@ -179,26 +293,27 @@ export function RegistrarMovimentoDialog({
 
   const movimentoMutation = useMutation({
     mutationFn: async () => {
-      if (!currentCompany?.id || !selectedItem || !quantidade || !motivo) {
+      if (!currentCompany?.id || !selectedItem || !motivo) {
         throw new Error('Preencha todos os campos obrigatórios');
       }
 
-      const qtd = parseFloat(quantidade);
+      const qtd = computed.quantity;
       if (isNaN(qtd) || qtd <= 0) {
-        throw new Error('Quantidade inválida');
+        throw new Error('Quantidade calculada inválida — verifique os campos.');
       }
 
       const stockItem = stockItems.find(item => item.id === selectedItem);
       if (!stockItem) throw new Error('Item não encontrado');
 
-      // Verificar se há estoque suficiente para saída
       if (!isEntrada && qtd > stockItem.quantity) {
-        throw new Error(`Estoque insuficiente. Disponível: ${stockItem.quantity}`);
+        throw new Error(`Estoque insuficiente. Disponível: ${stockItem.quantity} — tentando ${qtd.toFixed(3)}`);
       }
 
-      const newQuantity = isEntrada 
-        ? stockItem.quantity + qtd 
-        : stockItem.quantity - qtd;
+      const newQuantity = isEntrada
+        ? Number((stockItem.quantity + qtd).toFixed(4))
+        : Number((stockItem.quantity - qtd).toFixed(4));
+
+      const finalDescription = [computed.autoNote, observacao].filter(Boolean).join(' — ') || null;
 
       const { error: movimentoError } = await supabase
         .from('stock_movements')
@@ -208,7 +323,7 @@ export function RegistrarMovimentoDialog({
           type: isEntrada ? 'entrada' : 'saida',
           category: motivo,
           quantity: qtd,
-          description: observacao || null,
+          description: finalDescription,
           created_by: user?.id,
         });
 
@@ -226,8 +341,8 @@ export function RegistrarMovimentoDialog({
     onSuccess: (data) => {
       invalidateStock();
       toast.success(
-        isEntrada 
-          ? `Entrada registrada. Novo saldo: ${data.newQuantity}` 
+        isEntrada
+          ? `Entrada registrada. Novo saldo: ${data.newQuantity}`
           : `Saída registrada. Novo saldo: ${data.newQuantity}`
       );
       handleClose();
@@ -236,6 +351,7 @@ export function RegistrarMovimentoDialog({
       toast.error(error.message || 'Erro ao registrar movimento');
     },
   });
+
 
   const handleClose = () => {
     setSelectedItem('');
@@ -246,6 +362,13 @@ export function RegistrarMovimentoDialog({
     setSelectedLinha(ALL_VALUE);
     setSelectedCategoria(ALL_VALUE);
     setExpandedLinhas(new Set());
+    setInputMode('unit');
+    setSheetWidth('');
+    setSheetHeight('');
+    setPieceWidth('');
+    setPieceHeight('');
+    setPieceQty('1');
+    setLinearMeters('');
     onOpenChange(false);
   };
 
@@ -442,7 +565,7 @@ export function RegistrarMovimentoDialog({
                                       {items.map((item) => (
                                         <div
                                           key={item.id}
-                                          onClick={() => setSelectedItem(item.id)}
+                                          onClick={() => handleSelectItem(item.id)}
                                           className={cn(
                                             "relative flex flex-col items-center p-3 rounded-lg border cursor-pointer transition-all hover:border-primary/50 hover:bg-accent/50",
                                             selectedItem === item.id 
@@ -501,33 +624,131 @@ export function RegistrarMovimentoDialog({
               </div>
             </div>
 
-            {/* Campos de Quantidade, Motivo e Observação */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="quantidade">
-                  Quantidade * 
-                  {selectedStockItem?.item_template?.unit && (
-                    <span className="text-muted-foreground ml-1">
-                      ({selectedStockItem.item_template.unit})
-                    </span>
-                  )}
-                </Label>
-                <Input
-                  id="quantidade"
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  value={quantidade}
-                  onChange={(e) => setQuantidade(e.target.value)}
-                  placeholder="Ex: 10"
-                  required
-                />
-                {selectedStockItem && !isEntrada && (
-                  <p className="text-xs text-muted-foreground">
-                    Disponível: {selectedStockItem.quantity} {selectedStockItem.item_template?.unit}
-                  </p>
+            {/* Modo de entrada específico (Vidro / Perfil) */}
+            {selectedStockItem && (isGlass || isProfile) && (
+              <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs text-muted-foreground">Modo de {isEntrada ? 'entrada' : 'saída'}:</Label>
+                  <div className="flex gap-1 flex-wrap">
+                    {isGlass && (
+                      <>
+                        <Button type="button" size="sm" variant={inputMode === 'piece' ? 'default' : 'outline'} onClick={() => setInputMode('piece')}>
+                          Peça cortada (L × A)
+                        </Button>
+                        <Button type="button" size="sm" variant={inputMode === 'sheet' ? 'default' : 'outline'} onClick={() => setInputMode('sheet')}>
+                          Chapa inteira
+                        </Button>
+                      </>
+                    )}
+                    {isProfile && (
+                      <>
+                        <Button type="button" size="sm" variant={inputMode === 'bar' ? 'default' : 'outline'} onClick={() => setInputMode('bar')}>
+                          Por barra{barLengthM > 0 ? ` (${barLengthM} m)` : ''}
+                        </Button>
+                        <Button type="button" size="sm" variant={inputMode === 'linear' ? 'default' : 'outline'} onClick={() => setInputMode('linear')}>
+                          Metro linear (com retalho)
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Peça cortada (vidro) */}
+                {isGlass && inputMode === 'piece' && (
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Largura (mm)</Label>
+                      <Input type="number" min="1" value={pieceWidth} onChange={(e) => setPieceWidth(e.target.value)} placeholder="Ex: 800" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Altura (mm)</Label>
+                      <Input type="number" min="1" value={pieceHeight} onChange={(e) => setPieceHeight(e.target.value)} placeholder="Ex: 1200" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Quantidade</Label>
+                      <Input type="number" min="1" step="1" value={pieceQty} onChange={(e) => setPieceQty(e.target.value)} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Chapa inteira (vidro) */}
+                {isGlass && inputMode === 'sheet' && (
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Largura chapa (mm)</Label>
+                      <Input type="number" min="1" value={sheetWidth} onChange={(e) => setSheetWidth(e.target.value)} placeholder="Ex: 2200" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Altura chapa (mm)</Label>
+                      <Input type="number" min="1" value={sheetHeight} onChange={(e) => setSheetHeight(e.target.value)} placeholder="Ex: 3200" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Nº de chapas</Label>
+                      <Input type="number" min="0.01" step="0.01" value={quantidade} onChange={(e) => setQuantidade(e.target.value)} placeholder="1" />
+                    </div>
+                  </div>
+                )}
+
+                {/* Barra (perfil) */}
+                {isProfile && inputMode === 'bar' && (
+                  <div className="space-y-1">
+                    <Label className="text-xs">Quantidade de barras</Label>
+                    <Input type="number" min="0.01" step="0.01" value={quantidade} onChange={(e) => setQuantidade(e.target.value)} placeholder="Ex: 5" />
+                  </div>
+                )}
+
+                {/* Metro linear (perfil) */}
+                {isProfile && inputMode === 'linear' && (
+                  <div className="space-y-1">
+                    <Label className="text-xs">Total em metros lineares</Label>
+                    <Input type="number" min="0.01" step="0.01" value={linearMeters} onChange={(e) => setLinearMeters(e.target.value)} placeholder="Ex: 12.50" />
+                    {barLengthM > 0 && (
+                      <p className="text-[11px] text-muted-foreground">
+                        Convertido para barras de {barLengthM} m — o resto é registrado como retalho na observação.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Resumo do cálculo */}
+                {computed.summary && (
+                  <div className="rounded-md bg-primary/5 border border-primary/20 px-3 py-2 text-xs">
+                    <span className="text-muted-foreground">Será registrado: </span>
+                    <span className="font-medium text-primary">{computed.summary}</span>
+                  </div>
                 )}
               </div>
+            )}
+
+            {/* Quantidade simples (padrão) + Motivo */}
+            <div className="grid grid-cols-2 gap-4">
+              {(!selectedStockItem || (!isGlass && !isProfile)) && (
+                <div className="space-y-2">
+                  <Label htmlFor="quantidade">
+                    Quantidade *
+                    {selectedStockItem?.item_template?.unit && (
+                      <span className="text-muted-foreground ml-1">
+                        ({selectedStockItem.item_template.unit})
+                      </span>
+                    )}
+                  </Label>
+                  <Input
+                    id="quantidade"
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    value={quantidade}
+                    onChange={(e) => setQuantidade(e.target.value)}
+                    placeholder="Ex: 10"
+                    required
+                  />
+                  {selectedStockItem && !isEntrada && (
+                    <p className="text-xs text-muted-foreground">
+                      Disponível: {selectedStockItem.quantity} {selectedStockItem.item_template?.unit}
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="motivo">Motivo *</Label>
@@ -545,6 +766,7 @@ export function RegistrarMovimentoDialog({
                 </Select>
               </div>
             </div>
+
 
             <div className="space-y-2">
               <Label htmlFor="observacao">Observação</Label>
@@ -565,7 +787,7 @@ export function RegistrarMovimentoDialog({
             </Button>
             <Button 
               type="submit" 
-              disabled={!selectedItem || !quantidade || !motivo || movimentoMutation.isPending}
+              disabled={!selectedItem || !motivo || computed.quantity <= 0 || movimentoMutation.isPending}
               className={isEntrada ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}
             >
               {movimentoMutation.isPending ? 'Processando...' : 'Confirmar'}
