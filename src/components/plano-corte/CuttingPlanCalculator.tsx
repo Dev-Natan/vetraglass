@@ -778,6 +778,9 @@ export function CuttingPlanCalculator() {
       <div className="print-area">
         <PrintableCuttingReport
           companyName={currentCompany?.name || 'Urbano Vidros'}
+          companyLogoUrl={(currentCompany as any)?.logo_url ?? null}
+          companyTagline="Vidros e Esquadrias"
+          productHeadline={selectedProductData?.name || undefined}
           products={
             selectedProductData
               ? [{
