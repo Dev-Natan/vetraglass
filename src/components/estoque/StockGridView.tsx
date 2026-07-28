@@ -69,9 +69,14 @@ const StockGridCard = memo(function StockGridCard({
       </p>
 
       {/* Quantity */}
-      <p className={`text-lg font-bold ${isZeroStock ? 'text-destructive' : isLowStock ? 'text-amber-600' : ''}`}>
+      <p className={`text-lg font-bold ${(isZeroStock || isLowStock) ? 'text-destructive' : ''}`}>
         {item.quantity} <span className="text-xs text-muted-foreground font-normal">{item.item_template?.unit}</span>
       </p>
+      {(item.min_quantity || 0) > 0 && (
+        <p className={`text-[10px] ${(isZeroStock || isLowStock) ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
+          Mín: {item.min_quantity}
+        </p>
+      )}
 
       {/* Price Info */}
       {item.priceInfo && item.priceInfo.price > 0 && (
