@@ -3,6 +3,7 @@ import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import {
+import { parseCurrencyBRL } from '@/utils/currencyMask';
   Dialog,
   DialogContent,
   DialogHeader,
@@ -102,7 +103,7 @@ export function MovimentacaoCaixaDialog({
     enabled: !!currentCompany?.id && open,
   });
 
-  const amountValue = parseFloat(amount.replace(',', '.')) || 0;
+  const amountValue = parseCurrencyBRL(amount);
   const needsReinforcement = type === 'saida' && amountValue > currentDailyBalance;
   const reinforcementAmount = needsReinforcement ? amountValue - currentDailyBalance : 0;
   const hasEnoughCompanyBalance = !needsReinforcement || (companyCash?.current_balance || 0) >= reinforcementAmount;

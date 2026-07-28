@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
+import { parseCurrencyBRL } from '@/utils/currencyMask';
   Dialog,
   DialogContent,
   DialogDescription,
@@ -43,7 +44,7 @@ export function AbrirCaixaDialog({
     }
   }, [open, fallback]);
 
-  const parsedAmount = parseFloat(amountStr.replace(',', '.')) || 0;
+  const parsedAmount = parseCurrencyBRL(amountStr);
 
   const handleConfirm = async () => {
     await onConfirm(parsedAmount);

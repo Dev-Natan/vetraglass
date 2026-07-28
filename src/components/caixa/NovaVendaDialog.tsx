@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInvalidateStock } from '@/hooks/useInvalidateStock';
 import {
+import { parseCurrencyBRL } from '@/utils/currencyMask';
   Dialog,
   DialogContent,
   DialogHeader,
@@ -175,7 +176,7 @@ export function NovaVendaDialog({
   }, [items]);
 
   const discountValue = useMemo(() => {
-    const percent = parseFloat(discountPercent.replace(',', '.')) || 0;
+    const percent = parseCurrencyBRL(discountPercent);
     return (subtotal * percent) / 100;
   }, [subtotal, discountPercent]);
 
@@ -349,8 +350,8 @@ export function NovaVendaDialog({
   const createVendaItem = (): VendaItem | null => {
     if (!selectedMaterial) return null;
     
-    const width = parseFloat(materialWidth.replace(',', '.')) || 0;
-    const height = parseFloat(materialHeight.replace(',', '.')) || 0;
+    const width = parseCurrencyBRL(materialWidth);
+    const height = parseCurrencyBRL(materialHeight);
     const quantity = parseInt(materialQuantity) || 1;
     
     // Calculate based on unit type
@@ -639,7 +640,7 @@ export function NovaVendaDialog({
       items,
       customerName,
       paymentConfig,
-      discountPercent: parseFloat(discountPercent.replace(',', '.')) || 0,
+      discountPercent: parseCurrencyBRL(discountPercent),
       discountAmount: discountValue,
       subtotal,
       total,
@@ -1422,8 +1423,8 @@ export function NovaVendaDialog({
                   <span>Total estimado</span>
                   <span className="text-primary">
                     {(() => {
-                      const width = parseFloat(materialWidth.replace(',', '.')) || 0;
-                      const height = parseFloat(materialHeight.replace(',', '.')) || 0;
+                      const width = parseCurrencyBRL(materialWidth);
+                      const height = parseCurrencyBRL(materialHeight);
                       const qty = parseInt(materialQuantity) || 1;
                       
                       if (selectedMaterial.unit === 'm²' && width > 0 && height > 0) {

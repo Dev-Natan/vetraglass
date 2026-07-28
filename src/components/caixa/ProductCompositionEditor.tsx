@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import {
+import { parseCurrencyBRL } from '@/utils/currencyMask';
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter,
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -104,7 +105,7 @@ export function ProductCompositionEditor({
   }, [stockOptions, search]);
 
   const updateQty = (id: string, value: string) => {
-    const qty = parseFloat(value.replace(',', '.')) || 0;
+    const qty = parseCurrencyBRL(value);
     setLines((prev) => prev.map((l) => (l.id === id ? { ...l, quantity: qty } : l)));
   };
 

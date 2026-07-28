@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
+import { parseCurrencyBRL } from '@/utils/currencyMask';
   Dialog,
   DialogContent,
   DialogDescription,
@@ -48,7 +49,7 @@ export function AjustarSaldoDialog({
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
-  const parsedNewBalance = parseFloat(newBalance.replace(',', '.')) || 0;
+  const parsedNewBalance = parseCurrencyBRL(newBalance);
   const difference = parsedNewBalance - currentBalance;
 
   return (

@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Banknote, CreditCard, Smartphone, HelpCircle } from 'lucide-react';
+import { parseCurrencyBRL } from '@/utils/currencyMask';
 
 interface CashCount {
   payment_method: string;
@@ -55,7 +56,7 @@ export function CashCountForm({
     let total = 0;
 
     Object.entries(values).forEach(([method, valueStr]) => {
-      const amount = parseFloat(valueStr.replace(',', '.')) || 0;
+      const amount = parseCurrencyBRL(valueStr);
       counts.push({ payment_method: method, amount });
       total += amount;
     });
@@ -79,7 +80,7 @@ export function CashCountForm({
 
   const totalExpected = Object.values(expectedValues).reduce((sum, v) => sum + v, 0);
   const totalActual = Object.values(values).reduce((sum, v) => {
-    return sum + (parseFloat(v.replace(',', '.')) || 0);
+    return sum + (parseCurrencyBRL(v));
   }, 0);
 
   return (
