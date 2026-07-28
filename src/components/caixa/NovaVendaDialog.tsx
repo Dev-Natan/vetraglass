@@ -1,10 +1,10 @@
+import { parseCurrencyBRL } from '@/utils/currencyMask';
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInvalidateStock } from '@/hooks/useInvalidateStock';
 import {
-import { parseCurrencyBRL } from '@/utils/currencyMask';
   Dialog,
   DialogContent,
   DialogHeader,

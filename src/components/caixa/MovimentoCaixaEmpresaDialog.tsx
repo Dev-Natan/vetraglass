@@ -1,6 +1,6 @@
+import { parseCurrencyBRL } from '@/utils/currencyMask';
 import { useState, useEffect } from 'react';
 import {
-import { parseCurrencyBRL } from '@/utils/currencyMask';
   Dialog,
   DialogContent,
   DialogDescription,
