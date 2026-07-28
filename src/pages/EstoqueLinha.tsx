@@ -89,6 +89,7 @@ export default function EstoqueLinha() {
   // Filter states
   const [searchParams] = useSearchParams();
   const lockedTipo = searchParams.get('tipo'); // when present, category is locked to this type
+  const semLinhaOnly = searchParams.get('semlinha') === '1';
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState(lockedTipo || 'all');
   const [linhaFilter, setLinhaFilter] = useState('all');
@@ -246,8 +247,12 @@ export default function EstoqueLinha() {
     let items = activeItems.filter((item) => {
       const linha = item.company_item?.linha ?? item.item_template?.linha;
       const type = item.company_item?.type ?? item.item_template?.type;
-      if (isVidros) return type === 'glass';
-      if (isDiversos) return !linha && type !== 'glass';
+      if (isVidros) {
+        if (type !== 'glass' && type !== 'vidro') return false;
+        if (semLinhaOnly) return !linha;
+        return true;
+      }
+      if (isDiversos) return !linha && type !== 'glass' && type !== 'vidro';
       return (linha || '') === decodedLinha;
     });
     if (searchTerm) {
@@ -261,6 +266,11 @@ export default function EstoqueLinha() {
       items = items.filter((item) => {
         const type = item.company_item?.type ?? item.item_template?.type;
         return type !== 'perfil' && type !== 'vidro' && type !== 'glass';
+      });
+    } else if (categoryFilter === 'vidro') {
+      items = items.filter((item) => {
+        const type = item.company_item?.type ?? item.item_template?.type;
+        return type === 'vidro' || type === 'glass';
       });
     } else if (categoryFilter !== 'all') {
       items = items.filter((item) => {
@@ -287,7 +297,7 @@ export default function EstoqueLinha() {
       inStockItems: items.filter(item => item.quantity > 0),
       outOfStockItems: items.filter(item => item.quantity === 0),
     };
-  }, [activeItems, searchTerm, categoryFilter, statusFilter, sortBy, isVidros, isDiversos, decodedLinha]);
+  }, [activeItems, searchTerm, categoryFilter, statusFilter, sortBy, isVidros, isDiversos, decodedLinha, semLinhaOnly]);
 
 
   const filteredItems = useMemo(() => [...inStockItems, ...outOfStockItems], [inStockItems, outOfStockItems]);
@@ -336,13 +346,15 @@ export default function EstoqueLinha() {
             <h1 className="font-display font-bold text-2xl text-foreground flex items-center gap-2">
               <Boxes className="w-7 h-7 text-primary" />
               Estoque · {pageTitle}
-              {lockedTipo === 'perfil' ? ' · Perfis' : lockedTipo === 'diversos' ? ' · Acessórios/Diversos' : ''}
+              {lockedTipo === 'perfil' ? ' · Perfis' : lockedTipo === 'diversos' ? ' · Acessórios/Diversos' : lockedTipo === 'vidro' ? ' · Vidros' : ''}
             </h1>
             <p className="text-muted-foreground">
               {lockedTipo === 'perfil'
                 ? `Somente perfis da linha ${pageTitle}`
                 : lockedTipo === 'diversos'
                 ? `Somente acessórios/diversos da linha ${pageTitle}`
+                : lockedTipo === 'vidro'
+                ? `Somente vidros da linha ${pageTitle}`
                 : 'Controle de entradas e saídas desta linha'}
             </p>
           </div>

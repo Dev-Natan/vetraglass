@@ -20,7 +20,7 @@ function slug(s: string) {
   return encodeURIComponent(s);
 }
 
-type View = 'root' | 'perfis' | 'diversos';
+type View = 'root' | 'perfis' | 'diversos' | 'vidros';
 
 export default function Estoque() {
   const { currentCompany } = useAuth();
@@ -43,7 +43,9 @@ export default function Estoque() {
   const stats = useMemo(() => {
     const byLinhaPerfil = new Map<string, { items: number; qty: number }>();
     const byLinhaDiversos = new Map<string, { items: number; qty: number }>();
+    const byLinhaVidros = new Map<string, { items: number; qty: number }>();
     let vidros = { items: 0, qty: 0 };
+    let vidrosSemLinha = { items: 0, qty: 0 };
     let diversos = { items: 0, qty: 0 };
     let diversosSemLinha = { items: 0, qty: 0 };
     let perfis = { items: 0, qty: 0 };
@@ -56,6 +58,15 @@ export default function Estoque() {
       if (type === 'glass' || type === 'vidro') {
         vidros.items++;
         vidros.qty += qty;
+        if (!linha) {
+          vidrosSemLinha.items++;
+          vidrosSemLinha.qty += qty;
+        } else if (activeLinhaKeys.size === 0 || activeLinhaKeys.has(linha.toLowerCase())) {
+          const cur = byLinhaVidros.get(linha) ?? { items: 0, qty: 0 };
+          cur.items++;
+          cur.qty += qty;
+          byLinhaVidros.set(linha, cur);
+        }
         continue;
       }
 
@@ -93,17 +104,23 @@ export default function Estoque() {
       .map(l => ({ name: l.name, ...(byLinhaDiversos.get(l.name) ?? { items: 0, qty: 0 }) }))
       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
 
-    return { vidros, diversos, perfis, linhasPerfil, linhasDiversos, diversosSemLinha };
+    const linhasVidros = (productLinhas || [])
+      .map(l => ({ name: l.name, ...(byLinhaVidros.get(l.name) ?? { items: 0, qty: 0 }) }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+
+    return { vidros, diversos, perfis, linhasPerfil, linhasDiversos, linhasVidros, diversosSemLinha, vidrosSemLinha };
   }, [activeItems, activeLinhaKeys, productLinhas]);
 
   const headerTitle =
     view === 'root' ? 'Estoque'
     : view === 'perfis' ? 'Perfis · Selecione a linha'
+    : view === 'vidros' ? 'Vidros · Selecione a linha'
     : 'Acessórios / Diversos · Selecione a linha';
 
   const headerSubtitle =
     view === 'root' ? 'Escolha uma categoria para gerenciar entradas, saídas e saldos.'
     : view === 'perfis' ? 'Selecione a linha do perfil (Suprema, Temperados, etc.).'
+    : view === 'vidros' ? 'Selecione a linha do vidro (Temperados, Comum, etc.).'
     : 'Selecione a linha dos acessórios/diversos.';
 
   return (
@@ -138,11 +155,11 @@ export default function Estoque() {
         ) : view === 'root' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <StockCard
-              to={`/estoque/linha/${slug(VIDROS_KEY)}`}
+              onClick={() => setView('vidros')}
               icon={<GlassWater className="w-6 h-6" />}
               title="Vidros"
               subtitle={`${stats.vidros.items} item(s) · ${stats.vidros.qty.toFixed(2)} em saldo`}
-              badge="Todos os vidros"
+              badge={`${stats.linhasVidros.length} linha(s)`}
             />
             <StockCard
               onClick={() => setView('perfis')}
@@ -178,6 +195,42 @@ export default function Estoque() {
                   badge={`${l.items} itens`}
                 />
               ))
+            )}
+          </div>
+        ) : view === 'vidros' ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <StockCard
+              to={`/estoque/linha/${slug(VIDROS_KEY)}`}
+              icon={<GlassWater className="w-6 h-6" />}
+              title="Todos os Vidros"
+              subtitle={`${stats.vidros.items} item(s) · ${stats.vidros.qty.toFixed(2)} em saldo`}
+              badge="Ver tudo"
+            />
+            {stats.vidrosSemLinha.items > 0 && (
+              <StockCard
+                to={`/estoque/linha/${slug(VIDROS_KEY)}?semlinha=1`}
+                icon={<GlassWater className="w-6 h-6" />}
+                title="Sem linha específica"
+                subtitle={`${stats.vidrosSemLinha.items} item(s) · ${stats.vidrosSemLinha.qty.toFixed(2)} em saldo`}
+                badge="Genéricos"
+              />
+            )}
+            {stats.linhasVidros.map(l => (
+              <StockCard
+                key={l.name}
+                to={`/estoque/linha/${slug(l.name)}?tipo=vidro`}
+                icon={<Layers className="w-6 h-6" />}
+                title={l.name}
+                subtitle={`${l.items} vidro(s) · ${l.qty.toFixed(2)} em saldo`}
+                badge={`${l.items} itens`}
+              />
+            ))}
+            {stats.linhasVidros.length === 0 && stats.vidrosSemLinha.items === 0 && (
+              <Card className="col-span-full">
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  Nenhum vidro cadastrado.
+                </CardContent>
+              </Card>
             )}
           </div>
         ) : (
