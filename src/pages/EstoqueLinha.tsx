@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { supabase } from '@/integrations/supabase/client';
@@ -87,8 +87,10 @@ export default function EstoqueLinha() {
   } | null>(null);
 
   // Filter states
+  const [searchParams] = useSearchParams();
+  const initialTipo = searchParams.get('tipo') || 'all';
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState(initialTipo);
   const [linhaFilter, setLinhaFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState<StockStatus>('all');
   const [sortBy, setSortBy] = useState<StockSortBy>('name');
