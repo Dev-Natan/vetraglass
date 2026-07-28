@@ -2883,6 +2883,47 @@ export type Database = {
         }
         Relationships: []
       }
+      investment_allocations: {
+        Row: {
+          color: string
+          company_id: string
+          created_at: string
+          id: string
+          name: string
+          percentage: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          color?: string
+          company_id: string
+          created_at?: string
+          id?: string
+          name: string
+          percentage?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          percentage?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "investment_allocations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       item_template_color_prices: {
         Row: {
           color_name: string
