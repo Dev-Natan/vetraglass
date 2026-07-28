@@ -233,26 +233,6 @@ export default function Estoque() {
               </Card>
             )}
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {stats.linhasPerfil.length === 0 ? (
-              <Card className="col-span-full">
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  Nenhuma linha habilitada. Use <strong>Gerenciar Linhas</strong> em Produtos para ativá-las.
-                </CardContent>
-              </Card>
-            ) : (
-              stats.linhasPerfil.map(l => (
-                <StockCard
-                  key={l.name}
-                  to={`/estoque/linha/${slug(l.name)}?tipo=perfil`}
-                  icon={<Layers className="w-6 h-6" />}
-                  title={l.name}
-                  subtitle={`${l.items} perfil(s) · ${l.qty.toFixed(2)} em saldo`}
-                  badge={`${l.items} itens`}
-                />
-              ))
-            )}
-          </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <StockCard
