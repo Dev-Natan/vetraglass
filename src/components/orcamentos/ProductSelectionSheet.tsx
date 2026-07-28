@@ -16,7 +16,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { ArrowLeft, Search, Package, Check, ChevronRight, Home, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
-import { useProductLinhas } from '@/hooks/useProductLinhas';
+import { useProductLinhas } from '@/hooks/useCompanyLinhas';
 
 interface ProductSelectionSheetProps {
   open: boolean;
@@ -51,7 +51,7 @@ const categoryIcons: Record<string, string> = {
 export function ProductSelectionSheet({ open, onOpenChange, onSelectProduct }: ProductSelectionSheetProps) {
   const { currentCompany } = useAuth();
   const { labels: categoryLabels } = useProductCategoryLabels();
-  const { data: productLinhas } = useProductLinhas();
+  const { data: productLinhas } = useCompanyLinhas();
   const [step, setStep] = useState<SelectionStep>('linha');
   const [selectedLinha, setSelectedLinha] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);

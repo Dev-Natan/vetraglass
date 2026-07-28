@@ -15,7 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 import { useProductCategoryLabels } from '@/hooks/useProductCategories';
-import { useProductLinhas } from '@/hooks/useProductLinhas';
+import { useProductLinhas } from '@/hooks/useCompanyLinhas';
 import { ManageLinhasDialog } from '@/components/produtos/ManageLinhasDialog';
 
 export default function Produtos() {
@@ -33,7 +33,7 @@ export default function Produtos() {
   const [manageLinhasOpen, setManageLinhasOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const { labels: categoryLabels, categories } = useProductCategoryLabels();
-  const { data: productLinhas } = useProductLinhas();
+  const { data: productLinhas } = useCompanyLinhas();
   const getLinhaLabel = (slug: string) => productLinhas?.find(l => l.slug.toLowerCase() === slug.toLowerCase() || l.name.toLowerCase() === slug.toLowerCase())?.name || slug;
   const activeLinhaKeys = useMemo(() => {
     const set = new Set<string>();

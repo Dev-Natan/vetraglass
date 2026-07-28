@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Boxes, Layers, ChevronRight, GlassWater, Package, Loader2, Info } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useStockData } from '@/hooks/useStockData';
-import { useProductLinhas } from '@/hooks/useProductLinhas';
+import { useProductLinhas } from '@/hooks/useCompanyLinhas';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 
 const VIDROS_KEY = '__vidros__';
@@ -21,7 +21,7 @@ export default function Estoque() {
   useModuleTutorialTrigger('estoque');
 
   const { activeItems, isLoading } = useStockData({ companyId: currentCompany?.id });
-  const { data: productLinhas } = useProductLinhas();
+  const { data: productLinhas } = useCompanyLinhas();
 
   const activeLinhaKeys = useMemo(() => {
     const set = new Set<string>();

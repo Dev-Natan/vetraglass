@@ -13,7 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useProductCategories } from '@/hooks/useProductCategories';
-import { useProductLinhas, useProductLinhaLabels } from '@/hooks/useProductLinhas';
+import { useProductLinhas, useProductLinhaLabels } from '@/hooks/useCompanyLinhas';
 import { ImageUploadField } from '@/components/common/ImageUploadField';
 
 interface CreateCustomProductDialogProps {
@@ -29,7 +29,7 @@ export function CreateCustomProductDialog({ open, onOpenChange, defaultLinha }: 
   
   // Use dynamic categories and linhas from database
   const { data: productCategories } = useProductCategories();
-  const { data: productLinhas } = useProductLinhas();
+  const { data: productLinhas } = useCompanyLinhas();
   
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');

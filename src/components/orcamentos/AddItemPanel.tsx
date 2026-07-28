@@ -12,7 +12,7 @@ import { Search, Package, Check, ArrowLeft, Hash, DollarSign, Layers, Plus, Rule
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { useItemTypes } from '@/hooks/useItemTypes';
-import { useProductLinhas } from '@/hooks/useProductLinhas';
+import { useProductLinhas } from '@/hooks/useCompanyLinhas';
 import { toast } from 'sonner';
 
 interface UnifiedItem {
@@ -51,7 +51,7 @@ interface AddItemPanelProps {
 export function AddItemPanel({ onAdd, onCancel }: AddItemPanelProps) {
   const { currentCompany } = useAuth();
   const { data: itemTypes } = useItemTypes();
-  const { data: productLinhas } = useProductLinhas();
+  const { data: productLinhas } = useCompanyLinhas();
   
   const [selectedLinha, setSelectedLinha] = useState<string>('');
   const [selectedType, setSelectedType] = useState<string>('');

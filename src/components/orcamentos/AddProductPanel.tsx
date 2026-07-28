@@ -30,7 +30,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { useProductCategoryLabels, useProductCategories } from '@/hooks/useProductCategories';
-import { useProductLinhas } from '@/hooks/useProductLinhas';
+import { useProductLinhas } from '@/hooks/useCompanyLinhas';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useProductAluminumPriceOptions } from '@/hooks/useProductAluminumPrices';
 import { useGlassStockOptions } from '@/hooks/useGlassStockOptions';
@@ -130,7 +130,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     () => buildCategoryNormalizer(adminCategories?.map(c => ({ slug: c.slug, name: c.name }))),
     [adminCategories]
   );
-  const { data: productLinhas } = useProductLinhas();
+  const { data: productLinhas } = useCompanyLinhas();
   
   const [selectedLinha, setSelectedLinha] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');

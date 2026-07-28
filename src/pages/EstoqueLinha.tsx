@@ -34,7 +34,7 @@ import { useStockData } from '@/hooks/useStockData';
 import type { StockItem } from '@/types/estoque';
 
 import { useItemTypes } from '@/hooks/useItemTypes';
-import { useProductLinhas } from '@/hooks/useProductLinhas';
+import { useProductLinhas } from '@/hooks/useCompanyLinhas';
 import { cn } from '@/lib/utils';
 
 interface RegistrarMovimentoStockItem {
@@ -106,7 +106,7 @@ export default function EstoqueLinha() {
   } = useStockData({ companyId: currentCompany?.id });
 
   const { data: itemTypes } = useItemTypes();
-  const { data: productLinhas } = useProductLinhas();
+  const { data: productLinhas } = useCompanyLinhas();
 
   // Helper to get item name, type, linha from either source
   const getItemData = useCallback((item: StockItem) => {

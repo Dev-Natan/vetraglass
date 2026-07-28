@@ -26,7 +26,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { TrendingUp, TrendingDown, Package, Search, FolderOpen, Check, Layers, ChevronDown, ChevronRight } from 'lucide-react';
 import { useItemTypeLabels } from '@/hooks/useItemTypes';
-import { useProductLinhas } from '@/hooks/useProductLinhas';
+import { useProductLinhas } from '@/hooks/useCompanyLinhas';
 import { cn } from '@/lib/utils';
 import { useInvalidateStock } from '@/hooks/useInvalidateStock';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -81,7 +81,7 @@ export function RegistrarMovimentoDialog({
   const queryClient = useQueryClient();
   const invalidateStock = useInvalidateStock();
   const { labels: itemTypeLabels } = useItemTypeLabels();
-  const { data: productLinhas } = useProductLinhas();
+  const { data: productLinhas } = useCompanyLinhas();
   
   const [selectedItem, setSelectedItem] = useState<string>('');
   const [quantidade, setQuantidade] = useState<string>('');
