@@ -54,6 +54,8 @@ export function CuttingPlanCalculator() {
   const [hoveredProfileId, setHoveredProfileId] = useState<string | null>(null);
   const [profileOverrides, setProfileOverrides] = useState<Record<string, ProfileOverride>>({});
   const [glassOverrides, setGlassOverrides] = useState<Record<string, GlassOverride>>({});
+  const [offcutsDialogOpen, setOffcutsDialogOpen] = useState(false);
+
 
   const handleLiveChange = (payload: {
     product_template_id: string | null;
