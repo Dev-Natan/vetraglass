@@ -343,9 +343,10 @@ export default function ProdutosLinha() {
           ) : filteredProducts.length > 0 ? (
             filteredProducts.map((product) => {
               return (
-                <button
-                  type="button"
+                <div
                   key={product.id + (product.productTemplateId || '')}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => {
                     if (product.companyProductId) {
                       navigate(`/produtos/empresa/editar/${product.companyProductId}`);
@@ -353,7 +354,13 @@ export default function ProdutosLinha() {
                       quickActivateMutation.mutate(product.productTemplateId);
                     }
                   }}
-                  className={`text-left bg-card border rounded-lg p-4 flex items-center gap-4 shadow-sm hover:shadow-md hover:border-primary/40 hover:bg-accent/30 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${!product.is_active ? 'opacity-70' : ''}`}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      (e.currentTarget as HTMLDivElement).click();
+                    }
+                  }}
+                  className={`relative text-left bg-card border rounded-lg p-4 flex items-center gap-4 shadow-sm hover:shadow-md hover:border-primary/40 hover:bg-accent/30 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${!product.is_active ? 'opacity-70' : ''}`}
                 >
                   <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center shrink-0 p-1">
                     {product.image_url ? (
@@ -382,7 +389,52 @@ export default function ProdutosLinha() {
                       )}
                     </div>
                   </div>
-                </button>
+
+                  {(product.companyProductId || product.productTemplateId) && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8" aria-label="Ações do produto">
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                        {product.companyProductId && product.is_active && (
+                          <DropdownMenuItem
+                            onClick={() => deactivateProductMutation.mutate({ id: product.companyProductId!, isCustom: product.is_custom })}
+                          >
+                            <PowerOff className="w-4 h-4 mr-2" /> Desativar
+                          </DropdownMenuItem>
+                        )}
+                        {product.companyProductId && !product.is_active && (
+                          <DropdownMenuItem
+                            onClick={() => reactivateProductMutation.mutate({ id: product.companyProductId!, isCustom: product.is_custom })}
+                          >
+                            <Power className="w-4 h-4 mr-2" /> Ativar
+                          </DropdownMenuItem>
+                        )}
+                        {!product.companyProductId && product.productTemplateId && (
+                          <DropdownMenuItem
+                            onClick={() => quickActivateMutation.mutate(product.productTemplateId!)}
+                          >
+                            <Power className="w-4 h-4 mr-2" /> Ativar
+                          </DropdownMenuItem>
+                        )}
+                        {product.is_custom && product.companyProductId && (
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => {
+                              if (confirm(`Excluir permanentemente "${product.name}"? Esta ação não pode ser desfeita.`)) {
+                                deleteCustomMutation.mutate(product.companyProductId!);
+                              }
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" /> Excluir
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
               );
             })
           ) : (
