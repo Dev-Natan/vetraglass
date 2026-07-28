@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Package, MapPin, DollarSign, Power, Scissors, Sparkles, Clock, AlertTriangle } from 'lucide-react';
+import { Package, MapPin, DollarSign, Power, Scissors, Sparkles, Clock, AlertTriangle, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
