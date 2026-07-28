@@ -293,26 +293,27 @@ export function RegistrarMovimentoDialog({
 
   const movimentoMutation = useMutation({
     mutationFn: async () => {
-      if (!currentCompany?.id || !selectedItem || !quantidade || !motivo) {
+      if (!currentCompany?.id || !selectedItem || !motivo) {
         throw new Error('Preencha todos os campos obrigatórios');
       }
 
-      const qtd = parseFloat(quantidade);
+      const qtd = computed.quantity;
       if (isNaN(qtd) || qtd <= 0) {
-        throw new Error('Quantidade inválida');
+        throw new Error('Quantidade calculada inválida — verifique os campos.');
       }
 
       const stockItem = stockItems.find(item => item.id === selectedItem);
       if (!stockItem) throw new Error('Item não encontrado');
 
-      // Verificar se há estoque suficiente para saída
       if (!isEntrada && qtd > stockItem.quantity) {
-        throw new Error(`Estoque insuficiente. Disponível: ${stockItem.quantity}`);
+        throw new Error(`Estoque insuficiente. Disponível: ${stockItem.quantity} — tentando ${qtd.toFixed(3)}`);
       }
 
-      const newQuantity = isEntrada 
-        ? stockItem.quantity + qtd 
-        : stockItem.quantity - qtd;
+      const newQuantity = isEntrada
+        ? Number((stockItem.quantity + qtd).toFixed(4))
+        : Number((stockItem.quantity - qtd).toFixed(4));
+
+      const finalDescription = [computed.autoNote, observacao].filter(Boolean).join(' — ') || null;
 
       const { error: movimentoError } = await supabase
         .from('stock_movements')
@@ -322,7 +323,7 @@ export function RegistrarMovimentoDialog({
           type: isEntrada ? 'entrada' : 'saida',
           category: motivo,
           quantity: qtd,
-          description: observacao || null,
+          description: finalDescription,
           created_by: user?.id,
         });
 
@@ -340,8 +341,8 @@ export function RegistrarMovimentoDialog({
     onSuccess: (data) => {
       invalidateStock();
       toast.success(
-        isEntrada 
-          ? `Entrada registrada. Novo saldo: ${data.newQuantity}` 
+        isEntrada
+          ? `Entrada registrada. Novo saldo: ${data.newQuantity}`
           : `Saída registrada. Novo saldo: ${data.newQuantity}`
       );
       handleClose();
@@ -350,6 +351,7 @@ export function RegistrarMovimentoDialog({
       toast.error(error.message || 'Erro ao registrar movimento');
     },
   });
+
 
   const handleClose = () => {
     setSelectedItem('');
