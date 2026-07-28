@@ -63,6 +63,7 @@ interface StockItemCardProps {
   item: StockItem;
   onEdit: (item: StockItem) => void;
   onToggleActive: (e: React.MouseEvent, stockId: string, currentActive: boolean) => void;
+  onViewHistory?: (item: StockItem) => void;
   showActivateBtn?: boolean;
 }
 
