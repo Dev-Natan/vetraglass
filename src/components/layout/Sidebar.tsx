@@ -29,6 +29,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import { SupportSidebar } from '@/components/support/SupportSidebar';
+import vetraLogo from '@/assets/vetra-logo.png.asset.json';
 import { useSupportTickets } from '@/hooks/useSupportTickets';
 import { usePermissions, Module } from '@/hooks/usePermissions';
 import { useEnabledModulesMap } from '@/hooks/useModuleSettings';
@@ -152,8 +153,8 @@ export function Sidebar() {
         <div className="p-6 border-b border-sidebar-border/30" data-tutorial="logo">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-blue-500 via-blue-600 to-blue-800 shadow-lg shadow-blue-900/40 border border-blue-300/30">
-                <Layers className="h-5 w-5 text-white drop-shadow" strokeWidth={2.25} />
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white/5 border border-white/10 overflow-hidden">
+                <img src={vetraLogo.url} alt="Vetra" className="w-9 h-9 object-contain" />
               </div>
               <div>
                 <h1 className="font-display font-bold text-lg text-sidebar-foreground tracking-tight">Vetra</h1>
