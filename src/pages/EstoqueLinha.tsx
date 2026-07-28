@@ -297,7 +297,7 @@ export default function EstoqueLinha() {
       inStockItems: items.filter(item => item.quantity > 0),
       outOfStockItems: items.filter(item => item.quantity === 0),
     };
-  }, [activeItems, searchTerm, categoryFilter, statusFilter, sortBy, isVidros, isDiversos, decodedLinha]);
+  }, [activeItems, searchTerm, categoryFilter, statusFilter, sortBy, isVidros, isDiversos, decodedLinha, semLinhaOnly]);
 
 
   const filteredItems = useMemo(() => [...inStockItems, ...outOfStockItems], [inStockItems, outOfStockItems]);
