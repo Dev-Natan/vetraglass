@@ -109,6 +109,108 @@ export function RegistrarMovimentoDialog({
 
   const selectedStockItem = stockItems.find(item => item.id === selectedItem);
 
+  // Classificação da unidade
+  const itemType = (selectedStockItem?.item_template?.type || '').toLowerCase();
+  const rawUnit = (selectedStockItem?.item_template?.unit || '').toLowerCase().trim();
+  const barLengthMm = selectedStockItem?.item_template?.bar_length_mm || 0;
+  const barLengthM = barLengthMm > 0 ? barLengthMm / 1000 : 0;
+
+  const isGlass = itemType === 'glass' || itemType === 'vidro' || rawUnit === 'm2' || rawUnit === 'metro quadrado';
+  const isProfile = itemType === 'profile' || itemType === 'perfil' || rawUnit === 'barra' || rawUnit === 'barras' || (barLengthMm > 0);
+
+  // Ao trocar de item, definir modo padrão
+  const handleSelectItem = (id: string) => {
+    setSelectedItem(id);
+    const it = stockItems.find(x => x.id === id);
+    const t = (it?.item_template?.type || '').toLowerCase();
+    const u = (it?.item_template?.unit || '').toLowerCase();
+    const bl = it?.item_template?.bar_length_mm || 0;
+    if (t === 'glass' || t === 'vidro' || u === 'm2') {
+      setInputMode('piece');
+    } else if (t === 'profile' || t === 'perfil' || bl > 0) {
+      setInputMode('bar');
+    } else {
+      setInputMode('unit');
+    }
+    // Reset campos auxiliares
+    setSheetWidth(String(it?.item_template?.default_sheet_width_mm || ''));
+    setSheetHeight(String(it?.item_template?.default_sheet_height_mm || ''));
+    setPieceWidth('');
+    setPieceHeight('');
+    setPieceQty('1');
+    setLinearMeters('');
+    setQuantidade('');
+  };
+
+  // Calcula a quantidade final (na unidade de estoque) e um resumo textual
+  const computed = useMemo(() => {
+    if (!selectedStockItem) return { quantity: 0, storageUnit: '', summary: '', autoNote: '' };
+    const storageUnit = rawUnit || 'un';
+
+    if (isGlass) {
+      if (inputMode === 'piece') {
+        const w = parseFloat(pieceWidth) || 0;
+        const h = parseFloat(pieceHeight) || 0;
+        const q = parseFloat(pieceQty) || 0;
+        const areaM2 = (w / 1000) * (h / 1000) * q;
+        return {
+          quantity: Number(areaM2.toFixed(4)),
+          storageUnit: 'm²',
+          summary: w && h && q ? `${q}× peça(s) de ${w} × ${h} mm = ${areaM2.toFixed(3)} m²` : '',
+          autoNote: w && h && q ? `Peça cortada: ${q}× ${w}×${h} mm` : '',
+        };
+      }
+      if (inputMode === 'sheet') {
+        const sw = parseFloat(sheetWidth) || 0;
+        const sh = parseFloat(sheetHeight) || 0;
+        const sq = parseFloat(quantidade) || 0;
+        const areaPer = (sw / 1000) * (sh / 1000);
+        const total = areaPer * sq;
+        return {
+          quantity: Number(total.toFixed(4)),
+          storageUnit: 'm²',
+          summary: sw && sh && sq ? `${sq}× chapa(s) de ${sw} × ${sh} mm = ${total.toFixed(3)} m²` : '',
+          autoNote: sw && sh && sq ? `Chapa inteira: ${sq}× ${sw}×${sh} mm` : '',
+        };
+      }
+    }
+
+    if (isProfile) {
+      if (inputMode === 'bar') {
+        const q = parseFloat(quantidade) || 0;
+        // Armazenamento em barras
+        const totalM = barLengthM > 0 ? q * barLengthM : 0;
+        return {
+          quantity: q,
+          storageUnit: 'barra(s)',
+          summary: q ? (barLengthM > 0 ? `${q} barra(s) de ${barLengthM} m = ${totalM.toFixed(2)} m` : `${q} barra(s)`) : '',
+          autoNote: '',
+        };
+      }
+      if (inputMode === 'linear') {
+        const meters = parseFloat(linearMeters) || 0;
+        if (barLengthM <= 0) {
+          return { quantity: meters, storageUnit: 'm', summary: meters ? `${meters} m lineares` : '', autoNote: '' };
+        }
+        const bars = meters / barLengthM;
+        const barrasInteiras = Math.floor(bars);
+        const retalhoM = Number((meters - barrasInteiras * barLengthM).toFixed(3));
+        const retalhoTxt = retalhoM > 0 ? ` + retalho de ${retalhoM.toFixed(2)} m` : '';
+        return {
+          quantity: Number(bars.toFixed(4)),
+          storageUnit: 'barra(s) equivalentes',
+          summary: meters ? `${meters} m lineares = ${bars.toFixed(3)} barras (${barrasInteiras} inteira(s)${retalhoTxt})` : '',
+          autoNote: meters ? `Metro linear: ${meters} m${retalhoM > 0 ? ` (retalho ${retalhoM.toFixed(2)} m)` : ''}` : '',
+        };
+      }
+    }
+
+    // Padrão: unidade simples
+    const q = parseFloat(quantidade) || 0;
+    return { quantity: q, storageUnit, summary: q ? `${q} ${storageUnit}` : '', autoNote: '' };
+  }, [selectedStockItem, isGlass, isProfile, inputMode, pieceWidth, pieceHeight, pieceQty, sheetWidth, sheetHeight, quantidade, linearMeters, barLengthM, rawUnit]);
+
+
   // Filtrar itens por busca
   const filteredItems = useMemo(() => {
     return stockItems.filter(item => {
