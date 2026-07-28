@@ -1,17 +1,21 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Boxes, Layers, ChevronRight, GlassWater, Package, Loader2, Info,
-  Blocks, ArrowLeft, History,
+  Blocks, ArrowLeft, History, Search, Plus, Minus, DollarSign,
+  AlertTriangle, Ruler, X,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useStockData } from '@/hooks/useStockData';
 import { useCompanyLinhas } from '@/hooks/useCompanyLinhas';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
+import { useDebounce } from '@/hooks/useDebounce';
+import { RegistrarMovimentoDialog } from '@/components/estoque/RegistrarMovimentoDialog';
 
 const VIDROS_KEY = '__vidros__';
 const DIVERSOS_KEY = '__diversos__';
@@ -20,15 +24,25 @@ function slug(s: string) {
   return encodeURIComponent(s);
 }
 
+function formatBRL(value: number) {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0,
+  }).format(value || 0);
+}
+
 type View = 'root' | 'perfis' | 'diversos' | 'vidros';
 
 export default function Estoque() {
   const { currentCompany } = useAuth();
+  const navigate = useNavigate();
   useModuleTutorialTrigger('estoque');
 
   const [view, setView] = useState<View>('root');
+  const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 200);
+  const [movDialog, setMovDialog] = useState<null | { tipo: 'entrada' | 'saida' }>(null);
 
-  const { activeItems, isLoading } = useStockData({ companyId: currentCompany?.id });
+  const { activeItems, isLoading, kpis } = useStockData({ companyId: currentCompany?.id });
   const { data: productLinhas } = useCompanyLinhas();
 
   const activeLinhaKeys = useMemo(() => {
@@ -39,6 +53,35 @@ export default function Estoque() {
     });
     return set;
   }, [productLinhas]);
+
+  // Extra KPI: m² de vidro disponível vs reservado
+  const glassArea = useMemo(() => {
+    let available = 0;
+    let reserved = 0;
+    for (const it of activeItems) {
+      const type = (it.company_item?.type ?? it.item_template?.type ?? '').toLowerCase();
+      const unit = (it.company_item?.unit ?? it.item_template?.unit ?? '').toLowerCase();
+      if (type === 'glass' || type === 'vidro' || unit === 'm2') {
+        const reservedQty = Number((it as any).quantity_reserved ?? 0);
+        available += Math.max(0, (it.quantity || 0) - reservedQty);
+        reserved += reservedQty;
+      }
+    }
+    return { available, reserved };
+  }, [activeItems]);
+
+  // Busca global (só ativa com >=2 caracteres)
+  const searchResults = useMemo(() => {
+    const q = debouncedSearch.trim().toLowerCase();
+    if (q.length < 2) return [];
+    return activeItems
+      .filter(it => {
+        const name = (it.item_template?.name ?? it.company_item?.name ?? '').toLowerCase();
+        const linha = (it.item_template?.linha ?? it.company_item?.linha ?? '').toLowerCase();
+        return name.includes(q) || linha.includes(q);
+      })
+      .slice(0, 25);
+  }, [activeItems, debouncedSearch]);
 
   const stats = useMemo(() => {
     const byLinhaPerfil = new Map<string, { items: number; qty: number }>();
@@ -82,7 +125,6 @@ export default function Estoque() {
         continue;
       }
 
-      // Everything else (acessorios, guarnicao, sem tipo) → diversos
       diversos.items++;
       diversos.qty += qty;
       if (!linha) {
@@ -123,6 +165,17 @@ export default function Estoque() {
     : view === 'vidros' ? 'Selecione a linha do vidro (Temperados, Comum, etc.).'
     : 'Selecione a linha dos acessórios/diversos.';
 
+  function goToItem(it: any) {
+    const linha = (it.company_item?.linha ?? it.item_template?.linha ?? '').trim();
+    const type = (it.company_item?.type ?? it.item_template?.type ?? '').toLowerCase();
+    let tipo = 'diversos';
+    if (type === 'glass' || type === 'vidro') tipo = 'vidro';
+    else if (type === 'perfil' || type === 'profile') tipo = 'perfil';
+    const key = linha || (tipo === 'vidro' ? VIDROS_KEY : DIVERSOS_KEY);
+    navigate(`/estoque/linha/${slug(key)}?tipo=${tipo}`);
+    setSearch('');
+  }
+
   return (
     <MainLayout>
       <div className="p-6 space-y-6 max-w-6xl mx-auto">
@@ -140,12 +193,121 @@ export default function Estoque() {
         </div>
 
         {view === 'root' && (
-          <Card className="p-4 bg-primary/5 border-primary/20 flex gap-3">
-            <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-            <div className="text-sm text-muted-foreground">
-              Qualquer alteração de saldo reflete imediatamente no badge <strong>Em Estoque</strong> em Meus Preços.
+          <>
+            {/* KPIs */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Card>
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-xl bg-green-500/10 text-green-600 flex items-center justify-center shrink-0">
+                    <DollarSign className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xl font-bold truncate">{formatBRL(kpis.totalValue)}</p>
+                    <p className="text-xs text-muted-foreground">Total investido em estoque</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className={kpis.lowStockCount > 0 ? 'border-destructive/60' : ''}>
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${kpis.lowStockCount > 0 ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground'}`}>
+                    <AlertTriangle className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className={`text-xl font-bold ${kpis.lowStockCount > 0 ? 'text-destructive' : ''}`}>
+                      {kpis.lowStockCount}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Itens em alerta de reposição</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                    <Ruler className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xl font-bold truncate">
+                      {glassArea.available.toFixed(2)} m²
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Vidros disponíveis · {glassArea.reserved.toFixed(2)} m² reservados em OS
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          </Card>
+
+            {/* Global search */}
+            <div className="relative">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Buscar qualquer item do estoque (vidro, perfil, acessório)…"
+                  className="pl-9 pr-9 h-11"
+                />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-muted"
+                    aria-label="Limpar busca"
+                  >
+                    <X className="w-4 h-4 text-muted-foreground" />
+                  </button>
+                )}
+              </div>
+              {debouncedSearch.trim().length >= 2 && (
+                <Card className="absolute z-20 top-full left-0 right-0 mt-2 max-h-96 overflow-y-auto shadow-lg">
+                  <CardContent className="p-2">
+                    {searchResults.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-6">
+                        Nenhum item encontrado para "{debouncedSearch}".
+                      </p>
+                    ) : (
+                      <div className="space-y-1">
+                        {searchResults.map((it) => {
+                          const name = it.item_template?.name ?? it.company_item?.name ?? 'Item';
+                          const linha = it.item_template?.linha ?? it.company_item?.linha;
+                          const unit = it.item_template?.unit ?? it.company_item?.unit ?? '';
+                          const type = it.item_template?.type ?? it.company_item?.type ?? '';
+                          const min = Number(it.min_quantity ?? 0);
+                          const isLow = min > 0 && it.quantity <= min;
+                          return (
+                            <button
+                              key={it.id}
+                              type="button"
+                              onClick={() => goToItem(it)}
+                              className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-muted text-left"
+                            >
+                              <Package className="w-4 h-4 text-muted-foreground shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">{name}</p>
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {type || '—'}{linha ? ` · ${linha}` : ''}
+                                </p>
+                              </div>
+                              <Badge variant={isLow ? 'destructive' : 'outline'} className="shrink-0">
+                                {Number(it.quantity).toFixed(2)} {unit}
+                              </Badge>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            <Card className="p-4 bg-primary/5 border-primary/20 flex gap-3">
+              <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+              <div className="text-sm text-muted-foreground">
+                Qualquer alteração de saldo reflete imediatamente no badge <strong>Em Estoque</strong> em Meus Preços.
+              </div>
+            </Card>
+          </>
         )}
 
         {isLoading ? (
@@ -160,6 +322,8 @@ export default function Estoque() {
               title="Vidros"
               subtitle={`${stats.vidros.items} item(s) · ${stats.vidros.qty.toFixed(2)} em saldo`}
               badge={`${stats.linhasVidros.length} linha(s)`}
+              onQuickEntrada={() => setMovDialog({ tipo: 'entrada' })}
+              onQuickSaida={() => setMovDialog({ tipo: 'saida' })}
             />
             <StockCard
               onClick={() => setView('perfis')}
@@ -167,6 +331,8 @@ export default function Estoque() {
               title="Perfis"
               subtitle={`${stats.perfis.items} item(s) · ${stats.perfis.qty.toFixed(2)} em saldo`}
               badge={`${stats.linhasPerfil.length} linha(s)`}
+              onQuickEntrada={() => setMovDialog({ tipo: 'entrada' })}
+              onQuickSaida={() => setMovDialog({ tipo: 'saida' })}
             />
             <StockCard
               onClick={() => setView('diversos')}
@@ -174,6 +340,8 @@ export default function Estoque() {
               title="Acessórios / Diversos"
               subtitle={`${stats.diversos.items} item(s) · ${stats.diversos.qty.toFixed(2)} em saldo`}
               badge={`${stats.linhasDiversos.length} linha(s)`}
+              onQuickEntrada={() => setMovDialog({ tipo: 'entrada' })}
+              onQuickSaida={() => setMovDialog({ tipo: 'saida' })}
             />
             <StockCard
               to="/estoque/historico"
@@ -189,7 +357,6 @@ export default function Estoque() {
               subtitle="Sobras úteis de chapas e barras para reaproveitar antes de gastar material novo."
               badge="Ver retalhos"
             />
-
           </div>
         ) : view === 'perfis' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -277,13 +444,22 @@ export default function Estoque() {
           </div>
         )}
       </div>
+
+      {movDialog && (
+        <RegistrarMovimentoDialog
+          open={!!movDialog}
+          onOpenChange={(o) => { if (!o) setMovDialog(null); }}
+          tipo={movDialog.tipo}
+          stockItems={activeItems as any}
+        />
+      )}
     </MainLayout>
   );
 }
 
 
 function StockCard({
-  to, onClick, icon, title, subtitle, badge,
+  to, onClick, icon, title, subtitle, badge, onQuickEntrada, onQuickSaida,
 }: {
   to?: string;
   onClick?: () => void;
@@ -291,7 +467,10 @@ function StockCard({
   title: string;
   subtitle: string;
   badge: string;
+  onQuickEntrada?: () => void;
+  onQuickSaida?: () => void;
 }) {
+  const hasQuick = !!(onQuickEntrada || onQuickSaida);
   const inner = (
     <Card className="h-full transition-all hover:border-primary/60 hover:shadow-lg hover:-translate-y-0.5 cursor-pointer">
       <CardContent className="p-5 flex items-start gap-4">
@@ -304,12 +483,42 @@ function StockCard({
             <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
           <p className="text-xs text-muted-foreground mt-1 truncate">{subtitle}</p>
-          <Badge variant="outline" className="mt-2 text-[10px]">{badge}</Badge>
+          <div className="flex items-center gap-2 mt-2">
+            <Badge variant="outline" className="text-[10px]">{badge}</Badge>
+            {hasQuick && (
+              <div className="flex items-center gap-1 ml-auto">
+                {onQuickEntrada && (
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    className="h-7 w-7"
+                    title="Registrar entrada"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onQuickEntrada(); }}
+                  >
+                    <Plus className="w-3.5 h-3.5 text-green-600" />
+                  </Button>
+                )}
+                {onQuickSaida && (
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    className="h-7 w-7"
+                    title="Registrar saída"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onQuickSaida(); }}
+                  >
+                    <Minus className="w-3.5 h-3.5 text-destructive" />
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
   );
 
   if (to) return <Link to={to} className="group">{inner}</Link>;
-  return <button type="button" onClick={onClick} className="group text-left">{inner}</button>;
+  return <button type="button" onClick={onClick} className="group text-left w-full">{inner}</button>;
 }

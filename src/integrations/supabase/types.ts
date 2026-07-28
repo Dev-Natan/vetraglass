@@ -1984,6 +1984,7 @@ export type Database = {
           quantity_reserved: number
           sale_price: number | null
           status: string | null
+          supplier_name: string | null
           type: string | null
           unit: string | null
           updated_at: string
@@ -2014,6 +2015,7 @@ export type Database = {
           quantity_reserved?: number
           sale_price?: number | null
           status?: string | null
+          supplier_name?: string | null
           type?: string | null
           unit?: string | null
           updated_at?: string
@@ -2044,6 +2046,7 @@ export type Database = {
           quantity_reserved?: number
           sale_price?: number | null
           status?: string | null
+          supplier_name?: string | null
           type?: string | null
           unit?: string | null
           updated_at?: string
