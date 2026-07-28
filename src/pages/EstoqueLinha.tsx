@@ -89,6 +89,7 @@ export default function EstoqueLinha() {
   // Filter states
   const [searchParams] = useSearchParams();
   const lockedTipo = searchParams.get('tipo'); // when present, category is locked to this type
+  const semLinhaOnly = searchParams.get('semlinha') === '1';
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState(lockedTipo || 'all');
   const [linhaFilter, setLinhaFilter] = useState('all');
