@@ -193,14 +193,6 @@ export function CaixaResumo({
               <span className="text-xl font-bold text-primary">{formatCurrency(saldoDinheiro)}</span>
             </div>
 
-            {fixedFund !== undefined && excedente > 0 && (
-              <div className="text-xs text-muted-foreground bg-muted/50 rounded p-2">
-                <div className="flex justify-between">
-                  <span>Excedente previsto (fechamento):</span>
-                  <span className="text-green-600 font-medium">{formatCurrency(excedente)}</span>
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
 
