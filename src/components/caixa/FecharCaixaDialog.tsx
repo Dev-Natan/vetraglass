@@ -61,7 +61,9 @@ export function FecharCaixaDialog({
   const saldoFinalEsperado = summary.openingAmount + totalEntradasDia - totalSaidas;
 
   const totalCounted = parseFloat(physicalTotalStr.replace(',', '.')) || 0;
-  const difference = totalCounted - saldoFinalEsperado;
+  const rawDifference = totalCounted - saldoFinalEsperado;
+  // Arredonda para centavos e normaliza -0
+  const difference = (Math.round(rawDifference * 100) === 0) ? 0 : Math.round(rawDifference * 100) / 100;
   const hasValue = physicalTotalStr.trim() !== '';
 
   const formatCurrency = (value: number) =>
