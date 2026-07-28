@@ -114,11 +114,13 @@ export default function Estoque() {
   const headerTitle =
     view === 'root' ? 'Estoque'
     : view === 'perfis' ? 'Perfis · Selecione a linha'
+    : view === 'vidros' ? 'Vidros · Selecione a linha'
     : 'Acessórios / Diversos · Selecione a linha';
 
   const headerSubtitle =
     view === 'root' ? 'Escolha uma categoria para gerenciar entradas, saídas e saldos.'
     : view === 'perfis' ? 'Selecione a linha do perfil (Suprema, Temperados, etc.).'
+    : view === 'vidros' ? 'Selecione a linha do vidro (Temperados, Comum, etc.).'
     : 'Selecione a linha dos acessórios/diversos.';
 
   return (
