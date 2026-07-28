@@ -15,6 +15,7 @@ import { UnifiedAddItemDialog } from '@/components/estoque/UnifiedAddItemDialog'
 import { EditItemPriceDialog } from '@/components/estoque/EditItemPriceDialog';
 import { RegistrarMovimentoDialog } from '@/components/estoque/RegistrarMovimentoDialog';
 import { HistoricoMovimentosTab } from '@/components/estoque/HistoricoMovimentosTab';
+import { ItemHistoricoDialog } from '@/components/estoque/ItemHistoricoDialog';
 import { StockItemCard } from '@/components/estoque/StockItemCard';
 import { StockKPIs } from '@/components/estoque/StockKPIs';
 import {
