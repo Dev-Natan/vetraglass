@@ -152,8 +152,8 @@ export function Sidebar() {
         <div className="p-6 border-b border-sidebar-border/30" data-tutorial="logo">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center backdrop-blur-md border border-white/20">
-                <span className="text-white text-xl font-bold">V</span>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-blue-500 via-blue-600 to-blue-800 shadow-lg shadow-blue-900/40 border border-blue-300/30">
+                <Layers className="h-5 w-5 text-white drop-shadow" strokeWidth={2.25} />
               </div>
               <div>
                 <h1 className="font-display font-bold text-lg text-sidebar-foreground tracking-tight">Vetra</h1>
