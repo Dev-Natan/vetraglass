@@ -25,8 +25,8 @@ const StockGridCard = memo(function StockGridCard({
   return (
     <div
       className={`relative flex flex-col items-center p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer ${
-        item.is_active === false ? 'opacity-60' : ''
-      }`}
+        (isZeroStock || isLowStock) ? 'border-destructive/60 bg-destructive/5' : ''
+      } ${item.is_active === false ? 'opacity-60' : ''}`}
       onClick={() => onEdit(item)}
     >
       {/* Status Badges */}
@@ -42,9 +42,9 @@ const StockGridCard = memo(function StockGridCard({
           </Badge>
         )}
         {isLowStock && !isZeroStock && (
-          <Badge variant="outline" className="text-xs border-amber-500 text-amber-600">
-            <AlertTriangle className="w-3 h-3 mr-1" />
-            Baixo
+          <Badge variant="destructive" className="text-xs gap-1">
+            <AlertTriangle className="w-3 h-3" />
+            Abaixo do mín.
           </Badge>
         )}
       </div>
