@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { resolveProductImageUrl } from '@/utils/imageUrl';
-import { Printer, Download, Tags, BarChart3, Settings2, RotateCcw, Package } from 'lucide-react';
+import { Printer, Download, Tags, BarChart3, Settings2, RotateCcw, Package, Scissors } from 'lucide-react';
+import { SaveOffcutsDialog } from '@/components/plano-corte/SaveOffcutsDialog';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery } from '@tanstack/react-query';
