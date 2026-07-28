@@ -278,12 +278,6 @@ export function CaixaResumo({
                   </p>
                 </div>
               </div>
-              {fixedFund !== undefined && (
-                <div className="text-right">
-                  <p className="text-xs text-muted-foreground">Fundo fixo</p>
-                  <p className="text-sm font-medium">{formatCurrency(fixedFund)}</p>
-                </div>
-              )}
             </div>
           </CardContent>
         </Card>
