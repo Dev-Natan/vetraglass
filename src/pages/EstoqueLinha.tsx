@@ -335,11 +335,14 @@ export default function EstoqueLinha() {
             </Link>
             <h1 className="font-display font-bold text-2xl text-foreground flex items-center gap-2">
               <Boxes className="w-7 h-7 text-primary" />
-              Estoque · {pageTitle}{lockedTipo === 'perfil' ? ' · Perfis' : ''}
+              Estoque · {pageTitle}
+              {lockedTipo === 'perfil' ? ' · Perfis' : lockedTipo === 'diversos' ? ' · Acessórios/Diversos' : ''}
             </h1>
             <p className="text-muted-foreground">
               {lockedTipo === 'perfil'
                 ? `Somente perfis da linha ${pageTitle}`
+                : lockedTipo === 'diversos'
+                ? `Somente acessórios/diversos da linha ${pageTitle}`
                 : 'Controle de entradas e saídas desta linha'}
             </p>
           </div>
