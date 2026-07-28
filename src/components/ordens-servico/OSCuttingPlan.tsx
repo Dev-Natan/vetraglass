@@ -603,7 +603,11 @@ export function OSCuttingPlan({ ordemServicoId }: OSCuttingPlanProps) {
       <div className="print-area">
         <PrintableCuttingReport
           companyName={currentCompany?.name || 'Urbano Vidros'}
-          documentSubtitle={plans[0]?.os_number ? `OS ${plans[0].os_number}` : undefined}
+          companyLogoUrl={(currentCompany as any)?.logo_url ?? null}
+          companyTagline="Vidros e Esquadrias"
+          quoteOrOsNumber={(plans[0] as any)?.os_number || undefined}
+          clientName={(plans[0] as any)?.customer_name || undefined}
+          productHeadline={printProducts[0]?.productName || undefined}
           products={printProducts}
           profileCuts={printProfileCuts}
         />
