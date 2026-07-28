@@ -71,6 +71,7 @@ export const StockItemCard = memo(function StockItemCard({
   item,
   onEdit,
   onToggleActive,
+  onViewHistory,
   showActivateBtn = true,
 }: StockItemCardProps) {
   const qtyDisplay = formatQuantityDisplay(item);
