@@ -437,6 +437,14 @@ export default function Funcionarios() {
         isLoading={createEmployee.isPending || updateEmployee.isPending}
       />
 
+      <HistoricoValesDialog
+        open={historicoOpen}
+        onOpenChange={setHistoricoOpen}
+        employee={historicoEmployee}
+      />
+
+
+
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
