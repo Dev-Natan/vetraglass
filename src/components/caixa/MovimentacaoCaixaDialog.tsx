@@ -474,52 +474,59 @@ export function MovimentacaoCaixaDialog({
             />
           </div>
 
-          {/* Vincular a */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>Vincular a</Label>
-              <Select
-                value={partyType}
-                onValueChange={(v) => {
-                  setPartyType(v as typeof partyType);
-                  setPartyId('');
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Nenhum</SelectItem>
-                  <SelectItem value="cliente">Cliente</SelectItem>
-                  <SelectItem value="fornecedor">Fornecedor</SelectItem>
-                  <SelectItem value="funcionario">Funcionário</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {partyType !== 'none' && (
-              <div className="space-y-2">
-                <Label>{partyLabels[partyType]}</Label>
-                <Select value={partyId} onValueChange={setPartyId}>
+          {/* Vincular a — múltiplos envolvidos independentes */}
+          <div className="space-y-3">
+            <Label className="text-sm">Vincular a (opcional)</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Cliente Relacionado</Label>
+                <Select value={clienteId} onValueChange={setClienteId}>
                   <SelectTrigger>
-                    <SelectValue placeholder={`Selecione o ${partyLabels[partyType].toLowerCase()}`} />
+                    <SelectValue placeholder="Nenhum" />
                   </SelectTrigger>
                   <SelectContent>
-                    {parties.length === 0 ? (
-                      <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                        Nenhum registro encontrado.
-                      </div>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {clientes.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Fornecedor Relacionado</Label>
+                <Select value={fornecedorId} onValueChange={setFornecedorId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Nenhum" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {fornecedores.length === 0 ? (
+                      <div className="px-2 py-1.5 text-xs text-muted-foreground">Nenhum fornecedor cadastrado.</div>
                     ) : (
-                      parties.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.name}
-                        </SelectItem>
+                      fornecedores.map((f) => (
+                        <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
                       ))
                     )}
                   </SelectContent>
                 </Select>
               </div>
-            )}
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Funcionário Relacionado</Label>
+                <Select value={funcionarioId} onValueChange={setFuncionarioId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Nenhum" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {funcionarios.map((e) => (
+                      <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
+
 
 
           {/* Preview */}
