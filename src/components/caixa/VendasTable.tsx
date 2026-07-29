@@ -23,6 +23,7 @@ interface Sale {
   // Campos para suporte a vendas parciais
   sale_type?: 'full' | 'partial' | string;
   quote_id?: string | null;
+  ordem_servico_id?: string | null;
   paid_amount?: number;
   pending_amount?: number;
 }
@@ -32,6 +33,7 @@ interface VendasTableProps {
   onViewDetails?: (sale: Sale) => void;
   onCancelSale?: (sale: Sale) => void;
   onPrintReceipt?: (sale: Sale) => void;
+  onReceivePayment?: (sale: Sale) => void;
   showCancelButton?: boolean;
 }
 
