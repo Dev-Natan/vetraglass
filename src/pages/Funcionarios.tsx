@@ -9,6 +9,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { EmployeeDialog } from '@/components/funcionarios/EmployeeDialog';
+import { HistoricoValesDialog } from '@/components/funcionarios/HistoricoValesDialog';
+
 import { PermissionProfileBadge } from '@/components/funcionarios/PermissionProfileSelect';
 import { useEmployees, Employee } from '@/hooks/useEmployees';
 import { usePermissions } from '@/hooks/usePermissions';
