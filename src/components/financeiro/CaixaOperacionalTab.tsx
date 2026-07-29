@@ -72,6 +72,22 @@ export function CaixaOperacionalTab() {
   const [selectedReceivable, setSelectedReceivable] = useState<any>(null);
   const [faturarDialogOpen, setFaturarDialogOpen] = useState(false);
   const [osToFaturar, setOsToFaturar] = useState<any>(null);
+  const [novoRecebimentoOpen, setNovoRecebimentoOpen] = useState(false);
+  const [saleForReceipt, setSaleForReceipt] = useState<PartialSaleTarget | null>(null);
+
+  const handleReceivePartialPayment = (sale: Sale) => {
+    setSaleForReceipt({
+      id: sale.id,
+      sale_number: sale.sale_number,
+      customer_name: sale.customer_name,
+      total_amount: Number(sale.total_amount) || 0,
+      paid_amount: Number(sale.paid_amount ?? 0),
+      pending_amount: Number(sale.pending_amount ?? 0),
+      quote_id: sale.quote_id ?? null,
+      ordem_servico_id: (sale as any).ordem_servico_id ?? null,
+    });
+    setNovoRecebimentoOpen(true);
+  };
 
   const { 
     companyCash, 
