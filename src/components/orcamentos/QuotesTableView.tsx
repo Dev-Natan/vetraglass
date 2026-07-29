@@ -49,6 +49,8 @@ export function QuotesTableView({
   quotes,
   statusConfig,
   formatCurrency,
+  partialByQuoteId,
+  onNewReceipt,
   onView,
   onEdit,
   onDuplicate,
@@ -77,7 +79,8 @@ export function QuotesTableView({
           <TableBody>
             {quotes.map((quote) => {
               const status = statusConfig[quote.status as QuoteStatus] || statusConfig.pending;
-              const StatusIcon = status.icon;
+              const isPartial = partialByQuoteId?.get(quote.id)?.isPartial ?? false;
+              const StatusIcon = isPartial ? Wallet : status.icon;
               const isPending = quote.status === 'pending';
               const isApprovedOrConverted = quote.status === 'approved' || quote.status === 'converted';
               return (
@@ -94,9 +97,9 @@ export function QuotesTableView({
                     {format(new Date(quote.created_at), 'dd/MM/yyyy', { locale: ptBR })}
                   </TableCell>
                   <TableCell>
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${statusBadgeClass(quote.status as QuoteStatus)}`}>
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${statusBadgeClass(quote.status as QuoteStatus, isPartial)}`}>
                       <StatusIcon className="w-3 h-3" />
-                      {status.label}
+                      {isPartial ? 'Parcial' : status.label}
                     </span>
                   </TableCell>
                   <TableCell className="text-right font-semibold">{formatCurrency(quote.final_amount)}</TableCell>
