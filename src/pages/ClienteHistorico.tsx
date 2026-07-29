@@ -719,6 +719,7 @@ export default function ClienteHistorico() {
                         <TableHead>Vínculo</TableHead>
                         <TableHead className="w-32">Forma</TableHead>
                         <TableHead className="text-right w-32">Valor</TableHead>
+                        <TableHead className="w-16"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
