@@ -160,9 +160,14 @@ export function MovimentacaoCaixaDialog({
     setAmount('');
     setDescription('');
     setPaymentMethod('dinheiro');
-    setPartyType('none');
-    setPartyId('');
+    setClienteId('none');
+    setFornecedorId('none');
+    setFuncionarioId('none');
   };
+
+  const clienteSelected = clientes.find((c) => c.id === clienteId);
+  const fornecedorSelected = fornecedores.find((f) => f.id === fornecedorId);
+  const funcionarioSelected = funcionarios.find((e) => e.id === funcionarioId);
 
   // Mutation com suporte a reforço automático
   const mutation = useMutation({
@@ -183,9 +188,24 @@ export function MovimentacaoCaixaDialog({
         throw new Error('Informe uma descrição');
       }
 
-      const partyFields = partyType !== 'none' && partyId && selectedParty
-        ? { party_type: partyType, party_id: partyId, party_name: selectedParty.name }
+      // Vínculos independentes (podem existir 0 ou mais simultaneamente)
+      const linkFields: Record<string, string | null> = {
+        cliente_id: clienteId !== 'none' ? clienteId : null,
+        fornecedor_id: fornecedorId !== 'none' ? fornecedorId : null,
+        funcionario_id: funcionarioId !== 'none' ? funcionarioId : null,
+      };
+
+      // Manter compat com colunas legadas party_* usando o primeiro vínculo (prioridade fornecedor > cliente > funcionário)
+      const legacyParty = fornecedorSelected
+        ? { party_type: 'fornecedor', party_id: fornecedorSelected.id, party_name: fornecedorSelected.name }
+        : clienteSelected
+        ? { party_type: 'cliente', party_id: clienteSelected.id, party_name: clienteSelected.name }
+        : funcionarioSelected
+        ? { party_type: 'funcionario', party_id: funcionarioSelected.id, party_name: funcionarioSelected.name }
         : { party_type: null as string | null, party_id: null as string | null, party_name: null as string | null };
+
+      const partyFields = { ...linkFields, ...legacyParty };
+      const hasAnyLink = !!(linkFields.cliente_id || linkFields.fornecedor_id || linkFields.funcionario_id);
 
       // Se é saída e precisa de reforço, usar a função com reforço automático
       if (type === 'saida') {
