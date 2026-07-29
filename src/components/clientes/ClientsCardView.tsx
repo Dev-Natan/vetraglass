@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -7,7 +8,8 @@ import {
   User,
   Trash2,
   MessageCircle,
-  Eye
+  Eye,
+  History
 } from 'lucide-react';
 import { openWhatsapp } from '@/utils/whatsapp';
 
@@ -30,6 +32,7 @@ interface ClientsCardViewProps {
 }
 
 export const ClientsCardView = memo(function ClientsCardView({ clients, onView, onDelete }: ClientsCardViewProps) {
+  const navigate = useNavigate();
   const handleWhatsApp = (client: Client, e: React.MouseEvent) => {
     e.stopPropagation();
     openWhatsapp(client.phone, `Olá ${client.name}, tudo bem?`);
@@ -99,11 +102,25 @@ export const ClientsCardView = memo(function ClientsCardView({ clients, onView, 
               className="flex-1 gap-2"
               onClick={(e) => {
                 e.stopPropagation();
+                navigate(`/clientes/${client.id}/historico`);
+              }}
+              title="Ver histórico completo"
+            >
+              <History className="w-4 h-4" />
+              Ver Histórico
+            </Button>
+
+            <Button
+              variant="outline"
+              size="icon"
+              className="shrink-0"
+              onClick={(e) => {
+                e.stopPropagation();
                 onView(client);
               }}
+              title="Editar cadastro"
             >
               <Eye className="w-4 h-4" />
-              Ver Perfil
             </Button>
             
             {client.phone && (

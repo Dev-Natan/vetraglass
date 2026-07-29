@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Table,
   TableBody,
@@ -15,7 +16,8 @@ import {
   MapPin, 
   Eye,
   Trash2,
-  MessageCircle
+  MessageCircle,
+  History,
 } from 'lucide-react';
 import { openWhatsapp } from '@/utils/whatsapp';
 import { formatCPFOrCNPJ } from '@/utils/documentValidation';
@@ -50,6 +52,7 @@ type SortField = 'name' | 'city' | 'document_type';
 type SortDirection = 'asc' | 'desc';
 
 export function ClientsTableView({ clients, onView, onDelete }: ClientsTableViewProps) {
+  const navigate = useNavigate();
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
@@ -179,11 +182,24 @@ export function ClientsTableView({ clients, onView, onDelete }: ClientsTableView
                   <Button
                     variant="ghost"
                     size="icon"
+                    className="h-8 w-8 text-primary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/clientes/${client.id}/historico`);
+                    }}
+                    title="Ver histórico do cliente"
+                  >
+                    <History className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     className="h-8 w-8"
                     onClick={(e) => {
                       e.stopPropagation();
                       onView(client);
                     }}
+                    title="Editar cadastro"
                   >
                     <Eye className="h-4 w-4" />
                   </Button>
