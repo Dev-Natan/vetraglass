@@ -163,6 +163,10 @@ export function MovimentacaoCaixaDialog({
         throw new Error('Informe uma descrição');
       }
 
+      const partyFields = partyType !== 'none' && partyId && selectedParty
+        ? { party_type: partyType, party_id: partyId, party_name: selectedParty.name }
+        : { party_type: null as string | null, party_id: null as string | null, party_name: null as string | null };
+
       // Se é saída e precisa de reforço, usar a função com reforço automático
       if (type === 'saida') {
         const { data, error } = await supabase.rpc('register_cash_exit_with_reinforcement', {
@@ -174,7 +178,7 @@ export function MovimentacaoCaixaDialog({
         });
 
         if (error) throw error;
-        
+
         const result = data as {
           success: boolean;
           error?: string;
@@ -185,17 +189,22 @@ export function MovimentacaoCaixaDialog({
           };
           message?: string;
         };
-        
+
         if (!result.success) {
           throw new Error(result.error || 'Erro ao registrar saída');
         }
-        
+
+        if (result.movement_id && partyFields.party_type) {
+          await (supabase.from('cash_movements') as any)
+            .update(partyFields)
+            .eq('id', result.movement_id);
+        }
+
         return result;
       }
 
       // Entrada normal
-      const { data, error } = await supabase
-        .from('cash_movements')
+      const { data, error } = await (supabase.from('cash_movements') as any)
         .insert({
           company_id: currentCompany.id,
           cash_register_id: cashRegisterId,
@@ -205,6 +214,7 @@ export function MovimentacaoCaixaDialog({
           description: description.trim(),
           payment_method: paymentMethod,
           created_by: user.id,
+          ...partyFields,
         })
         .select()
         .single();
