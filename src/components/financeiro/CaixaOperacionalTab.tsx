@@ -151,57 +151,55 @@ export function CaixaOperacionalTab() {
 
   const cashSummary = useMemo(() => {
     const openingAmount = openCashRegister?.opening_amount || 0;
-    const activeSales = todaySales.filter((s) => s.payment_status !== 'cancelled');
-    const totalDinheiroSales = activeSales.filter((s) => s.payment_method === 'dinheiro').reduce((sum, s) => sum + (s.total_amount || 0), 0);
-    const totalCartaoSales = activeSales.filter((s) => s.payment_method === 'cartao').reduce((sum, s) => sum + (s.total_amount || 0), 0);
-    const totalPixSales = activeSales.filter((s) => s.payment_method === 'pix').reduce((sum, s) => sum + (s.total_amount || 0), 0);
 
-    // Entradas de orçamento (depósitos) — deduplicar contra vendas geradas na conversão
-    // (mesmo quote_id + mesmo valor + timestamp dentro de ±5s = mesma transação)
-    const TOL = 5000;
-    const salesRefs = activeSales.map((s: any) => ({
-      quote_id: s.quote_id || null,
-      method: s.payment_method,
-      amount: Number(s.total_amount) || 0,
-      ts: new Date(s.created_at || Date.now()).getTime(),
-      used: false,
-    }));
-    const depositMovsRaw = cashMovements.filter((m: any) => m.type === 'entrada' && m.category === 'entrada_orcamento');
-    const depositMovs = depositMovsRaw.filter((m: any) => {
-      const amt = Number(m.amount) || 0;
-      const ts = new Date(m.created_at || Date.now()).getTime();
-      const qid = (m as any).quote_id || null;
-      const hit = salesRefs.findIndex(
-        (s) => !s.used && s.amount === amt && Math.abs(s.ts - ts) <= TOL && (!qid || !s.quote_id || s.quote_id === qid)
-      );
-      if (hit >= 0) { salesRefs[hit].used = true; return false; }
-      return true;
-    });
-    const sumByMethod = (method: string) => depositMovs
-      .filter((m: any) => (m.payment_method || 'dinheiro') === method)
-      .reduce((sum: number, m: any) => sum + (m.amount || 0), 0);
+    // Fonte única de verdade: cash_movements agrupado por payment_method.
+    // Ignoramos categorias de abertura (que só marcam saldo inicial).
+    const isOpening = (m: any) => m.category === 'abertura' || m.category === 'abertura_caixa';
+    const normalizeMethod = (m: any): 'dinheiro' | 'pix' | 'cartao' | 'outro' => {
+      const raw = (m.payment_method || 'dinheiro').toLowerCase();
+      if (raw === 'dinheiro') return 'dinheiro';
+      if (raw === 'pix') return 'pix';
+      if (raw.startsWith('cartao')) return 'cartao';
+      return 'outro';
+    };
 
-    const totalDinheiro = totalDinheiroSales + sumByMethod('dinheiro');
-    const totalCartao = totalCartaoSales + sumByMethod('cartao') + sumByMethod('cartao_debito') + sumByMethod('cartao_credito');
-    const totalPix = totalPixSales + sumByMethod('pix');
-    const totalVendas = totalDinheiro + totalCartao + totalPix;
+    const entradas = cashMovements.filter((m: any) => m.type === 'entrada' && !isOpening(m));
+    const saidas = cashMovements.filter((m: any) => m.type === 'saida' && !isOpening(m));
 
-    const isSaleLinked = (m: any) =>
-      m.sale_id || m.quote_id || m.ordem_servico_id ||
-      m.category === 'entrada_orcamento' || m.category === 'venda' || m.category === 'venda_dinheiro' ||
-      m.category === 'abertura' || m.category === 'abertura_caixa';
+    const sumBy = (arr: any[], method: string) =>
+      arr.filter((m) => normalizeMethod(m) === method).reduce((s, m) => s + (Number(m.amount) || 0), 0);
 
-    // Movimentações manuais (reforço/sangria) que afetam somente o dinheiro físico
-    const totalEntradas = cashMovements
-      .filter(m => m.type === 'entrada' && !isSaleLinked(m))
-      .reduce((sum, m) => sum + (m.amount || 0), 0);
-    const totalSaidas = cashMovements.filter(m => m.type === 'saida' && (m as any).category !== 'abertura' && (m as any).category !== 'abertura_caixa').reduce((sum, m) => sum + (m.amount || 0), 0);
+    // Totais BRUTOS de entradas por método (recebimentos: vendas + parciais + orçamentos + manuais)
+    const entradaDinheiro = sumBy(entradas, 'dinheiro');
+    const entradaPix = sumBy(entradas, 'pix');
+    const entradaCartao = sumBy(entradas, 'cartao') + sumBy(entradas, 'outro');
 
-    // Dinheiro esperado no caixa físico = abertura + vendas em dinheiro + entradas manuais - saídas
-    const expectedAmount = openingAmount + totalDinheiro + totalEntradas - totalSaidas;
+    // Totais BRUTOS de saídas por método
+    const saidaDinheiro = sumBy(saidas, 'dinheiro');
+    const saidaPix = sumBy(saidas, 'pix');
+    const saidaCartao = sumBy(saidas, 'cartao') + sumBy(saidas, 'outro');
 
-    return { openingAmount, totalDinheiro, totalCartao, totalPix, totalVendas, expectedAmount, totalEntradas, totalSaidas };
-  }, [openCashRegister, todaySales, cashMovements]);
+    const totalEntradasBrutas = entradaDinheiro + entradaPix + entradaCartao;
+    const totalSaidas = saidaDinheiro + saidaPix + saidaCartao;
+    const totalVendas = totalEntradasBrutas; // toda entrada = receita do dia
+
+    // Dinheiro físico esperado no caixa (abertura + fluxo em dinheiro)
+    const expectedAmount = openingAmount + entradaDinheiro - saidaDinheiro;
+
+    return {
+      openingAmount,
+      totalDinheiro: entradaDinheiro,
+      totalCartao: entradaCartao,
+      totalPix: entradaPix,
+      totalVendas,
+      expectedAmount,
+      // Já contabilizado dentro de totalDinheiro/Pix/Cartao — evita dupla soma no CaixaResumo
+      totalEntradas: 0,
+      totalSaidas,
+    };
+  }, [openCashRegister, cashMovements]);
+
+
 
   const handleOpenCash = async (openingAmount: number) => {
     openCash(openingAmount);

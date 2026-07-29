@@ -119,21 +119,20 @@ export function useSales() {
       const { error: itemsError } = await supabase.from('sale_items').insert(saleItemsData);
       if (itemsError) throw itemsError;
 
-      // 4. Cash movement
-      if (paymentConfig.method === 'dinheiro') {
-        await supabase.from('cash_movements').insert({
-          company_id: companyId,
-          cash_register_id: cashRegisterId,
-          type: 'entrada',
-          category: 'venda',
-          amount: total,
-          description: `Venda #${String(sale.sale_number).padStart(4, '0')} - ${customerName}`,
-          payment_method: 'dinheiro',
-          sale_id: sale.id,
-          created_by: userId,
-          origem: 'venda'
-        });
-      }
+      // 4. Cash movement (para TODAS as formas de pagamento — fonte única de verdade do caixa)
+      await supabase.from('cash_movements').insert({
+        company_id: companyId,
+        cash_register_id: cashRegisterId,
+        type: 'entrada',
+        category: 'venda',
+        amount: total,
+        description: `Venda #${String(sale.sale_number).padStart(4, '0')} - ${customerName}`,
+        payment_method: paymentConfig.method,
+        sale_id: sale.id,
+        created_by: userId,
+        origem: 'venda'
+      });
+
 
       // 5. Stock logic (simplified but following original structure)
       let osAlreadyConsumed = false;
