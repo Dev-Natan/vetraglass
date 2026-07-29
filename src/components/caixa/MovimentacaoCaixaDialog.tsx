@@ -84,8 +84,34 @@ export function MovimentacaoCaixaDialog({
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('dinheiro');
+  const [partyType, setPartyType] = useState<'none' | 'cliente' | 'fornecedor' | 'funcionario'>('none');
+  const [partyId, setPartyId] = useState<string>('');
 
   const categories = type === 'entrada' ? entradaCategories : saidaCategories;
+
+  // Entidades vinculáveis (clientes, fornecedores ou funcionários)
+  const { data: parties = [] } = useQuery({
+    queryKey: ['movement-parties', currentCompany?.id, partyType],
+    queryFn: async () => {
+      if (!currentCompany?.id || partyType === 'none') return [] as { id: string; name: string }[];
+      const table = partyType === 'cliente' ? 'clients' : partyType === 'fornecedor' ? 'suppliers' : 'employees';
+      const { data, error } = await (supabase as any)
+        .from(table)
+        .select('id, name')
+        .eq('company_id', currentCompany.id)
+        .order('name', { ascending: true });
+      if (error) throw error;
+      return (data || []) as { id: string; name: string }[];
+    },
+    enabled: !!currentCompany?.id && open && partyType !== 'none',
+  });
+
+  const selectedParty = parties.find((p) => p.id === partyId);
+  const partyLabels: Record<string, string> = {
+    cliente: 'Cliente',
+    fornecedor: 'Fornecedor',
+    funcionario: 'Funcionário',
+  };
 
   // Buscar saldo do caixa da empresa
   const { data: companyCash } = useQuery({
