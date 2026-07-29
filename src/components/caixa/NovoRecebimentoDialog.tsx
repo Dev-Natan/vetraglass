@@ -93,6 +93,22 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
     enabled: !!sale?.id && open,
   });
 
+  // Dados do orçamento vinculado (para extrato)
+  const { data: linkedQuote } = useQuery({
+    queryKey: ['quote-for-receipt', sale?.quote_id],
+    queryFn: async () => {
+      if (!sale?.quote_id) return null;
+      const { data, error } = await supabase
+        .from('quotes')
+        .select('id, quote_number, final_amount, created_at')
+        .eq('id', sale.quote_id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!sale?.quote_id && open,
+  });
+
   const remaining = Math.max(0, (sale?.pending_amount ?? 0));
   const amountToReceive = useMemo(() => {
     const v = parseBRLInput(paymentAmount);
