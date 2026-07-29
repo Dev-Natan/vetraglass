@@ -15,6 +15,12 @@ interface CashMovement {
   payment_method?: string | null;
   party_type?: string | null;
   party_name?: string | null;
+  cliente_id?: string | null;
+  fornecedor_id?: string | null;
+  funcionario_id?: string | null;
+  cliente?: { name: string } | null;
+  fornecedor?: { name: string } | null;
+  funcionario?: { name: string } | null;
 }
 
 interface CaixaMovimentacoesTableProps {
