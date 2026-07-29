@@ -100,6 +100,8 @@ export default function Orcamentos() {
   const [approveQuoteItems, setApproveQuoteItems] = useState<any[]>([]);
   
   const [quoteToCancelApproved, setQuoteToCancelApproved] = useState<Quote | null>(null);
+  const [saleForReceipt, setSaleForReceipt] = useState<PartialSaleTarget | null>(null);
+  const [novoRecebimentoOpen, setNovoRecebimentoOpen] = useState(false);
 
   const {
     quotes,
