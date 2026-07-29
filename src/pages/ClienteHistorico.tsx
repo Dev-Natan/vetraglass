@@ -725,19 +725,27 @@ export default function ClienteHistorico() {
                     <TableBody>
                       {payments.map(p => {
                         const mc = methodConfig[p.payment_method ?? ''] || { label: p.payment_method || '—', className: 'bg-muted text-muted-foreground' };
-                        const linkedQuote = p.quote_id
+                        const linkedQuoteNumber = p.quote_id
                           ? quoteNumberById.get(p.quote_id)
                           : p.sale_id
                             ? quoteNumberBySaleId.get(p.sale_id)
                             : null;
+                        const linkedQuote = p.quote_id
+                          ? quotes.find(q => q.id === p.quote_id)
+                          : p.sale_id
+                            ? quotes.find(q => q.id === sales.find(s => s.id === p.sale_id)?.quote_id)
+                            : null;
+                        const linkedSale = p.sale_id
+                          ? sales.find(s => s.id === p.sale_id)
+                          : null;
                         return (
                           <TableRow key={p.id}>
                             <TableCell className="text-xs">
                               {format(new Date(p.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                             </TableCell>
                             <TableCell className="text-xs">
-                              {linkedQuote
-                                ? <span className="font-mono">Orç. #{String(linkedQuote).padStart(4, '0')}</span>
+                              {linkedQuoteNumber
+                                ? <span className="font-mono">Orç. #{String(linkedQuoteNumber).padStart(4, '0')}</span>
                                 : p.description || <span className="text-muted-foreground">—</span>}
                             </TableCell>
                             <TableCell>
@@ -745,6 +753,22 @@ export default function ClienteHistorico() {
                             </TableCell>
                             <TableCell className="text-right font-semibold text-emerald-700 dark:text-emerald-400">
                               + {formatCurrency(Number(p.amount) || 0)}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center justify-end gap-1">
+                                {(linkedSale && Number(linkedSale.pending_amount) > 0.01) && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-primary"
+                                    title="Extrato de Recebimentos"
+                                    onClick={() => handleDownloadExtrato(linkedSale, linkedQuote)}
+                                    disabled={exporting}
+                                  >
+                                    <FileDown className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
                             </TableCell>
                           </TableRow>
                         );
