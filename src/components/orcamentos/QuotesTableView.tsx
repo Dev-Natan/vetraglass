@@ -137,6 +137,18 @@ export function QuotesTableView({
                           <Edit className="w-4 h-4" />
                         </Button>
                       )}
+                      {isPartial && onNewReceipt && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-primary hover:text-primary hover:bg-primary/10 gap-1 h-8 px-2"
+                          title="Novo Recebimento"
+                          onClick={() => onNewReceipt(quote)}
+                        >
+                          <Wallet className="w-4 h-4" />
+                          <span className="hidden sm:inline">Receber</span>
+                        </Button>
+                      )}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-8 w-8" title="Mais ações">
