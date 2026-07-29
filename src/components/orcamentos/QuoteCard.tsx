@@ -71,14 +71,17 @@ export function QuoteCard({
   const status = statusConfig[quote.status as QuoteStatus] || statusConfig.pending;
   const StatusIcon = isPartial ? Wallet : status.icon;
 
-  const statusBadgeClass =
-    quote.status === 'pending'
+  const statusBadgeClass = isPartial
+    ? 'bg-blue-100 text-blue-800 border border-blue-200'
+    : quote.status === 'pending'
       ? 'bg-amber-100 text-amber-800 border border-amber-200'
       : quote.status === 'approved' || quote.status === 'converted'
       ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
       : quote.status === 'rejected'
       ? 'bg-rose-100 text-rose-800 border border-rose-200'
       : 'bg-slate-100 text-slate-800 border border-slate-200';
+
+  const statusLabel = isPartial ? 'Parcial' : status.label;
 
   return (
     <UICard className="overflow-hidden hover:shadow-md transition-shadow">
@@ -92,7 +95,7 @@ export function QuoteCard({
                 </span>
                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${statusBadgeClass}`}>
                   <StatusIcon className="w-3 h-3" />
-                  {status.label}
+                  {statusLabel}
                 </span>
               </div>
               <h3 className="font-bold text-base sm:text-lg line-clamp-1">{quote.customer_name}</h3>
