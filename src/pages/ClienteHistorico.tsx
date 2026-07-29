@@ -670,11 +670,25 @@ export default function ClienteHistorico() {
                               {formatCurrency(saldo)}
                             </TableCell>
                             <TableCell>
-                              <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                                <Link to={`/orcamentos?ver=${q.id}`}>
-                                  <Eye className="h-4 w-4" />
-                                </Link>
-                              </Button>
+                              <div className="flex items-center justify-end gap-1">
+                                {sale && Number(sale.pending_amount) > 0.01 && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-primary"
+                                    title="Extrato de Recebimentos"
+                                    onClick={() => handleDownloadExtrato(sale, q)}
+                                    disabled={exporting}
+                                  >
+                                    <FileDown className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                                  <Link to={`/orcamentos?ver=${q.id}`}>
+                                    <Eye className="h-4 w-4" />
+                                  </Link>
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         );
