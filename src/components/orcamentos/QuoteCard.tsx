@@ -37,6 +37,8 @@ interface QuoteCardProps {
   quote: Quote;
   statusConfig: any;
   formatCurrency: (val: number) => string;
+  isPartial?: boolean;
+  onNewReceipt?: (quote: Quote) => void;
   onView: (quote: Quote) => void;
   onEdit: (quote: Quote) => void;
   onDuplicate: (quote: Quote) => void;
