@@ -270,15 +270,47 @@ export default function ClienteHistorico() {
               <span className="hidden sm:inline">WhatsApp</span>
             </Button>
           )}
-          <Button
-            size="sm"
-            className="gap-2"
-            onClick={handleExportPdf}
-            disabled={exporting || !client}
-          >
-            {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-            <span className="hidden sm:inline">{exporting ? 'Gerando...' : 'Exportar PDF'}</span>
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="sm"
+                className="gap-2"
+                disabled={exporting || sharing !== null || !client}
+              >
+                {sharing || exporting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Share2 className="h-4 w-4" />
+                )}
+                <span className="hidden sm:inline">
+                  {sharing ? 'Enviando...' : exporting ? 'Gerando...' : 'Compartilhar'}
+                </span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem
+                className="gap-2 cursor-pointer"
+                onClick={handleExportPdf}
+              >
+                <Download className="h-4 w-4" /> Baixar PDF
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="gap-2 cursor-pointer"
+                onClick={() => handleSharePdf('whatsapp')}
+                disabled={sharing === 'whatsapp'}
+              >
+                <MessageCircle className="h-4 w-4 text-green-600" /> Enviar por WhatsApp
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="gap-2 cursor-pointer"
+                onClick={() => handleSharePdf('email')}
+                disabled={sharing === 'email'}
+              >
+                <Mail className="h-4 w-4 text-primary" /> Enviar por E-mail
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         <div ref={printableRef} className="space-y-4 bg-background">
