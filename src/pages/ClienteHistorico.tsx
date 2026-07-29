@@ -57,7 +57,7 @@ const quoteStatusBadge = (q: { status: string; sale_type?: string | null; pendin
 export default function ClienteHistorico() {
   const { id: clientId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { currentCompany } = useAuth();
+  const { currentCompany, user } = useAuth();
   const companyId = currentCompany?.id;
 
   const { data: client } = useQuery({
