@@ -301,22 +301,22 @@ export function MovimentacaoCaixaDialog({
         onOpenChange(o);
       }
     }}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Movimentação de Caixa</DialogTitle>
+          <DialogTitle className="text-xl">Nova Movimentação</DialogTitle>
           <DialogDescription>
             Registre entradas ou saídas avulsas do caixa.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-5 py-4">
+        <div className="space-y-5 py-2">
           {/* Saldo atual do caixa do dia */}
-          <div className="bg-muted/50 rounded-lg p-3 flex justify-between items-center">
+          <div className="bg-muted/50 rounded-xl px-4 py-3 flex justify-between items-center border">
             <span className="text-sm text-muted-foreground">Saldo atual do caixa</span>
             <span className="font-semibold">{formatCurrency(currentDailyBalance)}</span>
           </div>
 
-          {/* Type Selection */}
+          {/* Type Selection — Toggle Tabs */}
           <RadioGroup
             value={type}
             onValueChange={(v) => {
@@ -327,61 +327,66 @@ export function MovimentacaoCaixaDialog({
           >
             <Label
               htmlFor="type-entrada"
-              className={`flex items-center justify-center gap-2 p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                type === 'entrada' ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : 'border-muted hover:border-green-300'
+              className={`flex items-center justify-center gap-2 px-4 py-4 rounded-xl border-2 cursor-pointer transition-all ${
+                type === 'entrada'
+                  ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 shadow-sm'
+                  : 'border-muted bg-background hover:border-emerald-300'
               }`}
             >
               <RadioGroupItem value="entrada" id="type-entrada" className="sr-only" />
-              <ArrowUpCircle className={`w-5 h-5 ${type === 'entrada' ? 'text-green-600' : 'text-muted-foreground'}`} />
-              <span className={`font-medium ${type === 'entrada' ? 'text-green-700 dark:text-green-400' : ''}`}>
+              <ArrowUpCircle className={`w-5 h-5 ${type === 'entrada' ? 'text-emerald-600' : 'text-muted-foreground'}`} />
+              <span className={`font-semibold ${type === 'entrada' ? 'text-emerald-700 dark:text-emerald-400' : 'text-muted-foreground'}`}>
                 Entrada
               </span>
             </Label>
 
             <Label
               htmlFor="type-saida"
-              className={`flex items-center justify-center gap-2 p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                type === 'saida' ? 'border-red-500 bg-red-50 dark:bg-red-950/20' : 'border-muted hover:border-red-300'
+              className={`flex items-center justify-center gap-2 px-4 py-4 rounded-xl border-2 cursor-pointer transition-all ${
+                type === 'saida'
+                  ? 'border-rose-500 bg-rose-50 dark:bg-rose-950/30 shadow-sm'
+                  : 'border-muted bg-background hover:border-rose-300'
               }`}
             >
               <RadioGroupItem value="saida" id="type-saida" className="sr-only" />
-              <ArrowDownCircle className={`w-5 h-5 ${type === 'saida' ? 'text-red-600' : 'text-muted-foreground'}`} />
-              <span className={`font-medium ${type === 'saida' ? 'text-red-700 dark:text-red-400' : ''}`}>
+              <ArrowDownCircle className={`w-5 h-5 ${type === 'saida' ? 'text-rose-600' : 'text-muted-foreground'}`} />
+              <span className={`font-semibold ${type === 'saida' ? 'text-rose-700 dark:text-rose-400' : 'text-muted-foreground'}`}>
                 Saída
               </span>
             </Label>
           </RadioGroup>
 
-          {/* Category */}
-          <div className="space-y-2">
-            <Label>Categoria</Label>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.value} value={cat.value}>
-                    {cat.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Category + Amount — same row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Categoria</Label>
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger className="rounded-lg">
+                  <SelectValue placeholder="Selecione a categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          {/* Amount */}
-          <div className="space-y-2">
-            <Label>Valor</Label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">R$</span>
-              <Input
-                type="text"
-                inputMode="decimal"
-                placeholder="0,00"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="pl-10 text-lg"
-              />
+            <div className="space-y-2">
+              <Label>Valor</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">R$</span>
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0,00"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="pl-10 text-lg rounded-lg font-semibold"
+                />
+              </div>
             </div>
           </div>
 
@@ -436,27 +441,32 @@ export function MovimentacaoCaixaDialog({
             </Alert>
           )}
 
-          {/* Payment Method */}
+          {/* Payment Method — Modern cards */}
           <div className="space-y-2">
-            <Label>Forma</Label>
+            <Label>Forma de pagamento</Label>
             <RadioGroup
               value={paymentMethod}
               onValueChange={(v) => setPaymentMethod(v as PaymentMethod)}
-              className="flex gap-3"
+              className="grid grid-cols-3 gap-3"
             >
               {paymentMethods.map((method) => {
                 const Icon = method.icon;
+                const selected = paymentMethod === method.value;
                 return (
                   <Label
                     key={method.value}
                     htmlFor={`method-${method.value}`}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-all ${
-                      paymentMethod === method.value ? 'border-primary bg-primary/5' : 'border-muted hover:border-primary/50'
+                    className={`flex flex-col items-center justify-center gap-2 px-3 py-4 rounded-xl border-2 cursor-pointer transition-all ${
+                      selected
+                        ? 'border-primary bg-primary/5 shadow-sm'
+                        : 'border-muted bg-background hover:border-primary/40 hover:bg-muted/30'
                     }`}
                   >
                     <RadioGroupItem value={method.value} id={`method-${method.value}`} className="sr-only" />
-                    <Icon className="w-4 h-4" />
-                    <span className="text-sm">{method.label}</span>
+                    <Icon className={`w-5 h-5 ${selected ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <span className={`text-sm ${selected ? 'font-semibold text-primary' : 'text-muted-foreground'}`}>
+                      {method.label}
+                    </span>
                   </Label>
                 );
               })}
@@ -467,21 +477,27 @@ export function MovimentacaoCaixaDialog({
           <div className="space-y-2">
             <Label>Descrição</Label>
             <Textarea
-              placeholder="Descreva a movimentação..."
+              placeholder="Ex.: Pagamento de fornecedor referente à NF 1234..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              rows={2}
+              rows={3}
+              className="rounded-lg resize-none min-h-[84px]"
             />
           </div>
 
           {/* Vincular a — múltiplos envolvidos independentes */}
-          <div className="space-y-3">
-            <Label className="text-sm">Vincular a (opcional)</Label>
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                Vínculos da Movimentação
+              </h4>
+              <span className="text-xs text-muted-foreground">opcional</span>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Cliente Relacionado</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Cliente</Label>
                 <Select value={clienteId} onValueChange={setClienteId}>
-                  <SelectTrigger>
+                  <SelectTrigger className="rounded-lg bg-background">
                     <SelectValue placeholder="Nenhum" />
                   </SelectTrigger>
                   <SelectContent>
@@ -492,10 +508,10 @@ export function MovimentacaoCaixaDialog({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Fornecedor Relacionado</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Fornecedor</Label>
                 <Select value={fornecedorId} onValueChange={setFornecedorId}>
-                  <SelectTrigger>
+                  <SelectTrigger className="rounded-lg bg-background">
                     <SelectValue placeholder="Nenhum" />
                   </SelectTrigger>
                   <SelectContent>
@@ -510,10 +526,10 @@ export function MovimentacaoCaixaDialog({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Funcionário Relacionado</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Funcionário</Label>
                 <Select value={funcionarioId} onValueChange={setFuncionarioId}>
-                  <SelectTrigger>
+                  <SelectTrigger className="rounded-lg bg-background">
                     <SelectValue placeholder="Nenhum" />
                   </SelectTrigger>
                   <SelectContent>
@@ -531,14 +547,16 @@ export function MovimentacaoCaixaDialog({
 
           {/* Preview */}
           {amountValue > 0 && (
-            <div className={`rounded-lg p-4 ${
-              type === 'entrada' ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800'
-            } border`}>
+            <div className={`rounded-xl p-4 border ${
+              type === 'entrada'
+                ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800'
+                : 'bg-rose-50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800'
+            }`}>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">
                   {type === 'entrada' ? 'Entrada no caixa' : 'Saída do caixa'}
                 </span>
-                <span className={`text-lg font-bold ${type === 'entrada' ? 'text-green-600' : 'text-red-600'}`}>
+                <span className={`text-lg font-bold ${type === 'entrada' ? 'text-emerald-600' : 'text-rose-600'}`}>
                   {type === 'entrada' ? '+' : '-'}{formatCurrency(amountValue)}
                 </span>
               </div>
@@ -546,20 +564,25 @@ export function MovimentacaoCaixaDialog({
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>
+        <DialogFooter className="gap-2 sm:gap-2 pt-2 border-t">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={mutation.isPending}
+            className="rounded-full px-6"
+          >
             Cancelar
           </Button>
-          <Button 
-            onClick={handleSubmit} 
+          <Button
+            onClick={handleSubmit}
             disabled={
-              mutation.isPending || 
-              !category || 
-              !amount || 
+              mutation.isPending ||
+              !category ||
+              !amount ||
               !description.trim() ||
               (needsReinforcement && !hasEnoughCompanyBalance)
             }
-            className={type === 'entrada' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}
+            className="rounded-full px-6 bg-primary hover:bg-primary/90 text-primary-foreground"
           >
             {mutation.isPending ? (
               <>
@@ -569,7 +592,7 @@ export function MovimentacaoCaixaDialog({
             ) : needsReinforcement ? (
               'Confirmar com Reforço'
             ) : (
-              `Registrar ${type === 'entrada' ? 'Entrada' : 'Saída'}`
+              `Confirmar ${type === 'entrada' ? 'Entrada' : 'Saída'}`
             )}
           </Button>
         </DialogFooter>
