@@ -30,8 +30,8 @@ export function CaixaResumo({
     return (value ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
-  // Cálculo do saldo em dinheiro físico no caixa
-  const saldoDinheiro = openingAmount + totalDinheiro + totalEntradas - totalSaidas;
+  // Saldo consolidado do dia: Abertura + TODAS entradas (dinheiro+pix+cartão+outras) - saídas
+  const saldoDinheiro = openingAmount + totalDinheiro + totalCartao + totalPix + totalEntradas - totalSaidas;
 
   const hasCompanyCash = companyCashBalance !== undefined;
 
