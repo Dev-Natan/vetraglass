@@ -457,7 +457,7 @@ export function CaixaOperacionalTab() {
               <Badge variant="secondary">{todaySales.filter((s: any) => s.payment_status !== 'cancelled').length} vendas</Badge>
             </CardHeader>
             <CardContent>
-              <VendasTable sales={todaySales} onViewDetails={handleViewDetails} onCancelSale={handleCancelSale} onPrintReceipt={handlePrintReceipt} showCancelButton={true} />
+              <VendasTable sales={todaySales} onViewDetails={handleViewDetails} onCancelSale={handleCancelSale} onPrintReceipt={handlePrintReceipt} onReceivePayment={handleReceivePartialPayment} showCancelButton={true} />
             </CardContent>
           </Card>
         </>
