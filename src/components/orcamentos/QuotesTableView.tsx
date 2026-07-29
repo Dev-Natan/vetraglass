@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   MessageCircle, Download, Eye, MoreVertical, Edit, Copy, FileSignature,
-  Printer, CheckCircle, XCircle, RotateCcw, Trash2,
+  Printer, CheckCircle, XCircle, RotateCcw, Trash2, Wallet,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -20,6 +20,8 @@ interface QuotesTableViewProps {
   quotes: Quote[];
   statusConfig: any;
   formatCurrency: (val: number) => string;
+  partialByQuoteId?: Map<string, { isPartial: boolean }>;
+  onNewReceipt?: (quote: Quote) => void;
   onView: (quote: Quote) => void;
   onEdit: (quote: Quote) => void;
   onDuplicate: (quote: Quote) => void;
@@ -32,8 +34,10 @@ interface QuotesTableViewProps {
   onCancelApproved: (quote: Quote) => void;
 }
 
-const statusBadgeClass = (status: QuoteStatus) =>
-  status === 'pending'
+const statusBadgeClass = (status: QuoteStatus, isPartial: boolean) =>
+  isPartial
+    ? 'bg-blue-100 text-blue-800 border border-blue-200'
+    : status === 'pending'
     ? 'bg-amber-100 text-amber-800 border border-amber-200'
     : status === 'approved' || status === 'converted'
     ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
@@ -45,6 +49,8 @@ export function QuotesTableView({
   quotes,
   statusConfig,
   formatCurrency,
+  partialByQuoteId,
+  onNewReceipt,
   onView,
   onEdit,
   onDuplicate,
@@ -73,7 +79,8 @@ export function QuotesTableView({
           <TableBody>
             {quotes.map((quote) => {
               const status = statusConfig[quote.status as QuoteStatus] || statusConfig.pending;
-              const StatusIcon = status.icon;
+              const isPartial = partialByQuoteId?.get(quote.id)?.isPartial ?? false;
+              const StatusIcon = isPartial ? Wallet : status.icon;
               const isPending = quote.status === 'pending';
               const isApprovedOrConverted = quote.status === 'approved' || quote.status === 'converted';
               return (
@@ -90,9 +97,9 @@ export function QuotesTableView({
                     {format(new Date(quote.created_at), 'dd/MM/yyyy', { locale: ptBR })}
                   </TableCell>
                   <TableCell>
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${statusBadgeClass(quote.status as QuoteStatus)}`}>
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${statusBadgeClass(quote.status as QuoteStatus, isPartial)}`}>
                       <StatusIcon className="w-3 h-3" />
-                      {status.label}
+                      {isPartial ? 'Parcial' : status.label}
                     </span>
                   </TableCell>
                   <TableCell className="text-right font-semibold">{formatCurrency(quote.final_amount)}</TableCell>
@@ -130,6 +137,18 @@ export function QuotesTableView({
                           <Edit className="w-4 h-4" />
                         </Button>
                       )}
+                      {isPartial && onNewReceipt && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-primary hover:text-primary hover:bg-primary/10 gap-1 h-8 px-2"
+                          title="Novo Recebimento"
+                          onClick={() => onNewReceipt(quote)}
+                        >
+                          <Wallet className="w-4 h-4" />
+                          <span className="hidden sm:inline">Receber</span>
+                        </Button>
+                      )}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-8 w-8" title="Mais ações">
@@ -157,6 +176,11 @@ export function QuotesTableView({
 
                           {isApprovedOrConverted && (
                             <>
+                              {isPartial && onNewReceipt && (
+                                <DropdownMenuItem onClick={() => onNewReceipt(quote)} className="text-primary font-medium">
+                                  <Wallet className="w-4 h-4 mr-2" /> Novo Recebimento
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuItem onClick={() => onReopen(quote)}>
                                 <RotateCcw className="w-4 h-4 mr-2" /> Reabrir (Pendente)
                               </DropdownMenuItem>

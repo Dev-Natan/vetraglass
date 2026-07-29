@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { useSearchParams } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -15,6 +17,7 @@ import {
   LayoutGrid,
   List,
 } from 'lucide-react';
+import { NovoRecebimentoDialog, type PartialSaleTarget } from '@/components/caixa/NovoRecebimentoDialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -97,6 +100,8 @@ export default function Orcamentos() {
   const [approveQuoteItems, setApproveQuoteItems] = useState<any[]>([]);
   
   const [quoteToCancelApproved, setQuoteToCancelApproved] = useState<Quote | null>(null);
+  const [saleForReceipt, setSaleForReceipt] = useState<PartialSaleTarget | null>(null);
+  const [novoRecebimentoOpen, setNovoRecebimentoOpen] = useState(false);
 
   const {
     quotes,
@@ -106,6 +111,63 @@ export default function Orcamentos() {
     cancelApproved,
     duplicateQuote
   } = useQuotes(currentCompany?.id);
+
+  // Fetch sales linked to the company's quotes to detect partial payment status
+  const { data: quoteSales = [] } = useQuery({
+    queryKey: ['quote-sales-financials', currentCompany?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('sales')
+        .select('id, sale_number, quote_id, ordem_servico_id, customer_name, total_amount, paid_amount, pending_amount')
+        .eq('company_id', currentCompany!.id)
+        .not('quote_id', 'is', null);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!currentCompany?.id,
+  });
+
+  const salesByQuoteId = useMemo(() => {
+    const map = new Map<string, PartialSaleTarget & { isPartial: boolean }>();
+    for (const s of quoteSales) {
+      if (!s.quote_id) continue;
+      const total = Number(s.total_amount) || 0;
+      const paid = Number(s.paid_amount ?? 0);
+      const pending = Number(s.pending_amount ?? Math.max(0, total - paid));
+      const isPartial = paid > 0 && pending > 0.009;
+      // Prefer the record with a partial balance; otherwise keep the latest
+      const existing = map.get(s.quote_id);
+      if (!existing || (isPartial && !existing.isPartial)) {
+        map.set(s.quote_id, {
+          id: s.id,
+          sale_number: s.sale_number,
+          customer_name: s.customer_name,
+          total_amount: total,
+          paid_amount: paid,
+          pending_amount: pending,
+          quote_id: s.quote_id,
+          ordem_servico_id: s.ordem_servico_id ?? null,
+          isPartial,
+        });
+      }
+    }
+    return map;
+  }, [quoteSales]);
+
+  const handleNewReceipt = (quote: Quote) => {
+    const target = salesByQuoteId.get(quote.id);
+    if (!target) {
+      toast({
+        title: 'Sem venda vinculada',
+        description: 'Este orçamento ainda não possui uma venda com saldo em aberto.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    const { isPartial, ...saleTarget } = target;
+    setSaleForReceipt(saleTarget);
+    setNovoRecebimentoOpen(true);
+  };
 
   useEffect(() => {
     if (searchParams.get('novo') === 'true') {
@@ -319,6 +381,8 @@ export default function Orcamentos() {
                     quote={quote}
                     statusConfig={statusConfig}
                     formatCurrency={formatCurrency}
+                    isPartial={salesByQuoteId.get(quote.id)?.isPartial ?? false}
+                    onNewReceipt={handleNewReceipt}
                     onView={(q) => { setSelectedQuote(q); setIsViewDialogOpen(true); }}
                     onEdit={handleEdit}
                     onDuplicate={handleDuplicate}
@@ -337,6 +401,8 @@ export default function Orcamentos() {
                 quotes={pagination.paginatedData}
                 statusConfig={statusConfig}
                 formatCurrency={formatCurrency}
+                partialByQuoteId={salesByQuoteId}
+                onNewReceipt={handleNewReceipt}
                 onView={(q) => { setSelectedQuote(q); setIsViewDialogOpen(true); }}
                 onEdit={handleEdit}
                 onDuplicate={handleDuplicate}
@@ -416,6 +482,15 @@ export default function Orcamentos() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <NovoRecebimentoDialog
+        open={novoRecebimentoOpen}
+        onOpenChange={(open) => {
+          setNovoRecebimentoOpen(open);
+          if (!open) setSaleForReceipt(null);
+        }}
+        sale={saleForReceipt}
+      />
     </MainLayout>
   );
 }
