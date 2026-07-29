@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -7,7 +8,8 @@ import {
   User,
   Trash2,
   MessageCircle,
-  Eye
+  Eye,
+  History
 } from 'lucide-react';
 import { openWhatsapp } from '@/utils/whatsapp';
 
