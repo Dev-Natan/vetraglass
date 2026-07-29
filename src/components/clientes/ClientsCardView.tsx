@@ -32,6 +32,7 @@ interface ClientsCardViewProps {
 }
 
 export const ClientsCardView = memo(function ClientsCardView({ clients, onView, onDelete }: ClientsCardViewProps) {
+  const navigate = useNavigate();
   const handleWhatsApp = (client: Client, e: React.MouseEvent) => {
     e.stopPropagation();
     openWhatsapp(client.phone, `Olá ${client.name}, tudo bem?`);
