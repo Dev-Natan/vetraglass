@@ -216,11 +216,21 @@ export default function ClienteHistorico() {
               onClick={() => openWhatsapp(client.phone, `Olá ${client.name}, tudo bem?`)}
             >
               <MessageCircle className="h-4 w-4 text-green-600" />
-              WhatsApp
+              <span className="hidden sm:inline">WhatsApp</span>
             </Button>
           )}
+          <Button
+            size="sm"
+            className="gap-2"
+            onClick={handleExportPdf}
+            disabled={exporting || !client}
+          >
+            {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            <span className="hidden sm:inline">{exporting ? 'Gerando...' : 'Exportar PDF'}</span>
+          </Button>
         </div>
 
+        <div ref={printableRef} className="space-y-4 bg-background">
         {/* Client Contact Card */}
         <Card>
           <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
