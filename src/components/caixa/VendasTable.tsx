@@ -131,6 +131,17 @@ export function VendasTable({ sales, onViewDetails, onCancelSale, onPrintReceipt
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-1">
+                    {!isCancelled && sale.sale_type === 'partial' && (sale.pending_amount ?? 0) > 0 && onReceivePayment && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                        onClick={() => onReceivePayment(sale)}
+                        title="Novo recebimento"
+                      >
+                        <Receipt className="h-4 w-4" />
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="icon"
