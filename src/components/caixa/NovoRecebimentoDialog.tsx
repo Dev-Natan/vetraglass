@@ -451,12 +451,29 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
           )}
         </div>
 
-        <DialogFooter className="p-4 bg-muted/30 border-t gap-2 flex-row">
-          <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>
+        <DialogFooter className="p-4 bg-muted/30 border-t gap-2 flex-row flex-wrap">
+          <Button
+            variant="outline"
+            className="flex-1 min-w-[120px]"
+            onClick={() => onOpenChange(false)}
+            disabled={mutation.isPending}
+          >
             Cancelar
           </Button>
           <Button
-            className="flex-1"
+            variant="secondary"
+            className="flex-1 min-w-[140px] gap-2"
+            onClick={handleDownloadExtrato}
+            disabled={downloadingExtrato || !history?.length}
+          >
+            {downloadingExtrato ? (
+              <><Loader2 className="h-4 w-4 animate-spin" /> Gerando...</>
+            ) : (
+              <><FileDown className="h-4 w-4" /> Extrato</>
+            )}
+          </Button>
+          <Button
+            className="flex-1 min-w-[160px]"
             onClick={() => mutation.mutate()}
             disabled={mutation.isPending || !isCaixaAberto || amountToReceive <= 0}
           >
