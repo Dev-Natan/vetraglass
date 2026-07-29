@@ -209,15 +209,19 @@ export function CaixaResumo({
               <div className="grid grid-cols-2 gap-1 text-sm pl-6">
                 <span className="text-muted-foreground">Vendas dinheiro:</span>
                 <span className="text-right">{formatCurrency(totalDinheiro)}</span>
+                <span className="text-muted-foreground">Vendas cartão:</span>
+                <span className="text-right">{formatCurrency(totalCartao)}</span>
+                <span className="text-muted-foreground">Vendas PIX:</span>
+                <span className="text-right">{formatCurrency(totalPix)}</span>
                 {totalEntradas > 0 && (
                   <>
                     <span className="text-muted-foreground">Outras:</span>
                     <span className="text-right">{formatCurrency(totalEntradas)}</span>
                   </>
                 )}
-                <span className="font-medium">Total:</span>
-                <span className="text-right font-medium text-green-600">
-                  {formatCurrency(totalDinheiro + totalEntradas)}
+                <span className="font-medium pt-1 border-t">Total:</span>
+                <span className="text-right font-medium text-green-600 pt-1 border-t">
+                  {formatCurrency(totalDinheiro + totalCartao + totalPix + totalEntradas)}
                 </span>
               </div>
             </div>
@@ -242,8 +246,8 @@ export function CaixaResumo({
                     <span className="text-right">-</span>
                   </>
                 )}
-                <span className="font-medium">Total:</span>
-                <span className="text-right font-medium text-red-600">
+                <span className="font-medium pt-1 border-t">Total:</span>
+                <span className="text-right font-medium text-red-600 pt-1 border-t">
                   {formatCurrency(totalSaidas)}
                 </span>
               </div>
@@ -253,8 +257,8 @@ export function CaixaResumo({
             <div className="bg-muted/50 rounded-lg p-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium">Resultado do Dia:</span>
-                <span className={`font-bold ${(totalDinheiro + totalEntradas - totalSaidas) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatCurrency(totalDinheiro + totalEntradas - totalSaidas)}
+                <span className={`font-bold ${(totalVendas + totalEntradas - totalSaidas) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatCurrency(totalVendas + totalEntradas - totalSaidas)}
                 </span>
               </div>
             </div>
