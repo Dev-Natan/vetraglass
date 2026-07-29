@@ -84,34 +84,54 @@ export function MovimentacaoCaixaDialog({
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('dinheiro');
-  const [partyType, setPartyType] = useState<'none' | 'cliente' | 'fornecedor' | 'funcionario'>('none');
-  const [partyId, setPartyId] = useState<string>('');
+  const [clienteId, setClienteId] = useState<string>('none');
+  const [fornecedorId, setFornecedorId] = useState<string>('none');
+  const [funcionarioId, setFuncionarioId] = useState<string>('none');
 
   const categories = type === 'entrada' ? entradaCategories : saidaCategories;
 
-  // Entidades vinculáveis (clientes, fornecedores ou funcionários)
-  const { data: parties = [] } = useQuery({
-    queryKey: ['movement-parties', currentCompany?.id, partyType],
+  // Listas independentes para vinculação múltipla
+  const { data: clientes = [] } = useQuery({
+    queryKey: ['movement-clientes', currentCompany?.id],
     queryFn: async () => {
-      if (!currentCompany?.id || partyType === 'none') return [] as { id: string; name: string }[];
-      const table = partyType === 'cliente' ? 'clients' : partyType === 'fornecedor' ? 'suppliers' : 'employees';
-      const { data, error } = await (supabase as any)
-        .from(table)
+      const { data, error } = await supabase
+        .from('clients')
         .select('id, name')
-        .eq('company_id', currentCompany.id)
+        .eq('company_id', currentCompany!.id)
         .order('name', { ascending: true });
       if (error) throw error;
       return (data || []) as { id: string; name: string }[];
     },
-    enabled: !!currentCompany?.id && open && partyType !== 'none',
+    enabled: !!currentCompany?.id && open,
   });
 
-  const selectedParty = parties.find((p) => p.id === partyId);
-  const partyLabels: Record<string, string> = {
-    cliente: 'Cliente',
-    fornecedor: 'Fornecedor',
-    funcionario: 'Funcionário',
-  };
+  const { data: fornecedores = [] } = useQuery({
+    queryKey: ['movement-fornecedores', currentCompany?.id],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('suppliers')
+        .select('id, name')
+        .eq('company_id', currentCompany!.id)
+        .order('name', { ascending: true });
+      if (error) throw error;
+      return (data || []) as { id: string; name: string }[];
+    },
+    enabled: !!currentCompany?.id && open,
+  });
+
+  const { data: funcionarios = [] } = useQuery({
+    queryKey: ['movement-funcionarios', currentCompany?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('employees')
+        .select('id, name')
+        .eq('company_id', currentCompany!.id)
+        .order('name', { ascending: true });
+      if (error) throw error;
+      return (data || []) as { id: string; name: string }[];
+    },
+    enabled: !!currentCompany?.id && open,
+  });
 
   // Buscar saldo do caixa da empresa
   const { data: companyCash } = useQuery({
@@ -140,9 +160,14 @@ export function MovimentacaoCaixaDialog({
     setAmount('');
     setDescription('');
     setPaymentMethod('dinheiro');
-    setPartyType('none');
-    setPartyId('');
+    setClienteId('none');
+    setFornecedorId('none');
+    setFuncionarioId('none');
   };
+
+  const clienteSelected = clientes.find((c) => c.id === clienteId);
+  const fornecedorSelected = fornecedores.find((f) => f.id === fornecedorId);
+  const funcionarioSelected = funcionarios.find((e) => e.id === funcionarioId);
 
   // Mutation com suporte a reforço automático
   const mutation = useMutation({
@@ -163,9 +188,24 @@ export function MovimentacaoCaixaDialog({
         throw new Error('Informe uma descrição');
       }
 
-      const partyFields = partyType !== 'none' && partyId && selectedParty
-        ? { party_type: partyType, party_id: partyId, party_name: selectedParty.name }
+      // Vínculos independentes (podem existir 0 ou mais simultaneamente)
+      const linkFields: Record<string, string | null> = {
+        cliente_id: clienteId !== 'none' ? clienteId : null,
+        fornecedor_id: fornecedorId !== 'none' ? fornecedorId : null,
+        funcionario_id: funcionarioId !== 'none' ? funcionarioId : null,
+      };
+
+      // Manter compat com colunas legadas party_* usando o primeiro vínculo (prioridade fornecedor > cliente > funcionário)
+      const legacyParty = fornecedorSelected
+        ? { party_type: 'fornecedor', party_id: fornecedorSelected.id, party_name: fornecedorSelected.name }
+        : clienteSelected
+        ? { party_type: 'cliente', party_id: clienteSelected.id, party_name: clienteSelected.name }
+        : funcionarioSelected
+        ? { party_type: 'funcionario', party_id: funcionarioSelected.id, party_name: funcionarioSelected.name }
         : { party_type: null as string | null, party_id: null as string | null, party_name: null as string | null };
+
+      const partyFields = { ...linkFields, ...legacyParty };
+      const hasAnyLink = !!(linkFields.cliente_id || linkFields.fornecedor_id || linkFields.funcionario_id);
 
       // Se é saída e precisa de reforço, usar a função com reforço automático
       if (type === 'saida') {
@@ -194,7 +234,7 @@ export function MovimentacaoCaixaDialog({
           throw new Error(result.error || 'Erro ao registrar saída');
         }
 
-        if (result.movement_id && partyFields.party_type) {
+        if (result.movement_id && hasAnyLink) {
           await (supabase.from('cash_movements') as any)
             .update(partyFields)
             .eq('id', result.movement_id);
@@ -434,52 +474,59 @@ export function MovimentacaoCaixaDialog({
             />
           </div>
 
-          {/* Vincular a */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>Vincular a</Label>
-              <Select
-                value={partyType}
-                onValueChange={(v) => {
-                  setPartyType(v as typeof partyType);
-                  setPartyId('');
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Nenhum</SelectItem>
-                  <SelectItem value="cliente">Cliente</SelectItem>
-                  <SelectItem value="fornecedor">Fornecedor</SelectItem>
-                  <SelectItem value="funcionario">Funcionário</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {partyType !== 'none' && (
-              <div className="space-y-2">
-                <Label>{partyLabels[partyType]}</Label>
-                <Select value={partyId} onValueChange={setPartyId}>
+          {/* Vincular a — múltiplos envolvidos independentes */}
+          <div className="space-y-3">
+            <Label className="text-sm">Vincular a (opcional)</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Cliente Relacionado</Label>
+                <Select value={clienteId} onValueChange={setClienteId}>
                   <SelectTrigger>
-                    <SelectValue placeholder={`Selecione o ${partyLabels[partyType].toLowerCase()}`} />
+                    <SelectValue placeholder="Nenhum" />
                   </SelectTrigger>
                   <SelectContent>
-                    {parties.length === 0 ? (
-                      <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                        Nenhum registro encontrado.
-                      </div>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {clientes.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Fornecedor Relacionado</Label>
+                <Select value={fornecedorId} onValueChange={setFornecedorId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Nenhum" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {fornecedores.length === 0 ? (
+                      <div className="px-2 py-1.5 text-xs text-muted-foreground">Nenhum fornecedor cadastrado.</div>
                     ) : (
-                      parties.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.name}
-                        </SelectItem>
+                      fornecedores.map((f) => (
+                        <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
                       ))
                     )}
                   </SelectContent>
                 </Select>
               </div>
-            )}
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Funcionário Relacionado</Label>
+                <Select value={funcionarioId} onValueChange={setFuncionarioId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Nenhum" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {funcionarios.map((e) => (
+                      <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
+
 
 
           {/* Preview */}
