@@ -28,8 +28,9 @@ import {
   ArrowLeft, User, Phone, Mail, MapPin, FileText,
   AlertTriangle, Receipt, TrendingUp, Wallet, ShieldCheck,
   MessageCircle, Eye, Download, Loader2, LineChart,
-  Share2, Send, CreditCard,
+  Share2, Send, CreditCard, FileDown,
 } from 'lucide-react';
+import { ExtratoRecebimentos } from '@/components/caixa/ExtratoRecebimentos';
 import { openWhatsapp } from '@/utils/whatsapp';
 import { downloadElementAsPdf, elementToPdfBlob } from '@/utils/printableToPdf';
 import { uploadPdfForSharing, shareViaWhatsApp, shareViaEmail } from '@/utils/sharePdf';
