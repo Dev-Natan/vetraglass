@@ -13,6 +13,8 @@ interface CashMovement {
   amount: number;
   created_at: string;
   payment_method?: string | null;
+  party_type?: string | null;
+  party_name?: string | null;
 }
 
 interface CaixaMovimentacoesTableProps {
