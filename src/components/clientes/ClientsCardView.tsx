@@ -102,11 +102,25 @@ export const ClientsCardView = memo(function ClientsCardView({ clients, onView, 
               className="flex-1 gap-2"
               onClick={(e) => {
                 e.stopPropagation();
+                navigate(`/clientes/${client.id}/historico`);
+              }}
+              title="Ver histórico completo"
+            >
+              <History className="w-4 h-4" />
+              Ver Histórico
+            </Button>
+
+            <Button
+              variant="outline"
+              size="icon"
+              className="shrink-0"
+              onClick={(e) => {
+                e.stopPropagation();
                 onView(client);
               }}
+              title="Editar cadastro"
             >
               <Eye className="w-4 h-4" />
-              Ver Perfil
             </Button>
             
             {client.phone && (
