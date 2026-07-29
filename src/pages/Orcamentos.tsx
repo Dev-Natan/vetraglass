@@ -482,6 +482,15 @@ export default function Orcamentos() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <NovoRecebimentoDialog
+        open={novoRecebimentoOpen}
+        onOpenChange={(open) => {
+          setNovoRecebimentoOpen(open);
+          if (!open) setSaleForReceipt(null);
+        }}
+        sale={saleForReceipt}
+      />
     </MainLayout>
   );
 }
