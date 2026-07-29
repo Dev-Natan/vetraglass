@@ -30,8 +30,8 @@ export function CaixaResumo({
     return (value ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
-  // Cálculo do saldo em dinheiro físico no caixa
-  const saldoDinheiro = openingAmount + totalDinheiro + totalEntradas - totalSaidas;
+  // Saldo consolidado do dia: Abertura + TODAS entradas (dinheiro+pix+cartão+outras) - saídas
+  const saldoDinheiro = openingAmount + totalDinheiro + totalCartao + totalPix + totalEntradas - totalSaidas;
 
   const hasCompanyCash = companyCashBalance !== undefined;
 
@@ -155,24 +155,30 @@ export function CaixaResumo({
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Wallet className="h-4 w-4 text-primary" />
-              Saldo em Dinheiro (Caixa Físico)
+              Saldo Consolidado do Caixa
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid grid-cols-2 gap-2 text-sm">
               <span className="text-muted-foreground">Abertura:</span>
               <span className="text-right">{formatCurrency(openingAmount)}</span>
-              
+
               <span className="text-muted-foreground">+ Vendas dinheiro:</span>
               <span className="text-right text-green-600">+{formatCurrency(totalDinheiro)}</span>
-              
+
+              <span className="text-muted-foreground">+ Vendas PIX:</span>
+              <span className="text-right text-green-600">+{formatCurrency(totalPix)}</span>
+
+              <span className="text-muted-foreground">+ Vendas cartão:</span>
+              <span className="text-right text-green-600">+{formatCurrency(totalCartao)}</span>
+
               {totalEntradas > 0 && (
                 <>
                   <span className="text-muted-foreground">+ Outras entradas:</span>
                   <span className="text-right text-green-600">+{formatCurrency(totalEntradas)}</span>
                 </>
               )}
-              
+
               {totalSaidas > 0 && (
                 <>
                   <span className="text-muted-foreground">- Saídas:</span>
