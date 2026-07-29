@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,14 +11,19 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { format } from 'date-fns';
+import {
+  ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
+} from 'recharts';
+import { format, parseISO, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
-  ArrowLeft, User, Phone, Mail, MapPin, FileText, DollarSign,
-  AlertTriangle, CheckCircle2, Receipt, TrendingUp, Wallet, ShieldCheck,
-  MessageCircle, Eye,
+  ArrowLeft, User, Phone, Mail, MapPin, FileText,
+  AlertTriangle, Receipt, TrendingUp, Wallet, ShieldCheck,
+  MessageCircle, Eye, Download, Loader2, LineChart,
 } from 'lucide-react';
 import { openWhatsapp } from '@/utils/whatsapp';
+import { downloadElementAsPdf } from '@/utils/printableToPdf';
+import { toast } from 'sonner';
 
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
