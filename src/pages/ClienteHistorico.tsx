@@ -12,6 +12,13 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
 } from 'recharts';
 import { format, parseISO, startOfDay } from 'date-fns';
@@ -20,9 +27,12 @@ import {
   ArrowLeft, User, Phone, Mail, MapPin, FileText,
   AlertTriangle, Receipt, TrendingUp, Wallet, ShieldCheck,
   MessageCircle, Eye, Download, Loader2, LineChart,
+  Share2, Send, CreditCard,
 } from 'lucide-react';
 import { openWhatsapp } from '@/utils/whatsapp';
-import { downloadElementAsPdf } from '@/utils/printableToPdf';
+import { downloadElementAsPdf, elementToPdfBlob } from '@/utils/printableToPdf';
+import { uploadPdfForSharing, shareViaWhatsApp, shareViaEmail } from '@/utils/sharePdf';
+import { ExtratoRecebimentos } from '@/components/caixa/ExtratoRecebimentos';
 import { toast } from 'sonner';
 
 const formatCurrency = (v: number) =>
