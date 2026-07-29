@@ -13,6 +13,8 @@ interface CashMovement {
   amount: number;
   created_at: string;
   payment_method?: string | null;
+  party_type?: string | null;
+  party_name?: string | null;
 }
 
 interface CaixaMovimentacoesTableProps {
@@ -128,8 +130,18 @@ export function CaixaMovimentacoesTable({ movements }: CaixaMovimentacoesTablePr
                       {getCategoryLabel(movement.category)}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-sm max-w-[200px] truncate">
-                    {movement.description}
+                  <TableCell className="text-sm max-w-[240px]">
+                    <div className="truncate">{movement.description}</div>
+                    {movement.party_name && movement.party_type && (
+                      <div className="text-xs text-muted-foreground truncate">
+                        {movement.party_type === 'cliente'
+                          ? 'Cliente'
+                          : movement.party_type === 'fornecedor'
+                          ? 'Fornecedor'
+                          : 'Funcionário'}
+                        : {movement.party_name}
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell
                     className={`text-right font-medium ${

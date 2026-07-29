@@ -84,8 +84,34 @@ export function MovimentacaoCaixaDialog({
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('dinheiro');
+  const [partyType, setPartyType] = useState<'none' | 'cliente' | 'fornecedor' | 'funcionario'>('none');
+  const [partyId, setPartyId] = useState<string>('');
 
   const categories = type === 'entrada' ? entradaCategories : saidaCategories;
+
+  // Entidades vinculáveis (clientes, fornecedores ou funcionários)
+  const { data: parties = [] } = useQuery({
+    queryKey: ['movement-parties', currentCompany?.id, partyType],
+    queryFn: async () => {
+      if (!currentCompany?.id || partyType === 'none') return [] as { id: string; name: string }[];
+      const table = partyType === 'cliente' ? 'clients' : partyType === 'fornecedor' ? 'suppliers' : 'employees';
+      const { data, error } = await (supabase as any)
+        .from(table)
+        .select('id, name')
+        .eq('company_id', currentCompany.id)
+        .order('name', { ascending: true });
+      if (error) throw error;
+      return (data || []) as { id: string; name: string }[];
+    },
+    enabled: !!currentCompany?.id && open && partyType !== 'none',
+  });
+
+  const selectedParty = parties.find((p) => p.id === partyId);
+  const partyLabels: Record<string, string> = {
+    cliente: 'Cliente',
+    fornecedor: 'Fornecedor',
+    funcionario: 'Funcionário',
+  };
 
   // Buscar saldo do caixa da empresa
   const { data: companyCash } = useQuery({
@@ -114,6 +140,8 @@ export function MovimentacaoCaixaDialog({
     setAmount('');
     setDescription('');
     setPaymentMethod('dinheiro');
+    setPartyType('none');
+    setPartyId('');
   };
 
   // Mutation com suporte a reforço automático
@@ -135,6 +163,10 @@ export function MovimentacaoCaixaDialog({
         throw new Error('Informe uma descrição');
       }
 
+      const partyFields = partyType !== 'none' && partyId && selectedParty
+        ? { party_type: partyType, party_id: partyId, party_name: selectedParty.name }
+        : { party_type: null as string | null, party_id: null as string | null, party_name: null as string | null };
+
       // Se é saída e precisa de reforço, usar a função com reforço automático
       if (type === 'saida') {
         const { data, error } = await supabase.rpc('register_cash_exit_with_reinforcement', {
@@ -146,7 +178,7 @@ export function MovimentacaoCaixaDialog({
         });
 
         if (error) throw error;
-        
+
         const result = data as {
           success: boolean;
           error?: string;
@@ -157,17 +189,22 @@ export function MovimentacaoCaixaDialog({
           };
           message?: string;
         };
-        
+
         if (!result.success) {
           throw new Error(result.error || 'Erro ao registrar saída');
         }
-        
+
+        if (result.movement_id && partyFields.party_type) {
+          await (supabase.from('cash_movements') as any)
+            .update(partyFields)
+            .eq('id', result.movement_id);
+        }
+
         return result;
       }
 
       // Entrada normal
-      const { data, error } = await supabase
-        .from('cash_movements')
+      const { data, error } = await (supabase.from('cash_movements') as any)
         .insert({
           company_id: currentCompany.id,
           cash_register_id: cashRegisterId,
@@ -177,6 +214,7 @@ export function MovimentacaoCaixaDialog({
           description: description.trim(),
           payment_method: paymentMethod,
           created_by: user.id,
+          ...partyFields,
         })
         .select()
         .single();
@@ -395,6 +433,54 @@ export function MovimentacaoCaixaDialog({
               rows={2}
             />
           </div>
+
+          {/* Vincular a */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Vincular a</Label>
+              <Select
+                value={partyType}
+                onValueChange={(v) => {
+                  setPartyType(v as typeof partyType);
+                  setPartyId('');
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhum</SelectItem>
+                  <SelectItem value="cliente">Cliente</SelectItem>
+                  <SelectItem value="fornecedor">Fornecedor</SelectItem>
+                  <SelectItem value="funcionario">Funcionário</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {partyType !== 'none' && (
+              <div className="space-y-2">
+                <Label>{partyLabels[partyType]}</Label>
+                <Select value={partyId} onValueChange={setPartyId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={`Selecione o ${partyLabels[partyType].toLowerCase()}`} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {parties.length === 0 ? (
+                      <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                        Nenhum registro encontrado.
+                      </div>
+                    ) : (
+                      parties.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+
 
           {/* Preview */}
           {amountValue > 0 && (
