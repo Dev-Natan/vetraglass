@@ -203,7 +203,7 @@ export default function Funcionarios() {
               {employee.email && <p className="truncate">{employee.email}</p>}
               {employee.phone && <p>{employee.phone}</p>}
               {employee.hourly_rate > 0 && (
-                <p className="text-primary font-medium">{formatCurrency(employee.hourly_rate)}/hora</p>
+                <p className="text-primary font-medium">{formatCurrency(employee.hourly_rate)}/mês</p>
               )}
               {employee.permission_profile_id && (
                 <div className="mt-2">

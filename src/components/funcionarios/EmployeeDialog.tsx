@@ -433,7 +433,7 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
             <Label className="font-medium">Remuneração</Label>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div className="space-y-1">
-                <Label htmlFor="hourly_rate" className="text-xs">Salário (R$)</Label>
+                <Label htmlFor="hourly_rate" className="text-xs">Salário Mensal (R$)</Label>
                 <Input
                   id="hourly_rate"
                   type="number"
