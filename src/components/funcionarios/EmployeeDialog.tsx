@@ -498,7 +498,7 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
             </div>
             <PermissionProfileSelect
               value={formData.permission_profile_id}
-              onChange={(value) => setFormData({ ...formData, permission_profile_id: value })}
+              onChange={(value) => setFormData({ ...formData, permission_profile_id: value ? value : null })}
             />
             <p className="text-xs text-muted-foreground">
               Define quais módulos e ações o funcionário pode acessar quando logado no sistema.
