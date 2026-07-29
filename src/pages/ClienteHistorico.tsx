@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,14 +11,19 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
-import { format } from 'date-fns';
+import {
+  ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
+} from 'recharts';
+import { format, parseISO, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
-  ArrowLeft, User, Phone, Mail, MapPin, FileText, DollarSign,
-  AlertTriangle, CheckCircle2, Receipt, TrendingUp, Wallet, ShieldCheck,
-  MessageCircle, Eye,
+  ArrowLeft, User, Phone, Mail, MapPin, FileText,
+  AlertTriangle, Receipt, TrendingUp, Wallet, ShieldCheck,
+  MessageCircle, Eye, Download, Loader2, LineChart,
 } from 'lucide-react';
 import { openWhatsapp } from '@/utils/whatsapp';
+import { downloadElementAsPdf } from '@/utils/printableToPdf';
+import { toast } from 'sonner';
 
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
@@ -143,6 +148,51 @@ export default function ClienteHistorico() {
     return map;
   }, [quotes]);
 
+  // Chart data — daily totals + cumulative received amount over time
+  const chartData = useMemo(() => {
+    if (!payments.length) return [];
+    const byDay = new Map<string, number>();
+    const sorted = [...payments].sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+    );
+    sorted.forEach(p => {
+      const key = format(startOfDay(new Date(p.created_at)), 'yyyy-MM-dd');
+      byDay.set(key, (byDay.get(key) || 0) + (Number(p.amount) || 0));
+    });
+    let acc = 0;
+    return Array.from(byDay.entries()).map(([date, total]) => {
+      acc += total;
+      return {
+        date,
+        label: format(parseISO(date), 'dd/MM/yy', { locale: ptBR }),
+        diario: Math.round(total * 100) / 100,
+        acumulado: Math.round(acc * 100) / 100,
+      };
+    });
+  }, [payments]);
+
+  const printableRef = useRef<HTMLDivElement>(null);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportPdf = async () => {
+    if (!printableRef.current || !client) {
+      toast.error('Aguarde os dados carregarem');
+      return;
+    }
+    try {
+      setExporting(true);
+      const safeName = client.name.replace(/[^a-zA-Z0-9]+/g, '_').toLowerCase();
+      const stamp = format(new Date(), 'yyyy-MM-dd');
+      await downloadElementAsPdf(printableRef.current, `ficha_${safeName}_${stamp}.pdf`);
+      toast.success('PDF exportado com sucesso');
+    } catch (err) {
+      console.error(err);
+      toast.error('Falha ao gerar PDF');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <MainLayout>
       <div className="pb-20 space-y-4">
@@ -166,11 +216,21 @@ export default function ClienteHistorico() {
               onClick={() => openWhatsapp(client.phone, `Olá ${client.name}, tudo bem?`)}
             >
               <MessageCircle className="h-4 w-4 text-green-600" />
-              WhatsApp
+              <span className="hidden sm:inline">WhatsApp</span>
             </Button>
           )}
+          <Button
+            size="sm"
+            className="gap-2"
+            onClick={handleExportPdf}
+            disabled={exporting || !client}
+          >
+            {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            <span className="hidden sm:inline">{exporting ? 'Gerando...' : 'Exportar PDF'}</span>
+          </Button>
         </div>
 
+        <div ref={printableRef} className="space-y-4 bg-background">
         {/* Client Contact Card */}
         <Card>
           <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
@@ -274,6 +334,93 @@ export default function ClienteHistorico() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Recebimentos ao longo do tempo */}
+        <Card>
+          <CardHeader className="pb-2 flex flex-row items-center justify-between">
+            <div className="flex items-center gap-2">
+              <LineChart className="h-4 w-4 text-primary" />
+              <CardTitle className="text-base">Recebimentos ao longo do tempo</CardTitle>
+            </div>
+            {chartData.length > 0 && (
+              <Badge variant="outline" className="text-[10px]">
+                {chartData.length} {chartData.length === 1 ? 'dia' : 'dias'} com movimento
+              </Badge>
+            )}
+          </CardHeader>
+          <CardContent className="pt-2">
+            {chartData.length === 0 ? (
+              <div className="h-56 flex items-center justify-center text-sm text-muted-foreground">
+                Sem recebimentos registrados para exibir o gráfico.
+              </div>
+            ) : (
+              <div className="h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData} margin={{ top: 10, right: 16, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorDiario" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.35} />
+                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="colorAcumulado" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis
+                      dataKey="label"
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={11}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={11}
+                      tickLine={false}
+                      tickFormatter={(v) =>
+                        v >= 1000
+                          ? `R$ ${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}k`
+                          : `R$ ${v}`
+                      }
+                    />
+                    <Tooltip
+                      formatter={(v: number, name: string) => [
+                        formatCurrency(v),
+                        name === 'diario' ? 'Recebido no dia' : 'Acumulado',
+                      ]}
+                      labelFormatter={(l) => `Dia ${l}`}
+                      contentStyle={{
+                        background: 'hsl(var(--popover))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: 8,
+                        fontSize: 12,
+                      }}
+                    />
+                    <Legend
+                      wrapperStyle={{ fontSize: 11 }}
+                      formatter={(v) => (v === 'diario' ? 'Recebido no dia' : 'Acumulado')}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="acumulado"
+                      stroke="#10b981"
+                      strokeWidth={2}
+                      fill="url(#colorAcumulado)"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="diario"
+                      stroke="hsl(var(--primary))"
+                      strokeWidth={2}
+                      fill="url(#colorDiario)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Tabs */}
         <Tabs defaultValue="orcamentos" className="w-full">
@@ -411,6 +558,7 @@ export default function ClienteHistorico() {
             </Card>
           </TabsContent>
         </Tabs>
+        </div>
       </div>
     </MainLayout>
   );
