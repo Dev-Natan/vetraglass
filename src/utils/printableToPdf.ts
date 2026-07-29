@@ -1,8 +1,20 @@
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 
+const A4_WIDTH_PX = 794;
+
+interface RenderOptions {
+  filename?: string;
+  returnBlob?: boolean;
+}
+
+interface RenderResult {
+  blob: Blob;
+  dataUrl: string;
+}
+
 /**
- * Render a live DOM node to a multi-page A4 PDF and trigger download.
+ * Render a live DOM node to a multi-page A4 PDF.
  *
  * Strategy: clone the source node into an ISOLATED off-screen container
  * (`.pdf-render-root`) so the live app's Tailwind/flex/absolute layout
@@ -10,12 +22,7 @@ import jsPDF from 'jspdf';
  * (794px @ 96dpi), pure white background, and strips interactive chrome
  * via `data-html2canvas-ignore`.
  */
-export async function downloadElementAsPdf(
-  element: HTMLElement,
-  filename: string,
-): Promise<void> {
-  const A4_WIDTH_PX = 794;
-
+async function renderElementToPdf(element: HTMLElement): Promise<RenderResult> {
   // 1. Build an isolated host so nothing in the app tree affects layout.
   const host = document.createElement('div');
   host.className = 'pdf-render-root';
@@ -144,8 +151,46 @@ export async function downloadElementAsPdf(
       }
     }
 
-    pdf.save(filename);
+    const blob = pdf.output('blob');
+    const dataUrl = pdf.output('datauristring');
+    return { blob, dataUrl };
   } finally {
     host.remove();
   }
+}
+
+/**
+ * Render a live DOM node to a multi-page A4 PDF and trigger download.
+ */
+export async function downloadElementAsPdf(
+  element: HTMLElement,
+  filename: string,
+): Promise<void> {
+  const { blob } = await renderElementToPdf(element);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Render a live DOM node to a multi-page A4 PDF and return as Blob.
+ * Useful for sharing/uploading without triggering a download.
+ */
+export async function elementToPdfBlob(element: HTMLElement): Promise<Blob> {
+  const { blob } = await renderElementToPdf(element);
+  return blob;
+}
+
+/**
+ * Render a live DOM node to a multi-page A4 PDF and return as base64 data URL.
+ * Useful for embedding in mailto links or previewing.
+ */
+export async function elementToPdfDataUrl(element: HTMLElement): Promise<string> {
+  const { dataUrl } = await renderElementToPdf(element);
+  return dataUrl;
 }
