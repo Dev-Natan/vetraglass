@@ -148,6 +148,51 @@ export default function ClienteHistorico() {
     return map;
   }, [quotes]);
 
+  // Chart data — daily totals + cumulative received amount over time
+  const chartData = useMemo(() => {
+    if (!payments.length) return [];
+    const byDay = new Map<string, number>();
+    const sorted = [...payments].sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+    );
+    sorted.forEach(p => {
+      const key = format(startOfDay(new Date(p.created_at)), 'yyyy-MM-dd');
+      byDay.set(key, (byDay.get(key) || 0) + (Number(p.amount) || 0));
+    });
+    let acc = 0;
+    return Array.from(byDay.entries()).map(([date, total]) => {
+      acc += total;
+      return {
+        date,
+        label: format(parseISO(date), 'dd/MM/yy', { locale: ptBR }),
+        diario: Math.round(total * 100) / 100,
+        acumulado: Math.round(acc * 100) / 100,
+      };
+    });
+  }, [payments]);
+
+  const printableRef = useRef<HTMLDivElement>(null);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportPdf = async () => {
+    if (!printableRef.current || !client) {
+      toast.error('Aguarde os dados carregarem');
+      return;
+    }
+    try {
+      setExporting(true);
+      const safeName = client.name.replace(/[^a-zA-Z0-9]+/g, '_').toLowerCase();
+      const stamp = format(new Date(), 'yyyy-MM-dd');
+      await downloadElementAsPdf(printableRef.current, `ficha_${safeName}_${stamp}.pdf`);
+      toast.success('PDF exportado com sucesso');
+    } catch (err) {
+      console.error(err);
+      toast.error('Falha ao gerar PDF');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <MainLayout>
       <div className="pb-20 space-y-4">
