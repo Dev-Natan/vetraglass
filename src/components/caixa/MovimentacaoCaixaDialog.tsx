@@ -234,7 +234,7 @@ export function MovimentacaoCaixaDialog({
           throw new Error(result.error || 'Erro ao registrar saída');
         }
 
-        if (result.movement_id && partyFields.party_type) {
+        if (result.movement_id && hasAnyLink) {
           await (supabase.from('cash_movements') as any)
             .update(partyFields)
             .eq('id', result.movement_id);
