@@ -465,6 +465,9 @@ export type Database = {
           metadata: Json | null
           ordem_servico_id: string | null
           origem: string | null
+          party_id: string | null
+          party_name: string | null
+          party_type: string | null
           payment_method: string | null
           quote_id: string | null
           receivable_id: string | null
@@ -487,6 +490,9 @@ export type Database = {
           metadata?: Json | null
           ordem_servico_id?: string | null
           origem?: string | null
+          party_id?: string | null
+          party_name?: string | null
+          party_type?: string | null
           payment_method?: string | null
           quote_id?: string | null
           receivable_id?: string | null
@@ -509,6 +515,9 @@ export type Database = {
           metadata?: Json | null
           ordem_servico_id?: string | null
           origem?: string | null
+          party_id?: string | null
+          party_name?: string | null
+          party_type?: string | null
           payment_method?: string | null
           quote_id?: string | null
           receivable_id?: string | null
@@ -6202,6 +6211,56 @@ export type Database = {
             columns: ["item_template_id"]
             isOneToOne: false
             referencedRelation: "item_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      suppliers: {
+        Row: {
+          address: string | null
+          company_id: string
+          created_at: string
+          document: string | null
+          email: string | null
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          company_id: string
+          created_at?: string
+          document?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          company_id?: string
+          created_at?: string
+          document?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suppliers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
