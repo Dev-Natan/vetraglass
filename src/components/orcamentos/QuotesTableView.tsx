@@ -20,6 +20,8 @@ interface QuotesTableViewProps {
   quotes: Quote[];
   statusConfig: any;
   formatCurrency: (val: number) => string;
+  partialByQuoteId?: Map<string, { isPartial: boolean }>;
+  onNewReceipt?: (quote: Quote) => void;
   onView: (quote: Quote) => void;
   onEdit: (quote: Quote) => void;
   onDuplicate: (quote: Quote) => void;
@@ -32,8 +34,10 @@ interface QuotesTableViewProps {
   onCancelApproved: (quote: Quote) => void;
 }
 
-const statusBadgeClass = (status: QuoteStatus) =>
-  status === 'pending'
+const statusBadgeClass = (status: QuoteStatus, isPartial: boolean) =>
+  isPartial
+    ? 'bg-blue-100 text-blue-800 border border-blue-200'
+    : status === 'pending'
     ? 'bg-amber-100 text-amber-800 border border-amber-200'
     : status === 'approved' || status === 'converted'
     ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
