@@ -381,6 +381,8 @@ export default function Orcamentos() {
                     quote={quote}
                     statusConfig={statusConfig}
                     formatCurrency={formatCurrency}
+                    isPartial={salesByQuoteId.get(quote.id)?.isPartial ?? false}
+                    onNewReceipt={handleNewReceipt}
                     onView={(q) => { setSelectedQuote(q); setIsViewDialogOpen(true); }}
                     onEdit={handleEdit}
                     onDuplicate={handleDuplicate}
@@ -399,6 +401,8 @@ export default function Orcamentos() {
                 quotes={pagination.paginatedData}
                 statusConfig={statusConfig}
                 formatCurrency={formatCurrency}
+                partialByQuoteId={salesByQuoteId}
+                onNewReceipt={handleNewReceipt}
                 onView={(q) => { setSelectedQuote(q); setIsViewDialogOpen(true); }}
                 onEdit={handleEdit}
                 onDuplicate={handleDuplicate}
