@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye, DollarSign, CreditCard, Smartphone, XCircle, Printer } from 'lucide-react';
+import { Eye, DollarSign, CreditCard, Smartphone, XCircle, Printer, Receipt } from 'lucide-react';
 
 interface Sale {
   id: string;
