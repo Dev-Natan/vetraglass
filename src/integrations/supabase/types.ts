@@ -456,11 +456,14 @@ export type Database = {
           balance_after: number | null
           cash_register_id: string
           category: string | null
+          cliente_id: string | null
           company_id: string
           created_at: string
           created_by: string | null
           description: string | null
           expense_id: string | null
+          fornecedor_id: string | null
+          funcionario_id: string | null
           id: string
           metadata: Json | null
           ordem_servico_id: string | null
@@ -481,11 +484,14 @@ export type Database = {
           balance_after?: number | null
           cash_register_id: string
           category?: string | null
+          cliente_id?: string | null
           company_id: string
           created_at?: string
           created_by?: string | null
           description?: string | null
           expense_id?: string | null
+          fornecedor_id?: string | null
+          funcionario_id?: string | null
           id?: string
           metadata?: Json | null
           ordem_servico_id?: string | null
@@ -506,11 +512,14 @@ export type Database = {
           balance_after?: number | null
           cash_register_id?: string
           category?: string | null
+          cliente_id?: string | null
           company_id?: string
           created_at?: string
           created_by?: string | null
           description?: string | null
           expense_id?: string | null
+          fornecedor_id?: string | null
+          funcionario_id?: string | null
           id?: string
           metadata?: Json | null
           ordem_servico_id?: string | null
@@ -535,10 +544,31 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cash_movements_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "cash_movements_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_movements_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_movements_funcionario_id_fkey"
+            columns: ["funcionario_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
             referencedColumns: ["id"]
           },
           {
