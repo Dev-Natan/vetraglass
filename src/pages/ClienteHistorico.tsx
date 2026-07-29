@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
+import { createRoot } from 'react-dom/client';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,6 +13,13 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
 } from 'recharts';
 import { format, parseISO, startOfDay } from 'date-fns';
@@ -20,9 +28,12 @@ import {
   ArrowLeft, User, Phone, Mail, MapPin, FileText,
   AlertTriangle, Receipt, TrendingUp, Wallet, ShieldCheck,
   MessageCircle, Eye, Download, Loader2, LineChart,
+  Share2, Send, CreditCard, FileDown,
 } from 'lucide-react';
+import { ExtratoRecebimentos } from '@/components/caixa/ExtratoRecebimentos';
 import { openWhatsapp } from '@/utils/whatsapp';
-import { downloadElementAsPdf } from '@/utils/printableToPdf';
+import { downloadElementAsPdf, elementToPdfBlob } from '@/utils/printableToPdf';
+import { uploadPdfForSharing, shareViaWhatsApp, shareViaEmail } from '@/utils/sharePdf';
 import { toast } from 'sonner';
 
 const formatCurrency = (v: number) =>
@@ -47,7 +58,7 @@ const quoteStatusBadge = (q: { status: string; sale_type?: string | null; pendin
 export default function ClienteHistorico() {
   const { id: clientId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { currentCompany } = useAuth();
+  const { currentCompany, user } = useAuth();
   const companyId = currentCompany?.id;
 
   const { data: client } = useQuery({
@@ -173,6 +184,7 @@ export default function ClienteHistorico() {
 
   const printableRef = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState(false);
+  const [sharing, setSharing] = useState<'whatsapp' | 'email' | null>(null);
 
   const handleExportPdf = async () => {
     if (!printableRef.current || !client) {
@@ -188,6 +200,145 @@ export default function ClienteHistorico() {
     } catch (err) {
       console.error(err);
       toast.error('Falha ao gerar PDF');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleSharePdf = async (channel: 'whatsapp' | 'email') => {
+    if (!printableRef.current || !client || !user?.id) {
+      toast.error('Aguarde os dados carregarem');
+      return;
+    }
+    try {
+      setSharing(channel);
+      const safeName = client.name.replace(/[^a-zA-Z0-9]+/g, '_').toLowerCase();
+      const stamp = format(new Date(), 'yyyy-MM-dd');
+      const fileName = `ficha_${safeName}_${stamp}.pdf`;
+
+      const { publicUrl } = await uploadPdfForSharing({
+        element: printableRef.current,
+        fileName,
+        userId: user.id,
+        companyId: currentCompany?.id,
+        clientId: client.id,
+      });
+
+      const shareOptions = {
+        url: publicUrl,
+        recipientName: client.name,
+        documentLabel: 'ficha completa em PDF',
+      };
+
+      if (channel === 'whatsapp') {
+        const ok = shareViaWhatsApp(client.phone, shareOptions);
+        if (!ok) toast.error('Telefone do cliente não disponível para WhatsApp');
+      } else {
+        const ok = shareViaEmail(client.email, `Ficha do Cliente - ${client.name}`, shareOptions);
+        if (!ok) toast.error('E-mail do cliente não disponível');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Falha ao preparar PDF para compartilhamento');
+    } finally {
+      setSharing(null);
+    }
+  };
+
+  const generateExtratoPdf = async (
+    sale: {
+      id: string;
+      sale_number?: number | null;
+      total_amount: number;
+      paid_amount: number;
+      pending_amount: number;
+      payment_status?: string | null;
+      sale_type?: string | null;
+      quote_id?: string | null;
+      created_at: string;
+    },
+    linkedQuote?: { quote_number?: number | null; final_amount?: number | null; created_at?: string | null } | null,
+  ): Promise<Blob> => {
+    const salePayments = payments.filter(
+      p => p.sale_id === sale.id || (sale.quote_id && p.quote_id === sale.quote_id),
+    );
+
+    const container = document.createElement('div');
+    container.style.position = 'fixed';
+    container.style.left = '-9999px';
+    container.style.top = '0';
+    document.body.appendChild(container);
+
+    const root = createRoot(container);
+    root.render(
+      <ExtratoRecebimentos
+        clientName={client?.name || 'Cliente'}
+        clientDocument={client?.document_type && client?.document ? `${client.document_type}: ${client.document}` : client?.document}
+        clientPhone={client?.phone}
+        clientEmail={client?.email}
+        saleNumber={sale.sale_number}
+        quoteNumber={linkedQuote?.quote_number ?? quoteNumberById.get(sale.quote_id || '')}
+        totalAmount={Number(linkedQuote?.final_amount ?? sale.total_amount)}
+        paidAmount={Number(sale.paid_amount)}
+        pendingAmount={Number(sale.pending_amount)}
+        saleStatus={sale.payment_status}
+        saleType={sale.sale_type}
+        createdAt={sale.created_at}
+        payments={salePayments.map(p => ({
+          id: p.id,
+          amount: Number(p.amount) || 0,
+          payment_method: p.payment_method,
+          description: p.description,
+          created_at: p.created_at,
+        }))}
+      />,
+    );
+
+    // Allow React to paint before rasterizing.
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    try {
+      const blob = await elementToPdfBlob(container);
+      return blob;
+    } finally {
+      root.unmount();
+      container.remove();
+    }
+  };
+
+  const handleDownloadExtrato = async (
+    sale: {
+      id: string;
+      sale_number?: number | null;
+      total_amount: number;
+      paid_amount: number;
+      pending_amount: number;
+      payment_status?: string | null;
+      sale_type?: string | null;
+      quote_id?: string | null;
+      created_at: string;
+    },
+    linkedQuote?: { quote_number?: number | null; final_amount?: number | null; created_at?: string | null } | null,
+  ) => {
+    try {
+      setExporting(true);
+      const blob = await generateExtratoPdf(sale, linkedQuote);
+      const safeName = (client?.name || 'cliente').replace(/[^a-zA-Z0-9]+/g, '_').toLowerCase();
+      const ref = sale.sale_number
+        ? `venda_${String(sale.sale_number).padStart(4, '0')}`
+        : `orc_${String(linkedQuote?.quote_number ?? quoteNumberById.get(sale.quote_id || '') ?? 0).padStart(4, '0')}`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `extrato_${safeName}_${ref}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success('Extrato de recebimentos baixado');
+    } catch (err) {
+      console.error(err);
+      toast.error('Falha ao gerar extrato');
     } finally {
       setExporting(false);
     }
@@ -219,15 +370,47 @@ export default function ClienteHistorico() {
               <span className="hidden sm:inline">WhatsApp</span>
             </Button>
           )}
-          <Button
-            size="sm"
-            className="gap-2"
-            onClick={handleExportPdf}
-            disabled={exporting || !client}
-          >
-            {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-            <span className="hidden sm:inline">{exporting ? 'Gerando...' : 'Exportar PDF'}</span>
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="sm"
+                className="gap-2"
+                disabled={exporting || sharing !== null || !client}
+              >
+                {sharing || exporting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Share2 className="h-4 w-4" />
+                )}
+                <span className="hidden sm:inline">
+                  {sharing ? 'Enviando...' : exporting ? 'Gerando...' : 'Compartilhar'}
+                </span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem
+                className="gap-2 cursor-pointer"
+                onClick={handleExportPdf}
+              >
+                <Download className="h-4 w-4" /> Baixar PDF
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="gap-2 cursor-pointer"
+                onClick={() => handleSharePdf('whatsapp')}
+                disabled={sharing === 'whatsapp'}
+              >
+                <MessageCircle className="h-4 w-4 text-green-600" /> Enviar por WhatsApp
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="gap-2 cursor-pointer"
+                onClick={() => handleSharePdf('email')}
+                disabled={sharing === 'email'}
+              >
+                <Mail className="h-4 w-4 text-primary" /> Enviar por E-mail
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         <div ref={printableRef} className="space-y-4 bg-background">
@@ -487,11 +670,25 @@ export default function ClienteHistorico() {
                               {formatCurrency(saldo)}
                             </TableCell>
                             <TableCell>
-                              <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                                <Link to={`/orcamentos?ver=${q.id}`}>
-                                  <Eye className="h-4 w-4" />
-                                </Link>
-                              </Button>
+                              <div className="flex items-center justify-end gap-1">
+                                {sale && Number(sale.pending_amount) > 0.01 && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-primary"
+                                    title="Extrato de Recebimentos"
+                                    onClick={() => handleDownloadExtrato(sale, q)}
+                                    disabled={exporting}
+                                  >
+                                    <FileDown className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                                  <Link to={`/orcamentos?ver=${q.id}`}>
+                                    <Eye className="h-4 w-4" />
+                                  </Link>
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         );
@@ -522,24 +719,33 @@ export default function ClienteHistorico() {
                         <TableHead>Vínculo</TableHead>
                         <TableHead className="w-32">Forma</TableHead>
                         <TableHead className="text-right w-32">Valor</TableHead>
+                        <TableHead className="w-16"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {payments.map(p => {
                         const mc = methodConfig[p.payment_method ?? ''] || { label: p.payment_method || '—', className: 'bg-muted text-muted-foreground' };
-                        const linkedQuote = p.quote_id
+                        const linkedQuoteNumber = p.quote_id
                           ? quoteNumberById.get(p.quote_id)
                           : p.sale_id
                             ? quoteNumberBySaleId.get(p.sale_id)
                             : null;
+                        const linkedQuote = p.quote_id
+                          ? quotes.find(q => q.id === p.quote_id)
+                          : p.sale_id
+                            ? quotes.find(q => q.id === sales.find(s => s.id === p.sale_id)?.quote_id)
+                            : null;
+                        const linkedSale = p.sale_id
+                          ? sales.find(s => s.id === p.sale_id)
+                          : null;
                         return (
                           <TableRow key={p.id}>
                             <TableCell className="text-xs">
                               {format(new Date(p.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                             </TableCell>
                             <TableCell className="text-xs">
-                              {linkedQuote
-                                ? <span className="font-mono">Orç. #{String(linkedQuote).padStart(4, '0')}</span>
+                              {linkedQuoteNumber
+                                ? <span className="font-mono">Orç. #{String(linkedQuoteNumber).padStart(4, '0')}</span>
                                 : p.description || <span className="text-muted-foreground">—</span>}
                             </TableCell>
                             <TableCell>
@@ -547,6 +753,22 @@ export default function ClienteHistorico() {
                             </TableCell>
                             <TableCell className="text-right font-semibold text-emerald-700 dark:text-emerald-400">
                               + {formatCurrency(Number(p.amount) || 0)}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center justify-end gap-1">
+                                {(linkedSale && Number(linkedSale.pending_amount) > 0.01) && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-primary"
+                                    title="Extrato de Recebimentos"
+                                    onClick={() => handleDownloadExtrato(linkedSale, linkedQuote)}
+                                    disabled={exporting}
+                                  >
+                                    <FileDown className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
                             </TableCell>
                           </TableRow>
                         );

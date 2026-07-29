@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
+import { createRoot } from 'react-dom/client';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,7 +8,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
   DollarSign, CreditCard, Smartphone, Receipt, User, CheckCircle2,
-  AlertCircle, Loader2, History,
+  AlertCircle, Loader2, History, FileDown,
 } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -22,6 +23,8 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { parseBRLInput, formatBRLInput } from '@/utils/currencyMask';
 import { calculateFinancialStatus } from '@/hooks/useSalesFinancial';
+import { ExtratoRecebimentos } from './ExtratoRecebimentos';
+import { elementToPdfBlob } from '@/utils/printableToPdf';
 
 export interface PartialSaleTarget {
   id: string;                    // sale.id
@@ -88,6 +91,22 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
       return data || [];
     },
     enabled: !!sale?.id && open,
+  });
+
+  // Dados do orçamento vinculado (para extrato)
+  const { data: linkedQuote } = useQuery({
+    queryKey: ['quote-for-receipt', sale?.quote_id],
+    queryFn: async () => {
+      if (!sale?.quote_id) return null;
+      const { data, error } = await supabase
+        .from('quotes')
+        .select('id, quote_number, final_amount, created_at')
+        .eq('id', sale.quote_id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!sale?.quote_id && open,
   });
 
   const remaining = Math.max(0, (sale?.pending_amount ?? 0));
@@ -209,6 +228,66 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
       });
     },
   });
+
+  const [downloadingExtrato, setDownloadingExtrato] = useState(false);
+
+  const handleDownloadExtrato = async () => {
+    if (!sale) return;
+    setDownloadingExtrato(true);
+    try {
+      const container = document.createElement('div');
+      container.style.position = 'fixed';
+      container.style.left = '-9999px';
+      container.style.top = '0';
+      document.body.appendChild(container);
+
+      const root = createRoot(container);
+      root.render(
+        <ExtratoRecebimentos
+          clientName={sale.customer_name || 'Cliente'}
+          saleNumber={sale.sale_number}
+          quoteNumber={linkedQuote?.quote_number}
+          totalAmount={Number(linkedQuote?.final_amount ?? sale.total_amount)}
+          paidAmount={Number(sale.paid_amount)}
+          pendingAmount={Number(sale.pending_amount)}
+          saleStatus={sale.pending_amount <= 0.01 ? 'paid' : sale.paid_amount > 0 ? 'partial' : 'pending'}
+          saleType='partial'
+          createdAt={linkedQuote?.created_at || new Date().toISOString()}
+          payments={(history || []).map(h => ({
+            id: h.id,
+            amount: Number(h.amount) || 0,
+            payment_method: h.payment_method,
+            description: h.description,
+            created_at: h.created_at,
+          }))}
+        />,
+      );
+
+      await new Promise(resolve => setTimeout(resolve, 300));
+      const blob = await elementToPdfBlob(container);
+      root.unmount();
+      container.remove();
+
+      const ref = sale.sale_number
+        ? `venda_${String(sale.sale_number).padStart(4, '0')}`
+        : `orc_${String(linkedQuote?.quote_number ?? 0).padStart(4, '0')}`;
+      const safeName = (sale.customer_name || 'cliente').replace(/[^a-zA-Z0-9]+/g, '_').toLowerCase();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `extrato_${safeName}_${ref}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success('Extrato de recebimentos baixado');
+    } catch (err) {
+      console.error(err);
+      toast.error('Falha ao gerar extrato');
+    } finally {
+      setDownloadingExtrato(false);
+    }
+  };
 
   if (!sale) return null;
   const isCaixaAberto = !!openCashRegister?.id;
@@ -372,12 +451,29 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
           )}
         </div>
 
-        <DialogFooter className="p-4 bg-muted/30 border-t gap-2 flex-row">
-          <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>
+        <DialogFooter className="p-4 bg-muted/30 border-t gap-2 flex-row flex-wrap">
+          <Button
+            variant="outline"
+            className="flex-1 min-w-[120px]"
+            onClick={() => onOpenChange(false)}
+            disabled={mutation.isPending}
+          >
             Cancelar
           </Button>
           <Button
-            className="flex-1"
+            variant="secondary"
+            className="flex-1 min-w-[140px] gap-2"
+            onClick={handleDownloadExtrato}
+            disabled={downloadingExtrato || !history?.length}
+          >
+            {downloadingExtrato ? (
+              <><Loader2 className="h-4 w-4 animate-spin" /> Gerando...</>
+            ) : (
+              <><FileDown className="h-4 w-4" /> Extrato</>
+            )}
+          </Button>
+          <Button
+            className="flex-1 min-w-[160px]"
             onClick={() => mutation.mutate()}
             disabled={mutation.isPending || !isCaixaAberto || amountToReceive <= 0}
           >
