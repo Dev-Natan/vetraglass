@@ -245,6 +245,105 @@ export default function ClienteHistorico() {
     }
   };
 
+  const generateExtratoPdf = async (
+    sale: {
+      id: string;
+      sale_number?: number | null;
+      total_amount: number;
+      paid_amount: number;
+      pending_amount: number;
+      payment_status?: string | null;
+      sale_type?: string | null;
+      quote_id?: string | null;
+      created_at: string;
+    },
+    linkedQuote?: { quote_number?: number | null; final_amount?: number | null; created_at?: string | null } | null,
+  ): Promise<Blob> => {
+    const salePayments = payments.filter(
+      p => p.sale_id === sale.id || (sale.quote_id && p.quote_id === sale.quote_id),
+    );
+
+    const container = document.createElement('div');
+    container.style.position = 'fixed';
+    container.style.left = '-9999px';
+    container.style.top = '0';
+    document.body.appendChild(container);
+
+    const root = createRoot(container);
+    root.render(
+      <ExtratoRecebimentos
+        clientName={client?.name || 'Cliente'}
+        clientDocument={client?.document_type && client?.document ? `${client.document_type}: ${client.document}` : client?.document}
+        clientPhone={client?.phone}
+        clientEmail={client?.email}
+        saleNumber={sale.sale_number}
+        quoteNumber={linkedQuote?.quote_number ?? quoteNumberById.get(sale.quote_id || '')}
+        totalAmount={Number(linkedQuote?.final_amount ?? sale.total_amount)}
+        paidAmount={Number(sale.paid_amount)}
+        pendingAmount={Number(sale.pending_amount)}
+        saleStatus={sale.payment_status}
+        saleType={sale.sale_type}
+        createdAt={sale.created_at}
+        payments={salePayments.map(p => ({
+          id: p.id,
+          amount: Number(p.amount) || 0,
+          payment_method: p.payment_method,
+          description: p.description,
+          created_at: p.created_at,
+        }))}
+      />,
+    );
+
+    // Allow React to paint before rasterizing.
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    try {
+      const blob = await elementToPdfBlob(container);
+      return blob;
+    } finally {
+      root.unmount();
+      container.remove();
+    }
+  };
+
+  const handleDownloadExtrato = async (
+    sale: {
+      id: string;
+      sale_number?: number | null;
+      total_amount: number;
+      paid_amount: number;
+      pending_amount: number;
+      payment_status?: string | null;
+      sale_type?: string | null;
+      quote_id?: string | null;
+      created_at: string;
+    },
+    linkedQuote?: { quote_number?: number | null; final_amount?: number | null; created_at?: string | null } | null,
+  ) => {
+    try {
+      setExporting(true);
+      const blob = await generateExtratoPdf(sale, linkedQuote);
+      const safeName = (client?.name || 'cliente').replace(/[^a-zA-Z0-9]+/g, '_').toLowerCase();
+      const ref = sale.sale_number
+        ? `venda_${String(sale.sale_number).padStart(4, '0')}`
+        : `orc_${String(linkedQuote?.quote_number ?? quoteNumberById.get(sale.quote_id || '') ?? 0).padStart(4, '0')}`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `extrato_${safeName}_${ref}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success('Extrato de recebimentos baixado');
+    } catch (err) {
+      console.error(err);
+      toast.error('Falha ao gerar extrato');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <MainLayout>
       <div className="pb-20 space-y-4">
