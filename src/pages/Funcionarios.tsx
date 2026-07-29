@@ -54,6 +54,14 @@ export default function Funcionarios() {
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
+  const [historicoOpen, setHistoricoOpen] = useState(false);
+  const [historicoEmployee, setHistoricoEmployee] = useState<Employee | null>(null);
+
+  const handleOpenHistorico = (employee: Employee) => {
+    setHistoricoEmployee(employee);
+    setHistoricoOpen(true);
+  };
+
 
   const handlePrintCredentialCard = (employee: Employee) => {
     if (!employee.username || !currentCompany) {
