@@ -34,7 +34,6 @@ import { ExtratoRecebimentos } from '@/components/caixa/ExtratoRecebimentos';
 import { openWhatsapp } from '@/utils/whatsapp';
 import { downloadElementAsPdf, elementToPdfBlob } from '@/utils/printableToPdf';
 import { uploadPdfForSharing, shareViaWhatsApp, shareViaEmail } from '@/utils/sharePdf';
-import { ExtratoRecebimentos } from '@/components/caixa/ExtratoRecebimentos';
 import { toast } from 'sonner';
 
 const formatCurrency = (v: number) =>
