@@ -486,13 +486,18 @@ export function MovimentacaoCaixaDialog({
           </div>
 
           {/* Vincular a — múltiplos envolvidos independentes */}
-          <div className="space-y-3">
-            <Label className="text-sm">Vincular a (opcional)</Label>
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                Vínculos da Movimentação
+              </h4>
+              <span className="text-xs text-muted-foreground">opcional</span>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Cliente Relacionado</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Cliente</Label>
                 <Select value={clienteId} onValueChange={setClienteId}>
-                  <SelectTrigger>
+                  <SelectTrigger className="rounded-lg bg-background">
                     <SelectValue placeholder="Nenhum" />
                   </SelectTrigger>
                   <SelectContent>
@@ -503,10 +508,10 @@ export function MovimentacaoCaixaDialog({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Fornecedor Relacionado</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Fornecedor</Label>
                 <Select value={fornecedorId} onValueChange={setFornecedorId}>
-                  <SelectTrigger>
+                  <SelectTrigger className="rounded-lg bg-background">
                     <SelectValue placeholder="Nenhum" />
                   </SelectTrigger>
                   <SelectContent>
@@ -521,10 +526,10 @@ export function MovimentacaoCaixaDialog({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Funcionário Relacionado</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Funcionário</Label>
                 <Select value={funcionarioId} onValueChange={setFuncionarioId}>
-                  <SelectTrigger>
+                  <SelectTrigger className="rounded-lg bg-background">
                     <SelectValue placeholder="Nenhum" />
                   </SelectTrigger>
                   <SelectContent>
@@ -542,14 +547,16 @@ export function MovimentacaoCaixaDialog({
 
           {/* Preview */}
           {amountValue > 0 && (
-            <div className={`rounded-lg p-4 ${
-              type === 'entrada' ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800'
-            } border`}>
+            <div className={`rounded-xl p-4 border ${
+              type === 'entrada'
+                ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800'
+                : 'bg-rose-50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800'
+            }`}>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">
                   {type === 'entrada' ? 'Entrada no caixa' : 'Saída do caixa'}
                 </span>
-                <span className={`text-lg font-bold ${type === 'entrada' ? 'text-green-600' : 'text-red-600'}`}>
+                <span className={`text-lg font-bold ${type === 'entrada' ? 'text-emerald-600' : 'text-rose-600'}`}>
                   {type === 'entrada' ? '+' : '-'}{formatCurrency(amountValue)}
                 </span>
               </div>
@@ -557,20 +564,25 @@ export function MovimentacaoCaixaDialog({
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>
+        <DialogFooter className="gap-2 sm:gap-2 pt-2 border-t">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={mutation.isPending}
+            className="rounded-full px-6"
+          >
             Cancelar
           </Button>
-          <Button 
-            onClick={handleSubmit} 
+          <Button
+            onClick={handleSubmit}
             disabled={
-              mutation.isPending || 
-              !category || 
-              !amount || 
+              mutation.isPending ||
+              !category ||
+              !amount ||
               !description.trim() ||
               (needsReinforcement && !hasEnoughCompanyBalance)
             }
-            className={type === 'entrada' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}
+            className="rounded-full px-6 bg-primary hover:bg-primary/90 text-primary-foreground"
           >
             {mutation.isPending ? (
               <>
@@ -580,7 +592,7 @@ export function MovimentacaoCaixaDialog({
             ) : needsReinforcement ? (
               'Confirmar com Reforço'
             ) : (
-              `Registrar ${type === 'entrada' ? 'Entrada' : 'Saída'}`
+              `Confirmar ${type === 'entrada' ? 'Entrada' : 'Saída'}`
             )}
           </Button>
         </DialogFooter>
