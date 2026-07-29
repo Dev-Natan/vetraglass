@@ -256,6 +256,11 @@ export default function Funcionarios() {
                 </DropdownMenuItem>
               </PermissionGuard>
 
+              <DropdownMenuItem onClick={() => handleOpenHistorico(employee)}>
+                <Wallet className="w-4 h-4 mr-2" />
+                Histórico de Vales e Pagamentos
+              </DropdownMenuItem>
+
               <DropdownMenuItem
                 onClick={() =>
                   navigate(
@@ -263,9 +268,10 @@ export default function Funcionarios() {
                   )
                 }
               >
-                <Wallet className="w-4 h-4 mr-2" />
-                Ver pagamentos
+                <FileText className="w-4 h-4 mr-2" />
+                Ver salários no Financeiro
               </DropdownMenuItem>
+
 
 
               {/* Badge generation - available for all employees */}
