@@ -1,7 +1,7 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DollarSign, CreditCard, TrendingUp, TrendingDown, Wallet, ArrowUpDown, Printer } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { DollarSign, Wallet, ArrowUpDown, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
+
 
 interface CaixaResumoProps {
   openingAmount: number;
