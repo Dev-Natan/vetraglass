@@ -136,18 +136,33 @@ export function CaixaMovimentacoesTable({ movements }: CaixaMovimentacoesTablePr
                       {getCategoryLabel(movement.category)}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-sm max-w-[240px]">
+                  <TableCell className="text-sm max-w-[280px]">
                     <div className="truncate">{movement.description}</div>
-                    {movement.party_name && movement.party_type && (
-                      <div className="text-xs text-muted-foreground truncate">
-                        {movement.party_type === 'cliente'
-                          ? 'Cliente'
-                          : movement.party_type === 'fornecedor'
-                          ? 'Fornecedor'
-                          : 'Funcionário'}
-                        : {movement.party_name}
-                      </div>
-                    )}
+                    {(() => {
+                      const links: string[] = [];
+                      const clienteName = movement.cliente?.name;
+                      const fornecedorName = movement.fornecedor?.name;
+                      const funcionarioName = movement.funcionario?.name;
+                      if (fornecedorName) links.push(`Fornecedor: ${fornecedorName}`);
+                      if (clienteName) links.push(`Cliente: ${clienteName}`);
+                      if (funcionarioName) links.push(`Funcionário: ${funcionarioName}`);
+                      // Fallback para movimentações legadas (party_*) quando não há FKs específicas
+                      if (links.length === 0 && movement.party_name && movement.party_type) {
+                        const label =
+                          movement.party_type === 'cliente'
+                            ? 'Cliente'
+                            : movement.party_type === 'fornecedor'
+                            ? 'Fornecedor'
+                            : 'Funcionário';
+                        links.push(`${label}: ${movement.party_name}`);
+                      }
+                      if (links.length === 0) return null;
+                      return (
+                        <div className="text-xs text-muted-foreground truncate">
+                          ↳ {links.join(' | ')}
+                        </div>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell
                     className={`text-right font-medium ${
