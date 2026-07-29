@@ -548,6 +548,15 @@ export function CaixaOperacionalTab() {
           }}
         />
       )}
+
+      <NovoRecebimentoDialog
+        open={novoRecebimentoOpen}
+        onOpenChange={(open) => {
+          setNovoRecebimentoOpen(open);
+          if (!open) setSaleForReceipt(null);
+        }}
+        sale={saleForReceipt}
+      />
     </div>
   );
 }
