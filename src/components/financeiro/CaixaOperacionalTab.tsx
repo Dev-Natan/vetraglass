@@ -169,37 +169,36 @@ export function CaixaOperacionalTab() {
     const sumBy = (arr: any[], method: string) =>
       arr.filter((m) => normalizeMethod(m) === method).reduce((s, m) => s + (Number(m.amount) || 0), 0);
 
-    const totalDinheiro = sumBy(entradas, 'dinheiro') - sumBy(saidas, 'dinheiro');
-    const totalPix = sumBy(entradas, 'pix') - sumBy(saidas, 'pix');
-    const totalCartao = sumBy(entradas, 'cartao') - sumBy(saidas, 'cartao');
-    const totalOutro = sumBy(entradas, 'outro') - sumBy(saidas, 'outro');
+    // Totais BRUTOS de entradas por método (recebimentos: vendas + parciais + orçamentos + manuais)
+    const entradaDinheiro = sumBy(entradas, 'dinheiro');
+    const entradaPix = sumBy(entradas, 'pix');
+    const entradaCartao = sumBy(entradas, 'cartao') + sumBy(entradas, 'outro');
 
-    // Para os cards antigos ("Entradas manuais" x "Saídas"), mantemos apenas o que não é venda.
-    const isSaleLinked = (m: any) =>
-      m.sale_id || m.quote_id || m.ordem_servico_id ||
-      m.category === 'entrada_orcamento' || m.category === 'venda' ||
-      m.category === 'venda_dinheiro' || m.category === 'recebimento_parcial';
+    // Totais BRUTOS de saídas por método
+    const saidaDinheiro = sumBy(saidas, 'dinheiro');
+    const saidaPix = sumBy(saidas, 'pix');
+    const saidaCartao = sumBy(saidas, 'cartao') + sumBy(saidas, 'outro');
 
-    const totalEntradas = entradas
-      .filter((m: any) => !isSaleLinked(m))
-      .reduce((s: number, m: any) => s + (Number(m.amount) || 0), 0);
-    const totalSaidas = saidas.reduce((s: number, m: any) => s + (Number(m.amount) || 0), 0);
+    const totalEntradasBrutas = entradaDinheiro + entradaPix + entradaCartao;
+    const totalSaidas = saidaDinheiro + saidaPix + saidaCartao;
+    const totalVendas = totalEntradasBrutas; // toda entrada = receita do dia
 
-    const totalVendas = totalDinheiro + totalPix + totalCartao + totalOutro - totalEntradas + sumBy(saidas, 'dinheiro') + sumBy(saidas, 'pix') + sumBy(saidas, 'cartao') + sumBy(saidas, 'outro');
-    // Dinheiro físico esperado no caixa (para conferência na hora de fechar)
-    const expectedAmount = openingAmount + sumBy(entradas, 'dinheiro') - sumBy(saidas, 'dinheiro');
+    // Dinheiro físico esperado no caixa (abertura + fluxo em dinheiro)
+    const expectedAmount = openingAmount + entradaDinheiro - saidaDinheiro;
 
     return {
       openingAmount,
-      totalDinheiro,
-      totalCartao: totalCartao + totalOutro,
-      totalPix,
+      totalDinheiro: entradaDinheiro,
+      totalCartao: entradaCartao,
+      totalPix: entradaPix,
       totalVendas,
       expectedAmount,
-      totalEntradas,
+      // Já contabilizado dentro de totalDinheiro/Pix/Cartao — evita dupla soma no CaixaResumo
+      totalEntradas: 0,
       totalSaidas,
     };
   }, [openCashRegister, cashMovements]);
+
 
 
   const handleOpenCash = async (openingAmount: number) => {
