@@ -301,7 +301,7 @@ export function MovimentacaoCaixaDialog({
         onOpenChange(o);
       }
     }}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl flex flex-col max-h-[90vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle className="text-xl">Nova Movimentação</DialogTitle>
           <DialogDescription>
@@ -309,7 +309,7 @@ export function MovimentacaoCaixaDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-5 py-2">
+        <div className="space-y-5 py-2 px-1 flex-1 min-h-0 overflow-y-auto pr-2 pb-24 max-h-[60vh]">
           {/* Saldo atual do caixa do dia */}
           <div className="bg-muted/50 rounded-xl px-4 py-3 flex justify-between items-center border">
             <span className="text-sm text-muted-foreground">Saldo atual do caixa</span>
@@ -564,7 +564,7 @@ export function MovimentacaoCaixaDialog({
           )}
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-2 pt-2 border-t">
+        <DialogFooter className="gap-2 sm:gap-2 pt-2 border-t sticky bottom-0 bg-background z-10 shrink-0">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
