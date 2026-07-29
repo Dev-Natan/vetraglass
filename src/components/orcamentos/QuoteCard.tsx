@@ -55,6 +55,8 @@ export function QuoteCard({
   quote,
   statusConfig,
   formatCurrency,
+  isPartial = false,
+  onNewReceipt,
   onView,
   onEdit,
   onDuplicate,
@@ -67,7 +69,7 @@ export function QuoteCard({
   onCancelApproved
 }: QuoteCardProps) {
   const status = statusConfig[quote.status as QuoteStatus] || statusConfig.pending;
-  const StatusIcon = status.icon;
+  const StatusIcon = isPartial ? Wallet : status.icon;
 
   const statusBadgeClass =
     quote.status === 'pending'
