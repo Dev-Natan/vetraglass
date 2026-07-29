@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Table,
   TableBody,
@@ -15,7 +16,8 @@ import {
   MapPin, 
   Eye,
   Trash2,
-  MessageCircle
+  MessageCircle,
+  History,
 } from 'lucide-react';
 import { openWhatsapp } from '@/utils/whatsapp';
 import { formatCPFOrCNPJ } from '@/utils/documentValidation';
