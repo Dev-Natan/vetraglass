@@ -52,6 +52,7 @@ type SortField = 'name' | 'city' | 'document_type';
 type SortDirection = 'asc' | 'desc';
 
 export function ClientsTableView({ clients, onView, onDelete }: ClientsTableViewProps) {
+  const navigate = useNavigate();
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
