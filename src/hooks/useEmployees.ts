@@ -103,10 +103,16 @@ export function useEmployees() {
 
       const { createSystemAccess, password, ...dataToInsert } = employeeData;
 
+      // Normaliza UUIDs opcionais: string vazia -> null
+      const sanitized: any = { ...dataToInsert };
+      if (sanitized.permission_profile_id === '' || sanitized.permission_profile_id === undefined) {
+        sanitized.permission_profile_id = null;
+      }
+
       const { data, error } = await supabase
         .from('employees')
         .insert({
-          ...dataToInsert,
+          ...sanitized,
           company_id: currentCompany.id,
         })
         .select()
@@ -164,9 +170,15 @@ export function useEmployees() {
 
   const updateEmployee = useMutation({
     mutationFn: async ({ id, createSystemAccess, password, ...employeeData }: Partial<Employee> & { id: string; createSystemAccess?: boolean; password?: string }) => {
+      // Normaliza UUIDs opcionais: string vazia -> null
+      const sanitized: any = { ...employeeData };
+      if (sanitized.permission_profile_id === '') {
+        sanitized.permission_profile_id = null;
+      }
+
       const { data, error } = await supabase
         .from('employees')
-        .update(employeeData)
+        .update(sanitized)
         .eq('id', id)
         .select()
         .single();
