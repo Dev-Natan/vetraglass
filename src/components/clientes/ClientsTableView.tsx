@@ -182,11 +182,24 @@ export function ClientsTableView({ clients, onView, onDelete }: ClientsTableView
                   <Button
                     variant="ghost"
                     size="icon"
+                    className="h-8 w-8 text-primary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/clientes/${client.id}/historico`);
+                    }}
+                    title="Ver histórico do cliente"
+                  >
+                    <History className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     className="h-8 w-8"
                     onClick={(e) => {
                       e.stopPropagation();
                       onView(client);
                     }}
+                    title="Editar cadastro"
                   >
                     <Eye className="h-4 w-4" />
                   </Button>
