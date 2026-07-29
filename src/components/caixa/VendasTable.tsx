@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye, DollarSign, CreditCard, Smartphone, XCircle, Printer } from 'lucide-react';
+import { Eye, DollarSign, CreditCard, Smartphone, XCircle, Printer, Receipt } from 'lucide-react';
 
 interface Sale {
   id: string;
@@ -23,6 +23,7 @@ interface Sale {
   // Campos para suporte a vendas parciais
   sale_type?: 'full' | 'partial' | string;
   quote_id?: string | null;
+  ordem_servico_id?: string | null;
   paid_amount?: number;
   pending_amount?: number;
 }
@@ -32,6 +33,7 @@ interface VendasTableProps {
   onViewDetails?: (sale: Sale) => void;
   onCancelSale?: (sale: Sale) => void;
   onPrintReceipt?: (sale: Sale) => void;
+  onReceivePayment?: (sale: Sale) => void;
   showCancelButton?: boolean;
 }
 
@@ -41,7 +43,7 @@ const paymentMethodConfig = {
   pix: { label: 'PIX', icon: Smartphone, color: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' },
 };
 
-export function VendasTable({ sales, onViewDetails, onCancelSale, onPrintReceipt, showCancelButton = true }: VendasTableProps) {
+export function VendasTable({ sales, onViewDetails, onCancelSale, onPrintReceipt, onReceivePayment, showCancelButton = true }: VendasTableProps) {
   const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
@@ -129,6 +131,17 @@ export function VendasTable({ sales, onViewDetails, onCancelSale, onPrintReceipt
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-1">
+                    {!isCancelled && sale.sale_type === 'partial' && (sale.pending_amount ?? 0) > 0 && onReceivePayment && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                        onClick={() => onReceivePayment(sale)}
+                        title="Novo recebimento"
+                      >
+                        <Receipt className="h-4 w-4" />
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="icon"

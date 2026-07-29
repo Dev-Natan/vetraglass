@@ -27,6 +27,7 @@ import { CaixaMovimentacoesTable } from '@/components/caixa/CaixaMovimentacoesTa
 import { PendingDepositsAlert } from '@/components/caixa/PendingDepositsAlert';
 import { ReceivePaymentDialog } from '@/components/caixa/ReceivePaymentDialog';
 import { FaturarSaldoDialog } from '@/components/caixa/FaturarSaldoDialog';
+import { NovoRecebimentoDialog, type PartialSaleTarget } from '@/components/caixa/NovoRecebimentoDialog';
 
 // Hooks e Serviços
 import { useCaixa } from '@/hooks/useCaixa';
@@ -71,6 +72,22 @@ export function CaixaOperacionalTab() {
   const [selectedReceivable, setSelectedReceivable] = useState<any>(null);
   const [faturarDialogOpen, setFaturarDialogOpen] = useState(false);
   const [osToFaturar, setOsToFaturar] = useState<any>(null);
+  const [novoRecebimentoOpen, setNovoRecebimentoOpen] = useState(false);
+  const [saleForReceipt, setSaleForReceipt] = useState<PartialSaleTarget | null>(null);
+
+  const handleReceivePartialPayment = (sale: Sale) => {
+    setSaleForReceipt({
+      id: sale.id,
+      sale_number: sale.sale_number,
+      customer_name: sale.customer_name,
+      total_amount: Number(sale.total_amount) || 0,
+      paid_amount: Number(sale.paid_amount ?? 0),
+      pending_amount: Number(sale.pending_amount ?? 0),
+      quote_id: sale.quote_id ?? null,
+      ordem_servico_id: (sale as any).ordem_servico_id ?? null,
+    });
+    setNovoRecebimentoOpen(true);
+  };
 
   const { 
     companyCash, 
@@ -440,7 +457,7 @@ export function CaixaOperacionalTab() {
               <Badge variant="secondary">{todaySales.filter((s: any) => s.payment_status !== 'cancelled').length} vendas</Badge>
             </CardHeader>
             <CardContent>
-              <VendasTable sales={todaySales} onViewDetails={handleViewDetails} onCancelSale={handleCancelSale} onPrintReceipt={handlePrintReceipt} showCancelButton={true} />
+              <VendasTable sales={todaySales} onViewDetails={handleViewDetails} onCancelSale={handleCancelSale} onPrintReceipt={handlePrintReceipt} onReceivePayment={handleReceivePartialPayment} showCancelButton={true} />
             </CardContent>
           </Card>
         </>
@@ -531,6 +548,15 @@ export function CaixaOperacionalTab() {
           }}
         />
       )}
+
+      <NovoRecebimentoDialog
+        open={novoRecebimentoOpen}
+        onOpenChange={(open) => {
+          setNovoRecebimentoOpen(open);
+          if (!open) setSaleForReceipt(null);
+        }}
+        sale={saleForReceipt}
+      />
     </div>
   );
 }
