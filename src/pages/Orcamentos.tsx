@@ -112,6 +112,63 @@ export default function Orcamentos() {
     duplicateQuote
   } = useQuotes(currentCompany?.id);
 
+  // Fetch sales linked to the company's quotes to detect partial payment status
+  const { data: quoteSales = [] } = useQuery({
+    queryKey: ['quote-sales-financials', currentCompany?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('sales')
+        .select('id, sale_number, quote_id, ordem_servico_id, customer_name, total_amount, paid_amount, pending_amount')
+        .eq('company_id', currentCompany!.id)
+        .not('quote_id', 'is', null);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!currentCompany?.id,
+  });
+
+  const salesByQuoteId = useMemo(() => {
+    const map = new Map<string, PartialSaleTarget & { isPartial: boolean }>();
+    for (const s of quoteSales) {
+      if (!s.quote_id) continue;
+      const total = Number(s.total_amount) || 0;
+      const paid = Number(s.paid_amount ?? 0);
+      const pending = Number(s.pending_amount ?? Math.max(0, total - paid));
+      const isPartial = paid > 0 && pending > 0.009;
+      // Prefer the record with a partial balance; otherwise keep the latest
+      const existing = map.get(s.quote_id);
+      if (!existing || (isPartial && !existing.isPartial)) {
+        map.set(s.quote_id, {
+          id: s.id,
+          sale_number: s.sale_number,
+          customer_name: s.customer_name,
+          total_amount: total,
+          paid_amount: paid,
+          pending_amount: pending,
+          quote_id: s.quote_id,
+          ordem_servico_id: s.ordem_servico_id ?? null,
+          isPartial,
+        });
+      }
+    }
+    return map;
+  }, [quoteSales]);
+
+  const handleNewReceipt = (quote: Quote) => {
+    const target = salesByQuoteId.get(quote.id);
+    if (!target) {
+      toast({
+        title: 'Sem venda vinculada',
+        description: 'Este orçamento ainda não possui uma venda com saldo em aberto.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    const { isPartial, ...saleTarget } = target;
+    setSaleForReceipt(saleTarget);
+    setNovoRecebimentoOpen(true);
+  };
+
   useEffect(() => {
     if (searchParams.get('novo') === 'true') {
       setIsNewDialogOpen(true);
