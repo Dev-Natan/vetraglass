@@ -229,6 +229,66 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
     },
   });
 
+  const [downloadingExtrato, setDownloadingExtrato] = useState(false);
+
+  const handleDownloadExtrato = async () => {
+    if (!sale) return;
+    setDownloadingExtrato(true);
+    try {
+      const container = document.createElement('div');
+      container.style.position = 'fixed';
+      container.style.left = '-9999px';
+      container.style.top = '0';
+      document.body.appendChild(container);
+
+      const root = createRoot(container);
+      root.render(
+        <ExtratoRecebimentos
+          clientName={sale.customer_name || 'Cliente'}
+          saleNumber={sale.sale_number}
+          quoteNumber={linkedQuote?.quote_number}
+          totalAmount={Number(linkedQuote?.final_amount ?? sale.total_amount)}
+          paidAmount={Number(sale.paid_amount)}
+          pendingAmount={Number(sale.pending_amount)}
+          saleStatus={sale.pending_amount <= 0.01 ? 'paid' : sale.paid_amount > 0 ? 'partial' : 'pending'}
+          saleType='partial'
+          createdAt={linkedQuote?.created_at || new Date().toISOString()}
+          payments={(history || []).map(h => ({
+            id: h.id,
+            amount: Number(h.amount) || 0,
+            payment_method: h.payment_method,
+            description: h.description,
+            created_at: h.created_at,
+          }))}
+        />,
+      );
+
+      await new Promise(resolve => setTimeout(resolve, 300));
+      const blob = await elementToPdfBlob(container);
+      root.unmount();
+      container.remove();
+
+      const ref = sale.sale_number
+        ? `venda_${String(sale.sale_number).padStart(4, '0')}`
+        : `orc_${String(linkedQuote?.quote_number ?? 0).padStart(4, '0')}`;
+      const safeName = (sale.customer_name || 'cliente').replace(/[^a-zA-Z0-9]+/g, '_').toLowerCase();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `extrato_${safeName}_${ref}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast.success('Extrato de recebimentos baixado');
+    } catch (err) {
+      console.error(err);
+      toast.error('Falha ao gerar extrato');
+    } finally {
+      setDownloadingExtrato(false);
+    }
+  };
+
   if (!sale) return null;
   const isCaixaAberto = !!openCashRegister?.id;
 
