@@ -140,6 +140,8 @@ export function MovimentacaoCaixaDialog({
     setAmount('');
     setDescription('');
     setPaymentMethod('dinheiro');
+    setPartyType('none');
+    setPartyId('');
   };
 
   // Mutation com suporte a reforço automático
