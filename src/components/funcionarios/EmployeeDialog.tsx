@@ -272,7 +272,7 @@ export function EmployeeDialog({ open, onOpenChange, employee, onSave, isLoading
       commission_enabled: formData.commission_enabled,
       commission_percent: formData.commission_percent,
       commission_type: formData.commission_type,
-      permission_profile_id: formData.permission_profile_id,
+      permission_profile_id: formData.permission_profile_id || null,
       photo_url: formData.photo_url,
       admission_date: formData.hourly_rate > 0 ? (formData.admission_date || null) : (formData.admission_date || null),
       salary_payment_day: formData.hourly_rate > 0 ? formData.salary_payment_day : null,
