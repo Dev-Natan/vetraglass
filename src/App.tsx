@@ -231,6 +231,7 @@ function AppRoutes() {
       {/* Dashboard - protected */}
       <Route path="/dashboard" element={<ProtectedRoute><IndexRedirect /></ProtectedRoute>} />
       <Route path="/clientes" element={<ProtectedRoute><ModuleGuard moduleKey="clientes"><LazyRoute><Clientes /></LazyRoute></ModuleGuard></ProtectedRoute>} />
+      <Route path="/clientes/:id/historico" element={<ProtectedRoute><ModuleGuard moduleKey="clientes"><LazyRoute><ClienteHistorico /></LazyRoute></ModuleGuard></ProtectedRoute>} />
       <Route path="/produtos" element={<ProtectedRoute><ModuleGuard moduleKey="produtos"><LazyRoute><Produtos /></LazyRoute></ModuleGuard></ProtectedRoute>} />
       <Route path="/produtos/linha/:linha" element={<ProtectedRoute><ModuleGuard moduleKey="produtos"><LazyRoute><ProdutosLinha /></LazyRoute></ModuleGuard></ProtectedRoute>} />
       <Route path="/orcamentos" element={<ProtectedRoute><ModuleGuard moduleKey="orcamentos"><LazyRoute><Orcamentos /></LazyRoute></ModuleGuard></ProtectedRoute>} />
