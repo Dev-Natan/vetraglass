@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   MessageCircle, Download, Eye, MoreVertical, Edit, Copy, FileSignature,
-  Printer, CheckCircle, XCircle, RotateCcw, Trash2,
+  Printer, CheckCircle, XCircle, RotateCcw, Trash2, Wallet,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
