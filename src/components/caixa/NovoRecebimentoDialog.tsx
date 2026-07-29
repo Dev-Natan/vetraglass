@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
+import { createRoot } from 'react-dom/client';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,7 +8,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
   DollarSign, CreditCard, Smartphone, Receipt, User, CheckCircle2,
-  AlertCircle, Loader2, History,
+  AlertCircle, Loader2, History, FileDown,
 } from 'lucide-react';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -22,6 +23,8 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { parseBRLInput, formatBRLInput } from '@/utils/currencyMask';
 import { calculateFinancialStatus } from '@/hooks/useSalesFinancial';
+import { ExtratoRecebimentos } from './ExtratoRecebimentos';
+import { elementToPdfBlob } from '@/utils/printableToPdf';
 
 export interface PartialSaleTarget {
   id: string;                    // sale.id
