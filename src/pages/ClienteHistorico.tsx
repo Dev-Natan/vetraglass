@@ -183,6 +183,7 @@ export default function ClienteHistorico() {
 
   const printableRef = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState(false);
+  const [sharing, setSharing] = useState<'whatsapp' | 'email' | null>(null);
 
   const handleExportPdf = async () => {
     if (!printableRef.current || !client) {
@@ -200,6 +201,46 @@ export default function ClienteHistorico() {
       toast.error('Falha ao gerar PDF');
     } finally {
       setExporting(false);
+    }
+  };
+
+  const handleSharePdf = async (channel: 'whatsapp' | 'email') => {
+    if (!printableRef.current || !client || !user?.id) {
+      toast.error('Aguarde os dados carregarem');
+      return;
+    }
+    try {
+      setSharing(channel);
+      const safeName = client.name.replace(/[^a-zA-Z0-9]+/g, '_').toLowerCase();
+      const stamp = format(new Date(), 'yyyy-MM-dd');
+      const fileName = `ficha_${safeName}_${stamp}.pdf`;
+
+      const { publicUrl } = await uploadPdfForSharing({
+        element: printableRef.current,
+        fileName,
+        userId: user.id,
+        companyId: currentCompany?.id,
+        clientId: client.id,
+      });
+
+      const shareOptions = {
+        url: publicUrl,
+        recipientName: client.name,
+        documentLabel: 'ficha completa em PDF',
+      };
+
+      if (channel === 'whatsapp') {
+        const ok = shareViaWhatsApp(client.phone, shareOptions);
+        if (!ok) toast.error('Telefone do cliente não disponível para WhatsApp');
+      } else {
+        const ok = shareViaEmail(client.email, `Ficha do Cliente - ${client.name}`, shareOptions);
+        if (!ok) toast.error('E-mail do cliente não disponível');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Falha ao preparar PDF para compartilhamento');
+    } finally {
+      setSharing(null);
     }
   };
 
