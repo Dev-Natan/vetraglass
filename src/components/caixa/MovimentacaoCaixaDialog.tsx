@@ -84,34 +84,54 @@ export function MovimentacaoCaixaDialog({
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('dinheiro');
-  const [partyType, setPartyType] = useState<'none' | 'cliente' | 'fornecedor' | 'funcionario'>('none');
-  const [partyId, setPartyId] = useState<string>('');
+  const [clienteId, setClienteId] = useState<string>('none');
+  const [fornecedorId, setFornecedorId] = useState<string>('none');
+  const [funcionarioId, setFuncionarioId] = useState<string>('none');
 
   const categories = type === 'entrada' ? entradaCategories : saidaCategories;
 
-  // Entidades vinculáveis (clientes, fornecedores ou funcionários)
-  const { data: parties = [] } = useQuery({
-    queryKey: ['movement-parties', currentCompany?.id, partyType],
+  // Listas independentes para vinculação múltipla
+  const { data: clientes = [] } = useQuery({
+    queryKey: ['movement-clientes', currentCompany?.id],
     queryFn: async () => {
-      if (!currentCompany?.id || partyType === 'none') return [] as { id: string; name: string }[];
-      const table = partyType === 'cliente' ? 'clients' : partyType === 'fornecedor' ? 'suppliers' : 'employees';
-      const { data, error } = await (supabase as any)
-        .from(table)
+      const { data, error } = await supabase
+        .from('clients')
         .select('id, name')
-        .eq('company_id', currentCompany.id)
+        .eq('company_id', currentCompany!.id)
         .order('name', { ascending: true });
       if (error) throw error;
       return (data || []) as { id: string; name: string }[];
     },
-    enabled: !!currentCompany?.id && open && partyType !== 'none',
+    enabled: !!currentCompany?.id && open,
   });
 
-  const selectedParty = parties.find((p) => p.id === partyId);
-  const partyLabels: Record<string, string> = {
-    cliente: 'Cliente',
-    fornecedor: 'Fornecedor',
-    funcionario: 'Funcionário',
-  };
+  const { data: fornecedores = [] } = useQuery({
+    queryKey: ['movement-fornecedores', currentCompany?.id],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('suppliers')
+        .select('id, name')
+        .eq('company_id', currentCompany!.id)
+        .order('name', { ascending: true });
+      if (error) throw error;
+      return (data || []) as { id: string; name: string }[];
+    },
+    enabled: !!currentCompany?.id && open,
+  });
+
+  const { data: funcionarios = [] } = useQuery({
+    queryKey: ['movement-funcionarios', currentCompany?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('employees')
+        .select('id, name')
+        .eq('company_id', currentCompany!.id)
+        .order('name', { ascending: true });
+      if (error) throw error;
+      return (data || []) as { id: string; name: string }[];
+    },
+    enabled: !!currentCompany?.id && open,
+  });
 
   // Buscar saldo do caixa da empresa
   const { data: companyCash } = useQuery({
