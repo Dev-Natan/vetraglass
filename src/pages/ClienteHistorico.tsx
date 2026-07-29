@@ -558,6 +558,7 @@ export default function ClienteHistorico() {
             </Card>
           </TabsContent>
         </Tabs>
+        </div>
       </div>
     </MainLayout>
   );
