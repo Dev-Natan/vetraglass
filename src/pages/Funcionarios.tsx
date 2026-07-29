@@ -9,6 +9,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { EmployeeDialog } from '@/components/funcionarios/EmployeeDialog';
+import { HistoricoValesDialog } from '@/components/funcionarios/HistoricoValesDialog';
+
 import { PermissionProfileBadge } from '@/components/funcionarios/PermissionProfileSelect';
 import { useEmployees, Employee } from '@/hooks/useEmployees';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -54,6 +56,14 @@ export default function Funcionarios() {
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
+  const [historicoOpen, setHistoricoOpen] = useState(false);
+  const [historicoEmployee, setHistoricoEmployee] = useState<Employee | null>(null);
+
+  const handleOpenHistorico = (employee: Employee) => {
+    setHistoricoEmployee(employee);
+    setHistoricoOpen(true);
+  };
+
 
   const handlePrintCredentialCard = (employee: Employee) => {
     if (!employee.username || !currentCompany) {
@@ -256,6 +266,11 @@ export default function Funcionarios() {
                 </DropdownMenuItem>
               </PermissionGuard>
 
+              <DropdownMenuItem onClick={() => handleOpenHistorico(employee)}>
+                <Wallet className="w-4 h-4 mr-2" />
+                Histórico de Vales e Pagamentos
+              </DropdownMenuItem>
+
               <DropdownMenuItem
                 onClick={() =>
                   navigate(
@@ -263,9 +278,10 @@ export default function Funcionarios() {
                   )
                 }
               >
-                <Wallet className="w-4 h-4 mr-2" />
-                Ver pagamentos
+                <FileText className="w-4 h-4 mr-2" />
+                Ver salários no Financeiro
               </DropdownMenuItem>
+
 
 
               {/* Badge generation - available for all employees */}
@@ -420,6 +436,14 @@ export default function Funcionarios() {
         onSave={handleSave}
         isLoading={createEmployee.isPending || updateEmployee.isPending}
       />
+
+      <HistoricoValesDialog
+        open={historicoOpen}
+        onOpenChange={setHistoricoOpen}
+        employee={historicoEmployee}
+      />
+
+
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
