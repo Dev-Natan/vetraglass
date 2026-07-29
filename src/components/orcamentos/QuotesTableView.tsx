@@ -176,6 +176,11 @@ export function QuotesTableView({
 
                           {isApprovedOrConverted && (
                             <>
+                              {isPartial && onNewReceipt && (
+                                <DropdownMenuItem onClick={() => onNewReceipt(quote)} className="text-primary font-medium">
+                                  <Wallet className="w-4 h-4 mr-2" /> Novo Recebimento
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuItem onClick={() => onReopen(quote)}>
                                 <RotateCcw className="w-4 h-4 mr-2" /> Reabrir (Pendente)
                               </DropdownMenuItem>
