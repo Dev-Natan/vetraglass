@@ -1,0 +1,394 @@
+import { useState, useMemo } from 'react';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import {
+  DollarSign, CreditCard, Smartphone, Receipt, User, CheckCircle2,
+  AlertCircle, Loader2, History,
+} from 'lucide-react';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { parseBRLInput, formatBRLInput } from '@/utils/currencyMask';
+import { calculateFinancialStatus } from '@/hooks/useSalesFinancial';
+
+export interface PartialSaleTarget {
+  id: string;                    // sale.id
+  sale_number?: number | null;
+  customer_name: string | null;
+  total_amount: number;
+  paid_amount: number;
+  pending_amount: number;
+  quote_id?: string | null;
+  ordem_servico_id?: string | null;
+  os_number?: number | null;
+}
+
+interface Props {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  sale: PartialSaleTarget | null;
+  onSuccess?: () => void;
+}
+
+type PayMethod = 'dinheiro' | 'cartao' | 'pix';
+
+const formatCurrency = (v: number) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
+
+const methodLabel: Record<string, string> = {
+  dinheiro: 'Dinheiro', cartao: 'Cartão', pix: 'PIX',
+};
+
+export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: Props) {
+  const { currentCompany, user } = useAuth();
+  const queryClient = useQueryClient();
+  const [paymentMethod, setPaymentMethod] = useState<PayMethod>('dinheiro');
+  const [paymentAmount, setPaymentAmount] = useState('');
+
+  const { data: openCashRegister, isLoading: loadingCash } = useQuery({
+    queryKey: ['open-cash-register', currentCompany?.id],
+    queryFn: async () => {
+      if (!currentCompany?.id) return null;
+      const { data, error } = await supabase
+        .from('cash_registers')
+        .select('id, status')
+        .eq('company_id', currentCompany.id)
+        .eq('status', 'open')
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!currentCompany?.id && open,
+  });
+
+  // Histórico de recebimentos vinculados a esta venda
+  const { data: history } = useQuery({
+    queryKey: ['sale-receipts-history', sale?.id],
+    queryFn: async () => {
+      if (!sale?.id) return [];
+      const { data, error } = await supabase
+        .from('cash_movements')
+        .select('id, amount, payment_method, description, created_at, type')
+        .eq('sale_id', sale.id)
+        .eq('type', 'entrada')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!sale?.id && open,
+  });
+
+  const remaining = Math.max(0, (sale?.pending_amount ?? 0));
+  const amountToReceive = useMemo(() => {
+    const v = parseBRLInput(paymentAmount);
+    return Math.min(Math.max(0, v), remaining);
+  }, [paymentAmount, remaining]);
+
+  const suggestFull = () => setPaymentAmount(formatBRLInput(remaining));
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      if (!sale || !currentCompany?.id || !user?.id) throw new Error('Dados incompletos');
+      if (!openCashRegister?.id) throw new Error('Nenhum caixa aberto. Abra o caixa para receber.');
+      if (amountToReceive <= 0) throw new Error('Informe um valor maior que zero');
+      if (amountToReceive > remaining + 0.001) throw new Error('Valor maior que o saldo restante');
+
+      // 1) Cria movimento de caixa (uma linha independente por recebimento)
+      const nRef = sale.sale_number ?? sale.os_number ?? 0;
+      const label = sale.sale_number
+        ? `Entrada Parcial - Venda #${String(sale.sale_number).padStart(4, '0')}`
+        : `Entrada Parcial - OS #${String(nRef).padStart(4, '0')}`;
+      const description = `${label}${sale.customer_name ? ` - ${sale.customer_name}` : ''}`;
+
+      const { data: movement, error: movErr } = await supabase
+        .from('cash_movements')
+        .insert({
+          cash_register_id: openCashRegister.id,
+          company_id: currentCompany.id,
+          type: 'entrada',
+          category: 'recebimento_parcial',
+          amount: amountToReceive,
+          description,
+          payment_method: paymentMethod,
+          sale_id: sale.id,
+          created_by: user.id,
+          origem: 'venda',
+        })
+        .select('id')
+        .single();
+      if (movErr) throw movErr;
+
+      // 2) Atualiza a venda somando ao paid_amount
+      const newPaid = Number((sale.paid_amount + amountToReceive).toFixed(2));
+      const newPending = Math.max(0, Number((sale.total_amount - newPaid).toFixed(2)));
+      const finStatus = calculateFinancialStatus(newPaid, sale.total_amount);
+      const payment_status =
+        finStatus === 'PAGO' ? 'paid' : finStatus === 'PARCIAL' ? 'partial' : 'pending';
+
+      const { error: saleErr } = await supabase
+        .from('sales')
+        .update({
+          paid_amount: newPaid,
+          pending_amount: newPending,
+          payment_status,
+          sale_type: newPending <= 0 ? 'full' : 'partial',
+        })
+        .eq('id', sale.id);
+      if (saleErr) throw saleErr;
+
+      // 3) Atualiza OS vinculada
+      if (sale.ordem_servico_id) {
+        const { data: os } = await supabase
+          .from('ordens_servico')
+          .select('paid_amount, pending_amount, total_amount')
+          .eq('id', sale.ordem_servico_id)
+          .single();
+        if (os) {
+          const osPaid = Number(((os.paid_amount || 0) + amountToReceive).toFixed(2));
+          const osPending = Math.max(0, Number(((os.pending_amount ?? os.total_amount) - amountToReceive).toFixed(2)));
+          await supabase
+            .from('ordens_servico')
+            .update({ paid_amount: osPaid, pending_amount: osPending })
+            .eq('id', sale.ordem_servico_id);
+        }
+      }
+
+      // 4) Se quitou, marca contas a receber vinculadas como pagas
+      if (newPending <= 0) {
+        await supabase
+          .from('accounts_receivable')
+          .update({
+            status: 'paid',
+            paid_date: format(new Date(), 'yyyy-MM-dd'),
+            payment_method: paymentMethod,
+          })
+          .eq('sale_id', sale.id)
+          .neq('status', 'paid');
+
+        if (sale.quote_id) {
+          await supabase
+            .from('quotes')
+            .update({ status: 'completed', deposit_status: 'billed' })
+            .eq('id', sale.quote_id);
+        }
+      }
+
+      return { amount: amountToReceive, fullyPaid: newPending <= 0 };
+    },
+    onSuccess: (res) => {
+      toast.success(res.fullyPaid ? 'Venda quitada!' : 'Recebimento parcial registrado', {
+        description: `${formatCurrency(res.amount)} adicionado ao caixa (${methodLabel[paymentMethod]})`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['sales'] });
+      queryClient.invalidateQueries({ queryKey: ['sales-today'] });
+      queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['cash-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['ordens-servico'] });
+      queryClient.invalidateQueries({ queryKey: ['accounts-receivable'] });
+      queryClient.invalidateQueries({ queryKey: ['sale-receipts-history'] });
+      queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      setPaymentAmount('');
+      onOpenChange(false);
+      onSuccess?.();
+    },
+    onError: (err) => {
+      toast.error('Erro ao registrar recebimento', {
+        description: err instanceof Error ? err.message : 'Tente novamente',
+      });
+    },
+  });
+
+  if (!sale) return null;
+  const isCaixaAberto = !!openCashRegister?.id;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg p-0 gap-0 max-h-[92vh] flex flex-col">
+        <DialogHeader className="p-6 pb-4 border-b">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+              <Receipt className="h-5 w-5" />
+            </div>
+            <div>
+              <DialogTitle className="text-base">Novo Recebimento</DialogTitle>
+              <DialogDescription className="text-xs">
+                Registre um recebimento parcial para esta venda
+              </DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
+
+        <div className="p-6 space-y-4 overflow-y-auto flex-1">
+          <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border">
+            <User className="h-4 w-4 text-muted-foreground" />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold truncate">
+                {sale.customer_name || 'Consumidor'}
+              </p>
+              <p className="text-[10px] font-bold uppercase text-muted-foreground">
+                {sale.sale_number
+                  ? `Venda #${String(sale.sale_number).padStart(4, '0')}`
+                  : sale.os_number
+                  ? `OS #${String(sale.os_number).padStart(4, '0')}`
+                  : 'Venda'}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            <div className="p-3 rounded-lg border">
+              <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Total</p>
+              <p className="text-sm font-semibold">{formatCurrency(sale.total_amount)}</p>
+            </div>
+            <div className="p-3 rounded-lg border bg-emerald-500/5 border-emerald-500/20">
+              <p className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-400 mb-1">Já recebido</p>
+              <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
+                {formatCurrency(sale.paid_amount)}
+              </p>
+            </div>
+            <div className="p-3 rounded-lg border bg-primary/5 border-primary/20">
+              <p className="text-[10px] uppercase font-bold text-primary mb-1">Restante</p>
+              <p className="text-sm font-bold text-primary">{formatCurrency(remaining)}</p>
+            </div>
+          </div>
+
+          {history && history.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-[11px] font-bold uppercase text-muted-foreground">
+                <History className="h-3.5 w-3.5" /> Histórico de recebimentos
+              </div>
+              <ScrollArea className="max-h-32 rounded-lg border">
+                <div className="divide-y">
+                  {history.map((m: any) => (
+                    <div key={m.id} className="flex items-center justify-between px-3 py-2 text-xs">
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">
+                          {format(new Date(m.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                        </p>
+                        <p className="text-muted-foreground truncate">
+                          {methodLabel[m.payment_method] || m.payment_method || '—'}
+                        </p>
+                      </div>
+                      <span className="font-semibold text-emerald-700 dark:text-emerald-400 shrink-0">
+                        + {formatCurrency(Number(m.amount))}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+          )}
+
+          {!isCaixaAberto && !loadingCash && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>Abra o caixa para registrar recebimentos.</AlertDescription>
+            </Alert>
+          )}
+
+          {isCaixaAberto && (
+            <>
+              <Separator />
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-[10px] font-bold uppercase text-muted-foreground">
+                    Valor deste recebimento
+                  </Label>
+                  <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={suggestFull}>
+                    Usar saldo total ({formatCurrency(remaining)})
+                  </Button>
+                </div>
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0,00"
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(formatBRLInput(parseBRLInput(e.target.value)))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold uppercase text-muted-foreground">
+                  Forma de pagamento
+                </Label>
+                <RadioGroup
+                  value={paymentMethod}
+                  onValueChange={(v) => setPaymentMethod(v as PayMethod)}
+                  className="grid grid-cols-3 gap-2"
+                >
+                  {[
+                    { value: 'dinheiro', label: 'Dinheiro', Icon: DollarSign },
+                    { value: 'cartao', label: 'Cartão', Icon: CreditCard },
+                    { value: 'pix', label: 'PIX', Icon: Smartphone },
+                  ].map(({ value, label, Icon }) => {
+                    const selected = paymentMethod === value;
+                    return (
+                      <Label
+                        key={value}
+                        htmlFor={`nr-${value}`}
+                        className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border cursor-pointer transition-colors ${
+                          selected
+                            ? 'border-primary bg-primary/5 text-primary'
+                            : 'border-border hover:bg-muted/50 text-muted-foreground'
+                        }`}
+                      >
+                        <RadioGroupItem value={value} id={`nr-${value}`} className="sr-only" />
+                        <Icon className="w-4 h-4" />
+                        <span className="text-[11px] font-bold uppercase">{label}</span>
+                      </Label>
+                    );
+                  })}
+                </RadioGroup>
+              </div>
+
+              <div className="flex items-center justify-between p-4 rounded-xl bg-foreground text-background">
+                <span className="text-sm opacity-70">Novo saldo após recebimento</span>
+                <span className="text-xl font-bold">
+                  {formatCurrency(Math.max(0, remaining - amountToReceive))}
+                </span>
+              </div>
+
+              {amountToReceive > 0 && amountToReceive >= remaining && (
+                <Alert className="border-emerald-500/40 bg-emerald-500/10">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                  <AlertDescription className="text-emerald-700 dark:text-emerald-400">
+                    Este recebimento irá <strong>quitar</strong> a venda.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </>
+          )}
+        </div>
+
+        <DialogFooter className="p-4 bg-muted/30 border-t gap-2 flex-row">
+          <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>
+            Cancelar
+          </Button>
+          <Button
+            className="flex-1"
+            onClick={() => mutation.mutate()}
+            disabled={mutation.isPending || !isCaixaAberto || amountToReceive <= 0}
+          >
+            {mutation.isPending ? (
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processando...</>
+            ) : (
+              <>Registrar Recebimento</>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
