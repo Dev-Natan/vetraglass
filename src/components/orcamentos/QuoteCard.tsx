@@ -17,7 +17,8 @@ import {
   Printer,
   RotateCcw,
   MessageCircle,
-  Download
+  Download,
+  Wallet
 } from 'lucide-react';
 
 import { format } from 'date-fns';
