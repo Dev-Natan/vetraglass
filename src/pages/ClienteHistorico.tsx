@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
+import { createRoot } from 'react-dom/client';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
