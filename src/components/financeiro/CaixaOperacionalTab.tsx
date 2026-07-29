@@ -27,6 +27,7 @@ import { CaixaMovimentacoesTable } from '@/components/caixa/CaixaMovimentacoesTa
 import { PendingDepositsAlert } from '@/components/caixa/PendingDepositsAlert';
 import { ReceivePaymentDialog } from '@/components/caixa/ReceivePaymentDialog';
 import { FaturarSaldoDialog } from '@/components/caixa/FaturarSaldoDialog';
+import { NovoRecebimentoDialog, type PartialSaleTarget } from '@/components/caixa/NovoRecebimentoDialog';
 
 // Hooks e Serviços
 import { useCaixa } from '@/hooks/useCaixa';
