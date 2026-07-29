@@ -21,6 +21,7 @@ const ProdutosLinha = lazy(() => import("./pages/ProdutosLinha"));
 const Orcamentos = lazy(() => import("./pages/Orcamentos"));
 const OrdensServico = lazy(() => import("./pages/OrdensServico"));
 const Clientes = lazy(() => import("./pages/Clientes"));
+const ClienteHistorico = lazy(() => import("./pages/ClienteHistorico"));
 
 const Estoque = lazy(() => import("./pages/Estoque"));
 const EstoqueLinha = lazy(() => import("./pages/EstoqueLinha"));
