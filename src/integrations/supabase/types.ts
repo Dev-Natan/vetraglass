@@ -3609,6 +3609,8 @@ export type Database = {
       }
       ordens_servico: {
         Row: {
+          actual_end: string | null
+          actual_start: string | null
           cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
@@ -3643,6 +3645,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          actual_end?: string | null
+          actual_start?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
@@ -3677,6 +3681,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          actual_end?: string | null
+          actual_start?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
