@@ -273,6 +273,7 @@ export default function ClienteHistorico() {
     root.render(
       <ExtratoRecebimentos
         clientName={client?.name || 'Cliente'}
+        company={currentCompany}
         clientDocument={client?.document_type && client?.document ? `${client.document_type}: ${client.document}` : client?.document}
         clientPhone={client?.phone}
         clientEmail={client?.email}
