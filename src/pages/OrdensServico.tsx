@@ -211,8 +211,9 @@ export default function OrdensServico() {
       queryClient.invalidateQueries({ queryKey: ['material-consumption'] });
       toast.success('Status atualizado!');
     },
-    onError: () => {
-      toast.error('Erro ao atualizar status');
+    onError: (error: unknown) => {
+      const message = error instanceof Error ? error.message : 'Erro desconhecido';
+      toast.error(`Erro ao atualizar status: ${message}`);
     }
   });
 
