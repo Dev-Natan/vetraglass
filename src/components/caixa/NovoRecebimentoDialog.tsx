@@ -245,6 +245,7 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
       root.render(
         <ExtratoRecebimentos
           clientName={sale.customer_name || 'Cliente'}
+          company={currentCompany}
           saleNumber={sale.sale_number}
           quoteNumber={linkedQuote?.quote_number}
           totalAmount={Number(linkedQuote?.final_amount ?? sale.total_amount)}
