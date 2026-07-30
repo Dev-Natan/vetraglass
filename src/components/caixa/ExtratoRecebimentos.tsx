@@ -19,6 +19,15 @@ interface Payment {
   created_at: string;
 }
 
+export interface ExtratoCompany {
+  name?: string | null;
+  cnpj?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  logo_url?: string | null;
+}
+
 interface ExtratoRecebimentosProps {
   clientName: string;
   clientDocument?: string | null;
@@ -33,7 +42,8 @@ interface ExtratoRecebimentosProps {
   saleType?: string | null;
   createdAt?: string | null;
   payments: Payment[];
-  companyName?: string;
+  /** Dados da empresa emitente (empresa logada), exibidos no cabeçalho. */
+  company?: ExtratoCompany | null;
 }
 
 export function ExtratoRecebimentos({
@@ -50,7 +60,7 @@ export function ExtratoRecebimentos({
   saleType,
   createdAt,
   payments,
-  companyName = 'Vetra Glass',
+  company,
 }: ExtratoRecebimentosProps) {
   const sortedPayments = [...payments].sort(
     (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
@@ -65,15 +75,36 @@ export function ExtratoRecebimentos({
     ? '#f59e0b'
     : '#ef4444';
 
+  const companyName = company?.name?.trim() || 'Empresa';
+  const companyLines = [
+    company?.cnpj ? `CNPJ: ${company.cnpj}` : null,
+    company?.phone || null,
+    company?.email || null,
+    company?.address || null,
+  ].filter(Boolean) as string[];
+
   let runningBalance = totalAmount;
 
   return (
     <div className="bg-white text-slate-900 p-8" style={{ width: '794px', minHeight: '1123px', fontFamily: 'Arial, sans-serif' }}>
       {/* Header */}
       <div className="flex items-start justify-between border-b-2 border-slate-900 pb-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{companyName}</h1>
-          <p className="text-sm text-slate-600 mt-1">Extrato de Recebimentos</p>
+        <div className="flex items-start gap-3">
+          {company?.logo_url && (
+            <img
+              src={company.logo_url}
+              alt={companyName}
+              crossOrigin="anonymous"
+              style={{ width: '56px', height: '56px', objectFit: 'contain' }}
+            />
+          )}
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">{companyName}</h1>
+            {companyLines.map((line) => (
+              <p key={line} className="text-xs text-slate-600 leading-snug">{line}</p>
+            ))}
+            <p className="text-sm text-slate-600 mt-1">Extrato de Recebimentos</p>
+          </div>
         </div>
         <div className="text-right">
           <div className="flex items-center justify-end gap-2 text-sm text-slate-600">
@@ -83,6 +114,7 @@ export function ExtratoRecebimentos({
           <p className="text-xs text-slate-500 mt-1">Documento gerado automaticamente</p>
         </div>
       </div>
+
 
       {/* Client & Sale Info */}
       <div className="grid grid-cols-2 gap-6 mb-6">
