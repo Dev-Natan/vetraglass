@@ -52,15 +52,18 @@ const plans: Plan[] = [
 
 export default function Planos() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { currentCompany, signOut, isSaasAdmin } = useAuth();
   const { allowed, isFetching, refetch } = useSubscriptionAccess(currentCompany?.id);
 
-  // Se o admin reativou o plano (ex.: trial com nova data), libera o acesso na hora.
+  // Só redireciona automaticamente quem chegou aqui pelo bloqueio por assinatura.
+  const fromBlock = (location.state as { fromBlock?: boolean } | null)?.fromBlock === true;
+
   useEffect(() => {
-    if (isSaasAdmin || allowed) {
-      if (allowed && !isSaasAdmin) navigate('/dashboard', { replace: true });
+    if (fromBlock && allowed && !isSaasAdmin) {
+      navigate('/dashboard', { replace: true });
     }
-  }, [allowed, isSaasAdmin, navigate]);
+  }, [fromBlock, allowed, isSaasAdmin, navigate]);
 
   const handleSignOut = async () => {
     await signOut();
