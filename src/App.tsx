@@ -9,6 +9,8 @@ import { lazy, Suspense } from "react";
 import { LazyPageLoader } from "@/components/common/LazyPageLoader";
 import { Loader2 } from "lucide-react";
 import { ModuleGuard } from "@/components/ModuleGuard";
+import { useSubscriptionAccess, isSubscriptionAllowed } from "@/hooks/useSubscriptionAccess";
+
 
 // Core pages - loaded immediately (minimal bundle)
 import Landing from "./pages/Landing";
