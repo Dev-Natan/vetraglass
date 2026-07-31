@@ -73,7 +73,7 @@ export default function Planos() {
   const hasActiveAccess = allowed || isSaasAdmin;
 
   return (
-    <div className="min-h-screen bg-muted/30 p-4 sm:p-10">
+    <div className="relative min-h-screen bg-muted/30 p-4 sm:p-10">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-primary/5 to-transparent" />
       <div className="relative max-w-5xl mx-auto">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-8">
