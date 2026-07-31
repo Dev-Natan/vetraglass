@@ -52,15 +52,35 @@ const plans: Plan[] = [
 
 export default function Planos() {
   const navigate = useNavigate();
-  const { currentCompany } = useAuth();
+  const { currentCompany, signOut, isSaasAdmin } = useAuth();
+  const { allowed, isFetching, refetch } = useSubscriptionAccess(currentCompany?.id);
+
+  // Se o admin reativou o plano (ex.: trial com nova data), libera o acesso na hora.
+  useEffect(() => {
+    if (isSaasAdmin || allowed) {
+      if (allowed && !isSaasAdmin) navigate('/dashboard', { replace: true });
+    }
+  }, [allowed, isSaasAdmin, navigate]);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth', { replace: true });
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-sidebar via-background to-background p-4 sm:p-8">
       <div className="max-w-5xl mx-auto">
-        <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Voltar
-        </Button>
+        <div className="flex items-center justify-between gap-2 mb-4">
+          <Button variant="outline" onClick={() => refetch()} disabled={isFetching}>
+            <RefreshCw className={`mr-2 h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+            Verificar assinatura
+          </Button>
+          <Button variant="ghost" onClick={handleSignOut}>
+            <LogOut className="mr-2 h-4 w-4" />
+            Sair do sistema
+          </Button>
+        </div>
+
 
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium mb-3">
