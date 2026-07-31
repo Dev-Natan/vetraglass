@@ -137,7 +137,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
         );
       }
       if (!liveAllowed) {
-        return <Navigate to="/planos" replace />;
+        return <Navigate to="/planos" replace state={{ fromBlock: true }} />;
       }
     }
   }
