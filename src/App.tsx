@@ -92,6 +92,15 @@ const queryClient = createQueryClient();
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, companies, currentCompany, isSaasAdmin } = useAuth();
 
+  // Estado local pode estar desatualizado (ex.: reativação feita no painel admin).
+  // Revalidamos sempre contra o banco antes de bloquear o usuário.
+  const needsSubscriptionCheck = Boolean(!isSaasAdmin && user && currentCompany);
+  const {
+    data: liveSubscription,
+    isLoading: subscriptionLoading,
+    allowed: liveAllowed,
+  } = useSubscriptionAccess(currentCompany?.id, needsSubscriptionCheck);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -109,20 +118,31 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/empresa/nova" replace />;
   }
 
-  // Bloqueio de acesso: só libera dashboard com assinatura ativa.
-  // Empresas legadas em 'trialing' com trial válido continuam permitidas até expirar.
-  if (!isSaasAdmin && currentCompany) {
-    const status = currentCompany.subscription_status ?? 'pending_payment';
-    const trialEndsAt = currentCompany.trial_ends_at ? new Date(currentCompany.trial_ends_at) : null;
-    const trialValid = trialEndsAt ? trialEndsAt.getTime() > Date.now() : false;
-    const allowed = status === 'active' || (status === 'trialing' && trialValid);
-    if (!allowed) {
-      return <Navigate to="/planos" replace />;
+  // Bloqueio de acesso: libera com assinatura ativa ou trial com data futura.
+  if (needsSubscriptionCheck && currentCompany) {
+    const cachedAllowed = isSubscriptionAllowed({
+      subscription_status: currentCompany.subscription_status,
+      trial_ends_at: currentCompany.trial_ends_at,
+    });
+
+    if (!cachedAllowed) {
+      // Aguarda a verificação atualizada antes de expulsar da rota.
+      if (subscriptionLoading || liveSubscription === undefined) {
+        return (
+          <div className="min-h-screen flex items-center justify-center bg-background">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        );
+      }
+      if (!liveAllowed) {
+        return <Navigate to="/planos" replace />;
+      }
     }
   }
 
   return <>{children}</>;
 }
+
 
 function IndexRedirect() {
   const { isSaasAdmin, loading } = useAuth();
