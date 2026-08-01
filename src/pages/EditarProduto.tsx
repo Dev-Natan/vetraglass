@@ -116,6 +116,8 @@ export default function EditarProduto() {
   const { currentCompany, isSaasAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState('glass');
   const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
+  const [isCopyCompositionOpen, setIsCopyCompositionOpen] = useState(false);
+
   const [isEditItemDialogOpen, setIsEditItemDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ProductTemplateItem | null>(null);
   const [selectedItemToAdd, setSelectedItemToAdd] = useState('');
