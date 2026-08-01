@@ -173,10 +173,61 @@ export function MovimentacaoCaixaDialog({
     enabled: !!currentCompany?.id && open,
   });
 
+  // Saldo real da gaveta calculado ao vivo (abertura + entradas - saídas em dinheiro)
+  const { data: liveDrawerBalance } = useQuery({
+    queryKey: ['drawer-balance', cashRegisterId],
+    queryFn: async () => {
+      const { data: reg, error: regErr } = await supabase
+        .from('cash_registers')
+        .select('opening_amount')
+        .eq('id', cashRegisterId)
+        .maybeSingle();
+      if (regErr) throw regErr;
+
+      const { data: movs, error: movErr } = await supabase
+        .from('cash_movements')
+        .select('type, amount, category, payment_method')
+        .eq('cash_register_id', cashRegisterId);
+      if (movErr) throw movErr;
+
+      const isOpening = (m: any) => m.category === 'abertura' || m.category === 'abertura_caixa';
+      const isCash = (m: any) => (m.payment_method || 'dinheiro').toLowerCase() === 'dinheiro';
+
+      return (movs || [])
+        .filter((m: any) => !isOpening(m) && isCash(m))
+        .reduce((sum: number, m: any) => {
+          const value = Number(m.amount) || 0;
+          return m.type === 'entrada' ? sum + value : sum - value;
+        }, Number(reg?.opening_amount) || 0);
+    },
+    enabled: !!cashRegisterId && open,
+    refetchOnMount: 'always',
+    staleTime: 0,
+  });
+
+  // Realtime: mantém o saldo exibido sincronizado enquanto o modal está aberto
+  useEffect(() => {
+    if (!open || !cashRegisterId) return;
+    const channel = supabase
+      .channel(`movement-dialog-${cashRegisterId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'cash_movements', filter: `cash_register_id=eq.${cashRegisterId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['drawer-balance', cashRegisterId] });
+        },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [open, cashRegisterId, queryClient]);
+
+  const displayedBalance = liveDrawerBalance ?? currentDailyBalance;
+
   const amountValue = parseCurrencyBRL(amount);
-  const needsReinforcement = type === 'saida' && amountValue > currentDailyBalance;
-  const reinforcementAmount = needsReinforcement ? amountValue - currentDailyBalance : 0;
+  const needsReinforcement = type === 'saida' && amountValue > displayedBalance;
+  const reinforcementAmount = needsReinforcement ? amountValue - displayedBalance : 0;
   const hasEnoughCompanyBalance = !needsReinforcement || (companyCash?.current_balance || 0) >= reinforcementAmount;
+
 
   const resetForm = () => {
     setType('entrada');
