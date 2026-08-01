@@ -94,9 +94,9 @@ export function ClientTimeline({ clientId, clientName }: ClientTimelineProps) {
           : Promise.resolve({ data: [] }),
         supabase
           .from('expenses')
-          .select('id, description, amount, status, created_at, client_id')
+          .select('id, description, amount, status, created_at, reference_id')
           .eq('company_id', companyId)
-          .eq('client_id', clientId)
+          .or(`party_id.eq.${clientId},party_name.eq.${clientName}`)
       ]);
 
       const deposits = depositsResult.data || [];
