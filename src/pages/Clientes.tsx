@@ -30,6 +30,7 @@ import { usePagination } from '@/hooks/usePagination';
 import { PaginationControls } from '@/components/common/PaginationControls';
 import { queryKeys } from '@/lib/queryConfig';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 
 // Type moved to @/types/clientes

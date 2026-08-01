@@ -69,7 +69,7 @@ export function Client360Dialog({ open, onOpenChange, client, onSave, defaultTyp
       setForm(client);
       setActiveTab('visao-geral');
     } else {
-      setForm(initialForm);
+      setForm({ ...initialForm, client_type: defaultType || 'cliente' });
       setActiveTab('dados');
     }
     setDocumentError('');
