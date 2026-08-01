@@ -863,3 +863,25 @@ export default function ClienteHistorico() {
     </MainLayout>
   );
 }
+
+function getOSStatusLabel(status: string): string {
+  const labels: Record<string, string> = {
+    pending: 'Pendente',
+    in_progress: 'Em Andamento',
+    completed: 'Concluída',
+    delivered: 'Entregue',
+    cancelled: 'Cancelada'
+  };
+  return labels[status] || status;
+}
+
+function getOSStatusBadgeClass(status: string): string {
+  const classes: Record<string, string> = {
+    pending: 'bg-amber-100 text-amber-800 border-amber-200',
+    in_progress: 'bg-blue-100 text-blue-800 border-blue-200',
+    completed: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    delivered: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+    cancelled: 'bg-slate-100 text-slate-800 border-slate-200'
+  };
+  return classes[status] || 'bg-slate-100 text-slate-800 border-slate-200';
+}
