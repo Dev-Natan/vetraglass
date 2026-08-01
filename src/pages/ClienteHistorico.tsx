@@ -829,8 +829,8 @@ export default function ClienteHistorico() {
                             <TableCell>
                               <Badge variant="outline" className={mc.className}>{mc.label}</Badge>
                             </TableCell>
-                            <TableCell className="text-right font-semibold text-emerald-700 dark:text-emerald-400">
-                              + {formatCurrency(Number(p.amount) || 0)}
+                            <TableCell className={`text-right font-semibold ${p.type === 'entrada' ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}`}>
+                              {p.type === 'entrada' ? '+ ' : '- '} {formatCurrency(Number(p.amount) || 0)}
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center justify-end gap-1">
