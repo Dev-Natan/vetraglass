@@ -215,7 +215,9 @@ export function InvestimentosTab() {
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wider">Saldo Real da Empresa</p>
                 <p className="text-3xl font-bold text-primary">{formatCurrency(balance)}</p>
-                <p className="text-[11px] text-muted-foreground mt-1">Atualiza automaticamente conforme o caixa</p>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Caixa empresa {formatCurrency(companyCash)} · Bancos {formatCurrency(banksTotal)} · Gaveta {formatCurrency(drawerBalance)}
+                </p>
               </div>
             </div>
             <div className="text-right">
