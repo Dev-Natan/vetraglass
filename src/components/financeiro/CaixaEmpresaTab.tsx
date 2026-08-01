@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -244,6 +244,52 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
     onError: (error: Error) => toast.error(`Erro ao fechar caixa: ${error.message}`),
   });
 
+  /**
+   * Saldo da gaveta em tempo real:
+   * abertura + entradas - saídas registradas no caixa aberto.
+   * As vendas digitais/dinheiro já geram registro em cash_movements,
+   * portanto usamos apenas as movimentações como fonte única de verdade.
+   */
+  const drawerBalance = useMemo(() => {
+    if (!openCashRegister) return 0;
+    const opening = Number(openCashRegister.opening_amount || 0);
+    const entradas = dailyCashMovements
+      .filter((m) => m.type === 'entrada')
+      .reduce((sum, m) => sum + (Number(m.amount) || 0), 0);
+    const saidas = dailyCashMovements
+      .filter((m) => m.type === 'saida')
+      .reduce((sum, m) => sum + (Number(m.amount) || 0), 0);
+    return opening + entradas - saidas;
+  }, [openCashRegister, dailyCashMovements]);
+
+  const totalRealBalance = (Number(companyCash?.current_balance) || 0) + drawerBalance;
+
+  // Atualização em tempo real do saldo (gaveta + empresa)
+  useEffect(() => {
+    if (!currentCompany?.id) return;
+
+    const invalidate = () => {
+      queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['cash-register-open'] });
+      queryClient.invalidateQueries({ queryKey: ['company-cash'] });
+      queryClient.invalidateQueries({ queryKey: ['company-cash-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['sales-today'] });
+    };
+
+    const channel = supabase
+      .channel(`caixa-empresa-${currentCompany.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cash_movements', filter: `company_id=eq.${currentCompany.id}` }, invalidate)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cash_registers', filter: `company_id=eq.${currentCompany.id}` }, invalidate)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'company_cash', filter: `company_id=eq.${currentCompany.id}` }, invalidate)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'company_cash_movements', filter: `company_id=eq.${currentCompany.id}` }, invalidate)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentCompany?.id, queryClient]);
+
+
 
   const formatCurrency = (value: number | null | undefined) => {
     return (Number(value) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -394,19 +440,30 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
             <CardTitle className="text-sm font-medium">💰 Saldo Real da Empresa</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${companyCash.current_balance < 0 ? 'text-destructive' : 'text-green-600'}`}>
-              {formatCurrency(companyCash.current_balance)}
+            <div className={`text-2xl font-bold ${totalRealBalance < 0 ? 'text-destructive' : 'text-green-600'}`}>
+              {formatCurrency(totalRealBalance)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Valor que a empresa possui em caixa/banco (não inclui contas a receber)
             </p>
             {openCashRegister && (
-              <p className="text-xs text-muted-foreground mt-1">
-                + {formatCurrency(Number(openCashRegister.opening_amount || 0))} na gaveta do caixa aberto
-              </p>
+              <div className="mt-3 space-y-1 rounded-md border bg-muted/30 p-2 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Saldo em conta/empresa</span>
+                  <span className="font-medium">{formatCurrency(companyCash.current_balance)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Na gaveta (caixa aberto)</span>
+                  <span className="font-medium">{formatCurrency(drawerBalance)}</span>
+                </div>
+                <p className="pt-1 text-[11px] text-muted-foreground">
+                  Atualizado em tempo real conforme as movimentações do caixa
+                </p>
+              </div>
             )}
 
           </CardContent>
+
         </Card>
 
         {/* Ações */}
