@@ -107,11 +107,37 @@ export function CaixaOperacionalTab() {
     enabled: !!openCashRegister?.id,
   });
 
-  const { data: cashMovements = [] } = useQuery({
+  const { data: cashMovements = [], refetch: refetchCashMovements } = useQuery({
     queryKey: ['cash-movements', openCashRegister?.id],
     queryFn: () => caixaService.fetchCashMovements(openCashRegister!.id),
     enabled: !!openCashRegister?.id,
   });
+
+  // Realtime: qualquer inserção/alteração em cash_movements do caixa aberto
+  // recarrega a lista, mantendo o Saldo Total Atualizado sempre fiel.
+  useEffect(() => {
+    if (!openCashRegister?.id) return;
+    const channel = supabase
+      .channel(`cash-movements-${openCashRegister.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'cash_movements',
+          filter: `cash_register_id=eq.${openCashRegister.id}`,
+        },
+        () => {
+          refetchCashMovements();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [openCashRegister?.id, refetchCashMovements]);
+
 
   const { data: expensesDueToday = [] } = useQuery({
     queryKey: ['expenses-due-today', currentCompany?.id],
