@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -114,6 +114,30 @@ const emptyForm = (): FormState => ({
 export function ContasPagarTab() {
   const { currentCompany } = useAuth();
   const qc = useQueryClient();
+
+  useEffect(() => {
+    if (!currentCompany?.id) return;
+
+    const channel = supabase
+      .channel('expenses-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'expenses',
+          filter: `company_id=eq.${currentCompany.id}`,
+        },
+        () => {
+          qc.invalidateQueries({ queryKey: ['payables'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentCompany?.id, qc]);
   const { data: categories = [] } = useFinancialCategories('despesa');
   const { data: bankAccounts = [] } = useBankAccounts(true);
 
@@ -167,7 +191,7 @@ export function ContasPagarTab() {
       if (!currentCompany?.id) return [];
       let q = supabase
         .from('expenses')
-        .select('*, supplier:clients(name, phone, email, document)')
+        .select('*, supplier:clients!expenses_supplier_id_fkey(name, phone, email, document)')
         .eq('company_id', currentCompany.id)
         .order('due_date', { ascending: true });
       if (range) {
