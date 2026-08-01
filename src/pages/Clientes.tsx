@@ -4,7 +4,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
-  Plus, Search, Users, LayoutGrid, List
+  Plus, Search, Users, LayoutGrid, List, Truck
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -30,6 +30,7 @@ import { usePagination } from '@/hooks/usePagination';
 import { PaginationControls } from '@/components/common/PaginationControls';
 import { queryKeys } from '@/lib/queryConfig';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 
 // Type moved to @/types/clientes
@@ -44,6 +45,7 @@ export default function Clientes() {
   useModuleTutorialTrigger('clientes');
   
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState<'cliente' | 'fornecedor'>('cliente');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
@@ -157,13 +159,15 @@ export default function Clientes() {
 
   const filteredClients = clients.filter(client => {
     const search = searchTerm.toLowerCase();
-    return (
+    const matchesSearch = (
       client.name.toLowerCase().includes(search) ||
       client.document?.includes(searchTerm.replace(/\D/g, '')) ||
       client.email?.toLowerCase().includes(search) ||
       client.phone?.includes(searchTerm) ||
       client.city?.toLowerCase().includes(search)
     );
+    const matchesTab = client.client_type === activeTab;
+    return matchesSearch && matchesTab;
   });
 
   // Pagination
@@ -171,13 +175,28 @@ export default function Clientes() {
 
   return (
     <MainLayout>
-      <div className="pb-32 space-y-4">
+      <div className="pb-32 space-y-6">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="cliente" className="gap-2">
+              <Users className="h-4 w-4" />
+              Clientes
+            </TabsTrigger>
+            <TabsTrigger value="fornecedor" className="gap-2">
+              <Truck className="h-4 w-4" />
+              Fornecedores
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
         {/* Header */}
         <div data-tutorial="clientes-header" className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold">Clientes</h1>
+            <h1 className="text-xl sm:text-2xl font-bold">
+              {activeTab === 'cliente' ? 'Clientes' : 'Fornecedores'}
+            </h1>
             <p className="text-muted-foreground text-xs sm:text-sm">
-              {clients.length} clientes cadastrados
+              {clients.filter(c => c.client_type === activeTab).length} {activeTab === 'cliente' ? 'clientes' : 'fornecedores'} cadastrados
             </p>
           </div>
           
@@ -206,7 +225,7 @@ export default function Clientes() {
               className="gap-2 h-10 sm:h-11 px-4"
             >
               <Plus className="h-4 w-4" />
-              <span className="inline">Novo Cliente</span>
+              <span className="inline">Novo {activeTab === 'cliente' ? 'Cliente' : 'Fornecedor'}</span>
             </Button>
           </div>
         </div>
@@ -239,7 +258,7 @@ export default function Clientes() {
           <div className="flex flex-col items-center justify-center py-20 text-center animate-slide-up">
             <Users className="w-16 h-16 text-muted-foreground/50 mb-4" />
             <h3 className="font-medium text-foreground text-lg mb-1">
-              {searchTerm ? 'Nenhum cliente encontrado' : 'Nenhum cliente cadastrado'}
+              {searchTerm ? `Nenhum ${activeTab === 'cliente' ? 'cliente' : 'fornecedor'} encontrado` : `Nenhum ${activeTab === 'cliente' ? 'cliente' : 'fornecedor'} cadastrado`}
             </h3>
             <p className="text-sm text-muted-foreground mb-4">
               {searchTerm 
@@ -255,7 +274,7 @@ export default function Clientes() {
                 }}
               >
                 <Plus className="w-4 h-4" />
-                Cadastrar Primeiro Cliente
+                Cadastrar Primeiro {activeTab === 'cliente' ? 'Cliente' : 'Fornecedor'}
               </Button>
             )}
           </div>
@@ -296,6 +315,7 @@ export default function Clientes() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         client={selectedClient}
+        defaultType={activeTab}
         onSave={handleSave}
         isLoading={createMutation.isPending || updateMutation.isPending}
       />

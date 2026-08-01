@@ -35,6 +35,7 @@ interface Client360DialogProps {
   onOpenChange: (open: boolean) => void;
   client?: Client | null;
   onSave: (client: Omit<Client, 'id'>) => Promise<void>;
+  defaultType?: 'cliente' | 'fornecedor';
   isLoading?: boolean;
 }
 
@@ -58,7 +59,7 @@ const initialForm: Client = {
   notes: '',
 };
 
-export function Client360Dialog({ open, onOpenChange, client, onSave, isLoading }: Client360DialogProps) {
+export function Client360Dialog({ open, onOpenChange, client, onSave, defaultType, isLoading }: Client360DialogProps) {
   const [form, setForm] = useState<Client>(initialForm);
   const [documentError, setDocumentError] = useState('');
   const [activeTab, setActiveTab] = useState('visao-geral');
@@ -68,7 +69,7 @@ export function Client360Dialog({ open, onOpenChange, client, onSave, isLoading 
       setForm(client);
       setActiveTab('visao-geral');
     } else {
-      setForm(initialForm);
+      setForm({ ...initialForm, client_type: defaultType || 'cliente' });
       setActiveTab('dados');
     }
     setDocumentError('');
