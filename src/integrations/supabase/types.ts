@@ -2657,6 +2657,13 @@ export type Database = {
             referencedRelation: "expenses"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "expenses_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
         ]
       }
       feedback_votes: {

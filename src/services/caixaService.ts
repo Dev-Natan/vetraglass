@@ -59,7 +59,7 @@ export const caixaService = {
     const today = format(new Date(), 'yyyy-MM-dd');
     const { data, error } = await supabase
       .from('expenses')
-      .select('*, supplier:clients!expenses_supplier_id_fkey(name, phone, email, document)')
+      .select('*, supplier:clients(name, phone, email, document)')
       .eq('company_id', companyId)
       .eq('due_date', today)
       .eq('status', 'pending')
