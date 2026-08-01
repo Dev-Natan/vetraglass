@@ -12,8 +12,16 @@ interface ClientKPIsProps {
   clientName?: string | null;
 }
 
-/** Status considerados como "compra efetivada" para o cliente. */
-const CLOSED_QUOTE_STATUSES = ['approved', 'converted', 'completed', 'finalizado'];
+/** Status considerados como "compra efetivada" para o cliente (inclui pagamentos parciais). */
+const CLOSED_QUOTE_STATUSES = [
+  'approved',
+  'converted',
+  'completed',
+  'finalizado',
+  'partial',
+  'parcial',
+  'partially_paid',
+];
 
 export const ClientKPIs = memo(function ClientKPIs({ clientId, clientName }: ClientKPIsProps) {
   const { currentCompany } = useAuth();
@@ -29,23 +37,12 @@ export const ClientKPIs = memo(function ClientKPIs({ clientId, clientName }: Cli
         ? `client_id.eq.${clientId},customer_name.eq.${escapedName}`
         : `client_id.eq.${clientId}`;
 
-      const [quotesResult, receivablesResult, movementsResult, osResult] = await Promise.all([
+      const [quotesResult, osResult] = await Promise.all([
         supabase
           .from('quotes')
-          .select('id, status, final_amount, total_amount, created_at')
+          .select('id, status, final_amount, total_amount, created_at, updated_at')
           .eq('company_id', companyId)
           .or(linkFilter),
-        supabase
-          .from('accounts_receivable')
-          .select('total_amount, paid_amount, status')
-          .eq('company_id', companyId)
-          .eq('client_id', clientId),
-        supabase
-          .from('cash_movements')
-          .select('amount, type, receivable_id')
-          .eq('company_id', companyId)
-          .eq('type', 'entrada')
-          .eq('cliente_id', clientId),
         supabase
           .from('ordens_servico')
           .select('id, status')
@@ -54,32 +51,72 @@ export const ClientKPIs = memo(function ClientKPIs({ clientId, clientName }: Cli
       ]);
 
       const quotes = quotesResult.data || [];
-      const receivables = (receivablesResult.data || []).filter(
+      const os = osResult.data || [];
+      const quoteIds = quotes.map((q: any) => q.id);
+
+      // Recebimentos: os registros financeiros muitas vezes só têm quote_id (client_id nulo),
+      // então buscamos por cliente OU por qualquer orçamento deste cliente.
+      const receivableFilter = quoteIds.length
+        ? `client_id.eq.${clientId},quote_id.in.(${quoteIds.join(',')})`
+        : `client_id.eq.${clientId}`;
+
+      const [receivablesResult, depositsResult, movementsResult] = await Promise.all([
+        supabase
+          .from('accounts_receivable')
+          .select('id, quote_id, total_amount, paid_amount, status')
+          .eq('company_id', companyId)
+          .or(receivableFilter),
+        quoteIds.length
+          ? supabase
+              .from('quote_deposits')
+              .select('id, quote_id, amount, status')
+              .in('quote_id', quoteIds)
+          : Promise.resolve({ data: [] as any[] }),
+        supabase
+          .from('cash_movements')
+          .select('amount, type, receivable_id')
+          .eq('company_id', companyId)
+          .eq('type', 'entrada')
+          .eq('cliente_id', clientId),
+      ]);
+
+      const receivables = ((receivablesResult as any).data || []).filter(
         (r: any) => String(r.status || '') !== 'cancelled'
       );
-      const movements = movementsResult.data || [];
-      const os = osResult.data || [];
+      const deposits = ((depositsResult as any).data || []).filter((d: any) =>
+        ['received', 'paid', 'confirmado', 'pago'].includes(String(d.status || '').toLowerCase())
+      );
+      const movements = (movementsResult as any).data || [];
 
       const closedQuotes = quotes.filter((q: any) =>
         CLOSED_QUOTE_STATUSES.includes(String(q.status || '').toLowerCase())
       );
 
-      // Valor contratado (orçamentos aprovados/fechados)
+      // Valor contratado (orçamentos aprovados/parciais/fechados)
       const totalContratado = closedQuotes.reduce(
         (sum: number, q: any) => sum + Number(q.final_amount ?? q.total_amount ?? 0),
         0
       );
 
-      // Total efetivamente PAGO: baixas de contas a receber + entradas de caixa
-      // avulsas (sem vínculo com um recebível, para não contar duas vezes).
+      // Total efetivamente PAGO:
+      // 1) baixas de contas a receber
       const pagoReceivables = receivables.reduce(
         (sum: number, r: any) => sum + Number(r.paid_amount || 0),
         0
       );
+      // 2) sinais/entradas de orçamentos que ainda não viraram conta a receber
+      const quotesComReceivable = new Set(
+        receivables.map((r: any) => r.quote_id).filter(Boolean)
+      );
+      const pagoDepositos = deposits
+        .filter((d: any) => !quotesComReceivable.has(d.quote_id))
+        .reduce((sum: number, d: any) => sum + Number(d.amount || 0), 0);
+      // 3) entradas de caixa avulsas (sem vínculo com recebível, evita duplicidade)
       const pagoAvulso = movements
         .filter((m: any) => !m.receivable_id)
         .reduce((sum: number, m: any) => sum + Number(m.amount || 0), 0);
-      const totalPago = pagoReceivables + pagoAvulso;
+
+      const totalPago = pagoReceivables + pagoDepositos + pagoAvulso;
 
       const totalCompras = closedQuotes.length;
       const totalOrcamentos = quotes.length;
@@ -89,12 +126,10 @@ export const ClientKPIs = memo(function ClientKPIs({ clientId, clientName }: Cli
       const saldoDevedor = Math.max(0, totalContratado - totalPago);
       const inadimplente = receivables.some((r: any) => r.status === 'overdue');
 
+      const quoteDate = (q: any) => new Date(q.updated_at || q.created_at).getTime();
       const ultimaCompra = closedQuotes
         .slice()
-        .sort(
-          (a: any, b: any) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        )[0];
+        .sort((a: any, b: any) => quoteDate(b) - quoteDate(a))[0];
 
       const osAtivas = os.filter((o: any) =>
         ['pending', 'in_progress', 'em_producao', 'aguardando'].includes(
@@ -110,11 +145,14 @@ export const ClientKPIs = memo(function ClientKPIs({ clientId, clientName }: Cli
         ticketMedio,
         saldoDevedor,
         inadimplente,
-        ultimaCompraDate: ultimaCompra ? new Date(ultimaCompra.created_at) : null,
+        ultimaCompraDate: ultimaCompra
+          ? new Date(ultimaCompra.updated_at || ultimaCompra.created_at)
+          : null,
         osAtivas,
       };
     },
   });
+
 
 
   const formatCurrency = (value: number) =>
