@@ -193,6 +193,13 @@ export function ClientTimeline({ clientId, clientName }: ClientTimelineProps) {
 
           const saldoRestante = Math.max(0, Number((quote.final_amount - totalPago).toFixed(2)));
 
+          // Rentabilidade: Lucro Bruto = Total Recebido - Total de Despesas vinculadas
+          const totalDespesas = Number(
+            quote.expenses.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0).toFixed(2)
+          );
+          const lucroBruto = Number((totalPago - totalDespesas).toFixed(2));
+          const margemBruta = totalPago > 0 ? (lucroBruto / totalPago) * 100 : 0;
+
           return (
             <AccordionItem key={quote.id} value={quote.id} className="border rounded-lg px-4 bg-card">
               <AccordionTrigger className="hover:no-underline py-4">
