@@ -48,6 +48,53 @@ export function InvestimentosTab() {
     enabled: !!companyId,
   });
 
+  // Contas bancárias ativas
+  const banksQuery = useQuery({
+    queryKey: ['bank-accounts-balance', companyId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('bank_accounts')
+        .select('id, current_balance, active')
+        .eq('company_id', companyId!)
+        .eq('active', true);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!companyId,
+  });
+
+  // Caixa operacional aberto (gaveta): abertura + entradas - saídas
+  const drawerQuery = useQuery({
+    queryKey: ['operational-drawer-balance', companyId],
+    queryFn: async () => {
+      const { data: reg, error: regErr } = await supabase
+        .from('cash_registers')
+        .select('id, opening_amount')
+        .eq('company_id', companyId!)
+        .eq('status', 'open')
+        .order('opened_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (regErr) throw regErr;
+      if (!reg) return { registerId: null as string | null, balance: 0 };
+
+      const { data: movs, error: movErr } = await supabase
+        .from('cash_movements')
+        .select('type, amount')
+        .eq('cash_register_id', reg.id);
+      if (movErr) throw movErr;
+
+      const net = (movs || []).reduce((sum, m) => {
+        const amount = Number(m.amount) || 0;
+        return m.type === 'entrada' ? sum + amount : sum - amount;
+      }, Number(reg.opening_amount) || 0);
+
+      return { registerId: reg.id, balance: net };
+    },
+    enabled: !!companyId,
+  });
+
+
   const allocQuery = useQuery({
     queryKey: ['investment-allocations', companyId],
     queryFn: async () => {
@@ -63,17 +110,21 @@ export function InvestimentosTab() {
     enabled: !!companyId,
   });
 
-  // Realtime: company_cash + allocations
+  // Realtime: caixa da empresa, bancos, caixa operacional e alocações
   useEffect(() => {
     if (!companyId) return;
+    const refreshBalances = () => {
+      qc.invalidateQueries({ queryKey: ['company-cash', companyId] });
+      qc.invalidateQueries({ queryKey: ['bank-accounts-balance', companyId] });
+      qc.invalidateQueries({ queryKey: ['operational-drawer-balance', companyId] });
+    };
     const channel = supabase
       .channel(`invest-${companyId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'company_cash', filter: `company_id=eq.${companyId}` }, () => {
-        qc.invalidateQueries({ queryKey: ['company-cash', companyId] });
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'company_cash_movements', filter: `company_id=eq.${companyId}` }, () => {
-        qc.invalidateQueries({ queryKey: ['company-cash', companyId] });
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'company_cash', filter: `company_id=eq.${companyId}` }, refreshBalances)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'company_cash_movements', filter: `company_id=eq.${companyId}` }, refreshBalances)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bank_accounts', filter: `company_id=eq.${companyId}` }, refreshBalances)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cash_registers', filter: `company_id=eq.${companyId}` }, refreshBalances)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cash_movements', filter: `company_id=eq.${companyId}` }, refreshBalances)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'investment_allocations', filter: `company_id=eq.${companyId}` }, () => {
         qc.invalidateQueries({ queryKey: ['investment-allocations', companyId] });
       })
@@ -81,11 +132,19 @@ export function InvestimentosTab() {
     return () => { supabase.removeChannel(channel); };
   }, [companyId, qc]);
 
-  const balance = Number(cashQuery.data?.current_balance) || 0;
+  const companyCash = Number(cashQuery.data?.current_balance) || 0;
+  const banksTotal = useMemo(
+    () => (banksQuery.data || []).reduce((s, b) => s + (Number(b.current_balance) || 0), 0),
+    [banksQuery.data],
+  );
+  const drawerBalance = Number(drawerQuery.data?.balance) || 0;
+  const balance = companyCash + banksTotal + drawerBalance;
+
   const allocations = allocQuery.data || [];
   const totalPct = useMemo(() => allocations.reduce((s, a) => s + Number(a.percentage || 0), 0), [allocations]);
   const remainingPct = Math.max(0, 100 - totalPct);
   const allocatedValue = (balance * totalPct) / 100;
+
   const unallocatedValue = balance - allocatedValue;
 
   const addMutation = useMutation({
@@ -156,7 +215,9 @@ export function InvestimentosTab() {
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wider">Saldo Real da Empresa</p>
                 <p className="text-3xl font-bold text-primary">{formatCurrency(balance)}</p>
-                <p className="text-[11px] text-muted-foreground mt-1">Atualiza automaticamente conforme o caixa</p>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Caixa empresa {formatCurrency(companyCash)} · Bancos {formatCurrency(banksTotal)} · Gaveta {formatCurrency(drawerBalance)}
+                </p>
               </div>
             </div>
             <div className="text-right">
