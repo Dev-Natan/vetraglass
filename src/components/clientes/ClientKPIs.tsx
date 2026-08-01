@@ -136,8 +136,9 @@ export const ClientKPIs = memo(function ClientKPIs({ clientId, clientName }: Cli
   const kpis = [
     {
       icon: DollarSign,
-      label: 'Total Gasto',
-      value: formatCurrency(kpiData?.totalGasto || 0),
+      label: 'Total Pago',
+      value: formatCurrency(kpiData?.totalPago || 0),
+      subLabel: `Contratado: ${formatCurrency(kpiData?.totalContratado || 0)}`,
       color: 'text-green-600',
       bgColor: 'bg-green-50 dark:bg-green-950/30',
     },
@@ -145,7 +146,8 @@ export const ClientKPIs = memo(function ClientKPIs({ clientId, clientName }: Cli
       icon: ShoppingCart,
       label: 'Compras',
       value: kpiData?.totalCompras || 0,
-      subLabel: `Ticket: ${formatCurrency(kpiData?.ticketMedio || 0)}`,
+      subLabel: `${kpiData?.totalOrcamentos || 0} orçamentos · ${kpiData?.totalCompras || 0} aprovados`,
+      extraLabel: `Ticket: ${formatCurrency(kpiData?.ticketMedio || 0)}`,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50 dark:bg-blue-950/30',
     },
@@ -153,12 +155,14 @@ export const ClientKPIs = memo(function ClientKPIs({ clientId, clientName }: Cli
       icon: AlertTriangle,
       label: 'Saldo Devedor',
       value: formatCurrency(kpiData?.saldoDevedor || 0),
+      subLabel: 'Contratado − Pago',
       alert: kpiData?.inadimplente,
       color: kpiData?.inadimplente ? 'text-red-600' : 'text-yellow-600',
       bgColor: kpiData?.inadimplente
         ? 'bg-red-50 dark:bg-red-950/30'
         : 'bg-yellow-50 dark:bg-yellow-950/30',
     },
+
     {
       icon: Calendar,
       label: 'Última Compra',
