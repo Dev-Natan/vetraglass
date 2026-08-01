@@ -191,6 +191,9 @@ export const ClientKPIs = memo(function ClientKPIs({ clientId, clientName }: Cli
           </div>
           <p className={`text-lg font-bold ${kpi.color}`}>{kpi.value}</p>
           {kpi.subLabel && <p className="text-xs text-muted-foreground">{kpi.subLabel}</p>}
+          {'extraLabel' in kpi && kpi.extraLabel && (
+            <p className="text-xs text-muted-foreground">{kpi.extraLabel}</p>
+          )}
           {kpi.alert && <span className="text-xs text-red-600 font-medium">Inadimplente</span>}
         </Card>
       ))}
