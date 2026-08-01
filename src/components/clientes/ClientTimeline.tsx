@@ -147,13 +147,30 @@ export function ClientTimeline({ clientId, clientName }: ClientTimelineProps) {
     return (
       <Accordion type="single" collapsible className="w-full space-y-2">
         {quotes.map((quote) => {
-          // Cálculo do saldo restante baseado em depósitos e contas a receber
-          const totalPago = [
-            ...quote.deposits.filter(d => ['received', 'paid', 'confirmado', 'pago'].includes(String(d.status).toLowerCase())),
-            ...quote.receivables
-          ].reduce((sum, item) => sum + (item.paid_amount || item.amount || 0), 0);
+          // Filtramos depósitos confirmados
+          const confirmedDeposits = quote.deposits.filter(d => 
+            ['received', 'paid', 'confirmado', 'pago'].includes(String(d.status).toLowerCase())
+          );
 
-          const saldoRestante = Math.max(0, quote.final_amount - totalPago);
+          // Filtramos recebíveis. 
+          // Regra: Se um orcamento tem depósitos confirmados E contas a receber, 
+          // precisamos garantir que não estamos contando o mesmo valor duas vezes.
+          // Geralmente, o sinal (deposit) é convertido em parte da conta a receber paga no momento da aprovação.
+          
+          const totalPagoDepositos = confirmedDeposits.reduce((sum, d) => sum + Number(d.amount || 0), 0);
+          
+          // Somamos apenas a parte paga das contas a receber que NÃO seja o depósito inicial 
+          // (ou simplesmente confiamos que o paid_amount do receivable já reflete o total recebido para aquele título)
+          const totalPagoReceivables = quote.receivables.reduce((sum, r) => sum + Number(r.paid_amount || 0), 0);
+
+          // Cálculo do Valor Pago Real:
+          // Se houver contas a receber, usamos o paid_amount delas (que deve centralizar o sinal + parcelas).
+          // Se não houver, usamos os depósitos.
+          const totalPago = quote.receivables.length > 0 
+            ? totalPagoReceivables 
+            : totalPagoDepositos;
+
+          const saldoRestante = Math.max(0, Number((quote.final_amount - totalPago).toFixed(2)));
 
           return (
             <AccordionItem key={quote.id} value={quote.id} className="border rounded-lg px-4 bg-card">
@@ -239,21 +256,28 @@ export function ClientTimeline({ clientId, clientName }: ClientTimelineProps) {
                     </div>
                     
                     <div className="bg-muted/30 p-3 rounded-md border space-y-2">
-                      <h5 className="text-[10px] font-bold text-muted-foreground uppercase">Movimentações</h5>
+                      <h5 className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">Detalhamento Financeiro</h5>
                       {quote.deposits.length === 0 && quote.receivables.length === 0 ? (
-                        <p className="text-[10px] text-muted-foreground italic">Nenhum pagamento registrado</p>
+                        <p className="text-[10px] text-muted-foreground italic">Nenhum registro financeiro</p>
                       ) : (
                         <div className="space-y-1">
-                          {quote.deposits.map((d) => (
+                          {/* Exibimos depósitos apenas se não houver recebíveis vinculados (para evitar duplicidade visual) */}
+                          {quote.receivables.length === 0 && quote.deposits.map((d) => (
                             <div key={d.id} className="flex justify-between text-[10px]">
-                              <span>Sinal/Entrada ({format(new Date(d.created_at), 'dd/MM')})</span>
+                              <span className="truncate pr-2">Sinal/Entrada ({format(new Date(d.created_at), 'dd/MM')})</span>
                               <span className="font-medium text-green-600">+{formatCurrency(d.amount)}</span>
                             </div>
                           ))}
                           {quote.receivables.map((r) => (
-                            <div key={r.id} className="flex justify-between text-[10px]">
-                              <span>Parcela/Recebível ({format(new Date(r.created_at), 'dd/MM')})</span>
-                              <span className="font-medium text-green-600">+{formatCurrency(r.paid_amount || 0)}</span>
+                            <div key={r.id} className="space-y-1 border-b border-muted last:border-0 pb-1 mb-1">
+                              <div className="flex justify-between text-[10px] font-medium">
+                                <span>Título Financeiro</span>
+                                <span>{formatCurrency(r.total_amount)}</span>
+                              </div>
+                              <div className="flex justify-between text-[10px]">
+                                <span className="text-muted-foreground">Valor Recebido:</span>
+                                <span className="text-green-600">+{formatCurrency(r.paid_amount || 0)}</span>
+                              </div>
                             </div>
                           ))}
                         </div>
