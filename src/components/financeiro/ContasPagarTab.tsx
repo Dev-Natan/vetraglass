@@ -151,9 +151,10 @@ export function ContasPagarTab() {
     queryFn: async () => {
       if (!currentCompany?.id) return [];
       const { data, error } = await supabase
-        .from('suppliers')
+        .from('clients')
         .select('id, name, phone, email, document')
         .eq('company_id', currentCompany.id)
+        .eq('client_type', 'fornecedor')
         .order('name');
       if (error) throw error;
       return data || [];
@@ -167,7 +168,7 @@ export function ContasPagarTab() {
       if (!currentCompany?.id) return [];
       let q = supabase
         .from('expenses')
-        .select('*, supplier:suppliers(name, phone, email, document)')
+        .select('*, supplier:clients(name, phone, email, document)')
         .eq('company_id', currentCompany.id)
         .order('due_date', { ascending: true });
       if (range) {
@@ -440,14 +441,19 @@ export function ContasPagarTab() {
             </Select>
           </div>
 
-          <div className="overflow-x-auto border rounded-md">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Vencimento</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Fornecedor / Destino</TableHead>
-                  <TableHead>Categoria</TableHead>
+          {isLoading ? (
+            <div className="h-40 flex items-center justify-center">
+              <span className="animate-spin mr-2">⏳</span> Carregando contas...
+            </div>
+          ) : (
+            <div className="overflow-x-auto border rounded-md">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Vencimento</TableHead>
+                    <TableHead>Descrição</TableHead>
+                    <TableHead>Fornecedor / Destino</TableHead>
+                    <TableHead>Categoria</TableHead>
                   <TableHead>Parcela</TableHead>
                   <TableHead className="text-right">Valor</TableHead>
                   <TableHead>Status</TableHead>
