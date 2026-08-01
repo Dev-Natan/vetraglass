@@ -1893,7 +1893,21 @@ export default function ProductTemplates() {
             </form>
               </TabsContent>
               <TabsContent value="composicao" className="mt-4">
+            <div className="flex items-center justify-end mb-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => setIsCopyCompositionOpen(true)}
+                disabled={!(editingTemplate?.id || selectedTemplate?.id)}
+              >
+                <Layers className="w-4 h-4" />
+                Copiar Composição de outro Produto
+              </Button>
+            </div>
             <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,32%)_1fr] gap-4">
+
               {/* LEFT COLUMN — Add form */}
               <aside className="bg-muted/40 dark:bg-muted/20 border rounded-lg p-4 space-y-4 lg:sticky lg:top-0 self-start">
                 <div className="flex items-center gap-2 pb-2 border-b">
