@@ -244,6 +244,52 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
     onError: (error: Error) => toast.error(`Erro ao fechar caixa: ${error.message}`),
   });
 
+  /**
+   * Saldo da gaveta em tempo real:
+   * abertura + entradas - saídas registradas no caixa aberto.
+   * As vendas digitais/dinheiro já geram registro em cash_movements,
+   * portanto usamos apenas as movimentações como fonte única de verdade.
+   */
+  const drawerBalance = useMemo(() => {
+    if (!openCashRegister) return 0;
+    const opening = Number(openCashRegister.opening_amount || 0);
+    const entradas = dailyCashMovements
+      .filter((m) => m.type === 'entrada')
+      .reduce((sum, m) => sum + (Number(m.amount) || 0), 0);
+    const saidas = dailyCashMovements
+      .filter((m) => m.type === 'saida')
+      .reduce((sum, m) => sum + (Number(m.amount) || 0), 0);
+    return opening + entradas - saidas;
+  }, [openCashRegister, dailyCashMovements]);
+
+  const totalRealBalance = (Number(companyCash?.current_balance) || 0) + drawerBalance;
+
+  // Atualização em tempo real do saldo (gaveta + empresa)
+  useEffect(() => {
+    if (!currentCompany?.id) return;
+
+    const invalidate = () => {
+      queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['cash-register-open'] });
+      queryClient.invalidateQueries({ queryKey: ['company-cash'] });
+      queryClient.invalidateQueries({ queryKey: ['company-cash-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['sales-today'] });
+    };
+
+    const channel = supabase
+      .channel(`caixa-empresa-${currentCompany.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cash_movements', filter: `company_id=eq.${currentCompany.id}` }, invalidate)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cash_registers', filter: `company_id=eq.${currentCompany.id}` }, invalidate)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'company_cash', filter: `company_id=eq.${currentCompany.id}` }, invalidate)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'company_cash_movements', filter: `company_id=eq.${currentCompany.id}` }, invalidate)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentCompany?.id, queryClient]);
+
+
 
   const formatCurrency = (value: number | null | undefined) => {
     return (Number(value) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
