@@ -20,6 +20,7 @@ interface QuoteDeposit {
   id: string;
   quote_id: string;
   ordem_servico_id: string | null;
+  client_id?: string | null;
   customer_name: string;
   customer_phone: string | null;
   amount: number;
@@ -97,6 +98,7 @@ export function ReceberEntradaDialog({
           description: description,
           payment_method: paymentMethod,
           created_by: user.id,
+          cliente_id: deposit.client_id || null,
           origem: 'orcamento',
         })
         .select('id')

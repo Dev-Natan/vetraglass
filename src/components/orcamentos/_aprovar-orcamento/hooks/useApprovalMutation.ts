@@ -96,6 +96,7 @@ export function useApprovalMutation({
         .insert({
           company_id: companyId,
           quote_id: quote.id,
+          client_id: (quote as any).client_id || null,
           customer_name: quote.customer_name,
           customer_phone: quote.customer_phone,
           customer_email: quote.customer_email,
@@ -128,6 +129,7 @@ export function useApprovalMutation({
           .insert({
             company_id: companyId,
             quote_id: quote.id,
+            client_id: (quote as any).client_id || null,
             ordem_servico_id: ordemServico.id,
             customer_name: quote.customer_name,
             customer_phone: quote.customer_phone,
@@ -147,6 +149,7 @@ export function useApprovalMutation({
             company_id: companyId,
             ordem_servico_id: ordemServico.id,
             quote_id: quote.id,
+            client_id: (quote as any).client_id || null,
             customer_name: quote.customer_name,
             description: `Entrada - Orç. #${quote.quote_number.toString().padStart(4, '0')}`,
             total_amount: entryValue,
@@ -179,6 +182,7 @@ export function useApprovalMutation({
               company_id: companyId,
               type: 'entrada',
               category: 'entrada_orcamento',
+              cliente_id: (quote as any).client_id || null,
               amount: cardNetAmount,
               description: movementDescription,
               payment_method: entryPaymentMethod,
@@ -203,6 +207,7 @@ export function useApprovalMutation({
             .insert({
               company_id: companyId,
               cash_register_id: openCashRegister.id,
+              client_id: (quote as any).client_id || null,
               customer_name: quote.customer_name,
               subtotal: entryValue,
               total_amount: entryValue,
@@ -266,6 +271,7 @@ export function useApprovalMutation({
               ordem_servico_id: ordemServico.id,
               quote_id: quote.id,
               sale_id: saleId,
+              client_id: (quote as any).client_id || null,
               customer_name: quote.customer_name,
               description: `OS #${ordemServico.os_number} - ${condicaoNome || 'Saldo'} (${i}/${numInstallments})`,
               total_amount: i === numInstallments ? (pendingAmount - (installmentAmount * (numInstallments - 1))) : installmentAmount,

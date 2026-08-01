@@ -36,6 +36,7 @@ export interface PartialSaleTarget {
   quote_id?: string | null;
   ordem_servico_id?: string | null;
   os_number?: number | null;
+  client_id?: string | null;
 }
 
 interface Props {
@@ -142,6 +143,7 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
           description,
           payment_method: paymentMethod,
           sale_id: sale.id,
+          cliente_id: sale.client_id || null,
           created_by: user.id,
           origem: 'venda',
         })
@@ -190,6 +192,7 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
           .from('accounts_receivable')
           .update({
             status: 'paid',
+            client_id: sale.client_id || null,
             paid_date: format(new Date(), 'yyyy-MM-dd'),
             payment_method: paymentMethod,
           })

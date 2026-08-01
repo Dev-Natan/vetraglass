@@ -20,6 +20,7 @@ export function useQuoteSubmit({ companyId, quote, items, totals, discountPercen
   const { toast } = useToast();
 
   const buildQuotePayload = (data: QuoteFormData) => ({
+    client_id: (data as any).client_id || null,
     customer_name: data.customer_name,
     customer_phone: data.customer_phone || null,
     customer_email: data.customer_email || null,
