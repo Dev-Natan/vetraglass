@@ -14,6 +14,7 @@ import {
   Filter,
   Receipt,
   Loader2,
+  Eye,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,6 +47,11 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
 import { ReceivePaymentDialog } from '@/components/caixa/ReceivePaymentDialog';
+import {
+  ReceivableDetailsDialog,
+  getReceivableOrigin,
+  type ReceivableDetails,
+} from '@/components/financeiro/ReceivableDetailsDialog';
 
 interface Receivable {
   id: string;
@@ -61,10 +67,18 @@ interface Receivable {
   payment_method: string | null;
   sale_id: string | null;
   ordem_servico_id: string | null;
+  quote_id: string | null;
   client_id: string | null;
   notes: string | null;
   created_at: string;
+  client?: {
+    name: string | null;
+    phone: string | null;
+    email: string | null;
+    document: string | null;
+  } | null;
 }
+
 
 type StatusFilter = 'all' | 'pending' | 'overdue' | 'paid';
 type PeriodFilter = 'all' | 'today' | 'week' | 'month' | 'next60' | 'next90' | 'overdue';
@@ -87,6 +101,7 @@ export function ContasReceberTab() {
   
   const [receiveDialogOpen, setReceiveDialogOpen] = useState(false);
   const [selectedReceivable, setSelectedReceivable] = useState<Receivable | null>(null);
+  const [detailsReceivable, setDetailsReceivable] = useState<Receivable | null>(null);
   const [receivePaymentMethod, setReceivePaymentMethod] = useState<'dinheiro' | 'pix' | 'transferencia' | 'cartao'>('dinheiro');
 
   // Fetch receivables
@@ -99,7 +114,9 @@ export function ContasReceberTab() {
         .from('accounts_receivable')
         .select(`
           *,
+          client:clients(name, phone, email, document),
           sale:sales(payment_status),
+
           quote:quotes(status),
           ordem_servico:ordens_servico(status)
         `)
@@ -307,7 +324,7 @@ export function ContasReceberTab() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Cliente</TableHead>
+              <TableHead>Cliente / Origem</TableHead>
               <TableHead>Descrição</TableHead>
               <TableHead>Parcela</TableHead>
               <TableHead>Vencimento</TableHead>
@@ -334,8 +351,20 @@ export function ContasReceberTab() {
                 const statusDisplay = getStatusDisplay(receivable);
                 const StatusIcon = statusDisplay.icon;
                 return (
-                  <TableRow key={receivable.id}>
-                    <TableCell className="font-medium">{receivable.customer_name}</TableCell>
+                  <TableRow
+                    key={receivable.id}
+                    className="cursor-pointer"
+                    onClick={() => setDetailsReceivable(receivable)}
+                  >
+                    <TableCell className="font-medium">
+                      <p className="truncate max-w-[180px]">
+                        {receivable.client?.name || receivable.customer_name || '—'}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {getReceivableOrigin(receivable)}
+                        {receivable.client?.phone ? ` · ${receivable.client.phone}` : ''}
+                      </p>
+                    </TableCell>
                     <TableCell className="text-muted-foreground max-w-[200px] truncate">
                       {receivable.description}
                     </TableCell>
@@ -356,17 +385,28 @@ export function ContasReceberTab() {
                         {statusDisplay.label}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">
-                      {receivable.status !== 'paid' && (
-                        <Button 
-                          size="sm" 
-                          onClick={() => handleReceiveClick(receivable)}
-                          className="bg-green-600 hover:bg-green-700"
+                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex gap-1 justify-end">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8"
+                          title="Ver detalhes da cobrança"
+                          onClick={() => setDetailsReceivable(receivable)}
                         >
-                          <Receipt className="w-4 h-4 mr-1" />
-                          Receber
+                          <Eye className="w-4 h-4" />
                         </Button>
-                      )}
+                        {receivable.status !== 'paid' && (
+                          <Button
+                            size="sm"
+                            onClick={() => handleReceiveClick(receivable)}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            <Receipt className="w-4 h-4 mr-1" />
+                            Receber
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
@@ -375,6 +415,13 @@ export function ContasReceberTab() {
           </TableBody>
         </Table>
       </div>
+
+      <ReceivableDetailsDialog
+        open={!!detailsReceivable}
+        onOpenChange={(o) => !o && setDetailsReceivable(null)}
+        receivable={detailsReceivable as unknown as ReceivableDetails}
+        onReceive={() => detailsReceivable && handleReceiveClick(detailsReceivable)}
+      />
 
       <ReceivePaymentDialog
         open={receiveDialogOpen}
@@ -387,6 +434,7 @@ export function ContasReceberTab() {
           queryClient.invalidateQueries({ queryKey: ['accounts-receivable'] });
         }}
       />
+
     </div>
   );
 }

@@ -34,12 +34,13 @@ import {
 } from '@/components/ui/table';
 import {
   Plus, Search, CheckCircle, Clock, AlertCircle, Trash2, Pencil,
-  FileText, Banknote, Layers, Calendar, Receipt,
+  FileText, Banknote, Layers, Calendar, Receipt, Eye,
 } from 'lucide-react';
 import { format, addMonths, addDays, parseISO, isBefore, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { MonthSelector, getMonthDateRange } from '@/components/common/MonthSelector';
+import { PayableDetailsDialog, type PayableDetails } from '@/components/financeiro/PayableDetailsDialog';
 
 type PeriodScope = 'month' | 'next30' | 'next60' | 'next90' | 'all';
 
@@ -55,9 +56,16 @@ interface Payable {
   category: string;
   category_id: string | null;
   bank_account_id: string | null;
+  supplier_id: string | null;
   supplier_name: string | null;
   supplier_document: string | null;
   document_number: string | null;
+  supplier?: {
+    name: string | null;
+    phone: string | null;
+    email: string | null;
+    document: string | null;
+  } | null;
   installment_number: number;
   total_installments: number;
   parent_payable_id: string | null;
@@ -76,6 +84,7 @@ const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', curren
 interface FormState {
   id?: string;
   description: string;
+  supplier_id: string;
   supplier_name: string;
   supplier_document: string;
   category_id: string;
@@ -90,6 +99,7 @@ interface FormState {
 
 const emptyForm = (): FormState => ({
   description: '',
+  supplier_id: '',
   supplier_name: '',
   supplier_document: '',
   category_id: '',
@@ -134,6 +144,22 @@ export function ContasPagarTab() {
   const [payAmount, setPayAmount] = useState(0);
   const [payBankId, setPayBankId] = useState('');
   const [payDate, setPayDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [detailsPayable, setDetailsPayable] = useState<Payable | null>(null);
+
+  const { data: suppliers = [] } = useQuery({
+    queryKey: ['suppliers', currentCompany?.id],
+    queryFn: async () => {
+      if (!currentCompany?.id) return [];
+      const { data, error } = await supabase
+        .from('suppliers')
+        .select('id, name, phone, email, document')
+        .eq('company_id', currentCompany.id)
+        .order('name');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!currentCompany?.id,
+  });
 
   const { data: payables = [], isLoading } = useQuery({
     queryKey: ['payables', currentCompany?.id, scope, month.getMonth(), month.getFullYear()],
@@ -141,7 +167,7 @@ export function ContasPagarTab() {
       if (!currentCompany?.id) return [];
       let q = supabase
         .from('expenses')
-        .select('*')
+        .select('*, supplier:suppliers(name, phone, email, document)')
         .eq('company_id', currentCompany.id)
         .order('due_date', { ascending: true });
       if (range) {
@@ -171,6 +197,7 @@ export function ContasPagarTab() {
         const hit =
           p.description?.toLowerCase().includes(s) ||
           p.supplier_name?.toLowerCase().includes(s) ||
+          p.supplier?.name?.toLowerCase().includes(s) ||
           p.document_number?.toLowerCase().includes(s);
         if (!hit) return false;
       }
@@ -201,6 +228,7 @@ export function ContasPagarTab() {
     setForm({
       id: p.id,
       description: p.description,
+      supplier_id: p.supplier_id || '',
       supplier_name: p.supplier_name || '',
       supplier_document: p.supplier_document || '',
       category_id: p.category_id || '',
@@ -221,6 +249,7 @@ export function ContasPagarTab() {
       if (!f.description.trim()) throw new Error('Informe a descrição');
       if (!f.amount || f.amount <= 0) throw new Error('Valor inválido');
       if (!f.due_date) throw new Error('Informe o vencimento');
+      if (!f.supplier_id) throw new Error('Selecione o fornecedor de destino');
 
       const cat = categories.find((c) => c.id === f.category_id);
       const categoryLegacy = cat?.name || 'outros';
@@ -228,6 +257,7 @@ export function ContasPagarTab() {
       if (f.id) {
         const { error } = await supabase.from('expenses').update({
           description: f.description,
+          supplier_id: f.supplier_id || null,
           supplier_name: f.supplier_name || null,
           supplier_document: f.supplier_document || null,
           category_id: f.category_id || null,
@@ -251,6 +281,7 @@ export function ContasPagarTab() {
       const firstInsert = await supabase.from('expenses').insert({
         company_id: currentCompany.id,
         description: total > 1 ? `${f.description} (1/${total})` : f.description,
+        supplier_id: f.supplier_id || null,
         supplier_name: f.supplier_name || null,
         supplier_document: f.supplier_document || null,
         category_id: f.category_id || null,
@@ -273,7 +304,8 @@ export function ContasPagarTab() {
           rows.push({
             company_id: currentCompany.id,
             description: `${f.description} (${i}/${total})`,
-            supplier_name: f.supplier_name || null,
+            supplier_id: f.supplier_id || null,
+          supplier_name: f.supplier_name || null,
             supplier_document: f.supplier_document || null,
             category_id: f.category_id || null,
             bank_account_id: f.bank_account_id || null,
@@ -414,7 +446,7 @@ export function ContasPagarTab() {
                 <TableRow>
                   <TableHead>Vencimento</TableHead>
                   <TableHead>Descrição</TableHead>
-                  <TableHead>Fornecedor</TableHead>
+                  <TableHead>Fornecedor / Destino</TableHead>
                   <TableHead>Categoria</TableHead>
                   <TableHead>Parcela</TableHead>
                   <TableHead className="text-right">Valor</TableHead>
@@ -435,7 +467,7 @@ export function ContasPagarTab() {
                   const effectiveStatus = overdue ? 'overdue' : p.status;
                   const cfg = STATUS_CFG[effectiveStatus] || STATUS_CFG.pending;
                   return (
-                    <TableRow key={p.id}>
+                    <TableRow key={p.id} className="cursor-pointer" onClick={() => setDetailsPayable(p)}>
                       <TableCell className="whitespace-nowrap">
                         {p.due_date ? format(parseISO(p.due_date), 'dd/MM/yyyy', { locale: ptBR }) : '—'}
                       </TableCell>
@@ -445,7 +477,16 @@ export function ContasPagarTab() {
                           <p className="text-xs text-muted-foreground">Doc: {p.document_number}</p>
                         )}
                       </TableCell>
-                      <TableCell className="text-sm">{p.supplier_name || '—'}</TableCell>
+                      <TableCell className="text-sm">
+                        <p className="truncate max-w-[180px] font-medium">
+                          {p.supplier?.name || p.supplier_name || '—'}
+                        </p>
+                        {(p.supplier?.phone || p.supplier?.document) && (
+                          <p className="text-[11px] text-muted-foreground">
+                            {p.supplier?.phone || p.supplier?.document}
+                          </p>
+                        )}
+                      </TableCell>
                       <TableCell>
                         {cat ? (
                           <div className="flex items-center gap-1.5">
@@ -464,8 +505,12 @@ export function ContasPagarTab() {
                       </TableCell>
                       <TableCell className="text-right font-semibold whitespace-nowrap">{fmt(Number(p.amount))}</TableCell>
                       <TableCell><Badge className={cfg.cls + ' border-0'}>{cfg.label}</Badge></TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex gap-1 justify-end">
+                          <Button size="icon" variant="ghost" className="h-8 w-8" title="Ver detalhes"
+                            onClick={() => setDetailsPayable(p)}>
+                            <Eye className="w-3.5 h-3.5" />
+                          </Button>
                           {p.status !== 'paid' && p.status !== 'cancelled' && (
                             <Button size="sm" variant="outline" className="h-8" onClick={() => {
                               setPayDialog(p);
@@ -509,8 +554,31 @@ export function ContasPagarTab() {
               <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Ex.: Compra de vidro temperado lote #4521" />
             </div>
             <div>
-              <Label>Fornecedor</Label>
-              <Input value={form.supplier_name} onChange={(e) => setForm({ ...form, supplier_name: e.target.value })} />
+              <Label>Fornecedor *</Label>
+              <Select
+                value={form.supplier_id}
+                onValueChange={(v) => {
+                  const sup = suppliers.find((s) => s.id === v);
+                  setForm({
+                    ...form,
+                    supplier_id: v,
+                    supplier_name: sup?.name || form.supplier_name,
+                    supplier_document: sup?.document || form.supplier_document,
+                  });
+                }}
+              >
+                <SelectTrigger><SelectValue placeholder="Selecionar fornecedor" /></SelectTrigger>
+                <SelectContent>
+                  {suppliers.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {suppliers.length === 0 && (
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  Nenhum fornecedor cadastrado ainda.
+                </p>
+              )}
             </div>
             <div>
               <Label>CNPJ/CPF</Label>
@@ -593,6 +661,26 @@ export function ContasPagarTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <PayableDetailsDialog
+        open={!!detailsPayable}
+        onOpenChange={(o) => !o && setDetailsPayable(null)}
+        payable={
+          detailsPayable
+            ? ({
+                ...detailsPayable,
+                categoryName: categories.find((c) => c.id === detailsPayable.category_id)?.name || null,
+              } as unknown as PayableDetails)
+            : null
+        }
+        onPay={() => {
+          if (!detailsPayable) return;
+          setPayDialog(detailsPayable);
+          setPayAmount(Number(detailsPayable.amount));
+          setPayBankId(detailsPayable.bank_account_id || bankAccounts.find((b) => b.is_default)?.id || '');
+          setPayDate(format(new Date(), 'yyyy-MM-dd'));
+        }}
+      />
 
       {/* DIALOG PAGAMENTO */}
       <Dialog open={!!payDialog} onOpenChange={(o) => !o && setPayDialog(null)}>
