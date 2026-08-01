@@ -78,6 +78,8 @@ export function MovimentacaoCaixaDialog({
   onOpenChange,
   cashRegisterId,
   currentDailyBalance = 0,
+  onSuccess,
+
 }: MovimentacaoCaixaDialogProps) {
   const { currentCompany, user } = useAuth();
   const queryClient = useQueryClient();
