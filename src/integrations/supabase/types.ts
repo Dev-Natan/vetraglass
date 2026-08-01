@@ -2550,6 +2550,7 @@ export type Database = {
           reference_type: string | null
           status: string
           supplier_document: string | null
+          supplier_id: string | null
           supplier_name: string | null
           total_installments: number | null
           updated_at: string
@@ -2584,6 +2585,7 @@ export type Database = {
           reference_type?: string | null
           status?: string
           supplier_document?: string | null
+          supplier_id?: string | null
           supplier_name?: string | null
           total_installments?: number | null
           updated_at?: string
@@ -2618,6 +2620,7 @@ export type Database = {
           reference_type?: string | null
           status?: string
           supplier_document?: string | null
+          supplier_id?: string | null
           supplier_name?: string | null
           total_installments?: number | null
           updated_at?: string
@@ -2649,6 +2652,13 @@ export type Database = {
             columns: ["parent_payable_id"]
             isOneToOne: false
             referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]
