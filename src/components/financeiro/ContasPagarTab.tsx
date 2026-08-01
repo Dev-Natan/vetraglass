@@ -177,7 +177,7 @@ export function ContasPagarTab() {
       }
       const { data, error } = await q;
       if (error) throw error;
-      return (data as Payable[]) || [];
+      return (data as unknown as Payable[]) || [];
     },
     enabled: !!currentCompany?.id,
     staleTime: 0,
