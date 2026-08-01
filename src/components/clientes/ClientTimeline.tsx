@@ -4,14 +4,23 @@ import { useAuth } from '@/contexts/AuthContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  ShoppingCart, 
-  FileText, 
-  ClipboardList,
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import {
+  ShoppingCart,
+  FileText,
   DollarSign,
-  Clock
+  Clock,
+  Package,
+  Receipt,
+  Info,
 } from 'lucide-react';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 interface ClientTimelineProps {
@@ -19,124 +28,96 @@ interface ClientTimelineProps {
   clientName?: string | null;
 }
 
-interface TimelineEvent {
+interface QuoteHistoryItem {
   id: string;
-  type: 'sale' | 'quote' | 'os' | 'payment';
-  title: string;
-  description: string;
-  amount?: number;
+  quote_number: number;
+  final_amount: number;
+  total_amount: number;
   status: string;
-  date: Date;
-  icon: typeof ShoppingCart;
-  color: string;
+  created_at: string;
+  items: any[];
+  deposits: any[];
+  receivables: any[];
 }
 
 export function ClientTimeline({ clientId, clientName }: ClientTimelineProps) {
   const { currentCompany } = useAuth();
 
-  const { data: events = [], isLoading } = useQuery({
-    queryKey: ['client-timeline', clientId, clientName, currentCompany?.id],
+  const { data: history, isLoading } = useQuery({
+    queryKey: ['client-history-grouped', clientId, currentCompany?.id],
     enabled: !!currentCompany?.id && !!clientId,
     queryFn: async () => {
-      const [salesResult, quotesResult, osResult, paymentsResult] = await Promise.all([
-        supabase
-          .from('sales')
-          .select('id, sale_number, total_amount, payment_status, created_at')
-          .eq('company_id', currentCompany!.id)
-          .eq('client_id', clientId)
-          .order('created_at', { ascending: false })
-          .limit(20),
-        
-        supabase
-          .from('quotes')
-          .select('id, quote_number, final_amount, status, created_at')
-          .eq('company_id', currentCompany!.id)
-          .eq('client_id', clientId)
-          .order('created_at', { ascending: false })
-          .limit(20),
-        
-        supabase
-          .from('ordens_servico')
-          .select('id, os_number, total_amount, status, created_at')
-          .eq('company_id', currentCompany!.id)
-          .eq('client_id', clientId)
-          .order('created_at', { ascending: false })
-          .limit(20),
-        
-        supabase
-          .from('cash_movements')
-          .select('id, description, amount, type, created_at')
-          .eq('company_id', currentCompany!.id)
-          .or(`cliente_id.eq.${clientId},fornecedor_id.eq.${clientId}`)
-          .order('created_at', { ascending: false })
-          .limit(20)
+      const companyId = currentCompany!.id;
+
+      // Buscar todos os orçamentos
+      const { data: quotes } = await supabase
+        .from('quotes')
+        .select(`
+          id, 
+          quote_number, 
+          final_amount, 
+          total_amount, 
+          status, 
+          created_at,
+          quote_items (
+            id,
+            description,
+            width,
+            height,
+            quantity,
+            unit_price,
+            total_price
+          )
+        `)
+        .eq('company_id', companyId)
+        .eq('client_id', clientId)
+        .order('created_at', { ascending: false });
+
+      if (!quotes) return { negotiation: [], approved: [] };
+
+      const quoteIds = quotes.map(q => q.id);
+
+      // Buscar financeiros vinculados a esses orçamentos
+      const [depositsResult, receivablesResult] = await Promise.all([
+        quoteIds.length
+          ? supabase
+              .from('quote_deposits')
+              .select('id, quote_id, amount, status, created_at')
+              .in('quote_id', quoteIds)
+          : Promise.resolve({ data: [] }),
+        quoteIds.length
+          ? supabase
+              .from('accounts_receivable')
+              .select('id, quote_id, total_amount, paid_amount, status, created_at')
+              .in('quote_id', quoteIds)
+          : Promise.resolve({ data: [] }),
       ]);
 
-      const timeline: TimelineEvent[] = [];
+      const deposits = depositsResult.data || [];
+      const receivables = receivablesResult.data || [];
 
-      // Vendas
-      (salesResult.data || []).forEach((sale: any) => {
-        timeline.push({
-          id: `sale-${sale.id}`,
-          type: 'sale',
-          title: `Venda #${sale.sale_number}`,
-          description: sale.payment_status === 'paid' ? 'Paga' : 'Pendente',
-          amount: sale.total_amount,
-          status: sale.payment_status,
-          date: new Date(sale.created_at),
-          icon: ShoppingCart,
-          color: 'bg-green-500'
-        });
-      });
+      // Agrupar
+      const grouped: QuoteHistoryItem[] = quotes.map(q => ({
+        id: q.id,
+        quote_number: q.quote_number,
+        final_amount: Number(q.final_amount || q.total_amount || 0),
+        total_amount: Number(q.total_amount || 0),
+        status: q.status,
+        created_at: q.created_at,
+        items: (q as any).quote_items || [],
+        deposits: deposits.filter(d => d.quote_id === q.id),
+        receivables: receivables.filter(r => r.quote_id === q.id),
+      }));
 
-      // Orçamentos
-      (quotesResult.data || []).forEach((quote: any) => {
-        timeline.push({
-          id: `quote-${quote.id}`,
-          type: 'quote',
-          title: `Orçamento #${quote.quote_number}`,
-          description: getQuoteStatusLabel(quote.status),
-          amount: quote.final_amount,
-          status: quote.status,
-          date: new Date(quote.created_at),
-          icon: FileText,
-          color: 'bg-blue-500'
-        });
-      });
-
-      // OS
-      (osResult.data || []).forEach((os: any) => {
-        timeline.push({
-          id: `os-${os.id}`,
-          type: 'os',
-          title: `OS #${os.os_number.toString().padStart(4, '0')}`,
-          description: getOSStatusLabel(os.status),
-          amount: os.total_amount,
-          status: os.status,
-          date: new Date(os.created_at),
-          icon: ClipboardList,
-          color: 'bg-purple-500'
-        });
-      });
-
-      // Pagamentos / Movimentações
-      (paymentsResult.data || []).forEach((payment: any) => {
-        timeline.push({
-          id: `payment-${payment.id}`,
-          type: 'payment',
-          title: payment.type === 'income' ? 'Entrada / Recebimento' : 'Saída / Pagamento',
-          description: payment.description || 'Movimentação manual',
-          amount: payment.amount,
-          status: 'paid',
-          date: new Date(payment.created_at),
-          icon: DollarSign,
-          color: payment.type === 'income' ? 'bg-emerald-500' : 'bg-red-500'
-        });
-      });
-
-      // Ordenar por data
-      return timeline.sort((a, b) => b.date.getTime() - a.date.getTime());
-    }
+      return {
+        negotiation: grouped.filter(q => 
+          ['draft', 'pending', 'sent'].includes(String(q.status).toLowerCase())
+        ),
+        approved: grouped.filter(q => 
+          !['draft', 'pending', 'sent'].includes(String(q.status).toLowerCase())
+        ),
+      };
+    },
   });
 
   const formatCurrency = (value: number) => {
@@ -147,64 +128,170 @@ export function ClientTimeline({ clientId, clientName }: ClientTimelineProps) {
     return (
       <div className="space-y-4">
         {[1, 2, 3].map(i => (
-          <div key={i} className="flex gap-3">
-            <Skeleton className="h-10 w-10 rounded-full" />
-            <div className="flex-1 space-y-2">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-3 w-48" />
-            </div>
-          </div>
+          <Skeleton key={i} className="h-20 w-full rounded-lg" />
         ))}
       </div>
     );
   }
 
-  if (events.length === 0) {
+  const renderQuoteAccordion = (quotes: QuoteHistoryItem[]) => {
+    if (quotes.length === 0) {
+      return (
+        <div className="text-center py-8 text-muted-foreground border rounded-lg border-dashed">
+          <Clock className="h-8 w-8 mx-auto mb-2 opacity-20" />
+          <p className="text-sm">Nenhum orçamento nesta categoria</p>
+        </div>
+      );
+    }
+
     return (
-      <div className="text-center py-8 text-muted-foreground">
-        <Clock className="h-12 w-12 mx-auto mb-3 opacity-50" />
-        <p>Nenhuma interação registrada</p>
-        <p className="text-sm">Vendas, orçamentos e OS aparecerão aqui</p>
-      </div>
+      <Accordion type="single" collapsible className="w-full space-y-2">
+        {quotes.map((quote) => {
+          // Cálculo do saldo restante baseado em depósitos e contas a receber
+          const totalPago = [
+            ...quote.deposits.filter(d => ['received', 'paid', 'confirmado', 'pago'].includes(String(d.status).toLowerCase())),
+            ...quote.receivables
+          ].reduce((sum, item) => sum + (item.paid_amount || item.amount || 0), 0);
+
+          const saldoRestante = Math.max(0, quote.final_amount - totalPago);
+
+          return (
+            <AccordionItem key={quote.id} value={quote.id} className="border rounded-lg px-4 bg-card">
+              <AccordionTrigger className="hover:no-underline py-4">
+                <div className="flex items-center gap-4 w-full text-left">
+                  <div className="bg-primary/10 p-2 rounded-full hidden sm:block">
+                    <FileText className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold">Orçamento #{quote.quote_number}</span>
+                      <Badge variant={quote.status === 'approved' || quote.status === 'finalizado' ? 'default' : 'secondary'} className="text-[10px] uppercase h-5">
+                        {getQuoteStatusLabel(quote.status)}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(quote.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                    </p>
+                  </div>
+                  <div className="text-right mr-4">
+                    <p className="text-sm font-semibold">{formatCurrency(quote.final_amount)}</p>
+                    {saldoRestante > 0 && (
+                      <p className="text-[10px] text-red-500 font-medium">Saldo: {formatCurrency(saldoRestante)}</p>
+                    )}
+                  </div>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="pt-2 pb-4 space-y-4">
+                {/* Lista de Itens */}
+                <div className="space-y-2">
+                  <h4 className="text-xs font-semibold flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
+                    <Package className="h-3 w-3" />
+                    Produtos e Serviços
+                  </h4>
+                  <div className="bg-muted/30 rounded-md border text-xs divide-y">
+                    {quote.items.length > 0 ? (
+                      quote.items.map((item) => (
+                        <div key={item.id} className="p-2 flex justify-between items-center">
+                          <div className="flex-1 pr-4">
+                            <span className="font-medium">{item.description}</span>
+                            {(item.width || item.height) && (
+                              <span className="text-muted-foreground ml-2">
+                                ({item.width || 0} x {item.height || 0})
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-4 w-32 justify-end">
+                            <span className="text-muted-foreground">x{item.quantity}</span>
+                            <span className="font-medium">{formatCurrency(item.total_price)}</span>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-3 text-center text-muted-foreground italic">
+                        Nenhum item registrado
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Financeiro */}
+                <div className="space-y-2">
+                  <h4 className="text-xs font-semibold flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
+                    <Receipt className="h-3 w-3" />
+                    Histórico Financeiro
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="bg-muted/30 p-3 rounded-md border space-y-2">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">Valor Total:</span>
+                        <span className="font-bold">{formatCurrency(quote.final_amount)}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">Valor Pago:</span>
+                        <span className="font-bold text-green-600">{formatCurrency(totalPago)}</span>
+                      </div>
+                      <div className="border-t pt-2 flex justify-between text-xs">
+                        <span className="font-medium">Saldo Restante:</span>
+                        <span className={`font-bold ${saldoRestante > 0 ? 'text-red-500' : 'text-green-600'}`}>
+                          {formatCurrency(saldoRestante)}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-muted/30 p-3 rounded-md border space-y-2">
+                      <h5 className="text-[10px] font-bold text-muted-foreground uppercase">Movimentações</h5>
+                      {quote.deposits.length === 0 && quote.receivables.length === 0 ? (
+                        <p className="text-[10px] text-muted-foreground italic">Nenhum pagamento registrado</p>
+                      ) : (
+                        <div className="space-y-1">
+                          {quote.deposits.map((d) => (
+                            <div key={d.id} className="flex justify-between text-[10px]">
+                              <span>Sinal/Entrada ({format(new Date(d.created_at), 'dd/MM')})</span>
+                              <span className="font-medium text-green-600">+{formatCurrency(d.amount)}</span>
+                            </div>
+                          ))}
+                          {quote.receivables.map((r) => (
+                            <div key={r.id} className="flex justify-between text-[10px]">
+                              <span>Parcela/Recebível ({format(new Date(r.created_at), 'dd/MM')})</span>
+                              <span className="font-medium text-green-600">+{formatCurrency(r.paid_amount || 0)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          );
+        })}
+      </Accordion>
     );
-  }
+  };
 
   return (
-    <ScrollArea className="h-[400px] pr-4">
-      <div className="relative">
-        {/* Linha vertical */}
-        <div className="absolute left-5 top-0 bottom-0 w-0.5 bg-border" />
-
-        <div className="space-y-4">
-          {events.map((event) => (
-            <div key={event.id} className="flex gap-4 relative">
-              {/* Ícone */}
-              <div className={`w-10 h-10 rounded-full ${event.color} flex items-center justify-center flex-shrink-0 z-10`}>
-                <event.icon className="h-5 w-5 text-white" />
-              </div>
-
-              {/* Conteúdo */}
-              <div className="flex-1 bg-muted/50 rounded-lg p-3 border">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="font-medium text-sm">{event.title}</p>
-                    <p className="text-xs text-muted-foreground">{event.description}</p>
-                  </div>
-                  {event.amount && (
-                    <span className="font-semibold text-sm whitespace-nowrap">
-                      {formatCurrency(event.amount)}
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  {format(event.date, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                  <span className="mx-1">•</span>
-                  {formatDistanceToNow(event.date, { addSuffix: true, locale: ptBR })}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
+    <ScrollArea className="h-[500px] pr-4">
+      <div className="space-y-6">
+        <Tabs defaultValue="negotiation" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="negotiation" className="gap-2">
+              <Clock className="h-4 w-4" />
+              Em Negociação ({history?.negotiation.length || 0})
+            </TabsTrigger>
+            <TabsTrigger value="approved" className="gap-2">
+              <ShoppingCart className="h-4 w-4" />
+              Aprovados/Concluídos ({history?.approved.length || 0})
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="negotiation">
+            {renderQuoteAccordion(history?.negotiation || [])}
+          </TabsContent>
+          
+          <TabsContent value="approved">
+            {renderQuoteAccordion(history?.approved || [])}
+          </TabsContent>
+        </Tabs>
       </div>
     </ScrollArea>
   );
@@ -216,18 +303,10 @@ function getQuoteStatusLabel(status: string): string {
     pending: 'Pendente',
     sent: 'Enviado',
     approved: 'Aprovado',
-    rejected: 'Rejeitado'
+    rejected: 'Rejeitado',
+    finalizado: 'Finalizado',
+    completed: 'Concluído',
+    partial: 'Parcial',
   };
-  return labels[status] || status;
-}
-
-function getOSStatusLabel(status: string): string {
-  const labels: Record<string, string> = {
-    pending: 'Pendente',
-    in_progress: 'Em Andamento',
-    completed: 'Concluída',
-    delivered: 'Entregue',
-    cancelled: 'Cancelada'
-  };
-  return labels[status] || status;
+  return labels[status.toLowerCase()] || status;
 }

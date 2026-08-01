@@ -86,32 +86,32 @@ export const ClientKPIs = memo(function ClientKPIs({ clientId, clientName }: Cli
         0
       );
 
-      // Total efetivamente PAGO:
-      // 1) baixas de contas a receber
+      // Total efetivamente PAGO (lógica unificada com o histórico do orçamento):
       const pagoReceivables = receivables.reduce(
         (sum: number, r: any) => sum + Number(r.paid_amount || 0),
         0
       );
-      // 2) sinais/entradas de orçamentos que ainda não viraram conta a receber
+      
       const quotesComReceivable = new Set(
         receivables.map((r: any) => r.quote_id).filter(Boolean)
       );
+
       const pagoDepositos = deposits
         .filter((d: any) => !quotesComReceivable.has(d.quote_id))
         .reduce((sum: number, d: any) => sum + Number(d.amount || 0), 0);
-      // 3) entradas de caixa avulsas (sem vínculo com recebível, evita duplicidade)
+
       const pagoAvulso = movements
         .filter((m: any) => !m.receivable_id)
         .reduce((sum: number, m: any) => sum + Number(m.amount || 0), 0);
 
-      const totalPago = pagoReceivables + pagoDepositos + pagoAvulso;
+      const totalPago = Number((pagoReceivables + pagoDepositos + pagoAvulso).toFixed(2));
 
       const totalCompras = closedQuotes.length;
       const totalOrcamentos = quotes.length;
       const ticketMedio = totalCompras > 0 ? totalContratado / totalCompras : 0;
 
-      // Saldo devedor = contratado - pago (nunca negativo)
-      const saldoDevedor = Math.max(0, totalContratado - totalPago);
+      // Saldo devedor = contratado - pago (nunca negativo, arredondado para evitar centavos de discrepância)
+      const saldoDevedor = Math.max(0, Number((totalContratado - totalPago).toFixed(2)));
       const inadimplente = receivables.some((r: any) => r.status === 'overdue');
 
       const quoteDate = (q: any) => new Date(q.updated_at || q.created_at).getTime();
