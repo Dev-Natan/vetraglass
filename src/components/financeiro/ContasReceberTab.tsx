@@ -100,6 +100,7 @@ export function ContasReceberTab() {
   
   const [receiveDialogOpen, setReceiveDialogOpen] = useState(false);
   const [selectedReceivable, setSelectedReceivable] = useState<Receivable | null>(null);
+  const [detailsReceivable, setDetailsReceivable] = useState<Receivable | null>(null);
   const [receivePaymentMethod, setReceivePaymentMethod] = useState<'dinheiro' | 'pix' | 'transferencia' | 'cartao'>('dinheiro');
 
   // Fetch receivables
@@ -112,7 +113,9 @@ export function ContasReceberTab() {
         .from('accounts_receivable')
         .select(`
           *,
+          client:clients(name, phone, email, document),
           sale:sales(payment_status),
+
           quote:quotes(status),
           ordem_servico:ordens_servico(status)
         `)
