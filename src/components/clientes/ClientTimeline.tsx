@@ -46,7 +46,7 @@ export function ClientTimeline({ clientId }: ClientTimelineProps) {
           .order('created_at', { ascending: false })
           .limit(20),
         
-        (supabase as any)
+        supabase
           .from('quotes')
           .select('id, quote_number, final_amount, status, created_at')
           .eq('company_id', currentCompany!.id)
@@ -54,7 +54,7 @@ export function ClientTimeline({ clientId }: ClientTimelineProps) {
           .order('created_at', { ascending: false })
           .limit(20),
         
-        (supabase as any)
+        supabase
           .from('ordens_servico')
           .select('id, os_number, total_amount, status, created_at')
           .eq('company_id', currentCompany!.id)
@@ -63,12 +63,11 @@ export function ClientTimeline({ clientId }: ClientTimelineProps) {
           .limit(20),
         
         supabase
-          .from('accounts_receivable')
-          .select('id, description, total_amount, paid_amount, paid_date, status')
+          .from('cash_movements')
+          .select('id, description, amount, type, created_at')
           .eq('company_id', currentCompany!.id)
-          .eq('client_id', clientId)
-          .eq('status', 'paid')
-          .order('paid_date', { ascending: false })
+          .or(`cliente_id.eq.${clientId},fornecedor_id.eq.${clientId}`)
+          .order('created_at', { ascending: false })
           .limit(20)
       ]);
 
@@ -119,21 +118,19 @@ export function ClientTimeline({ clientId }: ClientTimelineProps) {
         });
       });
 
-      // Pagamentos
+      // Pagamentos / Movimentações
       (paymentsResult.data || []).forEach((payment: any) => {
-        if (payment.paid_date) {
-          timeline.push({
-            id: `payment-${payment.id}`,
-            type: 'payment',
-            title: 'Pagamento Recebido',
-            description: payment.description,
-            amount: payment.paid_amount || payment.total_amount,
-            status: 'paid',
-            date: new Date(payment.paid_date),
-            icon: DollarSign,
-            color: 'bg-emerald-500'
-          });
-        }
+        timeline.push({
+          id: `payment-${payment.id}`,
+          type: 'payment',
+          title: payment.type === 'income' ? 'Entrada / Recebimento' : 'Saída / Pagamento',
+          description: payment.description || 'Movimentação manual',
+          amount: payment.amount,
+          status: 'paid',
+          date: new Date(payment.created_at),
+          icon: DollarSign,
+          color: payment.type === 'income' ? 'bg-emerald-500' : 'bg-red-500'
+        });
       });
 
       // Ordenar por data

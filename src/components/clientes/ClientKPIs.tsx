@@ -34,7 +34,7 @@ export const ClientKPIs = memo(function ClientKPIs({ clientId }: ClientKPIsProps
         .in('status', ['pending', 'overdue']);
       
       // OS ativas - using any to avoid TS depth issues
-      const osResult = await (supabase as any)
+      const osResult = await supabase
         .from('ordens_servico')
         .select('id, status')
         .eq('company_id', currentCompany!.id)
