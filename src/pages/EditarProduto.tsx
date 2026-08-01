@@ -3,7 +3,7 @@ import { resolveImageUrl } from '@/utils/imageUrl';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { ArrowLeft, Upload, MoreHorizontal, Plus, ChevronRight, Home, Package, CheckCircle2, Circle, CircleDot } from 'lucide-react';
+import { ArrowLeft, Upload, MoreHorizontal, Plus, ChevronRight, Home, Package, CheckCircle2, Circle, CircleDot, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { processFileWithWhiteBackground } from '@/utils/imageBackgroundProcessor';
@@ -15,6 +15,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FormulaEditor } from '@/components/produtos/FormulaEditor';
 import { GlassFormulaEditor } from '@/components/produtos/GlassFormulaEditor';
 import { FiscalFieldsCard, FiscalFieldsData } from '@/components/produtos/FiscalFieldsCard';
+import { CopyCompositionDialog } from '@/components/produtos/CopyCompositionDialog';
+
 import { validateFormula } from '@/utils/safeFormulaEvaluator';
 import {
   Select,
@@ -116,6 +118,8 @@ export default function EditarProduto() {
   const { currentCompany, isSaasAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState('glass');
   const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
+  const [isCopyCompositionOpen, setIsCopyCompositionOpen] = useState(false);
+
   const [isEditItemDialogOpen, setIsEditItemDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ProductTemplateItem | null>(null);
   const [selectedItemToAdd, setSelectedItemToAdd] = useState('');
@@ -871,15 +875,27 @@ export default function EditarProduto() {
                       : `${getItemsByType(tab.value).length} ${tab.label.toLowerCase()} configurados`
                     }
                   </p>
-                  <Button 
-                    size="sm" 
-                    className="gap-2"
-                    onClick={() => setIsAddItemDialogOpen(true)}
-                  >
-                    <Plus className="w-4 h-4" />
-                    Adicionar item
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                      onClick={() => setIsCopyCompositionOpen(true)}
+                    >
+                      <Layers className="w-4 h-4" />
+                      Copiar Composição de outro Produto
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="gap-2"
+                      onClick={() => setIsAddItemDialogOpen(true)}
+                    >
+                      <Plus className="w-4 h-4" />
+                      Adicionar item
+                    </Button>
+                  </div>
                 </div>
+
 
               {/* Items grid */}
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
@@ -1045,7 +1061,18 @@ export default function EditarProduto() {
           </div>
         </div>
 
+        {/* Copiar composição de outro produto */}
+        {id && (
+          <CopyCompositionDialog
+            open={isCopyCompositionOpen}
+            onOpenChange={setIsCopyCompositionOpen}
+            productTemplateId={id}
+            companyId={isSaasAdmin ? null : (currentCompany?.id ?? null)}
+          />
+        )}
+
         {/* Add Item Dialog */}
+
         <Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
