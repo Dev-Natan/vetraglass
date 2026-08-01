@@ -87,6 +87,7 @@ export function MovimentacaoCaixaDialog({
   const [clienteId, setClienteId] = useState<string>('none');
   const [fornecedorId, setFornecedorId] = useState<string>('none');
   const [funcionarioId, setFuncionarioId] = useState<string>('none');
+  const [quoteId, setQuoteId] = useState<string>('none');
 
   const categories = type === 'entrada' ? entradaCategories : saidaCategories;
 
@@ -134,6 +135,23 @@ export function MovimentacaoCaixaDialog({
     enabled: !!currentCompany?.id && open,
   });
 
+  // Buscar orçamentos ativos/aprovados do cliente selecionado
+  const { data: orçamentos = [] } = useQuery({
+    queryKey: ['movement-quote-options', clienteId],
+    queryFn: async () => {
+      if (clienteId === 'none') return [];
+      const { data, error } = await supabase
+        .from('quotes')
+        .select('id, quote_number, status')
+        .eq('client_id', clienteId)
+        .in('status', ['pending', 'sent', 'approved', 'partial', 'completed'])
+        .order('quote_number', { ascending: false });
+      if (error) throw error;
+      return (data || []) as { id: string; quote_number: number; status: string }[];
+    },
+    enabled: clienteId !== 'none' && open,
+  });
+
   // Buscar saldo do caixa da empresa
   const { data: companyCash } = useQuery({
     queryKey: ['company-cash', currentCompany?.id],
@@ -164,6 +182,7 @@ export function MovimentacaoCaixaDialog({
     setClienteId('none');
     setFornecedorId('none');
     setFuncionarioId('none');
+    setQuoteId('none');
   };
 
   const clienteSelected = clientes.find((c) => c.id === clienteId);
@@ -194,6 +213,7 @@ export function MovimentacaoCaixaDialog({
         cliente_id: clienteId !== 'none' ? clienteId : null,
         fornecedor_id: fornecedorId !== 'none' ? fornecedorId : null,
         funcionario_id: funcionarioId !== 'none' ? funcionarioId : null,
+        quote_id: quoteId !== 'none' ? quoteId : null,
       };
 
       // Manter compat com colunas legadas party_* usando o primeiro vínculo (prioridade fornecedor > cliente > funcionário)
@@ -542,6 +562,25 @@ export function MovimentacaoCaixaDialog({
                 </Select>
               </div>
             </div>
+
+            {clienteId !== 'none' && (
+              <div className="space-y-1.5 pt-1">
+                <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Vincular a Orçamento</Label>
+                <Select value={quoteId} onValueChange={setQuoteId}>
+                  <SelectTrigger className="rounded-lg bg-background w-full">
+                    <SelectValue placeholder="Nenhum" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {orçamentos.map((q) => (
+                      <SelectItem key={q.id} value={q.id}>
+                        Orçamento #{q.quote_number} ({q.status})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
 
