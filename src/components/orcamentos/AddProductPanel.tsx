@@ -410,10 +410,13 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
       image_url: selectedProduct?.image_url || null,
       width,
       height,
+      width_b: selectedProduct?.has_multiple_sides ? widthB : undefined,
+      height_b: selectedProduct?.has_multiple_sides ? heightB : undefined,
+      has_multiple_sides: !!selectedProduct?.has_multiple_sides,
       quantity,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedProductId, cuttingPlanProductId, selectedProduct?.name, selectedProduct?.image_url, width, height, quantity]);
+  }, [selectedProductId, cuttingPlanProductId, selectedProduct?.name, selectedProduct?.image_url, selectedProduct?.has_multiple_sides, width, height, widthB, heightB, quantity]);
 
   // Fetch glass prices for selected product
   const { data: productGlassPrices } = useQuery({
