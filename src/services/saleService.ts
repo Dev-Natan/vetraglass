@@ -64,7 +64,34 @@ export const saleService = {
     if (financialError) throw financialError;
     if (!financialData?.length) return [];
 
-    const quoteIds = financialData.map(q => q.quote_id);
+    const candidateIds = financialData.map(q => q.quote_id);
+
+    // Regra de negócio: só podem ser faturados orçamentos APROVADOS ou que
+    // possuam Ordem de Serviço vinculada já CONCLUÍDA. Qualquer outro status
+    // (pendente/em negociação/enviado/cancelado/rascunho) é ocultado.
+    const { data: completedOs, error: osError } = await supabase
+      .from('ordens_servico')
+      .select('quote_id')
+      .eq('company_id', companyId)
+      .eq('status', 'completed')
+      .in('quote_id', candidateIds);
+
+    if (osError) throw osError;
+    const quotesWithCompletedOs = new Set(
+      (completedOs || []).map(o => o.quote_id).filter(Boolean) as string[]
+    );
+
+    const APPROVED_STATUSES = ['approved', 'aprovado'];
+    const quoteIds = financialData
+      .filter(
+        f =>
+          APPROVED_STATUSES.includes(String(f.status || '').toLowerCase()) ||
+          quotesWithCompletedOs.has(f.quote_id as string)
+      )
+      .map(f => f.quote_id);
+
+    if (!quoteIds.length) return [];
+
     const { data: quotesWithItems, error: itemsError } = await supabase
       .from('quotes')
       .select(`
@@ -74,6 +101,7 @@ export const saleService = {
       .in('id', quoteIds);
 
     if (itemsError) throw itemsError;
+
 
     return (quotesWithItems || []).map(quote => {
       const financial = financialData.find(f => f.quote_id === quote.id);
