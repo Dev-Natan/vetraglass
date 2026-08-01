@@ -265,7 +265,7 @@ export function Client360Dialog({ open, onOpenChange, client, onSave, defaultTyp
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <User className="h-5 w-5" />
-            <span className="uppercase">{isEditing ? client.name : 'Novo Cliente'}</span>
+            <span className="uppercase">{isEditing ? client.name : (defaultType === 'fornecedor' ? 'Novo Fornecedor' : 'Novo Cliente')}</span>
           </DialogTitle>
           <p id="client-dialog-description" className="text-sm text-muted-foreground">
             {isEditing ? 'Visão completa do cliente' : 'Preencha os dados para cadastrar um novo cliente'}
@@ -340,7 +340,7 @@ export function Client360Dialog({ open, onOpenChange, client, onSave, defaultTyp
               </Button>
               <Button type="submit" disabled={isLoading || !form.name.trim()}>
                 {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Cadastrar
+                {defaultType === 'fornecedor' ? 'Cadastrar Fornecedor' : 'Cadastrar Cliente'}
               </Button>
             </div>
           </form>
