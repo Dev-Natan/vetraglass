@@ -48,6 +48,53 @@ export function InvestimentosTab() {
     enabled: !!companyId,
   });
 
+  // Contas bancárias ativas
+  const banksQuery = useQuery({
+    queryKey: ['bank-accounts-balance', companyId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('bank_accounts')
+        .select('id, current_balance, active')
+        .eq('company_id', companyId!)
+        .eq('active', true);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!companyId,
+  });
+
+  // Caixa operacional aberto (gaveta): abertura + entradas - saídas
+  const drawerQuery = useQuery({
+    queryKey: ['operational-drawer-balance', companyId],
+    queryFn: async () => {
+      const { data: reg, error: regErr } = await supabase
+        .from('cash_registers')
+        .select('id, opening_amount')
+        .eq('company_id', companyId!)
+        .eq('status', 'open')
+        .order('opened_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (regErr) throw regErr;
+      if (!reg) return { registerId: null as string | null, balance: 0 };
+
+      const { data: movs, error: movErr } = await supabase
+        .from('cash_movements')
+        .select('type, amount')
+        .eq('cash_register_id', reg.id);
+      if (movErr) throw movErr;
+
+      const net = (movs || []).reduce((sum, m) => {
+        const amount = Number(m.amount) || 0;
+        return m.type === 'entrada' ? sum + amount : sum - amount;
+      }, Number(reg.opening_amount) || 0);
+
+      return { registerId: reg.id, balance: net };
+    },
+    enabled: !!companyId,
+  });
+
+
   const allocQuery = useQuery({
     queryKey: ['investment-allocations', companyId],
     queryFn: async () => {
