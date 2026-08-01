@@ -871,15 +871,27 @@ export default function EditarProduto() {
                       : `${getItemsByType(tab.value).length} ${tab.label.toLowerCase()} configurados`
                     }
                   </p>
-                  <Button 
-                    size="sm" 
-                    className="gap-2"
-                    onClick={() => setIsAddItemDialogOpen(true)}
-                  >
-                    <Plus className="w-4 h-4" />
-                    Adicionar item
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                      onClick={() => setIsCopyCompositionOpen(true)}
+                    >
+                      <Layers className="w-4 h-4" />
+                      Copiar Composição de outro Produto
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="gap-2"
+                      onClick={() => setIsAddItemDialogOpen(true)}
+                    >
+                      <Plus className="w-4 h-4" />
+                      Adicionar item
+                    </Button>
+                  </div>
                 </div>
+
 
               {/* Items grid */}
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
