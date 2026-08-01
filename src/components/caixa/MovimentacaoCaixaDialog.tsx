@@ -288,7 +288,7 @@ export function MovimentacaoCaixaDialog({
       if (error) throw error;
       return { success: true, data };
     },
-    onSuccess: (result) => {
+    onSuccess: async (result) => {
       const hasReinforcement = result && 'reinforcement' in result && result.reinforcement?.reinforcement_needed;
       
       if (hasReinforcement && result.reinforcement) {
@@ -299,14 +299,29 @@ export function MovimentacaoCaixaDialog({
       } else {
         toast.success(`${type === 'entrada' ? 'Entrada' : 'Saída'} registrada com sucesso!`);
       }
-      
-      queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
-      queryClient.invalidateQueries({ queryKey: ['cash-register-open'] });
-      queryClient.invalidateQueries({ queryKey: ['company-cash'] });
-      queryClient.invalidateQueries({ queryKey: ['pending-advances'] });
+
       resetForm();
       onOpenChange(false);
+
+      // Refetch imediato (refetchType: 'all' cobre também queries que ficaram
+      // inativas quando o modal desmontou) para que o Saldo Total Atualizado
+      // reflita a movimentação sem precisar recarregar a página.
+      const keys = [
+        ['cash-movements'],
+        ['cash-register-open'],
+        ['company-cash'],
+        ['pending-advances'],
+        ['sales-today'],
+      ];
+      await Promise.all(
+        keys.map(key =>
+          queryClient.invalidateQueries({ queryKey: key, refetchType: 'all' })
+        )
+      );
+
+      onSuccess?.();
     },
+
     onError: (error: Error) => {
       toast.error(error.message);
     },
