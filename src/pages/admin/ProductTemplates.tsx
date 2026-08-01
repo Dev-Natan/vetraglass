@@ -271,6 +271,7 @@ export default function ProductTemplates() {
   
   const [editingTemplate, setEditingTemplate] = useState<ProductTemplate | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<ProductTemplate | null>(null);
+  const [isCopyCompositionOpen, setIsCopyCompositionOpen] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState<string>("all");
