@@ -90,6 +90,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { VariablesTab } from "@/components/admin/product-templates/VariablesTab";
+import { CopyCompositionDialog } from "@/components/produtos/CopyCompositionDialog";
 
 
 
