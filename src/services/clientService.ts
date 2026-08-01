@@ -5,7 +5,7 @@ export const clientService = {
   async fetchClients(companyId: string): Promise<Client[]> {
     const { data, error } = await supabase
       .from('clients')
-      .select('id, company_id, name, document, document_type, email, phone, address, city, state, zip_code, notes, is_active, created_at, latitude, longitude')
+      .select('id, company_id, name, client_type, document, document_type, email, phone, address, city, state, zip_code, notes, is_active, created_at, latitude, longitude')
       .eq('company_id', companyId)
       .order('name', { ascending: true });
 

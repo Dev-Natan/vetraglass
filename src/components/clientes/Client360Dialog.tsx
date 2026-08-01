@@ -16,6 +16,7 @@ import { ClientQuickActions } from './ClientQuickActions';
 interface Client {
   id?: string;
   name: string;
+  client_type: 'cliente' | 'fornecedor';
   document: string;
   document_type: 'CPF' | 'CNPJ' | null;
   email: string;
@@ -45,6 +46,7 @@ const BRAZILIAN_STATES = [
 
 const initialForm: Client = {
   name: '',
+  client_type: 'cliente',
   document: '',
   document_type: null,
   email: '',
@@ -129,8 +131,24 @@ export function Client360Dialog({ open, onOpenChange, client, onSave, isLoading 
 
   const formFields = (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div className="md:col-span-2">
-        <Label htmlFor="name">Nome *</Label>
+      <div className="md:col-span-1">
+        <Label htmlFor="client_type">Tipo de Cadastro *</Label>
+        <Select
+          value={form.client_type}
+          onValueChange={value => setForm(prev => ({ ...prev, client_type: value as 'cliente' | 'fornecedor' }))}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Selecione o tipo" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="cliente">Cliente</SelectItem>
+            <SelectItem value="fornecedor">Fornecedor</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="md:col-span-1">
+        <Label htmlFor="name">Nome / Razão Social *</Label>
         <Input
           id="name"
           value={form.name}
