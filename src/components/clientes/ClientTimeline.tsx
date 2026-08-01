@@ -147,13 +147,30 @@ export function ClientTimeline({ clientId, clientName }: ClientTimelineProps) {
     return (
       <Accordion type="single" collapsible className="w-full space-y-2">
         {quotes.map((quote) => {
-          // Cálculo do saldo restante baseado em depósitos e contas a receber
-          const totalPago = [
-            ...quote.deposits.filter(d => ['received', 'paid', 'confirmado', 'pago'].includes(String(d.status).toLowerCase())),
-            ...quote.receivables
-          ].reduce((sum, item) => sum + (item.paid_amount || item.amount || 0), 0);
+          // Filtramos depósitos confirmados
+          const confirmedDeposits = quote.deposits.filter(d => 
+            ['received', 'paid', 'confirmado', 'pago'].includes(String(d.status).toLowerCase())
+          );
 
-          const saldoRestante = Math.max(0, quote.final_amount - totalPago);
+          // Filtramos recebíveis. 
+          // Regra: Se um orcamento tem depósitos confirmados E contas a receber, 
+          // precisamos garantir que não estamos contando o mesmo valor duas vezes.
+          // Geralmente, o sinal (deposit) é convertido em parte da conta a receber paga no momento da aprovação.
+          
+          const totalPagoDepositos = confirmedDeposits.reduce((sum, d) => sum + Number(d.amount || 0), 0);
+          
+          // Somamos apenas a parte paga das contas a receber que NÃO seja o depósito inicial 
+          // (ou simplesmente confiamos que o paid_amount do receivable já reflete o total recebido para aquele título)
+          const totalPagoReceivables = quote.receivables.reduce((sum, r) => sum + Number(r.paid_amount || 0), 0);
+
+          // Cálculo do Valor Pago Real:
+          // Se houver contas a receber, usamos o paid_amount delas (que deve centralizar o sinal + parcelas).
+          // Se não houver, usamos os depósitos.
+          const totalPago = quote.receivables.length > 0 
+            ? totalPagoReceivables 
+            : totalPagoDepositos;
+
+          const saldoRestante = Math.max(0, Number((quote.final_amount - totalPago).toFixed(2)));
 
           return (
             <AccordionItem key={quote.id} value={quote.id} className="border rounded-lg px-4 bg-card">
