@@ -16,6 +16,7 @@ import { ptBR } from 'date-fns/locale';
 
 interface ClientTimelineProps {
   clientId: string;
+  clientName?: string | null;
 }
 
 interface TimelineEvent {
@@ -30,13 +31,19 @@ interface TimelineEvent {
   color: string;
 }
 
-export function ClientTimeline({ clientId }: ClientTimelineProps) {
+export function ClientTimeline({ clientId, clientName }: ClientTimelineProps) {
   const { currentCompany } = useAuth();
 
   const { data: events = [], isLoading } = useQuery({
-    queryKey: ['client-timeline', clientId, currentCompany?.id],
+    queryKey: ['client-timeline', clientId, clientName, currentCompany?.id],
     enabled: !!currentCompany?.id && !!clientId,
     queryFn: async () => {
+      // Registros antigos podem não ter client_id — casamos também pelo nome do cliente.
+      const escapedName = clientName ? clientName.replace(/[,()]/g, ' ').trim() : null;
+      const linkFilter = escapedName
+        ? `client_id.eq.${clientId},customer_name.eq.${escapedName}`
+        : `client_id.eq.${clientId}`;
+
       const [salesResult, quotesResult, osResult, paymentsResult] = await Promise.all([
         supabase
           .from('sales')
@@ -50,7 +57,7 @@ export function ClientTimeline({ clientId }: ClientTimelineProps) {
           .from('quotes')
           .select('id, quote_number, final_amount, status, created_at')
           .eq('company_id', currentCompany!.id)
-          .eq('client_id', clientId)
+          .or(linkFilter)
           .order('created_at', { ascending: false })
           .limit(20),
         
@@ -58,7 +65,7 @@ export function ClientTimeline({ clientId }: ClientTimelineProps) {
           .from('ordens_servico')
           .select('id, os_number, total_amount, status, created_at')
           .eq('company_id', currentCompany!.id)
-          .eq('client_id', clientId)
+          .or(linkFilter)
           .order('created_at', { ascending: false })
           .limit(20),
         
