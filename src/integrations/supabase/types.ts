@@ -5080,6 +5080,7 @@ export type Database = {
           amount: number
           cash_movement_id: string | null
           cash_register_id: string | null
+          client_id: string | null
           company_id: string
           created_at: string
           created_by: string | null
@@ -5100,6 +5101,7 @@ export type Database = {
           amount: number
           cash_movement_id?: string | null
           cash_register_id?: string | null
+          client_id?: string | null
           company_id: string
           created_at?: string
           created_by?: string | null
@@ -5120,6 +5122,7 @@ export type Database = {
           amount?: number
           cash_movement_id?: string | null
           cash_register_id?: string | null
+          client_id?: string | null
           company_id?: string
           created_at?: string
           created_by?: string | null
@@ -5142,6 +5145,13 @@ export type Database = {
             columns: ["cash_register_id"]
             isOneToOne: false
             referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_deposits_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
           {
