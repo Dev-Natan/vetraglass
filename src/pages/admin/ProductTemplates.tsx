@@ -90,6 +90,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { VariablesTab } from "@/components/admin/product-templates/VariablesTab";
+import { CopyCompositionDialog } from "@/components/produtos/CopyCompositionDialog";
 
 
 
@@ -270,6 +271,7 @@ export default function ProductTemplates() {
   
   const [editingTemplate, setEditingTemplate] = useState<ProductTemplate | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<ProductTemplate | null>(null);
+  const [isCopyCompositionOpen, setIsCopyCompositionOpen] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState<string>("all");
@@ -1891,7 +1893,21 @@ export default function ProductTemplates() {
             </form>
               </TabsContent>
               <TabsContent value="composicao" className="mt-4">
+            <div className="flex items-center justify-end mb-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => setIsCopyCompositionOpen(true)}
+                disabled={!(editingTemplate?.id || selectedTemplate?.id)}
+              >
+                <Layers className="w-4 h-4" />
+                Copiar Composição de outro Produto
+              </Button>
+            </div>
             <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,32%)_1fr] gap-4">
+
               {/* LEFT COLUMN — Add form */}
               <aside className="bg-muted/40 dark:bg-muted/20 border rounded-lg p-4 space-y-4 lg:sticky lg:top-0 self-start">
                 <div className="flex items-center gap-2 pb-2 border-b">
@@ -2301,6 +2317,16 @@ export default function ProductTemplates() {
             </Tabs>
           </DialogContent>
         </Dialog>
+
+        {(editingTemplate?.id || selectedTemplate?.id) && (
+          <CopyCompositionDialog
+            open={isCopyCompositionOpen}
+            onOpenChange={setIsCopyCompositionOpen}
+            productTemplateId={(editingTemplate?.id || selectedTemplate?.id) as string}
+            companyId={null}
+          />
+        )}
+
 
 
 
