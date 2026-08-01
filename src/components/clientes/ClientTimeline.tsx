@@ -114,6 +114,7 @@ export function ClientTimeline({ clientId, clientName }: ClientTimelineProps) {
         items: (q as any).quote_items || [],
         deposits: deposits.filter(d => d.quote_id === q.id),
         receivables: receivables.filter(r => r.quote_id === q.id),
+        expenses: expenses.filter(e => e.reference_id === q.id || (e.description && e.description.includes(`#${q.quote_number}`))),
       }));
 
       return {
@@ -264,29 +265,46 @@ export function ClientTimeline({ clientId, clientName }: ClientTimelineProps) {
                     
                     <div className="bg-muted/30 p-3 rounded-md border space-y-2">
                       <h5 className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">Detalhamento Financeiro</h5>
-                      {quote.deposits.length === 0 && quote.receivables.length === 0 ? (
+                      {quote.deposits.length === 0 && quote.receivables.length === 0 && quote.expenses.length === 0 ? (
                         <p className="text-[10px] text-muted-foreground italic">Nenhum registro financeiro</p>
                       ) : (
                         <div className="space-y-1">
-                          {/* Exibimos depósitos apenas se não houver recebíveis vinculados (para evitar duplicidade visual) */}
+                          {/* Entradas / Sinais */}
                           {quote.receivables.length === 0 && quote.deposits.map((d) => (
                             <div key={d.id} className="flex justify-between text-[10px]">
                               <span className="truncate pr-2">Sinal/Entrada ({format(new Date(d.created_at), 'dd/MM')})</span>
                               <span className="font-medium text-green-600">+{formatCurrency(d.amount)}</span>
                             </div>
                           ))}
+                          
+                          {/* Recebíveis (Entradas) */}
                           {quote.receivables.map((r) => (
-                            <div key={r.id} className="space-y-1 border-b border-muted last:border-0 pb-1 mb-1">
+                            <div key={r.id} className="space-y-0.5 border-b border-muted/50 last:border-0 pb-1 mb-1">
                               <div className="flex justify-between text-[10px] font-medium">
-                                <span>Título Financeiro</span>
+                                <span className="text-muted-foreground">Recebível #{r.id.slice(0,4)}</span>
                                 <span>{formatCurrency(r.total_amount)}</span>
                               </div>
                               <div className="flex justify-between text-[10px]">
                                 <span className="text-muted-foreground">Valor Recebido:</span>
-                                <span className="text-green-600">+{formatCurrency(r.paid_amount || 0)}</span>
+                                <span className="text-green-600 font-medium">+{formatCurrency(r.paid_amount || 0)}</span>
                               </div>
                             </div>
                           ))}
+
+                          {/* Saídas / Despesas (Custos) */}
+                          {quote.expenses.length > 0 && (
+                            <div className="pt-1 mt-1 border-t border-muted">
+                              <h6 className="text-[9px] font-bold text-muted-foreground uppercase mb-1">Custos / Saídas</h6>
+                              {quote.expenses.map((e) => (
+                                <div key={e.id} className="flex justify-between text-[10px]">
+                                  <span className="truncate pr-2 text-muted-foreground" title={e.description}>
+                                    {e.description || 'Despesa'}
+                                  </span>
+                                  <span className="font-medium text-red-500">-{formatCurrency(e.amount)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
