@@ -109,9 +109,10 @@ export function MovimentacaoCaixaDialog({
     queryKey: ['movement-fornecedores', currentCompany?.id],
     queryFn: async () => {
       const { data, error } = await (supabase as any)
-        .from('suppliers')
+        .from('clients')
         .select('id, name')
         .eq('company_id', currentCompany!.id)
+        .eq('client_type', 'fornecedor')
         .order('name', { ascending: true });
       if (error) throw error;
       return (data || []) as { id: string; name: string }[];
@@ -166,7 +167,7 @@ export function MovimentacaoCaixaDialog({
   };
 
   const clienteSelected = clientes.find((c) => c.id === clienteId);
-  const fornecedorSelected = fornecedores.find((f) => f.id === fornecedorId);
+  const fornecedorSelected = fornecedores.find((f: any) => f.id === fornecedorId);
   const funcionarioSelected = funcionarios.find((e) => e.id === funcionarioId);
 
   // Mutation com suporte a reforço automático
@@ -197,7 +198,7 @@ export function MovimentacaoCaixaDialog({
 
       // Manter compat com colunas legadas party_* usando o primeiro vínculo (prioridade fornecedor > cliente > funcionário)
       const legacyParty = fornecedorSelected
-        ? { party_type: 'fornecedor', party_id: fornecedorSelected.id, party_name: fornecedorSelected.name }
+        ? { party_type: 'fornecedor', party_id: fornecedorSelected.id, party_name: (fornecedorSelected as any).name }
         : clienteSelected
         ? { party_type: 'cliente', party_id: clienteSelected.id, party_name: clienteSelected.name }
         : funcionarioSelected

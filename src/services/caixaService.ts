@@ -48,7 +48,7 @@ export const caixaService = {
   async fetchCashMovements(cashRegisterId: string): Promise<any[]> {
     const { data, error } = await supabase
       .from('cash_movements')
-      .select('*, cliente:clients!cash_movements_cliente_id_fkey(name), fornecedor:suppliers!cash_movements_fornecedor_id_fkey(name), funcionario:employees!cash_movements_funcionario_id_fkey(name)')
+      .select('*, cliente:clients!cash_movements_cliente_id_fkey(name), fornecedor:clients!cash_movements_fornecedor_id_fkey(name), funcionario:employees!cash_movements_funcionario_id_fkey(name)')
       .eq('cash_register_id', cashRegisterId)
       .order('created_at', { ascending: false });
     if (error) throw error;
