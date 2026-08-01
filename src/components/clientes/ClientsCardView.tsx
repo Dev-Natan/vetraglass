@@ -1,5 +1,4 @@
 import { memo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -33,7 +32,6 @@ interface ClientsCardViewProps {
 }
 
 export const ClientsCardView = memo(function ClientsCardView({ clients, onView, onViewHistory, onDelete }: ClientsCardViewProps) {
-  const navigate = useNavigate();
   const handleWhatsApp = (client: Client, e: React.MouseEvent) => {
     e.stopPropagation();
     openWhatsapp(client.phone, `Olá ${client.name}, tudo bem?`);
