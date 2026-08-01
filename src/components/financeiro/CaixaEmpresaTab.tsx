@@ -398,8 +398,14 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
               {formatCurrency(companyCash.current_balance)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Valor que a empresa possui em caixa/banco
+              Valor que a empresa possui em caixa/banco (não inclui contas a receber)
             </p>
+            {openCashRegister && (
+              <p className="text-xs text-muted-foreground mt-1">
+                + {formatCurrency(Number(openCashRegister.opening_amount || 0))} na gaveta do caixa aberto
+              </p>
+            )}
+
           </CardContent>
         </Card>
 
