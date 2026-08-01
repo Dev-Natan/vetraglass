@@ -2318,6 +2318,16 @@ export default function ProductTemplates() {
           </DialogContent>
         </Dialog>
 
+        {(editingTemplate?.id || selectedTemplate?.id) && (
+          <CopyCompositionDialog
+            open={isCopyCompositionOpen}
+            onOpenChange={setIsCopyCompositionOpen}
+            productTemplateId={(editingTemplate?.id || selectedTemplate?.id) as string}
+            companyId={null}
+          />
+        )}
+
+
 
 
         {/* Edit Item Dialog */}
