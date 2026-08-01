@@ -48,6 +48,8 @@ export function CuttingPlanCalculator() {
   const [productImage, setProductImage] = useState<string | null>(null);
   const [width, setWidth] = useState<number>(0);
   const [height, setHeight] = useState<number>(0);
+  const [widthB, setWidthB] = useState<number>(0);
+  const [heightB, setHeightB] = useState<number>(0);
   const [quantity, setQuantity] = useState<number>(1);
   const [activeTab, setActiveTab] = useState<'cortes' | 'acessorios' | 'otimizacao'>('cortes');
   const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
@@ -63,6 +65,9 @@ export function CuttingPlanCalculator() {
     image_url: string | null;
     width: number;
     height: number;
+    width_b?: number;
+    height_b?: number;
+    has_multiple_sides?: boolean;
     quantity: number;
   }) => {
     const nextId = payload.product_template_id || '';
@@ -78,6 +83,8 @@ export function CuttingPlanCalculator() {
     setProductImage(payload.image_url || null);
     setWidth(Number(payload.width) || 0);
     setHeight(Number(payload.height) || 0);
+    setWidthB(Number(payload.width_b) || 0);
+    setHeightB(Number(payload.height_b) || 0);
     setQuantity(Number(payload.quantity) || 1);
   };
 
@@ -87,6 +94,8 @@ export function CuttingPlanCalculator() {
     setProductImage(null);
     setWidth(0);
     setHeight(0);
+    setWidthB(0);
+    setHeightB(0);
     setQuantity(1);
     setCompletedItems(new Set());
     setProfileOverrides({});
@@ -144,6 +153,7 @@ export function CuttingPlanCalculator() {
         quantity_formula: row.quantity_formula,
         pieces_formula: row.pieces_formula,
         pieces_quantity: row.pieces_quantity,
+        side: row.side,
         cut_angle: row.cut_angle,
         cut_angle_start: row.cut_angle_start,
         cut_angle_end: row.cut_angle_end,
@@ -224,6 +234,20 @@ export function CuttingPlanCalculator() {
   });
 
 
+  /**
+   * Contexto de fórmulas: quando o item é do Lado B, o avaliador troca
+   * 'Largura'/'Altura' pelos valores do Lado B (fallback no Lado A).
+   */
+  const formulaCtx = useMemo(
+    () => ({ width, height, widthB: widthB || width, heightB: heightB || height }),
+    [width, height, widthB, heightB],
+  );
+
+  const sideOf = (item: any): string | null => {
+    const raw = (item?.side ?? '').toString().trim().toUpperCase();
+    return raw === 'B' ? 'B' : raw === 'C' ? 'C' : null;
+  };
+
   const calculatedCuts = useMemo((): ProfileCutItem[] => {
     if (!productItems || productItems.length === 0) return [];
 
@@ -237,6 +261,7 @@ export function CuttingPlanCalculator() {
         const widthF = override.widthFormula !== undefined ? override.widthFormula : baseWidthF;
         const heightF = override.heightFormula !== undefined ? override.heightFormula : baseHeightF;
         const quantityF = item.quantity_formula || '1';
+        const itemSide = sideOf(item);
 
         let calculatedLength = 0;
         let position: 'Altura' | 'Largura' = 'Largura';
@@ -244,18 +269,18 @@ export function CuttingPlanCalculator() {
         let displayHeightFormula: string | null = heightF;
 
         if (heightF && widthF) {
-          calculatedLength = evaluateFormula(heightF || widthF, width, height);
+          calculatedLength = evaluateFormula(heightF || widthF, formulaCtx, undefined, itemSide);
           position = heightF ? 'Altura' : 'Largura';
           displayHeightFormula = heightF;
           displayWidthFormula = widthF;
         } else if (heightF) {
-          calculatedLength = evaluateFormula(heightF, width, height);
+          calculatedLength = evaluateFormula(heightF, formulaCtx, undefined, itemSide);
           position = 'Altura';
         } else if (widthF) {
-          calculatedLength = evaluateFormula(widthF, width, height);
+          calculatedLength = evaluateFormula(widthF, formulaCtx, undefined, itemSide);
           position = 'Largura';
         } else {
-          calculatedLength = evaluateFormula(quantityF, width, height);
+          calculatedLength = evaluateFormula(quantityF, formulaCtx, undefined, itemSide);
           position = getFormulaPosition(quantityF);
           if (position === 'Altura') {
             displayHeightFormula = quantityF;
@@ -269,7 +294,7 @@ export function CuttingPlanCalculator() {
           override.piecesFormula !== undefined ? override.piecesFormula : basePiecesFormula;
         let piecesFromFormula = piecesPerProduct;
         if (piecesFormula && piecesFormula.trim() !== '') {
-          const evaluated = evaluateFormula(piecesFormula, width, height, null, 'ceil');
+          const evaluated = evaluateFormula(piecesFormula, formulaCtx, undefined, itemSide, 'ceil');
           if (evaluated > 0) piecesFromFormula = evaluated;
         }
         const totalPieces = piecesFromFormula * quantity;
@@ -303,7 +328,7 @@ export function CuttingPlanCalculator() {
         if (nameCmp !== 0) return nameCmp;
         return b.calculatedLength - a.calculatedLength;
       });
-  }, [productItems, width, height, quantity, completedItems, profileOverrides]);
+  }, [productItems, formulaCtx, quantity, completedItems, profileOverrides]);
 
 
   const calculatedGlassCuts = useMemo((): GlassCutItem[] => {
@@ -317,8 +342,9 @@ export function CuttingPlanCalculator() {
           const piecesQty = (item as any).pieces_quantity || 1;
           const widthF = override.widthFormula ?? ((item as any).width_formula || 'Largura');
           const heightF = override.heightFormula ?? ((item as any).height_formula || 'Altura');
-          const calcWidth = evaluateFormula(widthF, width, height);
-          const calcHeight = evaluateFormula(heightF, width, height);
+          const itemSide = sideOf(item);
+          const calcWidth = evaluateFormula(widthF, formulaCtx, undefined, itemSide);
+          const calcHeight = evaluateFormula(heightF, formulaCtx, undefined, itemSide);
           const areaM2 = (calcWidth * calcHeight) / 1000000;
           const customName = (item as any).notes || null;
 
@@ -346,8 +372,8 @@ export function CuttingPlanCalculator() {
         const override = glassOverrides[id] || {};
         const widthF = override.widthFormula ?? (formula.width_formula || 'Largura');
         const heightF = override.heightFormula ?? (formula.height_formula || 'Altura');
-        const calcWidth = evaluateFormula(widthF, width, height);
-        const calcHeight = evaluateFormula(heightF, width, height);
+        const calcWidth = evaluateFormula(widthF, formulaCtx, undefined, null);
+        const calcHeight = evaluateFormula(heightF, formulaCtx, undefined, null);
         const areaM2 = (calcWidth * calcHeight) / 1000000;
 
         return {
@@ -369,7 +395,7 @@ export function CuttingPlanCalculator() {
     }
 
     return glassItems;
-  }, [productItems, glassFormulas, width, height, quantity, completedItems, glassOverrides]);
+  }, [productItems, glassFormulas, formulaCtx, quantity, completedItems, glassOverrides]);
 
 
   const accessoryItems = useMemo((): AccessoryCutItem[] => {
@@ -385,7 +411,7 @@ export function CuttingPlanCalculator() {
         let total = piecesQty * quantity;
         let isFixed = true;
         if (qf && qf.trim() !== '' && qf.trim() !== '1') {
-          const r = evaluateFormula(qf, width, height);
+          const r = evaluateFormula(qf, formulaCtx, undefined, sideOf(it));
           if (r > 0) {
             isFixed = false;
             if (unit === 'm' || unit === 'metros') total = (r / 1000) * piecesQty * quantity;
