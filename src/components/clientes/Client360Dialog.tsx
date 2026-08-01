@@ -62,7 +62,7 @@ const initialForm: Client = {
   notes: '',
 };
 
-export function Client360Dialog({ open, onOpenChange, client, onSave, defaultType, isLoading }: Client360DialogProps) {
+export function Client360Dialog({ open, onOpenChange, client, onSave, defaultType, isLoading, initialTab }: Client360DialogProps) {
   const [form, setForm] = useState<Client>(initialForm);
   const [documentError, setDocumentError] = useState('');
   const [activeTab, setActiveTab] = useState('visao-geral');
@@ -70,13 +70,14 @@ export function Client360Dialog({ open, onOpenChange, client, onSave, defaultTyp
   useEffect(() => {
     if (client) {
       setForm(client);
-      setActiveTab('visao-geral');
+      setActiveTab(initialTab || 'visao-geral');
     } else {
       setForm({ ...initialForm, client_type: defaultType || 'cliente' });
       setActiveTab('dados');
     }
     setDocumentError('');
-  }, [client, open]);
+  }, [client, open, initialTab]);
+
 
   const handleDocumentChange = (value: string) => {
     const formatted = formatCPFOrCNPJ(value);
