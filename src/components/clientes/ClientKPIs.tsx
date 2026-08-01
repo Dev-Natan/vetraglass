@@ -29,7 +29,7 @@ export const ClientKPIs = memo(function ClientKPIs({ clientId, clientName }: Cli
         ? `client_id.eq.${clientId},customer_name.eq.${escapedName}`
         : `client_id.eq.${clientId}`;
 
-      const [quotesResult, receivablesResult, osResult] = await Promise.all([
+      const [quotesResult, receivablesResult, movementsResult, osResult] = await Promise.all([
         supabase
           .from('quotes')
           .select('id, status, final_amount, total_amount, created_at')
@@ -39,8 +39,13 @@ export const ClientKPIs = memo(function ClientKPIs({ clientId, clientName }: Cli
           .from('accounts_receivable')
           .select('total_amount, paid_amount, status')
           .eq('company_id', companyId)
-          .eq('client_id', clientId)
-          .in('status', ['pending', 'overdue']),
+          .eq('client_id', clientId),
+        supabase
+          .from('cash_movements')
+          .select('amount, type, receivable_id')
+          .eq('company_id', companyId)
+          .eq('type', 'entrada')
+          .eq('cliente_id', clientId),
         supabase
           .from('ordens_servico')
           .select('id, status')
@@ -49,24 +54,39 @@ export const ClientKPIs = memo(function ClientKPIs({ clientId, clientName }: Cli
       ]);
 
       const quotes = quotesResult.data || [];
-      const receivables = receivablesResult.data || [];
+      const receivables = (receivablesResult.data || []).filter(
+        (r: any) => String(r.status || '') !== 'cancelled'
+      );
+      const movements = movementsResult.data || [];
       const os = osResult.data || [];
 
       const closedQuotes = quotes.filter((q: any) =>
         CLOSED_QUOTE_STATUSES.includes(String(q.status || '').toLowerCase())
       );
 
-      const totalGasto = closedQuotes.reduce(
+      // Valor contratado (orçamentos aprovados/fechados)
+      const totalContratado = closedQuotes.reduce(
         (sum: number, q: any) => sum + Number(q.final_amount ?? q.total_amount ?? 0),
         0
       );
-      const totalCompras = closedQuotes.length;
-      const ticketMedio = totalCompras > 0 ? totalGasto / totalCompras : 0;
 
-      const saldoDevedor = receivables.reduce(
-        (sum: number, r: any) => sum + (Number(r.total_amount || 0) - Number(r.paid_amount || 0)),
+      // Total efetivamente PAGO: baixas de contas a receber + entradas de caixa
+      // avulsas (sem vínculo com um recebível, para não contar duas vezes).
+      const pagoReceivables = receivables.reduce(
+        (sum: number, r: any) => sum + Number(r.paid_amount || 0),
         0
       );
+      const pagoAvulso = movements
+        .filter((m: any) => !m.receivable_id)
+        .reduce((sum: number, m: any) => sum + Number(m.amount || 0), 0);
+      const totalPago = pagoReceivables + pagoAvulso;
+
+      const totalCompras = closedQuotes.length;
+      const totalOrcamentos = quotes.length;
+      const ticketMedio = totalCompras > 0 ? totalContratado / totalCompras : 0;
+
+      // Saldo devedor = contratado - pago (nunca negativo)
+      const saldoDevedor = Math.max(0, totalContratado - totalPago);
       const inadimplente = receivables.some((r: any) => r.status === 'overdue');
 
       const ultimaCompra = closedQuotes
@@ -83,8 +103,10 @@ export const ClientKPIs = memo(function ClientKPIs({ clientId, clientName }: Cli
       ).length;
 
       return {
-        totalGasto,
+        totalPago,
+        totalContratado,
         totalCompras,
+        totalOrcamentos,
         ticketMedio,
         saldoDevedor,
         inadimplente,
@@ -93,6 +115,7 @@ export const ClientKPIs = memo(function ClientKPIs({ clientId, clientName }: Cli
       };
     },
   });
+
 
   const formatCurrency = (value: number) =>
     value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -113,8 +136,9 @@ export const ClientKPIs = memo(function ClientKPIs({ clientId, clientName }: Cli
   const kpis = [
     {
       icon: DollarSign,
-      label: 'Total Gasto',
-      value: formatCurrency(kpiData?.totalGasto || 0),
+      label: 'Total Pago',
+      value: formatCurrency(kpiData?.totalPago || 0),
+      subLabel: `Contratado: ${formatCurrency(kpiData?.totalContratado || 0)}`,
       color: 'text-green-600',
       bgColor: 'bg-green-50 dark:bg-green-950/30',
     },
@@ -122,7 +146,8 @@ export const ClientKPIs = memo(function ClientKPIs({ clientId, clientName }: Cli
       icon: ShoppingCart,
       label: 'Compras',
       value: kpiData?.totalCompras || 0,
-      subLabel: `Ticket: ${formatCurrency(kpiData?.ticketMedio || 0)}`,
+      subLabel: `${kpiData?.totalOrcamentos || 0} orçamentos · ${kpiData?.totalCompras || 0} aprovados`,
+      extraLabel: `Ticket: ${formatCurrency(kpiData?.ticketMedio || 0)}`,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50 dark:bg-blue-950/30',
     },
@@ -130,12 +155,14 @@ export const ClientKPIs = memo(function ClientKPIs({ clientId, clientName }: Cli
       icon: AlertTriangle,
       label: 'Saldo Devedor',
       value: formatCurrency(kpiData?.saldoDevedor || 0),
+      subLabel: 'Contratado − Pago',
       alert: kpiData?.inadimplente,
       color: kpiData?.inadimplente ? 'text-red-600' : 'text-yellow-600',
       bgColor: kpiData?.inadimplente
         ? 'bg-red-50 dark:bg-red-950/30'
         : 'bg-yellow-50 dark:bg-yellow-950/30',
     },
+
     {
       icon: Calendar,
       label: 'Última Compra',
@@ -164,6 +191,9 @@ export const ClientKPIs = memo(function ClientKPIs({ clientId, clientName }: Cli
           </div>
           <p className={`text-lg font-bold ${kpi.color}`}>{kpi.value}</p>
           {kpi.subLabel && <p className="text-xs text-muted-foreground">{kpi.subLabel}</p>}
+          {'extraLabel' in kpi && kpi.extraLabel && (
+            <p className="text-xs text-muted-foreground">{kpi.extraLabel}</p>
+          )}
           {kpi.alert && <span className="text-xs text-red-600 font-medium">Inadimplente</span>}
         </Card>
       ))}
