@@ -281,7 +281,35 @@ export function ClientTimeline({ clientId, clientName }: ClientTimelineProps) {
                           {formatCurrency(saldoRestante)}
                         </span>
                       </div>
+
+                      {/* Indicador de Rentabilidade */}
+                      <div className="mt-1 rounded-md border bg-background/60 p-2 space-y-1">
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-tight text-muted-foreground">
+                          <TrendingUp className="h-3 w-3" />
+                          Rentabilidade
+                        </div>
+                        <div className="flex justify-between text-[10px]">
+                          <span className="text-muted-foreground">Total Recebido:</span>
+                          <span className="font-medium text-green-600">{formatCurrency(totalPago)}</span>
+                        </div>
+                        <div className="flex justify-between text-[10px]">
+                          <span className="text-muted-foreground">Total de Despesas:</span>
+                          <span className="font-medium text-red-500">-{formatCurrency(totalDespesas)}</span>
+                        </div>
+                        <div className="flex justify-between text-xs border-t pt-1">
+                          <span className="font-medium">Lucro Bruto:</span>
+                          <span className={`font-bold ${lucroBruto < 0 ? 'text-red-500' : lucroBruto === 0 ? 'text-muted-foreground' : 'text-emerald-600'}`}>
+                            {formatCurrency(lucroBruto)}
+                            {totalPago > 0 && (
+                              <span className="ml-1 text-[10px] font-medium opacity-80">
+                                ({margemBruta.toFixed(1)}%)
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      </div>
                     </div>
+                    
                     
                     <div className="bg-muted/30 p-3 rounded-md border space-y-2">
                       <h5 className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">Detalhamento Financeiro</h5>
