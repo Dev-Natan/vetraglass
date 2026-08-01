@@ -110,17 +110,21 @@ export function InvestimentosTab() {
     enabled: !!companyId,
   });
 
-  // Realtime: company_cash + allocations
+  // Realtime: caixa da empresa, bancos, caixa operacional e alocações
   useEffect(() => {
     if (!companyId) return;
+    const refreshBalances = () => {
+      qc.invalidateQueries({ queryKey: ['company-cash', companyId] });
+      qc.invalidateQueries({ queryKey: ['bank-accounts-balance', companyId] });
+      qc.invalidateQueries({ queryKey: ['operational-drawer-balance', companyId] });
+    };
     const channel = supabase
       .channel(`invest-${companyId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'company_cash', filter: `company_id=eq.${companyId}` }, () => {
-        qc.invalidateQueries({ queryKey: ['company-cash', companyId] });
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'company_cash_movements', filter: `company_id=eq.${companyId}` }, () => {
-        qc.invalidateQueries({ queryKey: ['company-cash', companyId] });
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'company_cash', filter: `company_id=eq.${companyId}` }, refreshBalances)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'company_cash_movements', filter: `company_id=eq.${companyId}` }, refreshBalances)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bank_accounts', filter: `company_id=eq.${companyId}` }, refreshBalances)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cash_registers', filter: `company_id=eq.${companyId}` }, refreshBalances)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cash_movements', filter: `company_id=eq.${companyId}` }, refreshBalances)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'investment_allocations', filter: `company_id=eq.${companyId}` }, () => {
         qc.invalidateQueries({ queryKey: ['investment-allocations', companyId] });
       })
@@ -128,11 +132,19 @@ export function InvestimentosTab() {
     return () => { supabase.removeChannel(channel); };
   }, [companyId, qc]);
 
-  const balance = Number(cashQuery.data?.current_balance) || 0;
+  const companyCash = Number(cashQuery.data?.current_balance) || 0;
+  const banksTotal = useMemo(
+    () => (banksQuery.data || []).reduce((s, b) => s + (Number(b.current_balance) || 0), 0),
+    [banksQuery.data],
+  );
+  const drawerBalance = Number(drawerQuery.data?.balance) || 0;
+  const balance = companyCash + banksTotal + drawerBalance;
+
   const allocations = allocQuery.data || [];
   const totalPct = useMemo(() => allocations.reduce((s, a) => s + Number(a.percentage || 0), 0), [allocations]);
   const remainingPct = Math.max(0, 100 - totalPct);
   const allocatedValue = (balance * totalPct) / 100;
+
   const unallocatedValue = balance - allocatedValue;
 
   const addMutation = useMutation({
