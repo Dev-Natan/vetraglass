@@ -28,7 +28,7 @@ import {
   ArrowLeft, User, Phone, Mail, MapPin, FileText,
   AlertTriangle, Receipt, TrendingUp, Wallet, ShieldCheck,
   MessageCircle, Eye, Download, Loader2, LineChart,
-  Share2, Send, CreditCard, FileDown,
+  Share2, Send, CreditCard, FileDown, ClipboardList,
 } from 'lucide-react';
 import { ExtratoRecebimentos } from '@/components/caixa/ExtratoRecebimentos';
 import { openWhatsapp } from '@/utils/whatsapp';
@@ -110,34 +110,48 @@ export default function ClienteHistorico() {
     enabled: !!clientId && !!companyId,
   });
 
-  const saleIds = useMemo(() => sales.map(s => s.id), [sales]);
-  const quoteIds = useMemo(() => quotes.map(q => q.id), [quotes]);
-
-  const { data: payments = [] } = useQuery({
-    queryKey: ['client-payments', clientId, saleIds, quoteIds],
+  const { data: osData = [] } = useQuery({
+    queryKey: ['client-os', clientId, companyId],
     queryFn: async () => {
-      if ((!saleIds.length && !quoteIds.length) || !companyId) return [];
-      const filters: string[] = [];
-      if (saleIds.length)  filters.push(`sale_id.in.(${saleIds.join(',')})`);
-      if (quoteIds.length) filters.push(`quote_id.in.(${quoteIds.join(',')})`);
-
+      if (!clientId || !companyId) return [];
       const { data, error } = await supabase
-        .from('cash_movements')
-        .select('id,amount,payment_method,description,created_at,sale_id,quote_id,category')
+        .from('ordens_servico')
+        .select('id,os_number,status,total_amount,created_at')
+        .eq('client_id', clientId)
         .eq('company_id', companyId)
-        .eq('type', 'entrada')
-        .or(filters.join(','))
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data || [];
     },
-    enabled: !!companyId && (saleIds.length > 0 || quoteIds.length > 0),
+    enabled: !!clientId && !!companyId,
+  });
+
+  const saleIds = useMemo(() => sales.map(s => s.id), [sales]);
+  const quoteIds = useMemo(() => quotes.map(q => q.id), [quotes]);
+
+  const { data: payments = [] } = useQuery({
+    queryKey: ['client-payments', clientId, companyId],
+    queryFn: async () => {
+      if (!clientId || !companyId) return [];
+      
+      const { data, error } = await supabase
+        .from('cash_movements')
+        .select('id,amount,payment_method,description,created_at,sale_id,quote_id,category,type')
+        .eq('company_id', companyId)
+        .or(`cliente_id.eq.${clientId},fornecedor_id.eq.${clientId}`)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!companyId && !!clientId,
   });
 
   const kpis = useMemo(() => {
     const activeQuotes = quotes.filter(q => q.status !== 'cancelled' && q.status !== 'rejected');
     const totalOrcado = activeQuotes.reduce((s, q) => s + (Number(q.final_amount) || 0), 0);
-    const totalPago = payments.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+    const totalPago = payments
+      .filter(p => p.type === 'entrada')
+      .reduce((s, p) => s + (Number(p.amount) || 0), 0);
     const saldoDevedor = sales.reduce((s, sl) => s + Math.max(0, Number(sl.pending_amount) || 0), 0);
     const adimplente = saldoDevedor <= 0.009;
     return { totalOrcado, totalPago, saldoDevedor, adimplente };
@@ -163,7 +177,9 @@ export default function ClienteHistorico() {
   const chartData = useMemo(() => {
     if (!payments.length) return [];
     const byDay = new Map<string, number>();
-    const sorted = [...payments].sort(
+    const sorted = [...payments]
+      .filter(p => p.type === 'entrada')
+      .sort(
       (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
     );
     sorted.forEach(p => {
@@ -608,14 +624,18 @@ export default function ClienteHistorico() {
 
         {/* Tabs */}
         <Tabs defaultValue="orcamentos" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 max-w-md">
+          <TabsList className="grid w-full grid-cols-3 max-w-md">
             <TabsTrigger value="orcamentos" className="gap-2">
               <FileText className="h-4 w-4" />
               Orçamentos ({quotes.length})
             </TabsTrigger>
+            <TabsTrigger value="os" className="gap-2">
+              <ClipboardList className="h-4 w-4" />
+              OS ({osData.length})
+            </TabsTrigger>
             <TabsTrigger value="pagamentos" className="gap-2">
               <Receipt className="h-4 w-4" />
-              Pagamentos ({payments.length})
+              Financeiro ({payments.length})
             </TabsTrigger>
           </TabsList>
 
@@ -694,6 +714,63 @@ export default function ClienteHistorico() {
                           </TableRow>
                         );
                       })}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Ordens de Serviço */}
+          <TabsContent value="os" className="mt-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Ordens de Serviço</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {osData.length === 0 ? (
+                  <div className="p-8 text-center text-sm text-muted-foreground">
+                    Nenhuma ordem de serviço registrada.
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-20">Nº</TableHead>
+                        <TableHead className="w-32">Data</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Valor</TableHead>
+                        <TableHead className="w-16"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {osData.map(os => (
+                        <TableRow key={os.id}>
+                          <TableCell className="font-mono text-xs">
+                            #{String(os.os_number).padStart(4, '0')}
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            {format(new Date(os.created_at), 'dd/MM/yyyy', { locale: ptBR })}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={getOSStatusBadgeClass(os.status)}>
+                              {getOSStatusLabel(os.status)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            {formatCurrency(Number(os.total_amount) || 0)}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex justify-end">
+                              <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                                <Link to={`/ordens-servico?ver=${os.id}`}>
+                                  <Eye className="h-4 w-4" />
+                                </Link>
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
                     </TableBody>
                   </Table>
                 )}
