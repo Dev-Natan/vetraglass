@@ -37,7 +37,10 @@ interface Client360DialogProps {
   onSave: (client: Omit<Client, 'id'>) => Promise<void>;
   defaultType?: 'cliente' | 'fornecedor';
   isLoading?: boolean;
+  /** Aba aberta ao exibir um cliente existente (ex.: 'historico'). */
+  initialTab?: string;
 }
+
 
 const BRAZILIAN_STATES = [
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',
