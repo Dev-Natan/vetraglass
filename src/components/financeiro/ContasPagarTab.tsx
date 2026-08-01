@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
@@ -34,7 +33,7 @@ import {
 } from '@/components/ui/table';
 import {
   Plus, Search, CheckCircle, Clock, AlertCircle, Trash2, Pencil,
-  FileText, Banknote, Layers, Calendar, Receipt, Eye,
+  Layers, Calendar, Receipt, Eye,
 } from 'lucide-react';
 import { format, addMonths, addDays, parseISO, isBefore, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -79,7 +78,7 @@ const STATUS_CFG: Record<string, { label: string; cls: string }> = {
   cancelled: { label: 'Cancelado', cls: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' },
 };
 
-const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const fmt = (v: number) => (v ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 interface FormState {
   id?: string;
@@ -188,7 +187,7 @@ export function ContasPagarTab() {
   const filtered = useMemo(() => {
     return payables.filter((p) => {
       if (statusFilter !== 'all') {
-        const isOverdue = p.status === 'pending' && p.due_date && isBefore(parseISO(p.due_date), new Date());
+        const isOverdue = p.status === 'pending' && p.due_date && isBefore(parseISO(p.due_date), startOfDay(new Date()));
         if (statusFilter === 'overdue' && !isOverdue) return false;
         if (statusFilter !== 'overdue' && p.status !== statusFilter) return false;
       }
@@ -207,7 +206,7 @@ export function ContasPagarTab() {
   }, [payables, search, statusFilter, categoryFilter]);
 
   const summary = useMemo(() => {
-    const now = new Date();
+    const now = startOfDay(new Date());
     let totalPending = 0, totalPaid = 0, totalOverdue = 0;
     for (const p of payables) {
       if (p.status === 'cancelled') continue;
@@ -278,7 +277,6 @@ export function ContasPagarTab() {
       const installmentAmount = total > 1 ? +(f.amount / total).toFixed(2) : f.amount;
       const lastAdjust = total > 1 ? +(f.amount - installmentAmount * (total - 1)).toFixed(2) : f.amount;
 
-      // Cria primeira parcela
       const firstInsert = await supabase.from('expenses').insert({
         company_id: currentCompany.id,
         description: total > 1 ? `${f.description} (1/${total})` : f.description,
@@ -306,7 +304,7 @@ export function ContasPagarTab() {
             company_id: currentCompany.id,
             description: `${f.description} (${i}/${total})`,
             supplier_id: f.supplier_id || null,
-          supplier_name: f.supplier_name || null,
+            supplier_name: f.supplier_name || null,
             supplier_document: f.supplier_document || null,
             category_id: f.category_id || null,
             bank_account_id: f.bank_account_id || null,
@@ -345,7 +343,6 @@ export function ContasPagarTab() {
       }).eq('id', payDialog.id);
       if (error) throw error;
 
-      // Debita saldo da conta bancária
       const bankId = payBankId || payDialog.bank_account_id;
       if (bankId) {
         const { data: bank } = await supabase
@@ -384,7 +381,7 @@ export function ContasPagarTab() {
         <SumCard label="A pagar" value={summary.totalPending} icon={Clock} color="text-yellow-600" />
         <SumCard label="Atrasado" value={summary.totalOverdue} icon={AlertCircle} color="text-red-600" />
         <SumCard label="Pago no período" value={summary.totalPaid} icon={CheckCircle} color="text-green-600" />
-        <SumCard label="Total no período" value={summary.totalPending + summary.totalPaid + summary.totalOverdue} icon={Banknote} color="text-foreground" />
+        <SumCard label="Total no período" value={summary.totalPending + summary.totalPaid + summary.totalOverdue} icon={Calendar} color="text-foreground" />
       </div>
 
       <Card>
@@ -454,98 +451,96 @@ export function ContasPagarTab() {
                     <TableHead>Descrição</TableHead>
                     <TableHead>Fornecedor / Destino</TableHead>
                     <TableHead>Categoria</TableHead>
-                  <TableHead>Parcela</TableHead>
-                  <TableHead className="text-right">Valor</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow><TableCell colSpan={8} className="text-center py-10">Carregando…</TableCell></TableRow>
-                ) : filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
-                    Nenhuma conta a pagar no período.
-                  </TableCell></TableRow>
-                ) : filtered.map((p) => {
-                  const cat = categories.find((c) => c.id === p.category_id);
-                  const overdue = p.status === 'pending' && p.due_date && isBefore(parseISO(p.due_date), new Date());
-                  const effectiveStatus = overdue ? 'overdue' : p.status;
-                  const cfg = STATUS_CFG[effectiveStatus] || STATUS_CFG.pending;
-                  return (
-                    <TableRow key={p.id} className="cursor-pointer" onClick={() => setDetailsPayable(p)}>
-                      <TableCell className="whitespace-nowrap">
-                        {p.due_date ? format(parseISO(p.due_date), 'dd/MM/yyyy', { locale: ptBR }) : '—'}
-                      </TableCell>
-                      <TableCell className="max-w-[260px]">
-                        <p className="truncate font-medium">{p.description}</p>
-                        {p.document_number && (
-                          <p className="text-xs text-muted-foreground">Doc: {p.document_number}</p>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        <p className="truncate max-w-[180px] font-medium">
-                          {p.supplier?.name || p.supplier_name || '—'}
-                        </p>
-                        {(p.supplier?.phone || p.supplier?.document) && (
-                          <p className="text-[11px] text-muted-foreground">
-                            {p.supplier?.phone || p.supplier?.document}
-                          </p>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {cat ? (
-                          <div className="flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color || '#64748b' }} />
-                            <span className="text-xs">{cat.name}</span>
-                          </div>
-                        ) : <span className="text-xs text-muted-foreground">—</span>}
-                      </TableCell>
-                      <TableCell>
-                        {p.total_installments > 1 ? (
-                          <Badge variant="outline" className="gap-1">
-                            <Layers className="w-3 h-3" />
-                            {p.installment_number}/{p.total_installments}
-                          </Badge>
-                        ) : <span className="text-xs text-muted-foreground">À vista</span>}
-                      </TableCell>
-                      <TableCell className="text-right font-semibold whitespace-nowrap">{fmt(Number(p.amount))}</TableCell>
-                      <TableCell><Badge className={cfg.cls + ' border-0'}>{cfg.label}</Badge></TableCell>
-                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex gap-1 justify-end">
-                          <Button size="icon" variant="ghost" className="h-8 w-8" title="Ver detalhes"
-                            onClick={() => setDetailsPayable(p)}>
-                            <Eye className="w-3.5 h-3.5" />
-                          </Button>
-                          {p.status !== 'paid' && p.status !== 'cancelled' && (
-                            <Button size="sm" variant="outline" className="h-8" onClick={() => {
-                              setPayDialog(p);
-                              setPayAmount(Number(p.amount));
-                              setPayBankId(p.bank_account_id || bankAccounts.find(b => b.is_default)?.id || '');
-                              setPayDate(format(new Date(), 'yyyy-MM-dd'));
-                            }}>
-                              <CheckCircle className="w-3.5 h-3.5 mr-1" /> Pagar
-                            </Button>
+                    <TableHead>Parcela</TableHead>
+                    <TableHead className="text-right">Valor</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.length === 0 ? (
+                    <TableRow><TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
+                      Nenhuma conta a pagar no período.
+                    </TableCell></TableRow>
+                  ) : filtered.map((p) => {
+                    const cat = categories.find((c) => c.id === p.category_id);
+                    const overdue = p.status === 'pending' && p.due_date && isBefore(parseISO(p.due_date), startOfDay(new Date()));
+                    const effectiveStatus = overdue ? 'overdue' : p.status;
+                    const cfg = STATUS_CFG[effectiveStatus] || STATUS_CFG.pending;
+                    return (
+                      <TableRow key={p.id} className="cursor-pointer" onClick={() => setDetailsPayable(p)}>
+                        <TableCell className="whitespace-nowrap">
+                          {p.due_date ? format(parseISO(p.due_date), 'dd/MM/yyyy', { locale: ptBR }) : '—'}
+                        </TableCell>
+                        <TableCell className="max-w-[260px]">
+                          <p className="truncate font-medium">{p.description}</p>
+                          {p.document_number && (
+                            <p className="text-xs text-muted-foreground">Doc: {p.document_number}</p>
                           )}
-                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(p)}>
-                            <Pencil className="w-3.5 h-3.5" />
-                          </Button>
-                          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive"
-                            onClick={() => { if (confirm('Remover esta conta?')) deleteMut.mutate(p.id); }}>
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          <p className="truncate max-w-[180px] font-medium">
+                            {p.supplier?.name || p.supplier_name || '—'}
+                          </p>
+                          {(p.supplier?.phone || p.supplier?.document) && (
+                            <p className="text-[11px] text-muted-foreground">
+                              {p.supplier?.phone || p.supplier?.document}
+                            </p>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {cat ? (
+                            <div className="flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color || '#64748b' }} />
+                              <span className="text-xs">{cat.name}</span>
+                            </div>
+                          ) : <span className="text-xs text-muted-foreground">—</span>}
+                        </TableCell>
+                        <TableCell>
+                          {p.total_installments > 1 ? (
+                            <Badge variant="outline" className="gap-1">
+                              <Layers className="w-3 h-3" />
+                              {p.installment_number}/{p.total_installments}
+                            </Badge>
+                          ) : <span className="text-xs text-muted-foreground">À vista</span>}
+                        </TableCell>
+                        <TableCell className="text-right font-semibold whitespace-nowrap">{fmt(Number(p.amount))}</TableCell>
+                        <TableCell><Badge className={cfg.cls + ' border-0'}>{cfg.label}</Badge></TableCell>
+                        <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex gap-1 justify-end">
+                            <Button size="icon" variant="ghost" className="h-8 w-8" title="Ver detalhes"
+                              onClick={() => setDetailsPayable(p)}>
+                              <Eye className="w-3.5 h-3.5" />
+                            </Button>
+                            {p.status !== 'paid' && p.status !== 'cancelled' && (
+                              <Button size="sm" variant="outline" className="h-8" onClick={() => {
+                                setPayDialog(p);
+                                setPayAmount(Number(p.amount));
+                                setPayBankId(p.bank_account_id || bankAccounts.find(b => b.is_default)?.id || '');
+                                setPayDate(format(new Date(), 'yyyy-MM-dd'));
+                              }}>
+                                <CheckCircle className="w-3.5 h-3.5 mr-1" /> Pagar
+                              </Button>
+                            )}
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(p)}>
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive"
+                              onClick={() => { if (confirm('Remover esta conta?')) deleteMut.mutate(p.id); }}>
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* DIALOG NOVA/EDIT */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -688,7 +683,6 @@ export function ContasPagarTab() {
         }}
       />
 
-      {/* DIALOG PAGAMENTO */}
       <Dialog open={!!payDialog} onOpenChange={(o) => !o && setPayDialog(null)}>
         <DialogContent>
           <DialogHeader>
