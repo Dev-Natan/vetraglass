@@ -79,7 +79,7 @@ export function ClientTimeline({ clientId, clientName }: ClientTimelineProps) {
       const quoteIds = quotes.map(q => q.id);
 
       // Buscar financeiros vinculados a esses orçamentos
-      const [depositsResult, receivablesResult] = await Promise.all([
+      const [depositsResult, receivablesResult, expensesResult] = await Promise.all([
         quoteIds.length
           ? supabase
               .from('quote_deposits')
@@ -92,10 +92,16 @@ export function ClientTimeline({ clientId, clientName }: ClientTimelineProps) {
               .select('id, quote_id, total_amount, paid_amount, status, created_at')
               .in('quote_id', quoteIds)
           : Promise.resolve({ data: [] }),
+        supabase
+          .from('expenses')
+          .select('id, description, amount, status, created_at, client_id')
+          .eq('company_id', companyId)
+          .eq('client_id', clientId)
       ]);
 
       const deposits = depositsResult.data || [];
       const receivables = receivablesResult.data || [];
+      const expenses = expensesResult.data || [];
 
       // Agrupar
       const grouped: QuoteHistoryItem[] = quotes.map(q => ({
