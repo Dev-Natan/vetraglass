@@ -1,5 +1,4 @@
 import { memo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -28,11 +27,11 @@ interface Client {
 interface ClientsCardViewProps {
   clients: Client[];
   onView: (client: Client) => void;
+  onViewHistory?: (client: Client) => void;
   onDelete: (client: Client) => void;
 }
 
-export const ClientsCardView = memo(function ClientsCardView({ clients, onView, onDelete }: ClientsCardViewProps) {
-  const navigate = useNavigate();
+export const ClientsCardView = memo(function ClientsCardView({ clients, onView, onViewHistory, onDelete }: ClientsCardViewProps) {
   const handleWhatsApp = (client: Client, e: React.MouseEvent) => {
     e.stopPropagation();
     openWhatsapp(client.phone, `Olá ${client.name}, tudo bem?`);
@@ -102,7 +101,7 @@ export const ClientsCardView = memo(function ClientsCardView({ clients, onView, 
               className="flex-1 gap-2"
               onClick={(e) => {
                 e.stopPropagation();
-                navigate(`/clientes/${client.id}/historico`);
+                (onViewHistory ?? onView)(client);
               }}
               title="Ver histórico completo"
             >

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Table,
   TableBody,
@@ -45,14 +44,14 @@ interface Client {
 interface ClientsTableViewProps {
   clients: Client[];
   onView: (client: Client) => void;
+  onViewHistory?: (client: Client) => void;
   onDelete: (client: Client) => void;
 }
 
 type SortField = 'name' | 'city' | 'document_type';
 type SortDirection = 'asc' | 'desc';
 
-export function ClientsTableView({ clients, onView, onDelete }: ClientsTableViewProps) {
-  const navigate = useNavigate();
+export function ClientsTableView({ clients, onView, onViewHistory, onDelete }: ClientsTableViewProps) {
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
@@ -185,7 +184,7 @@ export function ClientsTableView({ clients, onView, onDelete }: ClientsTableView
                     className="h-8 w-8 text-primary"
                     onClick={(e) => {
                       e.stopPropagation();
-                      navigate(`/clientes/${client.id}/historico`);
+                      (onViewHistory ?? onView)(client);
                     }}
                     title="Ver histórico do cliente"
                   >
