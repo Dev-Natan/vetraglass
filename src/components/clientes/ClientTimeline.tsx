@@ -19,6 +19,7 @@ import {
   Package,
   Receipt,
   Info,
+  TrendingUp,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -79,7 +80,7 @@ export function ClientTimeline({ clientId, clientName }: ClientTimelineProps) {
       const quoteIds = quotes.map(q => q.id);
 
       // Buscar financeiros vinculados a esses orçamentos
-      const [depositsResult, receivablesResult, expensesResult] = await Promise.all([
+      const [depositsResult, receivablesResult, expensesResult, cashOutResult] = await Promise.all([
         quoteIds.length
           ? supabase
               .from('quote_deposits')
@@ -96,12 +97,22 @@ export function ClientTimeline({ clientId, clientName }: ClientTimelineProps) {
           .from('expenses')
           .select('id, description, amount, status, created_at, reference_id')
           .eq('company_id', companyId)
-          .or(`party_id.eq.${clientId},party_name.eq.${clientName}`)
+          .or(`party_id.eq.${clientId},party_name.eq.${clientName}`),
+        // Saídas de caixa vinculadas diretamente aos orçamentos deste cliente
+        quoteIds.length
+          ? supabase
+              .from('cash_movements')
+              .select('id, quote_id, description, amount, created_at')
+              .eq('company_id', companyId)
+              .eq('type', 'saida')
+              .in('quote_id', quoteIds)
+          : Promise.resolve({ data: [] }),
       ]);
 
       const deposits = depositsResult.data || [];
       const receivables = receivablesResult.data || [];
       const expenses = expensesResult.data || [];
+      const cashOut = (cashOutResult as any).data || [];
 
       // Agrupar
       const grouped: QuoteHistoryItem[] = quotes.map(q => ({
@@ -114,7 +125,10 @@ export function ClientTimeline({ clientId, clientName }: ClientTimelineProps) {
         items: (q as any).quote_items || [],
         deposits: deposits.filter(d => d.quote_id === q.id),
         receivables: receivables.filter(r => r.quote_id === q.id),
-        expenses: (expenses || []).filter((e: any) => e.reference_id === q.id || (e.description && e.description.includes(`#${q.quote_number}`))),
+        expenses: [
+          ...(expenses || []).filter((e: any) => e.reference_id === q.id || (e.description && e.description.includes(`#${q.quote_number}`))),
+          ...cashOut.filter((m: any) => m.quote_id === q.id),
+        ],
       }));
 
       return {
@@ -179,6 +193,13 @@ export function ClientTimeline({ clientId, clientName }: ClientTimelineProps) {
             : totalPagoDepositos;
 
           const saldoRestante = Math.max(0, Number((quote.final_amount - totalPago).toFixed(2)));
+
+          // Rentabilidade: Lucro Bruto = Total Recebido - Total de Despesas vinculadas
+          const totalDespesas = Number(
+            quote.expenses.reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0).toFixed(2)
+          );
+          const lucroBruto = Number((totalPago - totalDespesas).toFixed(2));
+          const margemBruta = totalPago > 0 ? (lucroBruto / totalPago) * 100 : 0;
 
           return (
             <AccordionItem key={quote.id} value={quote.id} className="border rounded-lg px-4 bg-card">
@@ -261,7 +282,35 @@ export function ClientTimeline({ clientId, clientName }: ClientTimelineProps) {
                           {formatCurrency(saldoRestante)}
                         </span>
                       </div>
+
+                      {/* Indicador de Rentabilidade */}
+                      <div className="mt-1 rounded-md border bg-background/60 p-2 space-y-1">
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-tight text-muted-foreground">
+                          <TrendingUp className="h-3 w-3" />
+                          Rentabilidade
+                        </div>
+                        <div className="flex justify-between text-[10px]">
+                          <span className="text-muted-foreground">Total Recebido:</span>
+                          <span className="font-medium text-green-600">{formatCurrency(totalPago)}</span>
+                        </div>
+                        <div className="flex justify-between text-[10px]">
+                          <span className="text-muted-foreground">Total de Despesas:</span>
+                          <span className="font-medium text-red-500">-{formatCurrency(totalDespesas)}</span>
+                        </div>
+                        <div className="flex justify-between text-xs border-t pt-1">
+                          <span className="font-medium">Lucro Bruto:</span>
+                          <span className={`font-bold ${lucroBruto < 0 ? 'text-red-500' : lucroBruto === 0 ? 'text-muted-foreground' : 'text-emerald-600'}`}>
+                            {formatCurrency(lucroBruto)}
+                            {totalPago > 0 && (
+                              <span className="ml-1 text-[10px] font-medium opacity-80">
+                                ({margemBruta.toFixed(1)}%)
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      </div>
                     </div>
+                    
                     
                     <div className="bg-muted/30 p-3 rounded-md border space-y-2">
                       <h5 className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">Detalhamento Financeiro</h5>
