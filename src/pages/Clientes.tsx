@@ -49,6 +49,7 @@ export default function Clientes() {
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [dialogInitialTab, setDialogInitialTab] = useState<string>('visao-geral');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
 
@@ -149,6 +150,14 @@ export default function Clientes() {
 
   const handleView = (client: Client) => {
     setSelectedClient(client);
+    setDialogInitialTab('visao-geral');
+    setDialogOpen(true);
+  };
+
+  /** Abre o mesmo modal de detalhes, já posicionado na aba de Histórico. */
+  const handleViewHistory = (client: Client) => {
+    setSelectedClient(client);
+    setDialogInitialTab('historico');
     setDialogOpen(true);
   };
 
@@ -220,6 +229,7 @@ export default function Clientes() {
               data-tutorial="clientes-btn-novo"
               onClick={() => {
                 setSelectedClient(null);
+                setDialogInitialTab('dados');
                 setDialogOpen(true);
               }}
               className="gap-2 h-10 sm:h-11 px-4"
@@ -284,12 +294,14 @@ export default function Clientes() {
               <ClientsCardView
                 clients={pagination.paginatedData}
                 onView={handleView}
+                onViewHistory={handleViewHistory}
                 onDelete={handleDelete}
               />
             ) : (
               <ClientsTableView
                 clients={pagination.paginatedData}
                 onView={handleView}
+                onViewHistory={handleViewHistory}
                 onDelete={handleDelete}
               />
             )}
@@ -315,6 +327,7 @@ export default function Clientes() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         client={selectedClient}
+        initialTab={dialogInitialTab}
         defaultType={activeTab}
         onSave={handleSave}
         isLoading={createMutation.isPending || updateMutation.isPending}

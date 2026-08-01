@@ -28,10 +28,11 @@ interface Client {
 interface ClientsCardViewProps {
   clients: Client[];
   onView: (client: Client) => void;
+  onViewHistory?: (client: Client) => void;
   onDelete: (client: Client) => void;
 }
 
-export const ClientsCardView = memo(function ClientsCardView({ clients, onView, onDelete }: ClientsCardViewProps) {
+export const ClientsCardView = memo(function ClientsCardView({ clients, onView, onViewHistory, onDelete }: ClientsCardViewProps) {
   const navigate = useNavigate();
   const handleWhatsApp = (client: Client, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -102,7 +103,7 @@ export const ClientsCardView = memo(function ClientsCardView({ clients, onView, 
               className="flex-1 gap-2"
               onClick={(e) => {
                 e.stopPropagation();
-                navigate(`/clientes/${client.id}/historico`);
+                (onViewHistory ?? onView)(client);
               }}
               title="Ver histórico completo"
             >
