@@ -114,7 +114,7 @@ export function ClientTimeline({ clientId, clientName }: ClientTimelineProps) {
         items: (q as any).quote_items || [],
         deposits: deposits.filter(d => d.quote_id === q.id),
         receivables: receivables.filter(r => r.quote_id === q.id),
-        expenses: expenses.filter(e => e.reference_id === q.id || (e.description && e.description.includes(`#${q.quote_number}`))),
+        expenses: (expenses || []).filter((e: any) => e.reference_id === q.id || (e.description && e.description.includes(`#${q.quote_number}`))),
       }));
 
       return {
