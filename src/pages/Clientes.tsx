@@ -126,6 +126,22 @@ export default function Clientes() {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       if (!currentCompany?.id) throw new Error('Empresa não selecionada');
+
+      // Validação: bloqueia exclusão quando existem despesas/saídas de caixa vinculadas
+      const { count, error: linkError } = await supabase
+        .from('cash_movements')
+        .select('id', { count: 'exact', head: true })
+        .eq('company_id', currentCompany.id)
+        .eq('type', 'saida')
+        .eq('cliente_id', id);
+
+      if (linkError) throw linkError;
+      if ((count || 0) > 0) {
+        throw new Error(
+          `Não é possível remover: existem ${count} despesa(s) de caixa vinculada(s) a este cadastro.`
+        );
+      }
+
       return clientService.toggleClientStatus(id, currentCompany.id, false);
     },
 
@@ -135,8 +151,8 @@ export default function Clientes() {
       setDeleteDialogOpen(false);
       setClientToDelete(null);
     },
-    onError: () => {
-      toast.error('Erro ao remover cliente');
+    onError: (error: Error) => {
+      toast.error(error.message || 'Erro ao remover cliente');
     },
   });
 
