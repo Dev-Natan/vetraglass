@@ -118,6 +118,11 @@ interface AddProductPanelProps {
     image_url: string | null;
     width: number;
     height: number;
+    /** Largura do Lado B (produtos com múltiplos lados) */
+    width_b?: number;
+    /** Altura do Lado B (produtos com múltiplos lados) */
+    height_b?: number;
+    has_multiple_sides?: boolean;
     quantity: number;
   }) => void;
 }
