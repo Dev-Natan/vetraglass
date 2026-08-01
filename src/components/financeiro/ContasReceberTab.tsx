@@ -46,6 +46,11 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
 import { ReceivePaymentDialog } from '@/components/caixa/ReceivePaymentDialog';
+import {
+  ReceivableDetailsDialog,
+  getReceivableOrigin,
+  type ReceivableDetails,
+} from '@/components/financeiro/ReceivableDetailsDialog';
 
 interface Receivable {
   id: string;
@@ -61,10 +66,18 @@ interface Receivable {
   payment_method: string | null;
   sale_id: string | null;
   ordem_servico_id: string | null;
+  quote_id: string | null;
   client_id: string | null;
   notes: string | null;
   created_at: string;
+  client?: {
+    name: string | null;
+    phone: string | null;
+    email: string | null;
+    document: string | null;
+  } | null;
 }
+
 
 type StatusFilter = 'all' | 'pending' | 'overdue' | 'paid';
 type PeriodFilter = 'all' | 'today' | 'week' | 'month' | 'next60' | 'next90' | 'overdue';
