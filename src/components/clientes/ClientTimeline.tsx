@@ -38,12 +38,6 @@ export function ClientTimeline({ clientId, clientName }: ClientTimelineProps) {
     queryKey: ['client-timeline', clientId, clientName, currentCompany?.id],
     enabled: !!currentCompany?.id && !!clientId,
     queryFn: async () => {
-      // Registros antigos podem não ter client_id — casamos também pelo nome do cliente.
-      const escapedName = clientName ? clientName.replace(/[,()]/g, ' ').trim() : null;
-      const linkFilter = escapedName
-        ? `client_id.eq.${clientId},customer_name.eq.${escapedName}`
-        : `client_id.eq.${clientId}`;
-
       const [salesResult, quotesResult, osResult, paymentsResult] = await Promise.all([
         supabase
           .from('sales')
@@ -57,7 +51,7 @@ export function ClientTimeline({ clientId, clientName }: ClientTimelineProps) {
           .from('quotes')
           .select('id, quote_number, final_amount, status, created_at')
           .eq('company_id', currentCompany!.id)
-          .or(linkFilter)
+          .eq('client_id', clientId)
           .order('created_at', { ascending: false })
           .limit(20),
         
@@ -65,7 +59,7 @@ export function ClientTimeline({ clientId, clientName }: ClientTimelineProps) {
           .from('ordens_servico')
           .select('id, os_number, total_amount, status, created_at')
           .eq('company_id', currentCompany!.id)
-          .or(linkFilter)
+          .eq('client_id', clientId)
           .order('created_at', { ascending: false })
           .limit(20),
         

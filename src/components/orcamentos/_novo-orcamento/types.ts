@@ -67,6 +67,7 @@ export interface QuoteItem {
 
 export interface Quote {
   id: string;
+  client_id?: string | null;
   quote_number: number;
   customer_name: string;
   customer_phone: string | null;

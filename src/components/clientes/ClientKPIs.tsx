@@ -31,46 +31,34 @@ export const ClientKPIs = memo(function ClientKPIs({ clientId, clientName }: Cli
     enabled: !!currentCompany?.id && !!clientId,
     queryFn: async () => {
       const companyId = currentCompany!.id;
-      // Registros antigos podem não ter client_id preenchido — casamos também pelo nome.
-      const escapedName = clientName ? clientName.replace(/[,()]/g, ' ').trim() : null;
-      const linkFilter = escapedName
-        ? `client_id.eq.${clientId},customer_name.eq.${escapedName}`
-        : `client_id.eq.${clientId}`;
-
       const [quotesResult, osResult] = await Promise.all([
         supabase
           .from('quotes')
           .select('id, status, final_amount, total_amount, created_at, updated_at')
           .eq('company_id', companyId)
-          .or(linkFilter),
+          .eq('client_id', clientId),
         supabase
           .from('ordens_servico')
           .select('id, status')
           .eq('company_id', companyId)
-          .or(linkFilter),
+          .eq('client_id', clientId),
       ]);
 
       const quotes = quotesResult.data || [];
       const os = osResult.data || [];
       const quoteIds = quotes.map((q: any) => q.id);
 
-      // Recebimentos: os registros financeiros muitas vezes só têm quote_id (client_id nulo),
-      // então buscamos por cliente OU por qualquer orçamento deste cliente.
-      const receivableFilter = quoteIds.length
-        ? `client_id.eq.${clientId},quote_id.in.(${quoteIds.join(',')})`
-        : `client_id.eq.${clientId}`;
-
       const [receivablesResult, depositsResult, movementsResult] = await Promise.all([
         supabase
           .from('accounts_receivable')
           .select('id, quote_id, total_amount, paid_amount, status')
           .eq('company_id', companyId)
-          .or(receivableFilter),
+          .eq('client_id', clientId),
         quoteIds.length
           ? supabase
               .from('quote_deposits')
-              .select('id, quote_id, amount, status')
-              .in('quote_id', quoteIds)
+          .select('id, quote_id, amount, status')
+          .in('quote_id', quoteIds)
           : Promise.resolve({ data: [] as any[] }),
         supabase
           .from('cash_movements')
