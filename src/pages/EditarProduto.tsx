@@ -1059,7 +1059,18 @@ export default function EditarProduto() {
           </div>
         </div>
 
+        {/* Copiar composição de outro produto */}
+        {id && (
+          <CopyCompositionDialog
+            open={isCopyCompositionOpen}
+            onOpenChange={setIsCopyCompositionOpen}
+            productTemplateId={id}
+            companyId={isSaasAdmin ? null : (currentCompany?.id ?? null)}
+          />
+        )}
+
         {/* Add Item Dialog */}
+
         <Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
