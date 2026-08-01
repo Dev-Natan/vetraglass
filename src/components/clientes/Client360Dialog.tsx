@@ -294,7 +294,7 @@ export function Client360Dialog({ open, onOpenChange, client, onSave, defaultTyp
             </TabsList>
 
             <TabsContent value="visao-geral" className="mt-4 space-y-6">
-              <ClientKPIs clientId={client.id!} />
+              <ClientKPIs clientId={client.id!} clientName={client.name} />
               <Separator />
               <div>
                 <h3 className="text-sm font-medium mb-3">Ações Rápidas</h3>
@@ -306,7 +306,7 @@ export function Client360Dialog({ open, onOpenChange, client, onSave, defaultTyp
             </TabsContent>
 
             <TabsContent value="historico" className="mt-4">
-              <ClientTimeline clientId={client.id!} />
+              <ClientTimeline clientId={client.id!} clientName={client.name} />
             </TabsContent>
 
             <TabsContent value="acoes" className="mt-4">
