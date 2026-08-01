@@ -191,7 +191,7 @@ export function ContasPagarTab() {
       if (!currentCompany?.id) return [];
       let q = supabase
         .from('expenses')
-        .select('*, supplier:clients!expenses_supplier_id_fkey(name, phone, email, document)')
+        .select('*, supplier:clients(name, phone, email, document)')
         .eq('company_id', currentCompany.id)
         .order('due_date', { ascending: true });
       if (range) {
