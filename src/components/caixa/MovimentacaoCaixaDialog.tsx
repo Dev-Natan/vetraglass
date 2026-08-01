@@ -44,7 +44,10 @@ interface MovimentacaoCaixaDialogProps {
   onOpenChange: (open: boolean) => void;
   cashRegisterId: string;
   currentDailyBalance?: number;
+  /** Chamado após o registro ser persistido, para o pai recarregar seus dados. */
+  onSuccess?: () => void;
 }
+
 
 const entradaCategories = [
   { value: 'recebimento_parcela', label: 'Recebimento de Parcela' },
