@@ -440,19 +440,30 @@ export function CaixaEmpresaTab({ selectedMonth: externalMonth, onMonthChange }:
             <CardTitle className="text-sm font-medium">💰 Saldo Real da Empresa</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${companyCash.current_balance < 0 ? 'text-destructive' : 'text-green-600'}`}>
-              {formatCurrency(companyCash.current_balance)}
+            <div className={`text-2xl font-bold ${totalRealBalance < 0 ? 'text-destructive' : 'text-green-600'}`}>
+              {formatCurrency(totalRealBalance)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Valor que a empresa possui em caixa/banco (não inclui contas a receber)
             </p>
             {openCashRegister && (
-              <p className="text-xs text-muted-foreground mt-1">
-                + {formatCurrency(Number(openCashRegister.opening_amount || 0))} na gaveta do caixa aberto
-              </p>
+              <div className="mt-3 space-y-1 rounded-md border bg-muted/30 p-2 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Saldo em conta/empresa</span>
+                  <span className="font-medium">{formatCurrency(companyCash.current_balance)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Na gaveta (caixa aberto)</span>
+                  <span className="font-medium">{formatCurrency(drawerBalance)}</span>
+                </div>
+                <p className="pt-1 text-[11px] text-muted-foreground">
+                  Atualizado em tempo real conforme as movimentações do caixa
+                </p>
+              </div>
             )}
 
           </CardContent>
+
         </Card>
 
         {/* Ações */}
