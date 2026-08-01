@@ -79,7 +79,7 @@ export function ClientTimeline({ clientId, clientName }: ClientTimelineProps) {
       const quoteIds = quotes.map(q => q.id);
 
       // Buscar financeiros vinculados a esses orçamentos
-      const [depositsResult, receivablesResult, expensesResult] = await Promise.all([
+      const [depositsResult, receivablesResult, expensesResult, cashOutResult] = await Promise.all([
         quoteIds.length
           ? supabase
               .from('quote_deposits')
@@ -96,12 +96,22 @@ export function ClientTimeline({ clientId, clientName }: ClientTimelineProps) {
           .from('expenses')
           .select('id, description, amount, status, created_at, reference_id')
           .eq('company_id', companyId)
-          .or(`party_id.eq.${clientId},party_name.eq.${clientName}`)
+          .or(`party_id.eq.${clientId},party_name.eq.${clientName}`),
+        // Saídas de caixa vinculadas diretamente aos orçamentos deste cliente
+        quoteIds.length
+          ? supabase
+              .from('cash_movements')
+              .select('id, quote_id, description, amount, created_at')
+              .eq('company_id', companyId)
+              .eq('type', 'saida')
+              .in('quote_id', quoteIds)
+          : Promise.resolve({ data: [] }),
       ]);
 
       const deposits = depositsResult.data || [];
       const receivables = receivablesResult.data || [];
       const expenses = expensesResult.data || [];
+      const cashOut = (cashOutResult as any).data || [];
 
       // Agrupar
       const grouped: QuoteHistoryItem[] = quotes.map(q => ({
@@ -114,7 +124,10 @@ export function ClientTimeline({ clientId, clientName }: ClientTimelineProps) {
         items: (q as any).quote_items || [],
         deposits: deposits.filter(d => d.quote_id === q.id),
         receivables: receivables.filter(r => r.quote_id === q.id),
-        expenses: (expenses || []).filter((e: any) => e.reference_id === q.id || (e.description && e.description.includes(`#${q.quote_number}`))),
+        expenses: [
+          ...(expenses || []).filter((e: any) => e.reference_id === q.id || (e.description && e.description.includes(`#${q.quote_number}`))),
+          ...cashOut.filter((m: any) => m.quote_id === q.id),
+        ],
       }));
 
       return {
