@@ -538,7 +538,13 @@ export function CaixaOperacionalTab() {
           onOpenChange={setMovimentacaoCaixaOpen}
           cashRegisterId={openCashRegister.id}
           currentDailyBalance={cashSummary.expectedAmount}
+          onSuccess={() => {
+            refetchCashMovements();
+            queryClient.invalidateQueries({ queryKey: ['cash-register-open'], refetchType: 'all' });
+            queryClient.invalidateQueries({ queryKey: ['company-cash'], refetchType: 'all' });
+          }}
         />
+
       )}
 
       <ReceivePaymentDialog
