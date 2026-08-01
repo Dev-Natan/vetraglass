@@ -38,6 +38,7 @@ interface QuoteHistoryItem {
   items: any[];
   deposits: any[];
   receivables: any[];
+  expenses: any[];
 }
 
 export function ClientTimeline({ clientId, clientName }: ClientTimelineProps) {
