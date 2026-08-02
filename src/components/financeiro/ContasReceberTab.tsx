@@ -80,7 +80,7 @@ interface Receivable {
 }
 
 
-type StatusFilter = 'all' | 'pending' | 'overdue' | 'paid';
+type StatusFilter = 'all' | 'pending' | 'partial' | 'overdue' | 'paid';
 type PeriodFilter = 'all' | 'today' | 'week' | 'month' | 'next60' | 'next90' | 'overdue';
 
 const statusConfig = {
@@ -125,9 +125,10 @@ export function ContasReceberTab() {
 
       if (error) throw error;
 
-      // Filtra recebíveis vinculados a documentos cancelados e exclui pagos/cancelados
+      // Filtra apenas recebíveis vinculados a documentos cancelados.
+      // Pagos permanecem na base para permitir o filtro "Liquidado".
       const filtered = (data as any[]).filter((r) => {
-        if (r.status === 'cancelled' || r.status === 'paid') return false;
+        if (r.status === 'cancelled') return false;
         if (r.sale && r.sale.payment_status === 'cancelled') return false;
         if (r.quote && (r.quote.status === 'cancelled' || r.quote.status === 'cancelado')) return false;
         if (r.ordem_servico && (r.ordem_servico.status === 'cancelled' || r.ordem_servico.status === 'cancelada')) return false;
@@ -147,14 +148,20 @@ export function ContasReceberTab() {
     if (statusFilter !== 'all') {
       filtered = filtered.filter(r => {
         if (statusFilter === 'overdue') {
-          return r.status === 'pending' && isPast(new Date(r.due_date)) && !isToday(new Date(r.due_date));
+          return r.status !== 'paid' && isPast(new Date(r.due_date)) && !isToday(new Date(r.due_date));
+        }
+        if (statusFilter === 'partial') {
+          return r.status === 'partial' || (r.status !== 'paid' && (r.paid_amount || 0) > 0);
+        }
+        if (statusFilter === 'pending') {
+          return r.status === 'pending' && !(r.paid_amount && r.paid_amount > 0);
         }
         return r.status === statusFilter;
       });
     }
 
-    // Period filter
-    if (periodFilter !== 'all') {
+    // Period filter (não se aplica ao histórico de liquidados)
+    if (periodFilter !== 'all' && statusFilter !== 'paid') {
       const today = startOfDay(new Date());
       filtered = filtered.filter(r => {
         const dueDate = new Date(r.due_date);
@@ -201,8 +208,8 @@ export function ContasReceberTab() {
     const paid = receivables.filter(r => r.status === 'paid');
 
     return {
-      totalPending: pending.reduce((sum, r) => sum + r.total_amount, 0),
-      totalOverdue: overdue.reduce((sum, r) => sum + r.total_amount, 0),
+      totalPending: pending.reduce((sum, r) => sum + Math.max(0, r.total_amount - (r.paid_amount || 0)), 0),
+      totalOverdue: overdue.reduce((sum, r) => sum + Math.max(0, r.total_amount - (r.paid_amount || 0)), 0),
       totalDueThisWeek: dueThisWeek.reduce((sum, r) => sum + r.total_amount, 0),
       totalPaid: paid.reduce((sum, r) => sum + (r.paid_amount || r.total_amount), 0),
       countPending: pending.length,
@@ -216,10 +223,15 @@ export function ContasReceberTab() {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
+  // Saldo restante da parcela
+  const getBalance = (r: Receivable) =>
+    Math.max(0, Number((Number(r.total_amount || 0) - Number(r.paid_amount || 0)).toFixed(2)));
+
   // Status display helper
   const getStatusDisplay = (receivable: Receivable) => {
     if (receivable.status === 'paid') return statusConfig.paid;
     if (receivable.status === 'cancelled') return statusConfig.cancelled;
+    if (receivable.status === 'partial' || (receivable.paid_amount || 0) > 0) return statusConfig.partial;
     if (isPast(new Date(receivable.due_date)) && !isToday(new Date(receivable.due_date))) {
       return statusConfig.overdue;
     }
@@ -298,9 +310,10 @@ export function ContasReceberTab() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
-            <SelectItem value="pending">Pendentes</SelectItem>
+            <SelectItem value="pending">Pendente</SelectItem>
+            <SelectItem value="partial">Pago Parcial</SelectItem>
             <SelectItem value="overdue">Vencidos</SelectItem>
-            
+            <SelectItem value="paid">Liquidado</SelectItem>
           </SelectContent>
         </Select>
         <Select value={periodFilter} onValueChange={(v) => setPeriodFilter(v as PeriodFilter)}>
@@ -329,6 +342,7 @@ export function ContasReceberTab() {
               <TableHead>Parcela</TableHead>
               <TableHead>Vencimento</TableHead>
               <TableHead>Valor</TableHead>
+              <TableHead>Saldo restante</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
@@ -336,13 +350,13 @@ export function ContasReceberTab() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8">
+                <TableCell colSpan={8} className="text-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                 </TableCell>
               </TableRow>
             ) : filteredReceivables.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   Nenhuma parcela encontrada
                 </TableCell>
               </TableRow>
@@ -379,6 +393,16 @@ export function ContasReceberTab() {
                     <TableCell className="font-semibold">
                       {formatCurrency(receivable.total_amount)}
                     </TableCell>
+                    <TableCell className="font-semibold">
+                      <span className={getBalance(receivable) > 0 ? 'text-orange-600' : 'text-green-600'}>
+                        {formatCurrency(getBalance(receivable))}
+                      </span>
+                      {(receivable.paid_amount || 0) > 0 && (
+                        <p className="text-[11px] text-muted-foreground">
+                          pago {formatCurrency(receivable.paid_amount || 0)}
+                        </p>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Badge className={statusDisplay.color}>
                         <StatusIcon className="w-3 h-3 mr-1" />
@@ -399,11 +423,12 @@ export function ContasReceberTab() {
                         {receivable.status !== 'paid' && (
                           <Button
                             size="sm"
+                            title="Registrar recebimento"
                             onClick={() => handleReceiveClick(receivable)}
                             className="bg-green-600 hover:bg-green-700"
                           >
                             <Receipt className="w-4 h-4 mr-1" />
-                            Receber
+                            Registrar Recebimento
                           </Button>
                         )}
                       </div>

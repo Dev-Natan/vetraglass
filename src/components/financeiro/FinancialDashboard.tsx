@@ -1,185 +1,280 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  DollarSign, 
-  Wallet, 
-  ArrowUpRight, 
-  ArrowDownRight,
-  AlertCircle
-} from 'lucide-react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer, 
-  Legend,
-  AreaChart,
-  Area
-} from 'recharts';
-import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  ArrowUpRight,
+  ArrowDownRight,
+  AlertTriangle,
+  RefreshCw,
+} from 'lucide-react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+  Line,
+  ComposedChart,
+} from 'recharts';
+import { startOfMonth, endOfMonth, subMonths, format, isBefore, startOfDay } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+
+const fmt = (v: number) =>
+  (v ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+/** Categorias de caixa que são apenas transferência interna (não são receita/despesa). */
+const INTERNAL_CATEGORIES = ['abertura_caixa', 'fechamento_caixa', 'ajuste_sistema', 'sangria', 'reforco'];
+
+interface MonthlyFlow {
+  name: string;
+  entradas: number;
+  saidas: number;
+  saldo: number;
+}
 
 export function FinancialDashboard() {
   const { currentCompany } = useAuth();
+  const queryClient = useQueryClient();
+  const companyId = currentCompany?.id;
 
+  /** KPIs do mês corrente, calculados a partir do caixa real + despesas. */
   const { data: stats, isLoading } = useQuery({
-    queryKey: ['financial-stats', currentCompany?.id],
+    queryKey: ['financial-stats', companyId],
     queryFn: async () => {
-      if (!currentCompany?.id) return null;
+      if (!companyId) return null;
 
       const now = new Date();
-      const monthStart = startOfMonth(now).toISOString();
-      const monthEnd = endOfMonth(now).toISOString();
-      const prevMonthStart = startOfMonth(subMonths(now, 1)).toISOString();
-      const prevMonthEnd = endOfMonth(subMonths(now, 1)).toISOString();
+      const monthStart = startOfMonth(now);
+      const monthEnd = endOfMonth(now);
+      const prevStart = startOfMonth(subMonths(now, 1));
+      const prevEnd = endOfMonth(subMonths(now, 1));
 
-      // current month sales
-      const { data: sales } = await supabase
-        .from('sales')
-        .select('total_amount')
-        .eq('company_id', currentCompany.id)
-        .eq('payment_status', 'paid')
-        .gte('created_at', monthStart)
-        .lte('created_at', monthEnd);
+      const iso = (d: Date) => d.toISOString();
+      const day = (d: Date) => format(d, 'yyyy-MM-dd');
 
-      // current month expenses
-      const { data: expenses } = await supabase
-        .from('expenses')
-        .select('amount')
-        .eq('company_id', currentCompany.id)
+      const [receivedNow, receivedPrev, expensesNow, expensesPrev] = await Promise.all([
+        supabase
+          .from('accounts_receivable')
+          .select('paid_amount, total_amount, paid_date')
+          .eq('company_id', companyId)
+          .eq('status', 'paid')
+          .gte('paid_date', day(monthStart))
+          .lte('paid_date', day(monthEnd)),
+        supabase
+          .from('accounts_receivable')
+          .select('paid_amount, total_amount')
+          .eq('company_id', companyId)
+          .eq('status', 'paid')
+          .gte('paid_date', day(prevStart))
+          .lte('paid_date', day(prevEnd)),
+        supabase
+          .from('expenses')
+          .select('amount, paid_amount')
+          .eq('company_id', companyId)
+          .eq('status', 'paid')
+          .gte('due_date', day(monthStart))
+          .lte('due_date', day(monthEnd)),
+        supabase
+          .from('expenses')
+          .select('amount, paid_amount')
+          .eq('company_id', companyId)
+          .eq('status', 'paid')
+          .gte('due_date', day(prevStart))
+          .lte('due_date', day(prevEnd)),
+      ]);
+
+      // Depósitos/sinais de orçamento recebidos no período (não passam por accounts_receivable)
+      const { data: deposits } = await supabase
+        .from('quote_deposits')
+        .select('amount, created_at, status')
+        .eq('company_id', companyId)
         .eq('status', 'paid')
-        .gte('due_date', monthStart)
-        .lte('due_date', monthEnd);
+        .gte('created_at', iso(monthStart))
+        .lte('created_at', iso(monthEnd));
 
-      // prev month sales for comparison
-      const { data: prevSales } = await supabase
-        .from('sales')
-        .select('total_amount')
-        .eq('company_id', currentCompany.id)
-        .eq('payment_status', 'paid')
-        .gte('created_at', prevMonthStart)
-        .lte('created_at', prevMonthEnd);
+      const sum = (rows: any[] | null | undefined, field: string, fallback?: string) =>
+        (rows || []).reduce(
+          (acc, r) => acc + (Number(r[field]) || (fallback ? Number(r[fallback]) || 0 : 0)),
+          0,
+        );
 
-      // pending receivables
-      const { data: pendingReceivables } = await supabase
-        .from('accounts_receivable')
-        .select('total_amount')
-        .eq('company_id', currentCompany.id)
-        .eq('status', 'pending');
-
-      // overdue expenses
-      const { data: overdueExpenses } = await supabase
-        .from('expenses')
-        .select('amount')
-        .eq('company_id', currentCompany.id)
-        .eq('status', 'pending')
-        .lt('due_date', new Date().toISOString().split('T')[0]);
-
-      const currentRevenue = sales?.reduce((sum, s) => sum + (Number(s.total_amount) || 0), 0) || 0;
-      const currentExpenses = expenses?.reduce((sum, e) => sum + (Number(e.amount) || 0), 0) || 0;
-      const prevRevenue = prevSales?.reduce((sum, s) => sum + (Number(s.total_amount) || 0), 0) || 0;
-      const totalPendingReceivables = pendingReceivables?.reduce((sum, r) => sum + (Number(r.total_amount) || 0), 0) || 0;
-      const totalOverdueExpenses = overdueExpenses?.reduce((sum, e) => sum + (Number(e.amount) || 0), 0) || 0;
-
-      const revenueChange = prevRevenue > 0 ? ((currentRevenue - prevRevenue) / prevRevenue) * 100 : 0;
+      const revenue =
+        sum(receivedNow.data, 'paid_amount', 'total_amount') + sum(deposits, 'amount');
+      const prevRevenue = sum(receivedPrev.data, 'paid_amount', 'total_amount');
+      const expensesTotal = sum(expensesNow.data, 'paid_amount', 'amount');
+      const prevExpenses = sum(expensesPrev.data, 'paid_amount', 'amount');
 
       return {
-        currentRevenue,
-        currentExpenses,
-        netProfit: currentRevenue - currentExpenses,
-        revenueChange,
-        totalPendingReceivables,
-        totalOverdueExpenses
+        revenue,
+        expenses: expensesTotal,
+        netProfit: revenue - expensesTotal,
+        revenueChange: prevRevenue > 0 ? ((revenue - prevRevenue) / prevRevenue) * 100 : 0,
+        expenseChange: prevExpenses > 0 ? ((expensesTotal - prevExpenses) / prevExpenses) * 100 : 0,
       };
     },
-    enabled: !!currentCompany?.id,
+    enabled: !!companyId,
+    staleTime: 0,
   });
 
-  const { data: chartData } = useQuery({
-    queryKey: ['financial-chart-data', currentCompany?.id],
+  /** Inadimplência: saldos devedores de cobranças vencidas. */
+  const { data: delinquency } = useQuery({
+    queryKey: ['financial-delinquency', companyId],
     queryFn: async () => {
-      if (!currentCompany?.id) return [];
+      if (!companyId) return { total: 0, count: 0, clients: 0 };
 
-      const months = [];
+      const today = format(startOfDay(new Date()), 'yyyy-MM-dd');
+      const { data, error } = await supabase
+        .from('accounts_receivable')
+        .select('total_amount, paid_amount, due_date, status, customer_name, client_id')
+        .eq('company_id', companyId)
+        .in('status', ['pending', 'partial', 'overdue'])
+        .lt('due_date', today);
+
+      if (error) throw error;
+
+      const rows = (data || []).filter((r) =>
+        isBefore(new Date(r.due_date), startOfDay(new Date())),
+      );
+      const total = rows.reduce(
+        (acc, r) => acc + Math.max(0, (Number(r.total_amount) || 0) - (Number(r.paid_amount) || 0)),
+        0,
+      );
+      const clients = new Set(rows.map((r) => r.client_id || r.customer_name)).size;
+
+      return { total: Number(total.toFixed(2)), count: rows.length, clients };
+    },
+    enabled: !!companyId,
+    staleTime: 0,
+  });
+
+  /** Fluxo de caixa real mês a mês (últimos 6 meses) via movimentações de caixa. */
+  const { data: chartData = [], isLoading: chartLoading } = useQuery({
+    queryKey: ['financial-chart-data', companyId],
+    queryFn: async (): Promise<MonthlyFlow[]> => {
+      if (!companyId) return [];
+
+      const rangeStart = startOfMonth(subMonths(new Date(), 5));
+      const rangeEnd = endOfMonth(new Date());
+
+      const [drawer, company] = await Promise.all([
+        supabase
+          .from('cash_movements')
+          .select('type, amount, category, created_at')
+          .eq('company_id', companyId)
+          .gte('created_at', rangeStart.toISOString())
+          .lte('created_at', rangeEnd.toISOString()),
+        supabase
+          .from('company_cash_movements')
+          .select('type, amount, category, created_at')
+          .eq('company_id', companyId)
+          .gte('created_at', rangeStart.toISOString())
+          .lte('created_at', rangeEnd.toISOString()),
+      ]);
+
+      const buckets = new Map<string, MonthlyFlow>();
       for (let i = 5; i >= 0; i--) {
-        const date = subMonths(new Date(), i);
-        months.push({
-          start: startOfMonth(date).toISOString(),
-          end: endOfMonth(date).toISOString(),
-          label: format(date, 'MMM', { locale: ptBR }),
+        const d = subMonths(new Date(), i);
+        buckets.set(format(d, 'yyyy-MM'), {
+          name: format(d, 'MMM/yy', { locale: ptBR }),
+          entradas: 0,
+          saidas: 0,
+          saldo: 0,
         });
       }
 
-      const data = await Promise.all(months.map(async (m) => {
-        const { data: sales } = await supabase
-          .from('sales')
-          .select('total_amount')
-          .eq('company_id', currentCompany.id)
-          .eq('payment_status', 'paid')
-          .gte('created_at', m.start)
-          .lte('created_at', m.end);
+      const apply = (rows: any[] | null | undefined) => {
+        (rows || []).forEach((m) => {
+          if (INTERNAL_CATEGORIES.includes(String(m.category || ''))) return;
+          const key = format(new Date(m.created_at), 'yyyy-MM');
+          const bucket = buckets.get(key);
+          if (!bucket) return;
+          const amount = Number(m.amount) || 0;
+          if (String(m.type).startsWith('entrada') || m.type === 'transferencia_in') {
+            bucket.entradas += amount;
+          } else {
+            bucket.saidas += amount;
+          }
+        });
+      };
 
-        const { data: expenses } = await supabase
-          .from('expenses')
-          .select('amount')
-          .eq('company_id', currentCompany.id)
-          .eq('status', 'paid')
-          .gte('due_date', m.start)
-          .lte('due_date', m.end);
+      apply(drawer.data);
+      apply(company.data);
 
-        return {
-          name: m.label,
-          receitas: sales?.reduce((sum, s) => sum + (Number(s.total_amount) || 0), 0) || 0,
-          despesas: expenses?.reduce((sum, e) => sum + (Number(e.amount) || 0), 0) || 0,
-        };
+      return Array.from(buckets.values()).map((b) => ({
+        ...b,
+        entradas: Number(b.entradas.toFixed(2)),
+        saidas: Number(b.saidas.toFixed(2)),
+        saldo: Number((b.entradas - b.saidas).toFixed(2)),
       }));
-
-      return data;
     },
-    enabled: !!currentCompany?.id,
+    enabled: !!companyId,
+    staleTime: 0,
   });
 
-  const formatCurrency = (value: number) => {
-    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const hasFlow = useMemo(
+    () => chartData.some((d) => d.entradas > 0 || d.saidas > 0),
+    [chartData],
+  );
+
+  const refreshAll = () => {
+    ['financial-stats', 'financial-chart-data', 'financial-delinquency'].forEach((key) =>
+      queryClient.invalidateQueries({ queryKey: [key], refetchType: 'all' }),
+    );
   };
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-32" />
-        ))}
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-32" />
+          ))}
+        </div>
+        <Skeleton className="h-[340px]" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      {/* KPI Cards */}
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          Consolidado de {format(new Date(), "MMMM 'de' yyyy", { locale: ptBR })} · atualização em tempo real
+        </p>
+        <Button variant="ghost" size="sm" onClick={refreshAll} className="gap-2">
+          <RefreshCw className="w-4 h-4" /> Atualizar
+        </Button>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Faturamento Mensal</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-500" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Faturamento Total
+            </CardTitle>
+            <TrendingUp className="h-4 w-4 text-emerald-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats?.currentRevenue || 0)}</div>
+            <div className="text-2xl font-bold">{fmt(stats?.revenue || 0)}</div>
             <div className="flex items-center mt-1">
-              {stats && stats.revenueChange >= 0 ? (
-                <ArrowUpRight className="h-4 w-4 text-green-500 mr-1" />
+              {(stats?.revenueChange ?? 0) >= 0 ? (
+                <ArrowUpRight className="h-4 w-4 text-emerald-500 mr-1" />
               ) : (
-                <ArrowDownRight className="h-4 w-4 text-red-500 mr-1" />
+                <ArrowDownRight className="h-4 w-4 text-destructive mr-1" />
               )}
-              <span className={`text-xs font-medium ${stats && stats.revenueChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {Math.abs(stats?.revenueChange || 0).toFixed(1)}% em relação ao mês anterior
+              <span className="text-xs text-muted-foreground">
+                {Math.abs(stats?.revenueChange || 0).toFixed(1)}% vs. mês anterior
               </span>
             </div>
           </CardContent>
@@ -187,100 +282,129 @@ export function FinancialDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Lucro Líquido</CardTitle>
-            <DollarSign className="h-4 w-4 text-blue-500" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">Despesas</CardTitle>
+            <TrendingDown className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${stats && stats.netProfit >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-              {formatCurrency(stats?.netProfit || 0)}
+            <div className="text-2xl font-bold text-destructive">{fmt(stats?.expenses || 0)}</div>
+            <div className="flex items-center mt-1">
+              <span className="text-xs text-muted-foreground">
+                {Math.abs(stats?.expenseChange || 0).toFixed(1)}% vs. mês anterior
+              </span>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Receitas - Despesas pagas</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Contas a Receber</CardTitle>
-            <Wallet className="h-4 w-4 text-orange-500" />
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Lucro Líquido
+            </CardTitle>
+            <DollarSign className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{formatCurrency(stats?.totalPendingReceivables || 0)}</div>
-            <p className="text-xs text-muted-foreground mt-1">Total pendente no sistema</p>
+            <div
+              className={`text-2xl font-bold ${
+                (stats?.netProfit ?? 0) >= 0 ? 'text-primary' : 'text-destructive'
+              }`}
+            >
+              {fmt(stats?.netProfit || 0)}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Recebido − Despesas pagas</p>
           </CardContent>
         </Card>
 
-        <Card className={stats && stats.totalOverdueExpenses > 0 ? "border-red-200 bg-red-50/30" : ""}>
+        <Card className={(delinquency?.total ?? 0) > 0 ? 'border-destructive/40' : undefined}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Despesas Atrasadas</CardTitle>
-            <AlertCircle className={`h-4 w-4 ${stats && stats.totalOverdueExpenses > 0 ? 'text-red-500' : 'text-muted-foreground'}`} />
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Inadimplência
+            </CardTitle>
+            <AlertTriangle
+              className={`h-4 w-4 ${
+                (delinquency?.total ?? 0) > 0 ? 'text-destructive' : 'text-muted-foreground'
+              }`}
+            />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${stats && stats.totalOverdueExpenses > 0 ? 'text-red-600' : ''}`}>
-              {formatCurrency(stats?.totalOverdueExpenses || 0)}
+            <div
+              className={`text-2xl font-bold ${
+                (delinquency?.total ?? 0) > 0 ? 'text-destructive' : ''
+              }`}
+            >
+              {fmt(delinquency?.total || 0)}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Pagamentos vencidos</p>
+            <div className="flex flex-wrap gap-1 mt-1">
+              <Badge variant="outline" className="text-[10px]">
+                {delinquency?.count || 0} cobranças vencidas
+              </Badge>
+              <Badge variant="outline" className="text-[10px]">
+                {delinquency?.clients || 0} clientes
+              </Badge>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Chart Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">Fluxo de Caixa (6 meses)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px] w-full">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold">
+            Fluxo de Caixa Mês a Mês (Entradas vs Saídas)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {chartLoading ? (
+            <Skeleton className="h-[320px] w-full" />
+          ) : !hasFlow ? (
+            <div className="h-[320px] flex items-center justify-center text-sm text-muted-foreground">
+              Nenhuma movimentação de caixa registrada nos últimos 6 meses.
+            </div>
+          ) : (
+            <div className="h-[320px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="name" />
-                  <YAxis tickFormatter={(value) => `R$${value/1000}k`} />
-                  <Tooltip 
-                    formatter={(value: number) => formatCurrency(value)}
-                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                <ComposedChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border" />
+                  <XAxis dataKey="name" fontSize={12} />
+                  <YAxis
+                    fontSize={12}
+                    tickFormatter={(v: number) =>
+                      Math.abs(v) >= 1000 ? `R$${(v / 1000).toFixed(0)}k` : `R$${v}`
+                    }
+                  />
+                  <Tooltip
+                    formatter={(value: number, name: string) => [fmt(value), name]}
+                    contentStyle={{
+                      borderRadius: '8px',
+                      border: '1px solid hsl(var(--border))',
+                      background: 'hsl(var(--card))',
+                    }}
                   />
                   <Legend />
-                  <Bar dataKey="receitas" name="Receitas" fill="#22c55e" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="despesas" name="Despesas" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">Distribuição Mensal</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData}>
-                  <defs>
-                    <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="name" />
-                  <YAxis tickFormatter={(value) => `R$${value/1000}k`} />
-                  <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                  <Area 
-                    type="monotone" 
-                    dataKey={(data) => data.receitas - data.despesas} 
-                    name="Lucro Operacional" 
-                    stroke="#3b82f6" 
-                    fillOpacity={1} 
-                    fill="url(#colorProfit)" 
+                  <Bar
+                    dataKey="entradas"
+                    name="Entradas"
+                    fill="hsl(var(--primary))"
+                    radius={[4, 4, 0, 0]}
                   />
-                </AreaChart>
+                  <Bar
+                    dataKey="saidas"
+                    name="Saídas"
+                    fill="hsl(var(--destructive))"
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="saldo"
+                    name="Saldo líquido"
+                    stroke="hsl(var(--foreground))"
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                  />
+                </ComposedChart>
               </ResponsiveContainer>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

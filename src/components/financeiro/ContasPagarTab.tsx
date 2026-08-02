@@ -40,6 +40,7 @@ import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { MonthSelector, getMonthDateRange } from '@/components/common/MonthSelector';
 import { PayableDetailsDialog, type PayableDetails } from '@/components/financeiro/PayableDetailsDialog';
+import { TodayDuesAlert } from '@/components/financeiro/TodayDuesAlert';
 
 type PeriodScope = 'month' | 'next30' | 'next60' | 'next90' | 'all';
 
@@ -401,6 +402,8 @@ export function ContasPagarTab() {
 
   return (
     <div className="space-y-4">
+      <TodayDuesAlert onSelect={(description) => { setSearch(description); setStatusFilter('all'); setScope('all'); }} />
+
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
         <SumCard label="A pagar" value={summary.totalPending} icon={Clock} color="text-yellow-600" />
         <SumCard label="Atrasado" value={summary.totalOverdue} icon={AlertCircle} color="text-red-600" />
