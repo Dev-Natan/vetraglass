@@ -208,8 +208,8 @@ export function ContasReceberTab() {
     const paid = receivables.filter(r => r.status === 'paid');
 
     return {
-      totalPending: pending.reduce((sum, r) => sum + r.total_amount, 0),
-      totalOverdue: overdue.reduce((sum, r) => sum + r.total_amount, 0),
+      totalPending: pending.reduce((sum, r) => sum + Math.max(0, r.total_amount - (r.paid_amount || 0)), 0),
+      totalOverdue: overdue.reduce((sum, r) => sum + Math.max(0, r.total_amount - (r.paid_amount || 0)), 0),
       totalDueThisWeek: dueThisWeek.reduce((sum, r) => sum + r.total_amount, 0),
       totalPaid: paid.reduce((sum, r) => sum + (r.paid_amount || r.total_amount), 0),
       countPending: pending.length,
@@ -342,6 +342,7 @@ export function ContasReceberTab() {
               <TableHead>Parcela</TableHead>
               <TableHead>Vencimento</TableHead>
               <TableHead>Valor</TableHead>
+              <TableHead>Saldo restante</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
@@ -349,13 +350,13 @@ export function ContasReceberTab() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8">
+                <TableCell colSpan={8} className="text-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                 </TableCell>
               </TableRow>
             ) : filteredReceivables.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   Nenhuma parcela encontrada
                 </TableCell>
               </TableRow>
