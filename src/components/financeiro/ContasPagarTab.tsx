@@ -40,6 +40,7 @@ import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { MonthSelector, getMonthDateRange } from '@/components/common/MonthSelector';
 import { PayableDetailsDialog, type PayableDetails } from '@/components/financeiro/PayableDetailsDialog';
+import { TodayDuesAlert } from '@/components/financeiro/TodayDuesAlert';
 
 type PeriodScope = 'month' | 'next30' | 'next60' | 'next90' | 'all';
 
