@@ -173,10 +173,61 @@ export function MovimentacaoCaixaDialog({
     enabled: !!currentCompany?.id && open,
   });
 
+  // Saldo real da gaveta calculado ao vivo (abertura + entradas - saídas em dinheiro)
+  const { data: liveDrawerBalance } = useQuery({
+    queryKey: ['drawer-balance', cashRegisterId],
+    queryFn: async () => {
+      const { data: reg, error: regErr } = await supabase
+        .from('cash_registers')
+        .select('opening_amount')
+        .eq('id', cashRegisterId)
+        .maybeSingle();
+      if (regErr) throw regErr;
+
+      const { data: movs, error: movErr } = await supabase
+        .from('cash_movements')
+        .select('type, amount, category, payment_method')
+        .eq('cash_register_id', cashRegisterId);
+      if (movErr) throw movErr;
+
+      const isOpening = (m: any) => m.category === 'abertura' || m.category === 'abertura_caixa';
+      const isCash = (m: any) => (m.payment_method || 'dinheiro').toLowerCase() === 'dinheiro';
+
+      return (movs || [])
+        .filter((m: any) => !isOpening(m) && isCash(m))
+        .reduce((sum: number, m: any) => {
+          const value = Number(m.amount) || 0;
+          return m.type === 'entrada' ? sum + value : sum - value;
+        }, Number(reg?.opening_amount) || 0);
+    },
+    enabled: !!cashRegisterId && open,
+    refetchOnMount: 'always',
+    staleTime: 0,
+  });
+
+  // Realtime: mantém o saldo exibido sincronizado enquanto o modal está aberto
+  useEffect(() => {
+    if (!open || !cashRegisterId) return;
+    const channel = supabase
+      .channel(`movement-dialog-${cashRegisterId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'cash_movements', filter: `cash_register_id=eq.${cashRegisterId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['drawer-balance', cashRegisterId] });
+        },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [open, cashRegisterId, queryClient]);
+
+  const displayedBalance = liveDrawerBalance ?? currentDailyBalance;
+
   const amountValue = parseCurrencyBRL(amount);
-  const needsReinforcement = type === 'saida' && amountValue > currentDailyBalance;
-  const reinforcementAmount = needsReinforcement ? amountValue - currentDailyBalance : 0;
+  const needsReinforcement = type === 'saida' && amountValue > displayedBalance;
+  const reinforcementAmount = needsReinforcement ? amountValue - displayedBalance : 0;
   const hasEnoughCompanyBalance = !needsReinforcement || (companyCash?.current_balance || 0) >= reinforcementAmount;
+
 
   const resetForm = () => {
     setType('entrada');
@@ -312,7 +363,10 @@ export function MovimentacaoCaixaDialog({
         ['company-cash'],
         ['pending-advances'],
         ['sales-today'],
+        ['drawer-balance', cashRegisterId],
+        ['operational-drawer-balance'],
       ];
+
       await Promise.all(
         keys.map(key =>
           queryClient.invalidateQueries({ queryKey: key, refetchType: 'all' })
@@ -354,7 +408,7 @@ export function MovimentacaoCaixaDialog({
           {/* Saldo atual do caixa do dia */}
           <div className="bg-muted/50 rounded-xl px-4 py-3 flex justify-between items-center border">
             <span className="text-sm text-muted-foreground">Saldo atual do caixa</span>
-            <span className="font-semibold">{formatCurrency(currentDailyBalance)}</span>
+            <span className="font-semibold">{formatCurrency(displayedBalance)}</span>
           </div>
 
           {/* Type Selection — Toggle Tabs */}
@@ -445,7 +499,7 @@ export function MovimentacaoCaixaDialog({
                     <div className="bg-background/50 rounded p-2 space-y-1">
                       <div className="flex justify-between">
                         <span>Saldo atual do dia:</span>
-                        <span>{formatCurrency(currentDailyBalance)}</span>
+                        <span>{formatCurrency(displayedBalance)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Valor da saída:</span>
