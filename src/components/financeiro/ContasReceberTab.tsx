@@ -392,6 +392,16 @@ export function ContasReceberTab() {
                     <TableCell className="font-semibold">
                       {formatCurrency(receivable.total_amount)}
                     </TableCell>
+                    <TableCell className="font-semibold">
+                      <span className={getBalance(receivable) > 0 ? 'text-orange-600' : 'text-green-600'}>
+                        {formatCurrency(getBalance(receivable))}
+                      </span>
+                      {(receivable.paid_amount || 0) > 0 && (
+                        <p className="text-[11px] text-muted-foreground">
+                          pago {formatCurrency(receivable.paid_amount || 0)}
+                        </p>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Badge className={statusDisplay.color}>
                         <StatusIcon className="w-3 h-3 mr-1" />
@@ -412,11 +422,12 @@ export function ContasReceberTab() {
                         {receivable.status !== 'paid' && (
                           <Button
                             size="sm"
+                            title="Registrar recebimento"
                             onClick={() => handleReceiveClick(receivable)}
                             className="bg-green-600 hover:bg-green-700"
                           >
                             <Receipt className="w-4 h-4 mr-1" />
-                            Receber
+                            Registrar Recebimento
                           </Button>
                         )}
                       </div>
