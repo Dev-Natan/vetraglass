@@ -223,10 +223,15 @@ export function ContasReceberTab() {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
+  // Saldo restante da parcela
+  const getBalance = (r: Receivable) =>
+    Math.max(0, Number((Number(r.total_amount || 0) - Number(r.paid_amount || 0)).toFixed(2)));
+
   // Status display helper
   const getStatusDisplay = (receivable: Receivable) => {
     if (receivable.status === 'paid') return statusConfig.paid;
     if (receivable.status === 'cancelled') return statusConfig.cancelled;
+    if (receivable.status === 'partial' || (receivable.paid_amount || 0) > 0) return statusConfig.partial;
     if (isPast(new Date(receivable.due_date)) && !isToday(new Date(receivable.due_date))) {
       return statusConfig.overdue;
     }
