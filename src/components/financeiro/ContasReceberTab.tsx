@@ -80,7 +80,7 @@ interface Receivable {
 }
 
 
-type StatusFilter = 'all' | 'pending' | 'overdue' | 'paid';
+type StatusFilter = 'all' | 'pending' | 'partial' | 'overdue' | 'paid';
 type PeriodFilter = 'all' | 'today' | 'week' | 'month' | 'next60' | 'next90' | 'overdue';
 
 const statusConfig = {
