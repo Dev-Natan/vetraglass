@@ -405,7 +405,7 @@ export function MovimentacaoCaixaDialog({
           {/* Saldo atual do caixa do dia */}
           <div className="bg-muted/50 rounded-xl px-4 py-3 flex justify-between items-center border">
             <span className="text-sm text-muted-foreground">Saldo atual do caixa</span>
-            <span className="font-semibold">{formatCurrency(currentDailyBalance)}</span>
+            <span className="font-semibold">{formatCurrency(displayedBalance)}</span>
           </div>
 
           {/* Type Selection — Toggle Tabs */}
@@ -496,7 +496,7 @@ export function MovimentacaoCaixaDialog({
                     <div className="bg-background/50 rounded p-2 space-y-1">
                       <div className="flex justify-between">
                         <span>Saldo atual do dia:</span>
-                        <span>{formatCurrency(currentDailyBalance)}</span>
+                        <span>{formatCurrency(displayedBalance)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Valor da saída:</span>
