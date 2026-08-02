@@ -363,7 +363,10 @@ export function MovimentacaoCaixaDialog({
         ['company-cash'],
         ['pending-advances'],
         ['sales-today'],
+        ['drawer-balance', cashRegisterId],
+        ['operational-drawer-balance'],
       ];
+
       await Promise.all(
         keys.map(key =>
           queryClient.invalidateQueries({ queryKey: key, refetchType: 'all' })
