@@ -148,14 +148,20 @@ export function ContasReceberTab() {
     if (statusFilter !== 'all') {
       filtered = filtered.filter(r => {
         if (statusFilter === 'overdue') {
-          return r.status === 'pending' && isPast(new Date(r.due_date)) && !isToday(new Date(r.due_date));
+          return r.status !== 'paid' && isPast(new Date(r.due_date)) && !isToday(new Date(r.due_date));
+        }
+        if (statusFilter === 'partial') {
+          return r.status === 'partial' || (r.status !== 'paid' && (r.paid_amount || 0) > 0);
+        }
+        if (statusFilter === 'pending') {
+          return r.status === 'pending' && !(r.paid_amount && r.paid_amount > 0);
         }
         return r.status === statusFilter;
       });
     }
 
-    // Period filter
-    if (periodFilter !== 'all') {
+    // Period filter (não se aplica ao histórico de liquidados)
+    if (periodFilter !== 'all' && statusFilter !== 'paid') {
       const today = startOfDay(new Date());
       filtered = filtered.filter(r => {
         const dueDate = new Date(r.due_date);
