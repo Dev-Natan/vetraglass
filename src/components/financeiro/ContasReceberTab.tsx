@@ -305,9 +305,10 @@ export function ContasReceberTab() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
-            <SelectItem value="pending">Pendentes</SelectItem>
+            <SelectItem value="pending">Pendente</SelectItem>
+            <SelectItem value="partial">Pago Parcial</SelectItem>
             <SelectItem value="overdue">Vencidos</SelectItem>
-            
+            <SelectItem value="paid">Liquidado</SelectItem>
           </SelectContent>
         </Select>
         <Select value={periodFilter} onValueChange={(v) => setPeriodFilter(v as PeriodFilter)}>
