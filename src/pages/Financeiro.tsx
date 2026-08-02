@@ -66,6 +66,7 @@ import { useModuleTutorialTrigger } from '@/hooks/useModuleTutorialTrigger';
 import { PaginationControls } from '@/components/common/PaginationControls';
 import { Landmark, BookOpen, PiggyBank } from 'lucide-react';
 import { InvestimentosTab } from '@/components/financeiro/InvestimentosTab';
+import { useFinanceRealtime } from '@/hooks/useFinanceRealtime';
 
 const paymentMethodConfig = {
   dinheiro: { label: 'Dinheiro', color: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' },
@@ -82,6 +83,9 @@ const statusConfig = {
 export default function Financeiro() {
   const { currentCompany } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  // Sincroniza todas as abas com o banco em tempo real (caixa, bancos, despesas...)
+  useFinanceRealtime();
 
   useModuleTutorialTrigger('financeiro');
   useModuleTutorialTrigger('caixa-vendas');
