@@ -91,7 +91,7 @@ export async function generateOSReportPdf(
       String(it.productQty),
       String(it.width),
       String(it.height),
-      it.aluminumColor || '-',
+      it.aluminumColor || 'Padrão',
       [it.glassColor, it.glassThickness ? `${it.glassThickness}mm` : null]
         .filter(Boolean)
         .join(' ') || '-',
@@ -151,7 +151,8 @@ export async function generateOSReportPdf(
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(40);
-    const productTitle = `${it.productName} (${it.productQty} un — ${it.width}x${it.height}mm)`;
+    const aluColor = it.aluminumColor || 'Padrão';
+    const productTitle = `${it.productName} (${it.productQty} un — ${it.width}x${it.height}mm) | Cor Alu: ${aluColor}`;
     doc.text(productTitle, textX, textY);
     
     cursorY = img ? cursorY + TITLE_IMG_SIZE + 6 : cursorY + 10;
