@@ -120,9 +120,9 @@ export async function generateOSReportPdf(
   cursorY = (doc as any).lastAutoTable.finalY + 6;
 
   // 1. Agrupamento por Produto (Hierarquia Parente-Filho)
-  items.forEach((it) => {
+  for (const it of items) {
     // Verificar se cabe o título do produto + pelo menos uma linha de tabela
-    if (cursorY > 250) {
+    if (cursorY > 240) {
       doc.addPage();
       cursorY = 20;
     }
@@ -131,15 +131,32 @@ export async function generateOSReportPdf(
     const itGlasses = it.rows.filter((r) => r.itemType === 'glass');
     const itAccessories = it.rows.filter((r) => r.itemType === 'accessory' || r.itemType === 'component');
 
-    if (itProfiles.length === 0 && itGlasses.length === 0 && itAccessories.length === 0) return;
+    if (itProfiles.length === 0 && itGlasses.length === 0 && itAccessories.length === 0) continue;
 
-    // Título do Bloco do Produto
+    // Renderização da Imagem do Produto (se existir)
+    const img = productImages[it.osItemId];
+    const TITLE_IMG_SIZE = 15;
+    if (img) {
+      try {
+        doc.addImage(img, 'PNG', 14, cursorY, TITLE_IMG_SIZE, TITLE_IMG_SIZE, undefined, 'FAST');
+      } catch {
+        try {
+          doc.addImage(img, 'JPEG', 14, cursorY, TITLE_IMG_SIZE, TITLE_IMG_SIZE, undefined, 'FAST');
+        } catch { /* ignore */ }
+      }
+    }
+
+    // Título do Bloco do Produto (ao lado da imagem ou na margem se sem imagem)
+    const textX = img ? 14 + TITLE_IMG_SIZE + 4 : 14;
+    const textY = img ? cursorY + (TITLE_IMG_SIZE / 2) + 2 : cursorY + 4;
+    
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(40);
     const productTitle = `${it.productName} (${it.productQty} un — ${it.width}x${it.height}mm)`;
-    doc.text(productTitle, 14, cursorY);
-    cursorY += 5;
+    doc.text(productTitle, textX, textY);
+    
+    cursorY = img ? cursorY + TITLE_IMG_SIZE + 6 : cursorY + 10;
 
     // 2. Consolidação de Tabelas de Perfis (Funda ambas em uma única tabela)
     if (itProfiles.length > 0) {
