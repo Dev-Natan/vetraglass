@@ -119,122 +119,124 @@ export async function generateOSReportPdf(
   });
   cursorY = (doc as any).lastAutoTable.finalY + 6;
 
-  // Consolidated tables
-  const profiles = items.flatMap((i) => i.rows).filter((r) => r.itemType === 'profile');
-  const glasses = items.flatMap((i) => i.rows).filter((r) => r.itemType === 'glass');
-  const accessories = items
-    .flatMap((i) => i.rows)
-    .filter((r) => r.itemType === 'accessory' || r.itemType === 'component');
-
-  const section = (title: string) => {
-    if (cursorY > 260) {
+  // 1. Agrupamento por Produto (Hierarquia Parente-Filho)
+  items.forEach((it) => {
+    // Verificar se cabe o título do produto + pelo menos uma linha de tabela
+    if (cursorY > 250) {
       doc.addPage();
-      cursorY = 16;
+      cursorY = 20;
     }
+
+    const itProfiles = it.rows.filter((r) => r.itemType === 'profile');
+    const itGlasses = it.rows.filter((r) => r.itemType === 'glass');
+    const itAccessories = it.rows.filter((r) => r.itemType === 'accessory' || r.itemType === 'component');
+
+    if (itProfiles.length === 0 && itGlasses.length === 0 && itAccessories.length === 0) return;
+
+    // Título do Bloco do Produto
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(40);
+    const productTitle = `${it.productName} (${it.productQty} un — ${it.width}x${it.height}mm)`;
+    doc.text(productTitle, 14, cursorY);
+    cursorY += 5;
+
+    // 2. Consolidação de Tabelas de Perfis (Funda ambas em uma única tabela)
+    if (itProfiles.length > 0) {
+      autoTable(doc, {
+        startY: cursorY,
+        head: [['Perfil', 'Lado', 'Comprimento (mm)', 'Peças', 'Ângulo']],
+        body: itProfiles.map((p) => [
+          p.itemName,
+          p.side || '-',
+          String(p.calculatedLengthMm || 0),
+          String(p.calculatedQty),
+          p.cutAngle != null ? `${p.cutAngle}°` : '-',
+        ]),
+        styles: { fontSize: 8, cellPadding: 1.5 },
+        headStyles: { fillColor: [60, 60, 60] },
+        theme: 'striped',
+        margin: { left: 18 },
+        tableWidth: pageW - 32,
+      });
+      cursorY = (doc as any).lastAutoTable.finalY + 4;
+    }
+
+    // 3. Otimização da Tabela de Vidros
+    if (itGlasses.length > 0) {
+      autoTable(doc, {
+        startY: cursorY,
+        head: [['Vidro / Posição', 'Larg (mm)', 'Alt (mm)', 'Qtd', 'Área Total (m²)']],
+        body: itGlasses.map((g) => {
+          const area = (g.calculatedWidth / 1000) * (g.calculatedHeight / 1000) * g.calculatedQty;
+          return [
+            g.itemName,
+            String(g.calculatedWidth),
+            String(g.calculatedHeight),
+            String(g.calculatedQty),
+            area.toFixed(3),
+          ];
+        }),
+        styles: { fontSize: 8, cellPadding: 1.5 },
+        headStyles: { fillColor: [80, 80, 80] },
+        theme: 'grid',
+        margin: { left: 18 },
+        tableWidth: pageW - 32,
+      });
+      cursorY = (doc as any).lastAutoTable.finalY + 6;
+    }
+
+    cursorY += 2;
+  });
+
+  // 4. Layout de Acessórios & Insumos (Grade de 2 colunas consolidada no final)
+  const allAccessories = items.flatMap((it) => it.rows).filter((r) => r.itemType === 'accessory' || r.itemType === 'component');
+
+  if (allAccessories.length > 0) {
+    if (cursorY > 230) {
+      doc.addPage();
+      cursorY = 20;
+    }
+
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.text(title, 14, cursorY);
-    cursorY += 3;
-  };
+    doc.setTextColor(0);
+    doc.text('Acessórios & Insumos Consolidados', 14, cursorY);
+    cursorY += 5;
 
-  // Perfis
-  if (profiles.length) {
-    section('Perfis de Alumínio');
-    // Consolidate by item name
-    const map = new Map<string, { name: string; totalMm: number; pieces: number }>();
-    profiles.forEach((p) => {
-      const key = p.itemName;
-      const entry = map.get(key) || { name: key, totalMm: 0, pieces: 0 };
-      entry.totalMm += (p.calculatedLengthMm || 0) * p.calculatedQty;
-      entry.pieces += p.calculatedQty;
-      map.set(key, entry);
-    });
-    autoTable(doc, {
-      startY: cursorY,
-      head: [['Perfil', 'Peças', 'Comprimento Total (m)']],
-      body: Array.from(map.values()).map((r) => [
-        r.name,
-        String(r.pieces),
-        (r.totalMm / 1000).toFixed(2),
-      ]),
-      styles: { fontSize: 9, cellPadding: 2 },
-      headStyles: { fillColor: [30, 30, 30] },
-      theme: 'grid',
-    });
-    cursorY = (doc as any).lastAutoTable.finalY + 4;
-
-    // Detailed cuts
-    autoTable(doc, {
-      startY: cursorY,
-      head: [['Produto', 'Perfil', 'Lado', 'Comprimento (mm)', 'Peças', 'Ângulo']],
-      body: profiles.map((p) => [
-        p.productName,
-        p.itemName,
-        p.side || '-',
-        String(p.calculatedLengthMm || 0),
-        String(p.calculatedQty),
-        p.cutAngle != null ? `${p.cutAngle}°` : '-',
-      ]),
-      styles: { fontSize: 8, cellPadding: 1.5 },
-      headStyles: { fillColor: [60, 60, 60] },
-      theme: 'striped',
-    });
-    cursorY = (doc as any).lastAutoTable.finalY + 6;
-  }
-
-  // Vidros
-  if (glasses.length) {
-    section('Vidros');
-    const withArea = glasses.map((g) => ({
-      ...g,
-      area: (g.calculatedWidth / 1000) * (g.calculatedHeight / 1000) * g.calculatedQty,
-    }));
-    const totalArea = withArea.reduce((s, r) => s + r.area, 0);
-    autoTable(doc, {
-      startY: cursorY,
-      head: [['Produto', 'Vidro', 'Lado', 'Larg (mm)', 'Alt (mm)', 'Qtd', 'Área (m²)']],
-      body: withArea.map((g) => [
-        g.productName,
-        g.itemName,
-        g.side || '-',
-        String(g.calculatedWidth),
-        String(g.calculatedHeight),
-        String(g.calculatedQty),
-        g.area.toFixed(3),
-      ]),
-      foot: [['', '', '', '', '', 'Total:', totalArea.toFixed(3)]],
-      styles: { fontSize: 9, cellPadding: 2 },
-      headStyles: { fillColor: [30, 30, 30] },
-      footStyles: { fillColor: [230, 230, 230], textColor: 20, fontStyle: 'bold' },
-      theme: 'grid',
-    });
-    cursorY = (doc as any).lastAutoTable.finalY + 6;
-  }
-
-  // Acessórios & Insumos
-  if (accessories.length) {
-    section('Acessórios & Insumos');
-    const map = new Map<string, { name: string; unit: string; total: number }>();
-    accessories.forEach((a) => {
+    const accMap = new Map<string, { name: string; unit: string; total: number }>();
+    allAccessories.forEach((a) => {
       const unit = a.unit || 'un';
       const key = `${a.itemName}|${unit}`;
-      const entry = map.get(key) || { name: a.itemName, unit, total: 0 };
+      const entry = accMap.get(key) || { name: a.itemName, unit, total: 0 };
       entry.total += a.calculatedQty;
-      map.set(key, entry);
+      accMap.set(key, entry);
     });
+
+    const accData = Array.from(accMap.values()).map(r => [`${r.name}`, `${r.total.toFixed(2)} ${r.unit}`]);
+    
+    // Split data into two columns for the 2-column grid effect
+    const half = Math.ceil(accData.length / 2);
+    const col1 = accData.slice(0, half);
+    const col2 = accData.slice(half);
+
+    // We can use a single table with 4 columns to simulate 2 columns of data
+    const combinedData = [];
+    for (let i = 0; i < half; i++) {
+      combinedData.push([
+        col1[i]?.[0] || '', col1[i]?.[1] || '',
+        col2[i]?.[0] || '', col2[i]?.[1] || ''
+      ]);
+    }
+
     autoTable(doc, {
       startY: cursorY,
-      head: [['Item', 'Qtd Total', 'Unidade']],
-      body: Array.from(map.values()).map((r) => [
-        r.name,
-        r.total.toFixed(2),
-        r.unit,
-      ]),
-      styles: { fontSize: 9, cellPadding: 2 },
-      headStyles: { fillColor: [30, 30, 30] },
+      head: [['Item', 'Qtd', 'Item', 'Qtd']],
+      body: combinedData,
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [40, 40, 40] },
       theme: 'grid',
     });
-    cursorY = (doc as any).lastAutoTable.finalY + 6;
   }
 
   // Footer with page numbers
