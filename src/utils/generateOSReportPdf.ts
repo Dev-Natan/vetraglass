@@ -70,7 +70,7 @@ export async function generateOSReportPdf(
 
   let cursorY = 46;
 
-  // Resumo do Vão — preload product thumbnails (data URLs)
+  // Preload product thumbnails (data URLs)
   const productImages: Record<string, string | null> = {};
   await Promise.all(
     items.map(async (it) => {
@@ -81,6 +81,7 @@ export async function generateOSReportPdf(
   );
 
   const IMG_MM = 14;
+  // Summary Table
   autoTable(doc, {
     startY: cursorY,
     head: [['Img', 'Produto', 'Qtd', 'Larg (mm)', 'Alt (mm)', 'Cor Alu.', 'Vidro']],
@@ -111,9 +112,7 @@ export async function generateOSReportPdf(
       } catch {
         try {
           doc.addImage(img, 'JPEG', x, y, IMG_MM, IMG_MM, undefined, 'FAST');
-        } catch {
-          /* ignore unsupported formats */
-        }
+        } catch { /* ignore */ }
       }
     },
   });
@@ -121,7 +120,6 @@ export async function generateOSReportPdf(
 
   // 1. Agrupamento por Produto (Hierarquia Parente-Filho)
   for (const it of items) {
-    // Verificar se cabe o título do produto + pelo menos uma linha de tabela
     if (cursorY > 240) {
       doc.addPage();
       cursorY = 20;
@@ -146,7 +144,7 @@ export async function generateOSReportPdf(
       }
     }
 
-    // Título do Bloco do Produto (ao lado da imagem ou na margem se sem imagem)
+    // Título do Bloco do Produto
     const textX = img ? 14 + TITLE_IMG_SIZE + 4 : 14;
     const textY = img ? cursorY + (TITLE_IMG_SIZE / 2) + 2 : cursorY + 4;
     
@@ -158,7 +156,7 @@ export async function generateOSReportPdf(
     
     cursorY = img ? cursorY + TITLE_IMG_SIZE + 6 : cursorY + 10;
 
-    // 2. Consolidação de Tabelas de Perfis (Funda ambas em uma única tabela)
+    // 2. Consolidação de Tabelas de Perfis
     if (itProfiles.length > 0) {
       autoTable(doc, {
         startY: cursorY,
@@ -204,9 +202,9 @@ export async function generateOSReportPdf(
     }
 
     cursorY += 2;
-  });
+  }
 
-  // 4. Layout de Acessórios & Insumos (Grade de 2 colunas consolidada no final)
+  // 4. Layout de Acessórios & Insumos (Grade de 2 colunas)
   const allAccessories = items.flatMap((it) => it.rows).filter((r) => r.itemType === 'accessory' || r.itemType === 'component');
 
   if (allAccessories.length > 0) {
@@ -231,13 +229,10 @@ export async function generateOSReportPdf(
     });
 
     const accData = Array.from(accMap.values()).map(r => [`${r.name}`, `${r.total.toFixed(2)} ${r.unit}`]);
-    
-    // Split data into two columns for the 2-column grid effect
     const half = Math.ceil(accData.length / 2);
     const col1 = accData.slice(0, half);
     const col2 = accData.slice(half);
 
-    // We can use a single table with 4 columns to simulate 2 columns of data
     const combinedData = [];
     for (let i = 0; i < half; i++) {
       combinedData.push([
@@ -256,7 +251,7 @@ export async function generateOSReportPdf(
     });
   }
 
-  // Footer with page numbers
+  // Footer
   const total = doc.getNumberOfPages();
   for (let i = 1; i <= total; i++) {
     doc.setPage(i);
