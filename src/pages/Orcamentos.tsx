@@ -148,11 +148,13 @@ export default function Orcamentos() {
   const { data: quoteSales = [] } = useQuery({
     queryKey: ['quote-sales-financials', currentCompany?.id],
     queryFn: async () => {
+      // Buscamos todas as vendas da empresa que tenham quote_id OU que tenham o nome do cliente batendo com orçamentos ativos (legado)
+      // No entanto, para garantir performance e precisão, focamos no quote_id primeiro.
       const { data, error } = await supabase
         .from('sales')
         .select('id, sale_number, quote_id, ordem_servico_id, customer_name, total_amount, paid_amount, pending_amount, payment_status')
-        .eq('company_id', currentCompany!.id)
-        .not('quote_id', 'is', null);
+        .eq('company_id', currentCompany!.id);
+      
       if (error) throw error;
       return data || [];
     },
@@ -161,8 +163,22 @@ export default function Orcamentos() {
 
   const salesByQuoteId = useMemo(() => {
     const map = new Map<string, PartialSaleTarget & { isPartial: boolean }>();
+    
+    // Criar um mapa auxiliar de nomes de clientes para orçamentos (para casos legados sem quote_id na venda)
+    const quoteMapByName = new Map<string, string>();
+    if (quotes) {
+      quotes.forEach(q => {
+        if (q.status === 'approved' || q.status === 'converted') {
+          quoteMapByName.set(q.customer_name.trim().toLowerCase(), q.id);
+        }
+      });
+    }
+
     for (const s of quoteSales) {
-      if (!s.quote_id) continue;
+      // Tentar encontrar o quote_id via coluna direta ou via nome do cliente (fallback)
+      const quoteId = s.quote_id || quoteMapByName.get(s.customer_name?.trim().toLowerCase() || '');
+      
+      if (!quoteId) continue;
       
       const total = Number(s.total_amount) || 0;
       const paid = Number(s.paid_amount ?? 0);
@@ -187,7 +203,7 @@ export default function Orcamentos() {
                            (s.payment_status === 'partial' && existing.isPartial === false);
 
       if (shouldReplace) {
-        map.set(s.quote_id, {
+        map.set(quoteId, {
           id: s.id,
           sale_number: s.sale_number,
           customer_name: s.customer_name,
