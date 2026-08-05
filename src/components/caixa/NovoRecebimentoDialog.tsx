@@ -231,6 +231,13 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
       queryClient.invalidateQueries({ queryKey: ['sale-receipts-history'] });
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
       queryClient.invalidateQueries({ queryKey: ['quote-sales-financials'] });
+      queryClient.invalidateQueries({ queryKey: ['quote-financial-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['quote-receivables'] });
+      queryClient.invalidateQueries({ queryKey: ['quote-all-deposits'] });
+      queryClient.invalidateQueries({ queryKey: ['quote-entry-sale'] });
+      queryClient.invalidateQueries({ queryKey: ['quote-previously-paid'] });
+      queryClient.invalidateQueries({ queryKey: ['approved-quotes-paid-map'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-stats'] });
       
       setPaymentAmount('');
       onOpenChange(false);
