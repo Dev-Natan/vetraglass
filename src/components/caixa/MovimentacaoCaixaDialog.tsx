@@ -201,7 +201,7 @@ export function MovimentacaoCaixaDialog({
             pending_amount: financial?.pending_amount || 0
           };
         })
-        .filter(q => q.pending_amount > 0.01);
+        .filter(q => q.pending_amount > 0.01 && q.status !== 'cancelled');
 
       console.log('Orçamentos encontrados e filtrados:', finalResult);
       return finalResult;
