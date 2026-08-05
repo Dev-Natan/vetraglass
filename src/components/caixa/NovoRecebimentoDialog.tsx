@@ -85,7 +85,7 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
       const { data, error } = await supabase
         .from('cash_movements')
         .select('id, amount, payment_method, description, created_at, type')
-        .eq('sale_id', sale.id)
+        .or(`sale_id.eq.${sale.id}${sale.quote_id ? `,quote_id.eq.${sale.quote_id}` : ''}`)
         .eq('type', 'entrada')
         .order('created_at', { ascending: false });
       if (error) throw error;
