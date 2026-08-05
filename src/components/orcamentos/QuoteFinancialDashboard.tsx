@@ -3,6 +3,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { 
   DollarSign, 
   TrendingUp, 
@@ -11,7 +20,10 @@ import {
   AlertTriangle,
   Calendar,
   CreditCard,
-  Banknote
+  Banknote,
+  History,
+  ArrowDownCircle,
+  ArrowUpCircle
 } from 'lucide-react';
 import { format, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -41,6 +53,22 @@ export function QuoteFinancialDashboard({
   ordemServicoId,
   totalAmount,
 }: QuoteFinancialDashboardProps) {
+  // Fetch cash movements (payments and expenses) linked to this quote
+  const { data: movements } = useQuery({
+    queryKey: ['quote-financial-movements', quoteId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('cash_movements')
+        .select('*')
+        .eq('quote_id', quoteId)
+        .order('created_at', { ascending: true });
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!quoteId,
+  });
+
   // Fetch receivables - can be linked to quote or OS
   const { data: receivables, isLoading } = useQuery({
     queryKey: ['quote-receivables', quoteId, ordemServicoId],
@@ -405,8 +433,89 @@ export function QuoteFinancialDashboard({
         </Card>
       )}
 
+      {/* Histórico de Recebimentos e Pagamentos */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <History className="w-4 h-4" />
+            Histórico de Lançamentos
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="rounded-md border overflow-hidden">
+            <Table>
+              <TableHeader className="bg-muted/50">
+                <TableRow>
+                  <TableHead className="text-xs">Data</TableHead>
+                  <TableHead className="text-xs">Tipo</TableHead>
+                  <TableHead className="text-xs">Forma</TableHead>
+                  <TableHead className="text-right text-xs">Valor</TableHead>
+                  <TableHead className="text-right text-xs">Saldo Restante</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(() => {
+                  let runningBalance = totalAmount;
+                  if (!movements || movements.length === 0) {
+                    return (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-4 text-muted-foreground text-xs">
+                          Nenhum lançamento registrado
+                        </TableCell>
+                      </TableRow>
+                    );
+                  }
+
+                  return movements.map((movement) => {
+                    const isCredit = movement.type === 'in' || movement.type === 'sale';
+                    if (isCredit) {
+                      runningBalance -= Number(movement.amount);
+                    }
+                    
+                    return (
+                      <TableRow key={movement.id} className="hover:bg-muted/30">
+                        <TableCell className="text-xs py-2">
+                          {format(new Date(movement.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                        </TableCell>
+                        <TableCell className="py-2">
+                          <div className="flex items-center gap-1.5">
+                            {isCredit ? (
+                              <ArrowDownCircle className="w-3 h-3 text-emerald-500" />
+                            ) : (
+                              <ArrowUpCircle className="w-3 h-3 text-destructive" />
+                            )}
+                            <span className={cn("text-xs font-medium", isCredit ? "text-emerald-600" : "text-destructive")}>
+                              {isCredit ? 'Recebimento' : 'Saída/Custo'}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-xs py-2">
+                          {getPaymentMethodLabel(movement.payment_method)}
+                        </TableCell>
+                        <TableCell className={cn("text-right text-xs font-bold py-2", isCredit ? "text-emerald-600" : "text-destructive")}>
+                          {isCredit ? '' : '-'}{formatCurrency(Number(movement.amount))}
+                        </TableCell>
+                        <TableCell className="text-right text-xs font-mono py-2">
+                          {formatCurrency(Math.max(0, runningBalance))}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  });
+                })()}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="mt-3 flex justify-end">
+            <div className="text-xs text-muted-foreground flex items-center gap-2">
+              <span>Saldo Final Restante:</span>
+              <span className="font-bold text-sm text-foreground">{formatCurrency(Math.max(0, pendingAmount))}</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Empty State */}
-      {(!receivables || receivables.length === 0) && !effectiveDeposit && (
+      {(!receivables || receivables.length === 0) && !effectiveDeposit && (!movements || movements.length === 0) && (
         <Card>
           <CardContent className="pt-6 text-center text-muted-foreground">
             <DollarSign className="w-8 h-8 mx-auto mb-2 opacity-50" />
