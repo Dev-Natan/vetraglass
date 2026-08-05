@@ -158,12 +158,24 @@ export function QuoteFinancialDashboard({
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
-  // Calcular total pago: excluir entrada_orcamento dos receivables pois já contabilizado nos deposits
+  // Calcular total pago: somar entradas e parcelas pagas
+  // Garantimos que não haja dupla contagem se a entrada estiver tanto em quote_deposits quanto em accounts_receivable
   const paidReceivables = receivables?.filter(r => r.status === 'paid' && r.receivable_type !== 'entrada_orcamento') || [];
-  const paidAmount = paidReceivables.reduce((sum, r) => sum + r.total_amount, 0);
-  const depositPaidAmount = effectiveDeposit?.status === 'paid' ? (effectiveDeposit.amount || 0) : 0;
-  const totalPaid = paidAmount + depositPaidAmount;
-  const pendingAmount = totalAmount - totalPaid;
+  const paidAmount = paidReceivables.reduce((sum, r) => sum + (Number(r.paid_amount) || r.total_amount), 0);
+  const depositPaidAmount = effectiveDeposit?.status === 'paid' ? (Number(effectiveDeposit.amount) || 0) : 0;
+  
+  // Somar também movimentos de entrada vinculados que podem não estar nos receivables/deposits (recebimentos parciais diretos)
+  // Filtrar para evitar duplicidade com os depósitos e parcelas já somados
+  const otherMovementsAmount = (movements || [])
+    .filter(m => m.type === 'entrada' && m.category === 'recebimento_parcial')
+    .reduce((sum, m) => sum + (Number(m.amount) || 0), 0);
+
+  // Se houver movimentos parciais, eles representam o que foi pago via NovoRecebimentoDialog
+  // que atualiza sales.paid_amount. Para o dashboard, somamos o que é de fato "Entrada" + "Parcelas"
+  // ou usamos a lógica de movimentos se ela for mais abrangente.
+  
+  const totalPaid = Math.max(paidAmount + depositPaidAmount, otherMovementsAmount);
+  const pendingAmount = Math.max(0, Number((totalAmount - totalPaid).toFixed(2)));
   const percentPaid = totalAmount > 0 ? (totalPaid / totalAmount) * 100 : 0;
   
   // Calculate overdue and upcoming payments
