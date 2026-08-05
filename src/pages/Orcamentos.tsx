@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useFinanceRealtime } from '@/hooks/useFinanceRealtime';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useSearchParams } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -63,10 +63,38 @@ const statusConfig: Record<QuoteStatus, { label: string; icon: any; variant: 'de
 export default function Orcamentos() {
   const { currentCompany } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   
   // Ativa sincronização em tempo real para o módulo financeiro e orçamentos
   useFinanceRealtime();
+
+  // Inscrição Realtime específica para orçamentos e vendas na página de listagem
+  useEffect(() => {
+    if (!currentCompany?.id) return;
+
+    const channel = supabase
+      .channel('quotes-list-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'quotes', filter: `company_id=eq.${currentCompany.id}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['quotes', currentCompany.id] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'sales', filter: `company_id=eq.${currentCompany.id}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['quote-sales-financials', currentCompany.id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentCompany?.id, queryClient]);
   
   useModuleTutorialTrigger('orcamentos');
   
