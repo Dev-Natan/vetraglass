@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useFinanceRealtime } from '@/hooks/useFinanceRealtime';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useSearchParams } from 'react-router-dom';
@@ -63,6 +64,9 @@ export default function Orcamentos() {
   const { currentCompany } = useAuth();
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
+  
+  // Ativa sincronização em tempo real para o módulo financeiro e orçamentos
+  useFinanceRealtime();
   
   useModuleTutorialTrigger('orcamentos');
   
