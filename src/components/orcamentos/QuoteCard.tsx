@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from 'react';
 import { Quote, QuoteStatus } from '@/services/quoteService';
 import { openWhatsapp } from '@/utils/whatsapp';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +24,7 @@ import {
 
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
