@@ -152,12 +152,13 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
       if (movErr) throw movErr;
 
       // 2) Atualiza a venda somando ao paid_amount
-      const newPaid = Number((Number(sale.paid_amount) + amountToReceive).toFixed(2));
+      const currentPaid = Number(sale.paid_amount) || 0;
       const totalAmt = Number(sale.total_amount);
+      const newPaid = Number((currentPaid + amountToReceive).toFixed(2));
       const newPending = Math.max(0, Number((totalAmt - newPaid).toFixed(2)));
       const finStatus = calculateFinancialStatus(newPaid, totalAmt);
       const payment_status =
-        finStatus === 'PAGO' ? 'paid' : finStatus === 'PARCIAL' ? 'partial' : 'pending';
+        newPending <= 0.01 ? 'paid' : 'partial';
 
       const { error: saleErr } = await supabase
         .from('sales')
