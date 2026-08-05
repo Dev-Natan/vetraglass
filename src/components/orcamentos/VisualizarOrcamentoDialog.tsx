@@ -488,8 +488,8 @@ export function VisualizarOrcamentoDialog({ open, onOpenChange, quote }: Visuali
           {(() => {
             const steps: { key: QuoteStatus; label: string }[] = [
               { key: 'pending', label: 'Pendente' },
-              { key: 'approved', label: 'Aprovado' },
-              { key: 'converted', label: 'Convertido' },
+              { key: 'approved', label: 'Em Aberto' },
+              { key: 'converted', label: 'Liquidado' },
             ];
             const currentIdx = steps.findIndex(s => s.key === quote.status);
             const isRejected = quote.status === 'rejected' || quote.status === 'expired';
