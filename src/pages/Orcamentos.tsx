@@ -149,10 +149,12 @@ export default function Orcamentos() {
     queryKey: ['quote-sales-financials', currentCompany?.id],
     queryFn: async () => {
       // Buscamos todas as vendas da empresa que tenham quote_id OU que tenham o nome do cliente batendo com orçamentos ativos (legado)
-      // No entanto, para garantir performance e precisão, focamos no quote_id primeiro.
       const { data, error } = await supabase
         .from('sales')
-        .select('id, sale_number, quote_id, ordem_servico_id, customer_name, total_amount, paid_amount, pending_amount, payment_status')
+        .select(`
+          id, sale_number, quote_id, ordem_servico_id, customer_name, total_amount, paid_amount, pending_amount, payment_status,
+          quotes!left(final_amount)
+        `)
         .eq('company_id', currentCompany!.id);
       
       if (error) throw error;
