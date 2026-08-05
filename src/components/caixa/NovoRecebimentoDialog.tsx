@@ -219,6 +219,8 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
       toast.success(res.fullyPaid ? 'Venda quitada!' : 'Recebimento parcial registrado', {
         description: `${formatCurrency(res.amount)} adicionado ao caixa (${methodLabel[paymentMethod]})`,
       });
+      
+      // Invalida todas as queries relacionadas para atualizar UI em tempo real
       queryClient.invalidateQueries({ queryKey: ['sales'] });
       queryClient.invalidateQueries({ queryKey: ['sales-today'] });
       queryClient.invalidateQueries({ queryKey: ['cash-movements'] });
@@ -227,6 +229,8 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
       queryClient.invalidateQueries({ queryKey: ['accounts-receivable'] });
       queryClient.invalidateQueries({ queryKey: ['sale-receipts-history'] });
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
+      queryClient.invalidateQueries({ queryKey: ['quote-sales-financials'] });
+      
       setPaymentAmount('');
       onOpenChange(false);
       onSuccess?.();
