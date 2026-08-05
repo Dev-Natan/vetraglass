@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from 'react';
 import { Quote, QuoteStatus } from '@/services/quoteService';
 import { openWhatsapp } from '@/utils/whatsapp';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +24,7 @@ import {
 
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -68,6 +70,23 @@ export function QuoteCard({
   onGenerateContract,
   onCancelApproved
 }: QuoteCardProps) {
+  const [isHighlighting, setIsHighlighting] = useState(false);
+  const prevIsPartial = useRef(isPartial);
+  const prevStatus = useRef(quote.status);
+
+  useEffect(() => {
+    // Se o status ou o estado "Parcial" mudar, ativa o destaque
+    if (prevIsPartial.current !== isPartial || prevStatus.current !== quote.status) {
+      setIsHighlighting(true);
+      const timer = setTimeout(() => setIsHighlighting(false), 2000);
+      
+      prevIsPartial.current = isPartial;
+      prevStatus.current = quote.status;
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isPartial, quote.status]);
+
   const status = statusConfig[quote.status as QuoteStatus] || statusConfig.pending;
   const StatusIcon = isPartial ? Wallet : status.icon;
 
@@ -84,7 +103,14 @@ export function QuoteCard({
   const statusLabel = isPartial ? 'Parcial' : status.label;
 
   return (
-    <UICard className="overflow-hidden hover:shadow-md transition-shadow">
+    <UICard 
+      className={cn(
+        "overflow-hidden transition-all duration-500",
+        isHighlighting 
+          ? "ring-2 ring-primary shadow-[0_0_15px_rgba(var(--primary),0.3)] scale-[1.02] z-10" 
+          : "hover:shadow-md hover:scale-[1.01]"
+      )}
+    >
       <UICardContent className="p-0">
         <div className="p-4 sm:p-5">
           <div className="flex justify-between items-start mb-3">
