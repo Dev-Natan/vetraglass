@@ -103,7 +103,14 @@ export function QuoteCard({
   const statusLabel = isPartial ? 'Parcial' : status.label;
 
   return (
-    <UICard className="overflow-hidden hover:shadow-md transition-shadow">
+    <UICard 
+      className={cn(
+        "overflow-hidden transition-all duration-500",
+        isHighlighting 
+          ? "ring-2 ring-primary shadow-[0_0_15px_rgba(var(--primary),0.3)] scale-[1.02] z-10" 
+          : "hover:shadow-md hover:scale-[1.01]"
+      )}
+    >
       <UICardContent className="p-0">
         <div className="p-4 sm:p-5">
           <div className="flex justify-between items-start mb-3">
