@@ -431,6 +431,7 @@ export default function Orcamentos() {
                     statusConfig={statusConfig}
                     formatCurrency={formatCurrency}
                     isPartial={salesByQuoteId.get(quote.id)?.isPartial ?? false}
+                    pendingAmount={salesByQuoteId.get(quote.id)?.pending_amount}
                     onNewReceipt={handleNewReceipt}
                     onView={(q) => { setSelectedQuote(q); setIsViewDialogOpen(true); }}
                     onEdit={handleEdit}
