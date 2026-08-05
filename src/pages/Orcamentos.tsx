@@ -124,7 +124,7 @@ export default function Orcamentos() {
         .from('sales')
         .select('id, sale_number, quote_id, ordem_servico_id, customer_name, total_amount, paid_amount, pending_amount')
         .eq('company_id', currentCompany!.id)
-        .not('quote_id', 'is', null);
+        .or('pending_amount.gt.0.01,payment_status.eq.partial');
       if (error) throw error;
       return data || [];
     },

@@ -137,7 +137,7 @@ export function QuotesTableView({
                           <Edit className="w-4 h-4" />
                         </Button>
                       )}
-                      {isPartial && onNewReceipt && (
+                      {onNewReceipt && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -176,7 +176,7 @@ export function QuotesTableView({
 
                           {isApprovedOrConverted && (
                             <>
-                              {isPartial && onNewReceipt && (
+                              {onNewReceipt && (
                                 <DropdownMenuItem onClick={() => onNewReceipt(quote)} className="text-primary font-medium">
                                   <Wallet className="w-4 h-4 mr-2" /> Novo Recebimento
                                 </DropdownMenuItem>
