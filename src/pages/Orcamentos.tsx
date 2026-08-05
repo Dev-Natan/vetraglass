@@ -152,7 +152,7 @@ export default function Orcamentos() {
         .from('sales')
         .select('id, sale_number, quote_id, ordem_servico_id, customer_name, total_amount, paid_amount, pending_amount')
         .eq('company_id', currentCompany!.id)
-        .or('pending_amount.gt.0.01,payment_status.eq.partial');
+        .not('quote_id', 'is', null);
       if (error) throw error;
       return data || [];
     },
@@ -169,7 +169,9 @@ export default function Orcamentos() {
       const isPartial = paid > 0 && pending > 0.01;
       // Prefer the record with a partial balance; otherwise keep the latest
       const existing = map.get(s.quote_id);
-      if (!existing || (isPartial && !existing.isPartial)) {
+      // Se já existe e o novo não tem saldo, ignora o novo.
+      // Se não existe, ou se o novo tem saldo e o anterior não tinha, atualiza.
+      if (!existing || (pending > 0.01 && existing.pending_amount <= 0.01)) {
         map.set(s.quote_id, {
           id: s.id,
           sale_number: s.sale_number,
