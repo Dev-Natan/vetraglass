@@ -140,22 +140,61 @@ export function MovimentacaoCaixaDialog({
     enabled: !!currentCompany?.id && open,
   });
 
-  // Buscar orçamentos ativos/aprovados do cliente selecionado
-  const { data: orçamentos = [] } = useQuery({
+  // Buscar orçamentos ativos/aprovados do cliente selecionado que possuem saldo pendente
+  const { data: orçamentos = [], isLoading: loadingQuotes } = useQuery({
     queryKey: ['movement-quote-options', clienteId],
     queryFn: async () => {
       if (clienteId === 'none') return [];
+      
+      // Buscamos o status financeiro para filtrar por saldo pendente real
+      const { data: financialStatus, error: financialError } = await supabase
+        .from('quote_financial_status')
+        .select('quote_id, pending_amount')
+        .eq('client_id', clienteId)
+        .gt('pending_amount', 0.01);
+
+      if (financialError) throw financialError;
+      if (!financialStatus || financialStatus.length === 0) return [];
+
+      const quoteIdsWithBalance = financialStatus.map(f => f.quote_id);
+
       const { data, error } = await supabase
         .from('quotes')
-        .select('id, quote_number, status')
+        .select('id, quote_number, status, final_amount')
         .eq('client_id', clienteId)
-        .in('status', ['pending', 'sent', 'approved', 'partial', 'completed'])
+        .in('id', quoteIdsWithBalance)
+        .in('status', ['approved', 'partial', 'completed']) // Aprovado ou em andamento
         .order('quote_number', { ascending: false });
+      
       if (error) throw error;
-      return (data || []) as { id: string; quote_number: number; status: string }[];
+
+      // Mesclar os dados de saldo pendente
+      return (data || []).map(q => {
+        const financial = financialStatus.find(f => f.quote_id === q.id);
+        return {
+          ...q,
+          pending_amount: financial?.pending_amount || 0
+        };
+      });
     },
     enabled: clienteId !== 'none' && open,
   });
+
+  // Atualizar valor automaticamente ao selecionar orçamento
+  useEffect(() => {
+    if (quoteId !== 'none') {
+      const selected = orçamentos.find(q => q.id === quoteId);
+      if (selected && selected.pending_amount > 0) {
+        // Preencher automaticamente o valor com o saldo pendente se o campo estiver vazio
+        // ou se o usuário acabou de selecionar o orçamento
+        setAmount(selected.pending_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 }));
+        if (type === 'entrada') {
+          setCategory('recebimento_parcela');
+          setDescription(`Recebimento ref. Orçamento #${selected.quote_number}`);
+        }
+      }
+    }
+  }, [quoteId, orçamentos, type]);
 
   // Buscar saldo do caixa da empresa
   const { data: companyCash } = useQuery({
@@ -639,20 +678,34 @@ export function MovimentacaoCaixaDialog({
 
             {clienteId !== 'none' && (
               <div className="space-y-1.5 pt-1">
-                <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Vincular a Orçamento</Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-medium text-slate-600 dark:text-slate-300">Vincular a Orçamento</Label>
+                  {loadingQuotes && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+                </div>
                 <Select value={quoteId} onValueChange={setQuoteId}>
                   <SelectTrigger className="rounded-lg bg-background w-full">
-                    <SelectValue placeholder="Nenhum" />
+                    <SelectValue placeholder={loadingQuotes ? "Carregando..." : "Nenhum"} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Nenhum</SelectItem>
-                    {orçamentos.map((q) => (
-                      <SelectItem key={q.id} value={q.id}>
-                        Orçamento #{q.quote_number} ({q.status})
-                      </SelectItem>
-                    ))}
+                    {orçamentos.length === 0 && !loadingQuotes ? (
+                      <div className="px-2 py-3 text-center">
+                        <p className="text-[10px] text-muted-foreground">Nenhum orçamento pendente para este cliente.</p>
+                      </div>
+                    ) : (
+                      orçamentos.map((q) => (
+                        <SelectItem key={q.id} value={q.id}>
+                          #{q.quote_number} - {formatCurrency(q.pending_amount)} pendente
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
+                {quoteId !== 'none' && (
+                   <p className="text-[10px] text-emerald-600 font-medium">
+                     Saldo pendente: {formatCurrency(orçamentos.find(q => q.id === quoteId)?.pending_amount || 0)}
+                   </p>
+                )}
               </div>
             )}
           </div>
