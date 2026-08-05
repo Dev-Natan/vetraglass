@@ -148,8 +148,8 @@ export function MovimentacaoCaixaDialog({
       if (clienteId === 'none') return [];
       
       // Buscamos o status financeiro para filtrar por saldo pendente real
-      // NOTA: A view quote_financial_status NÃO tem client_id em sua definição original (vimos via pg_get_viewdef)
-      // Precisamos filtrar pelo quote_id que pertence ao cliente na tabela quotes
+      // A view quote_financial_status NÃO tem client_id, então primeiro pegamos todos com saldo
+      // e depois filtramos pelos orçamentos do cliente.
       const { data: financialStatus, error: financialError } = await (supabase as any)
         .from('quote_financial_status')
         .select('quote_id, pending_amount')
@@ -170,7 +170,6 @@ export function MovimentacaoCaixaDialog({
         .from('quotes')
         .select('id, quote_number, status, final_amount, client_id')
         .eq('client_id', clienteId)
-        .in('status', ['approved', 'partial', 'converted', 'completed']) // 'converted' é comum para orçamentos aprovados que viraram OS
         .order('quote_number', { ascending: false });
       
       if (quotesError) {
