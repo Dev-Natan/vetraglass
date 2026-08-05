@@ -40,6 +40,7 @@ interface QuoteCardProps {
   statusConfig: any;
   formatCurrency: (val: number) => string;
   isPartial?: boolean;
+  pendingAmount?: number;
   onNewReceipt?: (quote: Quote) => void;
   onView: (quote: Quote) => void;
   onEdit: (quote: Quote) => void;
@@ -58,6 +59,7 @@ export function QuoteCard({
   statusConfig,
   formatCurrency,
   isPartial = false,
+  pendingAmount,
   onNewReceipt,
   onView,
   onEdit,
@@ -213,11 +215,22 @@ export function QuoteCard({
         </div>
 
         <div className="bg-muted/30 px-4 py-3 sm:px-5 flex items-center justify-between border-t mt-auto">
-          <div className="flex flex-col">
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Total</span>
-            <span className="text-sm sm:text-base font-bold text-foreground">
-              {formatCurrency(quote.final_amount)}
-            </span>
+          <div className="flex flex-row gap-4 sm:gap-6">
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Total</span>
+              <span className="text-sm sm:text-base font-bold text-foreground">
+                {formatCurrency(quote.final_amount)}
+              </span>
+            </div>
+            
+            {isPartial && pendingAmount !== undefined && pendingAmount > 0 && (
+              <div className="flex flex-col border-l pl-4 sm:pl-6 border-muted-foreground/20">
+                <span className="text-[10px] uppercase tracking-wider text-primary font-semibold">Saldo</span>
+                <span className="text-sm sm:text-base font-bold text-primary">
+                  {formatCurrency(pendingAmount)}
+                </span>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-1">
             <Button
