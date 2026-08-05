@@ -70,6 +70,23 @@ export function QuoteCard({
   onGenerateContract,
   onCancelApproved
 }: QuoteCardProps) {
+  const [isHighlighting, setIsHighlighting] = useState(false);
+  const prevIsPartial = useRef(isPartial);
+  const prevStatus = useRef(quote.status);
+
+  useEffect(() => {
+    // Se o status ou o estado "Parcial" mudar, ativa o destaque
+    if (prevIsPartial.current !== isPartial || prevStatus.current !== quote.status) {
+      setIsHighlighting(true);
+      const timer = setTimeout(() => setIsHighlighting(false), 2000);
+      
+      prevIsPartial.current = isPartial;
+      prevStatus.current = quote.status;
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isPartial, quote.status]);
+
   const status = statusConfig[quote.status as QuoteStatus] || statusConfig.pending;
   const StatusIcon = isPartial ? Wallet : status.icon;
 
