@@ -152,12 +152,13 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
       if (movErr) throw movErr;
 
       // 2) Atualiza a venda somando ao paid_amount
-      const newPaid = Number((Number(sale.paid_amount) + amountToReceive).toFixed(2));
+      const currentPaid = Number(sale.paid_amount) || 0;
       const totalAmt = Number(sale.total_amount);
+      const newPaid = Number((currentPaid + amountToReceive).toFixed(2));
       const newPending = Math.max(0, Number((totalAmt - newPaid).toFixed(2)));
       const finStatus = calculateFinancialStatus(newPaid, totalAmt);
       const payment_status =
-        finStatus === 'PAGO' ? 'paid' : finStatus === 'PARCIAL' ? 'partial' : 'pending';
+        newPending <= 0.01 ? 'paid' : 'partial';
 
       const { error: saleErr } = await supabase
         .from('sales')
@@ -231,6 +232,13 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
       queryClient.invalidateQueries({ queryKey: ['sale-receipts-history'] });
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
       queryClient.invalidateQueries({ queryKey: ['quote-sales-financials'] });
+      queryClient.invalidateQueries({ queryKey: ['quote-financial-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['quote-receivables'] });
+      queryClient.invalidateQueries({ queryKey: ['quote-all-deposits'] });
+      queryClient.invalidateQueries({ queryKey: ['quote-entry-sale'] });
+      queryClient.invalidateQueries({ queryKey: ['quote-previously-paid'] });
+      queryClient.invalidateQueries({ queryKey: ['approved-quotes-paid-map'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-stats'] });
       
       setPaymentAmount('');
       onOpenChange(false);
