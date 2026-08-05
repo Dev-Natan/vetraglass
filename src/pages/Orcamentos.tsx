@@ -150,7 +150,7 @@ export default function Orcamentos() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('sales')
-        .select('id, sale_number, quote_id, ordem_servico_id, customer_name, total_amount, paid_amount, pending_amount')
+        .select('id, sale_number, quote_id, ordem_servico_id, customer_name, total_amount, paid_amount, pending_amount, payment_status')
         .eq('company_id', currentCompany!.id)
         .not('quote_id', 'is', null);
       if (error) throw error;
