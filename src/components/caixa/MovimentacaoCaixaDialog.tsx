@@ -147,7 +147,7 @@ export function MovimentacaoCaixaDialog({
       if (clienteId === 'none') return [];
       
       // Buscamos o status financeiro para filtrar por saldo pendente real
-      const { data: financialStatus, error: financialError } = await supabase
+      const { data: financialStatus, error: financialError } = await (supabase as any)
         .from('quote_financial_status')
         .select('quote_id, pending_amount')
         .eq('client_id', clienteId)
@@ -156,7 +156,7 @@ export function MovimentacaoCaixaDialog({
       if (financialError) throw financialError;
       if (!financialStatus || financialStatus.length === 0) return [];
 
-      const quoteIdsWithBalance = financialStatus.map(f => f.quote_id);
+      const quoteIdsWithBalance = financialStatus.map((f: any) => f.quote_id);
 
       const { data, error } = await supabase
         .from('quotes')
@@ -170,7 +170,7 @@ export function MovimentacaoCaixaDialog({
 
       // Mesclar os dados de saldo pendente
       return (data || []).map(q => {
-        const financial = financialStatus.find(f => f.quote_id === q.id);
+        const financial = financialStatus.find((f: any) => f.quote_id === q.id);
         return {
           ...q,
           pending_amount: financial?.pending_amount || 0
@@ -185,8 +185,6 @@ export function MovimentacaoCaixaDialog({
     if (quoteId !== 'none') {
       const selected = orçamentos.find(q => q.id === quoteId);
       if (selected && selected.pending_amount > 0) {
-        // Preencher automaticamente o valor com o saldo pendente se o campo estiver vazio
-        // ou se o usuário acabou de selecionar o orçamento
         setAmount(selected.pending_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 }));
         if (type === 'entrada') {
           setCategory('recebimento_parcela');
