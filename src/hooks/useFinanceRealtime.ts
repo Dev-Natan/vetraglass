@@ -34,6 +34,11 @@ const INVALIDATED_KEYS = [
   'drawer-balance',
   'bank-accounts',
   'sales-financeiro-audit',
+  'quote-sales-financials',
+  'quote-receivables',
+  'quote-financial-movements',
+  'quote-all-deposits',
+  'ordem-servico-for-quote',
 ];
 
 export function useFinanceRealtime(): void {
