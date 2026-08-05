@@ -110,7 +110,7 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
     enabled: !!sale?.quote_id && open,
   });
 
-  const remaining = Math.max(0, (sale?.pending_amount ?? 0));
+  const remaining = Math.max(0, Number((sale?.pending_amount ?? 0).toFixed(2)));
   const amountToReceive = useMemo(() => {
     const v = parseBRLInput(paymentAmount);
     return Math.min(Math.max(0, v), remaining);
