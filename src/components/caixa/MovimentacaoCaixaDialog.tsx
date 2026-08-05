@@ -728,7 +728,11 @@ export function MovimentacaoCaixaDialog({
                     <SelectItem value="none">Nenhum</SelectItem>
                     {orçamentos.length === 0 && !loadingQuotes ? (
                       <div className="px-2 py-3 text-center">
-                        <p className="text-[10px] text-muted-foreground">Nenhum orçamento pendente para este cliente.</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {type === 'entrada' 
+                            ? "Nenhum orçamento pendente para este cliente." 
+                            : "Nenhum orçamento aprovado encontrado para este cliente. Orçamentos pendentes não podem ser vinculados a despesas."}
+                        </p>
                       </div>
                     ) : (
                       orçamentos.map((q) => (
