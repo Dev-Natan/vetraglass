@@ -191,6 +191,10 @@ export default function Orcamentos() {
       // PRIORIDADE 1: Valor final do orçamento original (Fonte da Verdade)
       // PRIORIDADE 2: Valor total da venda se o orçamento não for encontrado
       const total = Number(linkedQuote?.final_amount ?? s.total_amount) || 0;
+      
+      // BUSCA DE PAGAMENTOS: Somar todos os cash_movements vinculados a este quote_id ou sale_id
+      // Isso garante que mesmo que a venda não tenha sido atualizada, o saldo exibido considere o pagamento real
+      // Mas para a listagem performática, usamos o paid_amount da venda e invalidamos corretamente
       const paid = Number(s.paid_amount ?? 0);
       
       // Cálculo preciso do saldo pendente baseado na diferença direta do valor do ORÇAMENTO
@@ -200,13 +204,11 @@ export default function Orcamentos() {
       
       const existing = map.get(quoteId);
       
-      // Lógica de priorização:
-      // 1. Se não houver registro para esse orçamento, adiciona.
-      // 2. Se o registro atual for de uma venda quitada e a nova venda tiver saldo pendente, substitui.
-      // 3. Se a nova venda for explicitamente parcial (payment_status), substitui.
+      // Lógica de priorização aprimorada:
+      // Escolher a venda que tem o maior valor pago para representar o status do orçamento
       const shouldReplace = !existing || 
-                           (pending > 0.01 && existing.pending_amount <= 0.01) ||
-                           (s.payment_status === 'partial' && existing.isPartial === false);
+                           (paid > existing.paid_amount) ||
+                           (pending > 0.01 && existing.pending_amount <= 0.01);
 
       if (shouldReplace) {
         map.set(quoteId, {
@@ -218,7 +220,7 @@ export default function Orcamentos() {
           pending_amount: pending,
           quote_id: quoteId,
           ordem_servico_id: s.ordem_servico_id ?? null,
-          isPartial: isPartial || s.payment_status === 'partial',
+          isPartial: isPartial || s.payment_status === 'partial' || s.payment_status === 'paid',
         });
       }
     }

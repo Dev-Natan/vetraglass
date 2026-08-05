@@ -132,6 +132,14 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
         : `Entrada Parcial - OS #${String(nRef).padStart(4, '0')}`;
       const description = `${label}${sale.customer_name ? ` - ${sale.customer_name}` : ''}`;
 
+      console.log('Dados para novo pagamento:', {
+        cash_register_id: openCashRegister.id,
+        amount: amountToReceive,
+        sale_id: sale.id,
+        quote_id: sale.quote_id,
+        client_id: sale.client_id
+      });
+
       const { data: movement, error: movErr } = await supabase
         .from('cash_movements')
         .insert({
@@ -148,9 +156,15 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
           created_by: user.id,
           origem: 'venda',
         })
-        .select('id')
+        .select('*')
         .single();
-      if (movErr) throw movErr;
+
+      if (movErr) {
+        console.error('Erro ao inserir movimento:', movErr);
+        throw movErr;
+      }
+
+      console.log('Novo Pagamento Criado:', movement);
 
       // 2) Atualiza a venda somando ao paid_amount
       const currentPaid = Number(sale.paid_amount) || 0;
