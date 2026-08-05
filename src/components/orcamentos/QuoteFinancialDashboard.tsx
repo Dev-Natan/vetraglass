@@ -161,20 +161,18 @@ export function QuoteFinancialDashboard({
   // Calcular total pago: somar entradas e parcelas pagas
   // Garantimos que não haja dupla contagem se a entrada estiver tanto em quote_deposits quanto em accounts_receivable
   const paidReceivables = receivables?.filter(r => r.status === 'paid' && r.receivable_type !== 'entrada_orcamento') || [];
-  const paidAmount = paidReceivables.reduce((sum, r) => sum + (Number(r.paid_amount) || r.total_amount), 0);
+  const paidReceivablesAmount = paidReceivables.reduce((sum, r) => sum + (Number(r.paid_amount) || r.total_amount), 0);
   const depositPaidAmount = effectiveDeposit?.status === 'paid' ? (Number(effectiveDeposit.amount) || 0) : 0;
   
-  // Somar também movimentos de entrada vinculados que podem não estar nos receivables/deposits (recebimentos parciais diretos)
-  // Filtrar para evitar duplicidade com os depósitos e parcelas já somados
+  // Somar também movimentos de entrada vinculados (recebimentos parciais diretos via NovoRecebimentoDialog)
+  // que salvam quote_id e category='recebimento_parcial'
   const otherMovementsAmount = (movements || [])
-    .filter(m => m.type === 'entrada' && m.category === 'recebimento_parcial')
+    .filter(m => m.type === 'entrada' && (m.category === 'recebimento_parcial' || m.category === 'entrada_orcamento'))
     .reduce((sum, m) => sum + (Number(m.amount) || 0), 0);
 
-  // Se houver movimentos parciais, eles representam o que foi pago via NovoRecebimentoDialog
-  // que atualiza sales.paid_amount. Para o dashboard, somamos o que é de fato "Entrada" + "Parcelas"
-  // ou usamos a lógica de movimentos se ela for mais abrangente.
-  
-  const totalPaid = Math.max(paidAmount + depositPaidAmount, otherMovementsAmount);
+  // O total pago deve ser o maior entre a soma de parcelas/depósitos OU a soma bruta de movimentos de entrada
+  // para garantir que nenhum pagamento escape, mesmo se não houver parcela vinculada.
+  const totalPaid = Math.max(paidReceivablesAmount + depositPaidAmount, otherMovementsAmount);
   const pendingAmount = Math.max(0, Number((totalAmount - totalPaid).toFixed(2)));
   const percentPaid = totalAmount > 0 ? (totalPaid / totalAmount) * 100 : 0;
   
