@@ -143,6 +143,7 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
           description,
           payment_method: paymentMethod,
           sale_id: sale.id,
+          quote_id: sale.quote_id || null,
           cliente_id: sale.client_id || null,
           created_by: user.id,
           origem: 'venda',
