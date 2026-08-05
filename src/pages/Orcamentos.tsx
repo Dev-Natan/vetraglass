@@ -168,10 +168,14 @@ export default function Orcamentos() {
     
     // Criar um mapa auxiliar de nomes de clientes para orçamentos (para casos legados sem quote_id na venda)
     const quoteMapByName = new Map<string, string>();
+    const quoteMapData = new Map<string, { id: string, final_amount: number }>();
+
     if (quotes) {
       quotes.forEach(q => {
         if (q.status === 'approved' || q.status === 'converted') {
-          quoteMapByName.set(q.customer_name.trim().toLowerCase(), q.id);
+          const name = q.customer_name.trim().toLowerCase();
+          quoteMapByName.set(name, q.id);
+          quoteMapData.set(q.id, { id: q.id, final_amount: q.final_amount });
         }
       });
     }
@@ -182,22 +186,15 @@ export default function Orcamentos() {
       
       if (!quoteId) continue;
       
-      const total = Number(s.total_amount) || 0;
+      const linkedQuote = quoteMapData.get(quoteId) || (s as any).quotes;
+      
+      // PRIORIDADE 1: Valor final do orçamento original (Fonte da Verdade)
+      // PRIORIDADE 2: Valor total da venda se o orçamento não for encontrado
+      const total = Number(linkedQuote?.final_amount ?? s.total_amount) || 0;
       const paid = Number(s.paid_amount ?? 0);
       
-      // Cálculo preciso do saldo pendente baseado no que está no banco ou na diferença direta
-      // Priorizamos o pending_amount do banco se ele for válido e coerente
-      let pending = s.pending_amount !== null ? Number(s.pending_amount) : total - paid;
-      
-      // Garantimos que não seja negativo por erros de arredondamento e forçamos cálculo se o DB estiver inconsistente
-      const calculatedPending = Math.max(0, Number((total - paid).toFixed(2)));
-      
-      // Se o saldo do banco for maior que o total (erro de dado) ou estiver zerado mas o cálculo diz que não, usamos o cálculo
-      if (pending > total || (pending <= 0.01 && calculatedPending > 0.01)) {
-        pending = calculatedPending;
-      }
-      
-      pending = Math.max(0, Number(pending.toFixed(2)));
+      // Cálculo preciso do saldo pendente baseado na diferença direta do valor do ORÇAMENTO
+      const pending = Math.max(0, Number((total - paid).toFixed(2)));
       
       const isPartial = paid > 0.01 && pending > 0.01;
       
