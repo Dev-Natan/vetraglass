@@ -186,7 +186,7 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
         }
       }
 
-      // 4) Se quitou, marca contas a receber vinculadas como pagas
+      // 4) Se quitou, marca contas a receber vinculadas como pagas e atualiza status do orçamento
       if (newPending <= 0) {
         await supabase
           .from('accounts_receivable')
@@ -202,9 +202,15 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
         if (sale.quote_id) {
           await supabase
             .from('quotes')
-            .update({ status: 'completed', deposit_status: 'billed' })
+            .update({ status: 'converted', deposit_status: 'billed' })
             .eq('id', sale.quote_id);
         }
+      } else if (sale.quote_id) {
+        // Se ainda há saldo, garante que o orçamento esteja como 'approved' (que mapeia para 'Parcial' na UI se houver venda)
+        await supabase
+          .from('quotes')
+          .update({ status: 'approved' })
+          .eq('id', sale.quote_id);
       }
 
       return { amount: amountToReceive, fullyPaid: newPending <= 0 };

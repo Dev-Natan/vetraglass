@@ -134,7 +134,7 @@ export default function Orcamentos() {
       const total = Number(s.total_amount) || 0;
       const paid = Number(s.paid_amount ?? 0);
       const pending = Number(s.pending_amount ?? Math.max(0, total - paid));
-      const isPartial = paid > 0 && pending > 0.009;
+      const isPartial = paid > 0 && pending > 0.01;
       // Prefer the record with a partial balance; otherwise keep the latest
       const existing = map.get(s.quote_id);
       if (!existing || (isPartial && !existing.isPartial)) {
