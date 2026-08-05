@@ -166,11 +166,21 @@ export function MovimentacaoCaixaDialog({
       }
 
       // Agora buscamos apenas os orçamentos que pertencem ao cliente selecionado
-      const { data: quotesData, error: quotesError } = await supabase
+      // OU orçamentos onde o customer_name coincide com o nome do cliente (fallback para orçamentos antigos sem client_id)
+      const selectedClient = clientes.find(c => c.id === clienteId);
+      
+      let query = supabase
         .from('quotes')
-        .select('id, quote_number, status, final_amount, client_id')
-        .eq('client_id', clienteId)
-        .order('quote_number', { ascending: false });
+        .select('id, quote_number, status, final_amount, client_id, customer_name');
+      
+      if (selectedClient) {
+        // Tenta buscar por ID ou Nome (para garantir que orçamentos legados da Rosita ou outros apareçam)
+        query = query.or(`client_id.eq.${clienteId},customer_name.eq."${selectedClient.name}"`);
+      } else {
+        query = query.eq('client_id', clienteId);
+      }
+
+      const { data: quotesData, error: quotesError } = await query.order('quote_number', { ascending: false });
       
       if (quotesError) {
         console.error('Erro ao buscar orçamentos do cliente:', quotesError);
@@ -178,7 +188,7 @@ export function MovimentacaoCaixaDialog({
       }
 
       if (!quotesData || quotesData.length === 0) {
-        console.log('Nenhum orçamento encontrado para o cliente na tabela quotes.');
+        console.log('Nenhum orçamento encontrado para o cliente na tabela quotes (ID ou Nome).');
         return [];
       }
 
@@ -191,7 +201,7 @@ export function MovimentacaoCaixaDialog({
             pending_amount: financial?.pending_amount || 0
           };
         })
-        .filter(q => q.pending_amount > 0.01);
+        .filter(q => q.pending_amount > 0.01 && q.status !== 'cancelled');
 
       console.log('Orçamentos encontrados e filtrados:', finalResult);
       return finalResult;
