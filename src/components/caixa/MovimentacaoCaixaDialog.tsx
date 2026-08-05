@@ -144,38 +144,57 @@ export function MovimentacaoCaixaDialog({
   const { data: orçamentos = [], isLoading: loadingQuotes } = useQuery({
     queryKey: ['movement-quote-options', clienteId],
     queryFn: async () => {
+      console.log('Buscando orçamentos para cliente:', clienteId);
       if (clienteId === 'none') return [];
       
       // Buscamos o status financeiro para filtrar por saldo pendente real
+      // A view quote_financial_status NÃO tem client_id, então primeiro pegamos todos com saldo
+      // e depois filtramos pelos orçamentos do cliente.
       const { data: financialStatus, error: financialError } = await (supabase as any)
         .from('quote_financial_status')
         .select('quote_id, pending_amount')
-        .eq('client_id', clienteId)
         .gt('pending_amount', 0.01);
 
-      if (financialError) throw financialError;
-      if (!financialStatus || financialStatus.length === 0) return [];
+      if (financialError) {
+        console.error('Erro ao buscar status financeiro:', financialError);
+        throw financialError;
+      }
+      
+      if (!financialStatus || financialStatus.length === 0) {
+        console.log('Nenhum status financeiro com saldo pendente encontrado.');
+        return [];
+      }
 
-      const quoteIdsWithBalance = financialStatus.map((f: any) => f.quote_id);
-
-      const { data, error } = await supabase
+      // Agora buscamos apenas os orçamentos que pertencem ao cliente selecionado
+      const { data: quotesData, error: quotesError } = await supabase
         .from('quotes')
-        .select('id, quote_number, status, final_amount')
+        .select('id, quote_number, status, final_amount, client_id')
         .eq('client_id', clienteId)
-        .in('id', quoteIdsWithBalance)
-        .in('status', ['approved', 'partial', 'completed']) // Aprovado ou em andamento
         .order('quote_number', { ascending: false });
       
-      if (error) throw error;
+      if (quotesError) {
+        console.error('Erro ao buscar orçamentos do cliente:', quotesError);
+        throw quotesError;
+      }
 
-      // Mesclar os dados de saldo pendente
-      return (data || []).map(q => {
-        const financial = financialStatus.find((f: any) => f.quote_id === q.id);
-        return {
-          ...q,
-          pending_amount: financial?.pending_amount || 0
-        };
-      });
+      if (!quotesData || quotesData.length === 0) {
+        console.log('Nenhum orçamento encontrado para o cliente na tabela quotes.');
+        return [];
+      }
+
+      // Filtrar apenas os que têm saldo pendente na view e mesclar
+      const finalResult = quotesData
+        .map(q => {
+          const financial = financialStatus.find((f: any) => f.quote_id === q.id);
+          return {
+            ...q,
+            pending_amount: financial?.pending_amount || 0
+          };
+        })
+        .filter(q => q.pending_amount > 0.01);
+
+      console.log('Orçamentos encontrados e filtrados:', finalResult);
+      return finalResult;
     },
     enabled: clienteId !== 'none' && open,
   });
