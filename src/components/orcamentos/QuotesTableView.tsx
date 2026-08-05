@@ -20,7 +20,7 @@ interface QuotesTableViewProps {
   quotes: Quote[];
   statusConfig: any;
   formatCurrency: (val: number) => string;
-  partialByQuoteId?: Map<string, { isPartial: boolean }>;
+  partialByQuoteId?: Map<string, { isPartial: boolean; pending_amount: number }>;
   onNewReceipt?: (quote: Quote) => void;
   onView: (quote: Quote) => void;
   onEdit: (quote: Quote) => void;
@@ -79,7 +79,9 @@ export function QuotesTableView({
           <TableBody>
             {quotes.map((quote) => {
               const status = statusConfig[quote.status as QuoteStatus] || statusConfig.pending;
-              const isPartial = partialByQuoteId?.get(quote.id)?.isPartial ?? false;
+              const saleInfo = partialByQuoteId?.get(quote.id);
+              const isPartial = saleInfo?.isPartial ?? false;
+              const pendingAmount = saleInfo?.pending_amount;
               const StatusIcon = isPartial ? Wallet : status.icon;
               const isPending = quote.status === 'pending';
               const isApprovedOrConverted = quote.status === 'approved' || quote.status === 'converted';
@@ -102,7 +104,16 @@ export function QuotesTableView({
                       {isPartial ? 'Parcial' : status.label}
                     </span>
                   </TableCell>
-                  <TableCell className="text-right font-semibold">{formatCurrency(quote.final_amount)}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex flex-col items-end">
+                      <span className="font-semibold">{formatCurrency(quote.final_amount)}</span>
+                      {isPartial && pendingAmount !== undefined && pendingAmount > 0 && (
+                        <span className="text-[10px] text-primary font-bold">
+                          Saldo: {formatCurrency(pendingAmount)}
+                        </span>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="inline-flex items-center gap-1">
                       <Button

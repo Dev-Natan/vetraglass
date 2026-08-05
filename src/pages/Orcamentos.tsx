@@ -163,10 +163,18 @@ export default function Orcamentos() {
     const map = new Map<string, PartialSaleTarget & { isPartial: boolean }>();
     for (const s of quoteSales) {
       if (!s.quote_id) continue;
+      
       const total = Number(s.total_amount) || 0;
       const paid = Number(s.paid_amount ?? 0);
-      const pending = Number(s.pending_amount ?? Math.max(0, total - paid));
-      const isPartial = paid > 0 && pending > 0.01;
+      
+      // Cálculo preciso do saldo pendente baseado no que está no banco ou na diferença direta
+      // Priorizamos o pending_amount do banco se ele for válido
+      let pending = s.pending_amount !== null ? Number(s.pending_amount) : total - paid;
+      
+      // Garantimos que não seja negativo por erros de arredondamento
+      pending = Math.max(0, Number(pending.toFixed(2)));
+      
+      const isPartial = paid > 0.01 && pending > 0.01;
       
       const existing = map.get(s.quote_id);
       
@@ -423,6 +431,7 @@ export default function Orcamentos() {
                     statusConfig={statusConfig}
                     formatCurrency={formatCurrency}
                     isPartial={salesByQuoteId.get(quote.id)?.isPartial ?? false}
+                    pendingAmount={salesByQuoteId.get(quote.id)?.pending_amount}
                     onNewReceipt={handleNewReceipt}
                     onView={(q) => { setSelectedQuote(q); setIsViewDialogOpen(true); }}
                     onEdit={handleEdit}
