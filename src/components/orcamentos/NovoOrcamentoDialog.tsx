@@ -313,6 +313,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote, duplicate }: No
         document: form.getValues('customer_document') || null,
         document_type:
           form.getValues('customer_document_type') === 'juridica' ? 'CNPJ' : 'CPF',
+        client_type: 'cliente',
         is_active: true,
       })
       .select('id')
