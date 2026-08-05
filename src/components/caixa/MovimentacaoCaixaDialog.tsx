@@ -201,7 +201,18 @@ export function MovimentacaoCaixaDialog({
             pending_amount: financial?.pending_amount || 0
           };
         })
-        .filter(q => q.pending_amount > 0.01 && q.status !== 'cancelled');
+        .filter(q => {
+          // Para entrada (recebimento), precisa de saldo pendente
+          // Para saída (despesa), a regra exige que o orçamento esteja APROVADO
+          const hasBalance = q.pending_amount > 0.01;
+          const isApproved = q.status === 'approved' || q.status === 'aprovado' || q.status === 'converted' || q.status === 'completed';
+          
+          if (type === 'entrada') {
+            return hasBalance && q.status !== 'cancelled';
+          } else {
+            return isApproved && q.status !== 'cancelled';
+          }
+        });
 
       console.log('Orçamentos encontrados e filtrados:', finalResult);
       return finalResult;
@@ -717,7 +728,11 @@ export function MovimentacaoCaixaDialog({
                     <SelectItem value="none">Nenhum</SelectItem>
                     {orçamentos.length === 0 && !loadingQuotes ? (
                       <div className="px-2 py-3 text-center">
-                        <p className="text-[10px] text-muted-foreground">Nenhum orçamento pendente para este cliente.</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {type === 'entrada' 
+                            ? "Nenhum orçamento pendente para este cliente." 
+                            : "Nenhum orçamento aprovado encontrado para este cliente. Orçamentos pendentes não podem ser vinculados a despesas."}
+                        </p>
                       </div>
                     ) : (
                       orçamentos.map((q) => (
