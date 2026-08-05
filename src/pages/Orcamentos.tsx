@@ -184,15 +184,22 @@ export default function Orcamentos() {
       const paid = Number(s.paid_amount ?? 0);
       
       // Cálculo preciso do saldo pendente baseado no que está no banco ou na diferença direta
-      // Priorizamos o pending_amount do banco se ele for válido
+      // Priorizamos o pending_amount do banco se ele for válido e coerente
       let pending = s.pending_amount !== null ? Number(s.pending_amount) : total - paid;
       
-      // Garantimos que não seja negativo por erros de arredondamento
+      // Garantimos que não seja negativo por erros de arredondamento e forçamos cálculo se o DB estiver inconsistente
+      const calculatedPending = Math.max(0, Number((total - paid).toFixed(2)));
+      
+      // Se o saldo do banco for maior que o total (erro de dado) ou estiver zerado mas o cálculo diz que não, usamos o cálculo
+      if (pending > total || (pending <= 0.01 && calculatedPending > 0.01)) {
+        pending = calculatedPending;
+      }
+      
       pending = Math.max(0, Number(pending.toFixed(2)));
       
       const isPartial = paid > 0.01 && pending > 0.01;
       
-      const existing = map.get(s.quote_id);
+      const existing = map.get(quoteId);
       
       // Lógica de priorização:
       // 1. Se não houver registro para esse orçamento, adiciona.
@@ -210,14 +217,14 @@ export default function Orcamentos() {
           total_amount: total,
           paid_amount: paid,
           pending_amount: pending,
-          quote_id: s.quote_id,
+          quote_id: quoteId,
           ordem_servico_id: s.ordem_servico_id ?? null,
           isPartial: isPartial || s.payment_status === 'partial',
         });
       }
     }
     return map;
-  }, [quoteSales]);
+  }, [quoteSales, quotes]);
 
   const handleNewReceipt = (quote: Quote) => {
     const target = salesByQuoteId.get(quote.id);
