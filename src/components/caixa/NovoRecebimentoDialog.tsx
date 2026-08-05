@@ -110,7 +110,7 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
     enabled: !!sale?.quote_id && open,
   });
 
-  const remaining = Math.max(0, (sale?.pending_amount ?? 0));
+  const remaining = Math.max(0, Number((sale?.pending_amount ?? 0).toFixed(2)));
   const amountToReceive = useMemo(() => {
     const v = parseBRLInput(paymentAmount);
     return Math.min(Math.max(0, v), remaining);
@@ -343,17 +343,17 @@ export function NovoRecebimentoDialog({ open, onOpenChange, sale, onSuccess }: P
           <div className="grid grid-cols-3 gap-2">
             <div className="p-3 rounded-lg border">
               <p className="text-[10px] uppercase font-bold text-muted-foreground mb-1">Total</p>
-              <p className="text-sm font-semibold">{formatCurrency(sale.total_amount)}</p>
+              <p className="text-sm font-semibold">{formatCurrency(Number(sale.total_amount))}</p>
             </div>
             <div className="p-3 rounded-lg border bg-emerald-500/5 border-emerald-500/20">
               <p className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-400 mb-1">Já recebido</p>
               <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
-                {formatCurrency(sale.paid_amount)}
+                {formatCurrency(Number(sale.paid_amount))}
               </p>
             </div>
             <div className="p-3 rounded-lg border bg-primary/5 border-primary/20">
               <p className="text-[10px] uppercase font-bold text-primary mb-1">Restante</p>
-              <p className="text-sm font-bold text-primary">{formatCurrency(remaining)}</p>
+              <p className="text-sm font-bold text-primary">{formatCurrency(Number(remaining))}</p>
             </div>
           </div>
 

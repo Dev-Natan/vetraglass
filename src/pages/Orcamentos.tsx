@@ -150,7 +150,7 @@ export default function Orcamentos() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('sales')
-        .select('id, sale_number, quote_id, ordem_servico_id, customer_name, total_amount, paid_amount, pending_amount')
+        .select('id, sale_number, quote_id, ordem_servico_id, customer_name, total_amount, paid_amount, pending_amount, payment_status')
         .eq('company_id', currentCompany!.id)
         .not('quote_id', 'is', null);
       if (error) throw error;
@@ -167,11 +167,18 @@ export default function Orcamentos() {
       const paid = Number(s.paid_amount ?? 0);
       const pending = Number(s.pending_amount ?? Math.max(0, total - paid));
       const isPartial = paid > 0 && pending > 0.01;
-      // Prefer the record with a partial balance; otherwise keep the latest
+      
       const existing = map.get(s.quote_id);
-      // Se já existe e o novo não tem saldo, ignora o novo.
-      // Se não existe, ou se o novo tem saldo e o anterior não tinha, atualiza.
-      if (!existing || (pending > 0.01 && existing.pending_amount <= 0.01)) {
+      
+      // Lógica de priorização:
+      // 1. Se não houver registro para esse orçamento, adiciona.
+      // 2. Se o registro atual for de uma venda quitada e a nova venda tiver saldo pendente, substitui.
+      // 3. Se a nova venda for explicitamente parcial (payment_status), substitui.
+      const shouldReplace = !existing || 
+                           (pending > 0.01 && existing.pending_amount <= 0.01) ||
+                           (s.payment_status === 'partial' && existing.isPartial === false);
+
+      if (shouldReplace) {
         map.set(s.quote_id, {
           id: s.id,
           sale_number: s.sale_number,
@@ -181,7 +188,7 @@ export default function Orcamentos() {
           pending_amount: pending,
           quote_id: s.quote_id,
           ordem_servico_id: s.ordem_servico_id ?? null,
-          isPartial,
+          isPartial: isPartial || s.payment_status === 'partial',
         });
       }
     }
