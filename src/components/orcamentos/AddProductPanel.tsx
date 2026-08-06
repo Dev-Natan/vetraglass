@@ -647,9 +647,11 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
       : (area > 0 ? basePrice * area : 0);
 
   const componentsTotal = components.reduce((sum, c) => sum + (c.unit_price * c.quantity), 0);
-  const computedTotalPrice = ((productUsesComposition && compositionPricing.isReady)
+  const hasPriceLineOverride = !!selectedPriceLine && (priceLinePerSqm > 0 || priceLinePerUnit > 0);
+  const computedTotalPrice = ((productUsesComposition && compositionPricing.isReady && !hasPriceLineOverride)
     ? compositionPricing.totalCost
     : unitPrice * quantity) + componentsTotal;
+
   const isPriceOverridden = manualTotalOverride !== null && Math.abs(manualTotalOverride - computedTotalPrice) > 0.005;
   const totalPrice = manualTotalOverride !== null ? manualTotalOverride : computedTotalPrice;
   const effectiveUnitPrice = quantity > 0
