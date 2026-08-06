@@ -10,8 +10,11 @@ import { Label } from '@/components/ui/label';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ProductPriceLinesTab } from '@/components/precos/ProductPriceLinesTab';
 import { GlassWater, Info, Loader2, Percent, Save, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
+
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const sb = supabase as any;
