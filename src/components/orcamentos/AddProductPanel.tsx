@@ -418,7 +418,27 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProductId, cuttingPlanProductId, selectedProduct?.name, selectedProduct?.image_url, selectedProduct?.has_multiple_sides, width, height, widthB, heightB, quantity]);
 
+  // ── Linhas de preço (variações) do produto ──
+  const [selectedPriceLineId, setSelectedPriceLineId] = useState<string>('');
+  const { data: priceLines = [] } = useProductPriceLines(companyProduct?.id ?? null, true);
+  const selectedPriceLine = priceLines.find((pl) => pl.id === selectedPriceLineId) ?? null;
+
+  // Seleciona automaticamente quando existe apenas uma variação
+  useEffect(() => {
+    if (priceLines.length === 1 && !selectedPriceLineId) {
+      setSelectedPriceLineId(priceLines[0].id);
+    }
+  }, [priceLines, selectedPriceLineId]);
+
+  const priceLinePerSqm = selectedPriceLine && selectedPriceLine.unit === 'm2'
+    ? Number(selectedPriceLine.price) || 0
+    : 0;
+  const priceLinePerUnit = selectedPriceLine && selectedPriceLine.unit !== 'm2'
+    ? Number(selectedPriceLine.price) || 0
+    : 0;
+
   // Fetch glass prices for selected product
+
   const { data: productGlassPrices } = useQuery({
     queryKey: ['product-glass-prices', companyProduct?.id],
     queryFn: async () => {
