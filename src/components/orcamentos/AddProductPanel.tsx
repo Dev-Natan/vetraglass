@@ -1,5 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useDynamicCompositionPricing } from '@/hooks/useDynamicCompositionPricing';
+import { useProductPriceLines, formatUnitLabel } from '@/hooks/useProductPriceLines';
+
 import { useProductsProfileStock } from '@/hooks/useProductsProfileStock';
 import { resolveProductImageUrl, resolveItemImageUrl } from '@/utils/imageUrl';
 import { useQuery } from '@tanstack/react-query';
@@ -418,7 +420,27 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProductId, cuttingPlanProductId, selectedProduct?.name, selectedProduct?.image_url, selectedProduct?.has_multiple_sides, width, height, widthB, heightB, quantity]);
 
+  // ── Linhas de preço (variações) do produto ──
+  const [selectedPriceLineId, setSelectedPriceLineId] = useState<string>('');
+  const { data: priceLines = [] } = useProductPriceLines(companyProduct?.id ?? null, true);
+  const selectedPriceLine = priceLines.find((pl) => pl.id === selectedPriceLineId) ?? null;
+
+  // Seleciona automaticamente quando existe apenas uma variação
+  useEffect(() => {
+    if (priceLines.length === 1 && !selectedPriceLineId) {
+      setSelectedPriceLineId(priceLines[0].id);
+    }
+  }, [priceLines, selectedPriceLineId]);
+
+  const priceLinePerSqm = selectedPriceLine && selectedPriceLine.unit === 'm2'
+    ? Number(selectedPriceLine.price) || 0
+    : 0;
+  const priceLinePerUnit = selectedPriceLine && selectedPriceLine.unit !== 'm2'
+    ? Number(selectedPriceLine.price) || 0
+    : 0;
+
   // Fetch glass prices for selected product
+
   const { data: productGlassPrices } = useQuery({
     queryKey: ['product-glass-prices', companyProduct?.id],
     queryFn: async () => {
@@ -598,6 +620,10 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
 
   // Determine final price based on pricing type
   const finalPricePerSqm = (() => {
+    // A variação (linha de preço) escolhida tem prioridade máxima
+    if (priceLinePerSqm > 0) {
+      return priceLinePerSqm;
+    }
     // Vidro do catálogo OU do estoque (cor+espessura selecionadas)
     if (hasGlass && glassPricePerSqm > 0) {
       return glassPricePerSqm;
@@ -613,13 +639,19 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
 
   // Calculate prices: use composition when available, otherwise area × price/m²
   const area = width && height ? ((width + (selectedProduct?.has_multiple_sides ? widthB : 0)) / 1000) * (height / 1000) : 0;
-  const unitPrice = (productUsesComposition && compositionPricing.isReady)
-    ? compositionPricing.compositionCostPerUnit
-    : (area > 0 ? basePrice * area : 0);
+  const unitPrice = (priceLinePerUnit > 0 && customPrice === null)
+    // Variação com unidade fixa (un, par, ml, kg): preço direto por unidade
+    ? priceLinePerUnit
+    : (productUsesComposition && compositionPricing.isReady && priceLinePerSqm <= 0)
+      ? compositionPricing.compositionCostPerUnit
+      : (area > 0 ? basePrice * area : 0);
+
   const componentsTotal = components.reduce((sum, c) => sum + (c.unit_price * c.quantity), 0);
-  const computedTotalPrice = ((productUsesComposition && compositionPricing.isReady)
+  const hasPriceLineOverride = !!selectedPriceLine && (priceLinePerSqm > 0 || priceLinePerUnit > 0);
+  const computedTotalPrice = ((productUsesComposition && compositionPricing.isReady && !hasPriceLineOverride)
     ? compositionPricing.totalCost
     : unitPrice * quantity) + componentsTotal;
+
   const isPriceOverridden = manualTotalOverride !== null && Math.abs(manualTotalOverride - computedTotalPrice) > 0.005;
   const totalPrice = manualTotalOverride !== null ? manualTotalOverride : computedTotalPrice;
   const effectiveUnitPrice = quantity > 0
@@ -639,6 +671,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     setSelectedGlassColor('');
     setSelectedAluminumColor('');
     setCustomAluminumColor('');
+    setSelectedPriceLineId('');
     // Auto-enable glass for Temperado line products
     const product = filteredProducts?.find(p => p.id === productId);
     if (product?.linha?.toLowerCase().includes('temperado')) {
@@ -660,7 +693,10 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     onAdd({
       product_template_id: cuttingPlanProductId,
       company_product_id: companyProduct?.id,
-      name: useVao ? `${selectedProduct.name} [Vão: ${vaoWidth}x${vaoHeight}mm]` : selectedProduct.name,
+      name: [
+        useVao ? `${selectedProduct.name} [Vão: ${vaoWidth}x${vaoHeight}mm]` : selectedProduct.name,
+        selectedPriceLine ? `— ${selectedPriceLine.description}` : '',
+      ].filter(Boolean).join(' '),
       base_price: (productUsesComposition && compositionPricing.isReady) ? compositionPricing.compositionCostPerSqm : basePrice,
       image_url: selectedProduct.image_url,
       linha: selectedProduct.linha,
@@ -1131,8 +1167,44 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
               </div>
             </div>
 
+            {/* Linhas de Preço (Variações) do produto */}
+            {mode !== 'cutting' && priceLines.length > 0 && (
+              <div className="space-y-1.5 rounded-md border border-primary/30 bg-primary/5 p-3">
+                <label className="text-xs font-medium text-foreground">
+                  Variação / Linha de preço <span className="text-destructive">*</span>
+                </label>
+                <Select value={selectedPriceLineId} onValueChange={setSelectedPriceLineId}>
+                  <SelectTrigger className="bg-background h-10">
+                    <SelectValue placeholder="Escolha a variação..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border shadow-lg z-50">
+                    {priceLines.map((pl) => (
+                      <SelectItem key={pl.id} value={pl.id}>
+                        <div className="flex items-center justify-between gap-4 w-full">
+                          <span>{pl.description}</span>
+                          <span className="text-muted-foreground text-xs">
+                            {formatCurrency(Number(pl.price))}/{formatUnitLabel(pl.unit)}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedPriceLine && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Preço aplicado: <strong>{formatCurrency(Number(selectedPriceLine.price))}</strong> por{' '}
+                    {formatUnitLabel(selectedPriceLine.unit)}
+                    {selectedPriceLine.cost != null && Number(selectedPriceLine.cost) > 0 && (
+                      <> · Margem: {(((Number(selectedPriceLine.price) - Number(selectedPriceLine.cost)) / Number(selectedPriceLine.price)) * 100).toFixed(1)}%</>
+                    )}
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Espessura/Cor do vidro e Cor do perfil — ocultos no modo Plano de Corte */}
             {mode !== 'cutting' && (
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-foreground">Espessura do vidro</label>

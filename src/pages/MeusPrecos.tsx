@@ -10,8 +10,11 @@ import { Label } from '@/components/ui/label';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ProductPriceLinesTab } from '@/components/precos/ProductPriceLinesTab';
 import { GlassWater, Info, Loader2, Percent, Save, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
+
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const sb = supabase as any;
@@ -177,23 +180,37 @@ export default function MeusPrecos() {
   return (
     <MainLayout>
       <div className="p-6 space-y-6 max-w-7xl mx-auto">
-        <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-3">
-            <GlassWater className="w-6 h-6 text-primary" />
-            <div>
-              <h1 className="text-2xl font-bold">Meus Preços · Vidros</h1>
-              <p className="text-sm text-muted-foreground">
-                Matriz de <strong>Espessura × Cor / Tipo</strong>. O preço do m² é usado diretamente pelo motor de orçamentos.
-              </p>
-            </div>
+        <div className="flex items-center gap-3">
+          <GlassWater className="w-6 h-6 text-primary" />
+          <div>
+            <h1 className="text-2xl font-bold">Meus Preços</h1>
+            <p className="text-sm text-muted-foreground">
+              Matriz de vidros e <strong>linhas de preço por variação</strong> dos seus produtos.
+            </p>
           </div>
-          <div className="flex gap-2">
-            <BulkAdjustDialog onApply={(p, f) => bulkAdjust.mutate({ percent: p, field: f })} />
-            <Button onClick={() => saveMutation.mutate()} disabled={!hasChanges || saveMutation.isPending} className="gap-2">
-              {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              Salvar {hasChanges ? `(${dirty.size})` : ''}
-            </Button>
-          </div>
+        </div>
+
+        <Tabs defaultValue="vidros" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="vidros">Vidros</TabsTrigger>
+            <TabsTrigger value="produtos">Produtos · Variações</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="produtos">
+            {currentCompany?.id ? (
+              <ProductPriceLinesTab companyId={currentCompany.id} />
+            ) : (
+              <Card className="p-6 text-sm text-muted-foreground">Selecione uma empresa.</Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="vidros" className="space-y-6">
+        <div className="flex items-center justify-end gap-2">
+          <BulkAdjustDialog onApply={(p, f) => bulkAdjust.mutate({ percent: p, field: f })} />
+          <Button onClick={() => saveMutation.mutate()} disabled={!hasChanges || saveMutation.isPending} className="gap-2">
+            {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            Salvar {hasChanges ? `(${dirty.size})` : ''}
+          </Button>
         </div>
 
         <Card className="p-4 bg-primary/5 border-primary/20 flex gap-3">
@@ -203,6 +220,7 @@ export default function MeusPrecos() {
             Células em branco caem no <strong>preço sugerido do sistema</strong>.
           </div>
         </Card>
+
 
         {isLoading || !gridReady ? (
           <div className="flex items-center justify-center py-16">
@@ -261,8 +279,11 @@ export default function MeusPrecos() {
             </CardContent>
           </Card>
         )}
+          </TabsContent>
+        </Tabs>
       </div>
     </MainLayout>
+
   );
 }
 

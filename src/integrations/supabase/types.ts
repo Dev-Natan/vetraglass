@@ -1775,6 +1775,68 @@ export type Database = {
           },
         ]
       }
+      company_product_price_lines: {
+        Row: {
+          attributes: Json
+          color: string | null
+          company_id: string
+          company_product_id: string
+          cost: number | null
+          created_at: string
+          description: string
+          glass_type: string | null
+          id: string
+          is_active: boolean
+          price: number
+          sort_order: number
+          thickness_mm: number | null
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          attributes?: Json
+          color?: string | null
+          company_id: string
+          company_product_id: string
+          cost?: number | null
+          created_at?: string
+          description: string
+          glass_type?: string | null
+          id?: string
+          is_active?: boolean
+          price?: number
+          sort_order?: number
+          thickness_mm?: number | null
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          attributes?: Json
+          color?: string | null
+          company_id?: string
+          company_product_id?: string
+          cost?: number | null
+          created_at?: string
+          description?: string
+          glass_type?: string | null
+          id?: string
+          is_active?: boolean
+          price?: number
+          sort_order?: number
+          thickness_mm?: number | null
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_product_price_lines_company_product_id_fkey"
+            columns: ["company_product_id"]
+            isOneToOne: false
+            referencedRelation: "company_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_products: {
         Row: {
           acabamento: string | null
