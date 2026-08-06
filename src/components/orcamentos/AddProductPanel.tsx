@@ -1,5 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useDynamicCompositionPricing } from '@/hooks/useDynamicCompositionPricing';
+import { useProductPriceLines, formatUnitLabel } from '@/hooks/useProductPriceLines';
+
 import { useProductsProfileStock } from '@/hooks/useProductsProfileStock';
 import { resolveProductImageUrl, resolveItemImageUrl } from '@/utils/imageUrl';
 import { useQuery } from '@tanstack/react-query';
