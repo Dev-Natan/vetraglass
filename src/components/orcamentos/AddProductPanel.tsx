@@ -642,7 +642,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
   const unitPrice = (priceLinePerUnit > 0 && customPrice === null)
     // Variação com unidade fixa (un, par, ml, kg): preço direto por unidade
     ? priceLinePerUnit
-    : (productUsesComposition && compositionPricing.isReady)
+    : (productUsesComposition && compositionPricing.isReady && priceLinePerSqm <= 0)
       ? compositionPricing.compositionCostPerUnit
       : (area > 0 ? basePrice * area : 0);
 
@@ -671,6 +671,7 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     setSelectedGlassColor('');
     setSelectedAluminumColor('');
     setCustomAluminumColor('');
+    setSelectedPriceLineId('');
     // Auto-enable glass for Temperado line products
     const product = filteredProducts?.find(p => p.id === productId);
     if (product?.linha?.toLowerCase().includes('temperado')) {
@@ -692,7 +693,10 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
     onAdd({
       product_template_id: cuttingPlanProductId,
       company_product_id: companyProduct?.id,
-      name: useVao ? `${selectedProduct.name} [Vão: ${vaoWidth}x${vaoHeight}mm]` : selectedProduct.name,
+      name: [
+        useVao ? `${selectedProduct.name} [Vão: ${vaoWidth}x${vaoHeight}mm]` : selectedProduct.name,
+        selectedPriceLine ? `— ${selectedPriceLine.description}` : '',
+      ].filter(Boolean).join(' '),
       base_price: (productUsesComposition && compositionPricing.isReady) ? compositionPricing.compositionCostPerSqm : basePrice,
       image_url: selectedProduct.image_url,
       linha: selectedProduct.linha,
