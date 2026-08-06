@@ -1131,8 +1131,44 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
               </div>
             </div>
 
+            {/* Linhas de Preço (Variações) do produto */}
+            {mode !== 'cutting' && priceLines.length > 0 && (
+              <div className="space-y-1.5 rounded-md border border-primary/30 bg-primary/5 p-3">
+                <label className="text-xs font-medium text-foreground">
+                  Variação / Linha de preço <span className="text-destructive">*</span>
+                </label>
+                <Select value={selectedPriceLineId} onValueChange={setSelectedPriceLineId}>
+                  <SelectTrigger className="bg-background h-10">
+                    <SelectValue placeholder="Escolha a variação..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border shadow-lg z-50">
+                    {priceLines.map((pl) => (
+                      <SelectItem key={pl.id} value={pl.id}>
+                        <div className="flex items-center justify-between gap-4 w-full">
+                          <span>{pl.description}</span>
+                          <span className="text-muted-foreground text-xs">
+                            {formatCurrency(Number(pl.price))}/{formatUnitLabel(pl.unit)}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedPriceLine && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Preço aplicado: <strong>{formatCurrency(Number(selectedPriceLine.price))}</strong> por{' '}
+                    {formatUnitLabel(selectedPriceLine.unit)}
+                    {selectedPriceLine.cost != null && Number(selectedPriceLine.cost) > 0 && (
+                      <> · Margem: {(((Number(selectedPriceLine.price) - Number(selectedPriceLine.cost)) / Number(selectedPriceLine.price)) * 100).toFixed(1)}%</>
+                    )}
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Espessura/Cor do vidro e Cor do perfil — ocultos no modo Plano de Corte */}
             {mode !== 'cutting' && (
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-foreground">Espessura do vidro</label>
