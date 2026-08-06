@@ -276,8 +276,11 @@ export default function MeusPrecos() {
             </CardContent>
           </Card>
         )}
+          </TabsContent>
+        </Tabs>
       </div>
     </MainLayout>
+
   );
 }
 
