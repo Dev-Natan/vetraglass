@@ -620,6 +620,10 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
 
   // Determine final price based on pricing type
   const finalPricePerSqm = (() => {
+    // A variação (linha de preço) escolhida tem prioridade máxima
+    if (priceLinePerSqm > 0) {
+      return priceLinePerSqm;
+    }
     // Vidro do catálogo OU do estoque (cor+espessura selecionadas)
     if (hasGlass && glassPricePerSqm > 0) {
       return glassPricePerSqm;
@@ -635,9 +639,13 @@ export function AddProductPanel({ onAdd, onCancel, mode = 'quote', submitLabel, 
 
   // Calculate prices: use composition when available, otherwise area × price/m²
   const area = width && height ? ((width + (selectedProduct?.has_multiple_sides ? widthB : 0)) / 1000) * (height / 1000) : 0;
-  const unitPrice = (productUsesComposition && compositionPricing.isReady)
-    ? compositionPricing.compositionCostPerUnit
-    : (area > 0 ? basePrice * area : 0);
+  const unitPrice = (priceLinePerUnit > 0 && customPrice === null)
+    // Variação com unidade fixa (un, par, ml, kg): preço direto por unidade
+    ? priceLinePerUnit
+    : (productUsesComposition && compositionPricing.isReady)
+      ? compositionPricing.compositionCostPerUnit
+      : (area > 0 ? basePrice * area : 0);
+
   const componentsTotal = components.reduce((sum, c) => sum + (c.unit_price * c.quantity), 0);
   const computedTotalPrice = ((productUsesComposition && compositionPricing.isReady)
     ? compositionPricing.totalCost
