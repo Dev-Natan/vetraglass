@@ -318,8 +318,8 @@ reservas; - permissões/multiempresa; - módulos funcionais aproveitáveis.
 **Refatorar por prioridade:** 1. aprovação de orçamento; 2. fluxo
 orçamento → OS → financeiro; 3. materiais, reservas e compras; 4.
 workflow formal da OS; 5. fontes de verdade do financeiro; 6. camada de
-dados/repositories; 7. arquivos grandes quando forem tocados; 8.
-tipagem strict gradualmente.
+dados/repositories; 7. arquivos grandes quando forem tocados; 8. tipagem
+strict gradualmente.
 
 **Evitar agora:** - reescrita total; - troca de stack; - redesign
 completo antes de estabilizar processos; - IA complexa antes de dados
