@@ -105,7 +105,7 @@ export function ConfirmStep({
 
               {hasEntry && (
                 <div className="flex justify-between items-center p-3 bg-green-50 dark:bg-green-950/30 rounded-lg">
-                  <span className="text-green-700 dark:text-green-300 font-medium">Entrada (Confirmada)</span>
+                  <span className="text-green-700 dark:text-green-300 font-medium">Entrada informada</span>
                   <span className="text-xl font-bold text-green-600">{formatCurrency(entryValue)}</span>
                 </div>
               )}

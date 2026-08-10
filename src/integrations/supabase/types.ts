@@ -6745,6 +6745,22 @@ export type Database = {
       }
     }
     Functions: {
+      approve_quote_transactional: {
+        Args: {
+          p_balance_due_date?: string | null
+          p_card_net_amount?: number | null
+          p_company_id: string
+          p_entry_amount?: number
+          p_estimated_end?: string | null
+          p_forma_pagamento_id?: string | null
+          p_notes?: string | null
+          p_payment_method?: string | null
+          p_priority?: string
+          p_quote_id: string
+          p_total_amount: number
+        }
+        Returns: Json
+      }
       accept_employee_invite: {
         Args: { _token: string; _user_id: string }
         Returns: Json

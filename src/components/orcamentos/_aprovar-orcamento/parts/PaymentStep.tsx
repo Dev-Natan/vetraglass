@@ -124,12 +124,11 @@ export function PaymentStep({
                   onChange={(e) => onChange('entryAmount', e.target.value)}
                   placeholder="0,00"
                   className="pl-9 h-12 text-lg"
-                  disabled={!isCaixaAberto}
                 />
               </div>
             </div>
 
-            {hasEntry && isCaixaAberto && (
+            {hasEntry && (
               <>
                 <div>
                   <Label>Forma de pagamento da entrada</Label>
@@ -253,7 +252,7 @@ export function PaymentStep({
               {hasEntry && (
                 <div className="space-y-2 mt-2">
                   <div className="flex justify-between text-sm px-1">
-                    <span className="text-green-600 font-medium">Entrada (Confirmada)</span>
+                    <span className="text-green-600 font-medium">Entrada informada</span>
                     <span className="text-green-600 font-bold">-{formatCurrency(entryValue)}</span>
                   </div>
                   <div className="flex justify-between text-lg font-bold border-t pt-2 px-1">
