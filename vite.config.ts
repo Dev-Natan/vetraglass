@@ -15,8 +15,8 @@ export default defineConfig(({ mode }) => ({
     include: ['@tanstack/react-query'],
   },
   server: {
-    host: "::",
-    port: 8080,
+    host: "0.0.0.0",
+    port: 3000,
   },
   plugins: [
     react(),

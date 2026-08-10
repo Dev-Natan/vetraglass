@@ -1,0 +1,6 @@
+{
+  "name": "Vetra - Sistema de Gestão",
+  "description": "Sistema completo de gestão para vidraçarias: orçamentos, ordens de serviço, estoque, financeiro, agenda e muito mais.",
+  "requestFramePermissions": ["camera", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
