@@ -96,7 +96,6 @@ export function useApprovalMutation({
         .insert({
           company_id: companyId,
           quote_id: quote.id,
-          client_id: (quote as any).client_id || null,
           customer_name: quote.customer_name,
           customer_phone: quote.customer_phone,
           customer_email: quote.customer_email,
