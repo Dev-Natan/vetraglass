@@ -184,7 +184,7 @@ export default function Landing() {
 
       {/* Hero Section */}
       <main>
-      <section className="relative overflow-hidden py-24 md:py-40" aria-label="Apresentação">
+      <section className="relative overflow-hidden bg-green-600 py-24 md:py-40" aria-label="Apresentação">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-primary/5" />
         <div className="container relative px-6">
           <div className="mx-auto max-w-4xl text-center animate-fade-in">
