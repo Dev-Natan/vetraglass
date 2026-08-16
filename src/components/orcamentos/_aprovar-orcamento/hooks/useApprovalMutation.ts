@@ -43,11 +43,14 @@ export function useApprovalMutation({
       if (!quote || !companyId) throw new Error('Dados incompletos');
 
       const {
-        selectedFormaId, entryAmount, entryPaymentMethod, cardActualReceived,
+        selectedFormaId, selectedCondicaoId, entryAmount, entryPaymentMethod, cardActualReceived,
         balanceDueDate, receiveOnCompletion, estimatedEnd, priority, notes,
       } = formState;
 
       const entryValue = parseAmount(entryAmount);
+      if (entryValue < 0 || entryValue > valorFinal) {
+        throw new Error('A entrada deve estar entre zero e o valor final');
+      }
       const pendingAmount = Number((valorFinal - entryValue).toFixed(2));
       const formaPagamentoId = selectedFormaId?.startsWith('fallback-') ? null : selectedFormaId;
       const effectiveBalanceDueDate = pendingAmount > 0
@@ -73,6 +76,7 @@ export function useApprovalMutation({
         p_priority: priority,
         p_notes: notes || null,
         p_forma_pagamento_id: formaPagamentoId,
+        p_condicao_pagamento_id: selectedCondicaoId,
       });
 
       if (error) throw error;
@@ -101,6 +105,9 @@ export function useApprovalMutation({
         title: 'Orçamento aprovado!',
         description: `OS #${data.ordemServico.os_number} criada com sucesso.`,
       });
+      // Close immediately so a completed approval cannot be submitted again
+      // while the affected queries are being refreshed.
+      onClose();
       queryClient.invalidateQueries({ queryKey: ['quotes'] });
       queryClient.invalidateQueries({ queryKey: ['sales-today'] });
       queryClient.invalidateQueries({ queryKey: ['ordens-servico'] });
@@ -110,7 +117,6 @@ export function useApprovalMutation({
       queryClient.invalidateQueries({ queryKey: ['material-consumption'] });
       queryClient.invalidateQueries({ queryKey: ['company-stock'] });
       queryClient.invalidateQueries({ queryKey: ['stock-reservations'] });
-      onClose();
       onSuccess?.();
     },
     onError: (error: Error) => {

@@ -66,6 +66,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote, duplicate }: No
 
   const handleClientSelect = (clientId: string) => {
     setSelectedClientId(clientId);
+    form.setValue('client_id', clientId === 'new' ? null : clientId);
 
     if (clientId === 'new') {
       form.setValue('customer_name', '');
@@ -97,6 +98,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote, duplicate }: No
       // Reset items immediately to avoid showing stale data from previous quote
       setItems([]);
       form.reset({
+        client_id: quote.client_id || null,
         customer_name: quote.customer_name,
         customer_phone: formatPhoneBR(quote.customer_phone || ''),
         customer_email: quote.customer_email || '',
@@ -110,6 +112,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote, duplicate }: No
         notes: quote.notes || '',
       });
       setShowMedidasColumn(quote.show_measures_column ?? true);
+      setSelectedClientId(quote.client_id || '');
       setShowM2Column(quote.show_m2_column ?? true);
       setCurrentStep('products');
       setShowAddProduct(false);
@@ -156,6 +159,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote, duplicate }: No
 
   const { createMutation, updateMutation } = useQuoteSubmit({
     companyId: currentCompany?.id,
+    clientId: selectedClientId && selectedClientId !== 'new' ? selectedClientId : null,
     quote,
     items,
     totals,
@@ -271,8 +275,14 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote, duplicate }: No
   };
 
   const onSubmit = (data: QuoteFormData) => {
-    if (isEditing) updateMutation.mutate(data);
-    else createMutation.mutate(data);
+    const submittedData = {
+      ...data,
+      client_id: selectedClientId && selectedClientId !== 'new'
+        ? selectedClientId
+        : data.client_id ?? null,
+    };
+    if (isEditing) updateMutation.mutate(submittedData);
+    else createMutation.mutate(submittedData);
   };
 
   const currentStepIndex = steps.findIndex(s => s.key === currentStep);
@@ -299,6 +309,7 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote, duplicate }: No
     });
     if (duplicate) {
       setSelectedClientId(duplicate.id);
+      form.setValue('client_id', duplicate.id);
       return;
     }
 
@@ -324,7 +335,10 @@ export function NovoOrcamentoDialog({ open, onOpenChange, quote, duplicate }: No
       return;
     }
 
-    if (data?.id) setSelectedClientId(data.id);
+    if (data?.id) {
+      setSelectedClientId(data.id);
+      form.setValue('client_id', data.id);
+    }
     await queryClient.invalidateQueries({ queryKey: ['clients'] });
     toast({ description: 'Novo cliente cadastrado automaticamente!' });
   };

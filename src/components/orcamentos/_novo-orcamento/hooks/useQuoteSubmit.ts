@@ -6,6 +6,7 @@ import { mapItemForInsert } from '../utils';
 
 interface SubmitParams {
   companyId: string | undefined;
+  clientId: string | null;
   quote: Quote | null | undefined;
   items: QuoteItem[];
   totals: { totalAmount: number; discountAmount: number; finalAmount: number };
@@ -15,12 +16,12 @@ interface SubmitParams {
   onClose: () => void;
 }
 
-export function useQuoteSubmit({ companyId, quote, items, totals, discountPercent, showMeasuresColumn, showM2Column, onClose }: SubmitParams) {
+export function useQuoteSubmit({ companyId, clientId, quote, items, totals, discountPercent, showMeasuresColumn, showM2Column, onClose }: SubmitParams) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const buildQuotePayload = (data: QuoteFormData) => ({
-    client_id: (data as any).client_id || null,
+    client_id: data.client_id || clientId || null,
     customer_name: data.customer_name,
     customer_phone: data.customer_phone || null,
     customer_email: data.customer_email || null,

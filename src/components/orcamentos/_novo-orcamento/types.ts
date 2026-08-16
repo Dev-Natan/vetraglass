@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 export const quoteSchema = z.object({
+  client_id: z.string().uuid().nullable().optional(),
   customer_name: z.string().min(2, 'Nome do cliente é obrigatório (mínimo 2 caracteres)').max(100, 'Nome deve ter no máximo 100 caracteres'),
   customer_phone: z.string().optional().refine(val => {
     if (!val) return true;
@@ -94,6 +95,7 @@ export interface NovoOrcamentoDialogProps {
 export type Step = 'client' | 'products' | 'summary' | 'finalize';
 
 export const DEFAULT_FORM_VALUES: QuoteFormData = {
+  client_id: null,
   customer_name: '',
   customer_phone: '',
   customer_email: '',

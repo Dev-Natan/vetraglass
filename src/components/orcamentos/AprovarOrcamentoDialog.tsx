@@ -60,6 +60,13 @@ export function AprovarOrcamentoDialog({
     [formasPagamento, formState.selectedFormaId]
   );
 
+  const condicoesDaForma = useMemo(
+    () => condicoesPagamento.filter(
+      (condicao) => !condicao.forma_pagamento_id || condicao.forma_pagamento_id === formState.selectedFormaId,
+    ),
+    [condicoesPagamento, formState.selectedFormaId],
+  );
+
   const valorFinal = useMemo(() => {
     if (!quote) return totalOriginal;
     
@@ -76,7 +83,7 @@ export function AprovarOrcamentoDialog({
   const entryValue = parseAmount(formState.entryAmount);
   const hasEntry = entryValue > 0;
 
-  const { data: openCashRegister } = useOpenCashRegister(currentCompany?.id, open);
+  const { data: openCashRegister } = useOpenCashRegister(currentCompany?.id, user?.id, open);
   const isCaixaAberto = !!openCashRegister;
 
   const quoteAgeDays = quote?.created_at
@@ -102,6 +109,19 @@ export function AprovarOrcamentoDialog({
       setFormState(prev => ({ ...prev, selectedFormaId: formasPagamento[0].id }));
     }
   }, [formasPagamento, formState.selectedFormaId]);
+
+  useEffect(() => {
+    if (!formState.selectedFormaId) return;
+    const selectedStillValid = condicoesDaForma.some(
+      (condicao) => condicao.id === formState.selectedCondicaoId,
+    );
+    if (!selectedStillValid) {
+      setFormState((previous) => ({
+        ...previous,
+        selectedCondicaoId: condicoesDaForma[0]?.id ?? null,
+      }));
+    }
+  }, [condicoesDaForma, formState.selectedCondicaoId, formState.selectedFormaId]);
 
   const approveMutation = useApprovalMutation({
     quote,
@@ -198,6 +218,13 @@ export function AprovarOrcamentoDialog({
           hasEntry={hasEntry}
           isCaixaAberto={isCaixaAberto}
           hasShortage={!!stockCheckResult?.hasShortage}
+          canApprove={
+            !approveMutation.isSuccess
+            && !!formState.selectedFormaId
+            && entryValue >= 0
+            && entryValue <= valorFinal
+            && (selectedForma?.tipo !== 'parcelado' || !!formState.selectedCondicaoId)
+          }
           onCancel={() => onOpenChange(false)}
           onBack={handleBack}
           onNext={handleNext}

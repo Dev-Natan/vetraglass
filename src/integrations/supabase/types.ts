@@ -6398,7 +6398,7 @@ export type Database = {
       }
       sales: {
         Row: {
-          cash_register_id: string
+          cash_register_id: string | null
           client_id: string | null
           company_id: string
           created_at: string
@@ -6425,7 +6425,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          cash_register_id: string
+          cash_register_id?: string | null
           client_id?: string | null
           company_id: string
           created_at?: string
@@ -6452,7 +6452,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          cash_register_id?: string
+          cash_register_id?: string | null
           client_id?: string | null
           company_id?: string
           created_at?: string
@@ -7391,6 +7391,7 @@ export type Database = {
           p_balance_due_date?: string
           p_card_net_amount?: number
           p_company_id: string
+          p_condicao_pagamento_id?: string
           p_entry_amount?: number
           p_estimated_end?: string
           p_forma_pagamento_id?: string
@@ -7424,6 +7425,10 @@ export type Database = {
         Returns: Json
       }
       cancel_approved_quote: { Args: { _quote_id: string }; Returns: Json }
+      phase2a_eval_formula: {
+        Args: { p_formula: string; p_height: number; p_width: number }
+        Returns: number
+      }
       cancel_os_materials: {
         Args: { _ordem_servico_id: string }
         Returns: number

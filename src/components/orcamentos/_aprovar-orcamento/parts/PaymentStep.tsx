@@ -16,12 +16,20 @@ import {
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { formatCurrency, parseAmount } from '../utils';
-import type { ApprovalFormState, EntryPaymentMethod, Priority } from '../types';
+import type { ApprovalFormState, ApprovalQuote, EntryPaymentMethod, Priority } from '../types';
 
 interface FormaPagamento {
   id: string;
   nome: string;
   tipo: string;
+}
+
+interface CondicaoPagamento {
+  id: string;
+  nome: string;
+  parcelas: number;
+  dias_entre_parcelas: number;
+  forma_pagamento_id: string | null;
 }
 
 const FALLBACK_FORMAS_PAGAMENTO: FormaPagamento[] = [
@@ -35,13 +43,13 @@ interface Props {
   state: ApprovalFormState;
   onChange: <K extends keyof ApprovalFormState>(key: K, value: ApprovalFormState[K]) => void;
   formasPagamento: FormaPagamento[];
-  condicoesPagamento: any[];
+  condicoesPagamento: CondicaoPagamento[];
   hasPaymentOptions: boolean;
   onInitializeDefaults: () => void;
   isInitializingDefaults: boolean;
   isCaixaAberto: boolean;
   valorFinal: number;
-  quote: any;
+  quote: ApprovalQuote;
 }
 
 export function PaymentStep({
@@ -53,6 +61,9 @@ export function PaymentStep({
   const pendingAmount = valorFinal - entryValue;
   const formasFiltradas = (formasPagamento.length > 0 ? formasPagamento : FALLBACK_FORMAS_PAGAMENTO)
     .filter((f, idx, arr) => arr.findIndex(x => x.id === f.id) === idx);
+  const condicoesFiltradas = condicoesPagamento.filter(
+    (condicao) => !condicao.forma_pagamento_id || condicao.forma_pagamento_id === state.selectedFormaId,
+  );
   const labelForma = (forma: FormaPagamento) =>
     forma.nome || forma.tipo || 'Forma de pagamento';
 
@@ -84,7 +95,13 @@ export function PaymentStep({
 
             <Select
               value={state.selectedFormaId || ''}
-              onValueChange={(v) => onChange('selectedFormaId', v)}
+              onValueChange={(v) => {
+                onChange('selectedFormaId', v);
+                const primeiraCondicao = condicoesPagamento.find(
+                  (condicao) => !condicao.forma_pagamento_id || condicao.forma_pagamento_id === v,
+                );
+                onChange('selectedCondicaoId', primeiraCondicao?.id ?? null);
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione a forma de pagamento" />
@@ -99,6 +116,27 @@ export function PaymentStep({
                 ))}
               </SelectContent>
             </Select>
+
+            {condicoesFiltradas.length > 0 && (
+              <div className="space-y-2">
+                <Label>Condição de pagamento</Label>
+                <Select
+                  value={state.selectedCondicaoId || ''}
+                  onValueChange={(value) => onChange('selectedCondicaoId', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a condição" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {condicoesFiltradas.map((condicao) => (
+                      <SelectItem key={condicao.id} value={condicao.id}>
+                        {condicao.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           <div className="p-4 border rounded-xl bg-card space-y-4">
